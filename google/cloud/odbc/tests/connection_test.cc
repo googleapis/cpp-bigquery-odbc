@@ -77,7 +77,7 @@ TEST(StatementTest, SQLExecute) {
 }
 
 TEST(StatementTest, SQLDescribeCol) {
-  const string table_name = kDatasetName + ".ODBC_PRINT_RESULTS_TEST";
+  const string table_name = kDatasetName + ".ODBC_COLUMN_DESCRIPTION_TEST";
 
   Schema schema {
     { "StringField", SQL_VARCHAR},
@@ -98,6 +98,39 @@ TEST(StatementTest, SQLDescribeCol) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckColumnData(conn, table_name, schema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  DropTable(conn, table_name);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLFetch) {
+  const string table_name = kDatasetName + ".ODBC_CHECK_RESULTS_TEST";
+
+  Schema schema {
+    { "StringField", SQL_VARCHAR},
+    { "IntegerField", SQL_BIGINT},
+    { "FloatField", SQL_DOUBLE}
+  };
+
+  //Create Table
+  shared_ptr<ConnectionHandle> conn(new ConnectionHandle());
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTable(conn, table_name, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  //Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertIntoTable(conn, table_name, kSampleData);
+  SQLLEN rows_count = 0;
+  SQLRETURN status = SQLRowCount(conn->hstmt, &rows_count);
+  CheckError(status, "SQLRowCount", conn);
+  EXPECT_EQ(rows_count, kSampleData.size());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CheckResults(conn, table_name, schema, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

@@ -28,6 +28,8 @@ SQLRETURN InsertDirectStatement(shared_ptr<ConnectionHandle> conn);
 
 void CheckColumnData(shared_ptr<ConnectionHandle> conn, string table_name, Schema schema);
 
+void CheckResults(shared_ptr<ConnectionHandle> conn, string table_name, Schema schema, StdRows data);
+
 }  // namespace bigquery_odbc
 }  // namespace cloud
 }  // namespace google

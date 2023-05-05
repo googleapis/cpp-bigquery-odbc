@@ -109,8 +109,33 @@ void CheckColumnData(shared_ptr<ConnectionHandle> conn, string table_name, Schem
 
     //Verify returned column descriptions with the table schema
     EXPECT_STREQ((const char * )col_ptr->name, schema[i].name.c_str());
+    EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
     EXPECT_EQ(col_ptr->data_type, schema[i].type);
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
+  }
+}
+
+void CheckResults(shared_ptr<ConnectionHandle> conn, string table_name, Schema schema, StdRows data) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, "SELECT * FROM " + table_name);
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR * )read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  //Check if the number of columns returned is correct
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols (conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, schema.size());
+
+  //Loop through columns and verify descriptions
+  vector<shared_ptr<Column>> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    shared_ptr<Column> col_ptr(new Column());
+    cols[i] = col_ptr;
+    
+    DescribeCol(conn, col_ptr, i + 1);
 
     SqlToCdataTypes(col_ptr);
     
@@ -118,9 +143,12 @@ void CheckColumnData(shared_ptr<ConnectionHandle> conn, string table_name, Schem
     SQLCHAR col_data[col_ptr->data_size + 1];
     col_ptr->data = col_data;
 
-    //TODO: SQLBindCol will be used later when we SQLFetch the data
     BindCol(conn, col_ptr, i + 1);
   }
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
 }
 
 }  // namespace bigquery_odbc
