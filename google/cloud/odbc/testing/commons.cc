@@ -38,6 +38,19 @@ void SqlToCdataTypes(shared_ptr<Column> col_ptr) {
     }
 }
 
+string getSchemaStr(Schema schema) {
+  string schema_str = "(";
+  for (int i = 0; i < schema.size(); i++) {
+    ColumnMinimal col = schema[i];
+    schema_str.append(col.name + " " + ToBqFieldType(col.type));
+    if(i < schema.size() - 1) {
+      schema_str.append(", ");
+    }
+  }
+  schema_str.append(")");
+  return schema_str;
+}
+
 void GetErrorDetails(const string api, shared_ptr<ConnectionHandle> conn) {
   SQLCHAR buf[kBufferLength];
   SQLCHAR sqlstate[15];
@@ -96,10 +109,10 @@ inline void CheckError(SQLRETURN status, const string api, shared_ptr<Connection
   }
 }
 
-void CreateTable(shared_ptr<ConnectionHandle> conn, string table_name, string schema) {
+void CreateTable(shared_ptr<ConnectionHandle> conn, string table_name, string schema_str) {
   char create_table_stmt[kBufferLength];
-  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema);
-  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
+  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema_str);
+  SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
 
