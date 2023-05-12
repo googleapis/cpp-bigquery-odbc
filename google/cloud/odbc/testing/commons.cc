@@ -38,6 +38,19 @@ void SqlToCdataTypes(shared_ptr<Column> col_ptr) {
     }
 }
 
+string getSchemaStr(Schema schema) {
+  string schema_str = "(";
+  for (int i = 0; i < schema.size(); i++) {
+    ColumnMinimal col = schema[i];
+    schema_str.append(col.name + " " + ToBqFieldType(col.type));
+    if(i < schema.size() - 1) {
+      schema_str.append(", ");
+    }
+  }
+  schema_str.append(")");
+  return schema_str;
+}
+
 void GetErrorDetails(const string api, shared_ptr<ConnectionHandle> conn) {
   SQLCHAR buf[kBufferLength];
   SQLCHAR sqlstate[15];
@@ -96,9 +109,9 @@ inline void CheckError(SQLRETURN status, const string api, shared_ptr<Connection
   }
 }
 
-void CreateTable(shared_ptr<ConnectionHandle> conn, string table_name, string schema) {
+void CreateTable(shared_ptr<ConnectionHandle> conn, string table_name, string schema_str) {
   char create_table_stmt[kBufferLength];
-  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema);
+  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema_str);
   SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
@@ -123,7 +136,7 @@ void InsertIntoTable(shared_ptr<ConnectionHandle> conn, string table_name, StdRo
     return;
   }
 
-  for(int i = 0; i < num_rows; i++) {
+  for (int i = 0; i < num_rows; i++) {
     StdRow row = rows[i];
     string row_str = "( ";
 
@@ -192,20 +205,20 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data, vector<s
     }
     col_names = all_col_names;
   }
-  for(string col_name: col_names) {
+  for (string col_name: col_names) {
     vector<string> ret_col_values = col_wise_data[col_name];
     //We have to sort inserted and returned values because we haven't specified the ordering
     sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
 
     vector<string> input_col_values;
-    for(auto data: input_data) {
+    for (auto data: input_data) {
       input_col_values.push_back(data.str_field);
     }
     sort(input_col_values.begin(), input_col_values.end(), str_comparison);
 
     //Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for(int i = 0; i < ret_col_values.size(); i++) {
+    for (int i = 0; i < ret_col_values.size(); i++) {
       EXPECT_EQ(ret_col_values[i], input_col_values[i]);
     }
   }

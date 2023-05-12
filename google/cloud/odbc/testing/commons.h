@@ -89,7 +89,27 @@ inline void StrToChar(char * dest, string src) {
   strcpy(dest, src.c_str());
 }
 
+inline string ToBqFieldType(SQLSMALLINT odbcType) {
+  switch (odbcType) {
+    case SQL_VARCHAR:
+      return "STRING";
+    case SQL_NUMERIC:
+      return "NUMERIC";
+    case SQL_INTEGER:
+      return "INT64";
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      return "FLOAT64";
+    case SQL_DATETIME:
+      return "DATETIME";
+    default:
+      throw std::runtime_error("Invalid odbc data type: " + odbcType);
+  }
+}
+
 void SqlToCdataTypes(shared_ptr<Column> col_ptr);
+
+string getSchemaStr(Schema schema);
 
 void GetErrorDetails(const string api, shared_ptr<ConnectionHandle> conn);
 

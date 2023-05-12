@@ -41,6 +41,7 @@ add_executable(
   testing/connection.cc
   testing/functions.cc
   testing/statement.cc
+  testing/metadata.cc
   tests/connection_test.cc
 )
 target_link_libraries(
