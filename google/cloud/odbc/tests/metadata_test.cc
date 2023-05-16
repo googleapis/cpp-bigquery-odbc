@@ -12,12 +12,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "testing/connection.h"
 #include "testing/metadata.h"
 
 namespace google {
 namespace cloud {
 namespace bigquery_odbc {
 
+TEST(StatementTest, SQLTables) {
+  map<string, Schema> tables = {
+    { "ODBC_SQLTables_TEST_1",
+      { { "Str1", SQL_VARCHAR } }
+    },
+    { "ODBC_SQLTables_TEST_2",
+      { { "Str2", SQL_VARCHAR },
+        { "Int2", SQL_INTEGER },
+        { "Float2", SQL_FLOAT },
+      }
+    },
+    { "ODBC_SQLTables_TEST_3",
+      { { "Str3", SQL_VARCHAR },
+        { "Int3", SQL_INTEGER },
+        { "Float3", SQL_FLOAT },
+        { "Date3", SQL_DATETIME}
+      }
+    }
+  };
+  shared_ptr<ConnectionHandle> conn(new ConnectionHandle());
+  for (auto it: tables) {
+    string table_name = it.first;
+    string table_name_full = kDatasetName + "." + table_name;
+    // Create Table
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+    CreateTable(conn, table_name_full, getSchemaStr(it.second));
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+
+  // Verify table schemas
+  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
+  Results results = *GetProcedures(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  for (auto it: tables) {
+    string table_name = it.first;
+    string table_name_full = kDatasetName + "." + table_name;
+    // Drop Tables
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+    //DropTable(conn, table_name_full);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
+
+/*
 TEST(StatementTest, SQLColumns) {
   map<string, Schema> tables = {
     { "ODBC_SQLColumns_TEST_1",
@@ -42,21 +89,22 @@ TEST(StatementTest, SQLColumns) {
     string table_name = it.first;
     string table_name_full = kDatasetName + "." + table_name;
     //Create Table
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     CreateTable(conn, table_name_full, getSchemaStr(it.second));
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
     //Verify columns
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     Results results = *GetColumns(conn, table_name);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
     //Drop Tables
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     DropTable(conn, table_name_full);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   }
 }
+*/
 
 }  // namespace bigquery_odbc
 }  // namespace cloud

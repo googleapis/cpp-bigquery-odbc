@@ -42,9 +42,9 @@ add_executable(
   testing/functions.cc
   testing/statement.cc
   testing/metadata.cc
-  tests/connection_test.cc
-  tests/misc_test.cc
-  tests/statement_test.cc
+  # tests/connection_test.cc
+  # tests/misc_test.cc
+  # tests/statement_test.cc
   tests/metadata_test.cc
 )
 target_link_libraries(

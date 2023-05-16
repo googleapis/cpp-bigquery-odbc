@@ -133,7 +133,7 @@ shared_ptr<Results> FetchResults(shared_ptr<ConnectionHandle> conn, string query
       auto data = cols[i_c]->data;
       auto data_len = cols[i_c]->data_len;
 
-      if(data_len == -1) {
+      if(data_len == SQL_NULL_DATA) {
         results[col_name].emplace_back(string());
         continue;
       }

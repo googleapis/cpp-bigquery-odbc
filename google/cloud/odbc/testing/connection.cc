@@ -32,8 +32,8 @@ SQLRETURN Connect(string conn_str, shared_ptr<ConnectionHandle> conn) {
   status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3,
                 SQL_IS_UINTEGER);
   CheckError(status, "SQLSetEnvAttr", conn);
-  
-  status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);     
+
+  status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CheckError(status, "SQLAllocHandle", conn);
 
   //Set the application name
@@ -50,6 +50,38 @@ SQLRETURN Connect(string conn_str, shared_ptr<ConnectionHandle> conn) {
   
   PrintDriverVerName(conn);
   
+  //Allocate statement handle
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+  return status;
+}
+
+SQLRETURN ConnectDsn(string dsn, shared_ptr<ConnectionHandle> conn) {
+  SQLSMALLINT buflen;
+  SQLSMALLINT out_len;
+  SQLRETURN status;
+
+  status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3,
+                SQL_IS_UINTEGER);
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  //Set the application name
+  status = SQLSetConnectAttr(conn->hdbc, SQL_APPLICATION_NAME, (SQLPOINTER)("odbctest"), SQL_NTS);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  status = SQLConnect(conn->hdbc, (SQLCHAR *)dsn.c_str(), SQL_NTS,
+                            (SQLCHAR *)conn->outdsn, NumSqlChar(conn->outdsn), NULL, 0);
+  CheckError(status, "SQLDriverConnect", conn);
+  conn->connected = true;
+
+  PrintDriverVerName(conn);
+
   //Allocate statement handle
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
   CheckError(status, "SQLAllocHandle", conn);
@@ -85,90 +117,105 @@ SQLRETURN Disconnect(shared_ptr<ConnectionHandle> conn) {
 //TODO(#10): Remove printf and support logging
 //Gets Info about the driver.
 SQLRETURN GetDriverInfo(shared_ptr<ConnectionHandle> conn) {
-  SQLCHAR out[kMaxDsnLen];
+  SQLCHAR buf[kMaxDsnLen];
   SQLSMALLINT out_len;
   SQLRETURN status;
 
-  printf("\n\n****************************************\n");
-  printf("Driver Info \n");
-  printf("****************************************\n");
-  status = SQLGetInfo(conn->hdbc, SQL_DATA_SOURCE_NAME, out, sizeof(out),
+  status = SQLGetInfo(conn->hdbc, SQL_DATA_SOURCE_NAME, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status)) {
+  CheckError(status, "SqlGetInfo(SQL_DATA_SOURCE_NAME)", conn);
+  if(SQL_SUCCEEDED(status)) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_DATA_SOURCE_NAME: %s\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_DATA_SOURCE_NAME: %d\n", status);
-    return status;
+    string dsn_name = (char *)buf;
+    conn->metadata.dsn_name = dsn_name;
+    cout << "SQL_DATA_SOURCE_NAME: " << conn->metadata.dsn_name << endl;
   }
-  status = SQLGetInfo(conn->hdbc, SQL_ODBC_VER, out, sizeof(out),
+
+  status = SQLGetInfo(conn->hdbc, SQL_ODBC_VER, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status)) {
+  CheckError(status, "SqlGetInfo(SQL_ODBC_VER)", conn);
+  if(SQL_SUCCEEDED(status)) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_ODBC_VER: %s\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_ODBC_VER: %d\n", status);
-    return status;
+    string db_odbc_ver = (char *)buf;
+    conn->metadata.db_odbc_ver = db_odbc_ver;
+    cout << "SQL_ODBC_VER: " << conn->metadata.db_odbc_ver << endl;
   }
-  status = SQLGetInfo(conn->hdbc, SQL_DATABASE_NAME, out, sizeof(out),
+
+  status = SQLGetInfo(conn->hdbc, SQL_DATABASE_NAME, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status)) {
+  CheckError(status, "SqlGetInfo(SQL_DATABASE_NAME)", conn);
+  if(SQL_SUCCEEDED(status)) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_DATABASE_NAME: %s\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_DATABASE_NAME: %d\n", status);
-    return status;
+    string db_name = (char *)buf;
+    conn->metadata.db_name = db_name;
+    cout << "SQL_DATABASE_NAME: " << conn->metadata.db_name << endl;
   }
-  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, out, sizeof(out),
+
+  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status)) {
+  CheckError(status, "SqlGetInfo(SQL_DRIVER_NAME)", conn);
+  if(SQL_SUCCEEDED(status)) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_DRIVER_NAME: %s\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_DRIVER_NAME: %d\n", status);
-    return status;
+    string driver_name = (char *)buf;
+    conn->metadata.driver_name = driver_name;
+    cout << "SQL_DRIVER_NAME: " << conn->metadata.driver_name << endl;
   }
-  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_ODBC_VER, out, sizeof(out),
+
+  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_ODBC_VER, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status)) {
+  CheckError(status, "SqlGetInfo(SQL_DRIVER_ODBC_VER)", conn);
+  if(SQL_SUCCEEDED(status)) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_DRIVER_ODBC_VER: %s\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_DRIVER_ODBC_VER: %d\n", status);
-    return status;
+    string driver_odbc_ver = (char *)buf;
+    conn->metadata.driver_odbc_ver = driver_odbc_ver;
+    cout << "SQL_DRIVER_ODBC_VER: " << conn->metadata.driver_odbc_ver << endl;
   }
-  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, out, sizeof(out),
+
+  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, buf, sizeof(buf),
                    &out_len);
-  if (SQL_SUCCEEDED(status))
+  CheckError(status, "SqlGetInfo(SQL_DRIVER_VER)", conn);
+  if(SQL_SUCCEEDED(status))
   {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    printf("SQL_DRIVER_VER: %s\n\n", out);
-  } else {
-    printf("Error calling SqlGetInfo for SQL_DRIVER_VER: %d\n", status);
-    return status;
+    string driver_ver = (char *)buf;
+    conn->metadata.driver_ver = driver_ver;
+    //cout << "SQL_DRIVER_VER: " << conn->metadata.driver_ver << endl;
   }
+  
+  status = SQLGetInfo(conn->hdbc, SQL_USER_NAME, buf, sizeof(buf),
+                   &out_len);
+  CheckError(status, "SqlGetInfo(SQL_USER_NAME)", conn);
+  if(SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      printf("[Truncated]");
+    }
+    string user_name = (char *)buf;
+    //conn->metadata.driver_odbc_ver = driver_odbc_ver;
+    cout << "SQL_USER_NAME: " << user_name << endl;
+  }
+
   return status;
 }
 
 //TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
 SQLRETURN GetEnvInfo(shared_ptr<ConnectionHandle> conn) {
-  SQLUINTEGER out;
-  auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)&out,
+  SQLUINTEGER buf;
+  auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)&buf,
                           SQL_IS_UINTEGER, NULL);
-  if (SQL_SUCCEEDED(status) && out == SQL_OV_ODBC3) {
+  if (SQL_SUCCEEDED(status) && buf == SQL_OV_ODBC3) {
     printf("****************************************\n");
     printf("Environment is ODBC3\n");
     printf("****************************************\n\n");

@@ -22,6 +22,10 @@ namespace google {
 namespace cloud {
 namespace bigquery_odbc {
 
+shared_ptr<Results> GetProcedures(shared_ptr<ConnectionHandle> conn);
+
+shared_ptr<Results> GetTables(shared_ptr<ConnectionHandle> conn);
+
 shared_ptr<Results> GetColumns(shared_ptr<ConnectionHandle> conn, string table_name);
 
 }  // namespace bigquery_odbc

@@ -42,12 +42,21 @@ constexpr SQLSMALLINT kBufferLength = 512;
 
 const string kDatasetName = "ODBCTESTDATASET";
 
+struct Metadata {
+  string dsn_name;
+  string db_name;
+  string db_odbc_ver;
+  string driver_name;
+  string driver_odbc_ver;
+  string driver_ver;
+};
 struct ConnectionHandle {
   HENV henv;
   HDBC hdbc;
   HSTMT hstmt;
   bool connected;
   SQLCHAR outdsn[4096];
+  Metadata metadata; // This is populated only after calling GetDriverInfo
 };
 
 struct Column {

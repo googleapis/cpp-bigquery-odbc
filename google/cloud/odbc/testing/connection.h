@@ -22,10 +22,14 @@ namespace google {
 namespace cloud {
 namespace bigquery_odbc {
 
-const string kDefaultConnectionString("DSN=ODBCTestsDSN");
+const string kDefaultDataSource = "ODBCTestsDSN";
+const string kDefaultConnectionString("DSN="+kDefaultDataSource);
 
 // Connect using a <conn_str> and populate the ConnectionHandle
 SQLRETURN Connect(string conn_str, shared_ptr<ConnectionHandle> conn);
+
+// Connect using a datasource name directly and populate the ConnectionHandle
+SQLRETURN ConnectDsn(string dsn, shared_ptr<ConnectionHandle> conn);
 
 SQLRETURN Disconnect(shared_ptr<ConnectionHandle> conn);
 
