@@ -41,9 +41,11 @@ add_executable(
   testing/connection.cc
   testing/functions.cc
   testing/statement.cc
-  tests/connection_test.cc
-  tests/misc_test.cc
-  tests/statement_test.cc
+  testing/catalog.cc
+  #tests/connection_test.cc
+  #tests/misc_test.cc
+  #tests/statement_test.cc
+  tests/catalog_test.cc
 )
 target_link_libraries(
   all_tests

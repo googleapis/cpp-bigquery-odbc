@@ -31,24 +31,17 @@ std::string GetRandomString(int len) {
   return str;
 }
 
-void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
-  switch (col_ptr->data_type) {
-    case SQL_BIGINT:
-    case SQL_INTEGER:
-      col_ptr->data_type = SQL_C_LONG;
-      break;
-    case SQL_DOUBLE:
-      col_ptr->data_type = SQL_C_DOUBLE;
-    case SQL_FLOAT:
-      col_ptr->data_type = SQL_C_FLOAT;
-      break;
-    case SQL_VARCHAR:
-    case SQL_C_CHAR:
-      col_ptr->data_type = SQL_C_CHAR;
-      break;
-    default:
-      FAIL() << " Invalid column data type " << col_ptr->data_type;
+std::string getSchemaStr(Schema schema) {
+  std::string schema_str = "(";
+  for (int i = 0; i < schema.size(); i++) {
+    ColumnMinimal col = schema[i];
+    schema_str.append(col.name + " " + ToBqFieldType(col.type));
+    if(i < schema.size() - 1) {
+      schema_str.append(", ");
     }
+  }
+  schema_str.append(")");
+  return schema_str;
 }
 
 void GetErrorDetails(const std::string api, std::shared_ptr<ConnectionHandle> conn) {
@@ -109,10 +102,10 @@ inline void CheckError(SQLRETURN status, const std::string api, std::shared_ptr<
   }
 }
 
-void CreateTable(std::shared_ptr<ConnectionHandle> conn, std::string table_name, std::string schema) {
+void CreateTable(std::shared_ptr<ConnectionHandle> conn, std::string table_name, std::string schema_str) {
   char create_table_stmt[kBufferLength];
-  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema);
-  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
+  StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name + " " + schema_str);
+  SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
 

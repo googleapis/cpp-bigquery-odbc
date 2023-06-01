@@ -149,8 +149,8 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
     if (status == SQL_SUCCESS_WITH_INFO) {
       printf("[Truncated]");
     }
-    std::string db_name = (char *)buf;
-    conn->metadata.db_name = db_name;
+    std::string project_id = (char *)buf;
+    conn->metadata.project_id = project_id;
   }
 
   status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, buf, sizeof(buf),
