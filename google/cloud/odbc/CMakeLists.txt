@@ -15,7 +15,11 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
-project(my_project)
+project(
+  cpp-bigquery-odbc
+  VERSION 1.0.0
+  LANGUAGES CXX
+)
 
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 17)
@@ -30,6 +34,15 @@ FetchContent_Declare(
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+
+set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
+set(BUILD_TESTING OFF)
+
+FetchContent_Declare(
+ google_cloud_cpp
+ URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
+)
+FetchContent_MakeAvailable(google_cloud_cpp)
 
 enable_testing()
 
@@ -51,7 +64,9 @@ target_link_libraries(
   all_tests
   odbc
   GTest::gtest_main
+  google_cloud_cpp_bigquery
 )
 
 include(GoogleTest)
 gtest_discover_tests(all_tests)
+

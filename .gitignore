@@ -1,1 +1,5 @@
 build/
+google/cloud/odbc/bazel-bin/
+google/cloud/odbc/bazel-odbc/
+google/cloud/odbc/bazel-out/
+google/cloud/odbc/bazel-testlogs/
