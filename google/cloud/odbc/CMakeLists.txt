@@ -15,44 +15,71 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
-project(my_project)
+project(
+  cpp-bigquery-odbc-testing
+  LANGUAGES CXX
+)
 
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(BEFORE $ENV{IODBC_INCLUDE_PATH})
-
 include(FetchContent)
+
+function (odbc_define_tests)
+  include_directories(BEFORE $ENV{IODBC_INCLUDE_PATH})
+
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  )
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+
+  enable_testing()
+
+  include_directories(BEFORE ./)
+
+  add_executable(
+    all_tests
+    testing/commons.cc
+    testing/connection.cc
+    testing/driver_properties.cc
+    testing/statement.cc
+    testing/catalog.cc
+    tests/connection_test.cc
+    tests/driver_properties_test.cc
+    tests/descriptor_test.cc
+    tests/statement_test.cc
+    tests/catalog_test.cc
+  )
+
+  target_link_libraries(
+    all_tests
+    odbc
+    GTest::gtest_main
+    GTest::gmock
+  )
+
+  include(GoogleTest)
+  gtest_discover_tests(all_tests)
+endfunction ()
+
+set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
+set(BUILD_TESTING OFF)
+set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
+set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest)
+
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  google-cloud-cpp
+  URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
 )
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+FetchContent_MakeAvailable(google-cloud-cpp)
 
-enable_testing()
+# For now, I am adding a default target which just depends on google_cloud_cpp_bigquery_rest.
+# This will change
+add_custom_target(odbc_client_interface ALL DEPENDS google_cloud_cpp_bigquery_rest)
 
-include_directories(BEFORE ./)
-
-add_executable(
-  all_tests
-  testing/commons.cc
-  testing/connection.cc
-  testing/driver_properties.cc
-  testing/statement.cc
-  testing/catalog.cc
-  tests/connection_test.cc
-  tests/driver_properties_test.cc
-  tests/descriptor_test.cc
-  tests/statement_test.cc
-  tests/catalog_test.cc
-)
-target_link_libraries(
-  all_tests
-  odbc
-  GTest::gtest_main
-)
-
-include(GoogleTest)
-gtest_discover_tests(all_tests)
+if (ODBC_BUILD_TESTING)
+  odbc_define_tests()
+endif ()
