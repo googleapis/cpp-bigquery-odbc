@@ -42,7 +42,7 @@ substitutions:
   _IMAGE: 'cloudbuild/${_DISTRO}'
   _TRIGGER_SOURCE: '${_PR_NUMBER:-main}'
   _TRIGGER_TYPE: 'manual'
-  _LOGS_BUCKET: 'cloud-cpp-community-publiclogs'
+  _LOGS_BUCKET: 'odbc-cpp-community-publiclogs'
   _TAG1: 'team-only'
 
 timeout: 12600s
