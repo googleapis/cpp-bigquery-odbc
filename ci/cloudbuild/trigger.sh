@@ -86,19 +86,20 @@ EOF
 function list_triggers() {
   gcloud beta builds triggers list \
     --project "${CLOUD_PROJECT}" \
+    --region=us-east1 \
     --filter "github.name = ${GITHUB_NAME}"
 }
 
 function describe_trigger() {
   local name="$1"
   gcloud beta builds triggers describe "${name}" \
-    --project "${CLOUD_PROJECT}"
+    --project "${CLOUD_PROJECT}" --region=us-east1
 }
 
 function import_trigger() {
   local file="$1"
   gcloud beta builds triggers import \
-    --project "${CLOUD_PROJECT}" --source "${file}"
+    --project "${CLOUD_PROJECT}" --region=us-east1 --source "${file}"
 }
 
 # Use getopt to parse and normalize all the args.
