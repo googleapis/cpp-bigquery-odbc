@@ -30,18 +30,8 @@ fi
 readonly ARCH
 
 components=(
-  # All the emulators are in the "beta" components
   beta
-  # We need the Bigtable emulator and CLI tool
-  bigtable
-  cbt
-  # We use the Pub/Sub emulator in our tests
-  pubsub-emulator
 )
-if [[ "${ARCH}" == "x86_64" ]]; then
-  # The spanner emulator is not available for ARM64, but we do use it for testing on x86_64
-  components+=(cloud-spanner-emulator)
-fi
 
 readonly SITE="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads"
 readonly TARBALL="google-cloud-cli-${GOOGLE_CLOUD_CPP_CLOUD_SDK_VERSION}-linux-${ARCH}.tar.gz"

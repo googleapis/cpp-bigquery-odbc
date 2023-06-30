@@ -30,7 +30,7 @@ RUN dnf makecache && \
 # Install the Python modules needed to run the storage emulator
 RUN dnf makecache && dnf install -y python3-devel
 RUN pip3 install --upgrade pip
-RUN pip3 install setuptools wheel
+RUN pip3 install setuptools wheel requests
 
 # The Cloud Pub/Sub emulator needs Java :shrug:
 RUN dnf makecache && dnf install -y java-latest-openjdk

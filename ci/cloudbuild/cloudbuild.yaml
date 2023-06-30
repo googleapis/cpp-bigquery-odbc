@@ -13,8 +13,8 @@
 # limitations under the License.
 
 options:
-  #workerPool: 'projects/bigquery-devtools-drivers/locations/us-east1/workerPools/cpp-bigquery-odbc-pool'
-  machineType: E2_HIGHCPU_32
+  workerPool: 'projects/bigquery-devtools-drivers/locations/us-east1/workerPools/cpp-bigquery-odbc-pool'
+  #machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
   env: [
     'HOME=/h',
