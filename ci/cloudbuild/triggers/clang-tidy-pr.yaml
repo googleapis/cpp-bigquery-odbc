@@ -8,7 +8,7 @@ github:
 name: clang-tidy-pr
 substitutions:
   _BUILD_NAME: clang-tidy
-  _DISTRO: fedora-37-cmake
+  _DISTRO: ubuntu-20.04-install
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:

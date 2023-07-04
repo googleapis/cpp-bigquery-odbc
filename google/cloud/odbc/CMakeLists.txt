@@ -39,11 +39,11 @@ set(BUILD_TESTING OFF)
 set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
 set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest)
 
-FetchContent_Declare(
-  google-cloud-cpp
-  URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
-)
-FetchContent_MakeAvailable(google-cloud-cpp)
+#FetchContent_Declare(
+#  google-cloud-cpp
+#  URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
+#)
+#FetchContent_MakeAvailable(google-cloud-cpp)
 
 enable_testing()
 
@@ -67,7 +67,7 @@ target_link_libraries(
   odbc
   GTest::gtest_main
   GTest::gmock
-  google_cloud_cpp_bigquery_rest
+  #google_cloud_cpp_bigquery_rest
 )
 
 include(GoogleTest)
