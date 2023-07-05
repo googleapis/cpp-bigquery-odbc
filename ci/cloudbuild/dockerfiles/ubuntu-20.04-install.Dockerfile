@@ -14,6 +14,16 @@
 
 FROM ubuntu:20.04
 
+# ENV for iODBC driver manager
+ARG gcs_odbc_bucket
+#ENV GCS_BUCKET=${gcs_odbc_bucket}
+ENV GCS_BUCKET=bq-dev-tools-simba-drivers-testing
+RUN echo 'GCS_BUCKET='${GCS_BUCKET}
+ARG odbc_secret
+ENV ODBC_CONN_KEYS=${odbc_secret}
+RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
+RUN echo 'ODBC_SECRET='${ODBC_SECRET}
+
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
@@ -216,12 +226,6 @@ ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 RUN echo '**** iODBC installation START ****'
 
-# Build argument obtained from cloudbuild-odbc.yaml
-ARG gcs_odbc_bucket
-ENV GCS_BUCKET=${gcs_odbc_bucket}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-
 ## BEGIN Installs pre-requisits for the Simba ODBC Driver.
 
 # glibc 2.17 or later
@@ -283,11 +287,15 @@ RUN echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKE
 RUN if [ $(gsutil ls gs://${GCS_BUCKET}/simba-odbc | grep -c simba.zip) -eq 0 ] ; \
     then echo 'Simba deliverables not found for download: exiting...' ; exit 1 ; fi
 
+
 # Configure connection credentials for the driver.
 RUN echo 'Configuring Connection Credentials...'
 RUN mkdir -p /opt/simba/connection
 WORKDIR /opt/simba
-RUN echo ${ODBC_CONN_KEYS} | tee /opt/simba/connection/key.json > /dev/null
+#RUN gcloud secrets versions access latest --secret=simba-odbc-keys &> /opt/simba/connection/key.json
+RUN gcloud secrets versions access latest --secret=simba-odbc-keys | tee /opt/simba/connection/key.json
+RUN cat /opt/simba/connection/key.json
+#RUN echo ${ODBC_CONN_KEYS} | tee /opt/simba/connection/key.json > /dev/null
 RUN echo 'Verifying Connection Keys File Size...'
 RUN if [ $(stat -c%s /opt/simba/connection/key.json) -lt 100 ] ; \
     then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
