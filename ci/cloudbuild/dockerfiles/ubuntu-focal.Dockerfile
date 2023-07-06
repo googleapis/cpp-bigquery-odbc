@@ -57,9 +57,6 @@ RUN apt-get update && \
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
 RUN pip3 install setuptools wheel
 
-# The Cloud Pub/Sub emulator needs Java :shrug:
-RUN apt update && (apt install -y openjdk-11-jre || apt install -y openjdk-9-jre)
-
 # Install the Cloud SDK and some of the emulators. We use the emulators to run
 # integration tests for the client libraries.
 COPY . /var/tmp/ci

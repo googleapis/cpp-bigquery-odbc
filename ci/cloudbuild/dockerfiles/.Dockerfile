@@ -17,7 +17,7 @@ ARG NCPU=4
 ARG ARCH=amd64
 
 # Fedora includes packages for gRPC, libcurl, and OpenSSL that are recent enough
-# for `cpp-bigquery-odbc`. Install these packages and additional development
+# for `google-cloud-cpp`. Install these packages and additional development
 # tools to compile the dependencies:
 RUN dnf makecache && \
     dnf install -y abi-compliance-checker autoconf automake \
@@ -36,6 +36,12 @@ RUN pip3 install setuptools wheel requests
 RUN dnf makecache && dnf install -y "dnf-command(debuginfo-install)"
 RUN dnf makecache && dnf debuginfo-install -y libstdc++
 
+# This is used by the docfx tool.
+RUN dnf makecache && dnf install -y pugixml-devel
+
+# This is used in the `publish-docs` build
+RUN dnf makecache && dnf install -y libxslt
+
 # Sets root's password to the empty string to enable users to get a root shell
 # inside the container with `su -` and no password. Sudo would not work because
 # we run these containers as the invoking user's uid, which does not exist in
@@ -47,7 +53,7 @@ RUN echo 'root:' | chpasswd
 # triggered by the Abseil `.pc` files, which we use (indirectly) when testing
 # our own `.pc` files.  We install the more traditional `pkg-config` binary.
 # For more details see
-#     https://github.com/googleapis/cpp-bigquery-odbc/issues/7052
+#     https://github.com/googleapis/google-cloud-cpp/issues/7052
 WORKDIR /var/tmp/build/pkg-config-cpp
 RUN curl -fsSL https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
@@ -239,106 +245,3 @@ RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/relea
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.
 RUN ldconfig /usr/local/lib*
-
-
-
-
-
-
-#Following steps install iODBC using the simba connector
-RUN echo '****iODBC installation START****'
-
-ARG gcs_odbc_bucket
-ENV GCS_BUCKET=${gcs_odbc_bucket}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-
-## BEGIN Installs pre-requisits for the Simba ODBC Driver.
-
-## glibc 2.17 or later
-#RUN echo 'Installing glibc...'
-#RUN dnf install -y libc6
-#RUN echo 'Verifying glibc version...'
-#RUN dpkg -l libc6
-#RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
-#    then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
-
-# iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-#RUN dnf install -y iodbc
-#RUN yum install iodbc
-RUN dnf install -y unixODBC unixODBC-devel
-RUN echo 'Verifying iodbc is installed...'
-#RUN dpkg -l iodbc
-#RUN echo 'Verifying iODBC Driver Manager libraries are installed...'
-#RUN if [ $(dpkg --search libiodbc*.so | grep -c libiodbc.so) -eq 0 ] ; \
-#    then echo 'iodbc installation failed: exiting...' ; exit 1 ; fi
-
-# Configure iODBC Driver Manager
-RUN echo "Creating Symlinks For iODBC Driver Manager..."
-RUN mkdir -p /usr/local/lib/odbc
-RUN ln -s /usr/lib/libiodbc.so.2 /usr/local/lib/odbc/libiodbc.so.2
-RUN ln -s /usr/lib/libiodbcinst.so.2 /usr/local/lib/odbc/libiodbcinst.so.2
-RUN ln -s /usr/lib/libiodbcadm.so.2 /usr/local/lib/odbc/libiodbcadm.so.2
-RUN ln -s /usr/lib/libiodbc.so.2 /usr/local/lib/odbc/libodbc.so
-RUN ln -s /usr/lib/libiodbcinst.so.2 /usr/local/lib/odbc/libodbcinst.so
-RUN echo "Verifying Symlinks For iODBC Driver Manager..."
-RUN if [ $(ls -l /usr/local/lib/odbc | grep -c "libodbc.*.so ->") -eq 0 ] ; \
-    then echo 'iOdbc symlink creation failed for libodbc: exiting...' ; \
-    exit 1 ; fi
-RUN if [ $(ls -l /usr/local/lib/odbc | grep -c "libiodbc.*.so.2 ->") -eq 0 ] ; \
-    then echo 'iOdbc symlink creation failed for libiodbc: exiting...' ; \
-    exit 1 ; fi
-
-# Install GCloud SDK - Needed for downloading Simba deliverables.
-RUN echo "Installing gcloud sdk..."
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | \
-    tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-    tee /usr/share/keyrings/cloud.google.gpg && \
-    dnf install -y --force-yes google-cloud-sdk
-
-# Install unzip - Needed for unzipping Simba deliverables.
-RUN echo "Installing unzip..."
-RUN dnf install -y unzip
-RUN echo "Verifying unzip is installed..."
-RUN if [ $(unzip --help | grep -c Usage:) -eq 0 ] ; \
-    then echo 'Unzip installation failed: exiting...' ; exit 1 ; fi
-
-# Check gcloud is installed.
-RUN echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-RUN if [ $(gsutil ls gs://${GCS_BUCKET}/simba-odbc | grep -c simba.zip) -eq 0 ] ; \
-    then echo 'Simba deliverables not found for download: exiting...' ; exit 1 ; fi
-
-# Configure connection credentials for the driver.
-RUN echo 'Configuring Connection Credentials...'
-RUN mkdir -p /opt/simba/connection
-WORKDIR /opt/simba
-RUN echo ${ODBC_CONN_KEYS} | tee /opt/simba/connection/key.json > /dev/null
-RUN echo 'Verifying Connection Keys File Size...'
-RUN if [ $(stat -c%s /opt/simba/connection/key.json) -lt 100 ] ; \
-    then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
-
-# Install Simba ODBC Driver
-RUN echo 'Installing Simba ODBC Driver...'
-RUN gsutil -m cp gs://${GCS_BUCKET}/simba-odbc/simba.zip .
-RUN unzip -qq simba.zip
-RUN echo 'Verifying Simba Install Directory...'
-RUN if [ $(ls /opt/simba/ | grep -c googlebigqueryodbc) -eq 0 ] ; \
-    then echo 'Simba driver not installed: exiting...' ; exit 1 ; fi
-
-# Configure environment variables
-RUN echo 'Configuring Environment Variables For Simba Driver...'
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/odbc
-ENV LD_PRELOAD=/usr/local/lib/odbc/libodbc.so:/usr/local/lib/odbc/libodbcinst.so
-ENV ODBCINI=/opt/simba/googlebigqueryodbc/odbc.ini
-ENV ODBCINSTINI=/opt/simba/googlebigqueryodbc/odbcinst.ini
-ENV SIMBAGOOGLEBIGQUERYODBCINI=/opt/simba/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
-RUN echo 'Verifying Environment Variables...'
-RUN echo 'LD_LIBRARY_PATH='${LD_LIBRARY_PATH}
-RUN echo 'LD_PRELOAD='${LD_PRELOAD}
-RUN echo 'ODBCINI='${ODBCINI}
-RUN echo 'ODBCINSTINI='${ODBCINSTINI}
-RUN echo 'SIMBAGOOGLEBIGQUERYODBCINI='${SIMBAGOOGLEBIGQUERYODBCINI}
-
-RUN echo '****iODBC installation END****'

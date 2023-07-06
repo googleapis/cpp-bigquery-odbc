@@ -1,0 +1,14 @@
+filename: ci/cloudbuild/cloudbuild.yaml
+github:
+  name: cpp-bigquery-odbc
+  owner: googleapis
+  push:
+    branch: ^main$
+name: demo-rhel-8-ci
+substitutions:
+  _BUILD_NAME: demo-install
+  _DISTRO: demo-rhel-8
+  _TRIGGER_TYPE: ci
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+tags:
+- ci
