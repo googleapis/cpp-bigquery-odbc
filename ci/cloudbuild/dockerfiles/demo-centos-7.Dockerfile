@@ -27,9 +27,9 @@ RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.
 RUN yum install -y centos-release-scl yum-utils
 RUN yum-config-manager --enable rhel-server-rhscl-7-rpms
 RUN yum makecache && \
-    yum install -y automake ccache cmake3 curl-devel devtoolset-7 gcc gcc-c++ \
+    yum install -y automake ccache curl-devel devtoolset-7 gcc gcc-c++ \
         git libtool make openssl-devel patch re2-devel tar wget which zlib-devel
-RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake && ln -sf /usr/bin/ctest3 /usr/bin/ctest
+#RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake && ln -sf /usr/bin/ctest3 /usr/bin/ctest
 # ```
 
 ## [BEGIN IGNORED]
@@ -59,6 +59,16 @@ ENV LD_LIBRARY_PATH /opt/rh/devtoolset-7/root/usr/lib64:/opt/rh/devtoolset-7/roo
 # invocations take extremely long to complete. If you plan to use `pkg-config`
 # with any of the installed artifacts, you'll want to upgrade it to something
 # newer. If not, `yum install pkgconfig` should work instead.
+
+# ```bash
+# Build cmake from source to have a newer version.
+WORKDIR /var/tmp/build/cmake
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
+# ```
 
 # ```bash
 WORKDIR /var/tmp/build/pkg-config-cpp

@@ -22,8 +22,8 @@ ARG ARCH=amd64
 RUN dnf makecache && \
     dnf install -y autoconf automake \
         xz clang clang-analyzer clang-tools-extra \
-        cmake diffutils findutils gcc-c++ git \
-        libcurl-devel llvm make ninja-build \
+        diffutils findutils gcc-c++ git \
+        libtool libcurl-devel llvm make ninja-build \
         openssl-devel patch python3 \
         python3-pip tar unzip wget which zip zlib-devel
 
@@ -41,6 +41,16 @@ RUN dnf makecache && dnf debuginfo-install -y libstdc++
 # we run these containers as the invoking user's uid, which does not exist in
 # the container's /etc/passwd file.
 RUN echo 'root:' | chpasswd
+
+# Build cmake from source to have a newer version.
+# ```bash
+WORKDIR /var/tmp/build/cmake
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
+# ```
 
 # Fedora's version of `pkg-config` (https://github.com/pkgconf/pkgconf) is slow
 # when handling `.pc` files with lots of `Requires:` deps.  This problem is
@@ -166,8 +176,19 @@ RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
     ldconfig
 
+# #### c-ares
+
+# ```bash
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./buildconf && ./configure && make -j ${NCPU:-4} && \
+    make install && \
+    ldconfig
+# ```
+
 WORKDIR /var/tmp/build/grpc
-RUN dnf makecache && dnf install -y c-ares-devel
+#RUN dnf makecache && dnf install -y c-ares-devel
 RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \

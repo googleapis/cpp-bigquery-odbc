@@ -24,7 +24,7 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade -y automake ccache cmake curl \
+    zypper install --allow-downgrade -y automake ccache curl \
         gcc gcc-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch re2-devel tar wget which zlib zlib-devel-static
 # ```
@@ -38,6 +38,17 @@ RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
     tee /etc/ld.so.conf.d/usrlocal.conf
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
 ENV PATH=/usr/local/bin:${PATH}
+# ```
+
+
+# Build cmake from source to have a newer version.
+# ```bash
+WORKDIR /var/tmp/build/cmake
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
 # ```
 
 # #### Abseil

@@ -22,9 +22,19 @@ ARG NCPU=4
 # ```bash
 RUN apt-get update && \
     apt-get --no-install-recommends install -y apt-transport-https apt-utils \
-        automake build-essential ca-certificates ccache cmake curl git \
+        automake build-essential ca-certificates ccache curl git \
         gcc g++ libc-ares-dev libc-ares2 libcurl4-openssl-dev \
         libssl-dev m4 make ninja-build pkg-config tar wget zlib1g-dev
+# ```
+
+# Build cmake from source to have a newer version.
+# ```bash
+WORKDIR /var/tmp/build/cmake
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
 # ```
 
 # #### Abseil

@@ -22,19 +22,12 @@ ARG ARCH=amd64
 RUN yum makecache && \
     yum install -y autoconf automake \
         xz clang clang-analyzer clang-tools-extra \
-        cmake diffutils findutils gcc-c++ git \
+        diffutils findutils gcc-c++ git \
         libcurl-devel llvm make ninja-build \
-        openssl-devel patch python3 \
-        python3-pip tar unzip wget which zip zlib-devel
+        openssl-devel patch \
+        tar unzip wget which zip zlib-devel
 
-# Install the Python modules needed to run the storage emulator
-RUN yum makecache && yum install -y python3
-RUN pip3 install --upgrade pip
-RUN pip3 install setuptools wheel requests
-
-# This is used to improve the output in check-api builds
-RUN yum makecache && yum install -y "yum-command(debuginfo-install)"
-RUN yum makecache && yum debuginfo-install -y libstdc++
+RUN yum makecache && yum install -y libstdc++
 
 # Sets root's password to the empty string to enable users to get a root shell
 # inside the container with `su -` and no password. Sudo would not work because

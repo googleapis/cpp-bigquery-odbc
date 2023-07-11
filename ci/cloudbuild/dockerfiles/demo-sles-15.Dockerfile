@@ -12,20 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:bullseye
+FROM registry.suse.com/bci/bci-base:latest
 ARG NCPU=4
 
 ## [BEGIN packaging.md]
 
-# Install the minimal development tools, libcurl, and OpenSSL:
+# Install the minimal development tools, libcurl and OpenSSL. The gRPC Makefile
+# uses `which` to determine whether the compiler is available. Install this
+# command for the extremely rare case where it may be missing from your
+# workstation or build server.
 
 # ```bash
-RUN apt-get update && \
-    apt-get --no-install-recommends install -y apt-transport-https apt-utils \
-        automake build-essential ca-certificates ccache curl git \
-        gcc g++ libc-ares-dev libc-ares2 libcurl4-openssl-dev \
-        libssl-dev m4 make ninja-build pkg-config tar wget zlib1g-dev
+RUN zypper refresh && \
+    zypper install --allow-downgrade -y automake awk ccache curl \
+        gcc gcc-c++ git gzip libcurl-devel libopenssl-devel \
+        libtool make patch tar wget which zlib zlib-devel-static
 # ```
+
+# The following steps will install libraries and tools in `/usr/local`. openSUSE
+# does not search for shared libraries in these directories by default, there
+# are multiple ways to solve this problem, the following steps are one solution:
+
+# ```bash
+RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
+    tee /etc/ld.so.conf.d/usrlocal.conf
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
+ENV PATH=/usr/local/bin:${PATH}
+# ```
+
 
 # Build cmake from source to have a newer version.
 # ```bash
@@ -39,8 +53,7 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-
 
 # #### Abseil
 
-# Debian 11 ships with Abseil==20200923.3.  Unfortunately, the current gRPC
-# version needs Abseil >= 20210324.
+# We need a recent version of Abseil.
 
 # :warning: By default, Abseil's ABI changes depending on whether it is used
 # with C++ >= 17 enabled or not. Installing Abseil with the default
@@ -62,6 +75,77 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230125.3.tar.gz | 
       -DABSL_BUILD_TESTING=OFF \
       -DBUILD_SHARED_LIBS=yes \
       -S . -B cmake-out && \
+    cmake --build cmake-out -- -j ${NCPU:-4} && \
+    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
+    ldconfig
+# ```
+
+# #### Protobuf
+
+# We need to install a version of Protobuf that is recent enough to support the
+# Google Cloud Platform proto files:
+
+# ```bash
+WORKDIR /var/tmp/build/protobuf
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=yes \
+        -Dprotobuf_BUILD_TESTS=OFF \
+        -Dprotobuf_ABSL_PROVIDER=package \
+        -S . -B cmake-out && \
+    cmake --build cmake-out -- -j ${NCPU:-4} && \
+    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
+    ldconfig
+# ```
+
+# #### c-ares
+
+# Recent versions of gRPC require c-ares >= 1.11, while openSUSE/Leap
+# distributes c-ares-1.9. Manually install a newer version:
+
+# ```bash
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./buildconf && ./configure && make -j ${NCPU:-4} && \
+    make install && \
+    ldconfig
+# ```
+
+WORKDIR /var/tmp/build/re2
+RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DRE2_BUILD_TESTING=OFF \
+        -S . -B cmake-out && \
+    cmake --build cmake-out -- -j ${NCPU:-4} && \
+    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
+    ldconfig
+
+# #### gRPC
+
+# We also need a version of gRPC that is recent enough to support the Google
+# Cloud Platform proto files. We manually install it using:
+
+# ```bash
+WORKDIR /var/tmp/build/grpc
+RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=yes \
+        -DgRPC_INSTALL=ON \
+        -DgRPC_BUILD_TESTS=OFF \
+        -DgRPC_ABSL_PROVIDER=package \
+        -DgRPC_CARES_PROVIDER=package \
+        -DgRPC_PROTOBUF_PROVIDER=package \
+        -DgRPC_RE2_PROVIDER=package \
+        -DgRPC_SSL_PROVIDER=package \
+        -DgRPC_ZLIB_PROVIDER=package \
+        -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
     ldconfig
@@ -105,70 +189,6 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
       -DBUILD_TESTING=OFF \
       -DJSON_BuildTests=OFF \
       -S . -B cmake-out && \
-    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
-    ldconfig
-# ```
-
-# #### Protobuf
-
-# Unless you are only using the Google Cloud Storage library the project
-# needs Protobuf and gRPC. Unfortunately the version of Protobuf that ships
-# with Debian 11 is not recent enough to support the protos published by
-# Google Cloud. We need to build from source:
-
-# ```bash
-WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -Dprotobuf_ABSL_PROVIDER=package \
-        -S . -B cmake-out && \
-    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
-    ldconfig
-# ```
-
-# #### RE2
-
-# The version of RE2 included with this distro hard-codes C++11 in its
-# pkg-config file. You can skip this build and use the system's package if
-# you are not planning to use pkg-config.
-
-# ```bash
-WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DRE2_BUILD_TESTING=OFF \
-        -H. -Bcmake-out && \
-    cmake --build cmake-out -- -j ${NCPU:-4} && \
-    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
-    ldconfig
-# ```
-
-# #### gRPC
-
-# Finally, we build gRPC from source:
-
-# ```bash
-WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -DgRPC_INSTALL=ON \
-        -DgRPC_BUILD_TESTS=OFF \
-        -DgRPC_ABSL_PROVIDER=package \
-        -DgRPC_CARES_PROVIDER=package \
-        -DgRPC_PROTOBUF_PROVIDER=package \
-        -DgRPC_RE2_PROVIDER=package \
-        -DgRPC_SSL_PROVIDER=package \
-        -DgRPC_ZLIB_PROVIDER=package \
-        -S . -B cmake-out && \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
     ldconfig
 # ```
