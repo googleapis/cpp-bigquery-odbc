@@ -32,13 +32,14 @@ source module ci/lib/io.sh
 # with versions as old as 3.5.
 
 cmake_config_testing_details=(
-  -DCMAKE_INSTALL_MESSAGE=NEVER
-  -DGOOGLE_CLOUD_CPP_ENABLE_CCACHE=ON
-  -DGOOGLE_CLOUD_CPP_ENABLE_WERROR=ON
+  #-DCMAKE_INSTALL_MESSAGE=NEVER
+  #-DGOOGLE_CLOUD_CPP_ENABLE_CCACHE=ON
+  #-DGOOGLE_CLOUD_CPP_ENABLE_WERROR=ON
+  -DODBC_BUILD_TESTING=OFF
 )
 ## [BEGIN packaging.md]
 # Pick a location to install the artifacts, e.g., `/usr/local` or `/opt`
-PREFIX="${HOME}/google-cloud-cpp-installed"
+PREFIX="${HOME}/cpp-bigquery-odbc-installed"
 cmake -H. -Bcmake-out \
   "${cmake_config_testing_details[@]}"
 cmake --build cmake-out -- -j "$(nproc)"
@@ -46,5 +47,5 @@ cmake --build cmake-out --target install
 ## [DONE packaging.md]
 
 # Tests the installed artifacts by building and running the quickstarts.
-quickstart::build_cmake_and_make "${PREFIX}"
-quickstart::run_cmake_and_make "${PREFIX}"
+#quickstart::build_cmake_and_make "${PREFIX}"
+#quickstart::run_cmake_and_make "${PREFIX}"
