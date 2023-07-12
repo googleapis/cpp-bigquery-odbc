@@ -50,8 +50,6 @@ fi
 function cmake::common_args() {
   local args
   args=(
-    -DGOOGLE_CLOUD_CPP_ENABLE_CCACHE=ON
-    -DGOOGLE_CLOUD_CPP_ENABLE_WERROR=ON
     -GNinja
     -S .
     -B cmake-out
