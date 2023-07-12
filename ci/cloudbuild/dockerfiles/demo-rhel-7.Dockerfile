@@ -35,6 +35,16 @@ RUN yum makecache && yum install -y libstdc++
 # the container's /etc/passwd file.
 RUN echo 'root:' | chpasswd
 
+# Build cmake from source to have a newer version.
+# ```bash
+WORKDIR /var/tmp/build/cmake
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
+# ```
+
 # Fedora's version of `pkg-config` (https://github.com/pkgconf/pkgconf) is slow
 # when handling `.pc` files with lots of `Requires:` deps.  This problem is
 # triggered by the Abseil `.pc` files, which we use (indirectly) when testing
