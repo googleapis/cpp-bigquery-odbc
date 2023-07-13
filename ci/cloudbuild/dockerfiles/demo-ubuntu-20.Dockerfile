@@ -50,7 +50,7 @@ RUN apt-get update && \
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
 RUN pip3 install setuptools wheel requests
 
-# Build cmake from source to have a newer version.
+# Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
     tar -xzf - --strip-components=1 && \

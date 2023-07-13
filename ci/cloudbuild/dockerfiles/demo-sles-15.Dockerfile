@@ -41,7 +41,7 @@ ENV PATH=/usr/local/bin:${PATH}
 # ```
 
 
-# Build cmake from source to have a newer version.
+# Build cmake from source to have the same version across all builds.
 # ```bash
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \

@@ -61,7 +61,7 @@ ENV LD_LIBRARY_PATH /opt/rh/devtoolset-7/root/usr/lib64:/opt/rh/devtoolset-7/roo
 # newer. If not, `yum install pkgconfig` should work instead.
 
 # ```bash
-# Build cmake from source to have a newer version.
+# Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
     tar -xzf - --strip-components=1 && \
