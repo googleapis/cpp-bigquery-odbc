@@ -13,13 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This build script serves two main purposes:
-#
-# 1. It demonstrates to users how to install `google-cloud-cpp`. We will
-#    extract part of this script into user-facing markdown documentation.
-# 2. It verifies that the installed artifacts work by compiling and running the
-#    quickstart programs against the installed artifacts.
 
 set -euo pipefail
 
