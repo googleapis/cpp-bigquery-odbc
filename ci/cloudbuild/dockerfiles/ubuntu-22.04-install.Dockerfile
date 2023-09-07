@@ -34,9 +34,12 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
+        libc++-dev \
+        libc++abi-dev \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
+        llvm \
         lsb-release \
         make \
         ninja-build \
@@ -218,6 +221,9 @@ RUN /var/tmp/ci/install-cloud-sdk.sh
 ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
+RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
+    chmod +x /usr/bin/bazelisk && \
+    ln -s /usr/bin/bazelisk /usr/bin/bazel
 
 #>>>>>>>>>>>>>>>>> unixODBC setup >>>>>>>>>>>>>>>
 

@@ -12,27 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-licenses(["notice"])  # Apache v2
-
-package(default_visibility = ["//visibility:private"])
-
-cc_library(
-    name = "odbc_client_interface",
-    srcs = [],
-    hdrs = [],
-    include_prefix = "odbc_client_interface",
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest"
-    ],
-    visibility = ["//:__pkg__"],
-)
-
-cc_test(
-    name = "odbc_client_interface_test",
-    srcs = ["tests/dummy_test.cc"],
-    tags = ["integration-test"],
-    deps = [
-        "//:odbc_client_interface"
-    ]
-)
+# gRPC may leak threads created in this function. This bug is marked as fixed,
+# but the problem is basically the same:
+#   https://github.com/grpc/grpc/issues/22479
+# Inside Google, b/256167587 has more details.
+thread:ThreadInternalsPosix

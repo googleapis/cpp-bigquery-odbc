@@ -1,0 +1,14 @@
+filename: ci/cloudbuild/cloudbuild.yaml
+github:
+  name: cpp-bigquery-odbc
+  owner: googleapis
+  push:
+    branch: ^main$
+name: msan-ci
+substitutions:
+  _BUILD_NAME: msan
+  _DISTRO: ubuntu-22.04-install
+  _TRIGGER_TYPE: ci
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+tags:
+- ci

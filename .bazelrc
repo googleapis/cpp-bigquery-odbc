@@ -30,3 +30,89 @@ build:macos --host_cxxopt=-std=c++17
 # Do not create the convenience links. They are inconvenient when the build
 # runs inside a docker image.
 build --experimental_convenience_symlinks=ignore
+
+# It is frustrating when long-running builds/tests fail, but it is even more
+# frustrating when they fail and don't give any output. So, remove the limit.
+build --experimental_ui_max_stdouterr_bytes=-1
+
+# Inject ${GTEST_SHUFFLE} and ${GTEST_RANDOM_SEED} into the test environment
+# if they are set in the enclosing environment. This allows for running tests
+# in a random order to help expose undesirable interdependencies.
+test --test_env=GTEST_SHUFFLE --test_env=GTEST_RANDOM_SEED
+
+# Clang Sanitizers, use with (for example):
+#
+# --client_env=CXX=clang++ --client_env=CC=clang --config asan
+#
+
+# --config asan: Address Sanitizer
+build:asan --strip=never
+build:asan --copt=-Og
+build:asan --copt=-g
+build:asan --copt=-fsanitize=address
+build:asan --copt=-fno-omit-frame-pointer
+build:asan --linkopt=-fsanitize=address
+build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
+build:asan --action_env=LSAN_OPTIONS=report_objects=1
+
+# --config tsan: Thread Sanitizer
+build:tsan --strip=never
+build:tsan --copt=-Og
+build:tsan --copt=-g
+build:tsan --copt=-fsanitize=thread
+build:tsan --copt=-fno-omit-frame-pointer
+build:tsan --linkopt=-fsanitize=thread
+# report_atomic_races=0: https://github.com/google/sanitizers/issues/953
+build:tsan --action_env=TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:report_atomic_races=0
+
+# --config ubsan: Undefined Behavior Sanitizer
+build:ubsan --strip=never
+build:ubsan --copt=-Og
+build:ubsan --copt=-g
+build:ubsan --copt=-fsanitize=undefined
+build:ubsan --copt=-fno-omit-frame-pointer
+build:ubsan --linkopt=-fsanitize=undefined
+build:ubsan --linkopt=-fsanitize-link-c++-runtime
+build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+build:ubsan --cxxopt=-stdlib=libc++
+build:ubsan --linkopt=-stdlib=libc++
+build:ubsan --linkopt=-lc++
+build:ubsan --linkopt=-lc++abi
+
+# --config xsan: Runs misc. sanitizers that aren't covered elsewhere.
+build:xsan --strip=never
+build:xsan --copt=-Og
+build:xsan --copt=-g
+build:xsan --copt=-fsanitize=float-divide-by-zero
+build:xsan --copt=-fsanitize=nullability
+build:xsan --copt=-fno-omit-frame-pointer
+build:xsan --cxxopt=-stdlib=libc++
+build:xsan --linkopt=-stdlib=libc++
+build:xsan --linkopt=-lc++
+build:xsan --linkopt=-lc++abi
+build:xsan --linkopt=-fsanitize-link-c++-runtime
+build:xsan --linkopt=-fsanitize=float-divide-by-zero
+build:xsan --linkopt=-fsanitize=nullability
+build:xsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+
+# --config msan: Memory Sanitizer
+build:msan --strip=never
+build:msan --copt=-Og
+build:msan --copt=-g
+build:msan --copt=-fsanitize=memory
+build:msan --copt=-fno-omit-frame-pointer
+build:msan --copt=-fsanitize-memory-track-origins
+build:msan --copt=-fsanitize-memory-use-after-dtor
+build:msan --linkopt=-fsanitize=memory
+build:msan --action_env=LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:/usr/lib64:/usr/lib:/lib64:/lib
+build:msan --action_env=MSAN_OPTIONS=poison_in_dtor=1
+build:msan --cxxopt=-stdlib=libc++
+build:msan --linkopt=-stdlib=libc++
+build:msan --linkopt=-lc++
+build:msan --linkopt=-lc++abi
+
+# --config libcxx: Compile and link using libc++.
+build:libcxx --cxxopt=-stdlib=libc++
+build:libcxx --linkopt=-stdlib=libc++
+build:libcxx --linkopt=-lc++
+build:libcxx --linkopt=-lc++abi
