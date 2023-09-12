@@ -54,7 +54,7 @@ github:
 name: ${name}-ci
 substitutions:
   _BUILD_NAME: ${name}
-  _DISTRO: fedora
+  _DISTRO: demo-ubuntu-20
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
@@ -75,7 +75,7 @@ github:
 name: ${name}-pr
 substitutions:
   _BUILD_NAME: ${name}
-  _DISTRO: fedora
+  _DISTRO: demo-ubuntu-20
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
