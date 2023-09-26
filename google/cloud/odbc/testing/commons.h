@@ -15,7 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_COMMONS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_COMMONS_H
 
-#include <iodbcext.h>
+#include "iodbcext.h"
 #include <locale.h>
 #include <sql.h>
 #include <sqlext.h>

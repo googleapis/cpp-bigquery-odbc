@@ -215,11 +215,11 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/90ad988fa4
 
 # Install the Cloud SDK and some of the emulators. We use the emulators to run
 # integration tests for the client libraries.
-COPY . /var/tmp/ci
-WORKDIR /var/tmp/downloads
-RUN /var/tmp/ci/install-cloud-sdk.sh
-ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
-ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
+#COPY . /var/tmp/ci
+#WORKDIR /var/tmp/downloads
+#RUN /var/tmp/ci/install-cloud-sdk.sh
+#ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+#ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
     chmod +x /usr/bin/bazelisk && \
@@ -262,48 +262,49 @@ RUN if [ $(ls -l /usr/local/lib/ | grep -c "libodbc.*.so.2 ->") -eq 0 ] ; \
     then echo 'unixODBC symlink creation failed: exiting...' ; \
     exit 1 ; fi
 
-## END Installs pre-requisites for the Simba ODBC Driver.
-
-# Check gcloud is installed.
-RUN echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-RUN if [ $(gsutil ls gs://${GCS_BUCKET}/simba-odbc | grep -c simba.zip) -eq 0 ] ; \
-    then echo 'Simba deliverables not found for download: exiting...' ; exit 1 ; fi
-
-
-# Configure connection credentials for the driver.
-RUN echo 'Configuring Connection Credentials...'
-RUN mkdir -p /opt/simba/connection
-WORKDIR /opt/simba
-RUN gcloud secrets versions access latest --secret=simba-odbc-keys | tee /opt/simba/connection/key.json
-RUN echo 'Verifying Connection Keys File Size...'
-RUN if [ $(stat -c%s /opt/simba/connection/key.json) -lt 100 ] ; \
-    then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
-
-# Install Simba ODBC Driver
-RUN echo 'Installing Simba ODBC Driver...'
-RUN gsutil -m cp gs://${GCS_BUCKET}/simba-odbc/simba.zip .
-RUN unzip -qq simba.zip
-RUN echo 'Verifying Simba Install Directory...'
-RUN if [ $(ls /opt/simba/ | grep -c googlebigqueryodbc) -eq 0 ] ; \
-    then echo 'Simba driver not installed: exiting...' ; exit 1 ; fi
-
-# Configure environment variables
-RUN echo 'Configuring Environment Variables For Simba Driver...'
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/
-ENV LD_PRELOAD=/usr/local/lib/libodbc.so:/usr/local/lib/libodbcinst.so
-ENV ODBCINI=/opt/simba/googlebigqueryodbc/odbc.ini
-ENV ODBCINSTINI=/opt/simba/googlebigqueryodbc/odbcinst.ini
-ENV SIMBAGOOGLEBIGQUERYODBCINI=/opt/simba/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
-RUN echo 'Verifying Environment Variables...'
-RUN echo 'LD_LIBRARY_PATH='${LD_LIBRARY_PATH}
-RUN echo 'ODBCINI='${ODBCINI}
-RUN echo 'ODBCINSTINI='${ODBCINSTINI}
-RUN echo 'SIMBAGOOGLEBIGQUERYODBCINI='${SIMBAGOOGLEBIGQUERYODBCINI}
+### END Installs pre-requisites for the Simba ODBC Driver.
+#
+## Check gcloud is installed.
+#RUN echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
+#RUN if [ $(gsutil ls gs://${GCS_BUCKET}/simba-odbc | grep -c simba.zip) -eq 0 ] ; \
+#    then echo 'Simba deliverables not found for download: exiting...' ; exit 1 ; fi
+#
+#
+## Configure connection credentials for the driver.
+#RUN echo 'Configuring Connection Credentials...'
+#RUN mkdir -p /opt/simba/connection
+#WORKDIR /opt/simba
+#RUN gcloud secrets versions access latest --secret=simba-odbc-keys | tee /opt/simba/connection/key.json
+#RUN echo 'Verifying Connection Keys File Size...'
+#RUN if [ $(stat -c%s /opt/simba/connection/key.json) -lt 100 ] ; \
+#    then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
+#
+## Install Simba ODBC Driver
+#RUN echo 'Installing Simba ODBC Driver...'
+#RUN gsutil -m cp gs://${GCS_BUCKET}/simba-odbc/simba.zip .
+#RUN unzip -qq simba.zip
+#RUN echo 'Verifying Simba Install Directory...'
+#RUN if [ $(ls /opt/simba/ | grep -c googlebigqueryodbc) -eq 0 ] ; \
+#    then echo 'Simba driver not installed: exiting...' ; exit 1 ; fi
+#
+## Configure environment variables
+#RUN echo 'Configuring Environment Variables For Simba Driver...'
+#ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/
+#ENV LD_PRELOAD=/usr/local/lib/libodbc.so:/usr/local/lib/libodbcinst.so
+#ENV ODBCINI=/opt/simba/googlebigqueryodbc/odbc.ini
+#ENV ODBCINSTINI=/opt/simba/googlebigqueryodbc/odbcinst.ini
+#ENV SIMBAGOOGLEBIGQUERYODBCINI=/opt/simba/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
+#RUN echo 'Verifying Environment Variables...'
+#RUN echo 'LD_LIBRARY_PATH='${LD_LIBRARY_PATH}
+#RUN echo 'ODBCINI='${ODBCINI}
+#RUN echo 'ODBCINSTINI='${ODBCINSTINI}
+#RUN echo 'SIMBAGOOGLEBIGQUERYODBCINI='${SIMBAGOOGLEBIGQUERYODBCINI}
 
 # Download odbc headers
 WORKDIR /workspace
 RUN echo 'Cloning iODBC github repo...'
 RUN git clone https://github.com/openlink/iODBC.git
 ENV IODBC_INCLUDE_PATH=/workspace/iODBC/include
+RUN ls $IODBC_INCLUDE_PATH
 
 RUN echo '****unixODBC installation END****'
