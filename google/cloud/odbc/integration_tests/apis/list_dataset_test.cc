@@ -41,6 +41,7 @@ namespace cloud {
 namespace bigquery_v2_minimal_internal {
 
 void ExplicitADCs(std::vector<std::string> const& argv) {
+  std::cout << "Running: " << std::endl;
   using ::google::cloud::internal::GetEnv;
   if (argv.size() == 1 && argv[0] == "--help") {
     throw google::cloud::testing_util::Usage{
@@ -51,11 +52,15 @@ void ExplicitADCs(std::vector<std::string> const& argv) {
       google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
           google::cloud::MakeGoogleDefaultCredentials());
   auto dataset_client = DatasetClient(MakeDatasetConnection(options));
-  
+
+  std::cout << "Creating request: " << std::endl;
   ListDatasetsRequest request;
   std::string project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
   request.set_project_id(project_id);
+  std::cout << "Project ID: " << project_id << std::endl;
+  std::cout << "Before request: " << std::endl;;
   auto range = dataset_client.ListDatasets(request);
+  std::cout << "Response is achieved: " << std::endl;
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
   std::vector<std::string> actual_dataset_ids;
@@ -103,6 +108,7 @@ void WithServiceAccount(std::vector<std::string> const& argv) {
 }  // namespace google
 
 int main(int argc, char* argv[]) {  // NOLINT(bugprone-exception-escape)
+  std::cout << "START: " << std::endl;
   google::cloud::testing_util::Example example({
       {"explicit-adcs", google::cloud::bigquery_v2_minimal_internal::ExplicitADCs},
       {"with-service-account", google::cloud::bigquery_v2_minimal_internal::WithServiceAccount},
