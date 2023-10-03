@@ -1,0 +1,149 @@
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM ubuntu:22.04
+
+# ENV for unixODBC driver manager
+ENV GCS_BUCKET=bq-dev-tools-simba-drivers-testing
+RUN echo 'GCS_BUCKET='${GCS_BUCKET}
+ARG odbc_secret
+ENV ODBC_CONN_KEYS=${odbc_secret}
+RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
+RUN echo 'ODBC_SECRET='${ODBC_SECRET}
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get --no-install-recommends install -y \
+        automake \
+        build-essential \
+        clang \
+        cmake \
+        curl \
+        gawk \
+        git \
+        gcc \
+        g++ \
+        libc++-dev \
+        libc++abi-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libtool \
+        llvm \
+        lsb-release \
+        make \
+        ninja-build \
+        patch \
+        pkg-config \
+        tar \
+        unzip \
+        zip \
+        wget \
+        zlib1g-dev \
+        apt-utils \
+        ca-certificates \
+        apt-transport-https
+
+# Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
+# Use a different directory for each build, and remove the downloaded
+# files and any temporary artifacts after a successful build to keep the
+# image smaller (and with fewer layers)
+
+WORKDIR /var/tmp/build/abseil-cpp
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230125.3.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DABSL_BUILD_TESTING=OFF \
+      -DABSL_PROPAGATE_CXX_STD=ON \
+      -DBUILD_SHARED_LIBS=yes \
+      -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+WORKDIR /var/tmp/build/googletest
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DBUILD_SHARED_LIBS=yes \
+      -S . -B cmake-out -GNinja  && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+WORKDIR /var/tmp/build/nlohmann-json
+RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DBUILD_SHARED_LIBS=yes \
+      -DBUILD_TESTING=OFF \
+      -DJSON_BuildTests=OFF \
+      -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=yes \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+# Install ctcache to speed up our clang-tidy build
+WORKDIR /var/tmp/build
+RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
+    cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
+    cd /var/tmp && rm -fr build
+
+# Install sccache from https://github.com/mozilla/sccache
+WORKDIR /var/tmp/sccache
+RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    mkdir -p /usr/local/bin && \
+    mv sccache /usr/local/bin/sccache && \
+    chmod +x /usr/local/bin/sccache
+
+WORKDIR /var/tmp/google-cloud-cpp
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/90ad988fa439de20b79774b1ee737a1dcb15f9c8.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
+        -DBUILD_TESTING=OFF \
+        -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
+        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out -- -j $(nproc) && \
+    cmake --build cmake-out --target install
+
+# Install the Cloud SDK and some of the emulators. We use the emulators to run
+# integration tests for the client libraries.
+COPY . /var/tmp/ci
+WORKDIR /var/tmp/downloads
+RUN /var/tmp/ci/install-cloud-sdk.sh
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
+
+RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
+    chmod +x /usr/bin/bazelisk && \
+    ln -s /usr/bin/bazelisk /usr/bin/bazel
