@@ -58,7 +58,7 @@ void ExplicitADCs(std::vector<std::string> const& argv) {
   std::string project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
   request.set_project_id(project_id);
   std::cout << "Project ID: " << project_id << std::endl;
-  std::cout << "Before request: " << std::endl;;
+  std::cout << "Before request: " << std::endl;
   auto range = dataset_client.ListDatasets(request);
   std::cout << "Response is achieved: " << std::endl;
   auto begin = range.begin();

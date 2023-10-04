@@ -27,7 +27,7 @@ io::run cmake "${cmake_args[@]}" \
   -DINTEGRATION_TESTING=ON
 io::run cmake --build cmake-out
 
-io::run export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT="bigquery-devtools-team"
+io::run export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT="bigquery-devtools-drivers"
 
 #mapfile -t ctest_args < <(ctest::common_args)
 
