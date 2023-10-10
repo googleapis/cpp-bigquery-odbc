@@ -316,7 +316,7 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
     build_flags+=("--build-arg=ARCH=${ARCH_FLAG}")
   fi
   export DOCKER_BUILDKIT=1
-  io::run docker build "${build_flags[@]}" ci
+  io::run docker build --progress=plain "${build_flags[@]}" ci
   io::log_h2 "Starting docker container: ${image}"
   run_flags=(
     "--interactive"
@@ -364,5 +364,5 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
     printf "\n\n"
     cmd=("bash" "--norc") # some distros have rc files that override our PS1
   fi
-  io::run docker run "${run_flags[@]}" "${image}" "${cmd[@]}"
+  io::run docker run --log-level debug1 "${run_flags[@]}" "${image}" "${cmd[@]}"
 fi

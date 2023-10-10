@@ -14,14 +14,6 @@
 
 FROM ubuntu:22.04
 
-# ENV for unixODBC driver manager
-ENV GCS_BUCKET=bq-dev-tools-testing-drivers
-RUN echo 'GCS_BUCKET='${GCS_BUCKET}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
-RUN echo 'ODBC_SECRET='${ODBC_SECRET}
-
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
@@ -78,105 +70,11 @@ RUN cmake -GNinja -S runtimes -B build \
 RUN cmake --build build
 RUN cmake --install build
 
-# Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
-# Use a different directory for each build, and remove the downloaded
-# files and any temporary artifacts after a successful build to keep the
-# image smaller (and with fewer layers)
-
-# #### Abseil
-
-# We need a recent version of Abseil.
-
-# :warning: By default, Abseil's ABI changes depending on whether it is used
-# with C++ >= 17 enabled or not. Installing Abseil with the default
-# configuration is error-prone, unless you can guarantee that all the code using
-# Abseil (gRPC, cpp-bigquery-odbc, your own code, etc.) is compiled with the same
-# C++ version. We recommend that you switch the default configuration to pin
-# Abseil's ABI to the version used at compile time. In this case, the compiler
-# defaults to C++14. Therefore, we change `absl/base/options.h` to **always**
-# use `absl::any`, `absl::string_view`, and `absl::variant`. See
-# [abseil/abseil-cpp#696] for more information.
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230125.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-# #### Googletest
-
-# Googletest is a testing framework used by us.
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-# #### crc32c
-
-# Install google/crc32c, a library to efficiently compute CRC32C checksums.
-# crc32c is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build/crc32c
-RUN curl -fsSL https://github.com/google/crc32c/archive/1.1.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCRC32C_BUILD_TESTS=OFF \
-      -DCRC32C_BUILD_BENCHMARKS=OFF \
-      -DCRC32C_USE_GLOG=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-# #### nlohmann_json library
-
-# google-cloud-cpp depends on the nlohmann_json library. We use CMake to
-# install it as this installs the necessary CMake configuration files.
-# Note that this is a header-only library, and often installed manually.
-# This leaves your environment without support for CMake pkg-config.
-WORKDIR /var/tmp/build/nlohmann-json
-RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DBUILD_TESTING=OFF \
-      -DJSON_BuildTests=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-
-# #### Protobuf
-
-# We need to install a version of Protobuf that is recent enough to support the
-# Google Cloud Platform proto files:
-WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -Dprotobuf_ABSL_PROVIDER=package \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# Setup vcpkg and install dependencies of google-cloud-cpp using it in manifest mode
+COPY . /var/tmp/ci
+WORKDIR /var/tmp/
+RUN chmod +x ci/cloudbuild/builds/lib/vcpkg.sh
+RUN ci/cloudbuild/builds/lib/vcpkg.sh
 
 
 # Install sccache from https://github.com/mozilla/sccache
