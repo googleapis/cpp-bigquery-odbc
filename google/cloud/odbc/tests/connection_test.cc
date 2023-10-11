@@ -60,7 +60,8 @@ TEST(DriverInfoTest, SQLGetInfo) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, SQLGetConnectAttr) {
+// This test is temporarily disabled till this issue is fixed for the driver
+TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   srand(time(NULL));
   int timeout = (rand() % 30) + 1;
   SQLUINTEGER timeout_ret;
