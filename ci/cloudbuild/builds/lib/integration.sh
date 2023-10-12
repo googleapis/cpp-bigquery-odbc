@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This bash library has various helper functions for our integration tests.
+
+# Make our include guard clean against set -o nounset.
+test -n "${CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__=0
+if ((CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__++ != 0)); then
+  return 0
+fi # include guard
+
+export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
+export CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=ODBC_TEST_DATASET
+export GOOGLE_APPLICATION_CREDENTIALS=/usr/local/google/home/meilakh/key.json
+
+# Outputs a list of Bazel arguments that should be used when running
+# integration tests. These do not include the common `bazel::common_args`.
+#
+# Example usage:
+#
+#   mapfile -t args < <(bazel::common_args)
+#   mapfile -t integration_args < <(integration::bazel_args)
+#   bazel test "${args[@]}" "${integration_args[@]}"
+#
+function integration::bazel_args() {
+  declare -a args
+
+  # Integration tests are inherently flaky. Make up to three attempts to get the
+  # test passing.
+  args+=(--flaky_test_attempts=3)
+
+  args+=(
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}"
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}"
+  )
+
+  # Adds environment variables that need to reference a specific service
+  # account key file. The key files are copied from a GCS bucket and stored on
+  # the local machine. See the `rotate-keys.sh` script for details about how
+  # these keys are rotated.
+  readonly KEY_DIR="/dev/odbc-auth"
+  mkdir "${KEY_DIR}"
+  gcloud secrets versions access latest --secret=odbc-keys --out-file="${KEY_DIR}/user_service_account.json"
+  args+=(
+    "--test_env=GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/user_service_account.json"
+  )
+  printf "%s\n" "${args[@]}"
+}

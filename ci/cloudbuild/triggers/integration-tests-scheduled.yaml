@@ -6,7 +6,7 @@ sourceToBuild:
   uri: https://github.com/googleapis/cpp-bigquery-odbc
 substitutions:
   _BUILD_NAME: integration-tests
-  _DISTRO: demo-ubuntu-20
+  _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: scheduled
 tags:
 - scheduled

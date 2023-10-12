@@ -18,10 +18,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
 source module ci/cloudbuild/builds/lib/bazel.sh
+source module ci/cloudbuild/builds/lib/integration.sh
 source module ci/lib/io.sh
 
-io::run export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
-io::run export CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=ODBC_TEST_DATASET
-
 mapfile -t args < <(bazel::common_args)
-io::run bazel test //google/cloud/odbc/integration_tests:* --test_arg=explicit-adcs --test_env CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers --test_env CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=ODBC_TEST_DATASET
+mapfile -t integration_args < <(integration::bazel_args)
+io::run bazel test //google/cloud/odbc/integration_tests:* \
+  "${args[@]}" \
+  --test_arg=explicit-adcs \
+  "${integration_args[@]}"
