@@ -22,9 +22,8 @@ if ((CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__++ != 0)); then
   return 0
 fi # include guard
 
-export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
-export CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=ODBC_TEST_DATASET
-export GOOGLE_APPLICATION_CREDENTIALS=/usr/local/google/home/meilakh/key.json
+CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
+CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=ODBC_TEST_DATASET
 
 # Outputs a list of Bazel arguments that should be used when running
 # integration tests. These do not include the common `bazel::common_args`.
