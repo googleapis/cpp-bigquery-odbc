@@ -54,10 +54,11 @@ function integration::bazel_args() {
   # these keys are rotated.
   readonly KEY_DIR="/dev/odbc-auth"
   mkdir "${KEY_DIR}"
-  gcloud secrets versions access latest --secret=odbc-keys --out-file="${KEY_DIR}/user_service_account.json"
+  gcloud secrets versions access latest --secret=user-account-auth-keys --out-file="${KEY_DIR}/user_account_auth_keys.json"
+  gcloud secrets versions access latest --secret=client-id-auth-keys --out-file="${KEY_DIR}/client_id_auth_keys.json"
   args+=(
-    "--test_env=CPP_BIGQUERY_ODBC_TEST_DEFAULT_APPLICATION_KEY="
-    "--test_env=CPP_BIGQUERY_ODBC_TEST_USER_SERVICE_ACCOUNT_KEY=${KEY_DIR}/user_service_account.json"
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY=${KEY_DIR}/user_account_auth_keys.json"
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY=${KEY_DIR}/client_id_auth_keys.json"
   )
   printf "%s\n" "${args[@]}"
 }

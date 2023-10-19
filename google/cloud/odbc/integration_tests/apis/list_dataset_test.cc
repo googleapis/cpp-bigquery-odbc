@@ -47,8 +47,8 @@ namespace odbc_bigquery_v2_tests {
     }
   }
 
-  TEST(ListAllDatasets, UserServiceAuth) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_SERVICE_ACCOUNT_KEY").value_or("");
+  TEST(ListAllDatasets, UserAccountAuth) {
+    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
     ASSERT_NE(path_to_file_with_credentials, "");
     setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
     auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
@@ -56,8 +56,10 @@ namespace odbc_bigquery_v2_tests {
     listAllDatasets(options);
   }
 
-  TEST(ListAllDatasets, DefaultAuth) {
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", "", 1);
+  TEST(ListAllDatasets, ClientIdAuth) {
+    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
+    ASSERT_NE(path_to_file_with_credentials, "");
+    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
     auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
         google::cloud::MakeGoogleDefaultCredentials());
     listAllDatasets(options);
