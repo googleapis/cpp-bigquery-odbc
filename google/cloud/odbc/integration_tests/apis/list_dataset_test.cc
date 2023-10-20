@@ -56,7 +56,7 @@ namespace odbc_bigquery_v2_tests {
     listAllDatasets(options);
   }
 
-  TEST(ListAllDatasets, ClientIdAuth) {
+  TEST(ListAllDatasets, ServiceAccountAuthWithClientId) {
     std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
     ASSERT_NE(path_to_file_with_credentials, "");
     setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
