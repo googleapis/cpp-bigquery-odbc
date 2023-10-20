@@ -24,6 +24,7 @@ fi # include guard
 
 CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
 CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=INTEGRATION_TESTS
+CPP_BIGQUERY_ODBC_TEST_TABLE_NAME=Template
 
 # Outputs a list of Bazel arguments that should be used when running
 # integration tests. These do not include the common `bazel::common_args`.
@@ -44,6 +45,7 @@ function integration::bazel_args() {
   args+=(
     "--test_env=CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}"
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_TABLE_NAME=${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}"
     # It's required for running 'blaze test' in docker and locally for default application auth
     "--test_env=HOME"
   )
