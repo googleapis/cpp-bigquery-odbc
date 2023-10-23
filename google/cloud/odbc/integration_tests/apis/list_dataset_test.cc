@@ -64,6 +64,33 @@ namespace odbc_bigquery_v2_tests {
         google::cloud::MakeGoogleDefaultCredentials());
     listAllDatasets(options);
   }
+
+    void listDatasetsByFilter(Options options) {
+      auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options)));
+      auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+      ASSERT_TRUE(project_id_optional.has_value());
+      std::string project_id = project_id_optional.value();
+      ListDatasetsRequest request;
+      request.set_project_id(project_id);
+      request.set_filter("labels.key_label:value_label"); // Such dataset was created on GCP
+
+      auto range = dataset_client.ListDatasets(request);
+
+      auto begin = range.begin();
+      ASSERT_NE(begin, range.end());
+      for (auto const& dataset : range) {
+        ASSERT_STATUS_OK(dataset);
+      }
+    }
+
+    TEST(ListDatasetsByFilter, UserAccountAuth) {
+      std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
+      ASSERT_NE(path_to_file_with_credentials, "");
+      setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+      auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+          google::cloud::MakeGoogleDefaultCredentials());
+      listDatasetsByFilter(options);
+    }
 } // google
 } // cloud
 } // odbc_bigquery_v2_tests
