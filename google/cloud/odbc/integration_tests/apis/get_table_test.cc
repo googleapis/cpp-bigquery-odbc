@@ -44,6 +44,7 @@ namespace odbc_bigquery_v2_tests {
     request.set_table_id(table_name_optional.value());
 
     auto table = table_client.GetTable(request);
+
     ASSERT_STATUS_OK(table);
   }
 

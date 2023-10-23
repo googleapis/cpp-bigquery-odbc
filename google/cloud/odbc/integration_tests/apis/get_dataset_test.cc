@@ -41,6 +41,7 @@ namespace odbc_bigquery_v2_tests {
       request.set_dataset_id(dataset_id_optional.value());
 
       auto dataset = dataset_client.GetDataset(request);
+
       ASSERT_STATUS_OK(dataset);
     }
 

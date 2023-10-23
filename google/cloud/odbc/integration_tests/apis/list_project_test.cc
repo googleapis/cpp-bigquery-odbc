@@ -32,8 +32,8 @@ namespace odbc_bigquery_v2_tests {
 
     void listAllProjects(Options options) {
       auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
-
       ListProjectsRequest request;
+
       auto range = project_client.ListProjects(request);
 
       auto begin = range.begin();
@@ -53,7 +53,6 @@ namespace odbc_bigquery_v2_tests {
           google::cloud::MakeGoogleDefaultCredentials());
       listAllProjects(options);
     }
-
 }
 }
 }
