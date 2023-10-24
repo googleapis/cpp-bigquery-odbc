@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include "google/cloud/options.h"
@@ -26,6 +26,7 @@ namespace cloud {
 namespace odbc_bigquery_v2_tests {
 
   using google::cloud::internal::GetEnv;
+  using ::testing::HasSubstr;
   using bigquery_v2_minimal_internal::TableClient;
   using bigquery_v2_minimal_internal::MakeTableConnection;
   using bigquery_v2_minimal_internal::GetTableRequest;
@@ -64,6 +65,29 @@ namespace odbc_bigquery_v2_tests {
     auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
         google::cloud::MakeGoogleDefaultCredentials());
     getTable(options);
+  }
+
+  TEST(GetTable, WrongTableName) {
+    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
+    ASSERT_NE(path_to_file_with_credentials, "");
+    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+        google::cloud::MakeGoogleDefaultCredentials());
+    auto table_client = TableClient(MakeTableConnection(std::move(options)));
+    auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+    auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+    ASSERT_TRUE(project_id_optional.has_value());
+    ASSERT_TRUE(dataset_id_optional.has_value());
+    GetTableRequest request;
+    request.set_project_id(project_id_optional.value());
+    request.set_dataset_id(dataset_id_optional.value());
+    request.set_table_id("Non_existing_table");
+
+    auto table = table_client.GetTable(request);
+
+    ASSERT_STATUS_NOT_OK(table);
+    EXPECT_THAT(table.status().message(), HasSubstr("Not found: Table"));
+    EXPECT_EQ(table.status().code(), StatusCode::kNotFound);
   }
 }
 }

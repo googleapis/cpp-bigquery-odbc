@@ -24,7 +24,7 @@ fi # include guard
 
 CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
 CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=INTEGRATION_TESTS
-CPP_BIGQUERY_ODBC_TEST_TABLE_NAME=Template
+CPP_BIGQUERY_ODBC_TEST_TABLE_NAME=Test_Table
 
 # Outputs a list of Bazel arguments that should be used when running
 # integration tests. These do not include the common `bazel::common_args`.
