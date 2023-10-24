@@ -78,9 +78,12 @@ namespace odbc_bigquery_v2_tests {
 
       auto begin = range.begin();
       ASSERT_NE(begin, range.end());
+      int count = 0;
       for (auto const& dataset : range) {
         ASSERT_STATUS_OK(dataset);
+        count++;
       }
+      ASSERT_EQ(count, 1);
     }
 
     TEST(ListDatasetsByFilter, UserAccountAuth) {
