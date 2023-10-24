@@ -56,9 +56,11 @@ function integration::bazel_args() {
   mkdir "${KEY_DIR}"
   gcloud secrets versions access latest --secret=user-account-auth-keys --out-file="${KEY_DIR}/user_account_auth_keys.json"
   gcloud secrets versions access latest --secret=client-id-auth-keys --out-file="${KEY_DIR}/client_id_auth_keys.json"
+  gcloud secrets versions access latest --secret=wrong-account-auth-keys --out-file="${KEY_DIR}/wrong_account_auth_keys.json"
   args+=(
     "--test_env=CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY=${KEY_DIR}/user_account_auth_keys.json"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY=${KEY_DIR}/client_id_auth_keys.json"
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY=${KEY_DIR}/wrong_account_auth_keys.json"
   )
   printf "%s\n" "${args[@]}"
 }

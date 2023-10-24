@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/options.h"
@@ -26,6 +26,7 @@ namespace cloud {
 namespace odbc_bigquery_v2_tests {
 
   using google::cloud::internal::GetEnv;
+  using ::testing::HasSubstr;
   using bigquery_v2_minimal_internal::ProjectClient;
   using bigquery_v2_minimal_internal::MakeProjectConnection;
   using bigquery_v2_minimal_internal::ListProjectsRequest;
@@ -52,6 +53,44 @@ namespace odbc_bigquery_v2_tests {
     auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
         google::cloud::MakeGoogleDefaultCredentials());
     listAllProjects(options);
+  }
+
+  TEST(ListAllProjects, WrongPathToAuthFile) {
+    setenv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-non-existing-file.json", 1);
+    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+        google::cloud::MakeGoogleDefaultCredentials());
+    auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
+    ListProjectsRequest request;
+
+    auto range = project_client.ListProjects(request);
+
+    auto begin = range.begin();
+    ASSERT_NE(begin, range.end());
+    for (auto const& project : range) {
+      ASSERT_STATUS_NOT_OK(project);
+      EXPECT_THAT(project.status().message(), HasSubstr("Cannot open credentials file"));
+      EXPECT_EQ(project.status().code(), StatusCode::kUnknown);
+    }
+  }
+
+  TEST(ListAllProjects, WrongAuthntication) {
+    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY").value_or("");
+    ASSERT_NE(path_to_file_with_credentials, "");
+    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+        google::cloud::MakeGoogleDefaultCredentials());
+    auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
+    ListProjectsRequest request;
+
+    auto range = project_client.ListProjects(request);
+
+    auto begin = range.begin();
+    ASSERT_NE(begin, range.end());
+    for (auto const& project : range) {
+      ASSERT_STATUS_NOT_OK(project);
+      EXPECT_THAT(project.status().message(), HasSubstr("Bad Request"));
+      EXPECT_EQ(project.status().code(), StatusCode::kInvalidArgument);
+    }
   }
 }
 }

@@ -22,7 +22,10 @@ namespace cloud {
 namespace odbc_testing_util_internal {
 
 #define ASSERT_STATUS_OK(expression) \
-  ASSERT_TRUE(expression.ok())
+  ASSERT_TRUE(expression.ok()) << "Error message: " << expression.status().message() << "\n"
+
+#define ASSERT_STATUS_NOT_OK(expression) \
+  ASSERT_FALSE(expression.ok())
 
 }  // namespace odbc_testing_util_internal
 }  // namespace cloud
