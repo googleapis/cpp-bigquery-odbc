@@ -72,7 +72,7 @@ namespace odbc_bigquery_v2_tests {
       std::string project_id = project_id_optional.value();
       ListDatasetsRequest request;
       request.set_project_id(project_id);
-      request.set_filter("labels.key_label:value_label"); // Such dataset was created on GCP
+      request.set_filter("labels.dataset_label_to_filter:dataset_label_value_to_filter"); // Such dataset was created on GCP
 
       auto range = dataset_client.ListDatasets(request);
 

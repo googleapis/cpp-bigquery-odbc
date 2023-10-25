@@ -26,6 +26,20 @@ CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=bigquery-devtools-drivers
 CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=INTEGRATION_TESTS
 CPP_BIGQUERY_ODBC_TEST_TABLE_NAME=Test_Table
 
+# Creating some datasets and tables for client library integration tests. It's used only for 'reading' operations.
+# This way tests still run independently and fast as we don't need to create/drop tables for every test.
+
+# Create a dataset
+bq query --use_legacy_sql=false \
+"CREATE SCHEMA IF NOT EXISTS \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}"
+bq query --use_legacy_sql=false \
+"ALTER SCHEMA \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}
+ SET OPTIONS(labels=[('dataset_label_to_filter', 'dataset_label_value_to_filter')])"
+# Create a table
+bq query --use_legacy_sql=false \
+"CREATE TABLE IF NOT EXISTS \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}.${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}
+ (id INT64, name STRING, age INT64)"
+
 # Outputs a list of Bazel arguments that should be used when running
 # integration tests. These do not include the common `bazel::common_args`.
 #
