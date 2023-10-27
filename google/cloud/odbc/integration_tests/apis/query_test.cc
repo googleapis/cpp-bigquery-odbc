@@ -440,7 +440,8 @@ TEST(Query, NoAccessAccountAuth) {
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Project")));
+  EXPECT_THAT(query_response, StatusIs(StatusCode::kPermissionDenied,
+    HasSubstr("User does not have bigquery.jobs.create permission in project")));
 }
 
 TEST(QueryResults, DifferentAccount) {
@@ -531,7 +532,8 @@ TEST(QueryResults, NoAccessAccountAuth) {
 
   auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Job")));
+  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
+    HasSubstr("Permission bigquery.jobs.get denied on job")));
 }
 }
 }
