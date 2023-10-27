@@ -67,7 +67,9 @@ namespace odbc_bigquery_v2_tests {
     auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
 
     auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+    auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
     ASSERT_TRUE(project_id_optional.has_value());
+    ASSERT_TRUE(dataset_id_optional.has_value());
     ListDatasetsRequest request;
     request.set_project_id(project_id_optional.value());
     request.set_filter("labels.dataset_label_to_filter:dataset_label_value_to_filter");
@@ -76,12 +78,12 @@ namespace odbc_bigquery_v2_tests {
 
     auto begin = range.begin();
     ASSERT_NE(begin, range.end());
-    int count = 0;
+    bool found = false;
     for (auto const& dataset : range) {
       ASSERT_STATUS_OK(dataset);
-      count++;
+      found = found || (dataset.value().dataset_reference.dataset_id == dataset_id_optional.value());
     }
-    ASSERT_EQ(count, 1);
+    ASSERT_EQ(found, true);
   }
 } // google
 } // cloud

@@ -25,6 +25,6 @@ cc_library(
     hdrs = cpp_bigquery_odbc_integration_testing_util_hdrs,
     visibility = ["//visibility:public"],
     deps = [
-        "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "@com_google_cloud_cpp//:common",
         "@com_google_googletest//:gtest",
 ])
