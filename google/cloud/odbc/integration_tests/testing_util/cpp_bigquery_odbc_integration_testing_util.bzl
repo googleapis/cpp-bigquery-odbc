@@ -17,9 +17,11 @@
 """Automatically generated source lists for cpp_bigquery_odbc_integration_testing_util - DO NOT EDIT."""
 
 cpp_bigquery_odbc_integration_testing_util_hdrs = [
+    "authentication.h",
     "status_matchers.h",
 ]
 
 cpp_bigquery_odbc_integration_testing_util_srcs = [
+    "authentication.cc",
     "status_matchers.cc",
 ]

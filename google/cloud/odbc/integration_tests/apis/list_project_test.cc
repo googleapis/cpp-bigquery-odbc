@@ -16,9 +16,9 @@
 
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/options.h"
-#include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
 
+#include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
 
 namespace google {
@@ -26,6 +26,9 @@ namespace cloud {
 namespace odbc_bigquery_v2_tests {
 
   using google::cloud::internal::GetEnv;
+  using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
+  using google::cloud::odbc_testing_util_internal::CreateWrongPathToAuthFileAuthentication;
+  using google::cloud::odbc_testing_util_internal::CreateWrongAuthentication;
   using ::testing::HasSubstr;
   using bigquery_v2_minimal_internal::ProjectClient;
   using bigquery_v2_minimal_internal::MakeProjectConnection;
@@ -47,18 +50,13 @@ namespace odbc_bigquery_v2_tests {
   // Using only this account here as it has access to only one project.
   // ServiceAccountAuthWithClientId account timing out after 15 minutes because of a big number of available projects.
   TEST(ListAllProjects, UserAccountAuth) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
-    ASSERT_NE(path_to_file_with_credentials, "");
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-    listAllProjects(options);
+    auto options = CreateUserAccountAuthentication();
+    ASSERT_STATUS_OK(options);
+    listAllProjects(options.value());
   }
 
   TEST(ListAllProjects, WrongPathToAuthFile) {
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-non-existing-file.json", 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
+    auto options = CreateWrongPathToAuthFileAuthentication();
     auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
     ListProjectsRequest request;
 
@@ -74,12 +72,9 @@ namespace odbc_bigquery_v2_tests {
   }
 
   TEST(ListAllProjects, WrongAuthntication) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY").value_or("");
-    ASSERT_NE(path_to_file_with_credentials, "");
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-    auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
+    auto options = CreateWrongAuthentication();
+    ASSERT_STATUS_OK(options);
+    auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
     ListProjectsRequest request;
 
     auto range = project_client.ListProjects(request);

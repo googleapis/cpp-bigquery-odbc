@@ -20,11 +20,14 @@ endif ()
 
 add_library(
     cpp_bigquery_odbc_integration_testing_util
+    authentication.h
+    authentication.cc
     status_matchers.h
     status_matchers.cc)
 
 target_link_libraries(
     cpp_bigquery_odbc_integration_testing_util
-    GTest::gtest_main)
+    google_cloud_cpp_bigquery_rest
+    GTest::gtest)
 
 create_bazel_config(cpp_bigquery_odbc_integration_testing_util YEAR 2023)

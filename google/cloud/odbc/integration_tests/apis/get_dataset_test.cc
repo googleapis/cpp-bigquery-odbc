@@ -16,9 +16,9 @@
 
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include "google/cloud/options.h"
-#include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
 
+#include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
 
 namespace google {
@@ -26,6 +26,8 @@ namespace cloud {
 namespace odbc_bigquery_v2_tests {
 
   using google::cloud::internal::GetEnv;
+  using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
+  using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
   using ::testing::HasSubstr;
   using bigquery_v2_minimal_internal::DatasetClient;
   using bigquery_v2_minimal_internal::MakeDatasetConnection;
@@ -47,30 +49,22 @@ namespace odbc_bigquery_v2_tests {
   }
 
   TEST(GetDataset, UserAccountAuth) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
-    ASSERT_NE(path_to_file_with_credentials, "");
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-    getDataset(options);
+    auto options = CreateUserAccountAuthentication();
+    ASSERT_STATUS_OK(options);
+    getDataset(options.value());
   }
 
   TEST(GetDataset, ServiceAccountAuthWithClientId) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
-    ASSERT_NE(path_to_file_with_credentials, "");
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-    getDataset(options);
+    auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+    ASSERT_STATUS_OK(options);
+    getDataset(options.value());
   }
 
   TEST(GetNonExistingDataset, UserAccountAuth) {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
-    ASSERT_NE(path_to_file_with_credentials, "");
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    auto options = google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-    auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options)));
+    auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+    ASSERT_STATUS_OK(options);
+    auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
+
     auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
     ASSERT_TRUE(project_id_optional.has_value());
     GetDatasetRequest request;
