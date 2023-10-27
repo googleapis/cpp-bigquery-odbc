@@ -81,7 +81,8 @@ namespace odbc_bigquery_v2_tests {
     bool found = false;
     for (auto const& dataset : range) {
       ASSERT_STATUS_OK(dataset);
-      found = found || (dataset.value().dataset_reference.dataset_id == dataset_id_optional.value());
+      found = dataset.value().dataset_reference.dataset_id == dataset_id_optional.value();
+      if (found) break;
     }
     ASSERT_EQ(found, true);
   }
