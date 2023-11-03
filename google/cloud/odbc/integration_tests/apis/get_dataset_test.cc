@@ -73,6 +73,7 @@ namespace odbc_bigquery_v2_tests {
 
     auto dataset = dataset_client.GetDataset(request);
 
+
     ASSERT_STATUS_NOT_OK(dataset);
     EXPECT_THAT(dataset.status().message(), HasSubstr("Not found"));
     EXPECT_EQ(dataset.status().code(), StatusCode::kNotFound);
