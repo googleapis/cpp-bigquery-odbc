@@ -23,43 +23,53 @@ namespace google {
 namespace cloud {
 namespace odbc_testing_util_internal {
 
-  using google::cloud::internal::GetEnv;
+using google::cloud::internal::GetEnv;
 
-  StatusOr<Options> CreateUserAccountAuthentication() {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
-    if (path_to_file_with_credentials.empty()) {
-      return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY environment variable is not set");
-    }
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
+StatusOr<Options> CreateUserAccountAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY environment variable is not set");
   }
+  setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      google::cloud::MakeGoogleDefaultCredentials());
+}
 
-  StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
-    if (path_to_file_with_credentials.empty()) {
-      return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY environment variable is not set");
-    }
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
+StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY environment variable is not set");
   }
+  setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      google::cloud::MakeGoogleDefaultCredentials());
+}
 
-  Options CreateWrongPathToAuthFileAuthentication() {
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-non-existing-file.json", 1);
-    return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
-  }
+Options CreateWrongPathToAuthFileAuthentication() {
+  setenv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-non-existing-file.json", 1);
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      google::cloud::MakeGoogleDefaultCredentials());
+}
 
-  StatusOr<Options> CreateWrongAuthentication() {
-    std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY").value_or("");
-    if (path_to_file_with_credentials.empty()) {
-      return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY environment variable is not set");
-    }
-    setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
-    return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-        google::cloud::MakeGoogleDefaultCredentials());
+StatusOr<Options> CreateWrongAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY environment variable is not set");
   }
+  setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      google::cloud::MakeGoogleDefaultCredentials());
+}
+
+StatusOr<Options> CreateNoAccessAccountAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_NO_ACCESS_ACCOUNT_AUTH_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_NO_ACCESS_ACCOUNT_AUTH_KEY environment variable is not set");
+  }
+  setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      google::cloud::MakeGoogleDefaultCredentials());
+}
 }
 }
 }

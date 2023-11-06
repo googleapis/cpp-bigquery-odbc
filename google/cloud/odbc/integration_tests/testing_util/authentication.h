@@ -37,6 +37,10 @@ Options CreateWrongPathToAuthFileAuthentication();
 // Creates WRONG Options object has not existing credentials.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateWrongAuthentication();
+
+// Creates WRONG Options object of the user with 0 projects to access.
+// Updates GOOGLE_APPLICATION_CREDENTIALS env var.
+StatusOr<Options> CreateNoAccessAccountAuthentication();
 }
 }
 }

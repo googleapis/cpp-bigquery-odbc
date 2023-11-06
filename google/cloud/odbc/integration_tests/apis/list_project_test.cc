@@ -30,6 +30,7 @@ using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateWrongPathToAuthFileAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateWrongAuthentication;
+using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::ProjectClient;
 using bigquery_v2_minimal_internal::MakeProjectConnection;
@@ -83,6 +84,18 @@ TEST(ListAllProjects, WrongAuthntication) {
   for (auto const& project : range) {
     EXPECT_THAT(project, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Bad Request")));
   }
+}
+
+TEST(ListAllProjects, NoAccessAccountAuth) {
+  auto options = CreateNoAccessAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  ListProjectsRequest request;
+
+  auto range = project_client.ListProjects(request);
+
+  auto begin = range.begin();
+  ASSERT_EQ(begin, range.end());
 }
 }
 }

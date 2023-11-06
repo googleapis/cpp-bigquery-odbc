@@ -29,6 +29,7 @@ using google::cloud::internal::GetEnv;
 using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::MakeTableConnection;
@@ -104,6 +105,27 @@ TEST(ListAllTables, ProjectNotExist) {
   for (auto const& table : range) {
     EXPECT_THAT(table, StatusIs(StatusCode::kInvalidArgument,
       HasSubstr("Invalid resource name projects/" + project_id + "; Project id")));
+  }
+}
+
+TEST(ListAllTables, NoAccessAccountAuth) {
+  auto options = CreateNoAccessAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id_optional.has_value());
+  ASSERT_TRUE(dataset_id_optional.has_value());
+  ListTablesRequest request;
+  request.set_project_id(project_id_optional.value());
+  request.set_dataset_id(dataset_id_optional.value());
+
+  auto range = table_client.ListTables(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& table : range) {
+    EXPECT_THAT(table, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Dataset")));
   }
 }
 }
