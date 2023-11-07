@@ -95,7 +95,7 @@ TEST(ListAllProjects, NoAccessAccountAuth) {
   auto range = project_client.ListProjects(request);
 
   auto begin = range.begin();
-  ASSERT_EQ(begin, range.end());
+  EXPECT_EQ(begin, range.end());
 }
 }
 }

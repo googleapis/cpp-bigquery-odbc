@@ -196,7 +196,7 @@ TEST(ListDatasets, NoAccessAccountAuth) {
   auto range = dataset_client.ListDatasets(request);
 
   auto begin = range.begin();
-  ASSERT_EQ(begin, range.end());
+  EXPECT_EQ(begin, range.end());
 }
 } // google
 } // cloud
