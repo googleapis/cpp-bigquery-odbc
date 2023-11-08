@@ -110,10 +110,7 @@ TEST(ListDatasets, UsingFilterNoDatasets) {
   auto range = dataset_client.ListDatasets(request);
 
   auto begin = range.begin();
-  ASSERT_NE(begin, range.end());
-  for (auto const& dataset : range) {
-    EXPECT_THAT(dataset, StatusIs(StatusCode::kInternal, HasSubstr("Not a valid Json DatasetList object")));
-  }
+  EXPECT_EQ(begin, range.end());
 }
 
 TEST(ListDatasets, WrongFilter) {
