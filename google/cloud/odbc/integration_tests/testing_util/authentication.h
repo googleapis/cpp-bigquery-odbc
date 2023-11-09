@@ -32,7 +32,7 @@ StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication();
 
 // Creates WRONG Options object with the path to not existing file.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
-Options CreateWrongPathToAuthFileAuthentication();
+StatusOr<Options> CreateWrongPathToAuthFileAuthentication();
 
 // Creates WRONG Options object has not existing credentials.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.

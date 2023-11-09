@@ -59,7 +59,8 @@ TEST(ListAllProjects, UserAccountAuth) {
 
 TEST(ListAllProjects, WrongPathToAuthFile) {
   auto options = CreateWrongPathToAuthFileAuthentication();
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options)));
+  ASSERT_STATUS_OK(options);
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);
