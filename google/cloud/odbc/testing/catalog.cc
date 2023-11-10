@@ -70,3 +70,4 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ConnectionHandle> co
 }  // namespace bigquery_odbc
 }  // namespace cloud
 }  // namespace google
+
