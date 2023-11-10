@@ -1,0 +1,126 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <gmock/gmock.h>
+#include <chrono>
+
+#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include "google/cloud/internal/getenv.h"
+
+#include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
+#include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+
+namespace google {
+namespace cloud {
+namespace odbc_bigquery_v2_tests {
+
+using google::cloud::internal::GetEnv;
+using google::cloud::odbc_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
+using ::testing::HasSubstr;
+using bigquery_v2_minimal_internal::JobClient;
+using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
+using bigquery_v2_minimal_internal::ListJobsRequest;
+using bigquery_v2_minimal_internal::Projection;
+using bigquery_v2_minimal_internal::StateFilter;
+
+TEST(ListJobs, ServiceAccountAuthWithClientId) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id_optional.has_value());
+
+  ListJobsRequest request;
+  request.set_project_id(project_id_optional.value());
+  // Listing jobs only for the last week to make the test faster
+  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  request.set_min_creation_time(week_before);
+  request.set_max_creation_time(std::chrono::system_clock::now());
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    ASSERT_STATUS_OK(job);
+  }
+}
+
+TEST(ListJobs, MoreRequestArguments) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id_optional.has_value());
+
+  ListJobsRequest request;
+  request.set_project_id(project_id_optional.value());
+  // Listing jobs only for the last week to make the test faster
+  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  request.set_min_creation_time(week_before);
+  request.set_max_creation_time(std::chrono::system_clock::now());
+  request.set_projection(Projection::Full());
+  request.set_all_users(true);
+  request.set_state_filter(StateFilter::Done());
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    ASSERT_STATUS_OK(job);
+  }
+}
+
+TEST(ListJobs, ProjectNotExist) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+
+  ListJobsRequest request;
+  request.set_project_id("non-existing-project");
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    EXPECT_THAT(job, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
+  }
+}
+
+TEST(ListJobs, NoAccessAccountAuth) {
+  auto options = CreateNoAccessAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id_optional.has_value());
+
+  ListJobsRequest request;
+  request.set_project_id(project_id_optional.value());
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    EXPECT_THAT(job, StatusIs(StatusCode::kPermissionDenied,
+      HasSubstr("User does not have bigquery.jobs.list permission in project")));
+  }
+}
+}
+}
+}
