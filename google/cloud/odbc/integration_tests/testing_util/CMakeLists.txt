@@ -22,12 +22,14 @@ add_library(
     cpp_bigquery_odbc_integration_testing_util
     authentication.h
     authentication.cc
+    common_functions.h
+    common_functions.cc
     status_matchers.h
     status_matchers.cc)
 
 target_link_libraries(
     cpp_bigquery_odbc_integration_testing_util
-    google_cloud_cpp_common
+    google_cloud_cpp_bigquery_rest
     GTest::gmock)
 
 create_bazel_config(cpp_bigquery_odbc_integration_testing_util YEAR 2023)
