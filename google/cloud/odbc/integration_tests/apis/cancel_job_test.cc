@@ -72,7 +72,7 @@ TEST(CancelJob, ServiceAccountAuthWithClientId) {
 
   ASSERT_STATUS_OK(job_response);
 
-  // Getting previous Job
+  // Cancelling previous Job
   std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
   cancel_job_request.set_project_id(project_id_optional.value());
@@ -118,7 +118,7 @@ TEST(CancelJob, DifferentAccount) {
 
   ASSERT_STATUS_OK(job_response);
 
-  // Getting previous Job with another account
+  // Cancelling previous Job with another account
   auto options_with_user_account = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options_with_user_account);
   auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(options_with_user_account.value())));
@@ -134,7 +134,7 @@ TEST(CancelJob, DifferentAccount) {
 }
 
 TEST(CancelJob, WrongLocation) {
-  // First we create a job, so later we could 'get' it
+  // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
@@ -167,7 +167,7 @@ TEST(CancelJob, WrongLocation) {
 
   ASSERT_STATUS_OK(job_response);
 
-  // Getting previous Job
+  // Cancelling previous Job
   std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
   cancel_job_request.set_project_id(project_id_optional.value());
@@ -180,7 +180,7 @@ TEST(CancelJob, WrongLocation) {
 }
 
 TEST(CancelJob, LocationNotExist) {
-  // First we create a job, so later we could 'get' it
+  // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
@@ -213,7 +213,7 @@ TEST(CancelJob, LocationNotExist) {
 
   ASSERT_STATUS_OK(job_response);
 
-  // Getting previous Job
+  // Cancelling previous Job
   std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
   cancel_job_request.set_project_id(project_id_optional.value());
