@@ -45,7 +45,7 @@ StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
       google::cloud::MakeGoogleDefaultCredentials());
 }
 
-Options CreateWrongPathToAuthFileAuthentication() {
+StatusOr<Options> CreateWrongPathToAuthFileAuthentication() {
   setenv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-non-existing-file.json", 1);
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
       google::cloud::MakeGoogleDefaultCredentials());
