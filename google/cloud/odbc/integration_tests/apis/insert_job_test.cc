@@ -367,6 +367,83 @@ TEST(InsertJob, DifferentAccount) {
   EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
     HasSubstr("User does not have permission to access results of another user's job")));
 }
+
+TEST(InsertJob, CreateTableAndInsertRow) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id_optional.has_value());
+  ASSERT_TRUE(dataset_id_optional.has_value());
+  Job job;
+  JobConfiguration job_configuration;
+  JobConfigurationQuery job_configuration_query;
+  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".Test_Table_Runtime");
+  job_configuration_query.query = absl::StrCat("CREATE TABLE IF NOT EXISTS ", table_name, " (id INT) ");
+  job_configuration.query = job_configuration_query;
+  job.configuration = job_configuration;
+  InsertJobRequest request;
+  request.set_project_id(project_id_optional.value());
+  request.set_job(job);
+
+  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
+                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+                                "connectionProperties", "systemVariables", "structTypes",
+                                "structValues", "location"});
+
+  auto job_response = job_client.InsertJob(request);
+
+  ASSERT_STATUS_OK(job_response);
+  EXPECT_EQ(job_response.value().configuration.job_type, "QUERY");
+
+  // Getting results of previous Job
+  std::string job_id = job_response.value().job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_job_id(job_id);
+
+  auto query_results_response = job_client.QueryResults(get_query_results_request);
+
+  ASSERT_STATUS_OK(query_results_response);
+  EXPECT_TRUE(query_results_response.value().job_complete);
+
+  // Inserting a row in that table
+  Job job_dml;
+  JobConfiguration job_configuration_dml;
+  JobConfigurationQuery job_configuration_query_dml;
+  job_configuration_query_dml.query = absl::StrCat("INSERT INTO ", table_name, " VALUES(1)");
+  job_configuration_dml.query = job_configuration_query_dml;
+  job_dml.configuration = job_configuration_dml;
+  InsertJobRequest request_dml;
+  request_dml.set_project_id(project_id_optional.value());
+  request_dml.set_job(job_dml);
+
+  request_dml.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
+                                    "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+                                    "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+                                    "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+                                    "connectionProperties", "systemVariables", "structTypes",
+                                    "structValues", "location"});
+
+  auto job_response_dml = job_client.InsertJob(request_dml);
+
+  ASSERT_STATUS_OK(job_response_dml);
+  EXPECT_EQ(job_response_dml.value().configuration.job_type, "QUERY");
+
+  // Getting results of previous Job
+  std::string job_id_dml = job_response_dml.value().job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request_dml;
+  get_query_results_request_dml.set_project_id(project_id_optional.value());
+  get_query_results_request_dml.set_job_id(job_id_dml);
+
+  auto query_results_response_dml = job_client.QueryResults(get_query_results_request_dml);
+
+  ASSERT_STATUS_OK(query_results_response_dml);
+  EXPECT_TRUE(query_results_response_dml.value().job_complete);
+}
 }
 }
 }
