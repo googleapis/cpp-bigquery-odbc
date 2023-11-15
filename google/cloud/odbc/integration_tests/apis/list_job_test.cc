@@ -43,12 +43,12 @@ using bigquery_v2_minimal_internal::StateFilter;
 TEST(ListJobs, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
@@ -66,12 +66,12 @@ TEST(ListJobs, UserAccountAuth) {
 TEST(ListJobs, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
@@ -89,12 +89,12 @@ TEST(ListJobs, ServiceAccountAuth) {
 TEST(ListJobs, ServiceAccountAuthWithClientId) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
@@ -112,12 +112,12 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
 TEST(ListJobs, MoreRequestArguments) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
@@ -138,7 +138,7 @@ TEST(ListJobs, MoreRequestArguments) {
 TEST(ListJobs, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
   ListJobsRequest request;
   request.set_project_id(std::string(kNameForNonExistingProject));
@@ -155,12 +155,12 @@ TEST(ListJobs, ProjectNotExist) {
 TEST(ListJobs, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
 
   auto range = job_client.ListJobs(request);
 

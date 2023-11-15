@@ -41,7 +41,7 @@ using bigquery_v2_minimal_internal::ListProjectsRequest;
 TEST(ListAllProjects, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);
@@ -56,7 +56,7 @@ TEST(ListAllProjects, UserAccountAuth) {
 TEST(ListAllProjects, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);
@@ -71,7 +71,7 @@ TEST(ListAllProjects, ServiceAccountAuth) {
 TEST(ListAllProjects, WrongPathToAuthFile) {
   auto options = CreateWrongPathToAuthFileAuthentication();
   ASSERT_STATUS_OK(options);
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);
@@ -86,7 +86,7 @@ TEST(ListAllProjects, WrongPathToAuthFile) {
 TEST(ListAllProjects, WrongAuthntication) {
   auto options = CreateWrongAuthentication();
   ASSERT_STATUS_OK(options);
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);
@@ -101,7 +101,7 @@ TEST(ListAllProjects, WrongAuthntication) {
 TEST(ListAllProjects, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
   auto range = project_client.ListProjects(request);

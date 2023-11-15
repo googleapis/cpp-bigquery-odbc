@@ -41,17 +41,17 @@ using bigquery_v2_minimal_internal::TableMetadataView;
 TEST(GetTable, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 
@@ -61,17 +61,17 @@ TEST(GetTable, UserAccountAuth) {
 TEST(GetTable, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 
@@ -81,17 +81,17 @@ TEST(GetTable, ServiceAccountAuth) {
 TEST(GetTable, ServiceAccountAuthWithClientId) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 
@@ -101,15 +101,15 @@ TEST(GetTable, ServiceAccountAuthWithClientId) {
 TEST(GetTable, TableNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
   request.set_table_id("Non_existing_table");
 
   auto table = table_client.GetTable(request);
@@ -120,16 +120,16 @@ TEST(GetTable, TableNotExist) {
 TEST(GetTable, DatasetNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(table_name);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   request.set_dataset_id("Non_existing_dataset");
-  request.set_table_id(table_name_optional.value());
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 
@@ -139,17 +139,17 @@ TEST(GetTable, DatasetNotExist) {
 TEST(GetTable, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   std::string project_id = std::string(kNameForNonExistingProject);
   GetTableRequest request;
   request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 
@@ -160,46 +160,46 @@ TEST(GetTable, ProjectNotExist) {
 TEST(GetTable, SelectedFields) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
-  request.set_selected_fields({column_name.value()});
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
+  request.set_selected_fields({*column_name});
 
   auto table = table_client.GetTable(request);
 
   ASSERT_STATUS_OK(table);
   EXPECT_EQ(table.value().schema.fields.size(), 1);
-  EXPECT_EQ(table.value().schema.fields[0].name, column_name.value());
+  EXPECT_EQ(table.value().schema.fields[0].name, *column_name);
 }
 
 TEST(GetTable, SelectedFieldsNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
   request.set_selected_fields({"not_existing-field"});
 
   auto table = table_client.GetTable(request);
@@ -210,19 +210,19 @@ TEST(GetTable, SelectedFieldsNotExist) {
 TEST(GetTable, SetView) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
   request.set_view(TableMetadataView::Basic());
 
   auto table = table_client.GetTable(request);
@@ -234,17 +234,17 @@ TEST(GetTable, SetView) {
 TEST(GetTable, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   GetTableRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
-  request.set_table_id(table_name_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
 
   auto table = table_client.GetTable(request);
 

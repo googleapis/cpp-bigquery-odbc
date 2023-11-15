@@ -40,14 +40,14 @@ using bigquery_v2_minimal_internal::ListTablesRequest;
 TEST(ListAllTables, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
   ListTablesRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
 
   auto range = table_client.ListTables(request);
 
@@ -61,14 +61,14 @@ TEST(ListAllTables, UserAccountAuth) {
 TEST(ListAllTables, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
   ListTablesRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
 
   auto range = table_client.ListTables(request);
 
@@ -82,14 +82,14 @@ TEST(ListAllTables, ServiceAccountAuth) {
 TEST(ListAllTables, ServiceAccountAuthWithClientId) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
   ListTablesRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
 
   auto range = table_client.ListTables(request);
 
@@ -103,12 +103,12 @@ TEST(ListAllTables, ServiceAccountAuthWithClientId) {
 TEST(ListAllTables, DatasetNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
   ListTablesRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   request.set_dataset_id("Non_existing_dataset");
 
   auto range = table_client.ListTables(request);
@@ -123,14 +123,14 @@ TEST(ListAllTables, DatasetNotExist) {
 TEST(ListAllTables, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(dataset_id);
   std::string project_id = std::string(kNameForNonExistingProject);
   ListTablesRequest request;
   request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_dataset_id(*dataset_id);
 
   auto range = table_client.ListTables(request);
 
@@ -145,14 +145,14 @@ TEST(ListAllTables, ProjectNotExist) {
 TEST(ListAllTables, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
   ListTablesRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_dataset_id(dataset_id_optional.value());
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
 
   auto range = table_client.ListTables(request);
 

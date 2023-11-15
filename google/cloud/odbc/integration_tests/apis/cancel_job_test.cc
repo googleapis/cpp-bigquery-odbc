@@ -46,7 +46,7 @@ TEST(CancelJob, UserAccountAuth) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -66,7 +66,7 @@ TEST(CancelJob, ServiceAccountAuth) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -86,7 +86,7 @@ TEST(CancelJob, ServiceAccountAuthWithClientId) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -106,7 +106,7 @@ TEST(CancelJob, DifferentAccount) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -114,7 +114,7 @@ TEST(CancelJob, DifferentAccount) {
   // Cancelling previous Job with another account
   auto options_with_user_account = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options_with_user_account);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(options_with_user_account.value())));
+  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(*options_with_user_account)));
   CancelJobRequest cancel_job_request;
   cancel_job_request.set_project_id(project_id);
   cancel_job_request.set_job_id(job_id.value());
@@ -129,7 +129,7 @@ TEST(CancelJob, WrongLocation) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -149,7 +149,7 @@ TEST(CancelJob, LocationNotExist) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   auto job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
@@ -168,12 +168,12 @@ TEST(CancelJob, LocationNotExist) {
 TEST(CancelJob, JobNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(project_id_optional.value());
+  cancel_job_request.set_project_id(*project_id);
   cancel_job_request.set_job_id("Not_existing_job");
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);
@@ -184,9 +184,9 @@ TEST(CancelJob, JobNotExist) {
 TEST(CancelJob, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   CancelJobRequest cancel_job_request;
   cancel_job_request.set_project_id(std::string(kNameForNonExistingProject));

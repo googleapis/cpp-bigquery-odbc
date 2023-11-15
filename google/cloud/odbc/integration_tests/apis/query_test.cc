@@ -44,22 +44,22 @@ using bigquery_v2_minimal_internal::QueryParameter;
 TEST(Query, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -76,7 +76,7 @@ TEST(Query, UserAccountAuth) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client.QueryResults(get_query_results_request);
@@ -89,22 +89,22 @@ TEST(Query, UserAccountAuth) {
 TEST(Query, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -121,7 +121,7 @@ TEST(Query, ServiceAccountAuth) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client.QueryResults(get_query_results_request);
@@ -134,22 +134,22 @@ TEST(Query, ServiceAccountAuth) {
 TEST(Query, ServiceAccountAuthWithClientId) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -166,7 +166,7 @@ TEST(Query, ServiceAccountAuthWithClientId) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client.QueryResults(get_query_results_request);
@@ -179,14 +179,14 @@ TEST(Query, ServiceAccountAuthWithClientId) {
 TEST(Query, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT * FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
@@ -206,18 +206,18 @@ TEST(Query, ProjectNotExist) {
 TEST(Query, DatasetNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(table_name);
 
-  std::string table_name = absl::StrCat("Not_existing_dataset.", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT * FROM ", table_name);
+  std::string full_table_name = absl::StrCat("Not_existing_dataset.", *table_name);
+  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -232,18 +232,18 @@ TEST(Query, DatasetNotExist) {
 TEST(Query, TableNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".Not_existing_table");
+  std::string table_name = absl::StrCat(*dataset_id, ".Not_existing_table");
   std::string query_statement = absl::StrCat("SELECT * FROM ", table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -258,20 +258,20 @@ TEST(Query, TableNotExist) {
 TEST(Query, ColumnNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT not_existing_column FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT not_existing_column FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -286,22 +286,22 @@ TEST(Query, ColumnNotExist) {
 TEST(Query, SelectZeroRows) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT * FROM ", table_name, " WHERE 1 = 2");
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name, " WHERE 1 = 2");
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -318,23 +318,23 @@ TEST(Query, SelectZeroRows) {
 TEST(Query, PageTokens) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   query_request.set_max_results(1);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -352,7 +352,7 @@ TEST(Query, PageTokens) {
   // Getting the rest results from previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_page_token(query_response.value().page_token);
   get_query_results_request.set_max_results(1);
@@ -368,13 +368,13 @@ TEST(Query, PageTokens) {
 TEST(QueryResukts, JobNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
 
   std::string job_id = "Not_existing_job";
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client.QueryResults(get_query_results_request);
@@ -385,20 +385,20 @@ TEST(QueryResukts, JobNotExist) {
 TEST(QueryResults, LocationNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT * FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -412,7 +412,7 @@ TEST(QueryResults, LocationNotExist) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location("Not_existing_location");
 
@@ -424,20 +424,20 @@ TEST(QueryResults, LocationNotExist) {
 TEST(QueryResults, WrongLocation) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT * FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -451,7 +451,7 @@ TEST(QueryResults, WrongLocation) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location("asia-south2");
 
@@ -463,24 +463,24 @@ TEST(QueryResults, WrongLocation) {
 TEST(Query, WithQueryParameters) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name, " WHERE ", column_name.value(), " > @min_age");
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
   QueryRequest query_request;
   query_request.set_query(query_statement);
   QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
   query_request.set_query_parameters({query_parameter});
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "defaultDataset",
@@ -495,7 +495,7 @@ TEST(Query, WithQueryParameters) {
   // Getting results of previous Query
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client.QueryResults(get_query_results_request);
@@ -508,22 +508,22 @@ TEST(Query, WithQueryParameters) {
 TEST(Query, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -539,22 +539,22 @@ TEST(Query, NoAccessAccountAuth) {
 TEST(QueryResults, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -569,11 +569,12 @@ TEST(QueryResults, DifferentAccount) {
   // Getting results of previous Query with another account
   auto options_with_user_account = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(options_with_user_account.value())));
+  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
+    std::move(*options_with_user_account)));
 
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
@@ -585,22 +586,22 @@ TEST(QueryResults, DifferentAccount) {
 TEST(QueryResults, NoAccessAccountAuth) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
   auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
-  ASSERT_TRUE(column_name.has_value());
+  ASSERT_TRUE(column_name);
 
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  std::string query_statement = absl::StrCat("SELECT ", column_name.value(), " FROM ", table_name);
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(project_id_optional.value());
+  post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",
@@ -615,11 +616,12 @@ TEST(QueryResults, NoAccessAccountAuth) {
   // Getting results of previous Query with another account with no access permission
   auto options_with_user_account = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(options_with_user_account.value())));
+  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
+    std::move(*options_with_user_account)));
 
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id_optional.value());
+  get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
   auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
