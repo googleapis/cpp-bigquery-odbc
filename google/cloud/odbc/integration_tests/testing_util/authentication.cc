@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <fstream>
 
 #include "google/cloud/options.h"
 #include "google/cloud/credentials.h"
@@ -26,19 +27,31 @@ namespace odbc_testing_util_internal {
 using google::cloud::internal::GetEnv;
 
 StatusOr<Options> CreateUserAccountAuthentication() {
-  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY").value_or("");
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY").value_or("");
   if (path_to_file_with_credentials.empty()) {
-    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_ACCOUNT_KEY environment variable is not set");
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY environment variable is not set");
   }
   setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
       google::cloud::MakeGoogleDefaultCredentials());
 }
 
-StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
-  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY").value_or("");
+StatusOr<Options> CreateServiceAccountAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   if (path_to_file_with_credentials.empty()) {
-    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_ACCOUNT_KEY environment variable is not set");
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY environment variable is not set");
+  }
+  auto is = std::ifstream(path_to_file_with_credentials);
+  is.exceptions(std::ios::badbit);  // Minimal error handling
+  auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+          google::cloud::MakeServiceAccountCredentials(contents));
+}
+
+StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
+  std::string path_to_file_with_credentials = GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(StatusCode::kInvalidArgument, "CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY environment variable is not set");
   }
   setenv("GOOGLE_APPLICATION_CREDENTIALS", path_to_file_with_credentials.c_str(), 1);
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(

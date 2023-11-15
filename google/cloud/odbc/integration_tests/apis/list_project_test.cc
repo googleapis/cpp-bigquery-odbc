@@ -28,6 +28,7 @@ namespace odbc_bigquery_v2_tests {
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateWrongPathToAuthFileAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateWrongAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
@@ -36,10 +37,25 @@ using bigquery_v2_minimal_internal::ProjectClient;
 using bigquery_v2_minimal_internal::MakeProjectConnection;
 using bigquery_v2_minimal_internal::ListProjectsRequest;
 
-// Using only this account here as it has access to only one project.
-// ServiceAccountAuthWithClientId account timing out after 15 minutes because of a big number of available projects.
+// We don't use ServiceAccountAuthWithClientIdAuthentication
+// It's timing out after 15 minutes because of a big number of available projects.
 TEST(ListAllProjects, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
+  ListProjectsRequest request;
+
+  auto range = project_client.ListProjects(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    ASSERT_STATUS_OK(project);
+  }
+}
+
+TEST(ListAllProjects, ServiceAccountAuth) {
+  auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client = ProjectClient(MakeProjectConnection(std::move(options.value())));
   ListProjectsRequest request;

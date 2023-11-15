@@ -28,6 +28,7 @@ namespace odbc_bigquery_v2_tests {
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
 using ::testing::HasSubstr;
@@ -37,6 +38,31 @@ using bigquery_v2_minimal_internal::ListDatasetsRequest;
 
 TEST(ListAllDatasets, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
+  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id_optional.has_value());
+  ASSERT_TRUE(dataset_id_optional.has_value());
+  std::string project_id = project_id_optional.value();
+  ListDatasetsRequest request;
+  request.set_project_id(project_id);
+
+  auto range = dataset_client.ListDatasets(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  bool found = false;
+  for (auto const& dataset : range) {
+    ASSERT_STATUS_OK(dataset);
+    found = dataset.value().dataset_reference.dataset_id == dataset_id_optional.value();
+    if (found) break;
+  }
+  ASSERT_EQ(found, true);
+}
+
+TEST(ListAllDatasets, ServiceAccountAuth) {
+  auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
   auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");

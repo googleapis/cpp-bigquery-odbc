@@ -28,6 +28,7 @@ namespace odbc_bigquery_v2_tests {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::InsertJob;
@@ -39,6 +40,46 @@ using bigquery_v2_minimal_internal::Job;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::CancelJobRequest;
+
+TEST(CancelJob, UserAccountAuth) {
+  // First we create a job, so later we could 'cancel' it
+  auto options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+
+  // Cancelling previous Job
+  CancelJobRequest cancel_job_request;
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
+
+  auto cancel_job_response = job_client.CancelJob(cancel_job_request);
+
+  ASSERT_STATUS_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
+}
+
+TEST(CancelJob, ServiceAccountAuth) {
+  // First we create a job, so later we could 'cancel' it
+  auto options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+
+  // Cancelling previous Job
+  CancelJobRequest cancel_job_request;
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
+
+  auto cancel_job_response = job_client.CancelJob(cancel_job_request);
+
+  ASSERT_STATUS_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
+}
 
 TEST(CancelJob, ServiceAccountAuthWithClientId) {
   // First we create a job, so later we could 'cancel' it

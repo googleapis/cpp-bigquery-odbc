@@ -26,6 +26,9 @@ namespace odbc_testing_util_internal {
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateUserAccountAuthentication();
 
+// Creates Options object which has credentials for Service Account Authentication.
+StatusOr<Options> CreateServiceAccountAuthentication();
+
 // Creates Options object which has credentials for Service Account With Client ID Authentication.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication();
