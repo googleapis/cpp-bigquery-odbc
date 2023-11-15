@@ -25,7 +25,9 @@ add_library(
     common_functions.h
     common_functions.cc
     status_matchers.h
-    status_matchers.cc)
+    status_matchers.cc
+    util_constants.h
+    util_constants.cc)
 
 target_link_libraries(
     cpp_bigquery_odbc_integration_testing_util

@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
 #include "google/cloud/odbc/integration_tests/testing_util/common_functions.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -146,7 +147,7 @@ TEST(GetJob, ProjectNotExist) {
   ASSERT_TRUE(project_id_optional.has_value());
 
   GetJobRequest get_job_request;
-  get_job_request.set_project_id("not-existing-project");
+  get_job_request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
   get_job_request.set_job_id("Not_existing_job");
 
   auto get_job_response = job_client.GetJob(get_job_request);

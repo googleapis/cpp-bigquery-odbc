@@ -15,11 +15,11 @@
 #include <gmock/gmock.h>
 
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
-#include "google/cloud/options.h"
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -182,14 +182,14 @@ TEST(ListDatasets, ProjectNotExist) {
   auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
 
   ListDatasetsRequest request;
-  request.set_project_id("Non-existing-project");
+  request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
 
   auto range = dataset_client.ListDatasets(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
   for (auto const& dataset : range) {
-    EXPECT_THAT(dataset, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid project ID")));
+    EXPECT_THAT(dataset, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
   }
 }
 

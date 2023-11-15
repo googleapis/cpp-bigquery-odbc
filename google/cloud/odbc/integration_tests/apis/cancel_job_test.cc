@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <gmock/gmock.h>
-#include "absl/strings/str_cat.h"
 
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/internal/getenv.h"
@@ -21,6 +20,7 @@
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
 #include "google/cloud/odbc/integration_tests/testing_util/common_functions.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -147,7 +147,7 @@ TEST(CancelJob, ProjectNotExist) {
   ASSERT_TRUE(project_id_optional.has_value());
 
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id("not-existing-project");
+  cancel_job_request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
   cancel_job_request.set_job_id("Not_existing_job");
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);

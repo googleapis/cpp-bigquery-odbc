@@ -16,11 +16,11 @@
 #include "absl/strings/str_cat.h"
 
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/options.h"
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -98,7 +98,7 @@ TEST(Query, ProjectNotExist) {
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id("Non-existing-project");
+  post_query_request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",

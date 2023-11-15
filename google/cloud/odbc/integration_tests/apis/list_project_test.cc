@@ -15,7 +15,6 @@
 #include <gmock/gmock.h>
 
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
-#include "google/cloud/options.h"
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"

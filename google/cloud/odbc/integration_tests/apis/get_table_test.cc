@@ -15,11 +15,11 @@
 #include <gmock/gmock.h>
 
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
-#include "google/cloud/options.h"
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -123,7 +123,7 @@ TEST(GetTable, ProjectNotExist) {
   auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
   ASSERT_TRUE(dataset_id_optional.has_value());
   ASSERT_TRUE(table_name_optional.has_value());
-  std::string project_id = "Non-existing-project";
+  std::string project_id = NAME_FOR_NON_EXISTING_PROJECT;
   GetTableRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id_optional.value());
@@ -131,8 +131,8 @@ TEST(GetTable, ProjectNotExist) {
 
   auto table = table_client.GetTable(request);
 
-  EXPECT_THAT(table, StatusIs(StatusCode::kInvalidArgument,
-    HasSubstr("Invalid resource name projects/" + project_id + "; Project id")));
+  EXPECT_THAT(table, StatusIs(StatusCode::kNotFound,
+    HasSubstr("Project " + project_id + " is not found")));
 }
 
 TEST(GetTable, SelectedFields) {

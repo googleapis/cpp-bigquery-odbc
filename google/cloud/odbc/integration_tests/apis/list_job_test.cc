@@ -20,6 +20,7 @@
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -91,7 +92,7 @@ TEST(ListJobs, ProjectNotExist) {
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
 
   ListJobsRequest request;
-  request.set_project_id("non-existing-project");
+  request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
 
   auto range = job_client.ListJobs(request);
 

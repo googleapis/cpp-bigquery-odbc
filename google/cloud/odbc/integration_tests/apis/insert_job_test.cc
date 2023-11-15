@@ -16,11 +16,11 @@
 #include "absl/strings/str_cat.h"
 
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/options.h"
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 
 namespace google {
 namespace cloud {
@@ -111,7 +111,7 @@ TEST(InsertJob, ProjectNotExist) {
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
   InsertJobRequest request;
-  request.set_project_id("Non-existing-project");
+  request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
   request.set_job(job);
 
   request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
