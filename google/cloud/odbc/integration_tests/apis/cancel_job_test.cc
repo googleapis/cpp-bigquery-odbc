@@ -20,6 +20,7 @@
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/integration_tests/testing_util/common_functions.h"
 
 namespace google {
 namespace cloud {
@@ -29,6 +30,7 @@ using google::cloud::internal::GetEnv;
 using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::InsertJob;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -43,40 +45,14 @@ TEST(CancelJob, ServiceAccountAuthWithClientId) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", table_name);
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_job(job);
-
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
-
-  auto job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Cancelling previous Job
-  std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(project_id_optional.value());
-  cancel_job_request.set_job_id(job_id);
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);
 
@@ -89,43 +65,17 @@ TEST(CancelJob, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", table_name);
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_job(job);
-
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
-
-  auto job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Cancelling previous Job with another account
   auto options_with_user_account = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options_with_user_account);
   auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(options_with_user_account.value())));
-  std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(project_id_optional.value());
-  cancel_job_request.set_job_id(job_id);
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
 
   auto cancel_job_response = job_client_with_user_account.CancelJob(cancel_job_request);
 
@@ -138,40 +88,14 @@ TEST(CancelJob, WrongLocation) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", table_name);
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_job(job);
-
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
-
-  auto job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Cancelling previous Job
-  std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(project_id_optional.value());
-  cancel_job_request.set_job_id(job_id);
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
   cancel_job_request.set_location("asia-south2");
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);
@@ -184,40 +108,14 @@ TEST(CancelJob, LocationNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(options.value())));
-  auto project_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  ASSERT_TRUE(project_id_optional.has_value());
-  ASSERT_TRUE(dataset_id_optional.has_value());
-  ASSERT_TRUE(table_name_optional.has_value());
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".", table_name_optional.value());
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", table_name);
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id_optional.value());
-  request.set_job(job);
-
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
-
-  auto job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
+  auto job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Cancelling previous Job
-  std::string job_id = job_response.value().job_reference.job_id;
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(project_id_optional.value());
-  cancel_job_request.set_job_id(job_id);
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
   cancel_job_request.set_location("Not_existing_location");
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);
