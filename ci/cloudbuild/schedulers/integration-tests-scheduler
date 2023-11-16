@@ -1,0 +1,5 @@
+--location=us-east1 \
+--schedule "0 0 * * *" \
+--oauth-service-account-email=cloud-build-trigger-scheduler@bigquery-devtools-drivers.iam.gserviceaccount.com \
+--oauth-token-scope=https://www.googleapis.com/auth/cloud-platform \
+--uri "https://cloudbuild.googleapis.com/v1/projects/bigquery-devtools-drivers/locations/us-east1/triggers/c00caade-cf62-4f42-9e1e-b0c12edd516d:run"

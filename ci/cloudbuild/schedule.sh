@@ -20,16 +20,21 @@
 # Usage: schedule.sh [options]
 #
 #   Options:
-#     --create=name               Create a new job with the specified name
+#     --create=name               Create/overwrite a new file with the configuration of scheduler
+#     --upload=name               Create a scheduler on GCP based on configuration
+#                                 from ./schedulers/<name> file
 #     -t|--trigger=id             Uses specific trigger while creating a scheduler job
 #     -f|--frequency=frequency    The format is "* * * * *"
 #     -p|--project=name           The name of the GCP project
+#                                 (if omitted for "upload" action - gcloud default project is used)
 #     -s|--service_account=email  The full email of service account, which will be used
 #                                 to run Cloud Build builds
 #
 # Example:
 #
-#    $ schedule.sh --create integration-tests-scheduler -t c00caade-cf62-4f42-9e1e-b0c12edd516d -f "0 0 * * *" -p bigquery-devtools-drivers -s cloud-build-trigger-scheduler@bigquery-devtools-drivers.iam.gserviceaccount.com
+#    $ schedule.sh --create integration-tests-scheduler -t c00caade-cf62-4f42-9e1e-b0c12edd516d -f "0 0 * * *" -s cloud-build-trigger-scheduler@bigquery-devtools-drivers.iam.gserviceaccount.com -p bigquery-devtools-drivers
+#
+#    $ schedule.sh --upload integration-tests-scheduler -p bigquery-devtools-drivers
 
 set -euo pipefail
 
@@ -42,11 +47,12 @@ function print_usage() {
 }
 
 readonly CREATE="create"
+readonly UPLOAD="upload"
 
 # Use getopt to parse and normalize all the args.
 PARSED="$(getopt -a \
   --options="t:f:p:s:" \
-  --longoptions="create:,trigger:,frequency:,project:,service_account:,help" \
+  --longoptions="create:,upload:,trigger:,frequency:,project:,service_account:,help" \
   --name="${PROGRAM_NAME}" \
   -- "$@")"
 eval set -- "${PARSED}"
@@ -55,12 +61,18 @@ VERB=""
 NAME=""
 TRIGGER=""
 FREQUENCY=""
-PROJECT=""
+PROJECT="bigquery-devtools-drivers"
 SERVICE_ACCOUNT=""
+
 while true; do
   case "$1" in
     --create)
       VERB="${CREATE}"
+      NAME="$2"
+      shift 2
+      ;;
+    --upload)
+      VERB="${UPLOAD}"
       NAME="$2"
       shift 2
       ;;
@@ -91,16 +103,32 @@ while true; do
   esac
 done
 
+function generate_scheduler() {
+  cat > ./schedulers/"${NAME}" << EOF
+--location=us-east1 \\
+--schedule "${FREQUENCY}" \\
+--oauth-service-account-email=${SERVICE_ACCOUNT} \\
+--oauth-token-scope=https://www.googleapis.com/auth/cloud-platform \\
+--uri "https://cloudbuild.googleapis.com/v1/projects/${PROJECT}/locations/us-east1/triggers/${TRIGGER}:run"
+EOF
+}
+
+function upload_scheduler() {
+  command="gcloud beta scheduler jobs create http ${NAME} "
+  command+="$(cat ./schedulers/"${NAME}")"
+  if [[ -n "${PROJECT}" ]]; then
+    command+=" --project=${PROJECT} "
+  fi
+  echo "$command" | bash
+}
+
 case "${VERB}" in
   "${CREATE}")
-    io::run gcloud beta scheduler jobs create http "${NAME}" \
-          --project "${PROJECT}" \
-          --location=us-east1 \
-          --schedule "${FREQUENCY}" \
-          --oauth-service-account-email="${SERVICE_ACCOUNT}" \
-          --oauth-token-scope=https://www.googleapis.com/auth/cloud-platform \
-          --uri "https://cloudbuild.googleapis.com/v1/projects/${PROJECT}/locations/us-east1/triggers/${TRIGGER}:run"
-    ;;
+    generate_scheduler
+  ;;
+  "${UPLOAD}")
+    upload_scheduler
+  ;;
   -h | --help)
     print_usage
     ;;
