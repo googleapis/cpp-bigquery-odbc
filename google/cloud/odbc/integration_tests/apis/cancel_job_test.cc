@@ -31,6 +31,7 @@ using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::InsertJob;
+using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -147,7 +148,7 @@ TEST(CancelJob, ProjectNotExist) {
   ASSERT_TRUE(project_id_optional.has_value());
 
   CancelJobRequest cancel_job_request;
-  cancel_job_request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
+  cancel_job_request.set_project_id(std::string(kNameForNonExistingProject));
   cancel_job_request.set_job_id("Not_existing_job");
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);

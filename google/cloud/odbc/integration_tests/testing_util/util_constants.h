@@ -19,8 +19,7 @@ namespace google {
 namespace cloud {
 namespace odbc_testing_util_internal {
 
-#define NAME_FOR_NON_EXISTING_PROJECT \
-  "non-existing-project"
+inline constexpr absl::string_view kNameForNonExistingProject = "non-existing-project";
 
 }  // namespace odbc_testing_util_internal
 }  // namespace cloud

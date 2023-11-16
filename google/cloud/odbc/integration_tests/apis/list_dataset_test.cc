@@ -30,6 +30,7 @@ using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
@@ -182,7 +183,7 @@ TEST(ListDatasets, ProjectNotExist) {
   auto dataset_client = DatasetClient(MakeDatasetConnection(std::move(options.value())));
 
   ListDatasetsRequest request;
-  request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
+  request.set_project_id(std::string(kNameForNonExistingProject));
 
   auto range = dataset_client.ListDatasets(request);
 

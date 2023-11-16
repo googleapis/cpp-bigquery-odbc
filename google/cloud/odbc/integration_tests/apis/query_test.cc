@@ -31,6 +31,7 @@ using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -98,7 +99,7 @@ TEST(Query, ProjectNotExist) {
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
-  post_query_request.set_project_id(NAME_FOR_NON_EXISTING_PROJECT);
+  post_query_request.set_project_id(std::string(kNameForNonExistingProject));
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
                                            "queryParameters", "defaultDataset",

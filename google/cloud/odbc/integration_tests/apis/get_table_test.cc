@@ -30,6 +30,7 @@ using google::cloud::odbc_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::MakeTableConnection;
@@ -123,7 +124,7 @@ TEST(GetTable, ProjectNotExist) {
   auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
   ASSERT_TRUE(dataset_id_optional.has_value());
   ASSERT_TRUE(table_name_optional.has_value());
-  std::string project_id = NAME_FOR_NON_EXISTING_PROJECT;
+  std::string project_id = std::string(kNameForNonExistingProject);
   GetTableRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id_optional.value());
