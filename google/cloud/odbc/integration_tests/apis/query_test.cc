@@ -41,6 +41,7 @@ using bigquery_v2_minimal_internal::QueryRequest;
 using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::QueryParameter;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(Query, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -85,6 +86,7 @@ TEST(Query, UserAccountAuth) {
   EXPECT_TRUE(query_results_response.value().job_complete);
   EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(Query, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

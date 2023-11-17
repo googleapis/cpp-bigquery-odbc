@@ -36,6 +36,7 @@ using bigquery_v2_minimal_internal::ProjectClient;
 using bigquery_v2_minimal_internal::MakeProjectConnection;
 using bigquery_v2_minimal_internal::ListProjectsRequest;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 // We don't use ServiceAccountAuthWithClientIdAuthentication
 // It's timing out after 15 minutes because of a big number of available projects.
 TEST(ListAllProjects, UserAccountAuth) {
@@ -52,6 +53,7 @@ TEST(ListAllProjects, UserAccountAuth) {
     ASSERT_STATUS_OK(project);
   }
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(ListAllProjects, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

@@ -38,6 +38,7 @@ using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::GetTableRequest;
 using bigquery_v2_minimal_internal::TableMetadataView;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(GetTable, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -57,6 +58,7 @@ TEST(GetTable, UserAccountAuth) {
 
   ASSERT_STATUS_OK(table);
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(GetTable, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

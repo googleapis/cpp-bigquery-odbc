@@ -42,6 +42,7 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::GetJobRequest;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(GetJob, UserAccountAuth) {
   // First we create a job, so later we could 'get' it
   auto options = CreateUserAccountAuthentication();
@@ -61,6 +62,7 @@ TEST(GetJob, UserAccountAuth) {
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(GetJob, ServiceAccountAuth) {
   // First we create a job, so later we could 'get' it

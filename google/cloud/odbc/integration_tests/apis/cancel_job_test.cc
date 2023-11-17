@@ -42,6 +42,7 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::CancelJobRequest;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(CancelJob, UserAccountAuth) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateUserAccountAuthentication();
@@ -61,6 +62,7 @@ TEST(CancelJob, UserAccountAuth) {
   ASSERT_STATUS_OK(cancel_job_response);
   EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(CancelJob, ServiceAccountAuth) {
   // First we create a job, so later we could 'cancel' it

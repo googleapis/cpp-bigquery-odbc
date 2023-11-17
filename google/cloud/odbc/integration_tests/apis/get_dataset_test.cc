@@ -37,6 +37,7 @@ using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
 using bigquery_v2_minimal_internal::GetDatasetRequest;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(GetDataset, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -54,6 +55,7 @@ TEST(GetDataset, UserAccountAuth) {
 
   ASSERT_STATUS_OK(dataset);
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(GetDataset, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

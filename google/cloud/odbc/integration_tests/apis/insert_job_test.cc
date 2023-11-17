@@ -43,6 +43,7 @@ using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::QueryParameter;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(InsertJob, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -94,6 +95,7 @@ TEST(InsertJob, UserAccountAuth) {
   EXPECT_EQ(query_results_response.value().schema.fields.size(), 1);
   EXPECT_EQ(query_results_response.value().total_rows, 1);
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

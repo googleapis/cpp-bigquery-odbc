@@ -40,6 +40,7 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
 
+#ifdef USER_ACCOUNT_AUTH // b/309605217
 TEST(ListJobs, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -62,6 +63,7 @@ TEST(ListJobs, UserAccountAuth) {
     ASSERT_STATUS_OK(job);
   }
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(ListJobs, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();

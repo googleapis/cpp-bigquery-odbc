@@ -48,6 +48,11 @@ function (define_integration_tests)
 
   target_compile_features(scheduled_integration_tests PUBLIC cxx_std_17)
 
+  option(USER_ACCOUNT_AUTH "Run tests using User Authentication" OFF)
+  if (USER_ACCOUNT_AUTH)
+      add_definitions(-DUSER_ACCOUNT_AUTH)
+  endif()
+
   include(GoogleTest)
   gtest_discover_tests(scheduled_integration_tests)
 endfunction ()
