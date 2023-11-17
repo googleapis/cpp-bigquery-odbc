@@ -40,7 +40,7 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
 
-#ifdef USER_ACCOUNT_AUTH // b/309605217
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);

@@ -37,7 +37,7 @@ using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
 using bigquery_v2_minimal_internal::ListDatasetsRequest;
 
-#ifdef USER_ACCOUNT_AUTH // b/309605217
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListDatasets, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);

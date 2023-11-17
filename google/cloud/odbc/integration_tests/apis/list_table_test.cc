@@ -37,7 +37,7 @@ using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::ListTablesRequest;
 
-#ifdef USER_ACCOUNT_AUTH // b/309605217
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListAllTables, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);

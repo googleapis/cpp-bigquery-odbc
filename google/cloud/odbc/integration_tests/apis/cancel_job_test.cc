@@ -42,7 +42,7 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::CancelJobRequest;
 
-#ifdef USER_ACCOUNT_AUTH // b/309605217
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(CancelJob, UserAccountAuth) {
   // First we create a job, so later we could 'cancel' it
   auto options = CreateUserAccountAuthentication();

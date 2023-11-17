@@ -38,7 +38,7 @@ using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::GetTableRequest;
 using bigquery_v2_minimal_internal::TableMetadataView;
 
-#ifdef USER_ACCOUNT_AUTH // b/309605217
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(GetTable, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
