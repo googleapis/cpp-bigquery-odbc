@@ -16,12 +16,11 @@
 
 cmake_minimum_required(VERSION 3.14)
 project(
-  cpp-bigquery-odbc-testing
+  cpp-bigquery-odbc-bq-driver
   LANGUAGES CXX
 )
 
 include(FetchContent)
-
 
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
@@ -60,6 +59,7 @@ function (odbc_define_tests)
 
   target_link_libraries(
     all_tests
+    google-cloud-odbc::bq-driver
     odbc
     GTest::gtest_main
     GTest::gmock
@@ -95,6 +95,9 @@ endif()
 add_library(odbc_client_interface dummy.cc)
 target_link_libraries(odbc_client_interface PRIVATE google_cloud_cpp_bigquery_rest)
 
+include(bq_driver.cmake)
+
 odbc_define_tests()
 
 add_subdirectory(integration_tests)
+
