@@ -97,3 +97,4 @@ jobs:
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_BINARY_SOURCES: x-gcs,gs://cpp-bigquery-odbc-gha-cache/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
+      ODBC_INCLUDE_PATH: ${{ runner.temp }}/.build/iODBC/include"
