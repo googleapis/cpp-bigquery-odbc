@@ -55,6 +55,9 @@ jobs:
         curl -fsSL "https://github.com/microsoft/vcpkg/archive/${{ steps.dynamic.outputs.vcpkg-version }}.tar.gz" |
             tar -C vcpkg --strip-components=1 -zxf -
         vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    - name: Install iODBC
+      run: |
+        brew install libiodbc
     - name: Build cpp-bigquery-odbc
       run: |
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
@@ -67,3 +70,4 @@ jobs:
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_BINARY_SOURCES: x-gcs,gs://cpp-bigquery-odbc-gha-cache/vcpkg-cache/${{ matrix.os }},readwrite
+      ODBC_INCLUDE_PATH: /usr/local/opt/libiodbc/include

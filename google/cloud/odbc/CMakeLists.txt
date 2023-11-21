@@ -66,6 +66,7 @@ function (odbc_define_tests)
   )
 
   target_include_directories(all_tests PUBLIC ./)
+  target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
   target_compile_features(all_tests PUBLIC cxx_std_17)
 

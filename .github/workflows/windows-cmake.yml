@@ -56,6 +56,13 @@ jobs:
           tar -zxf - --strip-components=1
         chmod +x sccache.exe
         mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Install iODBC
+      working-directory: "${{runner.temp}}"
+      shell: bash
+      run: |
+        mkdir -p .build/iODBC
+        curl -fsSL "https://github.com/openlink/iODBC/archive/develop.tar.gz" |
+          tar -C .build/iODBC --strip-components=1 -zxf -
     - name: Download and Install vcpkg
       shell: bash
       run: |
@@ -76,6 +83,7 @@ jobs:
     - name: Build cpp-bigquery-odbc
       shell: bash
       run: |
+        export ODBC_INCLUDE_PATH="${TEMP}/.build/iODBC/include"
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         # Put the CMake output in a directory with more space and keep it short

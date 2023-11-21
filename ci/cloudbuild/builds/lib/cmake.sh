@@ -71,6 +71,9 @@ function ctest::common_args() {
     args+=(
       -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache
       -DCMAKE_CC_COMPILER_LAUNCHER=/usr/local/bin/sccache
+      -DLDFLAGS="-L/opt/homebrew/opt/libiodbc/lib"
+      -DCPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
+      -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/opt/homebrew/opt/libiodbc/include
     )
   fi
   printf "%s\n" "${args[@]}"
