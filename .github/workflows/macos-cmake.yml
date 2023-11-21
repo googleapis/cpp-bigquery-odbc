@@ -55,6 +55,11 @@ jobs:
         curl -fsSL "https://github.com/microsoft/vcpkg/archive/${{ steps.dynamic.outputs.vcpkg-version }}.tar.gz" |
             tar -C vcpkg --strip-components=1 -zxf -
         vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    - name: Install iODBC
+      run: |
+        brew install libiodbc
+        export LDFLAGS="-L/opt/homebrew/opt/libiodbc/lib"
+        export CPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
     - name: Build cpp-bigquery-odbc
       run: |
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
