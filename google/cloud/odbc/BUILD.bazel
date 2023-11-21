@@ -28,6 +28,19 @@ cc_library(
     visibility = ["//:__pkg__"],
 )
 
+load(":google_cloud_odbc_bq_driver.bzl", "google_cloud_odbc_bq_driver_hdrs", "google_cloud_odbc_bq_driver_srcs")
+
+cc_library(
+    name = "google_cloud_odbc_bq_driver",
+    srcs = google_cloud_odbc_bq_driver_srcs,
+    hdrs = google_cloud_odbc_bq_driver_hdrs,
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//:odbc_client_interface",
+        "@com_google_cloud_cpp//:experimental-bigquery-rest"
+    ],
+)
+
 cc_test(
     name = "odbc_client_interface_test",
     srcs = ["tests/dummy_test.cc"],
