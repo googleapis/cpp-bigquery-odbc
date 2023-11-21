@@ -41,6 +41,7 @@ add_library(
 
 target_include_directories(
     google_cloud_odbc_bq_driver PUBLIC ./)
+target_include_directories(google_cloud_odbc_bq_driver PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
