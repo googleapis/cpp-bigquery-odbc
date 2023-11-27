@@ -16,6 +16,8 @@
 #
 # This script manages Google Cloud Scheduler jobs. It uses 'cloud-build-scheduler'
 # service account which can interact with Cloud Build.
+# Before creating a scheduler, a trigger should be created (using trigger.sh).
+# The id of the trigger can be retrieved using GCP UI of trigger.sh as well.
 #
 # Usage: schedule.sh [options]
 #
