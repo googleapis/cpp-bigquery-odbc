@@ -1,0 +1,79 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+#include "utils.h"
+
+#include "google/cloud/internal/getenv.h"
+
+#include <gtest/gtest.h>
+
+namespace google {
+namespace cloud {
+namespace odbc_bq_driver {
+
+const Section kDsnSection {
+  { "Description", "Google BigQuery ODBC Connector" },
+  { "Driver", "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" }
+};
+
+const Section kOdbcSection {
+  { "Trace", "1" },
+  { "TraceFile", "/tmp/odbc.log" }
+};
+
+const Section kCommentedDsnSection {
+  { "HTAPI_MinResultsSize", "1000" },
+  { "HTAPI_MinActivationRatio", "3" }
+};
+
+Sections kSampleIniSections {
+  { "SampleDSN", kDsnSection },
+  { "ODBC", kOdbcSection }
+};
+
+Sections kCommentedIniSections {
+  { "SampleDSN", kCommentedDsnSection },
+};
+
+TEST(Parsing, ParseIni) {
+  std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
+  std::string path = std::filesystem::canonical(test_data_path + "/sample.ini");
+  Sections sections = *ParseIni(path);
+
+  // Test if the uncommented sections are defined
+  for(auto it_outer = kSampleIniSections.begin(); it_outer != kSampleIniSections.end(); it_outer++ ) {
+    std::string section_name = it_outer->first;
+    Section sample_ini_section = it_outer->second;
+    for(auto it_inner = sample_ini_section.begin(); it_inner != sample_ini_section.end(); it_inner++ ) {
+      std::string property = it_inner->first;
+      EXPECT_EQ(sample_ini_section[property], sections[section_name][property]);
+    }
+  }
+
+  // Test if the commented sections are not defined
+  for(auto it_outer = kCommentedIniSections.begin(); it_outer != kCommentedIniSections.end(); it_outer++ ) {
+    std::string sectionName = it_outer->first;
+    Section commented_ini_section = it_outer->second;
+    for(auto it_inner = commented_ini_section.begin(); it_inner != commented_ini_section.end(); it_inner++ ) {
+      std::string property = it_inner->first;
+      EXPECT_EQ(sections[sectionName][property], "");
+    }
+  }
+
+}
+
+}  // namespace odbc_bq_driver
+}  // namespace cloud
+}  // namespace google

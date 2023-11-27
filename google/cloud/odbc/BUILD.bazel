@@ -22,23 +22,10 @@ cc_library(
     hdrs = [],
     include_prefix = "odbc_client_interface",
     deps = [
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
         "@com_google_cloud_cpp//:experimental-bigquery-rest"
     ],
     visibility = ["//:__pkg__"],
-)
-
-load(":google_cloud_odbc_bq_driver.bzl", "google_cloud_odbc_bq_driver_hdrs", "google_cloud_odbc_bq_driver_srcs")
-
-cc_library(
-    name = "google_cloud_odbc_bq_driver",
-    srcs = google_cloud_odbc_bq_driver_srcs,
-    hdrs = google_cloud_odbc_bq_driver_hdrs,
-    visibility = ["//:__subpackages__"],
-    deps = [
-        "//:odbc_client_interface",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest"
-    ],
 )
 
 cc_test(
@@ -49,3 +36,44 @@ cc_test(
         "//:odbc_client_interface"
     ]
 )
+
+# Library and tests for Driver internal
+load(":google_cloud_odbc_bq_driver_internal.bzl", "google_cloud_odbc_bq_driver_internal_hdrs", "google_cloud_odbc_bq_driver_internal_srcs")
+
+cc_library(
+    name = "google_cloud_odbc_bq_driver_internal",
+    srcs = google_cloud_odbc_bq_driver_internal_srcs,
+    hdrs = google_cloud_odbc_bq_driver_internal_hdrs,
+    visibility = ["//:__pkg__"],
+    deps = [
+        "@com_google_cloud_cpp//:experimental-bigquery-rest" # We need this dependency to use 'options' from client libraries
+    ],
+)
+
+[cc_test(
+    name = driver_utils_test.replace("/", "_").replace(".cc", ""),
+    timeout = "long",
+    srcs = [driver_utils_test],
+    tags = ["unit-tests"],
+    deps = [
+        "//:google_cloud_odbc_bq_driver_internal",
+        "@com_google_googletest//:gtest_main",
+    ],
+) for driver_utils_test in glob(["bq_driver/internal/*_test.cc"])]
+
+# Library target for the Driver
+
+load(":google_cloud_odbc_bq_driver.bzl", "google_cloud_odbc_bq_driver_hdrs", "google_cloud_odbc_bq_driver_srcs")
+
+cc_library(
+    name = "google_cloud_odbc_bq_driver",
+    srcs = google_cloud_odbc_bq_driver_srcs,
+    hdrs = google_cloud_odbc_bq_driver_hdrs,
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//:odbc_client_interface",
+        "//:google_cloud_odbc_bq_driver_internal",
+        "@com_google_cloud_cpp//:experimental-bigquery-rest"
+    ],
+)
+
