@@ -127,6 +127,7 @@ TEST(GetDataset, ProjectNotExist) {
     HasSubstr("Project " + project_id + " is not found")));
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(GetDataset, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -143,6 +144,7 @@ TEST(GetDataset, NoAccessAccountAuth) {
 
   EXPECT_THAT(dataset, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Dataset")));
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }

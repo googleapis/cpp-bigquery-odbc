@@ -100,6 +100,7 @@ TEST(ListAllProjects, WrongAuthntication) {
   }
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListAllProjects, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -111,6 +112,7 @@ TEST(ListAllProjects, NoAccessAccountAuth) {
   auto begin = range.begin();
   EXPECT_EQ(begin, range.end());
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }

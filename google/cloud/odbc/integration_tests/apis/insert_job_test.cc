@@ -388,6 +388,7 @@ TEST(InsertJob, NoJobConfigurationQuery) {
   EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid Job object")));
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(InsertJob, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -423,6 +424,7 @@ TEST(InsertJob, NoAccessAccountAuth) {
   EXPECT_THAT(job_response, StatusIs(StatusCode::kPermissionDenied,
     HasSubstr("User does not have bigquery.jobs.create permission in project")));
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();

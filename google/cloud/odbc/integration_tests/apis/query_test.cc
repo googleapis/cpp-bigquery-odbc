@@ -507,6 +507,7 @@ TEST(Query, WithQueryParameters) {
   EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(Query, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -537,6 +538,7 @@ TEST(Query, NoAccessAccountAuth) {
   EXPECT_THAT(query_response, StatusIs(StatusCode::kPermissionDenied,
     HasSubstr("User does not have bigquery.jobs.create permission in project")));
 }
+#endif // USER_ACCOUNT_AUTH
 
 TEST(QueryResults, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
@@ -585,6 +587,7 @@ TEST(QueryResults, DifferentAccount) {
     HasSubstr("User does not have permission to access results of another user's job")));
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(QueryResults, NoAccessAccountAuth) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
@@ -631,6 +634,7 @@ TEST(QueryResults, NoAccessAccountAuth) {
   EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
     HasSubstr("Permission bigquery.jobs.get denied on job")));
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }

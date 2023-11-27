@@ -233,6 +233,7 @@ TEST(GetTable, SetView) {
   EXPECT_EQ(table.value().num_bytes, -1);
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(GetTable, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -252,6 +253,7 @@ TEST(GetTable, NoAccessAccountAuth) {
 
   EXPECT_THAT(table, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Table")));
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }

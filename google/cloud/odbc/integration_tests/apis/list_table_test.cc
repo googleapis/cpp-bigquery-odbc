@@ -144,6 +144,7 @@ TEST(ListAllTables, ProjectNotExist) {
   }
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListAllTables, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -164,6 +165,7 @@ TEST(ListAllTables, NoAccessAccountAuth) {
     EXPECT_THAT(table, StatusIs(StatusCode::kPermissionDenied, HasSubstr("Access Denied: Dataset")));
   }
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }

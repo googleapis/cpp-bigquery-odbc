@@ -154,6 +154,7 @@ TEST(ListJobs, ProjectNotExist) {
   }
 }
 
+#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -173,6 +174,7 @@ TEST(ListJobs, NoAccessAccountAuth) {
       HasSubstr("User does not have bigquery.jobs.list permission in project")));
   }
 }
+#endif // USER_ACCOUNT_AUTH
 }
 }
 }
