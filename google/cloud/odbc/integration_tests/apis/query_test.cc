@@ -571,7 +571,7 @@ TEST(QueryResults, DifferentAccount) {
   EXPECT_TRUE(query_response.value().job_complete);
 
   // Getting results of previous Query with another account
-  auto options_with_user_account = CreateUserAccountAuthentication();
+  auto options_with_user_account = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
     std::move(*options_with_user_account)));

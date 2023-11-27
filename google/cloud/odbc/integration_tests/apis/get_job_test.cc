@@ -114,7 +114,7 @@ TEST(GetJob, DifferentAccount) {
   auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job with another account
-  auto options_with_user_account = CreateUserAccountAuthentication();
+  auto options_with_user_account = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options_with_user_account);
   auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(std::move(*options_with_user_account)));
   GetJobRequest get_job_request;

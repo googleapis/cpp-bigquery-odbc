@@ -462,7 +462,7 @@ TEST(InsertJob, DifferentAccount) {
   EXPECT_EQ(job_response.value().configuration.job_type, "QUERY");
 
   // Getting results of previous Job using another account
-  auto options_with_user_account = CreateUserAccountAuthentication();
+  auto options_with_user_account = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
     std::move(*options_with_user_account)));
