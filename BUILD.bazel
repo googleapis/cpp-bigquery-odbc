@@ -25,3 +25,15 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = ["//google/cloud/odbc:odbc_client_interface"],
 )
+
+cc_library(
+    name = "google_cloud_odbc_bq_driver",
+    visibility = ["//visibility:public"],
+    deps = ["//google/cloud/odbc:google_cloud_odbc_bq_driver"],
+)
+
+cc_library(
+    name = "google_cloud_odbc_bq_driver_internal",
+    visibility = ["//visibility:public"],
+    deps = ["//google/cloud/odbc:google_cloud_odbc_bq_driver_internal"],
+)

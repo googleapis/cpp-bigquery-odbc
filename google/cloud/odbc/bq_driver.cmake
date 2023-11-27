@@ -14,6 +14,12 @@
 # limitations under the License.
 # ~~~
 
+# To avoid maintaining the list of files for the library, export them to a .bzl
+# file.
+if (NOT COMMAND create_bazel_config)
+  include(CreateOdbcBazelConfig)
+endif()
+
 add_library(
     google_cloud_odbc_bq_driver # cmake-format: sort
     bq_driver/odbc_api.cc
@@ -39,8 +45,26 @@ add_library(
     bq_driver/odbc_trace.cc
     bq_driver/odbc_trace.h)
 
+# BQ Driver Internal Library
+add_library(
+  google_cloud_odbc_bq_driver_internal
+  bq_driver/internal/utils.h
+  bq_driver/internal/utils.cc
+)
+
+target_link_libraries(
+  google_cloud_odbc_bq_driver_internal
+  google_cloud_cpp_bigquery_rest # We need this dependency to use 'options' from client libraries
+)
+
+create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
+
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver PRIVATE $ENV{ODBC_INCLUDE_PATH})
+target_link_libraries(
+  google_cloud_odbc_bq_driver
+  google_cloud_odbc_bq_driver_internal
+)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
@@ -52,11 +76,32 @@ set_target_properties(
 add_library(google-cloud-odbc::bq-driver ALIAS
             google_cloud_odbc_bq_driver)
 
-# To avoid maintaining the list of files for the library, export them to a .bzl
-# file.
-if (COMMAND create_bazel_config)
-  create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
-else()
-  include(CreateOdbcBazelConfig)
-  create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
-endif()
+create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
+
+# Function for running for unit tests
+function (bq_driver_define_unit_tests)
+  if (NOT ODBC_BUILD_TESTING)
+    return()
+  endif ()
+
+  enable_testing()
+
+  add_executable(
+    google_cloud_odbc_bq_driver_unit_tests
+    bq_driver/internal/utils_test.cc
+  )
+
+  target_link_libraries(
+    google_cloud_odbc_bq_driver_unit_tests
+    google_cloud_odbc_bq_driver_internal
+    GTest::gtest_main
+    GTest::gtest
+  )
+
+  target_compile_features(google_cloud_odbc_bq_driver_unit_tests PUBLIC cxx_std_17)
+
+  include(GoogleTest)
+  gtest_discover_tests(google_cloud_odbc_bq_driver_unit_tests)
+endfunction ()
+
+bq_driver_define_unit_tests()

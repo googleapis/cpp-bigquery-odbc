@@ -64,7 +64,7 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ConnectionHandle> co
     results[dataset_name].emplace_back(table_name);
   }
 
-  return std::make_shared<Results>(results);;
+  return std::make_shared<Results>(results);
 }
 
 }  // namespace bigquery_odbc

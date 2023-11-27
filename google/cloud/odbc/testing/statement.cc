@@ -145,7 +145,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ConnectionHandle> conn, st
     }
   }
 
-  return std::make_shared<Results>(results);;
+  return std::make_shared<Results>(results);
 }
 
 std::shared_ptr<Results> ScrollResults(std::shared_ptr<ConnectionHandle> conn, std::string query, int rs_size) {

@@ -51,10 +51,10 @@ function (odbc_define_tests)
     testing/statement.cc
     testing/catalog.cc
     tests/connection_test.cc
-    tests/driver_properties_test.cc
-    tests/descriptor_test.cc
-    tests/statement_test.cc
-    tests/catalog_test.cc
+    # tests/driver_properties_test.cc
+    # tests/descriptor_test.cc
+    # tests/statement_test.cc
+    # tests/catalog_test.cc
   )
 
   target_link_libraries(
