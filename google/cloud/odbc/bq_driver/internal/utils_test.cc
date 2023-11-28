@@ -49,11 +49,10 @@ Sections kCommentedIniSections {
 
 TEST(Parsing, ParseIni) {
   std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
-  std::string path = std::filesystem::canonical(test_data_path + "/sample.ini");
-  Sections sections = *ParseIni(path);
+  Sections sections = *ParseIni(test_data_path + "/sample.ini");
 
   // Test if the uncommented sections are defined
-  for(auto it_outer = kSampleIniSections.begin(); it_outer != kSampleIniSections.end(); it_outer++ ) {
+  for(auto it_outer = kSampleIniSections.begin(); it_outer != kSampleIniSections.end(); it_outer++) {
     std::string section_name = it_outer->first;
     Section sample_ini_section = it_outer->second;
     for(auto it_inner = sample_ini_section.begin(); it_inner != sample_ini_section.end(); it_inner++ ) {
@@ -63,15 +62,27 @@ TEST(Parsing, ParseIni) {
   }
 
   // Test if the commented sections are not defined
-  for(auto it_outer = kCommentedIniSections.begin(); it_outer != kCommentedIniSections.end(); it_outer++ ) {
+  for(auto it_outer = kCommentedIniSections.begin(); it_outer != kCommentedIniSections.end(); it_outer++) {
     std::string sectionName = it_outer->first;
     Section commented_ini_section = it_outer->second;
-    for(auto it_inner = commented_ini_section.begin(); it_inner != commented_ini_section.end(); it_inner++ ) {
+    for(auto it_inner = commented_ini_section.begin(); it_inner != commented_ini_section.end(); it_inner++) {
       std::string property = it_inner->first;
       EXPECT_EQ(sections[sectionName][property], "");
     }
   }
 
+}
+
+TEST(Parsing, ParseIniIncorrectPath) {
+  std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
+  EXPECT_THROW({
+    try {
+      ParseIni(test_data_path + "/invalid_file_name.ini");
+    } catch (const std::runtime_error& e) {
+      EXPECT_STREQ("Cannot access file", e.what());
+      throw;
+    }
+  }, std::runtime_error);
 }
 
 }  // namespace odbc_bq_driver

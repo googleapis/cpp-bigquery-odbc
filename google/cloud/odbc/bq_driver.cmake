@@ -96,7 +96,6 @@ function (bq_driver_define_unit_tests)
     google_cloud_odbc_bq_driver_unit_tests
     google_cloud_odbc_bq_driver_internal
     GTest::gtest_main
-    GTest::gtest
   )
 
   target_compile_features(google_cloud_odbc_bq_driver_unit_tests PUBLIC cxx_std_17)

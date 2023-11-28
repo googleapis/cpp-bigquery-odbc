@@ -19,16 +19,16 @@ namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
-inline void LTrim( std::string& s) {
+inline void LTrim(std::string& s) {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
     [](char ch) { return (std::isspace(ch) == 0); }));
 }
 
-inline void RTrim( std::string& s) {
+inline void RTrim(std::string& s) {
 	s.erase(std::find_if(s.rbegin(), s.rend(), [](char ch) { return (std::isspace(ch) == 0); }).base(), s.end());
 }
 
-inline void Trim( std::string& s) {
+inline void Trim(std::string& s) {
   LTrim(s);
   RTrim(s);
 }
@@ -70,7 +70,8 @@ std::shared_ptr<Sections> ParseIni(std::string const& file_path) {
         }
       }
     }
-    is.close();
+  } else {
+    throw std::runtime_error("Cannot access file");
   }
   return std::make_shared<Sections>(sections);
 }

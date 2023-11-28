@@ -23,6 +23,8 @@ source module ci/lib/io.sh
 
 mapfile -t args < <(bazel::common_args)
 mapfile -t integration_args < <(integration::bazel_args)
+integration::setup
+
 io::run bazel test //google/cloud/odbc/integration_tests:* \
   "${args[@]}" \
   "${integration_args[@]}" \

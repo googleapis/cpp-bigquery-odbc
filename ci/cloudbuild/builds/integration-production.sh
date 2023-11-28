@@ -28,7 +28,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 export ODBC_TESTS_DSN="SampleDSN"
 
 io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_CXX_STANDARD=14 \
+  -DCMAKE_CXX_STANDARD=17 \
   -DODBC_BUILD_TESTING=ON
 io::run cmake --build cmake-out
 
@@ -37,7 +37,7 @@ io::run env -C cmake-out ctest "${ctest_args[@]}"
 
 # This runs all the unit tests
 
-mapfile -t args < <(bazel::common_args)
-mapfile -t integration_args < <(integration::bazel_args)
-
-io::run bazel test "${args[@]}" "${integration_args[@]}" --test_tag_filters=unit-tests ...
+# mapfile -t args < <(bazel::common_args)
+# mapfile -t integration_args < <(integration::bazel_args)
+# 
+# io::run bazel test "${args[@]}" "${integration_args[@]}" --test_tag_filters=unit-tests ...

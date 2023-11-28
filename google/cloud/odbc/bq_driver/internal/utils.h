@@ -15,7 +15,6 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
 
-#include <filesystem>
 #include <algorithm>
 #include <fstream>
 #include <memory>
