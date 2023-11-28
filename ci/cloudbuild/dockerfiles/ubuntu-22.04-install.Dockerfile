@@ -201,7 +201,7 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     chmod +x /usr/local/bin/sccache
 
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/90ad988fa439de20b79774b1ee737a1dcb15f9c8.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \

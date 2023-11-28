@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 #include "google/cloud/internal/getenv.h"
 

@@ -20,6 +20,23 @@ if (NOT COMMAND create_bazel_config)
   include(CreateOdbcBazelConfig)
 endif()
 
+# BQ Driver Internal Library
+add_library(
+  google_cloud_odbc_bq_driver_internal
+  bq_driver/internal/utils.h
+  bq_driver/internal/utils.cc
+)
+
+target_link_libraries(
+  google_cloud_odbc_bq_driver_internal
+  google_cloud_cpp_bigquery_rest # We need this dependency to use 'options' from client libraries
+  stdc++fs
+)
+target_include_directories(google_cloud_odbc_bq_driver_internal PUBLIC ${CMAKE_SOURCE_DIR})
+
+create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
+
+# BQ Driver Library
 add_library(
     google_cloud_odbc_bq_driver # cmake-format: sort
     bq_driver/odbc_api.cc
@@ -44,21 +61,6 @@ add_library(
     bq_driver/odbc_statement.h
     bq_driver/odbc_trace.cc
     bq_driver/odbc_trace.h)
-
-# BQ Driver Internal Library
-add_library(
-  google_cloud_odbc_bq_driver_internal
-  bq_driver/internal/utils.h
-  bq_driver/internal/utils.cc
-)
-
-target_link_libraries(
-  google_cloud_odbc_bq_driver_internal
-  google_cloud_cpp_bigquery_rest # We need this dependency to use 'options' from client libraries
-  stdc++fs
-)
-
-create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver PRIVATE $ENV{ODBC_INCLUDE_PATH})
