@@ -47,9 +47,9 @@ Sections kCommentedIniSections {
   { "SampleDSN", kCommentedDsnSection },
 };
 
-TEST(Parsing, ParseIni) {
+TEST(Parsing, ParseConfig) {
   std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
-  Sections sections = *ParseIni(test_data_path + "/sample.ini");
+  Sections sections = *ParseConfig(test_data_path + "/sample.ini");
 
   // Test if the uncommented sections are defined
   for(auto it_outer = kSampleIniSections.begin(); it_outer != kSampleIniSections.end(); it_outer++) {
@@ -70,14 +70,13 @@ TEST(Parsing, ParseIni) {
       EXPECT_EQ(sections[sectionName][property], "");
     }
   }
-
 }
 
-TEST(Parsing, ParseIniIncorrectPath) {
+TEST(Parsing, ParseConfigIncorrectPath) {
   std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
   EXPECT_THROW({
     try {
-      ParseIni(test_data_path + "/invalid_file_name.ini");
+      ParseConfig(test_data_path + "/invalid_file_name.ini");
     } catch (const std::runtime_error& e) {
       EXPECT_STREQ("Cannot access file", e.what());
       throw;
