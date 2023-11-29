@@ -98,7 +98,7 @@ function integration::bazel_args() {
     "--test_env=CPP_BIGQUERY_ODBC_TEST_NO_ACCESS_ACCOUNT_AUTH_KEY=${KEY_DIR}/no_access_account_auth_keys.json"
   )
   args+=(
-    "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=/workspace/google/cloud/odbc/bq_driver/internal/test_data/"
+    "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/"
   )
   printf "%s\n" "${args[@]}"
 }

@@ -83,7 +83,7 @@ create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
 
 # Function for running for unit tests
 function (bq_driver_define_unit_tests)
-  if (NOT ODBC_BUILD_TESTING)
+  if (NOT ODBC_UNIT_TESTING)
     return()
   endif ()
 

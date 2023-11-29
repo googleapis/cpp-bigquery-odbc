@@ -22,7 +22,7 @@ source module ci/gha/builds/lib/cmake.sh
 
 mapfile -t args < <(cmake::common_args)
 args+=(
-  -DODBC_BUILD_TESTING=OFF
+  -DODBC_INTEGRATION_TESTING=OFF
 )
 mapfile -t vcpkg_args < <(cmake::vcpkg_args)
 mapfile -t ctest_args < <(ctest::common_args)

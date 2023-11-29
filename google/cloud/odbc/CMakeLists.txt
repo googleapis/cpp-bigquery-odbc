@@ -37,7 +37,7 @@ else()
 endif()
 
 function (odbc_define_tests)
-  if (NOT ODBC_BUILD_TESTING)
+  if (NOT ODBC_INTEGRATION_TESTING)
     return()
   endif ()
 
@@ -73,8 +73,9 @@ function (odbc_define_tests)
   gtest_discover_tests(all_tests)
 endfunction ()
 
+# Fetching dependecies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
-if (NOT google_cloud_cpp_bigquery_rest_FOUND)
+if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUND)
   # These flags need to be set to build google_cloud_cpp_bigquery_rest without examples
   set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
   set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)

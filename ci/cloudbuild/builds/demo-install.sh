@@ -21,7 +21,7 @@ source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/lib/io.sh
 
 cmake_config_testing_details=(
-  -DODBC_BUILD_TESTING=OFF
+  -DODBC_INTEGRATION_TESTING=OFF
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(

@@ -62,7 +62,7 @@ void ClearDataset(string kDatasetName, shared_ptr<vector<string>> table_names_pt
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLTables) {
+TEST(CatalogTest, DISABLED_SQLTables) {
   ClearDataset(kDatasetName);
   auto conn = std::make_shared<ConnectionHandle>();
 

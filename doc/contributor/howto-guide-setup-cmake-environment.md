@@ -82,7 +82,7 @@ much faster.
 
 ```shell
 cd $HOME/cpp-bigquery-odbc
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_BUILD_TESTING=ON
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_INTEGRATION_TESTING=ON
 cmake  --build build -j $(nproc) 
 ```
 
@@ -96,7 +96,7 @@ Assuming you have already setup a DSN using a driver manager following the steps
 
 ```shell
 cd $HOME/cpp-bigquery-odbc
-cmake -B build -S . -DODBC_BUILD_TESTING=ON
+cmake -B build -S . -DODBC_INTEGRATION_TESTING=ON
 cmake  --build build -j $(nproc)
 cd build
 ctest

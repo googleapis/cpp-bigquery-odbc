@@ -22,6 +22,14 @@ source module ci/cloudbuild/builds/lib/bazel.sh
 source module ci/cloudbuild/builds/lib/integration.sh
 source module ci/lib/io.sh
 
+# This runs all the unit tests
+
+mapfile -t args < <(bazel::common_args)
+mapfile -t integration_args < <(integration::bazel_args)
+
+io::run bazel test "${args[@]}" "${integration_args[@]}" --test_tag_filters=unit-tests ...
+
+# Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
 
 # This is the name of DSN set in odbc.ini from simba.zip
@@ -29,15 +37,9 @@ export ODBC_TESTS_DSN="SampleDSN"
 
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
-  -DODBC_BUILD_TESTING=ON
+  -DODBC_INTEGRATION_TESTING=ON \
+  -DODBC_UNIT_TESTING=OFF
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
-
-# This runs all the unit tests
-
-# mapfile -t args < <(bazel::common_args)
-# mapfile -t integration_args < <(integration::bazel_args)
-# 
-# io::run bazel test "${args[@]}" "${integration_args[@]}" --test_tag_filters=unit-tests ...
