@@ -91,11 +91,6 @@ else()
   find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
 endif()
 
-# For now, I am adding a default target which just depends on google_cloud_cpp_bigquery_rest.
-# This will change
-add_library(odbc_client_interface dummy.cc)
-target_link_libraries(odbc_client_interface PRIVATE google_cloud_cpp_bigquery_rest)
-
 include(bq_driver.cmake)
 
 add_library(odbc_bq_driver dummy.cc)

@@ -69,6 +69,9 @@ target_link_libraries(
   google_cloud_odbc_bq_driver_internal
 )
 
+target_link_libraries(google_cloud_odbc_bq_driver odbc_client_interface)
+add_subdirectory(client_interface)
+
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
     google_cloud_odbc_bq_driver

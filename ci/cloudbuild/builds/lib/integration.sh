@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This bash library has various helper functions for our integration tests.
+# This bash library has various helper functions for our BQ Client Library integration tests.
 
 # Make our include guard clean against set -o nounset.
 test -n "${CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__=0
@@ -96,9 +96,6 @@ function integration::bazel_args() {
     "--test_env=CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY=${KEY_DIR}/client_id_auth_keys.json"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY=${KEY_DIR}/wrong_account_auth_keys.json"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_NO_ACCESS_ACCOUNT_AUTH_KEY=${KEY_DIR}/no_access_account_auth_keys.json"
-  )
-  args+=(
-    "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/"
   )
   printf "%s\n" "${args[@]}"
 }

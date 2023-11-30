@@ -19,15 +19,15 @@ set -euo pipefail
 source "$(dirname "$0")/../../lib/init.sh"
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/bazel.sh
-source module ci/cloudbuild/builds/lib/integration.sh
+source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 # This runs all the unit tests
 
 mapfile -t args < <(bazel::common_args)
-mapfile -t integration_args < <(integration::bazel_args)
+mapfile -t unit_tests_args < <(unit-tests::bazel_args)
 
-io::run bazel test "${args[@]}" "${integration_args[@]}" --test_tag_filters=unit-tests ...
+io::run bazel test "${args[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
