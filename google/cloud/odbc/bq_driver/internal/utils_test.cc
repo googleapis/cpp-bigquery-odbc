@@ -25,7 +25,8 @@ namespace odbc_bq_driver {
 
 const Section kDsnSection {
   { "Description", "Google BigQuery ODBC Connector" },
-  { "Driver", "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" }
+  { "Driver", "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" },
+  { "PropertyWithoutValue", ""}
 };
 
 const Section kOdbcSection {
@@ -38,50 +39,43 @@ const Section kCommentedDsnSection {
   { "HTAPI_MinActivationRatio", "3" }
 };
 
-Sections kSampleIniSections {
+const Sections kSampleIniSections {
   { "SampleDSN", kDsnSection },
   { "ODBC", kOdbcSection }
 };
 
-Sections kCommentedIniSections {
+const Sections kCommentedIniSections {
   { "SampleDSN", kCommentedDsnSection },
 };
 
 TEST(Parsing, ParseConfig) {
   std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
-  Sections sections = *ParseConfig(test_data_path + "/sample.ini");
+  auto sections = ParseConfig(test_data_path + "/sample.ini");
 
   // Test if the uncommented sections are defined
-  for(auto it_outer = kSampleIniSections.begin(); it_outer != kSampleIniSections.end(); it_outer++) {
-    std::string section_name = it_outer->first;
-    Section sample_ini_section = it_outer->second;
-    for(auto it_inner = sample_ini_section.begin(); it_inner != sample_ini_section.end(); it_inner++ ) {
-      std::string property = it_inner->first;
-      EXPECT_EQ(sample_ini_section[property], sections[section_name][property]);
+  for(const auto & it_outer : kSampleIniSections) {
+    std::string section_name = it_outer.first;
+    Section sample_ini_section = it_outer.second;
+    for(auto & it_inner : sample_ini_section) {
+      std::string property = it_inner.first;
+      EXPECT_EQ(sample_ini_section[property], (*(sections.value()))[section_name][property]);
     }
   }
 
   // Test if the commented sections are not defined
-  for(auto it_outer = kCommentedIniSections.begin(); it_outer != kCommentedIniSections.end(); it_outer++) {
-    std::string sectionName = it_outer->first;
-    Section commented_ini_section = it_outer->second;
-    for(auto it_inner = commented_ini_section.begin(); it_inner != commented_ini_section.end(); it_inner++) {
-      std::string property = it_inner->first;
-      EXPECT_EQ(sections[sectionName][property], "");
+  for(const auto & it_outer : kCommentedIniSections) {
+    std::string section_name = it_outer.first;
+    Section commented_ini_section = it_outer.second;
+    for(auto & it_inner : commented_ini_section) {
+      std::string property = it_inner.first;
+      EXPECT_EQ((*(sections.value()))[section_name][property], "");
     }
   }
 }
 
 TEST(Parsing, ParseConfigIncorrectPath) {
-  std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
-  EXPECT_THROW({
-    try {
-      ParseConfig(test_data_path + "/invalid_file_name.ini");
-    } catch (const std::runtime_error& e) {
-      EXPECT_STREQ("Cannot access file", e.what());
-      throw;
-    }
-  }, std::runtime_error);
+  auto sections = ParseConfig("/invalid_file_name.ini");
+  EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
 }
 
 }  // namespace odbc_bq_driver

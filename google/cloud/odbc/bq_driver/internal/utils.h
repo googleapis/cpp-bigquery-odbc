@@ -21,9 +21,9 @@
 #include <map>
 #include <string>
 
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+#include "google/cloud/status_or.h"
+
+namespace google::cloud::odbc_bq_driver {
 
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
@@ -42,10 +42,10 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
-std::shared_ptr<Sections> ParseConfig(std::string const& file_path);
+StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::odbc_bq_driver
+
+
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
