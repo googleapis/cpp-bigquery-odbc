@@ -27,7 +27,7 @@ export CC=clang
 export CXX=clang++
 
 mapfile -t args < <(bazel::common_args)
-mapfile -t unit_tests_args < <(unit-tests::bazel_args)
+mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 args+=("--config=tsan")
 # report_atomic_races=0: https://github.com/google/sanitizers/issues/953
 args+=("--test_env=TSAN_OPTIONS=suppressions=${PROJECT_ROOT}/ci/tsan_suppressions.txt:halt_on_error=1:second_deadlock_stack=1:report_atomic_races=0")

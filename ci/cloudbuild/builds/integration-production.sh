@@ -25,7 +25,7 @@ source module ci/lib/io.sh
 # This runs all the unit tests
 
 mapfile -t args < <(bazel::common_args)
-mapfile -t unit_tests_args < <(unit-tests::bazel_args)
+mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 
 io::run bazel test "${args[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 

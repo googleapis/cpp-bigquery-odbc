@@ -27,6 +27,6 @@ export CC=clang
 export CXX=clang++
 
 mapfile -t args < <(bazel::common_args)
-mapfile -t unit_tests_args < <(unit-tests::bazel_args)
+mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 args+=("--config=ubsan")
 bazel test "${args[@]}" "${unit_tests_args[@]}" --test_tag_filters=integration-test,unit-tests ...

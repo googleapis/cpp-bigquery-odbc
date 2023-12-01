@@ -28,10 +28,10 @@ fi # include guard
 # Example usage:
 #
 #   mapfile -t args < <(bazel::common_args)
-#   mapfile -t unit_tests_args < <(unit-tests::bazel_args)
+#   mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 #   bazel test "${args[@]}" "${unit_tests_args[@]}"
 #
-function unit-tests::bazel_args() {
+function unit_tests::bazel_args() {
   declare -a args
 
   args+=(
