@@ -20,30 +20,30 @@
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
 
-// Not all compilers support <filesystem> header
+/// Including <filesystem> or <experimental/filesystem>
+/// depends on the specific compiler
 #if __has_include(<filesystem>)
-#include <filesystem>
-namespace fs = std::filesystem;
+  #include <filesystem>
+  namespace fs = std::filesystem;
 #elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
- namespace fs = std::experimental::filesystem;
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
 #else
- #error "Missing the <filesystem> header."
+  #error "Missing the <filesystem> header."
 #endif
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
+/// Include secrets from GCP Secret Manager during compilation
 #ifdef DEFAULT_BIGQUERY_CLIENT_ID
   #define DEFAULT_CLIENT_ID DEFAULT_BIGQUERY_CLIENT_ID
 #else
   #define DEFAULT_CLIENT_ID "provide DEFAULT_BIGQUERY_CLIENT_ID flag please"
 #endif
 #ifdef DEFAULT_BIGQUERY_CLIENT_SECRET
-#define DEFAULT_CLIENT_SECRET DEFAULT_BIGQUERY_CLIENT_SECRET
+  #define DEFAULT_CLIENT_SECRET DEFAULT_BIGQUERY_CLIENT_SECRET
 #else
-#define DEFAULT_CLIENT_SECRET "provide DEFAULT_BIGQUERY_CLIENT_SECRET flag please"
+  #define DEFAULT_CLIENT_SECRET "provide DEFAULT_BIGQUERY_CLIENT_SECRET flag please"
 #endif
 
 inline constexpr absl::string_view kAuthorizedUserFileName = "authorized_user.json";
@@ -66,8 +66,6 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
     std::string const& credentials_file_path,
     std::string const& refresh_token);
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif //GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H

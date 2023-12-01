@@ -20,9 +20,7 @@
 #include "google/cloud/odbc/client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/setenv.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::odbc_bq_driver::SetEnv;
 
@@ -72,6 +70,4 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
   return Status(StatusCode::kInvalidArgument, "OauthMechanism enum is invalid.");
 }
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::odbc_bigquery_client_interface
