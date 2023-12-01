@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <filesystem>
 #include <fstream>
 
 #include "google/cloud/credentials.h"
@@ -29,14 +28,11 @@ std::string const kDefaultClientSecret = DEFAULT_CLIENT_SECRET;
 
 StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
     std::string const& refresh_token) {
-  std::string file_path = std::filesystem::temp_directory_path() / kAuthorizedUserFileName;
+  std::string file_path = AuthorizedUserFilePath();
   std::ofstream os(file_path);
   if (!os.is_open()) {
     return Status(StatusCode::kInvalidArgument, "Can't open file with path: " + file_path);
   }
-
-  std::cout << "CLIENT_ID: " << kDefaultClientId << "\n";
-  std::cout << "CLIENT_SECRET: " << kDefaultClientSecret << "\n";
 
   std::string content =
     "{\n"

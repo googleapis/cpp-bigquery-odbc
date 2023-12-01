@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 
@@ -34,7 +33,7 @@ TEST(UserAuthentication, HappyPath) {
   EXPECT_TRUE(credentials);
   auto file_path = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
   EXPECT_TRUE(file_path);
-  auto is = std::ifstream(std::filesystem::temp_directory_path() / kAuthorizedUserFileName);
+  auto is = std::ifstream(AuthorizedUserFilePath());
   is.exceptions(std::ios::badbit);  // Minimal error handling
   auto content = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
   EXPECT_TRUE(content.find(refresh_token) != std::string::npos);

@@ -34,12 +34,16 @@ fi # include guard
 function unit-tests::bazel_args() {
   declare -a args
 
-  DEFAULT_BIGQUERY_CLIENT_ID=$(gcloud secrets versions access latest --secret=default_bigquery_client_id)
-  DEFAULT_BIGQUERY_CLIENT_SECRET=$(gcloud secrets versions access latest --secret=default_bigquery_client_secret)
+  if [[ -x "$(command -v gcloud)" ]]; then
+    DEFAULT_BIGQUERY_CLIENT_ID=$(gcloud secrets versions access latest --secret=default_bigquery_client_id)
+    DEFAULT_BIGQUERY_CLIENT_SECRET=$(gcloud secrets versions access latest --secret=default_bigquery_client_secret)
+    args+=(
+      "--copt=-DDEFAULT_BIGQUERY_CLIENT_ID=\"${DEFAULT_BIGQUERY_CLIENT_ID}\""
+      "--copt=-DDEFAULT_BIGQUERY_CLIENT_SECRET=\"${DEFAULT_BIGQUERY_CLIENT_SECRET}\""
+    )
+  fi
   args+=(
     "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/"
-    "--copt=-DDEFAULT_BIGQUERY_CLIENT_ID=\"${DEFAULT_BIGQUERY_CLIENT_ID}\""
-    "--copt=-DDEFAULT_BIGQUERY_CLIENT_SECRET=\"${DEFAULT_BIGQUERY_CLIENT_SECRET}\""
   )
   printf "%s\n" "${args[@]}"
 }

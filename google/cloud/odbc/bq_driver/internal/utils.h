@@ -21,6 +21,8 @@
 #include <map>
 #include <string>
 
+#include "google/cloud/status_or.h"
+
 namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
@@ -42,7 +44,7 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
-std::shared_ptr<Sections> ParseConfig(std::string const& file_path);
+StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
 }  // namespace odbc_bq_driver
 }  // namespace cloud

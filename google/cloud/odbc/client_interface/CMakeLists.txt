@@ -23,9 +23,12 @@ add_library(
 
 target_link_libraries(
     odbc_client_interface
-    google_cloud_cpp_bigquery_rest)
+    google_cloud_cpp_bigquery_rest
+    stdc++fs)
 
 target_include_directories(odbc_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
+
+target_compile_features(odbc_client_interface PUBLIC cxx_std_17)
 
 create_bazel_config(odbc_client_interface YEAR 2023)
 

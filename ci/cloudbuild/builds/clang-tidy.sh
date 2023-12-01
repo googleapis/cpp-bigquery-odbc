@@ -31,7 +31,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 # require a newer C++ standard.
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_CLANG_TIDY=/usr/local/bin/clang-tidy-wrapper \
-  -DCMAKE_CXX_STANDARD=14 \
+  -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 

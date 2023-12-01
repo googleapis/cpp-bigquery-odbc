@@ -20,6 +20,17 @@
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
 
+// Not all compilers support <filesystem> header
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+ namespace fs = std::experimental::filesystem;
+#else
+ #error "Missing the <filesystem> header."
+#endif
+
 namespace google {
 namespace cloud {
 namespace odbc_bigquery_client_interface {
@@ -36,6 +47,11 @@ namespace odbc_bigquery_client_interface {
 #endif
 
 inline constexpr absl::string_view kAuthorizedUserFileName = "authorized_user.json";
+
+inline std::string AuthorizedUserFilePath() {
+  return (fs::temp_directory_path() / std::string(kAuthorizedUserFileName))
+          .string(); // Additional conversions are needed for Windows platform
+}
 
 enum class OauthMechanism {
     kAuthorizedUser,
