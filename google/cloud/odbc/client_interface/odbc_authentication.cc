@@ -18,10 +18,13 @@
 #include "google/cloud/status_or.h"
 
 #include "google/cloud/odbc/client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_driver/internal/setenv.h"
 
 namespace google {
 namespace cloud {
 namespace odbc_bigquery_client_interface {
+
+using google::cloud::odbc_bq_driver::SetEnv;
 
 std::string const kDefaultClientId = DEFAULT_CLIENT_ID;
 std::string const kDefaultClientSecret = DEFAULT_CLIENT_SECRET;
@@ -47,7 +50,7 @@ StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
     return Status(StatusCode::kInvalidArgument, "Can't close file with path: " + file_path);
   }
 
-  setenv("GOOGLE_APPLICATION_CREDENTIALS", file_path.c_str(), 1);
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", file_path);
   return google::cloud::MakeGoogleDefaultCredentials();
 }
 

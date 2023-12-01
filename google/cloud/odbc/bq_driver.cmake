@@ -23,8 +23,10 @@ endif()
 # BQ Driver Internal Library
 add_library(
   google_cloud_odbc_bq_driver_internal
-  bq_driver/internal/utils.h
-  bq_driver/internal/utils.cc
+    bq_driver/internal/setenv.h
+    bq_driver/internal/setenv.cc
+    bq_driver/internal/utils.h
+    bq_driver/internal/utils.cc
 )
 
 target_link_libraries(
@@ -95,6 +97,7 @@ function (bq_driver_define_unit_tests)
 
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
+    bq_driver/internal/setenv_test.cc
     bq_driver/internal/utils_test.cc
   )
 

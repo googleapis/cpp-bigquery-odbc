@@ -17,9 +17,11 @@
 """Automatically generated source lists for google_cloud_odbc_bq_driver_internal - DO NOT EDIT."""
 
 google_cloud_odbc_bq_driver_internal_hdrs = [
+    "bq_driver/internal/setenv.h",
     "bq_driver/internal/utils.h",
 ]
 
 google_cloud_odbc_bq_driver_internal_srcs = [
+    "bq_driver/internal/setenv.cc",
     "bq_driver/internal/utils.cc",
 ]

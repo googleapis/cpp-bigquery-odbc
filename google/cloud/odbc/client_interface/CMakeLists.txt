@@ -24,6 +24,7 @@ add_library(
 target_link_libraries(
     odbc_client_interface
     google_cloud_cpp_bigquery_rest
+    google_cloud_odbc_bq_driver_internal
     stdc++fs)
 
 target_include_directories(odbc_client_interface PUBLIC ${CMAKE_SOURCE_DIR})

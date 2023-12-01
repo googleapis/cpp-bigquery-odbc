@@ -25,6 +25,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "//:google_cloud_odbc_bq_driver_internal",
 ])
 
 [cc_test(
@@ -33,7 +34,6 @@ cc_library(
     tags = ["unit-tests"],
     deps = [
         "//:odbc_client_interface",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_googletest//:gtest_main",
     ],
 ) for client_interface_test in glob(["*_test.cc"])]
