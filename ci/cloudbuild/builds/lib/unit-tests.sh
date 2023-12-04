@@ -28,12 +28,20 @@ fi # include guard
 # Example usage:
 #
 #   mapfile -t args < <(bazel::common_args)
-#   mapfile -t unit_tests_args < <(unit_tests::bazel_args)
-#   bazel test "${args[@]}" "${unit_tests_args[@]}"
+#   mapfile -t integration_args < <(unit_tests::bazel_args)
+#   bazel test "${args[@]}" "${integration_args[@]}"
 #
 function unit_tests::bazel_args() {
   declare -a args
 
+  if [[ -x "$(command -v gcloud)" ]]; then
+    DEFAULT_BIGQUERY_CLIENT_ID=$(gcloud secrets versions access latest --secret=default_bigquery_client_id)
+    DEFAULT_BIGQUERY_CLIENT_SECRET=$(gcloud secrets versions access latest --secret=default_bigquery_client_secret)
+    args+=(
+      "--copt=-DDEFAULT_BIGQUERY_CLIENT_ID=\"${DEFAULT_BIGQUERY_CLIENT_ID}\""
+      "--copt=-DDEFAULT_BIGQUERY_CLIENT_SECRET=\"${DEFAULT_BIGQUERY_CLIENT_SECRET}\""
+    )
+  fi
   args+=(
     "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/"
   )

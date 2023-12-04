@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+// NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
@@ -81,3 +82,4 @@ TEST(Parsing, ParseConfigIncorrectPath) {
 }  // namespace odbc_bq_driver
 }  // namespace cloud
 }  // namespace google
+// NOLINTEND(modernize-concat-nested-namespaces)

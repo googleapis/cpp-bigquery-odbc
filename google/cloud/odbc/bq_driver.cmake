@@ -23,6 +23,8 @@ endif()
 # BQ Driver Internal Library
 add_library(
   google_cloud_odbc_bq_driver_internal
+  bq_driver/internal/setenv.h
+  bq_driver/internal/setenv.cc
   bq_driver/internal/utils.h
   bq_driver/internal/utils.cc
 )
@@ -68,6 +70,9 @@ target_link_libraries(
   google_cloud_odbc_bq_driver_internal
 )
 
+target_link_libraries(google_cloud_odbc_bq_driver odbc_client_interface)
+add_subdirectory(client_interface)
+
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
     google_cloud_odbc_bq_driver
@@ -90,6 +95,7 @@ function (bq_driver_define_unit_tests)
 
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
+    bq_driver/internal/setenv_test.cc
     bq_driver/internal/utils_test.cc
   )
 

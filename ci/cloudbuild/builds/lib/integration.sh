@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This bash library has various helper functions for our integration tests.
+# This bash library has various helper functions for our BQ Client Library integration tests.
 
 # Make our include guard clean against set -o nounset.
 test -n "${CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__=0

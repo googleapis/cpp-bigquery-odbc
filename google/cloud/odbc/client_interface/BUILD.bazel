@@ -12,28 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package(default_visibility = ["//visibility:private"])
+package(default_visibility = ["//:__subpackages__"])
 
 licenses(["notice"])  # Apache 2.0
 
-exports_files([
-    "LICENSE",
-])
+load(":odbc_client_interface.bzl", "odbc_client_interface_hdrs", "odbc_client_interface_srcs")
 
 cc_library(
     name = "odbc_client_interface",
+    srcs = odbc_client_interface_srcs,
+    hdrs = odbc_client_interface_hdrs,
     visibility = ["//visibility:public"],
-    deps = ["//google/cloud/odbc/client_interface:odbc_client_interface"],
-)
+    deps = [
+        "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "//:google_cloud_odbc_bq_driver_internal",
+])
 
-cc_library(
-    name = "google_cloud_odbc_bq_driver",
-    visibility = ["//visibility:public"],
-    deps = ["//google/cloud/odbc:google_cloud_odbc_bq_driver"],
-)
-
-cc_library(
-    name = "google_cloud_odbc_bq_driver_internal",
-    visibility = ["//visibility:public"],
-    deps = ["//google/cloud/odbc:google_cloud_odbc_bq_driver_internal"],
-)
+[cc_test(
+    name = client_interface_test.replace("/", "_").replace(".cc", ""),
+    srcs = [client_interface_test],
+    tags = ["unit-tests"],
+    deps = [
+        "//:odbc_client_interface",
+        "@com_google_googletest//:gtest_main",
+    ],
+) for client_interface_test in glob(["*_test.cc"])]
