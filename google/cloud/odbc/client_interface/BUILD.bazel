@@ -35,5 +35,6 @@ cc_library(
     deps = [
         "//:odbc_client_interface",
         "@com_google_googletest//:gtest_main",
+        "//google/cloud/odbc/integration_tests/testing_util:cpp_bigquery_odbc_integration_testing_util",
     ],
 ) for client_interface_test in glob(["*_test.cc"])]

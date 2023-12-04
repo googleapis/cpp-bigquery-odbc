@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
@@ -52,6 +53,25 @@ StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
   return google::cloud::MakeGoogleDefaultCredentials();
 }
 
+StatusOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
+    std::string const& credentials_file_path) {
+  auto is = std::ifstream(credentials_file_path);
+  is.exceptions(std::ios::badbit);  // Minimal error handling
+
+  nlohmann::basic_json json = nlohmann::json::parse(is, nullptr, false);
+  if (json.is_discarded()) {
+    return Status(StatusCode::kInvalidArgument, "File content is not valid json");
+  }
+  if (json.at("type") == "authorized_user") {
+    SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path);
+    return google::cloud::MakeGoogleDefaultCredentials();
+  }
+  if (json.at("type") == "service_account") {
+    return google::cloud::MakeServiceAccountCredentials(json.dump());
+  }
+  return Status(StatusCode::kInvalidArgument, "File content is not recognized");
+}
+
 StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
     OauthMechanism const& auth_mechanism,
     std::string const& credentials_file_path,
@@ -61,7 +81,7 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
       return CreateUserCredentials(refresh_token);
       break;
     case OauthMechanism::kServiceAccount:
-      return Status(StatusCode::kUnimplemented, "Currently not implemented. Will use file: " + credentials_file_path);
+      return CreateServiceCredentials(credentials_file_path);
       break;
     case OauthMechanism::kExternalUser:
       return Status(StatusCode::kUnimplemented, "Currently not implemented.");
