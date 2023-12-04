@@ -172,6 +172,10 @@ void DescribeCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column>
 // Executes the BindCol API to bind the Column struct data buffers to the statement handle
 void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index);
 
+// Waits until asynchronous BQ job is finished
+// Should be used after every BQ insert/select/update/delete operation
+inline void Wait();
+
 }  // namespace bigquery_odbc
 }  // namespace cloud
 }  // namespace google

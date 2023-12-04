@@ -13,10 +13,14 @@
 // limitations under the License.
 
 #include <testing/commons.h>
+#include <chrono>
+#include <thread>
 
 namespace google {
 namespace cloud {
 namespace bigquery_odbc {
+
+using namespace std::chrono_literals;
 
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
@@ -116,6 +120,7 @@ void Table::Create(std::shared_ptr<ConnectionHandle> conn, std::string schema_st
   StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
   SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  Wait();
 }
 
 void Table::Drop(std::shared_ptr<ConnectionHandle> conn) {
@@ -123,11 +128,13 @@ void Table::Drop(std::shared_ptr<ConnectionHandle> conn) {
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)drop_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  Wait();
 }
 
 void ExecuteStatement(std::shared_ptr<ConnectionHandle> conn, char stmt[]) {
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  Wait();
 }
 
 // TODO(#11): Generic implementation of InsertIntoTable function from testing/commons.*
@@ -172,6 +179,7 @@ void Table::Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows) {
 
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  Wait();
 }
 
 void DescribeCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
@@ -197,6 +205,11 @@ void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col
                 col_ptr->data_size,
                 &col_ptr->data_len);
   CheckError(status, "SQLBindCol", conn);
+}
+
+// Waits until asynchronous BQ job is finished
+inline void Wait() {
+  std::this_thread::sleep_for(1000ms);
 }
 
 }  // namespace bigquery_odbc

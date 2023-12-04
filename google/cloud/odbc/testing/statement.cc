@@ -144,6 +144,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ConnectionHandle> conn, st
       results[col_name].push_back(val);
     }
   }
+  Wait();
 
   return std::make_shared<Results>(results);;
 }

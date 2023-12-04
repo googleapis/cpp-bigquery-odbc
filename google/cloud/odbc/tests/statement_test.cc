@@ -59,6 +59,7 @@ void CheckColumnData(std::shared_ptr<ConnectionHandle> conn, std::string table_n
     EXPECT_EQ(col_ptr->data_type, schema[i].type);
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
+  Wait();
 }
 
 
