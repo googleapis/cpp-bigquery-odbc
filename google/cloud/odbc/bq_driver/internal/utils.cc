@@ -15,7 +15,10 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
-namespace google::cloud::odbc_bq_driver {
+// NOLINTBEGIN(modernize-concat-nested-namespaces)
+namespace google {
+namespace cloud {
+namespace odbc_bq_driver {
 
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
   std::ifstream is(file_path);
@@ -55,6 +58,7 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
   return std::make_shared<Sections>(sections);
 }
 
-} // namespace google::cloud::odbc_bq_driver
-
-
+}  // namespace odbc_bq_driver
+}  // namespace cloud
+}  // namespace google
+// NOLINTEND(modernize-concat-nested-namespaces)

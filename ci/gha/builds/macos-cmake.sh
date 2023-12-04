@@ -30,7 +30,7 @@ mapfile -t ctest_args < <(ctest::common_args)
 io::log_h1 "Starting Build"
 TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
 time {
-  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=17
+  io::run cmake "${args[@]}" "${vcpkg_args[@]}"
 }
 
 TIMEFORMAT="==> 🕑 CMake build done in %R seconds"
