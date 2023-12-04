@@ -16,27 +16,6 @@ licenses(["notice"])  # Apache v2
 
 package(default_visibility = ["//visibility:private"])
 
-cc_library(
-    name = "odbc_client_interface",
-    srcs = [],
-    hdrs = [],
-    include_prefix = "odbc_client_interface",
-    deps = [
-        "@com_google_googletest//:gtest",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest"
-    ],
-    visibility = ["//:__pkg__"],
-)
-
-cc_test(
-    name = "odbc_client_interface_test",
-    srcs = ["tests/dummy_test.cc"],
-    tags = ["integration-test"],
-    deps = [
-        "//:odbc_client_interface"
-    ]
-)
-
 # Library and tests for Driver internal
 load(":google_cloud_odbc_bq_driver_internal.bzl", "google_cloud_odbc_bq_driver_internal_hdrs", "google_cloud_odbc_bq_driver_internal_srcs")
 
@@ -71,7 +50,7 @@ cc_library(
     hdrs = google_cloud_odbc_bq_driver_hdrs,
     visibility = ["//:__subpackages__"],
     deps = [
-        "//:odbc_client_interface",
+        "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "//:google_cloud_odbc_bq_driver_internal",
         "@com_google_cloud_cpp//:experimental-bigquery-rest"
     ],
