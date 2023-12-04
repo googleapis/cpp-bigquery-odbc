@@ -25,7 +25,7 @@ namespace google {
 namespace cloud {
 namespace odbc_bigquery_client_interface {
 
-    using google::cloud::odbc_bq_driver::SetEnv;
+using google::cloud::odbc_bq_driver::SetEnv;
 
 StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
     std::string const& refresh_token) {
@@ -52,16 +52,13 @@ StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
   return google::cloud::MakeGoogleDefaultCredentials();
 }
 
-StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
-    OauthMechanism const& auth_mechanism,
-    std::string const& credentials_file_path,
-    std::string const& refresh_token) {
-  switch (auth_mechanism) {
+StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Auth const& auth) {
+  switch (auth.auth_mechanism) {
     case OauthMechanism::kAuthorizedUser:
-      return CreateUserCredentials(refresh_token);
+      return CreateUserCredentials(auth.refresh_token);
       break;
     case OauthMechanism::kServiceAccount:
-      return Status(StatusCode::kUnimplemented, "Currently not implemented. Will use file: " + credentials_file_path);
+      return Status(StatusCode::kUnimplemented, "Currently not implemented. Will use file: " + auth.credentials_file_path);
       break;
     case OauthMechanism::kExternalUser:
       return Status(StatusCode::kUnimplemented, "Currently not implemented.");

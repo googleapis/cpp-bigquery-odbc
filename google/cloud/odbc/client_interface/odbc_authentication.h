@@ -60,12 +60,15 @@ enum class OauthMechanism {
     kServiceAccount
 };
 
+struct Auth {
+    OauthMechanism auth_mechanism;
+    std::string credentials_file_path;
+    std::string refresh_token;
+};
+
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 /// It creates a file in temp dir for OauthMechanism::kAuthorizedUser.
-StatusOr<std::shared_ptr<Credentials>> CreateCredentials(
-    OauthMechanism const& auth_mechanism,
-    std::string const& credentials_file_path,
-    std::string const& refresh_token);
+StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Auth const& auth);
 
 }  // namespace odbc_bigquery_client_interface
 }  // namespace cloud

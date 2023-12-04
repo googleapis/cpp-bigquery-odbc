@@ -18,8 +18,10 @@
 
 odbc_client_interface_hdrs = [
     "odbc_authentication.h",
+    "odbc_bq_client.h",
 ]
 
 odbc_client_interface_srcs = [
     "odbc_authentication.cc",
+    "odbc_bq_client.cc",
 ]
