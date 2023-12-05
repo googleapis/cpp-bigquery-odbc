@@ -63,7 +63,7 @@ void ClearDataset(string kDatasetName, shared_ptr<vector<string>> table_names_pt
 }
 
 TEST(CatalogTest, SQLTables) {
-  ClearDataset(kDatasetName);
+//  ClearDataset(kDatasetName);
   auto conn = std::make_shared<ConnectionHandle>();
 
   // Create tables
@@ -88,7 +88,7 @@ TEST(CatalogTest, SQLTables) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  ClearDataset(kDatasetName, make_shared<vector<string>>(table_names));
+//  ClearDataset(kDatasetName, make_shared<vector<string>>(table_names));
 }
 
 }  // namespace bigquery_odbc
