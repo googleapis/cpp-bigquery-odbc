@@ -82,13 +82,15 @@ TEST(CatalogTest, SQLTables) {
   EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
 
   auto table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
+  vector<string> test_table_names;
   for(auto it: kTables) {
     EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first), table_names.end());
+    test_table_names.push_back(it.first);
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-//  ClearDataset(kDatasetName, make_shared<vector<string>>(table_names));
+  ClearDataset(kDatasetName, make_shared<vector<string>>(test_table_names));
 }
 
 }  // namespace bigquery_odbc

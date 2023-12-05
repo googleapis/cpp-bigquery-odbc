@@ -218,7 +218,7 @@ void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col
 // Waits until asynchronous BQ job is finished
 inline void Wait() {
       const auto start = std::chrono::high_resolution_clock::now();
-  std::this_thread::sleep_for(1000ms);
+//  std::this_thread::sleep_for(1000ms);
       const auto end = std::chrono::high_resolution_clock::now();
       const std::chrono::duration<double, std::milli> elapsed = end - start;
 
