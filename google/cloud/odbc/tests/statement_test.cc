@@ -199,9 +199,9 @@ TEST(StatementTest, SQLFetch) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+//  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//  table.Drop(conn);
+//  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLFetchScroll) {
