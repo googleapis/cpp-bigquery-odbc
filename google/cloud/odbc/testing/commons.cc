@@ -116,29 +116,36 @@ inline void CheckError(SQLRETURN status, const std::string api, std::shared_ptr<
 }
 
 void Table::Create(std::shared_ptr<ConnectionHandle> conn, std::string schema_str) {
+  std::cout << "Create Table\n";
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt, "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
   SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR *)create_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  std::cout << "Table Created\n";
   Wait();
 }
 
 void Table::Drop(std::shared_ptr<ConnectionHandle> conn) {
+  std::cout << "Drop Table\n";
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)drop_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  std::cout << "Table Dropped\n";
   Wait();
 }
 
 void ExecuteStatement(std::shared_ptr<ConnectionHandle> conn, char stmt[]) {
+  std::cout << "Execute Statement\n";
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  std::cout << "Statement executed\n";
   Wait();
 }
 
 // TODO(#11): Generic implementation of InsertIntoTable function from testing/commons.*
 void Table::Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows) {
+  std::cout << "Insert Data\n";
   auto insert_stmt =  "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -179,6 +186,7 @@ void Table::Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows) {
 
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR *)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+  std::cout << "Data Inserted\n";
   Wait();
 }
 
@@ -209,7 +217,12 @@ void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col
 
 // Waits until asynchronous BQ job is finished
 inline void Wait() {
+      const auto start = std::chrono::high_resolution_clock::now();
   std::this_thread::sleep_for(1000ms);
+      const auto end = std::chrono::high_resolution_clock::now();
+      const std::chrono::duration<double, std::milli> elapsed = end - start;
+
+      std::cout << "Waited " << elapsed.count() << '\n';
 }
 
 }  // namespace bigquery_odbc
