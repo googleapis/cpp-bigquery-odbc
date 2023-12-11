@@ -29,6 +29,9 @@ namespace odbc_bigquery_client_interface {
 
 StatusOr<std::shared_ptr<Credentials>> CreateUserCredentials(
     std::string const& refresh_token) {
+  if (refresh_token.empty()) {
+    return Status(StatusCode::kInvalidArgument, "Refresh token should not be empty");
+  }
   std::string file_path = AuthorizedUserFilePath();
   std::ofstream os(file_path);
   if (!os.is_open()) {

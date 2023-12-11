@@ -40,6 +40,12 @@ TEST(UserAuthentication, HappyPath) {
   EXPECT_TRUE(content.find(refresh_token) != std::string::npos);
 }
 
+TEST(UserAuthentication, EmptyRefreshToken) {
+  auto credentials = CreateCredentials(OauthMechanism::kAuthorizedUser, "", "");
+
+  EXPECT_EQ(credentials.status().code(), StatusCode::kInvalidArgument);
+}
+
 }  // namespace odbc_bigquery_client_interface
 }  // namespace cloud
 }  // namespace google
