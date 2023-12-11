@@ -61,7 +61,7 @@ RUN apt-get update && \
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
 
-COPY . /var/tmp/ci
+COPY ./requirements.txt /var/tmp/ci/requirements.txt
 WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
@@ -220,6 +220,7 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/90ad988fa4
 
 # Install the Cloud SDK and some of the emulators. We use the emulators to run
 # integration tests for the client libraries.
+COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
 WORKDIR /var/tmp/downloads
 RUN /var/tmp/ci/install-cloud-sdk.sh
 ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
