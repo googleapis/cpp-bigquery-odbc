@@ -15,21 +15,21 @@
 # ~~~
 
 add_library(
-    odbc_client_interface
+    odbc_bq_client_interface
     odbc_authentication.h
     odbc_authentication.cc)
 
 target_link_libraries(
-    odbc_client_interface
+    odbc_bq_client_interface
     google_cloud_cpp_bigquery_rest
     google_cloud_odbc_bq_driver_internal
     stdc++fs)
 
-target_include_directories(odbc_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_compile_features(odbc_client_interface PUBLIC cxx_std_17)
+target_compile_features(odbc_bq_client_interface PUBLIC cxx_std_17)
 
-create_bazel_config(odbc_client_interface YEAR 2023)
+create_bazel_config(odbc_bq_client_interface YEAR 2023)
 
 # Adding default BQ secrets during compilation
 option(DEFAULT_BIGQUERY_CLIENT_ID "Default BigQuery ClientId" OFF)
@@ -50,18 +50,18 @@ function (client_interface_define_unit_tests)
   enable_testing()
 
   add_executable(
-      odbc_client_interface_unit_tests
+      odbc_bq_client_interface_unit_tests
       odbc_authentication_test.cc
   )
 
   target_link_libraries(
-      odbc_client_interface_unit_tests
-      odbc_client_interface
+      odbc_bq_client_interface_unit_tests
+      odbc_bq_client_interface
       google_cloud_cpp_bigquery_rest
       GTest::gtest_main)
 
   include(GoogleTest)
-  gtest_discover_tests(odbc_client_interface_unit_tests)
+  gtest_discover_tests(odbc_bq_client_interface_unit_tests)
 endfunction ()
 
 client_interface_define_unit_tests()

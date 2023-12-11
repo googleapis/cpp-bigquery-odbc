@@ -17,7 +17,7 @@
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
 
-#include "google/cloud/odbc/client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/setenv.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)

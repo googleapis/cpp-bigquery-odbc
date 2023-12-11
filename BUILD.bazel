@@ -21,9 +21,9 @@ exports_files([
 ])
 
 cc_library(
-    name = "odbc_client_interface",
+    name = "odbc_bq_client_interface",
     visibility = ["//visibility:public"],
-    deps = ["//google/cloud/odbc/client_interface:odbc_client_interface"],
+    deps = ["//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface"],
 )
 
 cc_library(

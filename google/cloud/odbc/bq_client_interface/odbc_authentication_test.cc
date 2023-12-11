@@ -17,7 +17,7 @@
 
 #include "google/cloud/internal/getenv.h"
 
-#include "google/cloud/odbc/client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {

@@ -16,12 +16,12 @@ package(default_visibility = ["//:__subpackages__"])
 
 licenses(["notice"])  # Apache 2.0
 
-load(":odbc_client_interface.bzl", "odbc_client_interface_hdrs", "odbc_client_interface_srcs")
+load(":odbc_bq_client_interface.bzl", "odbc_bq_client_interface_hdrs", "odbc_bq_client_interface_srcs")
 
 cc_library(
-    name = "odbc_client_interface",
-    srcs = odbc_client_interface_srcs,
-    hdrs = odbc_client_interface_hdrs,
+    name = "odbc_bq_client_interface",
+    srcs = odbc_bq_client_interface_srcs,
+    hdrs = odbc_bq_client_interface_hdrs,
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
@@ -29,11 +29,11 @@ cc_library(
 ])
 
 [cc_test(
-    name = client_interface_test.replace("/", "_").replace(".cc", ""),
-    srcs = [client_interface_test],
+    name = bq_client_interface_test.replace("/", "_").replace(".cc", ""),
+    srcs = [bq_client_interface_test],
     tags = ["unit-tests"],
     deps = [
-        "//:odbc_client_interface",
+        "//:odbc_bq_client_interface",
         "@com_google_googletest//:gtest_main",
     ],
-) for client_interface_test in glob(["*_test.cc"])]
+) for bq_client_interface_test in glob(["*_test.cc"])]
