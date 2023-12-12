@@ -15,6 +15,11 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
 
+#ifdef _WIN32
+#include <windows.h>
+#include <winreg.h>
+#endif //_WIN32
+
 #include <algorithm>
 #include <fstream>
 #include <memory>
@@ -45,7 +50,21 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
+#ifdef _WIN32
+
+constexpr int kMaxKeyLength = 4096;
+
+constexpr int kMaxValueNameLen= 4096;
+
+StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key);
+
+StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key);
+
+#else
+
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
+
+#endif //_WIN32
 
 }  // namespace odbc_bq_driver
 }  // namespace cloud

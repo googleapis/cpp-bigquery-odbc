@@ -20,6 +20,110 @@ namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
+#ifdef _WIN32
+
+StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key) {
+  Section section;
+  HKEY key_handle;
+  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0, KEY_READ, &key_handle);
+  if (status != ERROR_SUCCESS) {
+    RegCloseKey(key_handle);
+    return Status(StatusCode::kInvalidArgument, "Can't open registry key with path: " + registry_key);
+  }
+
+  DWORD num_values;
+  DWORD longest_data_len;  
+  status = RegQueryInfoKey(
+    key_handle,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    &num_values,
+    NULL,
+    &longest_data_len,
+    NULL,
+    NULL);
+  
+  BYTE buffer[1024];
+  TCHAR property_name[kMaxValueNameLen];
+  DWORD buffer_len = kMaxValueNameLen;
+
+  for (int i = 0, status = ERROR_SUCCESS; i < num_values; i++) { 
+    buffer_len = kMaxValueNameLen; 
+    property_name[0] = '\0'; 
+    status = RegEnumValue(key_handle,
+      i,
+      property_name,
+      &buffer_len,
+      NULL,
+      NULL,
+      NULL,
+      NULL);
+    if (status == ERROR_SUCCESS) {
+      buffer_len = longest_data_len;
+      buffer[0] = '\0';
+      LONG status = RegQueryValueEx(key_handle, property_name, 0, NULL, buffer, &buffer_len);
+      std::string value((char *)buffer);
+      section[property_name] = value;
+    }
+  }
+  RegCloseKey(key_handle);
+  return std::make_shared<Section>(section);
+}
+
+StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key) {
+  Sections sections;
+  HKEY key_handle;
+  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0, KEY_READ, &key_handle);
+  if (status != ERROR_SUCCESS) {
+    RegCloseKey(key_handle);
+    return Status(StatusCode::kInvalidArgument, "Can't open registry key with path: " + registry_key);
+  }
+
+  TCHAR subkey_name[kMaxKeyLength];
+  DWORD name_len;
+  DWORD num_sub_keys=0;
+
+  status = RegQueryInfoKey(
+    key_handle,
+    NULL,
+    NULL,
+    NULL,
+    &num_sub_keys,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL);
+
+  // List all the sections
+  for (int i = 0; i < num_sub_keys; i++) {
+    name_len = kMaxKeyLength;
+    status = RegEnumKeyEx(key_handle, i,
+      subkey_name, 
+      &name_len,
+      NULL, 
+      NULL, 
+      NULL, 
+      NULL); 
+    if (status == ERROR_SUCCESS) {
+      auto get_sections_response = GetSectionWin(registry_key + "\\" + std::string(subkey_name));
+      if(get_sections_response.status().code() == StatusCode::kOk) {
+        sections[subkey_name] = *get_sections_response.value();
+      }
+    }
+  }
+  RegCloseKey(key_handle);
+  return std::make_shared<Sections>(sections);
+}
+
+#else
+
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
   std::ifstream is(file_path);
   is.exceptions(std::ios::badbit);  // Minimal error handling
@@ -57,6 +161,8 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
   }
   return std::make_shared<Sections>(sections);
 }
+
+#endif //_WIN32
 
 }  // namespace odbc_bq_driver
 }  // namespace cloud
