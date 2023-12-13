@@ -96,7 +96,7 @@ TEST(ListAllProjects, WrongAuthntication) {
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
   for (auto const& project : range) {
-    EXPECT_THAT(project, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Bad Request")));
+    EXPECT_THAT(project, StatusIs(StatusCode::kUnauthenticated, HasSubstr("The OAuth client was not found")));
   }
 }
 
