@@ -65,7 +65,7 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key
     if (status == ERROR_SUCCESS) {
       buffer_len = longest_data_len;
       buffer[0] = '\0';
-      LONG status = RegQueryValueEx(key_handle, property_name, 0, NULL, buffer, &buffer_len);
+      LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL, buffer, &buffer_len);
       std::string value((char *)buffer);
       section[property_name] = value;
     }
@@ -75,7 +75,6 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key
 }
 
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key) {
-  Sections sections;
   HKEY key_handle;
   LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0, KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
@@ -85,7 +84,7 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key)
 
   TCHAR subkey_name[kMaxKeyLength];
   DWORD name_len;
-  DWORD num_sub_keys=0;
+  DWORD num_sub_keys = 0;
 
   status = RegQueryInfoKey(
     key_handle,
@@ -101,6 +100,12 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key)
     NULL,
     NULL);
 
+  if (status != ERROR_SUCCESS) {
+    RegCloseKey(key_handle);
+    return Status(StatusCode::kInternal, "RegQueryInfoKey failed with error code: " + status);
+  }
+
+  Sections sections;
   // List all the sections
   for (int i = 0; i < num_sub_keys; i++) {
     name_len = kMaxKeyLength;

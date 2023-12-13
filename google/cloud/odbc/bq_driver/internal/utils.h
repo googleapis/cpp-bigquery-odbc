@@ -54,10 +54,28 @@ inline void Trim(std::string& s) {
 
 constexpr int kMaxKeyLength = 4096;
 
-constexpr int kMaxValueNameLen= 4096;
+constexpr int kMaxValueNameLen = 4096;
 
+/**
+ * @param registry_key Registry key path assuming it has a flat hierarchy. Keys which have sub_keys
+ *  are ignored.
+ *
+ * @return Map of property->value(string-string)
+ *
+ * @example GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\ODBCTestsDSN")
+*/
 StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key);
 
+
+/**
+ * @param registry_key Registry key path assuming it keys which have sub-keys.
+ *  When it looks for keys in the registry key path, it will ignore keys which
+ *  do not have sub-keys
+ *
+ * @return Map of depth 2
+ *
+ * @example ParseConfig("SOFTWARE\\ODBC\\ODBC.INI")
+*/
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key);
 
 #else
