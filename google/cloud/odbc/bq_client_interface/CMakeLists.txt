@@ -17,7 +17,9 @@
 add_library(
     odbc_bq_client_interface
     odbc_authentication.h
-    odbc_authentication.cc)
+    odbc_authentication.cc
+    odbc_bq_client.h
+    odbc_bq_client.cc)
 
 target_link_libraries(
     odbc_bq_client_interface
@@ -40,6 +42,7 @@ function (client_interface_define_unit_tests)
   add_executable(
       odbc_bq_client_interface_unit_tests
       odbc_authentication_test.cc
+      odbc_bq_client_test.cc
   )
 
   target_link_libraries(
