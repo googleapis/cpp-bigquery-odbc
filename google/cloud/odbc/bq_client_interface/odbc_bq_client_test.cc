@@ -16,6 +16,7 @@
 
 #include "google/cloud/internal/getenv.h"
 
+#include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
@@ -26,13 +27,13 @@ namespace odbc_bigquery_client_interface {
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
-TEST(ODBCBQClient, Create) {
+TEST(ODBCBQClient, CreateBQClient) {
   std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
   std::string credentials_file_path = test_data_path + "service_account_auth_keys.json";
 
-  auto odbc_bq_client = ODBCBQClient::Create({OauthMechanism::kServiceAccount, credentials_file_path});
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient({OauthMechanism::kServiceAccount, credentials_file_path});
 
-  EXPECT_TRUE(odbc_bq_client);
+  ASSERT_STATUS_OK(odbc_bq_client);
 }
 
 }  // namespace odbc_bigquery_client_interface
