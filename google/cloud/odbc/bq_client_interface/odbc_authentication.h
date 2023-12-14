@@ -30,13 +30,13 @@ enum class OauthMechanism {
     kExternalUser
 };
 
-struct Auth {
+struct Oauth {
     OauthMechanism auth_mechanism;
     std::string credentials_file_path;
 };
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
-StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Auth const& auth);
+StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth);
 
 }  // namespace odbc_bigquery_client_interface
 }  // namespace cloud

@@ -40,10 +40,10 @@ StatusOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
   return google::cloud::MakeServiceAccountCredentials(contents);
 }
 
-StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Auth const& auth) {
-  switch (auth.auth_mechanism) {
+StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
+  switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAccount:
-      return CreateServiceCredentials(auth.credentials_file_path);
+      return CreateServiceCredentials(oauth.credentials_file_path);
       break;
     case OauthMechanism::kExternalUser:
       return Status(StatusCode::kUnimplemented, "Currently not implemented.");
