@@ -32,8 +32,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeTableConnection;
 
-StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(Auth const& auth) {
-  auto credentials = CreateCredentials(auth);
+StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(Oauth const& oauth) {
+  auto credentials = CreateCredentials(oauth);
   if (!credentials) {
     return credentials.status();
   }

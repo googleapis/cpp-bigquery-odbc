@@ -54,7 +54,7 @@ namespace odbc_bigquery_client_interface {
 class ODBCBQClient {
 public:
 
-  static StatusOr<std::unique_ptr<ODBCBQClient>> CreateBQClient(Auth const& auth);
+  static StatusOr<std::unique_ptr<ODBCBQClient>> CreateBQClient(Oauth const& oauth);
   ~ODBCBQClient() = default;
 
   ODBCBQClient(ODBCBQClient const &) = default;
