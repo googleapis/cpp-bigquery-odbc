@@ -91,7 +91,7 @@ struct TraceOptions {
     // Returns a singleton object.
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> config_sections);
+       CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const& config_sections);
     
     // Shared members.
     bool logging_enabled;

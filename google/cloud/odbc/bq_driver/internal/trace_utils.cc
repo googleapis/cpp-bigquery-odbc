@@ -40,7 +40,7 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions> const& opts, std::shared_pt
   {
     trace_sections = odbc_section->second;
   }
-  
+
   for (auto const &s : trace_sections)
   {
     if (s.first == "Trace")
@@ -103,7 +103,7 @@ TraceOptions::CreateTraceOptionsFromODBCConfigs(std::string const &file_path)
 }
 
 StatusOr<std::shared_ptr<TraceOptions>>
-TraceOptions::CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> config_sections)
+TraceOptions::CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const& config_sections)
 {
   if (options_ == nullptr)
   {
