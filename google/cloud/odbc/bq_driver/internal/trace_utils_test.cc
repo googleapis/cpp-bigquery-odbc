@@ -18,9 +18,44 @@
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {
 namespace cloud {
-namespace odbc_bq_driver {
+namespace odbc_bq_driver { 
 
-TraceOptions test_opts = {true};
+auto test_opts = TraceOptions::CreateTraceOptionsConsole(true, 0);
+
+const Section kOdbcSection {
+  { "Trace", "1" },
+  { "TraceFile", "/tmp/odbc.log" }
+};
+
+const Sections kConfigSections {
+  { "ODBC", kOdbcSection }
+};
+
+TEST(TraceLogging, TraceOptionsFromConfigSuccess)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections);
+  auto opts = TraceOptions::CreateTraceOptionsFromODBCConfigs(config_sections);
+  EXPECT_TRUE(opts.status().ok());
+
+  EXPECT_TRUE(opts.value()->logging_enabled);
+  EXPECT_TRUE(opts.value()->trace_file.is_open());
+  EXPECT_EQ(1, opts.value()->log_level);
+
+  std::lock_guard<std::mutex>(opts.value()->m); 
+  if (opts.value()->trace_file.is_open()) {
+    opts.value()->trace_file.close();
+  }
+}
+
+TEST(TraceLogging, TraceOptionsFromConfigEmpty)
+{
+  std::shared_ptr<Sections> configs = nullptr;
+  auto opts = TraceOptions::CreateTraceOptionsFromODBCConfigs(configs);
+  ASSERT_FALSE(opts.status().ok());
+  
+  EXPECT_EQ(opts.status().code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(opts.status().message(), "Invalid ODBC Config");
+}
 
 TEST(TraceLogging, BasicODBCTypes)
 {
@@ -30,7 +65,7 @@ TEST(TraceLogging, BasicODBCTypes)
   std::string fmt4 = FormatSqlUInteger(4);
 
   EXPECT_EQ("TestBasicODBCTypes\t\tSQLSMALLINT, 1\n\t\tSQLUSMALLINT, 2\n\t\tSQLINTEGER, 3\n\t\tSQLUINTEGER, 4\n",
-            CollectAndPrintArgs("TestBasicODBCTypes", test_opts,
+            CollectAndPrintArgs("TestBasicODBCTypes", *test_opts.value(),
                                 4, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str()));
 }
 
@@ -53,7 +88,7 @@ TEST(TraceLogging, Handle)
   std::string fmt5 = FormatSqlHandleType(SQL_HANDLE_STMT);
   std::string fmt6 = FormatSqlHandleType(1234);
 
-  EXPECT_EQ(expected, CollectAndPrintArgs("TestHandle", test_opts,
+  EXPECT_EQ(expected, CollectAndPrintArgs("TestHandle", *test_opts.value(),
                                           6, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
                                           fmt4.c_str(), fmt5.c_str(), fmt6.c_str()));
 }
@@ -84,7 +119,7 @@ TEST(TraceLogging, Pointers)
       .append("SQLINTEGER *, 3\n\t\tSQLUINTEGER *, 4\n\t\t")
       .append("SQLCHAR *, Hello World\n\t\tSQLPOINTER *, 0x0\n\t\tSQLHANDLE *, 0x0\n");
 
-  EXPECT_EQ(expected, CollectAndPrintArgs("TestPointers", test_opts,
+  EXPECT_EQ(expected, CollectAndPrintArgs("TestPointers", *test_opts.value(),
                                           8, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str(),
                                           fmt5.c_str(), fmt6.c_str(), fmt7.c_str(), fmt8.c_str()));
 }
@@ -96,7 +131,7 @@ TEST(TraceLogging, Length)
   std::string fmt3 = FormatSqlSetPosiRow(50);
 
   EXPECT_EQ("TestLength\t\tSQLLEN, 10\n\t\tSQLULEN, 11\n\t\tSQLSETPOSIROW, 50\n",
-            CollectAndPrintArgs("TestLength", test_opts, 3, fmt1.c_str(), fmt2.c_str(), fmt3.c_str()));
+            CollectAndPrintArgs("TestLength", *test_opts.value(), 3, fmt1.c_str(), fmt2.c_str(), fmt3.c_str()));
 }
 
 TEST(TraceLogging, ReturnCodes)
@@ -105,7 +140,7 @@ TEST(TraceLogging, ReturnCodes)
   std::string fmt2 = FormatSqlReturn(2);
 
   EXPECT_EQ("TestRetCodes\t\tRETCODE, 1\n\t\tSQLRETURN, 2\n",
-            CollectAndPrintArgs("TestRetCodes", test_opts, 2, fmt1.c_str(), fmt2.c_str()));
+            CollectAndPrintArgs("TestRetCodes", *test_opts.value(), 2, fmt1.c_str(), fmt2.c_str()));
 }
 
 TEST(TraceLogging, AdditionalSqlTypes)
@@ -145,7 +180,7 @@ TEST(TraceLogging, AdditionalSqlTypes)
       .append("SQLFLOAT *, 2.2000\n\t\tSQLREAL *, 3.30\n");
 
   EXPECT_EQ(expected,
-            CollectAndPrintArgs("TestAdditionalSqlTypes", test_opts, 14,
+            CollectAndPrintArgs("TestAdditionalSqlTypes", *test_opts.value(), 14,
                                 fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str(),
                                 fmt5.c_str(), fmt6.c_str(), fmt7.c_str(), fmt8.c_str(),
                                 fmt9.c_str(), fmt10.c_str(), fmt11.c_str(), fmt12.c_str(),
@@ -159,7 +194,7 @@ TEST(TraceLogging, BasicTypesString)
   const char str3[] = "Hello3";
 
   EXPECT_EQ("TestBasicTypesString\t\tHello1\n\t\tHello2\n\t\tHello3\n",
-            CollectAndPrintArgs("TestBasicTypesString", test_opts, 3,
+            CollectAndPrintArgs("TestBasicTypesString", *test_opts.value(), 3,
                                 FormatString(str1).c_str(), FormatCharString(str2).c_str(),
                                 FormatCharArray(str3).c_str()));
 }
@@ -170,7 +205,7 @@ TEST(TraceLogging, BasicTypesChar)
   unsigned char c2 = 'B';
 
   EXPECT_EQ("TestBasicTypesChar\t\tA\n\t\tB\n",
-            CollectAndPrintArgs("TestBasicTypesChar", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesChar", *test_opts.value(), 2,
                                 FormatChar(c1).c_str(), FormatCharU(c2).c_str()));
 }
 
@@ -180,7 +215,7 @@ TEST(TraceLogging, BasicTypesInt)
   unsigned int i2 = 2;
 
   EXPECT_EQ("TestBasicTypesInt\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesInt", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesInt", *test_opts.value(), 2,
                                 FormatInt(i1).c_str(), FormatIntU(i2).c_str()));
 }
 
@@ -190,7 +225,7 @@ TEST(TraceLogging, BasicTypesLong)
   unsigned long l2 = 2L;
 
   EXPECT_EQ("TestBasicTypesLong\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesLong", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesLong", *test_opts.value(), 2,
                                 FormatLong(l1).c_str(), FormatLongU(l2).c_str()));
 }
 
@@ -200,45 +235,42 @@ TEST(TraceLogging, BasicTypesShort)
   unsigned short s2 = 2;
 
   EXPECT_EQ("TestBasicTypesShort\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesShort", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesShort", *test_opts.value(), 2,
                                 FormatShort(s1).c_str(), FormatShortU(s2).c_str()));
 }
 
 TEST(TraceLogging, BasicTypesDouble)
 {
   EXPECT_EQ("TestBasicTypesDouble\t\t1.1234\n",
-            CollectAndPrintArgs("TestBasicTypesDouble", test_opts, 1, FormatDouble(1.1234).c_str()));
+            CollectAndPrintArgs("TestBasicTypesDouble", *test_opts.value(), 1, FormatDouble(1.1234).c_str()));
 }
 
 TEST(TraceLogging, BasicTypesFloat)
 {
   EXPECT_EQ("TestBasicTypesFloat\t\t1.12\n",
-            CollectAndPrintArgs("TestBasicTypesFloat", test_opts, 1, FormatFloat(1.12).c_str()));
+            CollectAndPrintArgs("TestBasicTypesFloat", *test_opts.value(), 1, FormatFloat(1.12).c_str()));
 }
 
 TEST(TraceLogging, BasicTypesBool)
 {
   EXPECT_EQ("TestBasicTypesBool\t\tTRUE\n\t\tFALSE\n",
             CollectAndPrintArgs(
-              "TestBasicTypesBool", test_opts, 2, FormatBool(true).c_str(), FormatBool(false).c_str()));
+              "TestBasicTypesBool", *test_opts.value(), 2, FormatBool(true).c_str(), FormatBool(false).c_str()));
 }
 
 TEST(TraceLogging, ExitInternalTraceEnabled)
 {
   SQLRETURN ret_code = 1001;
-  TraceOptions opts;
-  opts.logging_enabled = true;
 
-  EXPECT_EQ("TestExit\t\tSQLRETURN, 1001\n", ExitInternal("TestExit", ret_code, opts));
+  EXPECT_EQ("TestExit\t\tSQLRETURN, 1001\n", ExitInternal("TestExit", ret_code, *test_opts.value()));
 }
 
 TEST(TraceLogging, ExitInternalTraceDisabled)
 {
   SQLRETURN ret_code = 1001;
-  TraceOptions opts;
-  opts.logging_enabled = false;
+  test_opts.value()->logging_enabled = false;
 
-  EXPECT_EQ("", ExitInternal("TestExit", ret_code, opts));
+  EXPECT_EQ("", ExitInternal("TestExit", ret_code, *test_opts.value()));
 }
 
 #if (ODBCVER >= 0x0300)
@@ -354,7 +386,7 @@ TEST(TraceLogging, WindowHandles)
   std::string fmt2 = FormatSqlHWND(w2);
 
   EXPECT_EQ("TestWindowHandles\t\tHWND, 0x0\n\t\tSQLHWND 0x0\n",
-            CollectAndPrintArgs("TestWindowHandles", test_opts, 2, fmt1.c_str(), fmt2.c_str()));
+            CollectAndPrintArgs("TestWindowHandles", *test_opts.value(), 2, fmt1.c_str(), fmt2.c_str()));
 }
 #endif  /* WIN32 */
 

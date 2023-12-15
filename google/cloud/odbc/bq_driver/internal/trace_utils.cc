@@ -22,6 +22,106 @@ namespace odbc_bq_driver {
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 
+// Initialize the Singleton instance. 
+TraceOptions* TraceOptions::options_ = nullptr;
+
+namespace
+{
+Status LoadFromConfigs(std::shared_ptr<TraceOptions> opts, std::shared_ptr<Sections> config_sections)
+{
+  if (!config_sections)
+  {
+    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
+  }
+
+  Section trace_sections;
+  auto const odbc_section = config_sections->find("ODBC");
+  if (odbc_section != config_sections->end())
+  {
+    trace_sections = odbc_section->second;
+  }
+  std::lock_guard(opts->m);
+  for (auto const &s : trace_sections)
+  {
+    if (s.first == "Trace")
+    {
+      opts->logging_enabled = true;
+      opts->log_level = std::stoi(s.second);
+    }
+    else if (s.first == "TraceFile")
+    {
+      opts->logging_enabled = true;
+      if (!opts->trace_file.is_open())
+        opts->trace_file.open(s.second, std::ofstream::out | std::ofstream::app);
+      if (!opts->trace_file.is_open())
+      {
+        return Status(StatusCode::kInternal, "Can't open  trace file: " + s.second);
+      }
+    }
+  }
+
+  return Status(StatusCode::kOk, "");
+}
+}  // namespace
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
+{
+  if (options_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_ = new TraceOptions();
+  }
+  options_->log_level = log_level;
+  options_->logging_enabled = logging_enabled;
+
+  return std::shared_ptr<TraceOptions>(options_);
+}
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFromODBCConfigs(std::string const &file_path)
+{
+  auto configs = ParseConfig(file_path);
+  if (!configs.ok())
+    return std::move(configs).status();
+
+  if (options_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_ = new TraceOptions();
+  }
+
+  auto shared_opts = std::shared_ptr<TraceOptions>(options_);
+
+  auto status = LoadFromConfigs(shared_opts, *configs);
+  if (!status.ok())
+  {
+    return std::move(status);
+  }
+
+  return shared_opts;
+}
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> config_sections)
+{
+  if (options_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_ = new TraceOptions();
+  }
+
+  auto shared_opts = std::shared_ptr<TraceOptions>(options_);
+
+  auto status = LoadFromConfigs(shared_opts, config_sections);
+  if (!status.ok())
+  {
+    return std::move(status);
+  }
+
+  return shared_opts;
+}
+
 int TracePrintInternalStdOut(TraceOptions& opts, std::string& s)
 {
   if (!opts.logging_enabled || s.empty())

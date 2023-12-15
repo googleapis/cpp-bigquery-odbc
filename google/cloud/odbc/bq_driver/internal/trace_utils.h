@@ -16,6 +16,7 @@
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 
 #include "odbc_includes.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <iostream>
@@ -32,16 +33,80 @@ namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
-///////////////////////////
-// Trace Options
-///////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+// TraceOptions facilitates ODBC tracing. 
+// Multiple instances of this class is forbidden.
+//
+// Usage:
+//   auto options = CreateTraceOptionsConsole(true, 0);
+//   if (!options.ok()) {
+//      return options.status();
+//   }
+//   if (*options.logging_enabled) {
+//     ....
+//   }
+//
+//   auto options = CreateTraceOptionsFromODBCConfigs("/tmp/odbc.ini");
+//   if (!options.ok()) {
+//      return options.status();
+//   }
+//   if (*options.logging_enabled) {
+//     ....
+//   }
+/////////////////////////////////////////////////////////////////////////////////
 struct TraceOptions {
-    bool logging_enabled = false;
-    int  log_level = 0;
+    // // Disallow Copy.
+    TraceOptions(TraceOptions &other) = delete;
+
+    // // Disallow Assignment.
+    void operator=(const TraceOptions &) = delete;
+
+    //////////////////////////////////////////////////////////
+    // Creates TraceOptions for emitting to Stdout.
+    // No TraceFile is opened.
+    //
+    // Returns a singleton object.
+    //////////////////////////////////////////////////////////
+    static StatusOr<std::shared_ptr<TraceOptions>>
+       CreateTraceOptionsConsole(bool logging_enabled, int log_level);
+
+    //////////////////////////////////////////////////////////
+    // Creates TraceOptions for emitting to a trace file
+    // specified in the ODBC ini Config file.
+    //  
+    // Loads the ini config file, parses it and opens a trace file for logging.
+    //
+    // Returns a singleton object.
+    //////////////////////////////////////////////////////////
+    static StatusOr<std::shared_ptr<TraceOptions>>
+       CreateTraceOptionsFromODBCConfigs(std::string const& file_path);
+
+    //////////////////////////////////////////////////////////
+    // Creates TraceOptions based on the trace section in the 
+    // ODBC config file.
+    //
+    // Similar to the above version in that a trace file is opened for
+    // logging but the ODBC config file is loaded and parsed by the caller.
+    //
+    // Returns a singleton object.
+    //////////////////////////////////////////////////////////
+    static StatusOr<std::shared_ptr<TraceOptions>>
+       CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> config_sections);
+    
+    // Shared members.
+    bool logging_enabled;
+    int  log_level{0};
     std::ofstream trace_file;
-    std::mutex m;
+    std::mutex m; // Used for guarding any logging operations with file or stdout.
+  private:
+    TraceOptions() = default;
+    static TraceOptions* options_;
 };
-// Emit methods for actually printing the trace lines to stdout or a trace file.
+
+///////////////////////////////////////////////////////////////
+// Emit methods for actually printing the trace 
+// lines to stdout or a trace file.
+///////////////////////////////////////////////////////////////
 
 // Clients of this utility should use the two methods below to emit
 // a trace of all parameters to an stdout or a trace file.
