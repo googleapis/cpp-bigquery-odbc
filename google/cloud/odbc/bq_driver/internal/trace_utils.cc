@@ -73,7 +73,6 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
     // Cannot use std::make_shared because constructor is protected.
     options_console_ = new TraceOptions();
   }
-  std::lock_guard<std::mutex>(options_console_->m);
 
   options_console_->log_level = log_level;
   options_console_->logging_enabled = logging_enabled;
@@ -93,8 +92,6 @@ TraceOptions::CreateTraceOptionsFromODBCConfigs(std::string const &file_path)
     // Cannot use std::make_shared because constructor is protected.
     options_file_ = new TraceOptions();
   }
-
-  std::lock_guard<std::mutex>(options_file_->m);
 
   auto shared_opts = std::shared_ptr<TraceOptions>(options_file_);
   auto status = LoadFromConfigs(shared_opts, *configs);
@@ -118,8 +115,6 @@ TraceOptions::CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const&
     // Cannot use std::make_shared because constructor is protected.
     options_file_ = new TraceOptions();
   }
-
-  std::lock_guard<std::mutex>(options_file_->m);
   
   auto shared_opts = std::shared_ptr<TraceOptions>(options_file_);
   auto status = LoadFromConfigs(shared_opts, config_sections);
