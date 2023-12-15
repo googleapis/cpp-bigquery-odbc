@@ -65,7 +65,7 @@ struct TraceOptions {
     // Creates TraceOptions for emitting to Stdout.
     // No TraceFile is opened.
     //
-    // Returns a singleton object.
+    // Returns a singleton object for console tracing.
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
        CreateTraceOptionsConsole(bool logging_enabled, int log_level);
@@ -76,7 +76,7 @@ struct TraceOptions {
     //  
     // Loads the ini config file, parses it and opens a trace file for logging.
     //
-    // Returns a singleton object.
+    // Returns a singleton object for file tracing
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
        CreateTraceOptionsFromODBCConfigs(std::string const& file_path);
@@ -88,7 +88,7 @@ struct TraceOptions {
     // Similar to the above version in that a trace file is opened for
     // logging but the ODBC config file is loaded and parsed by the caller.
     //
-    // Returns a singleton object.
+    // Returns a singleton object for file tracing
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
        CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const& config_sections);
@@ -100,7 +100,8 @@ struct TraceOptions {
     std::mutex m; // Used for guarding any logging operations with file or stdout.
   private:
     TraceOptions() = default;
-    static TraceOptions* options_;
+    static TraceOptions* options_console_;
+    static TraceOptions* options_file_;
 };
 
 ///////////////////////////////////////////////////////////////
