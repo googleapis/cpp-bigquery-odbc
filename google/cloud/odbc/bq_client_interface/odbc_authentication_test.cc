@@ -17,7 +17,7 @@
 
 #include "google/cloud/internal/getenv.h"
 
-#include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
@@ -26,7 +26,7 @@ namespace cloud {
 namespace odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util_internal::StatusIs;
+using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
 using ::testing::HasSubstr;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {

@@ -38,7 +38,8 @@ export ODBC_TESTS_DSN="SampleDSN"
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
-  -DODBC_UNIT_TESTING=OFF
+  -DODBC_UNIT_TESTING=OFF \
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)

@@ -18,14 +18,14 @@
 #include "google/cloud/internal/getenv.h"
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
-#include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
 
 namespace google {
 namespace cloud {
 namespace odbc_bigquery_v2_tests {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util_internal::StatusIs;
+using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
 using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::CreateWrongPathToAuthFileAuthentication;

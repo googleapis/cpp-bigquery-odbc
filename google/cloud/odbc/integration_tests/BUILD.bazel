@@ -24,6 +24,7 @@ licenses(["notice"])  # Apache 2.0
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_googletest//:gtest_main",
+        "//google/cloud/odbc/testing_util:odbc_bigquery_testing_util",
         "//google/cloud/odbc/integration_tests/testing_util:cpp_bigquery_odbc_integration_testing_util",
     ],
 ) for api_test in glob(["apis/*.cc"])]

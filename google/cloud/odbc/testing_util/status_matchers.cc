@@ -14,7 +14,7 @@
 
 namespace google {
 namespace cloud {
-namespace odbc_testing_util_internal {
-}  // namespace odbc_testing_util_internal
+namespace odbc_bigquery_testing_util_internal {
+}  // namespace odbc_bigquery_testing_util_internal
 }  // namespace cloud
 }  // namespace google

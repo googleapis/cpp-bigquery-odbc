@@ -16,7 +16,7 @@
 
 #include "google/cloud/internal/getenv.h"
 
-#include "google/cloud/odbc/integration_tests/testing_util/status_matchers.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)

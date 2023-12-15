@@ -19,13 +19,11 @@
 cpp_bigquery_odbc_integration_testing_util_hdrs = [
     "authentication.h",
     "common_functions.h",
-    "status_matchers.h",
     "util_constants.h",
 ]
 
 cpp_bigquery_odbc_integration_testing_util_srcs = [
     "authentication.cc",
     "common_functions.cc",
-    "status_matchers.cc",
     "util_constants.cc",
 ]
