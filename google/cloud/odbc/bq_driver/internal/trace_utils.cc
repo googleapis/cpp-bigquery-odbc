@@ -40,7 +40,7 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions> opts, std::shared_ptr<Secti
   {
     trace_sections = odbc_section->second;
   }
-  std::lock_guard(opts->m);
+  std::lock_guard<std::mutex>(opts->m);
   for (auto const &s : trace_sections)
   {
     if (s.first == "Trace")
