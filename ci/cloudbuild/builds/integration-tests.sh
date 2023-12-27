@@ -17,6 +17,7 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
+source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/bazel.sh
 source module ci/cloudbuild/builds/lib/integration.sh
 source module ci/lib/io.sh
@@ -29,3 +30,13 @@ io::run bazel test //google/cloud/odbc/integration_tests:* \
   "${args[@]}" \
   "${integration_args[@]}" \
   --cache_test_results=no
+
+# Check there are no build issues with CMake
+io::run mapfile -t cmake_args < <(cmake::common_args)
+
+io::run cmake "${cmake_args[@]}" \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DODBC_INTEGRATION_TESTING=OFF \
+  -DODBC_UNIT_TESTING=OFF \
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=ON
+io::run cmake --build cmake-out --clean-first

@@ -25,7 +25,7 @@ add_library(
 
 target_link_libraries(
     odbc_bigquery_testing_util
-    google_cloud_cpp_bigquery_rest
+    google-cloud-cpp::experimental-bigquery_rest
     GTest::gmock)
 
 create_bazel_config(odbc_bigquery_testing_util YEAR 2023)

@@ -40,7 +40,7 @@ function (define_integration_tests)
 
   target_link_libraries(
       scheduled_integration_tests PUBLIC
-      google_cloud_cpp_bigquery_rest
+      google-cloud-cpp::experimental-bigquery_rest
       cpp_bigquery_odbc_integration_testing_util
       odbc_bigquery_testing_util
       GTest::gtest_main
