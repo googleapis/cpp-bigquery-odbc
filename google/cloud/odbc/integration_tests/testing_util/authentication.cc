@@ -20,9 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/status_or.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_testing_util_internal {
+namespace google::cloud::odbc_testing_util_internal {
 
 using google::cloud::internal::GetEnv;
 
@@ -83,6 +81,5 @@ StatusOr<Options> CreateNoAccessAccountAuthentication() {
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
       google::cloud::MakeGoogleDefaultCredentials());
 }
-}
-}
-}
+
+} // namespace google::cloud::odbc_testing_util_internal

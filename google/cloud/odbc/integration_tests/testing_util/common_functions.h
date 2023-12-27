@@ -18,15 +18,12 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/status_or.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_testing_util_internal {
+namespace google::cloud::odbc_testing_util_internal {
 
 // Inserts some basic job to BQ
 // Returns the job_id
 StatusOr<std::string> InsertJob(bigquery_v2_minimal_internal::JobClient job_client);
-}
-}
-}
+
+} // namespace google::cloud::odbc_testing_util_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_COMMON_FUNCTIONS_H

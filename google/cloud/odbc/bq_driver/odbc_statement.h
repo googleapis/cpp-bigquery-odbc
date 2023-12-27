@@ -28,14 +28,8 @@
 // SQLEndTranInternal
 ///////////////////////////////////////////////////////////
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H

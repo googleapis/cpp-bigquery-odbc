@@ -19,10 +19,7 @@
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
@@ -36,7 +33,4 @@ TEST(ODBCBQClient, CreateBQClient) {
   ASSERT_STATUS_OK(odbc_bq_client);
 }
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bigquery_client_interface

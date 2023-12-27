@@ -14,10 +14,7 @@
 
 #include "odbc_trace.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 // Following functionality stull needs to still be implmented for the
 // entry functions.
@@ -2772,7 +2769,4 @@ void TraceFunctionExit_SQLBulkOperations(
     ExitInternal("SQLBulkOperations_Exit", ret_code, opts);
 }
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver

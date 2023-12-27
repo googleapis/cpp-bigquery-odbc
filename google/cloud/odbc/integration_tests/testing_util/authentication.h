@@ -18,9 +18,7 @@
 #include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_testing_util_internal {
+namespace google::cloud::odbc_testing_util_internal {
 
 // Creates Options object which has credentials for User Account Authentication.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
@@ -44,8 +42,7 @@ StatusOr<Options> CreateWrongAuthentication();
 // Creates WRONG Options object of the user with 0 projects to access.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateNoAccessAccountAuthentication();
-}
-}
-}
+
+} // namespace google::cloud::odbc_testing_util_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_AUTHENTICATION_H

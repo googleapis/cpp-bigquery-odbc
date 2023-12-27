@@ -20,10 +20,7 @@
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
@@ -50,7 +47,4 @@ TEST(ServiceAuthentication, FileNotExist) {
   EXPECT_THAT(credentials, StatusIs(StatusCode::kInvalidArgument, HasSubstr("There was an error while opening the file:")));
 }
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bigquery_client_interface

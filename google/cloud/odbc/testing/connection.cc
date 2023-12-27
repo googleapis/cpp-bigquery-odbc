@@ -14,9 +14,7 @@
 
 #include "testing/connection.h"
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
+namespace google::cloud::bigquery_odbc {
 
 void SetAttributes(std::shared_ptr<ConnectionHandle> conn, int timeout) {
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
@@ -174,6 +172,4 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc

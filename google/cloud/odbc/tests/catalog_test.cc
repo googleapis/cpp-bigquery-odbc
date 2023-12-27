@@ -15,11 +15,7 @@
 #include "testing/connection.h"
 #include "testing/catalog.h"
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
-
-using namespace std;
+namespace google::cloud::bigquery_odbc {
 
 std::map<std::string, Schema> kTables = {
   { "ODBC_SQLTables_TEST_1",
@@ -41,9 +37,9 @@ std::map<std::string, Schema> kTables = {
 };
 
 // Drops all tables in a dataset
-void ClearDataset(string kDatasetName, shared_ptr<vector<string>> table_names_ptr = nullptr) {
+void ClearDataset(std::string kDatasetName, std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {
   auto conn = std::make_shared<ConnectionHandle>();
-  vector<string> table_names;
+      std::vector<std::string> table_names;
   if(!table_names_ptr) {
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
@@ -55,7 +51,7 @@ void ClearDataset(string kDatasetName, shared_ptr<vector<string>> table_names_pt
 
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
   for(auto table_name: table_names) {
-    string table_name_full = kDatasetName + "." + table_name;
+    std::string table_name_full = kDatasetName + "." + table_name;
     Table(table_name_full).Drop(conn);
   }
 
@@ -67,8 +63,8 @@ TEST(CatalogTest, SQLTables) {
 
   // Create tables
   for (auto it: kTables) {
-    string table_name = it.first;
-    string table_name_full = kDatasetName + "." + table_name;
+    std::string table_name = it.first;
+    std::string table_name_full = kDatasetName + "." + table_name;
     // Create Table
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     Table(table_name_full).Create(conn, getSchemaStr(it.second));
@@ -81,7 +77,7 @@ TEST(CatalogTest, SQLTables) {
   EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
 
   auto table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
-  vector<string> test_table_names;
+  std::vector<std::string> test_table_names;
   for(auto it: kTables) {
     EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first), table_names.end());
     test_table_names.push_back(it.first);
@@ -89,9 +85,7 @@ TEST(CatalogTest, SQLTables) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  ClearDataset(kDatasetName, make_shared<vector<string>>(test_table_names));
+  ClearDataset(kDatasetName, std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc

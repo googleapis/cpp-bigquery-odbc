@@ -28,10 +28,7 @@
 #include <cstdint>
 #include <mutex>
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing. 
@@ -240,9 +237,6 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
 #endif  /* ODBCVER >= 0x0300 */
 
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H

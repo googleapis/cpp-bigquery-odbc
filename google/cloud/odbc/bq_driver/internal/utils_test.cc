@@ -19,9 +19,7 @@
 
 #include <gtest/gtest.h>
 
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 const Section kDsnSection {
   { "Description", "Google BigQuery ODBC Connector" },
@@ -78,6 +76,4 @@ TEST(Parsing, ParseConfigIncorrectPath) {
   EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
 }
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::odbc_bq_driver

@@ -24,10 +24,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
 /// ODBC BigQuery Client
 ///
@@ -95,9 +92,6 @@ private:
 
 };
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif //GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_CLIENT_H

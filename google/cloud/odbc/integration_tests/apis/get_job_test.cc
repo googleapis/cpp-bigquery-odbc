@@ -22,9 +22,7 @@
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_v2_tests {
+namespace google::cloud::odbc_bigquery_v2_tests {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
@@ -198,6 +196,5 @@ TEST(GetJob, ProjectNotExist) {
 
   EXPECT_THAT(get_job_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
 }
-}
-}
-}
+
+} // namespace google::cloud::odbc_bigquery_v2_tests

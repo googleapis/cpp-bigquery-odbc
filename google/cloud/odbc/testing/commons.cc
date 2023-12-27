@@ -14,9 +14,7 @@
 
 #include <testing/commons.h>
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
+namespace google::cloud::bigquery_odbc {
 
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
@@ -199,6 +197,4 @@ void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col
   CheckError(status, "SQLBindCol", conn);
 }
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc

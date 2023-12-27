@@ -15,9 +15,7 @@
 
 #include "testing/catalog.h"
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
+namespace google::cloud::bigquery_odbc {
 
 Catalog::~Catalog() = default;
 
@@ -67,6 +65,4 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ConnectionHandle> co
   return std::make_shared<Results>(results);
 }
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc

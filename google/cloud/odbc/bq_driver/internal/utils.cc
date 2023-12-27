@@ -15,10 +15,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 #ifdef _WIN32
 
@@ -169,7 +166,4 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
 
 #endif //_WIN32
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver

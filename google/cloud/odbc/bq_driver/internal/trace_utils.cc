@@ -14,10 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
@@ -829,7 +826,4 @@ std::string FormatSqlHWND(SQLHWND handle)
 }
 #endif  /* WIN32 */
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver

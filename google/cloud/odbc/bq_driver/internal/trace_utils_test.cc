@@ -16,10 +16,7 @@
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 #include <gtest/gtest.h>
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
 using ::testing::HasSubstr;
@@ -440,7 +437,4 @@ TEST(TraceLoggingConsole, WindowHandles)
 }
 #endif  /* WIN32 */
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver

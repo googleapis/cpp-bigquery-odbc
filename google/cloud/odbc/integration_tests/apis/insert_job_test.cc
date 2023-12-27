@@ -22,9 +22,7 @@
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_v2_tests {
+namespace google::cloud::odbc_bigquery_v2_tests {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
@@ -554,6 +552,5 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   ASSERT_STATUS_OK(query_results_response_dml);
   EXPECT_TRUE(query_results_response_dml.value().job_complete);
 }
-}
-}
-}
+
+} // namespace google::cloud::odbc_bigquery_v2_tests

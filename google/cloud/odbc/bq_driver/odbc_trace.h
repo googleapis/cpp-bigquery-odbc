@@ -26,10 +26,7 @@
 // API names and return codes.
 /////////////////////////////////////////////////////////////
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver {
 
 void TraceFunctionEntry_SQLAllocHandle(
     SQLSMALLINT handle_type, SQLHANDLE input_handle,
@@ -728,9 +725,6 @@ void TraceFunctionEntry_SQLBulkOperations(
 void TraceFunctionExit_SQLBulkOperations(
     SQLRETURN ret_code, TraceOptions& opts);
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H

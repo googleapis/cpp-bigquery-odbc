@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_testing_util_internal {
-}  // namespace odbc_bigquery_testing_util_internal
-}  // namespace cloud
-}  // namespace google
+namespace google::cloud::odbc_bigquery_testing_util_internal {
+
+} // namespace google::cloud::odbc_bigquery_testing_util_internal

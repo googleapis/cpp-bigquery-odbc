@@ -18,10 +18,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_client_interface {
+namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
@@ -63,7 +60,4 @@ StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
     return ::google::cloud::odbc_bigquery_client_interface::FilterProjects(project_client_, project_ids, options);
 }
 
-}  // namespace odbc_bigquery_client_interface
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+} // namespace google::cloud::odbc_bigquery_client_interface

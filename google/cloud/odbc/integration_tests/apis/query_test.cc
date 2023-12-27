@@ -22,9 +22,7 @@
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 
-namespace google {
-namespace cloud {
-namespace odbc_bigquery_v2_tests {
+namespace google::cloud::odbc_bigquery_v2_tests {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
@@ -635,6 +633,5 @@ TEST(QueryResults, NoAccessAccountAuth) {
     HasSubstr("Permission bigquery.jobs.get denied on job")));
 }
 #endif // USER_ACCOUNT_AUTH
-}
-}
-}
+
+} // namespace google::cloud::odbc_bigquery_v2_tests

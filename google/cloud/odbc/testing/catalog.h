@@ -18,9 +18,7 @@
 
 #include "testing/commons.h"
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
+namespace google::cloud::bigquery_odbc {
 
 class Catalog {
  public:
@@ -35,8 +33,6 @@ class Catalog {
   static std::shared_ptr<Results> GetTables(std::shared_ptr<ConnectionHandle> conn, std::string dataset = "");
 };
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CATALOG_H

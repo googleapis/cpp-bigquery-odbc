@@ -18,9 +18,7 @@
 
 #include <testing/commons.h>
 
-namespace google {
-namespace cloud {
-namespace bigquery_odbc {
+namespace google::cloud::bigquery_odbc {
 
 // Returns the default DSN name after checking if ODBC_TESTS_DSN env is defined
 inline const std::string GetDefaultDSN() {
@@ -48,8 +46,6 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn);
 
 SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn);
 
-}  // namespace bigquery_odbc
-}  // namespace cloud
-}  // namespace google
+} // namespace google::cloud::bigquery_odbc
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CONNECTION_H
