@@ -17,11 +17,13 @@
 """Automatically generated source lists for odbc_bq_client_interface - DO NOT EDIT."""
 
 odbc_bq_client_interface_hdrs = [
+    "bq_projects.h",
     "odbc_authentication.h",
     "odbc_bq_client.h",
 ]
 
 odbc_bq_client_interface_srcs = [
+    "bq_projects.cc",
     "odbc_authentication.cc",
     "odbc_bq_client.cc",
 ]

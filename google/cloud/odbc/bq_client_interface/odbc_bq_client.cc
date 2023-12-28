@@ -16,6 +16,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
+#include "google/cloud/odbc/bq_client_interface/bq_projects.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {
@@ -46,6 +47,20 @@ StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(Oauth const
 
   return std::unique_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, table_client));
+}
+
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project>
+  ODBCBQClient::GetProject(std::string const& project_id, Options const& options) {
+    return ::google::cloud::odbc_bigquery_client_interface::GetProject(project_client_, project_id, options);
+}
+StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  ODBCBQClient::ListAllProjects(Options const& options) {
+    return ::google::cloud::odbc_bigquery_client_interface::ListAllProjects(project_client_, options);
+}
+
+StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  ODBCBQClient::FilterProjects(std::vector<std::string> const& project_ids, Options const& options) {
+    return ::google::cloud::odbc_bigquery_client_interface::FilterProjects(project_client_, project_ids, options);
 }
 
 }  // namespace odbc_bigquery_client_interface

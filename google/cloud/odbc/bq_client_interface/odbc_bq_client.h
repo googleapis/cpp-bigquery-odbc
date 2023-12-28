@@ -15,8 +15,6 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_CLIENT_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_CLIENT_H
 
-#include <utility>
-
 #include "google/cloud/status_or.h"
 
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
@@ -62,6 +60,22 @@ public:
 
   ODBCBQClient(ODBCBQClient &&) = default;
   ODBCBQClient &operator=(ODBCBQClient &&) = default;
+
+  ///////////////
+  // Project APIs
+  ///////////////
+
+  // Get detailed project information for the project passed in.
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project>
+    GetProject(std::string const& project_id, ::google::cloud::Options const& options);
+
+  // Lists all projects for the user.
+  StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+    ListAllProjects(::google::cloud::Options const& options);
+
+  // Filter projects for the user, based on project_ids.
+  StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+    FilterProjects(std::vector<std::string> const& project_ids, ::google::cloud::Options const& options);
 
 private:
   ODBCBQClient(
