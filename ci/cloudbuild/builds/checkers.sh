@@ -28,31 +28,31 @@ source module ci/lib/io.sh
 #   sed_edit -e 's/foo/bar/g' -e 's,baz,blah,' hello.txt
 #
 function sed_edit() {
-	local expressions=()
-	local files=()
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-		-e)
-			test $# -gt 1 || return 1
-			expressions+=("-e" "$2")
-			shift 2
-			;;
-		*)
-			files+=("$1")
-			shift
-			;;
-		esac
-	done
-	local tmp
-	tmp="$(mktemp /tmp/checkers.XXXXXX.tmp)"
-	for file in "${files[@]}"; do
-		sed "${expressions[@]}" "${file}" >"${tmp}"
-		if ! cmp -s "${file}" "${tmp}"; then
-			chmod --reference="${file}" "${tmp}"
-			cp -f "${tmp}" "${file}"
-		fi
-	done
-	rm -f "${tmp}"
+  local expressions=()
+  local files=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -e)
+        test $# -gt 1 || return 1
+        expressions+=("-e" "$2")
+        shift 2
+        ;;
+      *)
+        files+=("$1")
+        shift
+        ;;
+    esac
+  done
+  local tmp
+  tmp="$(mktemp /tmp/checkers.XXXXXX.tmp)"
+  for file in "${files[@]}"; do
+    sed "${expressions[@]}" "${file}" >"${tmp}"
+    if ! cmp -s "${file}" "${tmp}"; then
+      chmod --reference="${file}" "${tmp}"
+      cp -f "${tmp}" "${file}"
+    fi
+  done
+  rm -f "${tmp}"
 }
 export -f sed_edit
 
@@ -62,11 +62,11 @@ export -f sed_edit
 # only the files that have changed in a development branch, set
 # `GOOGLE_CLOUD_CPP_FAST_CHECKERS=1`.
 git_files() {
-	if [ -z "${GOOGLE_CLOUD_CPP_FAST_CHECKERS-}" ]; then
-		git ls-files "${@}"
-	else
-		git diff main --name-only --diff-filter=d "${@}"
-	fi
+  if [ -z "${GOOGLE_CLOUD_CPP_FAST_CHECKERS-}" ]; then
+    git ls-files "${@}"
+  else
+    git diff main --name-only --diff-filter=d "${@}"
+  fi
 }
 
 # This controls the output format from bash's `time` command, which we use
@@ -81,11 +81,11 @@ enable -n printf
 # Check for typos first so we don't generate more new files w/ the same typos.
 printf "%-50s" "Running typos:" >&2
 time {
-	# See https://github.com/crate-ci/typos for more details.
-	# A couple useful invocations:
-	#  $ typos --write-changes  # writes spelling fixes back to disk
-	#  $ typos --dump-config -  # dumps effective config to stdout
-	typos
+  # See https://github.com/crate-ci/typos for more details.
+  # A couple useful invocations:
+  #  $ typos --write-changes  # writes spelling fixes back to disk
+  #  $ typos --dump-config -  # dumps effective config to stdout
+  typos
 }
 
 # TODO(#4501) - this fixup can be removed if #include <absl/...> works
@@ -96,9 +96,9 @@ time {
 # includes.
 printf "%-50s" "Running Abseil header fixes:" >&2
 time {
-	expressions=("-e" "'s;#include \"absl/strings/str_\(cat\|replace\|join\).h\";#include \"google/cloud/internal/absl_str_\1_quiet.h\";'")
-	(git grep -zEl '#include "absl/strings/str_(cat|replace|join).h"' -- '*.h' '*.cc' ':!google/cloud/internal/absl_str_*quiet.h' || true) |
-		xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
+  expressions=("-e" "'s;#include \"absl/strings/str_\(cat\|replace\|join\).h\";#include \"google/cloud/internal/absl_str_\1_quiet.h\";'")
+  (git grep -zEl '#include "absl/strings/str_(cat|replace|join).h"' -- '*.h' '*.cc' ':!google/cloud/internal/absl_str_*quiet.h' || true) |
+    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
 }
 
 # Apply several transformations that cannot be enforced by clang-format:
@@ -108,67 +108,81 @@ time {
 #       `grpc::` namespace do not exist inside google.
 printf "%-50s" "Running include fixes:" >&2
 time {
-	expressions+=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
-	(git grep -zEl 'grpc::([A-Z][A-Z_]+)' -- '*.h' '*.cc' || true) |
-		xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
+  expressions+=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
+  (git grep -zEl 'grpc::([A-Z][A-Z_]+)' -- '*.h' '*.cc' || true) |
+    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
 
-	expression=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
-	expressions+=("-e" "'s;#include <grpc++/;#include <grpcpp/;'")
-	(git grep -zl '#include <grpc++/' -- '*.h' '*.cc' || true) |
-		xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
+  expression=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
+  expressions+=("-e" "'s;#include <grpc++/;#include <grpcpp/;'")
+  (git grep -zl '#include <grpc++/' -- '*.h' '*.cc' || true) |
+    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
 }
 
 # Applies whitespace fixes in text files, unless they request no edits. The
 # `[D]` character class makes this file not contain the target text itself.
 printf "%-50s" "Running whitespace fixes:" >&2
 time {
-	# Removes trailing whitespace on lines
-	expressions=("-e" "'s/[[:blank:]]\+$//'")
-	# Removes trailing blank lines (see http://sed.sourceforge.net/sed1line.txt)
-	expressions+=("-e" "':x;/^\n*$/{\$d;N;bx;}'")
-	# Adds a trailing newline if one doesn't already exist
-	expressions+=("-e" "'\$a\'")
-	git_files -z | grep -zv 'googleapis.patch$' |
-		grep -zv '\.gz$' |
-		grep -zv '\.pb$' |
-		grep -zv '\.png$' |
-		(xargs -r -0 grep -ZPL "\b[D]O NOT EDIT\b" || true) |
-		xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
+  # Removes trailing whitespace on lines
+  expressions=("-e" "'s/[[:blank:]]\+$//'")
+  # Removes trailing blank lines (see http://sed.sourceforge.net/sed1line.txt)
+  expressions+=("-e" "':x;/^\n*$/{\$d;N;bx;}'")
+  # Adds a trailing newline if one doesn't already exist
+  expressions+=("-e" "'\$a\'")
+  git_files -z | grep -zv 'googleapis.patch$' |
+    grep -zv '\.gz$' |
+    grep -zv '\.pb$' |
+    grep -zv '\.png$' |
+    (xargs -r -0 grep -ZPL "\b[D]O NOT EDIT\b" || true) |
+    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
 }
 
 # Apply buildifier to fix the BUILD and .bzl formatting rules.
 #    https://github.com/bazelbuild/buildtools/tree/master/buildifier
 printf "%-50s" "Running buildifier:" >&2
 time {
-	git_files -z -- '*.BUILD' '*.bzl' '*.bazel' |
-		xargs -r -P "$(nproc)" -n 50 -0 buildifier -mode=fix
+  git_files -z -- '*.BUILD' '*.bzl' '*.bazel' |
+    xargs -r -P "$(nproc)" -n 50 -0 buildifier -mode=fix
 }
 
 # Apply psf/black to format Python files.
 #    https://pypi.org/project/black/
 printf "%-50s" "Running black:" >&2
 time {
-	git_files -z -- '*.py' | xargs -r -P "$(nproc)" -n 50 -0 python3 -m black --quiet
+  git_files -z -- '*.py' | xargs -r -P "$(nproc)" -n 50 -0 python3 -m black --quiet
+}
+
+# Apply shfmt to format all shell scripts
+printf "%-50s" "Running shfmt:" >&2
+time {
+  git_files -z -- '*.sh' | xargs -r -P "$(nproc)" -n 50 -0 shfmt -w
 }
 
 # Apply shellcheck(1) to emit warnings for common scripting mistakes.
 printf "%-50s" "Running shellcheck:" >&2
 time {
-	git_files -z -- '*.sh' |
-		xargs -r -P "$(nproc)" -n 50 -0 shellcheck \
-			--exclude=SC1090 \
-			--exclude=SC1091 \
-			--exclude=SC2034 \
-			--exclude=SC2153 \
-			--exclude=SC2181
+  git_files -z -- '*.sh' |
+    xargs -r -P "$(nproc)" -n 50 -0 shellcheck \
+      --exclude=SC1090 \
+      --exclude=SC1091 \
+      --exclude=SC2034 \
+      --exclude=SC2153 \
+      --exclude=SC2181
 }
 
 # The version of clang-format is important, different versions have slightly
 # different formatting output (sigh).
 printf "%-50s" "Running clang-format:" >&2
 time {
-	git_files -z -- '*.h' '*.cc' '*.proto' |
-		xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
+  git_files -z -- '*.h' '*.cc' '*.proto' |
+    xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
+}
+
+# The version of clang-format is important, different versions have slightly
+# different formatting output (sigh).
+printf "%-50s" "Running clang-format:" >&2
+time {
+  git_files -z -- '*.h' '*.cc' '*.proto' |
+    xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
 }
 
 # mdformat does `tempfile.mkstemp(); ...; os.replace(tmp_path, path)`,
@@ -176,9 +190,9 @@ time {
 # pass to reset the group/other permissions to something more reasonable.
 printf "%-50s" "Running markdown formatter:" >&2
 time {
-	# See `.mdformat.toml` for the configuration parameters.
-	git_files -z -- '*.md' ':!./CHANGELOG.md' | xargs -r -P "$(nproc)" -n 50 -0 mdformat
-	git_files -z -- '*.md' ':!./CHANGELOG.md' | xargs -r -0 chmod go=u-w
+  # See `.mdformat.toml` for the configuration parameters.
+  git_files -z -- '*.md' ':!./CHANGELOG.md' | xargs -r -P "$(nproc)" -n 50 -0 mdformat
+  git_files -z -- '*.md' ':!./CHANGELOG.md' | xargs -r -0 chmod go=u-w
 }
 
 # If there are any diffs, report them and exit with a non-zero status so

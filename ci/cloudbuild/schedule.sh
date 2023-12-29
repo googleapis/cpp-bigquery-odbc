@@ -106,7 +106,7 @@ while true; do
 done
 
 function generate_scheduler() {
-  cat > ./schedulers/"${NAME}" << EOF
+  cat >./schedulers/"${NAME}" <<EOF
 --location=us-east1 \\
 --schedule "${FREQUENCY}" \\
 --oauth-service-account-email=${SERVICE_ACCOUNT} \\
@@ -127,10 +127,10 @@ function upload_scheduler() {
 case "${VERB}" in
   "${CREATE}")
     generate_scheduler
-  ;;
+    ;;
   "${UPLOAD}")
     upload_scheduler
-  ;;
+    ;;
   -h | --help)
     print_usage
     ;;

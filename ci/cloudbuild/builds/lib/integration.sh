@@ -29,29 +29,28 @@ CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_ID=id
 CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME=name
 CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE=age
 
-
 function integration::setup() {
   # Creating some datasets and tables for client library integration tests. It's used only for 'reading' operations.
   # This way tests still run independently and fast as we don't need to create/drop tables for every test.
 
   # Delete previously created Catalog
   bq query --use_legacy_sql=false \
-  "DROP SCHEMA IF EXISTS \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}
-   CASCADE"
+    "DROP SCHEMA IF EXISTS \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}
+     CASCADE"
   # Create a dataset
   bq query --use_legacy_sql=false \
-  "CREATE SCHEMA \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}"
+    "CREATE SCHEMA \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}"
   bq query --use_legacy_sql=false \
-  "ALTER SCHEMA \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}
-   SET OPTIONS(labels=[('dataset_label_to_filter', 'dataset_label_value_to_filter')])"
+    "ALTER SCHEMA \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}
+     SET OPTIONS(labels=[('dataset_label_to_filter', 'dataset_label_value_to_filter')])"
   # Create a table
   bq query --use_legacy_sql=false \
-  "CREATE TABLE \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}.${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}
-   (${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_ID} INT64, ${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME} STRING, ${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE} INT64)"
-   # Populate the table with data
-   bq query --use_legacy_sql=false \
-  "INSERT INTO \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}.${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}
-   VALUES(1, 'Boris', 24), (2, 'Mari', 29), (3, 'Ken', 34)"
+    "CREATE TABLE \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}.${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}
+     (${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_ID} INT64, ${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME} STRING, ${CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE} INT64)"
+  # Populate the table with data
+  bq query --use_legacy_sql=false \
+    "INSERT INTO \`${CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT}\`.${CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET}.${CPP_BIGQUERY_ODBC_TEST_TABLE_NAME}
+     VALUES(1, 'Boris', 24), (2, 'Mari', 29), (3, 'Ken', 34)"
 }
 
 # Outputs a list of Bazel arguments that should be used when running
