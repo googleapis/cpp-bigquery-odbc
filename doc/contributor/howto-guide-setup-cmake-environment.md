@@ -22,7 +22,7 @@ git clone git@github.com:googleapis/cpp-bigquery-odbc.git
 [vcpkg](https://vcpkg.io) is a package manager for C++ that builds from source
 and installs any binary artifacts in `$HOME`. The first order dependencies of our
 cmake targets are handled by the corresponding `CMakeLists.txt` files, but the dependencies
-of [google-cloud-cppp](https://github.com/googleapis/google-cloud-cpp) have to be installed using vcpkg
+of [google-cloud-cpp](https://github.com/googleapis/google-cloud-cpp) have to be installed using vcpkg
 
 In these instructions, we will install `vcpkg` descriptions
 in `$HOME/vcpkg`, you can change the `vcpkg` location, just remember to adapt

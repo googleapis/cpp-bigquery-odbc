@@ -29,7 +29,7 @@ using google::cloud::odbc_bq_driver_internal::FormatSqlPointer;
 using google::cloud::odbc_bq_driver_internal::FormatString;
 using google::cloud::odbc_bq_driver_internal::FormatSqlSetPosiRow;
 
-// Following functionality stull needs to still be implmented for the
+// Following functionality still needs to be implemented for the
 // entry functions.
 //
 // 1) Different levels of logging.

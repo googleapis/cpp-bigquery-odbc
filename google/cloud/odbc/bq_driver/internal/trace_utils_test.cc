@@ -52,7 +52,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled)
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
-  
+
   (*test_opts_file)->trace_file.close();
 }
 
@@ -97,7 +97,7 @@ TEST(TraceLogging, TraceOptionsFromConfigEmpty)
   std::shared_ptr<Sections> configs = nullptr;
   auto opts = TraceOptions::CreateTraceOptionsFile(configs);
 
-  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument, 
+  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument,
               HasSubstr("Invalid ODBC Config")));
 }
 
@@ -394,7 +394,7 @@ TEST(TraceLoggingConsole, FormatTimestampStruct)
             FormatTimestampStruct(t));
 }
 
-TEST(TraceLoggingConsole, FormatIntervalStructPositve)
+TEST(TraceLoggingConsole, FormatIntervalStructPositive)
 {
   SQL_INTERVAL_STRUCT t;
   t.interval_sign = 1;

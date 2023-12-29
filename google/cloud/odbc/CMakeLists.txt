@@ -73,7 +73,7 @@ function (odbc_define_tests)
   gtest_discover_tests(all_tests)
 endfunction ()
 
-# Fetching dependecies from google-cloud-cpp
+# Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
 if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUND)
   # These flags need to be set to build google_cloud_cpp_bigquery_rest without examples
