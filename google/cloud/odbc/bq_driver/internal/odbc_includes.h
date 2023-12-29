@@ -19,14 +19,13 @@
 
 #ifdef _WIN32
 
-# define _WINSOCKAPI_
-# include <Windows.h>
+#define _WINSOCKAPI_
+#include <Windows.h>
 
-#endif //_WIN32
+#endif  //_WIN32
 
 #include <odbcinst.h>
 #include <sql.h>
 #include <sqlext.h>
-
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INCLUDES_H

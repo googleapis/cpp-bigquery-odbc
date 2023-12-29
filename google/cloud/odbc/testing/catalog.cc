@@ -19,46 +19,49 @@ namespace google::cloud::odbc_tests {
 
 Catalog::~Catalog() = default;
 
-std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ConnectionHandle> conn, std::string dataset) {
+std::shared_ptr<Results> Catalog::GetTables(
+    std::shared_ptr<ConnectionHandle> conn, std::string dataset) {
   SQLRETURN status;
   int res_cols = 5;
   Catalog catalog_result[res_cols];
   Results results;
 
-  for (int i = 0;i < res_cols; i++){
+  for (int i = 0; i < res_cols; i++) {
     catalog_result[i].target_type = SQL_C_CHAR;
     catalog_result[i].buffer_length = kBufferLength;
-    catalog_result[i].target_value = malloc(sizeof(unsigned char)*catalog_result[i].buffer_length);
-    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i+1,
-                             catalog_result[i].target_type,
-                             catalog_result[i].target_value,
-                             catalog_result[i].buffer_length,
-                             &(catalog_result[i].str_len));
+    catalog_result[i].target_value =
+        malloc(sizeof(unsigned char) * catalog_result[i].buffer_length);
+    status = SQLBindCol(
+        conn->hstmt, (SQLUSMALLINT)i + 1, catalog_result[i].target_type,
+        catalog_result[i].target_value, catalog_result[i].buffer_length,
+        &(catalog_result[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
   // No results are returned if we don't append "%"
   auto project_id = conn->metadata.project_id + "%";
 
   if (dataset.length()) {
-    status = SQLTables(conn->hstmt, (SQLCHAR *)project_id.c_str(), SQL_NTS, (SQLCHAR *)dataset.c_str(), SQL_NTS, NULL, 0, NULL,0);
+    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                       (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
   } else {
-    status = SQLTables(conn->hstmt, (SQLCHAR *)project_id.c_str(), SQL_NTS, NULL, 0, NULL, 0, NULL,0);
+    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS, NULL,
+                       0, NULL, 0, NULL, 0);
   }
   CheckError(status, "SQLTables", conn);
 
   int i = 0, count = 0;
-  while(1) {
+  while (1) {
     status = SQLFetch(conn->hstmt);
-    if(status == SQL_NO_DATA) {
+    if (status == SQL_NO_DATA) {
       break;
     }
-    if(!SQL_SUCCEEDED(status)) {
+    if (!SQL_SUCCEEDED(status)) {
       CheckError(status, "SQLFetch", conn);
       break;
     }
     // Col1: Catalog Name/Project Id, Col2: Dataset name, Col3: Table Name
-    std::string dataset_name = (char *)catalog_result[1].target_value;
-    std::string table_name = (char *)catalog_result[2].target_value;
+    std::string dataset_name = (char*)catalog_result[1].target_value;
+    std::string table_name = (char*)catalog_result[2].target_value;
     results[dataset_name].emplace_back(table_name);
   }
 

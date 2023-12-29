@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include "absl/strings/str_cat.h"
-
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/internal/getenv.h"
-
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/internal/absl_str_cat_quiet.h"
+#include "google/cloud/internal/getenv.h"
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_integration_tests_apis {
 
@@ -36,12 +34,25 @@ using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::InsertJobRequest;
 using bigquery_v2_minimal_internal::Job;
+using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
-using bigquery_v2_minimal_internal::GetQueryResultsRequest;
+using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::QueryParameter;
+using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util_internal::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_testing_util_internal::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
+using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(InsertJob, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -58,8 +69,9 @@ TEST(InsertJob, UserAccountAuth) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat(
-    "SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name,
+                   " WHERE ", *column_name, " > @min_age");
   QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
   job_configuration_query.query_parameters = {query_parameter};
   job_configuration.query = job_configuration_query;
@@ -68,12 +80,13 @@ TEST(InsertJob, UserAccountAuth) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -86,14 +99,15 @@ TEST(InsertJob, UserAccountAuth) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
   EXPECT_EQ(query_results_response.value().schema.fields.size(), 1);
   EXPECT_EQ(query_results_response.value().total_rows, 1);
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
@@ -111,8 +125,9 @@ TEST(InsertJob, ServiceAccountAuth) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat(
-      "SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name,
+                   " WHERE ", *column_name, " > @min_age");
   QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
   job_configuration_query.query_parameters = {query_parameter};
   job_configuration.query = job_configuration_query;
@@ -121,12 +136,13 @@ TEST(InsertJob, ServiceAccountAuth) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -139,7 +155,8 @@ TEST(InsertJob, ServiceAccountAuth) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
@@ -163,8 +180,9 @@ TEST(InsertJob, ServiceAccountAuthWithClientId) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat(
-    "SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name,
+                   " WHERE ", *column_name, " > @min_age");
   QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
   job_configuration_query.query_parameters = {query_parameter};
   job_configuration.query = job_configuration_query;
@@ -173,12 +191,13 @@ TEST(InsertJob, ServiceAccountAuthWithClientId) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -191,7 +210,8 @@ TEST(InsertJob, ServiceAccountAuthWithClientId) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
@@ -212,7 +232,8 @@ TEST(InsertJob, ProjectNotExist) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", full_table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT * FROM ", full_table_name);
 
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
@@ -220,17 +241,20 @@ TEST(InsertJob, ProjectNotExist) {
   request.set_project_id(std::string(kNameForNonExistingProject));
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument,
-    HasSubstr("Error in non-idempotent operation: ProjectId and DatasetId must be non-empty")));
+  EXPECT_THAT(job_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Error in non-idempotent operation: ProjectId "
+                                 "and DatasetId must be non-empty")));
 }
 
 TEST(InsertJob, DatasetNotExist) {
@@ -245,8 +269,10 @@ TEST(InsertJob, DatasetNotExist) {
   Job job;
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
-  std::string full_table_name = absl::StrCat("Not_existing_dataset.", *table_name);
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", full_table_name);
+  std::string full_table_name =
+      absl::StrCat("Not_existing_dataset.", *table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT * FROM ", full_table_name);
 
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
@@ -254,12 +280,13 @@ TEST(InsertJob, DatasetNotExist) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -273,9 +300,11 @@ TEST(InsertJob, DatasetNotExist) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Dataset")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Dataset")));
 }
 
 TEST(InsertJob, NoQueryParameters) {
@@ -295,20 +324,22 @@ TEST(InsertJob, NoQueryParameters) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat(
-    "SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name,
+                   " WHERE ", *column_name, " > @min_age");
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -322,10 +353,12 @@ TEST(InsertJob, NoQueryParameters) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kInvalidArgument,
-    HasSubstr("Query parameter 'min_age' not found")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Query parameter 'min_age' not found")));
 }
 
 TEST(InsertJob, NoJobConfiguration) {
@@ -344,16 +377,18 @@ TEST(InsertJob, NoJobConfiguration) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid Job object")));
+  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument,
+                                     HasSubstr("Invalid Job object")));
 }
 
 TEST(InsertJob, NoJobConfigurationQuery) {
@@ -374,19 +409,21 @@ TEST(InsertJob, NoJobConfigurationQuery) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid Job object")));
+  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument,
+                                     HasSubstr("Invalid Job object")));
 }
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(InsertJob, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -402,7 +439,8 @@ TEST(InsertJob, NoAccessAccountAuth) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", full_table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT * FROM ", full_table_name);
 
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
@@ -410,19 +448,22 @@ TEST(InsertJob, NoAccessAccountAuth) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kPermissionDenied,
-    HasSubstr("User does not have bigquery.jobs.create permission in project")));
+  EXPECT_THAT(job_response,
+              StatusIs(StatusCode::kPermissionDenied,
+                       HasSubstr("User does not have bigquery.jobs.create "
+                                 "permission in project")));
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
@@ -439,7 +480,8 @@ TEST(InsertJob, DifferentAccount) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  job_configuration_query.query = absl::StrCat("SELECT * FROM ", full_table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT * FROM ", full_table_name);
 
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
@@ -447,12 +489,13 @@ TEST(InsertJob, DifferentAccount) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -462,18 +505,21 @@ TEST(InsertJob, DifferentAccount) {
   // Getting results of previous Job using another account
   auto options_with_user_account = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
-    std::move(*options_with_user_account)));
+  auto job_client_with_user_account = JobClient(
+      MakeBigQueryJobConnection(std::move(*options_with_user_account)));
 
   std::string job_id = job_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client_with_user_account.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
-    HasSubstr("User does not have permission to access results of another user's job")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kPermissionDenied,
+                       HasSubstr("User does not have permission to access "
+                                 "results of another user's job")));
 }
 
 TEST(InsertJob, CreateTableAndInsertRow) {
@@ -488,19 +534,21 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
   std::string table_name = absl::StrCat(*dataset_id, ".Test_Table_Runtime");
-  job_configuration_query.query = absl::StrCat("CREATE TABLE IF NOT EXISTS ", table_name, " (id INT) ");
+  job_configuration_query.query =
+      absl::StrCat("CREATE TABLE IF NOT EXISTS ", table_name, " (id INT) ");
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                "connectionProperties", "systemVariables", "structTypes",
-                                "structValues", "location"});
+  request.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response = job_client.InsertJob(request);
 
@@ -513,7 +561,8 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
@@ -522,19 +571,21 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   Job job_dml;
   JobConfiguration job_configuration_dml;
   JobConfigurationQuery job_configuration_query_dml;
-  job_configuration_query_dml.query = absl::StrCat("INSERT INTO ", table_name, " VALUES(1)");
+  job_configuration_query_dml.query =
+      absl::StrCat("INSERT INTO ", table_name, " VALUES(1)");
   job_configuration_dml.query = job_configuration_query_dml;
   job_dml.configuration = job_configuration_dml;
   InsertJobRequest request_dml;
   request_dml.set_project_id(*project_id);
   request_dml.set_job(job_dml);
 
-  request_dml.set_json_filter_keys({"statistics", "status", "labels", "destinationTable",
-                                    "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-                                    "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-                                    "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-                                    "connectionProperties", "systemVariables", "structTypes",
-                                    "structValues", "location"});
+  request_dml.set_json_filter_keys(
+      {"statistics", "status", "labels", "destinationTable",
+       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
+       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
+       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
+       "connectionProperties", "systemVariables", "structTypes", "structValues",
+       "location"});
 
   auto job_response_dml = job_client.InsertJob(request_dml);
 
@@ -547,7 +598,8 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   get_query_results_request_dml.set_project_id(*project_id);
   get_query_results_request_dml.set_job_id(job_id_dml);
 
-  auto query_results_response_dml = job_client.QueryResults(get_query_results_request_dml);
+  auto query_results_response_dml =
+      job_client.QueryResults(get_query_results_request_dml);
 
   ASSERT_STATUS_OK(query_results_response_dml);
   EXPECT_TRUE(query_results_response_dml.value().job_complete);

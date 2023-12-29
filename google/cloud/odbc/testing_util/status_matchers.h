@@ -20,11 +20,13 @@
 namespace google::cloud::odbc_testing_util {
 
 #define ASSERT_STATUS_OK(expression) \
-  ASSERT_TRUE(expression.ok()) << "Error message: " << expression.status().message() << "\n"
+  ASSERT_TRUE(expression.ok())       \
+      << "Error message: " << expression.status().message() << "\n"
 
 MATCHER_P2(StatusIs, code, matcher, "") {
-  EXPECT_EQ(arg.status().code(), code) << "Expected code to be: " << StatusCodeToString(code)
-    << ", but was: " << StatusCodeToString(arg.status().code());
+  EXPECT_EQ(arg.status().code(), code)
+      << "Expected code to be: " << StatusCodeToString(code)
+      << ", but was: " << StatusCodeToString(arg.status().code());
   EXPECT_THAT(arg.status().message(), matcher);
   return true;
 }

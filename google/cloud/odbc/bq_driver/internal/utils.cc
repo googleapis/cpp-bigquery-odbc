@@ -12,58 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
 
-StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key) {
+StatusOr<std::shared_ptr<Section>> GetSectionWin(
+    std::string const& registry_key) {
   Section section;
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInvalidArgument, "Can't open registry key with path: " + registry_key);
+    return Status(StatusCode::kInvalidArgument,
+                  "Can't open registry key with path: " + registry_key);
   }
 
   DWORD num_values;
-  DWORD longest_data_len;  
-  status = RegQueryInfoKey(
-    key_handle,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    &num_values,
-    NULL,
-    &longest_data_len,
-    NULL,
-    NULL);
-  
+  DWORD longest_data_len;
+  status = RegQueryInfoKey(key_handle, NULL, NULL, NULL, NULL, NULL, NULL,
+                           &num_values, NULL, &longest_data_len, NULL, NULL);
+
   BYTE buffer[1024];
   TCHAR property_name[kMaxValueNameLen];
   DWORD buffer_len = kMaxValueNameLen;
 
-  for (int i = 0, status = ERROR_SUCCESS; i < num_values; i++) { 
-    buffer_len = kMaxValueNameLen; 
-    property_name[0] = '\0'; 
-    status = RegEnumValue(key_handle,
-      i,
-      property_name,
-      &buffer_len,
-      NULL,
-      NULL,
-      NULL,
-      NULL);
+  for (int i = 0, status = ERROR_SUCCESS; i < num_values; i++) {
+    buffer_len = kMaxValueNameLen;
+    property_name[0] = '\0';
+    status = RegEnumValue(key_handle, i, property_name, &buffer_len, NULL, NULL,
+                          NULL, NULL);
     if (status == ERROR_SUCCESS) {
       buffer_len = longest_data_len;
       buffer[0] = '\0';
-      LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL, buffer, &buffer_len);
-      std::string value((char *)buffer);
+      LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL,
+                                          buffer, &buffer_len);
+      std::string value((char*)buffer);
       section[property_name] = value;
     }
   }
@@ -71,51 +57,40 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key
   return std::make_shared<Section>(section);
 }
 
-StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key) {
+StatusOr<std::shared_ptr<Sections>> ParseConfig(
+    std::string const& registry_key) {
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInvalidArgument, "Can't open registry key with path: " + registry_key);
+    return Status(StatusCode::kInvalidArgument,
+                  "Can't open registry key with path: " + registry_key);
   }
 
   TCHAR subkey_name[kMaxKeyLength];
   DWORD name_len;
   DWORD num_sub_keys = 0;
 
-  status = RegQueryInfoKey(
-    key_handle,
-    NULL,
-    NULL,
-    NULL,
-    &num_sub_keys,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL);
+  status = RegQueryInfoKey(key_handle, NULL, NULL, NULL, &num_sub_keys, NULL,
+                           NULL, NULL, NULL, NULL, NULL, NULL);
 
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInternal, "RegQueryInfoKey failed with error code: " + status);
+    return Status(StatusCode::kInternal,
+                  "RegQueryInfoKey failed with error code: " + status);
   }
 
   Sections sections;
   // List all the sections
   for (int i = 0; i < num_sub_keys; i++) {
     name_len = kMaxKeyLength;
-    status = RegEnumKeyEx(key_handle, i,
-      subkey_name, 
-      &name_len,
-      NULL, 
-      NULL, 
-      NULL, 
-      NULL); 
+    status = RegEnumKeyEx(key_handle, i, subkey_name, &name_len, NULL, NULL,
+                          NULL, NULL);
     if (status == ERROR_SUCCESS) {
-      auto get_sections_response = GetSectionWin(registry_key + "\\" + std::string(subkey_name));
-      if(get_sections_response.status().code() == StatusCode::kOk) {
+      auto get_sections_response =
+          GetSectionWin(registry_key + "\\" + std::string(subkey_name));
+      if (get_sections_response.status().code() == StatusCode::kOk) {
         sections[subkey_name] = *get_sections_response.value();
       }
     }
@@ -153,17 +128,18 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
           value = line.substr(pos + 1);
           Trim(value);
         }
-        if(!current_section_name.empty()) {
+        if (!current_section_name.empty()) {
           sections[current_section_name][property] = value;
         }
       }
     }
   } else {
-    return Status(StatusCode::kInvalidArgument, "Can't open file with path: " + file_path);
+    return Status(StatusCode::kInvalidArgument,
+                  "Can't open file with path: " + file_path);
   }
   return std::make_shared<Sections>(sections);
 }
 
-#endif //_WIN32
+#endif  //_WIN32
 
 } // namespace google::cloud::odbc_bq_driver_internal

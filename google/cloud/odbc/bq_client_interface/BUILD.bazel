@@ -25,7 +25,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
-])
+    ],
+)
 
 [cc_test(
     name = bq_client_interface_test.replace("/", "_").replace(".cc", ""),

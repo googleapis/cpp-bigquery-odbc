@@ -17,7 +17,8 @@
 
 namespace google::cloud::odbc_integration_tests_testing_util {
 
-inline constexpr absl::string_view kNameForNonExistingProject = "non-existing-project";
+inline constexpr absl::string_view kNameForNonExistingProject =
+    "non-existing-project";
 
 } // namespace google::cloud::odbc_integration_tests_testing_util
 

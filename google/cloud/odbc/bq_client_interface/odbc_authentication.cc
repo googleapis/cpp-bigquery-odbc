@@ -12,27 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <fstream>
-
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
-
-#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 StatusOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     std::string const& credentials_file_path) {
   if (credentials_file_path.empty()) {
-    return Status(StatusCode::kInvalidArgument, "The path to the file can't be empty.");
+    return Status(StatusCode::kInvalidArgument,
+                  "The path to the file can't be empty.");
   }
   auto is = std::ifstream(credentials_file_path);
   if (!is.is_open()) {
-    return Status(StatusCode::kInvalidArgument, "There was an error while opening the file: " + credentials_file_path);
+    return Status(
+        StatusCode::kInvalidArgument,
+        "There was an error while opening the file: " + credentials_file_path);
   }
   auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
   if (is.bad()) {
-    return Status(StatusCode::kInternal, "There was an error while reading the file: " + credentials_file_path);
+    return Status(
+        StatusCode::kInternal,
+        "There was an error while reading the file: " + credentials_file_path);
   }
   return google::cloud::MakeServiceAccountCredentials(contents);
 }
@@ -46,7 +49,8 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
       return Status(StatusCode::kUnimplemented, "Currently not implemented.");
       break;
   }
-  return Status(StatusCode::kInvalidArgument, "OauthMechanism enum is invalid.");
+  return Status(StatusCode::kInvalidArgument,
+                "OauthMechanism enum is invalid.");
 }
 
 } // namespace google::cloud::odbc_bigquery_client_interface

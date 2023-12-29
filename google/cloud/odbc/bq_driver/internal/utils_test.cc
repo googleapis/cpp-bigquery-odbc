@@ -12,59 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
-
 #include "google/cloud/internal/getenv.h"
-
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-const Section kDsnSection {
-  { "Description", "Google BigQuery ODBC Connector" },
-  { "Driver", "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" },
-  { "PropertyWithoutValue", ""}
-};
+Section const kDsnSection{
+    {"Description", "Google BigQuery ODBC Connector"},
+    {"Driver",
+     "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so"},
+    {"PropertyWithoutValue", ""}};
 
-const Section kOdbcSection {
-  { "Trace", "1" },
-  { "TraceFile", "/tmp/odbc.log" }
-};
+Section const kOdbcSection{{"Trace", "1"}, {"TraceFile", "/tmp/odbc.log"}};
 
-const Section kCommentedDsnSection {
-  { "HTAPI_MinResultsSize", "1000" },
-  { "HTAPI_MinActivationRatio", "3" }
-};
+Section const kCommentedDsnSection{{"HTAPI_MinResultsSize", "1000"},
+                                   {"HTAPI_MinActivationRatio", "3"}};
 
-const Sections kSampleIniSections {
-  { "SampleDSN", kDsnSection },
-  { "ODBC", kOdbcSection }
-};
+Sections const kSampleIniSections{{"SampleDSN", kDsnSection},
+                                  {"ODBC", kOdbcSection}};
 
-const Sections kCommentedIniSections {
-  { "SampleDSN", kCommentedDsnSection },
+Sections const kCommentedIniSections{
+    {"SampleDSN", kCommentedDsnSection},
 };
 
 TEST(Parsing, ParseConfig) {
-  std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
+  std::string test_data_path =
+      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
+          .value_or("");
   auto sections = ParseConfig(test_data_path + "/sample.ini");
 
   // Test if the uncommented sections are defined
-  for(const auto & it_outer : kSampleIniSections) {
+  for (auto const& it_outer : kSampleIniSections) {
     std::string section_name = it_outer.first;
     Section sample_ini_section = it_outer.second;
-    for(auto & it_inner : sample_ini_section) {
+    for (auto& it_inner : sample_ini_section) {
       std::string property = it_inner.first;
-      EXPECT_EQ(sample_ini_section[property], (*(sections.value()))[section_name][property]);
+      EXPECT_EQ(sample_ini_section[property],
+                (*(sections.value()))[section_name][property]);
     }
   }
 
   // Test if the commented sections are not defined
-  for(const auto & it_outer : kCommentedIniSections) {
+  for (auto const& it_outer : kCommentedIniSections) {
     std::string section_name = it_outer.first;
     Section commented_ini_section = it_outer.second;
-    for(auto & it_inner : commented_ini_section) {
+    for (auto& it_inner : commented_ini_section) {
       std::string property = it_inner.first;
       EXPECT_EQ((*(sections.value()))[section_name][property], "");
     }

@@ -27,4 +27,5 @@ cc_library(
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_googletest//:gtest",
-])
+    ],
+)

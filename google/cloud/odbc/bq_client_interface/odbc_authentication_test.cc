@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <fstream>
-#include <gmock/gmock.h>
-
-#include "google/cloud/internal/getenv.h"
-
-#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/internal/getenv.h"
+#include <gmock/gmock.h>
+#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -27,10 +25,14 @@ using google::cloud::odbc_testing_util::StatusIs;
 using ::testing::HasSubstr;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {
-  std::string test_data_path = google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH").value_or("");
-  std::string credentials_file_path = test_data_path + "service_account_auth_keys.json";
+  std::string test_data_path =
+      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
+          .value_or("");
+  std::string credentials_file_path =
+      test_data_path + "service_account_auth_keys.json";
 
-  auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, credentials_file_path});
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kServiceAccount, credentials_file_path});
 
   ASSERT_STATUS_OK(credentials);
 }
@@ -38,13 +40,19 @@ TEST(ServiceAuthentication, ServiceAccountAuthentication) {
 TEST(ServiceAuthentication, EmptyPath) {
   auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, ""});
 
-  EXPECT_THAT(credentials, StatusIs(StatusCode::kInvalidArgument, HasSubstr("The path to the file can't be empty.")));
+  EXPECT_THAT(credentials,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("The path to the file can't be empty.")));
 }
 
 TEST(ServiceAuthentication, FileNotExist) {
-  auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, "not_existing_file.json"});
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kServiceAccount, "not_existing_file.json"});
 
-  EXPECT_THAT(credentials, StatusIs(StatusCode::kInvalidArgument, HasSubstr("There was an error while opening the file:")));
+  EXPECT_THAT(
+      credentials,
+      StatusIs(StatusCode::kInvalidArgument,
+               HasSubstr("There was an error while opening the file:")));
 }
 
 } // namespace google::cloud::odbc_bigquery_client_interface

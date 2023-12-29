@@ -1,9 +1,8 @@
 # How-to Guide: Set Up for CMake-based builds
 
 This document describes how to set up your workstation to build the libraries
-and tests using CMake. The intended audience is developers of the
-driver who want to verify their changes will work with CMake and/or
-prefer to use CMake.
+and tests using CMake. The intended audience is developers of the driver who
+want to verify their changes will work with CMake and/or prefer to use CMake.
 
 The document assumes you are using a Linux workstation running Ubuntu, changing
 the instructions for other distributions or operating systems is left as an
@@ -20,14 +19,15 @@ git clone git@github.com:googleapis/cpp-bigquery-odbc.git
 ## Download and bootstrap `vcpkg`
 
 [vcpkg](https://vcpkg.io) is a package manager for C++ that builds from source
-and installs any binary artifacts in `$HOME`. The first order dependencies of our
-cmake targets are handled by the corresponding `CMakeLists.txt` files, but the dependencies
-of [google-cloud-cpp](https://github.com/googleapis/google-cloud-cpp) have to be installed using vcpkg
+and installs any binary artifacts in `$HOME`. The first order dependencies of
+our cmake targets are handled by the corresponding `CMakeLists.txt` files, but
+the dependencies of
+[google-cloud-cpp](https://github.com/googleapis/google-cloud-cpp) have to be
+installed using vcpkg
 
-In these instructions, we will install `vcpkg` descriptions
-in `$HOME/vcpkg`, you can change the `vcpkg` location, just remember to adapt
-these instructions as you go along. Download the `vcpkg` package descriptions
-using `git`:
+In these instructions, we will install `vcpkg` descriptions in `$HOME/vcpkg`,
+you can change the `vcpkg` location, just remember to adapt these instructions
+as you go along. Download the `vcpkg` package descriptions using `git`:
 
 ```shell
 git -C $HOME clone https://github.com/microsoft/vcpkg
@@ -42,8 +42,8 @@ export VCPKG_ROOT=$HOME/vcpkg
 
 ## Installing dependencies of `google-cloud-cpp` with vcpkg
 
-Now you can use `vcpkg` to install all the dependencies of `google-cloud-cpp` or install
-`google-cloud-cpp` itself.
+Now you can use `vcpkg` to install all the dependencies of `google-cloud-cpp` or
+install `google-cloud-cpp` itself.
 
 Install all dependencies using [vcpkg.json](../../vcpkg.json):
 
@@ -53,8 +53,9 @@ vcpkg install
 ```
 
 We have [vcpkg.json](../../vcpkg.json) at project root, which makes it run in
-[manifest mode](https://learn.microsoft.com/en-us/vcpkg/users/manifests). So if you  want
-to install these packages individually, you have to be at some other directory:
+[manifest mode](https://learn.microsoft.com/en-us/vcpkg/users/manifests). So if
+you want to install these packages individually, you have to be at some other
+directory:
 
 ```shell
 cd $HOME
@@ -66,8 +67,8 @@ vcpkg install nlohmann-json
 vcpkg install gtest
 ```
 
-Optionally, you can install `google-cloud-cpp` from vcpkg, if you don't need the latest changes from their
-main branch:
+Optionally, you can install `google-cloud-cpp` from vcpkg, if you don't need the
+latest changes from their main branch:
 
 ```shell
 vcpkg install google-cloud-cpp
@@ -83,16 +84,21 @@ much faster.
 ```shell
 cd $HOME/cpp-bigquery-odbc
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_INTEGRATION_TESTING=ON
-cmake  --build build -j $(nproc) 
+cmake  --build build -j $(nproc)
 ```
 
 After this the client library would be at the path `build/google/cloud/odbc/`
 
 ## Running the tests
 
-The steps above just build the library target, which is not so useful for verifying that your setup is correct. You may want to build and run an example/test.
+The steps above just build the library target, which is not so useful for
+verifying that your setup is correct. You may want to build and run an
+example/test.
 
-Assuming you have already setup a DSN using a driver manager following the steps in the [internal doc](https://g3doc.corp.google.com/company/teams/bigquery-developer-tools/odbc/odbc_tests.md#running-odbc-tests-locally), you can run the driver integration tests like this:
+Assuming you have already setup a DSN using a driver manager following the steps
+in the
+[internal doc](https://g3doc.corp.google.com/company/teams/bigquery-developer-tools/odbc/odbc_tests.md#running-odbc-tests-locally),
+you can run the driver integration tests like this:
 
 ```shell
 cd $HOME/cpp-bigquery-odbc
@@ -102,8 +108,8 @@ cd build
 ctest
 ```
 
-You can also run the client library integration tests one by one. Here is an example of running the 
-`Get Dataset` test:
+You can also run the client library integration tests one by one. Here is an
+example of running the `Get Dataset` test:
 
 ```shell
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DINTEGRATION_TESTING=ON
@@ -111,7 +117,9 @@ cmake  --build build -j $(nproc)
 cd build/google/cloud/odbc
 ./integration_tests/client_library_integration_apis_get_dataset_test explicit-adcs
 ```
-Depending on the arguments passed to the test, you would need to set some env variables too:
+
+Depending on the arguments passed to the test, you would need to set some env
+variables too:
 
 ```shell
 export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=<GCP project ID>

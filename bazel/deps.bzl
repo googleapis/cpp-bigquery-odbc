@@ -87,7 +87,7 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
         sha256 = "66ffd9315665bfaafc96b52278f57c7e2dd09f5ede279ea6d39b2be471e7e3aa",
     )
-    
+
     maybe(
         http_archive,
         name = "com_google_cloud_cpp",

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "testing/connection.h"
 #include "testing/driver_properties.h"
+#include "testing/connection.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -26,24 +26,25 @@ void CheckDataTypes(std::shared_ptr<ConnectionHandle> conn) {
   SQLINTEGER col_size;
   SQLLEN type_name_len = 0, data_type_len = 0, col_size_len = 0;
 
-  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, (SQLPOINTER)type_name, (SQLLEN)sizeof(type_name), &type_name_len);
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, (SQLPOINTER)type_name,
+                      (SQLLEN)sizeof(type_name), &type_name_len);
   CheckError(status, "SQLBindCol", conn);
 
-  status = SQLBindCol(conn->hstmt, 2, SQL_C_SHORT, (SQLPOINTER)&sql_data_type, (SQLLEN)sizeof(sql_data_type), &data_type_len);
+  status = SQLBindCol(conn->hstmt, 2, SQL_C_SHORT, (SQLPOINTER)&sql_data_type,
+                      (SQLLEN)sizeof(sql_data_type), &data_type_len);
   CheckError(status, "SQLBindCol", conn);
 
   while (1) {
     status = SQLFetch(conn->hstmt);
-    if(status == SQL_NO_DATA) {
+    if (status == SQL_NO_DATA) {
       break;
     }
     CheckError(status, "SQLFetch", conn);
 
-    std::string bq_data_type = (char *)type_name;
+    std::string bq_data_type = (char*)type_name;
     EXPECT_EQ(kBqToSqlDataTypes.at(bq_data_type), sql_data_type);
   }
 }
-
 
 TEST(DriverPropertiesTest, SQLGetFunctions) {
   auto conn = std::make_shared<ConnectionHandle>();

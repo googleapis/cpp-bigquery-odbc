@@ -99,4 +99,3 @@ target_link_libraries(odbc_bq_driver PRIVATE google_cloud_odbc_bq_driver)
 odbc_define_tests()
 
 add_subdirectory(integration_tests)
-

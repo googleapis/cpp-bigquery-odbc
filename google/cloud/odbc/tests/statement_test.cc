@@ -12,38 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "testing/connection.h"
 #include "testing/statement.h"
+#include "testing/connection.h"
 
 namespace google::cloud::odbc_tests {
 
-const StdRows kSampleData{
-  { "Test String 1", 1, 1.1 },
-  { .int_field = 237, .float_field = 2.22 },
-  { "Test String 3", NULL, 3.333 },
-  { "Test String 4", 49 },
-  { "Test String 5", 53, 5 },
-  { "Test String 6", 698, 0.31 },
-  { "Test String 7", 12, 71.6 },
-  { "Test String 8", 83, 8.8 },
+StdRows const kSampleData{
+    {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
+    {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
+    {"Test String 5", 53, 5},       {"Test String 6", 698, 0.31},
+    {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
 };
 
 // Checks if the column description returned by DescribeCol matches the schema
-void CheckColumnData(std::shared_ptr<ConnectionHandle> conn, std::string table_name, Schema schema) {
+void CheckColumnData(std::shared_ptr<ConnectionHandle> conn,
+                     std::string table_name, Schema schema) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, "SELECT * FROM " + table_name);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR * )read_stmt, strlen(read_stmt));
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
-  //Check if the number of columns returned is correct
+  // Check if the number of columns returned is correct
   SQLSMALLINT num_cols;
   status = SQLNumResultCols(conn->hstmt, &num_cols);
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, schema.size());
 
-  //Loop through columns and verify descriptions
+  // Loop through columns and verify descriptions
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   for (int i = 0; i < num_cols; i++) {
     auto col_ptr = std::make_shared<Column>();
@@ -52,32 +49,33 @@ void CheckColumnData(std::shared_ptr<ConnectionHandle> conn, std::string table_n
     DescribeCol(conn, col_ptr, i + 1);
 
     // Verify returned column descriptions with the table schema
-    EXPECT_STREQ((const char * )col_ptr->name, schema[i].name.c_str());
+    EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
     EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
     EXPECT_EQ(col_ptr->data_type, schema[i].type);
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
 
-
-// Verify if the inserted data(<input_data>) is the same as the data fetched col-wise
-// Note: This doesn't verify the integrity of the fetched rows
-void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data, std::vector<std::string> col_names) {
-  if(!col_names.size()) {
+// Verify if the inserted data(<input_data>) is the same as the data fetched
+// col-wise Note: This doesn't verify the integrity of the fetched rows
+void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
+                             std::vector<std::string> col_names) {
+  if (!col_names.size()) {
     std::vector<std::string> all_col_names;
     for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
       all_col_names.emplace_back(it->first);
     }
     col_names = all_col_names;
   }
-  for (auto col_name: col_names) {
+  for (auto col_name : col_names) {
     auto ret_col_values = col_wise_data[col_name];
-    
-    // We have to sort inserted and returned values because we haven't specified the ordering
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
     sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
 
     std::vector<std::string> input_col_values;
-    for (auto data: input_data) {
+    for (auto data : input_data) {
       input_col_values.emplace_back(data.str_field);
     }
     sort(input_col_values.begin(), input_col_values.end(), str_comparison);
@@ -109,15 +107,16 @@ TEST(StatementTest, SQLNumParams) {
   auto const table_name = kDatasetName + ".ODBC_NUM_PARAMS_TEST";
   auto const insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
   Table table(table_name);
-  
+
   // Create Table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLSMALLINT num_params;
-  auto  status = SQLPrepare(conn->hstmt, (SQLCHAR *)insert_stmt.c_str(), SQL_NTS);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
   status = SQLNumParams(conn->hstmt, &num_params);
   CheckError(status, "SQLNumParams", conn);
@@ -133,16 +132,15 @@ TEST(StatementTest, SQLDescribeCol) {
   auto const table_name = kDatasetName + ".ODBC_COLUMN_DESCRIPTION_TEST";
   Table table(table_name);
 
-  Schema schema {
-    { "StringField", SQL_VARCHAR},
-    { "IntegerField", SQL_BIGINT},
-    { "FloatField", SQL_DOUBLE}
-  };
+  Schema schema{{"StringField", SQL_VARCHAR},
+                {"IntegerField", SQL_BIGINT},
+                {"FloatField", SQL_DOUBLE}};
 
   // Create Table
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -165,14 +163,13 @@ TEST(StatementTest, SQLFetch) {
 
   // TODO(#14): Add integer and floating point fields too
   // Schema returned by the query
-  Schema schema {
-    { "StringField", SQL_VARCHAR}
-  };
+  Schema schema{{"StringField", SQL_VARCHAR}};
 
   // Create Table
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -184,10 +181,9 @@ TEST(StatementTest, SQLFetch) {
   EXPECT_EQ(rows_count, kSampleData.size());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  //TODO(#14): Add integer and floating point fields too
+  // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
   auto results = *FetchResults(conn, query);
 
@@ -206,14 +202,13 @@ TEST(StatementTest, SQLFetchScroll) {
   Table table(table_name);
 
   // Schema returned by the query
-  Schema schema {
-    { "StringField", SQL_VARCHAR}
-  };
+  Schema schema{{"StringField", SQL_VARCHAR}};
 
   // Create Table
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -242,21 +237,19 @@ TEST(StatementTest, SQLGetData) {
 
   // TODO(#14): Add integer and floating point fields too
   // Schema returned by the query
-  Schema schema {
-    { "StringField", SQL_VARCHAR}
-  };
+  Schema schema{{"StringField", SQL_VARCHAR}};
 
   // Create Table
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Insert(conn, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -274,26 +267,25 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// This test is temporarily disabled till we are able to debug this with help from the vendor
+// This test is temporarily disabled till we are able to debug this with help
+// from the vendor
 TEST(StatementTest, DISABLED_SQLPutData) {
   auto const table_name = kDatasetName + ".ODBC_PUT_DATA_TEST";
   Table table(table_name);
 
   // TODO(#14): Add integer and floating point fields too
   // Schema returned by the query
-  Schema schema {
-    { "StringField1", SQL_VARCHAR},
-    { "StringField2", SQL_VARCHAR},
-    { "StringField3", SQL_VARCHAR}
-  };
+  Schema schema{{"StringField1", SQL_VARCHAR},
+                {"StringField2", SQL_VARCHAR},
+                {"StringField3", SQL_VARCHAR}};
 
   // Create Table
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
-  table.Create(conn, "(StringField1 STRING, StringField2 STRING, StringField3 STRING)");
+  table.Create(
+      conn, "(StringField1 STRING, StringField2 STRING, StringField3 STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
 
   // Insert a row
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -326,7 +318,8 @@ TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  SQLCHAR cursor_name[kBufferLength] = "INSERT_CURSOR", cursor_name_ret[kBufferLength];
+  SQLCHAR cursor_name[kBufferLength] = "INSERT_CURSOR",
+          cursor_name_ret[kBufferLength];
 
   auto status = SQLSetCursorName(conn->hstmt, cursor_name, kBufferLength);
   CheckError(status, "SQLSetCursorName", conn);
@@ -334,7 +327,7 @@ TEST(StatementTest, SQLSetCursorName) {
   status = SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
   CheckError(status, "SQLGetCursorName", conn);
 
-  EXPECT_STREQ((char *)cursor_name_ret, (char *)cursor_name);
+  EXPECT_STREQ((char*)cursor_name_ret, (char*)cursor_name);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

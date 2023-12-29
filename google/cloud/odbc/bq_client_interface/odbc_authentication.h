@@ -15,21 +15,17 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 
-#include "absl/strings/string_view.h"
-
 #include "google/cloud/credentials.h"
 #include "google/cloud/status_or.h"
+#include "absl/strings/string_view.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-enum class OauthMechanism {
-    kServiceAccount,
-    kExternalUser
-};
+enum class OauthMechanism { kServiceAccount, kExternalUser };
 
 struct Oauth {
-    OauthMechanism auth_mechanism;
-    std::string credentials_file_path;
+  OauthMechanism auth_mechanism;
+  std::string credentials_file_path;
 };
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
@@ -37,4 +33,4 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth);
 
 } // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif //GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
+#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H

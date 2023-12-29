@@ -32,7 +32,10 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-Before raising a pull request, you should be running the affected library targets or tests locally using
-either [cmake](doc/contributor/howto-guide-setup-cmake-environment.md) or [bazel](doc/contributor/howto-guide-setup-bazel-environment.md).
+Before raising a pull request, you should be running the affected library
+targets or tests locally using either
+[cmake](doc/contributor/howto-guide-setup-cmake-environment.md) or
+[bazel](doc/contributor/howto-guide-setup-bazel-environment.md).
 
-If you are updating a new build, refer these [instructions](ci/cloudbuild/README.md).
+If you are updating a new build, refer these
+[instructions](ci/cloudbuild/README.md).

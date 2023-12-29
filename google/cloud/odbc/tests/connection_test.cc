@@ -31,11 +31,14 @@ std::vector<int> GetMajorMinorVer(std::string version_str) {
 
 void VerifyDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
   EXPECT_EQ(conn->metadata.dsn_name, GetDefaultDSN());
-  std::vector<int> db_odbc_versions = GetMajorMinorVer(conn->metadata.db_odbc_ver);
+  std::vector<int> db_odbc_versions =
+      GetMajorMinorVer(conn->metadata.db_odbc_ver);
   EXPECT_EQ(db_odbc_versions[0], 3);
-  std::vector<int> driver_odbc_versions = GetMajorMinorVer(conn->metadata.driver_odbc_ver);
+  std::vector<int> driver_odbc_versions =
+      GetMajorMinorVer(conn->metadata.driver_odbc_ver);
   EXPECT_EQ(driver_odbc_versions[0], 3);
-  EXPECT_EQ(conn->metadata.driver_name, "Simba ODBC Driver for Google BigQuery");
+  EXPECT_EQ(conn->metadata.driver_name,
+            "Simba ODBC Driver for Google BigQuery");
 }
 
 TEST(ConnectionTest, SQLDriverConnect) {
@@ -66,7 +69,9 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, timeout), SQL_SUCCESS);
 
-  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)&timeout_ret, (SQLINTEGER)sizeof(timeout_ret), NULL);
+  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
+                                  (SQLPOINTER)&timeout_ret,
+                                  (SQLINTEGER)sizeof(timeout_ret), NULL);
   CheckError(status, "SQLGetConnectAttr", conn);
   EXPECT_EQ(timeout, timeout_ret);
 

@@ -18,15 +18,14 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <winreg.h>
-#endif //_WIN32
-
-#include <algorithm>
-#include <fstream>
-#include <memory>
-#include <map>
-#include <string>
+#endif  //_WIN32
 
 #include "google/cloud/status_or.h"
+#include <algorithm>
+#include <fstream>
+#include <map>
+#include <memory>
+#include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -34,12 +33,16 @@ using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
 
 inline void LTrim(std::string& s) {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-    [](char ch) { return (std::isspace(ch) == 0); }));
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) {
+            return (std::isspace(ch) == 0);
+          }));
 }
 
 inline void RTrim(std::string& s) {
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](char ch) { return (std::isspace(ch) == 0); }).base(), s.end());
+  s.erase(std::find_if(s.rbegin(), s.rend(),
+                       [](char ch) { return (std::isspace(ch) == 0); })
+              .base(),
+          s.end());
 }
 
 inline void Trim(std::string& s) {
@@ -54,15 +57,15 @@ constexpr int kMaxKeyLength = 4096;
 constexpr int kMaxValueNameLen = 4096;
 
 /**
- * @param registry_key Registry key path assuming it has a flat hierarchy. Keys which have sub_keys
- *  are ignored.
+ * @param registry_key Registry key path assuming it has a flat hierarchy. Keys
+ * which have sub_keys are ignored.
  *
  * @return Map of property->value(string-string)
  *
  * @example GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\ODBCTestsDSN")
-*/
-StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key);
-
+ */
+StatusOr<std::shared_ptr<Section>> GetSectionWin(
+    std::string const& registry_key);
 
 /**
  * @param registry_key Registry key path assuming it keys which have sub-keys.
@@ -72,14 +75,15 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(std::string const& registry_key
  * @return Map of depth 2
  *
  * @example ParseConfig("SOFTWARE\\ODBC\\ODBC.INI")
-*/
-StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& registry_key);
+ */
+StatusOr<std::shared_ptr<Sections>> ParseConfig(
+    std::string const& registry_key);
 
 #else
 
 StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
-#endif //_WIN32
+#endif  //_WIN32
 
 } // namespace google::cloud::odbc_bq_driver_internal
 

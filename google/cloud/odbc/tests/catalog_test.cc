@@ -12,29 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "testing/connection.h"
 #include "testing/catalog.h"
+#include "testing/connection.h"
 
 namespace google::cloud::odbc_tests {
 
 std::map<std::string, Schema> kTables = {
-  { "ODBC_SQLTables_TEST_1",
-    { { "Str1", SQL_VARCHAR } }
-  },
-  { "ODBC_SQLTables_TEST_2",
-    { { "Str2", SQL_VARCHAR },
-      { "Int2", SQL_INTEGER },
-      { "Float2", SQL_FLOAT },
-    }
-  },
-  { "ODBC_SQLTables_TEST_3",
-    { { "Str3", SQL_VARCHAR },
-      { "Int3", SQL_INTEGER },
-      { "Float3", SQL_FLOAT },
-      { "Date3", SQL_DATETIME}
-    }
-  }
-};
+    {"ODBC_SQLTables_TEST_1", {{"Str1", SQL_VARCHAR}}},
+    {"ODBC_SQLTables_TEST_2",
+     {
+         {"Str2", SQL_VARCHAR},
+         {"Int2", SQL_INTEGER},
+         {"Float2", SQL_FLOAT},
+     }},
+    {"ODBC_SQLTables_TEST_3",
+     {{"Str3", SQL_VARCHAR},
+      {"Int3", SQL_INTEGER},
+      {"Float3", SQL_FLOAT},
+      {"Date3", SQL_DATETIME}}}};
 
 // Drops all tables in a dataset
 void ClearDataset(std::string kDatasetName, std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {

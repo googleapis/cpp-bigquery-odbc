@@ -18,10 +18,13 @@ bazel test //google/cloud/odbc/integration_tests:* --test_tag_filters=scheduled-
   --test_env=CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE=age
 ```
 
-All environment variables can be found in [`integration.sh`](../../../../ci/cloudbuild/builds/lib/integration.sh) script.
-Also, there can be found commands to create a dataset with a table, as tests rely on prepopulated GCP BigQuery.
+All environment variables can be found in
+[`integration.sh`](../../../../ci/cloudbuild/builds/lib/integration.sh) script.
+Also, there can be found commands to create a dataset with a table, as tests
+rely on prepopulated GCP BigQuery.
 
 Running some of the tests can be done by adding a filter flag, for example
+
 ```
 --test_arg=--gtest_filter=ListDatasets.*
 ```
@@ -29,6 +32,7 @@ Running some of the tests can be done by adding a filter flag, for example
 # Running all tests using CMake
 
 First export all environment variables
+
 ```
 export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=<GCP project ID> \
 export CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET=<BQ Dataset name> \
@@ -63,6 +67,7 @@ cd build && ctest
 ```
 
 Running some of the tests can be done by adding a filter flag, for example
+
 ```
 -R ListAllDatasets.*
 ```
