@@ -55,10 +55,8 @@ namespace odbc_bq_driver {
 //   }
 /////////////////////////////////////////////////////////////////////////////////
 struct TraceOptions {
-    // // Disallow Copy.
+    // Disallow Copy and Assignment.
     TraceOptions(TraceOptions &other) = delete;
-
-    // // Disallow Assignment.
     void operator=(const TraceOptions &) = delete;
 
     //////////////////////////////////////////////////////////
@@ -79,7 +77,7 @@ struct TraceOptions {
     // Returns a singleton object for file tracing
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsFromODBCConfigs(std::string const& file_path);
+       CreateTraceOptionsFile(std::string const& file_path);
 
     //////////////////////////////////////////////////////////
     // Creates TraceOptions based on the trace section in the 
@@ -91,7 +89,7 @@ struct TraceOptions {
     // Returns a singleton object for file tracing
     //////////////////////////////////////////////////////////
     static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const& config_sections);
+       CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections);
     
     // Shared members.
     bool logging_enabled;

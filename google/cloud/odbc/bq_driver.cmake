@@ -102,6 +102,7 @@ function (bq_driver_define_unit_tests)
 
   target_link_libraries(
     google_cloud_odbc_bq_driver_unit_tests
+    odbc_bigquery_testing_util
     google_cloud_odbc_bq_driver_internal
     GTest::gtest_main
   )

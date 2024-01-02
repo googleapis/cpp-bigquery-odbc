@@ -13,12 +13,16 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include <gtest/gtest.h>
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
+
+using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using ::testing::HasSubstr;
 
 // Common Test Values.
 const Section kOdbcSection{
@@ -34,8 +38,8 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigSuccess)
 {
   auto config_sections = std::make_shared<Sections>(kConfigSections);
   auto test_opts_file =
-      TraceOptions::CreateTraceOptionsFromODBCConfigs(config_sections);
-  ASSERT_TRUE(test_opts_file.ok());
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
 
   EXPECT_TRUE(test_opts_file.value()->logging_enabled);
   EXPECT_TRUE(test_opts_file.value()->trace_file.is_open());
@@ -45,11 +49,11 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigSuccess)
 TEST(TraceLogging, TraceOptionsFromConfigEmpty)
 {
   std::shared_ptr<Sections> configs = nullptr;
-  auto opts = TraceOptions::CreateTraceOptionsFromODBCConfigs(configs);
+  auto opts = TraceOptions::CreateTraceOptionsFile(configs);
   ASSERT_FALSE(opts.status().ok());
-  
-  EXPECT_EQ(opts.status().code(), StatusCode::kInvalidArgument);
-  EXPECT_EQ(opts.status().message(), "Invalid ODBC Config");
+
+  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument, 
+              HasSubstr("Invalid ODBC Config")));
 }
 
 TEST(TraceLoggingConsole, BasicODBCTypes)

@@ -81,7 +81,7 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
 }
 
 StatusOr<std::shared_ptr<TraceOptions>>
-TraceOptions::CreateTraceOptionsFromODBCConfigs(std::string const &file_path)
+TraceOptions::CreateTraceOptionsFile(std::string const &file_path)
 {
   auto configs = ParseConfig(file_path);
   if (!configs.ok())
@@ -104,7 +104,7 @@ TraceOptions::CreateTraceOptionsFromODBCConfigs(std::string const &file_path)
 }
 
 StatusOr<std::shared_ptr<TraceOptions>>
-TraceOptions::CreateTraceOptionsFromODBCConfigs(std::shared_ptr<Sections> const& config_sections)
+TraceOptions::CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections)
 {
   if (config_sections == nullptr) {
     return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
