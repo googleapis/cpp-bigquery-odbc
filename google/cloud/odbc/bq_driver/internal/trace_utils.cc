@@ -42,22 +42,29 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions> const& opts, std::shared_pt
     trace_sections = odbc_section->second;
   }
 
+  std::string trace_file;
+  opts->log_level = 0;
+  opts->logging_enabled = false;
   for (auto const &s : trace_sections)
   {
     if (s.first == "Trace")
     {
-      opts->logging_enabled = true;
       opts->log_level = std::stoi(s.second);
-    }
-    else if (s.first == "TraceFile")
+    } else if (s.first == "TraceFile")
     {
-      opts->logging_enabled = true;
-      if (!opts->trace_file.is_open())
-        opts->trace_file.open(s.second, std::ofstream::out | std::ofstream::app);
-      if (!opts->trace_file.is_open())
-      {
-        return Status(StatusCode::kInternal, "Can't open  trace file: " + s.second);
-      }
+      trace_file = s.second;
+    }
+  }
+  if (opts->log_level > 0 && !trace_file.empty())
+  {
+    opts->logging_enabled = true;
+    if (!opts->trace_file.is_open())
+    {
+      opts->trace_file.open(trace_file, std::ofstream::out | std::ofstream::app);
+    }
+    if (!opts->trace_file.is_open())
+    {
+      return Status(StatusCode::kInternal, "Can't open  trace file: " + trace_file);
     }
   }
 
