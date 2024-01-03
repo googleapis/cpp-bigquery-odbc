@@ -55,6 +55,8 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled)
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(1, (*test_opts_file)->log_level);
+  
+  (*test_opts_file)->trace_file.close();
 }
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled)
@@ -91,6 +93,8 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4)
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(4, (*test_opts_file)->log_level);
+
+  (*test_opts_file)->trace_file.close();
 }
 
 TEST(TraceLogging, TraceOptionsFromConfigEmpty)
