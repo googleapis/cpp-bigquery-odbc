@@ -22,6 +22,119 @@ namespace odbc_bq_driver {
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 
+// Initialize the Singleton instance. 
+std::shared_ptr<TraceOptions>  TraceOptions::options_console_ = nullptr;
+std::shared_ptr<TraceOptions>  TraceOptions::options_file_ = nullptr;
+std::mutex TraceOptions::options_mutex_;
+
+namespace
+{
+Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sections> const& config_sections)
+{
+  if (!config_sections)
+  {
+    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
+  }
+
+  Section trace_sections;
+  auto const odbc_section = config_sections->find("ODBC");
+  if (odbc_section != config_sections->end())
+  {
+    trace_sections = odbc_section->second;
+  }
+
+  std::string trace_file;
+  opts->log_level = 0;
+  opts->logging_enabled = false;
+  for (auto const &s : trace_sections)
+  {
+    if (s.first == "Trace")
+    {
+      opts->log_level = std::stoi(s.second);
+    } else if (s.first == "TraceFile")
+    {
+      trace_file = s.second;
+    }
+  }
+  if (opts->log_level > 0 && !trace_file.empty())
+  {
+    opts->logging_enabled = true;
+    if (!opts->trace_file.is_open())
+    {
+      opts->trace_file.open(trace_file, std::ofstream::out | std::ofstream::app);
+    }
+    if (!opts->trace_file.is_open())
+    {
+      return Status(StatusCode::kInternal, "Can't open  trace file: " + trace_file);
+    }
+  }
+
+  return Status(StatusCode::kOk, "");
+}
+}  // namespace
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
+{
+  std::lock_guard<std::mutex> lk{options_mutex_};
+  if (options_console_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_console_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+
+  options_console_->log_level = log_level;
+  options_console_->logging_enabled = logging_enabled;
+
+  return options_console_;
+}
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFile(std::string const &file_path)
+{
+  auto configs = ParseConfig(file_path);
+  if (!configs.ok())
+    return std::move(configs).status();
+
+  std::lock_guard<std::mutex> lk{options_mutex_};
+  if (options_file_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+
+  auto status = LoadFromConfigs(options_file_, *configs);
+  if (!status.ok())
+  {
+    return std::move(status);
+  }
+
+  return options_file_;
+}
+
+StatusOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections)
+{
+  if (config_sections == nullptr) {
+    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
+  }
+
+  std::lock_guard<std::mutex> lk{options_mutex_};
+  if (options_file_ == nullptr)
+  {
+    // Cannot use std::make_shared because constructor is protected.
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+  
+  auto status = LoadFromConfigs(options_file_, config_sections);
+  if (!status.ok())
+  {
+    return std::move(status);
+  }
+
+  return options_file_;
+}
+
 int TracePrintInternalStdOut(TraceOptions& opts, std::string& s)
 {
   if (!opts.logging_enabled || s.empty())
@@ -611,7 +724,7 @@ std::string FormatTimeStruct(SQL_TIME_STRUCT t)
 std::string FormatTimestampStruct(SQL_TIMESTAMP_STRUCT ts)
 {
   char buf[kCharBufSize1];
-  sprintf(buf, "\t\t%s, datetime(YYYY/MM/DD hh:mm:ss.sss)=%hu/%hu/%hu %hu:%hu:%hu.%hu\n",
+  sprintf(buf, "\t\t%s, datetime(YYYY/MM/DD hh:mm:ss.sss)=%hu/%hu/%hu %hu:%hu:%hu.%u\n",
           "SQL_TIMESTAMP_STRUCT", ts.year, ts.month, ts.day,
           ts.hour, ts.minute, ts.second, ts.fraction);
   return buf;

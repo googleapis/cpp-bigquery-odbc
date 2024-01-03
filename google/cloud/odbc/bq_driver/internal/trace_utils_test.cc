@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include <gtest/gtest.h>
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
@@ -20,9 +21,92 @@ namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
-TraceOptions test_opts = {true};
+using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using ::testing::HasSubstr;
 
-TEST(TraceLogging, BasicODBCTypes)
+// Common Test Values.
+const Section kOdbcSection1{
+   {"Trace", "1"},
+   {"TraceFile", "/tmp/odbc.log"}};
+const Section kOdbcSection2{
+   {"Trace", "0"},
+   {"TraceFile", "/tmp/odbc.log"}};
+const Section kOdbcSection3{
+   {"TraceFile", "/tmp/odbc.log"}};
+const Section kOdbcSection4{
+   {"Trace", "4"},
+   {"TraceFile", "/tmp/odbc.log"}};
+
+const Sections kConfigSections1{{"ODBC", kOdbcSection1}};
+const Sections kConfigSections2{{"ODBC", kOdbcSection2}};
+const Sections kConfigSections3{{"ODBC", kOdbcSection3}};
+const Sections kConfigSections4{{"ODBC", kOdbcSection4}};
+
+std::shared_ptr<TraceOptions> test_opts_console =
+    TraceOptions::CreateTraceOptionsConsole(true, 0).value();
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections1);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(1, (*test_opts_file)->log_level);
+  
+  (*test_opts_file)->trace_file.close();
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections2);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(0, (*test_opts_file)->log_level);
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections3);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(0, (*test_opts_file)->log_level);
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections4);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(4, (*test_opts_file)->log_level);
+
+  (*test_opts_file)->trace_file.close();
+}
+
+TEST(TraceLogging, TraceOptionsFromConfigEmpty)
+{
+  std::shared_ptr<Sections> configs = nullptr;
+  auto opts = TraceOptions::CreateTraceOptionsFile(configs);
+
+  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument, 
+              HasSubstr("Invalid ODBC Config")));
+}
+
+TEST(TraceLoggingConsole, BasicODBCTypes)
 {
   std::string fmt1 = FormatSqlSmallInt(1);
   std::string fmt2 = FormatSqlUSmallInt(2);
@@ -30,11 +114,11 @@ TEST(TraceLogging, BasicODBCTypes)
   std::string fmt4 = FormatSqlUInteger(4);
 
   EXPECT_EQ("TestBasicODBCTypes\t\tSQLSMALLINT, 1\n\t\tSQLUSMALLINT, 2\n\t\tSQLINTEGER, 3\n\t\tSQLUINTEGER, 4\n",
-            CollectAndPrintArgs("TestBasicODBCTypes", test_opts,
+            CollectAndPrintArgs("TestBasicODBCTypes", *test_opts_console,
                                 4, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str()));
 }
 
-TEST(TraceLogging, Handle)
+TEST(TraceLoggingConsole, Handle)
 {
   std::string expected;
   expected.append("TestHandle\t\tSQL_NULL_HANDLE, 0x0\n\t\t")
@@ -53,12 +137,12 @@ TEST(TraceLogging, Handle)
   std::string fmt5 = FormatSqlHandleType(SQL_HANDLE_STMT);
   std::string fmt6 = FormatSqlHandleType(1234);
 
-  EXPECT_EQ(expected, CollectAndPrintArgs("TestHandle", test_opts,
+  EXPECT_EQ(expected, CollectAndPrintArgs("TestHandle", *test_opts_console,
                                           6, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
                                           fmt4.c_str(), fmt5.c_str(), fmt6.c_str()));
 }
 
-TEST(TraceLogging, Pointers)
+TEST(TraceLoggingConsole, Pointers)
 {
   SQLPOINTER p = nullptr;
   SQLPOINTER *pp = nullptr;
@@ -84,31 +168,31 @@ TEST(TraceLogging, Pointers)
       .append("SQLINTEGER *, 3\n\t\tSQLUINTEGER *, 4\n\t\t")
       .append("SQLCHAR *, Hello World\n\t\tSQLPOINTER *, 0x0\n\t\tSQLHANDLE *, 0x0\n");
 
-  EXPECT_EQ(expected, CollectAndPrintArgs("TestPointers", test_opts,
+  EXPECT_EQ(expected, CollectAndPrintArgs("TestPointers", *test_opts_console,
                                           8, fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str(),
                                           fmt5.c_str(), fmt6.c_str(), fmt7.c_str(), fmt8.c_str()));
 }
 
-TEST(TraceLogging, Length)
+TEST(TraceLoggingConsole, Length)
 {
   std::string fmt1 = FormatSqlLen(10);
   std::string fmt2 = FormatSqlULen(11);
   std::string fmt3 = FormatSqlSetPosiRow(50);
 
   EXPECT_EQ("TestLength\t\tSQLLEN, 10\n\t\tSQLULEN, 11\n\t\tSQLSETPOSIROW, 50\n",
-            CollectAndPrintArgs("TestLength", test_opts, 3, fmt1.c_str(), fmt2.c_str(), fmt3.c_str()));
+            CollectAndPrintArgs("TestLength", *test_opts_console, 3, fmt1.c_str(), fmt2.c_str(), fmt3.c_str()));
 }
 
-TEST(TraceLogging, ReturnCodes)
+TEST(TraceLoggingConsole, ReturnCodes)
 {
   std::string fmt1 = FormatSqlReturnCode(1);
   std::string fmt2 = FormatSqlReturn(2);
 
   EXPECT_EQ("TestRetCodes\t\tRETCODE, 1\n\t\tSQLRETURN, 2\n",
-            CollectAndPrintArgs("TestRetCodes", test_opts, 2, fmt1.c_str(), fmt2.c_str()));
+            CollectAndPrintArgs("TestRetCodes", *test_opts_console, 2, fmt1.c_str(), fmt2.c_str()));
 }
 
-TEST(TraceLogging, AdditionalSqlTypes)
+TEST(TraceLoggingConsole, AdditionalSqlTypes)
 {
   SQLDATE *d = (SQLDATE *)"1901-01-01";
   SQLTIME *t = (SQLTIME *)"10:30:00";
@@ -145,105 +229,105 @@ TEST(TraceLogging, AdditionalSqlTypes)
       .append("SQLFLOAT *, 2.2000\n\t\tSQLREAL *, 3.30\n");
 
   EXPECT_EQ(expected,
-            CollectAndPrintArgs("TestAdditionalSqlTypes", test_opts, 14,
+            CollectAndPrintArgs("TestAdditionalSqlTypes", *test_opts_console, 14,
                                 fmt1.c_str(), fmt2.c_str(), fmt3.c_str(), fmt4.c_str(),
                                 fmt5.c_str(), fmt6.c_str(), fmt7.c_str(), fmt8.c_str(),
                                 fmt9.c_str(), fmt10.c_str(), fmt11.c_str(), fmt12.c_str(),
                                 fmt13.c_str(), fmt14.c_str()));
 }
 
-TEST(TraceLogging, BasicTypesString)
+TEST(TraceLoggingConsole, BasicTypesString)
 {
   std::string str1 = "Hello1";
   const char *str2 = "Hello2";
   const char str3[] = "Hello3";
 
   EXPECT_EQ("TestBasicTypesString\t\tHello1\n\t\tHello2\n\t\tHello3\n",
-            CollectAndPrintArgs("TestBasicTypesString", test_opts, 3,
+            CollectAndPrintArgs("TestBasicTypesString", *test_opts_console, 3,
                                 FormatString(str1).c_str(), FormatCharString(str2).c_str(),
                                 FormatCharArray(str3).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesChar)
+TEST(TraceLoggingConsole, BasicTypesChar)
 {
   char c1 = 'A';
   unsigned char c2 = 'B';
 
   EXPECT_EQ("TestBasicTypesChar\t\tA\n\t\tB\n",
-            CollectAndPrintArgs("TestBasicTypesChar", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesChar", *test_opts_console, 2,
                                 FormatChar(c1).c_str(), FormatCharU(c2).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesInt)
+TEST(TraceLoggingConsole, BasicTypesInt)
 {
   int i1 = 1;
   unsigned int i2 = 2;
 
   EXPECT_EQ("TestBasicTypesInt\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesInt", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesInt", *test_opts_console, 2,
                                 FormatInt(i1).c_str(), FormatIntU(i2).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesLong)
+TEST(TraceLoggingConsole, BasicTypesLong)
 {
   long l1 = 1L;
   unsigned long l2 = 2L;
 
   EXPECT_EQ("TestBasicTypesLong\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesLong", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesLong", *test_opts_console, 2,
                                 FormatLong(l1).c_str(), FormatLongU(l2).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesShort)
+TEST(TraceLoggingConsole, BasicTypesShort)
 {
   short s1 = 1;
   unsigned short s2 = 2;
 
   EXPECT_EQ("TestBasicTypesShort\t\t1\n\t\t2\n",
-            CollectAndPrintArgs("TestBasicTypesShort", test_opts, 2,
+            CollectAndPrintArgs("TestBasicTypesShort", *test_opts_console, 2,
                                 FormatShort(s1).c_str(), FormatShortU(s2).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesDouble)
+TEST(TraceLoggingConsole, BasicTypesDouble)
 {
+  double d = 1.1234;
   EXPECT_EQ("TestBasicTypesDouble\t\t1.1234\n",
-            CollectAndPrintArgs("TestBasicTypesDouble", test_opts, 1, FormatDouble(1.1234).c_str()));
+            CollectAndPrintArgs("TestBasicTypesDouble", *test_opts_console, 1, FormatDouble(d).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesFloat)
+TEST(TraceLoggingConsole, BasicTypesFloat)
 {
+  float f = 1.12;
   EXPECT_EQ("TestBasicTypesFloat\t\t1.12\n",
-            CollectAndPrintArgs("TestBasicTypesFloat", test_opts, 1, FormatFloat(1.12).c_str()));
+            CollectAndPrintArgs("TestBasicTypesFloat", *test_opts_console, 1, FormatFloat(f).c_str()));
 }
 
-TEST(TraceLogging, BasicTypesBool)
+TEST(TraceLoggingConsole, BasicTypesBool)
 {
   EXPECT_EQ("TestBasicTypesBool\t\tTRUE\n\t\tFALSE\n",
             CollectAndPrintArgs(
-              "TestBasicTypesBool", test_opts, 2, FormatBool(true).c_str(), FormatBool(false).c_str()));
+              "TestBasicTypesBool", *test_opts_console, 2, FormatBool(true).c_str(), FormatBool(false).c_str()));
 }
 
-TEST(TraceLogging, ExitInternalTraceEnabled)
+TEST(TraceLoggingConsole, ExitInternalTraceEnabled)
 {
   SQLRETURN ret_code = 1001;
-  TraceOptions opts;
-  opts.logging_enabled = true;
 
-  EXPECT_EQ("TestExit\t\tSQLRETURN, 1001\n", ExitInternal("TestExit", ret_code, opts));
+  EXPECT_EQ("TestExit\t\tSQLRETURN, 1001\n", ExitInternal("TestExit", ret_code, *test_opts_console));
 }
 
-TEST(TraceLogging, ExitInternalTraceDisabled)
+TEST(TraceLoggingConsole, ExitInternalTraceDisabled)
 {
   SQLRETURN ret_code = 1001;
-  TraceOptions opts;
-  opts.logging_enabled = false;
+  test_opts_console->logging_enabled = false;
 
-  EXPECT_EQ("", ExitInternal("TestExit", ret_code, opts));
+  EXPECT_EQ("", ExitInternal("TestExit", ret_code, *test_opts_console));
+  test_opts_console->logging_enabled = true;
 }
 
 #if (ODBCVER >= 0x0300)
 
-TEST(TraceLogging, FormatNumericStructPositive)
+TEST(TraceLoggingConsole, FormatNumericStructPositive)
 {
   SQL_NUMERIC_STRUCT n;
   n.precision = 2;
@@ -262,7 +346,7 @@ TEST(TraceLogging, FormatNumericStructPositive)
             FormatNumericStruct(n));
 }
 
-TEST(TraceLogging, FormatNumericStructNegative)
+TEST(TraceLoggingConsole, FormatNumericStructNegative)
 {
   SQL_NUMERIC_STRUCT n;
   n.precision = 2;
@@ -280,7 +364,7 @@ TEST(TraceLogging, FormatNumericStructNegative)
   EXPECT_EQ("\t\tSQL_NUMERIC_STRUCT, precision=2, scale=3, val=(-)1234567 \n", FormatNumericStruct(n));
 }
 
-TEST(TraceLogging, FormatDateStruct)
+TEST(TraceLoggingConsole, FormatDateStruct)
 {
   SQL_DATE_STRUCT d;
   d.day = 12;
@@ -290,7 +374,7 @@ TEST(TraceLogging, FormatDateStruct)
   EXPECT_EQ("\t\tSQL_DATE_STRUCT, date(YYYY/MM/DD)=2023/12/12\n", FormatDateStruct(d));
 }
 
-TEST(TraceLogging, FormatTimeStruct)
+TEST(TraceLoggingConsole, FormatTimeStruct)
 {
   SQL_TIME_STRUCT t;
   t.hour = 10;
@@ -300,7 +384,7 @@ TEST(TraceLogging, FormatTimeStruct)
   EXPECT_EQ("\t\tSQL_TIME_STRUCT, time(hh:mm:ss)=10:11:12\n", FormatTimeStruct(t));
 }
 
-TEST(TraceLogging, FormatTimestampStruct)
+TEST(TraceLoggingConsole, FormatTimestampStruct)
 {
   SQL_TIMESTAMP_STRUCT t;
   t.day = 12;
@@ -315,7 +399,7 @@ TEST(TraceLogging, FormatTimestampStruct)
             FormatTimestampStruct(t));
 }
 
-TEST(TraceLogging, FormatIntervalStructPositve)
+TEST(TraceLoggingConsole, FormatIntervalStructPositve)
 {
   SQL_INTERVAL_STRUCT t;
   t.interval_sign = 1;
@@ -329,7 +413,7 @@ TEST(TraceLogging, FormatIntervalStructPositve)
   EXPECT_EQ(exp, FormatIntervalStruct(t));
 }
 
-TEST(TraceLogging, FormatIntervalStructNegative)
+TEST(TraceLoggingConsole, FormatIntervalStructNegative)
 {
   SQL_INTERVAL_STRUCT t;
   t.interval_sign = 0;
@@ -345,7 +429,7 @@ TEST(TraceLogging, FormatIntervalStructNegative)
 #endif
 
 #ifdef WIN32
-TEST(TraceLogging, WindowHandles)
+TEST(TraceLoggingConsole, WindowHandles)
 {
   HWND w1 = nullptr;
   SQLHWND w2 = nullptr;
@@ -354,7 +438,7 @@ TEST(TraceLogging, WindowHandles)
   std::string fmt2 = FormatSqlHWND(w2);
 
   EXPECT_EQ("TestWindowHandles\t\tHWND, 0x0\n\t\tSQLHWND 0x0\n",
-            CollectAndPrintArgs("TestWindowHandles", test_opts, 2, fmt1.c_str(), fmt2.c_str()));
+            CollectAndPrintArgs("TestWindowHandles", *test_opts_console, 2, fmt1.c_str(), fmt2.c_str()));
 }
 #endif  /* WIN32 */
 
