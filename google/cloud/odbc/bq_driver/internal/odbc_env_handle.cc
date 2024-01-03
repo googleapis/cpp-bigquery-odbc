@@ -12,44 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INCLUDES_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INCLUDES_H
-
-#define ODBCVER 0x0380
-
-#ifdef _WIN32
-
-# define _WINSOCKAPI_
-# include <Windows.h>
-
-#endif //_WIN32
-
-#include "google/cloud/odbc/bq_driver/internal/utils.h"
-
-#include <odbcinst.h>
-#include <sql.h>
-#include <sqlext.h>
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
-enum class HandleType {
-  kConnHandle,
-  kEnvHandle,
-  kStatementHandle,
-  kDescriptorHandle
-};
-
-struct HandleWrapped {
-  HandleType handle_type;
-  SQLHANDLE handle_ref; // reference to the internal handle we created
-};
-
 }  // namespace odbc_bq_driver
 }  // namespace cloud
 }  // namespace google
 // NOLINTEND(modernize-concat-nested-namespaces)
-
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INCLUDES_H

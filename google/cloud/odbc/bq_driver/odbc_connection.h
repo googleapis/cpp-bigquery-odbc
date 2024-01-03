@@ -15,6 +15,9 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_CONNECTION_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_CONNECTION_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+
 ////////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC connection:
@@ -32,6 +35,12 @@
 namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
+
+SQLRETURN SQL_API SQLDriverConnectInternal(
+    SQLHDBC connectionHandle, SQLHWND windowHandle, SQLCHAR *inConnectionString,
+    SQLSMALLINT inConnectionStringLen, SQLCHAR *outConnectionString,
+    SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen,
+    SQLUSMALLINT driverCompletion);
 
 }  // namespace odbc_bq_driver
 }  // namespace cloud

@@ -26,7 +26,8 @@ namespace odbc_bq_driver {
 const Section kDsnSection {
   { "Description", "Google BigQuery ODBC Connector" },
   { "Driver", "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" },
-  { "PropertyWithoutValue", ""}
+  { "PropertyWithoutValue", ""},
+  { "Value with equals", "I=am=a=value"}
 };
 
 const Section kOdbcSection {
@@ -53,7 +54,7 @@ TEST(Parsing, ParseConfig) {
   auto sections = ParseConfig(test_data_path + "/sample.ini");
 
   // Test if the uncommented sections are defined
-  for(const auto & it_outer : kSampleIniSections) {
+  for (const auto & it_outer : kSampleIniSections) {
     std::string section_name = it_outer.first;
     Section sample_ini_section = it_outer.second;
     for(auto & it_inner : sample_ini_section) {
@@ -63,10 +64,10 @@ TEST(Parsing, ParseConfig) {
   }
 
   // Test if the commented sections are not defined
-  for(const auto & it_outer : kCommentedIniSections) {
+  for (const auto & it_outer : kCommentedIniSections) {
     std::string section_name = it_outer.first;
     Section commented_ini_section = it_outer.second;
-    for(auto & it_inner : commented_ini_section) {
+    for (auto & it_inner : commented_ini_section) {
       std::string property = it_inner.first;
       EXPECT_EQ((*(sections.value()))[section_name][property], "");
     }
@@ -76,6 +77,28 @@ TEST(Parsing, ParseConfig) {
 TEST(Parsing, ParseConfigIncorrectPath) {
   auto sections = ParseConfig("/invalid_file_name.ini");
   EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
+}
+
+TEST(Parsing, ParseConnectionString) {
+  Section testing_section = kDsnSection;
+  std::string conn_str = "";
+  // Create the connection string we will use for this test
+  for (const auto & it : testing_section) {
+    conn_str.append(it.first);
+    conn_str.append("=");
+    conn_str.append(it.second);
+    conn_str.append(";");
+  }
+
+  Section section_ret = ParseConnectionString(conn_str);
+
+  for (const auto & it : testing_section) {
+    std::string field = it.first;
+    std::string value = it.second;
+    Trim(field);
+    Trim(value);
+    EXPECT_EQ(section_ret[field], value);
+  }
 }
 
 }  // namespace odbc_bq_driver
