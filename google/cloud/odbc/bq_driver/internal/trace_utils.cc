@@ -28,7 +28,7 @@ std::shared_ptr<TraceOptions>  TraceOptions::options_file_ = nullptr;
 
 namespace
 {
-Status LoadFromConfigs(std::shared_ptr<TraceOptions> const& opts, std::shared_ptr<Sections> const& config_sections)
+Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sections> const& config_sections)
 {
   if (!config_sections)
   {
