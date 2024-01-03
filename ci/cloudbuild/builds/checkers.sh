@@ -159,14 +159,6 @@ time {
     xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
 }
 
-# The version of clang-format is important, different versions have slightly
-# different formatting output (sigh).
-printf "%-50s" "Running clang-format:" >&2
-time {
-  git_files -z -- '*.h' '*.cc' '*.proto' |
-    xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
-}
-
 # mdformat does `tempfile.mkstemp(); ...; os.replace(tmp_path, path)`,
 # which results in the new .md file having mode 0600. So, run a second
 # pass to reset the group/other permissions to something more reasonable.
