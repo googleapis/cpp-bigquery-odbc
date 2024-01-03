@@ -22,7 +22,8 @@ Section const kDsnSection{
     {"Description", "Google BigQuery ODBC Connector"},
     {"Driver",
      "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so"},
-    {"PropertyWithoutValue", ""}};
+    {"PropertyWithoutValue", ""},
+    {"Value with equals", "I=am=a=value"}};
 
 Section const kOdbcSection{{"Trace", "1"}, {"TraceFile", "/tmp/odbc.log"}};
 
@@ -67,6 +68,28 @@ TEST(Parsing, ParseConfig) {
 TEST(Parsing, ParseConfigIncorrectPath) {
   auto sections = ParseConfig("/invalid_file_name.ini");
   EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
+}
+
+TEST(Parsing, ParseConnectionString) {
+  Section testing_section = kDsnSection;
+  std::string conn_str = "";
+  // Create the connection string we will use for this test
+  for (auto const& it : testing_section) {
+    conn_str.append(it.first);
+    conn_str.append("=");
+    conn_str.append(it.second);
+    conn_str.append(";");
+  }
+
+  Section section_ret = ParseConnectionString(conn_str);
+
+  for (auto const& it : testing_section) {
+    std::string field = it.first;
+    std::string value = it.second;
+    Trim(field);
+    Trim(value);
+    EXPECT_EQ(section_ret[field], value);
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -25,6 +25,7 @@ cc_library(
     hdrs = google_cloud_odbc_bq_driver_internal_hdrs,
     visibility = ["//:__pkg__"],
     deps = [
+        "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",  # We need this dependency to use 'options' from client libraries
     ],
 )
@@ -52,7 +53,5 @@ cc_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//:google_cloud_odbc_bq_driver_internal",
-        "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest",
     ],
 )

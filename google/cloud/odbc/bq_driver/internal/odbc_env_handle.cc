@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 
-///////////////////////////////////////////////////////////
-// Defines the following internal APIs related to
-// ODBC environment:
-//
-// SQLAllocEnvInternal
-// SQLSetEnvAttrInternal
-// SQLGetEnvAttrInternal
-// SQLFreeHandleInternal
-// SQLCancelHandleInternal
-///////////////////////////////////////////////////////////
-
-namespace google::cloud::odbc_bq_driver {
-}  // namespace google::cloud::odbc_bq_driver
-
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
+// NOLINTBEGIN(modernize-concat-nested-namespaces)
+namespace google {
+namespace cloud {
+namespace odbc_bq_driver {}  // namespace odbc_bq_driver
+}  // namespace cloud
+}  // namespace google
+// NOLINTEND(modernize-concat-nested-namespaces)
