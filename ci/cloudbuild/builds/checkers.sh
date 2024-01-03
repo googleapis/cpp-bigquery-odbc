@@ -17,7 +17,6 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
-#source module ci/cloudbuild/builds/lib/features.sh
 source module ci/cloudbuild/builds/lib/git.sh
 source module ci/lib/io.sh
 
@@ -60,9 +59,9 @@ export -f sed_edit
 #
 # By default, we check all files in the repository tracked by `git`. To check
 # only the files that have changed in a development branch, set
-# `GOOGLE_CLOUD_CPP_FAST_CHECKERS=1`.
+# `GOOGLE_CLOUD_ODBC_FAST_CHECKERS=1`.
 git_files() {
-  if [ -z "${GOOGLE_CLOUD_CPP_FAST_CHECKERS-}" ]; then
+  if [ -z "${GOOGLE_CLOUD_ODBC_FAST_CHECKERS-}" ]; then
     git ls-files "${@}"
   else
     git diff main --name-only --diff-filter=d "${@}"
@@ -98,23 +97,6 @@ printf "%-50s" "Running Abseil header fixes:" >&2
 time {
   expressions=("-e" "'s;#include \"absl/strings/str_\(cat\|replace\|join\).h\";#include \"google/cloud/internal/absl_str_\1_quiet.h\";'")
   (git grep -zEl '#include "absl/strings/str_(cat|replace|join).h"' -- '*.h' '*.cc' ':!google/cloud/internal/absl_str_*quiet.h' || true) |
-    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
-}
-
-# Apply several transformations that cannot be enforced by clang-format:
-#     - Replace any #include for grpc++/* with grpcpp/*. The paths with grpc++
-#       are obsoleted by the gRPC team, so we should not use them in our code.
-#     - Replace grpc::<BLAH> with grpc::StatusCode::<BLAH>, the aliases in the
-#       `grpc::` namespace do not exist inside google.
-printf "%-50s" "Running include fixes:" >&2
-time {
-  expressions+=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
-  (git grep -zEl 'grpc::([A-Z][A-Z_]+)' -- '*.h' '*.cc' || true) |
-    xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
-
-  expression=("-e" "'s;#include <grpc++/grpc++.h>;#include <grpcpp/grpcpp.h>;'")
-  expressions+=("-e" "'s;#include <grpc++/;#include <grpcpp/;'")
-  (git grep -zl '#include <grpc++/' -- '*.h' '*.cc' || true) |
     xargs -r -P "$(nproc)" -n 50 -0 bash -c "sed_edit ${expressions[*]} \"\$0\" \"\$@\""
 }
 
