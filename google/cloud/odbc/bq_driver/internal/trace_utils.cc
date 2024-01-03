@@ -25,6 +25,7 @@ constexpr int kCharBufSize2 = 256;
 // Initialize the Singleton instance. 
 std::shared_ptr<TraceOptions>  TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions>  TraceOptions::options_file_ = nullptr;
+std::mutex TraceOptions::mu_;
 
 namespace
 {
@@ -75,6 +76,7 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
 StatusOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
 {
+  std::lock_guard<std::mutex> lk(mu_);
   if (options_console_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.
@@ -94,6 +96,7 @@ TraceOptions::CreateTraceOptionsFile(std::string const &file_path)
   if (!configs.ok())
     return std::move(configs).status();
 
+  std::lock_guard<std::mutex> lk(mu_);
   if (options_file_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.
@@ -116,6 +119,7 @@ TraceOptions::CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sec
     return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
   }
 
+  std::lock_guard<std::mutex> lk(mu_);
   if (options_file_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.

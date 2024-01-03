@@ -100,6 +100,7 @@ struct TraceOptions {
     TraceOptions() = default;
     static std::shared_ptr<TraceOptions> options_console_;
     static std::shared_ptr<TraceOptions> options_file_;
+    static std::mutex mu_; // used for guarding update of internal options members.
 };
 
 ///////////////////////////////////////////////////////////////
