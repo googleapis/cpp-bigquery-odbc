@@ -23,8 +23,8 @@ constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 
 // Initialize the Singleton instance. 
-TraceOptions* TraceOptions::options_console_ = nullptr;
-TraceOptions* TraceOptions::options_file_ = nullptr;
+std::shared_ptr<TraceOptions>  TraceOptions::options_console_ = nullptr;
+std::shared_ptr<TraceOptions>  TraceOptions::options_file_ = nullptr;
 
 namespace
 {
@@ -78,13 +78,13 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level)
   if (options_console_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.
-    options_console_ = new TraceOptions();
+    options_console_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
   options_console_->log_level = log_level;
   options_console_->logging_enabled = logging_enabled;
 
-  return std::shared_ptr<TraceOptions>(options_console_);
+  return options_console_;
 }
 
 StatusOr<std::shared_ptr<TraceOptions>>
@@ -97,17 +97,16 @@ TraceOptions::CreateTraceOptionsFile(std::string const &file_path)
   if (options_file_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.
-    options_file_ = new TraceOptions();
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  auto shared_opts = std::shared_ptr<TraceOptions>(options_file_);
-  auto status = LoadFromConfigs(shared_opts, *configs);
+  auto status = LoadFromConfigs(options_file_, *configs);
   if (!status.ok())
   {
     return std::move(status);
   }
 
-  return shared_opts;
+  return options_file_;
 }
 
 StatusOr<std::shared_ptr<TraceOptions>>
@@ -120,17 +119,16 @@ TraceOptions::CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sec
   if (options_file_ == nullptr)
   {
     // Cannot use std::make_shared because constructor is protected.
-    options_file_ = new TraceOptions();
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
   
-  auto shared_opts = std::shared_ptr<TraceOptions>(options_file_);
-  auto status = LoadFromConfigs(shared_opts, config_sections);
+  auto status = LoadFromConfigs(options_file_, config_sections);
   if (!status.ok())
   {
     return std::move(status);
   }
 
-  return shared_opts;
+  return options_file_;
 }
 
 int TracePrintInternalStdOut(TraceOptions& opts, std::string& s)

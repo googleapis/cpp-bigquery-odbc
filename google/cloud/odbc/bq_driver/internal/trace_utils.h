@@ -98,8 +98,8 @@ struct TraceOptions {
     std::mutex m; // Used for guarding any logging operations with file or stdout.
   private:
     TraceOptions() = default;
-    static TraceOptions* options_console_;
-    static TraceOptions* options_file_;
+    static std::shared_ptr<TraceOptions> options_console_;
+    static std::shared_ptr<TraceOptions> options_file_;
 };
 
 ///////////////////////////////////////////////////////////////
