@@ -44,7 +44,7 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
   }
 
   std::string trace_file;
-  bool isTracePresent = false;
+  bool tracing_enabled = false;
   opts->log_level = 0;
   opts->logging_enabled = false;
   for (auto const &s : trace_sections)
@@ -52,16 +52,16 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
     if (s.first == "Trace")
     {
       int val = std::stoi(s.second);
-      if (val == 1) 
+      if (val) 
       {
-        isTracePresent = true;
+        tracing_enabled = true;
       }
     } else if (s.first == "TraceFile")
     {
       trace_file = s.second;
     }
   }
-  if (isTracePresent && !trace_file.empty())
+  if (tracing_enabled && !trace_file.empty())
   {
     opts->logging_enabled = true;
     if (!opts->trace_file.is_open())
