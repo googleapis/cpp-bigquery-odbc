@@ -52,7 +52,7 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
     if (s.first == "Trace")
     {
       int val = std::stoi(s.second);
-      if (val) 
+      if (val == 1) 
       {
         tracing_enabled = true;
       }

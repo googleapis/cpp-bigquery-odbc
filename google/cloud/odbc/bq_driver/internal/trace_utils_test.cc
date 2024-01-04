@@ -33,10 +33,14 @@ const Section kOdbcSection2{
    {"TraceFile", "/tmp/odbc.log"}};
 const Section kOdbcSection3{
    {"TraceFile", "/tmp/odbc.log"}};
+const Section kOdbcSection4{
+   {"Trace", "4"},
+   {"TraceFile", "/tmp/odbc.log"}};
 
 const Sections kConfigSections1{{"ODBC", kOdbcSection1}};
 const Sections kConfigSections2{{"ODBC", kOdbcSection2}};
 const Sections kConfigSections3{{"ODBC", kOdbcSection3}};
+const Sections kConfigSections4{{"ODBC", kOdbcSection4}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
     TraceOptions::CreateTraceOptionsConsole(true, 0).value();
@@ -70,6 +74,18 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled)
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent)
 {
   auto config_sections = std::make_shared<Sections>(kConfigSections3);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(0, (*test_opts_file)->log_level);
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4)
+{
+  auto config_sections = std::make_shared<Sections>(kConfigSections4);
   StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
   ASSERT_STATUS_OK(test_opts_file);
