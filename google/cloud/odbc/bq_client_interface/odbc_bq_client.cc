@@ -31,7 +31,7 @@ using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 
 StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
-  auto credentials = CreateCredentials(oauth);
+  StatusOr<std::shared_ptr<Credentials>> credentials = CreateCredentials(oauth);
   if (!credentials) {
     return credentials.status();
   }
@@ -42,9 +42,16 @@ StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
   TableClient table_client = TableClient(MakeTableConnection(options));
+  std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
+      ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
 
   return std::unique_ptr<ODBCBQClient>(new ODBCBQClient(
-      dataset_client, job_client, project_client, table_client));
+      dataset_client, job_client, project_client, table_client, generator));
+}
+
+StatusOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
+  return ::google::cloud::odbc_bigquery_client_interface::GetOAuth2Token(
+      access_token_generator_);
 }
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project>

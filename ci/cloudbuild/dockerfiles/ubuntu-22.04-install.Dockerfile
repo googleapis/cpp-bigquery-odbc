@@ -206,14 +206,14 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     chmod +x /usr/local/bin/sccache
 
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.19.0.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.20.0.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
         -DBUILD_TESTING=OFF \
         -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
-        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest \
+        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2 \
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install

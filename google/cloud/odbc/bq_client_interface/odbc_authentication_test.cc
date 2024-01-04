@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/oauth2/access_token_generator.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
@@ -20,9 +22,18 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+class MockAccessTokenGenerator
+    : public ::google::cloud::oauth2::AccessTokenGenerator {
+ public:
+  MOCK_METHOD(StatusOr<AccessToken>, GetToken, (), (override));
+};
+
 using google::cloud::internal::GetEnv;
+using ::google::cloud::odbc_bigquery_client_interface::SetEnv;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+using ::testing::Return;
+using ::testing::StrEq;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {
   std::string test_data_path =
@@ -53,6 +64,42 @@ TEST(ServiceAuthentication, FileNotExist) {
       credentials,
       StatusIs(StatusCode::kInvalidArgument,
                HasSubstr("There was an error while opening the file:")));
+}
+
+TEST(GetOAuth2Token, GetToken) {
+  auto const expiration =
+      std::chrono::system_clock::now() + std::chrono::minutes(15);
+  auto access_token = AccessToken{"test-token", expiration};
+  auto mock_generator = std::make_shared<MockAccessTokenGenerator>();
+  EXPECT_CALL(*mock_generator, GetToken())
+      .Times(1)
+      .WillOnce(Return(StatusOr(access_token)));
+  std::string env_var = "something";
+  SetEnv("GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT", env_var);
+
+  StatusOr<AccessToken> token = GetOAuth2Token(mock_generator);
+
+  ASSERT_STATUS_OK(token);
+  EXPECT_EQ(GetEnv("GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT")
+                .value_or(""),
+            env_var);
+}
+
+TEST(GetOAuth2Token, Unauthenticated) {
+  auto mock_generator = std::make_shared<MockAccessTokenGenerator>();
+  EXPECT_CALL(*mock_generator, GetToken())
+      .Times(1)
+      .WillOnce(Return(Status(StatusCode::kUnauthenticated, "no access")));
+  std::string env_var = "something";
+  SetEnv("GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT", env_var);
+
+  StatusOr<AccessToken> token = GetOAuth2Token(mock_generator);
+
+  EXPECT_THAT(token,
+              StatusIs(StatusCode::kUnauthenticated, StrEq("no access")));
+  EXPECT_EQ(GetEnv("GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT")
+                .value_or(""),
+            env_var);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

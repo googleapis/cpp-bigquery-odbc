@@ -20,10 +20,12 @@ odbc_bq_client_interface_hdrs = [
     "projects.h",
     "odbc_authentication.h",
     "odbc_bq_client.h",
+    "setenv.h",
 ]
 
 odbc_bq_client_interface_srcs = [
     "projects.cc",
     "odbc_authentication.cc",
     "odbc_bq_client.cc",
+    "setenv.cc",
 ]

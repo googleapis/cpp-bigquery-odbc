@@ -21,10 +21,13 @@ add_library(
     odbc_authentication.h
     odbc_authentication.cc
     odbc_bq_client.h
-    odbc_bq_client.cc)
+    odbc_bq_client.cc
+    setenv.h
+    setenv.cc)
 
 target_link_libraries(
     odbc_bq_client_interface
+    google-cloud-cpp::oauth2
     google-cloud-cpp::experimental-bigquery_rest)
 
 target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})

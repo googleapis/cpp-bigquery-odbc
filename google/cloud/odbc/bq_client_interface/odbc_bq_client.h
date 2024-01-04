@@ -56,6 +56,8 @@ class ODBCBQClient {
   ODBCBQClient(ODBCBQClient&&) = default;
   ODBCBQClient& operator=(ODBCBQClient&&) = default;
 
+  StatusOr<AccessToken> GetOAuth2Token();
+
   ///////////////
   // Project APIs
   ///////////////
@@ -80,16 +82,21 @@ class ODBCBQClient {
       ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client,
       ::google::cloud::bigquery_v2_minimal_internal::ProjectClient
           project_client,
-      ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client)
+      ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client,
+      std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
+          access_token_generator)
       : dataset_client_(std::move(dataset_client)),
         job_client_(std::move(job_client)),
         project_client_(std::move(project_client)),
-        table_client_(std::move(table_client)) {}
+        table_client_(std::move(table_client)),
+        access_token_generator_(std::move(access_token_generator)) {}
 
   ::google::cloud::bigquery_v2_minimal_internal::DatasetClient dataset_client_;
   ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client_;
   ::google::cloud::bigquery_v2_minimal_internal::ProjectClient project_client_;
   ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client_;
+  std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
+      access_token_generator_;
 };
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -76,7 +76,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUN
   set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
   set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
   set(BUILD_TESTING OFF)
-  set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest)
+  set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2)
 
   FetchContent_Declare(
     google-cloud-cpp
@@ -85,6 +85,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUN
   FetchContent_MakeAvailable(google-cloud-cpp)
 else()
   find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
+  find_package(google_cloud_cpp_oauth2 CONFIG REQUIRED)
 endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
