@@ -16,7 +16,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
-#include "google/cloud/odbc/bq_client_interface/bq_projects.h"
+#include "google/cloud/odbc/bq_client_interface/projects.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google {

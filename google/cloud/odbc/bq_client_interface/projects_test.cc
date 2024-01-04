@@ -15,7 +15,7 @@
 #include <gmock/gmock.h>
 
 #include "google/cloud/odbc/testing_util/status_matchers.h"
-#include "google/cloud/odbc/bq_client_interface/bq_projects.h"
+#include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
 

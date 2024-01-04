@@ -25,10 +25,10 @@ StatusOr<std::vector<Project>> ListAllProjects(
     ProjectClient &project_client, Options const& options) {
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
 
   std::vector<Project> projects;
-  for (auto const& project : range) {
+  for (auto const& project : projects_response) {
     if (!project) {
       return project.status();
     }
@@ -42,9 +42,9 @@ StatusOr<Project> GetProject(
     ProjectClient &project_client, std::string const& project_id, Options const& options) {
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
 
-  for (auto const& project : range) {
+  for (auto const& project : projects_response) {
     if (!project) {
       return project.status();
     }
@@ -53,17 +53,17 @@ StatusOr<Project> GetProject(
     }
   }
 
-  return Status(StatusCode::kNotFound, "The project with id " + project_id + " was not found");
+  return Status(StatusCode::kNotFound, "The project " + project_id + " was not found");
 }
 
 StatusOr<std::vector<Project>> FilterProjects(
     ProjectClient &project_client, std::vector<std::string> const& project_ids, Options const& options) {
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
 
   std::vector<Project> projects;
-  for (auto const& project : range) {
+  for (auto const& project : projects_response) {
     if (!project) {
       return project.status();
     }

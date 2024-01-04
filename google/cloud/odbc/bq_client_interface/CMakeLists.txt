@@ -16,8 +16,8 @@
 
 add_library(
     odbc_bq_client_interface
-    bq_projects.h
-    bq_projects.cc
+    projects.h
+    projects.cc
     odbc_authentication.h
     odbc_authentication.cc
     odbc_bq_client.h
@@ -43,7 +43,7 @@ function (client_interface_define_unit_tests)
 
   add_executable(
       odbc_bq_client_interface_unit_tests
-      bq_projects_test.cc
+      projects_test.cc
       odbc_authentication_test.cc
       odbc_bq_client_test.cc
   )
