@@ -44,19 +44,20 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
   }
 
   std::string trace_file;
+  bool isTracePresent = false;
   opts->log_level = 0;
   opts->logging_enabled = false;
   for (auto const &s : trace_sections)
   {
     if (s.first == "Trace")
     {
-      opts->log_level = std::stoi(s.second);
+      isTracePresent = true;
     } else if (s.first == "TraceFile")
     {
       trace_file = s.second;
     }
   }
-  if (opts->log_level > 0 && !trace_file.empty())
+  if (isTracePresent && !trace_file.empty())
   {
     opts->logging_enabled = true;
     if (!opts->trace_file.is_open())
