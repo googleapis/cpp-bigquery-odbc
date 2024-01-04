@@ -51,7 +51,11 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts, std::shared_ptr<Sect
   {
     if (s.first == "Trace")
     {
-      isTracePresent = true;
+      int val = std::stoi(s.second);
+      if (val == 1) 
+      {
+        isTracePresent = true;
+      }
     } else if (s.first == "TraceFile")
     {
       trace_file = s.second;
