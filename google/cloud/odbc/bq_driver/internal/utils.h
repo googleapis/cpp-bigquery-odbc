@@ -67,9 +67,9 @@ inline void Trim(std::string& s) {
  *
  * @example Split("SOFTWARE\\ODBC\\ODBC.INI", "\\", 2) will return ["SOFTWARE", "ODBC"]
 */
-std::vector<std::string> Split(std::string s, std::string delimiter, int limit = 0);
+std::vector<std::string> Split(const std::string& s, const std::string& delimiter, int limit = 0);
 
-std::string Join(std::vector<std::string> v, std::string separator = "", int start_ind = 0);
+std::string Join(std::vector<std::string> v, const std::string& separator = "", unsigned int start_ind = 0);
 
 #ifdef _WIN32
 

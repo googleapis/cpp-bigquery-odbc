@@ -20,8 +20,10 @@ namespace google {
 namespace cloud {
 namespace odbc_bq_driver {
 
-std::vector<std::string> Split(std::string s, std::string delimiter, int limit) {
-  int start_ind = 0, end_ind, len_del = delimiter.length();
+std::vector<std::string> Split(const std::string& s, const std::string& delimiter, int limit) {
+  int start_ind = 0;
+  int end_ind;
+  int len_del = delimiter.length();
   std::string split;
   std::vector<std::string> splits;
   
@@ -35,8 +37,11 @@ std::vector<std::string> Split(std::string s, std::string delimiter, int limit) 
   return splits;
 }
 
-std::string Join(std::vector<std::string> v, std::string separator, int start_ind) {
-  std::string joined = "";
+std::string Join(std::vector<std::string> v, const std::string& separator, unsigned int start_ind) {
+  if (!v.size()) {
+    return "";
+  }
+  std::string joined;
   for (; start_ind < v.size() - 1; start_ind++) {
     joined.append(v[start_ind]);
     joined.append(separator);
@@ -197,7 +202,7 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
 Section ParseConnectionString(std::string& str) {
   Section section;
   std::vector<std::string> splits = Split(str, ";");
-  for (std::string property: splits) {
+  for (const std::string& property: splits) {
     std::vector<std::string> property_splits = Split(property, "=", 2);
     if(property_splits.size() < 2) {
       continue;

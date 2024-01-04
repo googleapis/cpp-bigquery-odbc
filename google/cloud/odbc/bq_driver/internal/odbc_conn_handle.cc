@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
@@ -22,7 +23,6 @@ namespace odbc_bq_driver {
 using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
-using google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 
 Status ConnectionHandle::Connect(Authentication& auth) {
   auth_ = auth;

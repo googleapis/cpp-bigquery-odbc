@@ -18,6 +18,7 @@
 //////////////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -112,7 +113,6 @@ SQLRETURN SQL_API SQLDriverConnect(
     SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen,
     SQLUSMALLINT driverCompletion)
 {
-    SQLRETURN rc = SQL_SUCCESS;
 
     // Call to Acquire mutex for connection handle in odbc_lock.h.
     // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -123,7 +123,10 @@ SQLRETURN SQL_API SQLDriverConnect(
     // Call to Trace function exit in odbc_trace.h if tracing is enabled.
     // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+    return google::cloud::odbc_bq_driver::SQLDriverConnectInternal(connectionHandle, windowHandle, inConnectionString,
+    inConnectionStringLen, outConnectionString,
+    outConnectionStringBufferLen, outConnectionStringLen,
+    driverCompletion);
 }
 //////////////////////////////////////
 // Unicode version of SQLDriverConnect.

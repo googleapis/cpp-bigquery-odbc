@@ -15,7 +15,6 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H
 
-#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
@@ -40,7 +39,7 @@ struct Authentication {
      AuthMechanism auth_mechanism;
      std::string email;
      std::string key_file_path;
-     // TODO: This should be removed if we decide that we will not support refresh tokens
+     // NOTE: This should be removed if we decide that we will not support refresh tokens
      std::string refresh_token;	
 };
 
