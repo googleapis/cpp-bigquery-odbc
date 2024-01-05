@@ -35,15 +35,15 @@
 
 // NOLINTBEGIN
 
-using google::cloud::odbc_bq_driver::TraceOptions;
-using google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
-using google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
-using google::cloud::StatusOr;
-using google::cloud::Status;
+using ::google::cloud::odbc_bq_driver::TraceOptions;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
+using ::google::cloud::StatusOr;
+using ::google::cloud::Status;
 
 // We want this to be created once on startup and shared by all APIs.
 // Replace the console call with the file version, for the final release.
-static StatusOr<std::shared_ptr<TraceOptions>> trace_opts_console =
+static const StatusOr<std::shared_ptr<TraceOptions>> trace_opts_console =
     TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true, /*unused log_level*/ 0);
 
 // Internal Helper Functions
