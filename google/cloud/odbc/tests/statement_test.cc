@@ -332,4 +332,4 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

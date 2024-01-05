@@ -12,33 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include <chrono>
-
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/internal/getenv.h"
-
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/internal/getenv.h"
+#include <gmock/gmock.h>
+#include <chrono>
 
 namespace google::cloud::odbc_integration_tests_apis {
 
-using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
-using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::JobClient;
-using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::ListJobsRequest;
+using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
+using google::cloud::internal::GetEnv;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
+using google::cloud::odbc_testing_util::StatusIs;
+using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -49,7 +52,8 @@ TEST(ListJobs, UserAccountAuth) {
   ListJobsRequest request;
   request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
-  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  auto week_before =
+      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
@@ -61,7 +65,7 @@ TEST(ListJobs, UserAccountAuth) {
     ASSERT_STATUS_OK(job);
   }
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(ListJobs, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
@@ -73,7 +77,8 @@ TEST(ListJobs, ServiceAccountAuth) {
   ListJobsRequest request;
   request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
-  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  auto week_before =
+      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
@@ -96,7 +101,8 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
   ListJobsRequest request;
   request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
-  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  auto week_before =
+      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
@@ -119,7 +125,8 @@ TEST(ListJobs, MoreRequestArguments) {
   ListJobsRequest request;
   request.set_project_id(*project_id);
   // Listing jobs only for the last week to make the test faster
-  auto week_before = std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
+  auto week_before =
+      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
   request.set_projection(Projection::Full());
@@ -148,11 +155,12 @@ TEST(ListJobs, ProjectNotExist) {
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
   for (auto const& job : range) {
-    EXPECT_THAT(job, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
+    EXPECT_THAT(
+        job, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
   }
 }
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -169,9 +177,10 @@ TEST(ListJobs, NoAccessAccountAuth) {
   ASSERT_NE(begin, range.end());
   for (auto const& job : range) {
     EXPECT_THAT(job, StatusIs(StatusCode::kPermissionDenied,
-      HasSubstr("User does not have bigquery.jobs.list permission in project")));
+                              HasSubstr("User does not have bigquery.jobs.list "
+                                        "permission in project")));
   }
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

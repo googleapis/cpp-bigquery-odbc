@@ -35,4 +35,4 @@ TEST(ODBCBQClient, CreateBQClient) {
   ASSERT_STATUS_OK(odbc_bq_client);
 }
 
-} // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_bigquery_client_interface

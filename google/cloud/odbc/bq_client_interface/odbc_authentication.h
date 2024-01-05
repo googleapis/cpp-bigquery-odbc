@@ -31,6 +31,6 @@ struct Oauth {
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth);
 
-} // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H

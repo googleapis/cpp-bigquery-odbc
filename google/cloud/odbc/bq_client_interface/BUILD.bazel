@@ -34,9 +34,9 @@ cc_library(
     tags = ["unit-tests"],
     deps = [
         "//:odbc_bq_client_interface",
+        "//google/cloud/odbc/testing_util:odbc_bigquery_testing_util",
         "@com_google_cloud_cpp//:experimental-bigquery-rest_mocks",
         "@com_google_cloud_cpp//:mocks",
-        "//google/cloud/odbc/testing_util:odbc_bigquery_testing_util",
         "@com_google_googletest//:gtest_main",
     ],
 ) for bq_client_interface_test in glob(["*_test.cc"])]

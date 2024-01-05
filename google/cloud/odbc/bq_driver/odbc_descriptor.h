@@ -29,6 +29,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-} // namespace google::cloud::odbc_bq_driver
+}  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DESCRIPTOR_H

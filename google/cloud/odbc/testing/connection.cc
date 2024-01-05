@@ -180,4 +180,4 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

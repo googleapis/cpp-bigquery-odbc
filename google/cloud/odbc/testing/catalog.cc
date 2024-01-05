@@ -68,4 +68,4 @@ std::shared_ptr<Results> Catalog::GetTables(
   return std::make_shared<Results>(results);
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

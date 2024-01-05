@@ -30,12 +30,16 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::InsertJob;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
+using google::cloud::odbc_testing_util::StatusIs;
 using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
@@ -204,7 +208,8 @@ TEST(CancelJob, ProjectNotExist) {
 
   auto cancel_job_response = job_client.CancelJob(cancel_job_request);
 
-  EXPECT_THAT(cancel_job_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
+  EXPECT_THAT(cancel_job_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
 }
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

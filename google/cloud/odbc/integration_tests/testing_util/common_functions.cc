@@ -76,4 +76,4 @@ StatusOr<std::string> InsertJob(JobClient job_client) {
   return job_response.value().job_reference.job_id;
 }
 
-} // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_integration_tests_testing_util

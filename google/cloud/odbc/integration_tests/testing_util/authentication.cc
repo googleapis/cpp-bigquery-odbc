@@ -100,4 +100,4 @@ StatusOr<Options> CreateNoAccessAccountAuthentication() {
       google::cloud::MakeGoogleDefaultCredentials());
 }
 
-} // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_integration_tests_testing_util

@@ -85,6 +85,6 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
 #endif  //_WIN32
 
-} // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

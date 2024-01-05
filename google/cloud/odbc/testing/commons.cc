@@ -197,4 +197,4 @@ void BindCol(std::shared_ptr<ConnectionHandle> conn,
   CheckError(status, "SQLBindCol", conn);
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

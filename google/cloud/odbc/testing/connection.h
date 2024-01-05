@@ -48,6 +48,6 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn);
 
 SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn);
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CONNECTION_H

@@ -22,16 +22,6 @@
 
 namespace google::cloud::odbc_integration_tests_apis {
 
-using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
-using ::testing::HasSubstr;
-using bigquery_v2_minimal_internal::JobClient;
-using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::InsertJobRequest;
 using bigquery_v2_minimal_internal::Job;
 using bigquery_v2_minimal_internal::JobClient;
@@ -41,6 +31,17 @@ using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
+using google::cloud::odbc_testing_util::StatusIs;
 using google::cloud::odbc_testing_util_internal::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_util_internal::
@@ -605,4 +606,4 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   EXPECT_TRUE(query_results_response_dml.value().job_complete);
 }
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

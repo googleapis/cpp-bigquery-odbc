@@ -97,4 +97,4 @@ SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

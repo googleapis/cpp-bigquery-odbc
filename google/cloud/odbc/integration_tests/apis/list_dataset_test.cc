@@ -25,12 +25,17 @@ using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::ListDatasetsRequest;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
 using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
@@ -244,6 +249,6 @@ TEST(ListDatasets, NoAccessAccountAuth) {
   auto begin = range.begin();
   EXPECT_EQ(begin, range.end());
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

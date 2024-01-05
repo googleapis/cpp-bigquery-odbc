@@ -16,16 +16,17 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
-using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::Project;
+using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 
-StatusOr<std::vector<Project>> ListAllProjects(
-    ProjectClient &project_client, Options const& options) {
+StatusOr<std::vector<Project>> ListAllProjects(ProjectClient& project_client,
+                                               Options const& options) {
   ListProjectsRequest request;
 
-  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response =
+      project_client.ListProjects(request, options);
 
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
@@ -38,11 +39,13 @@ StatusOr<std::vector<Project>> ListAllProjects(
   return projects;
 }
 
-StatusOr<Project> GetProject(
-    ProjectClient &project_client, std::string const& project_id, Options const& options) {
+StatusOr<Project> GetProject(ProjectClient& project_client,
+                             std::string const& project_id,
+                             Options const& options) {
   ListProjectsRequest request;
 
-  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response =
+      project_client.ListProjects(request, options);
 
   for (auto const& project : projects_response) {
     if (!project) {
@@ -53,21 +56,25 @@ StatusOr<Project> GetProject(
     }
   }
 
-  return Status(StatusCode::kNotFound, "The project " + project_id + " was not found");
+  return Status(StatusCode::kNotFound,
+                "The project " + project_id + " was not found");
 }
 
 StatusOr<std::vector<Project>> FilterProjects(
-    ProjectClient &project_client, std::vector<std::string> const& project_ids, Options const& options) {
+    ProjectClient& project_client, std::vector<std::string> const& project_ids,
+    Options const& options) {
   ListProjectsRequest request;
 
-  StreamRange<Project> projects_response = project_client.ListProjects(request, options);
+  StreamRange<Project> projects_response =
+      project_client.ListProjects(request, options);
 
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
     if (!project) {
       return project.status();
     }
-    if (std::find(project_ids.begin(), project_ids.end(), (*project).id) != project_ids.end()) {
+    if (std::find(project_ids.begin(), project_ids.end(), (*project).id) !=
+        project_ids.end()) {
       projects.push_back(*project);
     }
   }
@@ -75,4 +82,4 @@ StatusOr<std::vector<Project>> FilterProjects(
   return projects;
 }
 
-} // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_bigquery_client_interface

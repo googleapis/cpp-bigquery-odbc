@@ -55,4 +55,4 @@ TEST(ServiceAuthentication, FileNotExist) {
                HasSubstr("There was an error while opening the file:")));
 }
 
-} // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_bigquery_client_interface

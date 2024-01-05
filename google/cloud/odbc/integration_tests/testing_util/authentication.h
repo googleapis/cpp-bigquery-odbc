@@ -44,6 +44,6 @@ StatusOr<Options> CreateWrongAuthentication();
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateNoAccessAccountAuthentication();
 
-} // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_integration_tests_testing_util
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_AUTHENTICATION_H

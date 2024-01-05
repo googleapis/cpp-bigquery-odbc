@@ -22,8 +22,9 @@ namespace google::cloud::odbc_integration_tests_testing_util {
 
 // Inserts some basic job to BQ
 // Returns the job_id
-StatusOr<std::string> InsertJob(bigquery_v2_minimal_internal::JobClient job_client);
+StatusOr<std::string> InsertJob(
+    bigquery_v2_minimal_internal::JobClient job_client);
 
-} // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_integration_tests_testing_util
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_COMMON_FUNCTIONS_H

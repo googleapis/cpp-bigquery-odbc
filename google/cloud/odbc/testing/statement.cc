@@ -371,4 +371,4 @@ void InsertDataWithSqlPut(std::shared_ptr<ConnectionHandle> conn,
   }
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

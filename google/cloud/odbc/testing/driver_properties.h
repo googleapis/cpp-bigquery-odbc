@@ -42,6 +42,6 @@ map<std::string, SQLSMALLINT> const kBqToSqlDataTypes = {
 
 SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn);
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H

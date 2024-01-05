@@ -17,21 +17,20 @@
 
 #include "odbc_includes.h"
 #include "utils.h"
-
 #include <algorithm>
-#include <iostream>
-#include <fstream>
-#include <memory>
-#include <map>
-#include <string>
 #include <cstdarg>
 #include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 /////////////////////////////////////////////////////////////////////////////////
-// TraceOptions facilitates ODBC tracing. 
+// TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
 //
 // Usage:
@@ -52,83 +51,85 @@ namespace google::cloud::odbc_bq_driver_internal {
 //   }
 /////////////////////////////////////////////////////////////////////////////////
 struct TraceOptions {
-    // Disallow Copy and Assignment.
-    TraceOptions(TraceOptions &other) = delete;
-    void operator=(const TraceOptions &) = delete;
+  // Disallow Copy and Assignment.
+  TraceOptions(TraceOptions& other) = delete;
+  void operator=(TraceOptions const&) = delete;
 
-    //////////////////////////////////////////////////////////
-    // Creates TraceOptions for emitting to Stdout.
-    // No TraceFile is opened.
-    //
-    // Returns a singleton object for console tracing.
-    //////////////////////////////////////////////////////////
-    static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsConsole(bool logging_enabled, int log_level);
+  //////////////////////////////////////////////////////////
+  // Creates TraceOptions for emitting to Stdout.
+  // No TraceFile is opened.
+  //
+  // Returns a singleton object for console tracing.
+  //////////////////////////////////////////////////////////
+  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsConsole(
+      bool logging_enabled, int log_level);
 
-    //////////////////////////////////////////////////////////
-    // Creates TraceOptions for emitting to a trace file
-    // specified in the ODBC ini Config file.
-    //  
-    // Loads the ini config file, parses it and opens a trace file for logging.
-    //
-    // Returns a singleton object for file tracing
-    //////////////////////////////////////////////////////////
-    static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsFile(std::string const& file_path);
+  //////////////////////////////////////////////////////////
+  // Creates TraceOptions for emitting to a trace file
+  // specified in the ODBC ini Config file.
+  //
+  // Loads the ini config file, parses it and opens a trace file for logging.
+  //
+  // Returns a singleton object for file tracing
+  //////////////////////////////////////////////////////////
+  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsFile(
+      std::string const& file_path);
 
-    //////////////////////////////////////////////////////////
-    // Creates TraceOptions based on the trace section in the 
-    // ODBC config file.
-    //
-    // Similar to the above version in that a trace file is opened for
-    // logging but the ODBC config file is loaded and parsed by the caller.
-    //
-    // Returns a singleton object for file tracing
-    //////////////////////////////////////////////////////////
-    static StatusOr<std::shared_ptr<TraceOptions>>
-       CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections);
-    
-    // Shared members.
-    bool logging_enabled;
-    int  log_level{0};
-    std::ofstream trace_file;
-    std::mutex m; // Used for guarding any logging operations with file or stdout.
-  private:
-    TraceOptions() = default;
-    static std::shared_ptr<TraceOptions> options_console_;
-    static std::shared_ptr<TraceOptions> options_file_;
-    static std::mutex mu_; // used for guarding update of internal options members.
+  //////////////////////////////////////////////////////////
+  // Creates TraceOptions based on the trace section in the
+  // ODBC config file.
+  //
+  // Similar to the above version in that a trace file is opened for
+  // logging but the ODBC config file is loaded and parsed by the caller.
+  //
+  // Returns a singleton object for file tracing
+  //////////////////////////////////////////////////////////
+  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsFile(
+      std::shared_ptr<Sections> const& config_sections);
+
+  // Shared members.
+  bool logging_enabled;
+  int log_level{0};
+  std::ofstream trace_file;
+  std::mutex
+      m;  // Used for guarding any logging operations with file or stdout.
+ private:
+  TraceOptions() = default;
+  static std::shared_ptr<TraceOptions> options_console_;
+  static std::shared_ptr<TraceOptions> options_file_;
+  static std::mutex
+      mu_;  // used for guarding update of internal options members.
 };
 
 ///////////////////////////////////////////////////////////////
-// Emit methods for actually printing the trace 
+// Emit methods for actually printing the trace
 // lines to stdout or a trace file.
 ///////////////////////////////////////////////////////////////
 
 // Clients of this utility should use the two methods below to emit
 // a trace of all parameters to an stdout or a trace file.
-std::string CollectAndPrintArgs(
-    const std::string& func_name, TraceOptions& opts, int num_args, ...);
-std::string CollectAndPrintArgsFile(
-    const std::string& func_name, TraceOptions& opts, int num_args, ...);
+std::string CollectAndPrintArgs(std::string const& func_name,
+                                TraceOptions& opts, int num_args, ...);
+std::string CollectAndPrintArgsFile(std::string const& func_name,
+                                    TraceOptions& opts, int num_args, ...);
 
 // Below are Helper methods for the above.
 
 // Prints the trace string to stdout.
 int TracePrintInternalStdOut(TraceOptions& opts, std::string& s);
-// Prints the trace string to a trace file. 
+// Prints the trace string to a trace file.
 // It is the responsibility of the caller to open and close the time
-int TracePrintInternalFile(TraceOptions& opts,std::string& s);
-// Collects all the passed in arguments and returns a 
+int TracePrintInternalFile(TraceOptions& opts, std::string& s);
+// Collects all the passed in arguments and returns a
 // formatted string to be traced for all the args.
 std::string CollectArgs(va_list src_args, int num_args);
 
 ///////////////////////////////////////////
 // Convenience Helper Methods.
 ////////////////////////////////////////////
-const char *ToCStr(const std::string &str);
-std::string ExitInternal(
-    const std::string &func_name, SQLRETURN ret_code, TraceOptions &opts);
+char const* ToCStr(std::string const& str);
+std::string ExitInternal(std::string const& func_name, SQLRETURN ret_code,
+                         TraceOptions& opts);
 
 ////////////////////////////////////////////////////////////////////
 // Additional Helper methods for validating and formatting strings
@@ -159,8 +160,8 @@ std::string FormatSqlHandle(const SQLHANDLE* p);
 std::string FormatSqlLen(SQLLEN l);
 std::string FormatSqlULen(SQLULEN l);
 std::string FormatSqlSetPosiRow(SQLSETPOSIROW rp);
-std::string FormatSqlLen(const SQLLEN *l);
-std::string FormatSqlULen(const SQLULEN *l);
+std::string FormatSqlLen(const SQLLEN* l);
+std::string FormatSqlULen(const SQLULEN* l);
 // Return codes.
 std::string FormatSqlReturnCode(RETCODE ret);
 std::string FormatSqlReturn(SQLRETURN ret);
@@ -180,14 +181,14 @@ std::string FormatSqlReal(const SQLREAL* r);
 std::string FormatSqlTime(const SQLTIME* t);
 std::string FormatSqlTimestamp(const SQLTIMESTAMP* tp);
 std::string FormatSqlVarchar(const SQLVARCHAR* s);
-#endif  /* ODBCVER >= 0x0300 */
+#endif /* ODBCVER >= 0x0300 */
 
 /////////////////////////////////////////////
 // Basic C Types
 /////////////////////////////////////////////
-std::string FormatString(const std::string& str);
-std::string FormatCharString(const char* str);
-std::string FormatCharArray(const char str[]);
+std::string FormatString(std::string const& str);
+std::string FormatCharString(char const* str);
+std::string FormatCharArray(char const str[]);
 std::string FormatChar(char c);
 std::string FormatCharU(unsigned char c);
 std::string FormatInt(int d);
@@ -212,14 +213,13 @@ std::string FormatBool(bool b);
 // Unicode Types
 /////////////////////////////////////////////
 
-
 /////////////////////////////////////////////
 // Window specific types.
 /////////////////////////////////////////////
 #ifdef WIN32
 std::string FormatWindowHandle(HWND handle);
 std::string FormatWindowHandle(SQLHWND handle);
-#endif  /* WIN32 */
+#endif /* WIN32 */
 
 /////////////////////////////////////////////
 // Struct types.
@@ -234,9 +234,8 @@ std::string GetIntervalType(SQLINTERVAL type);
 std::string FormatIntervalYearMonthStruct(SQL_YEAR_MONTH_STRUCT ym);
 std::string FormatIntervalDaySecondStruct(SQL_DAY_SECOND_STRUCT ds);
 std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
-#endif  /* ODBCVER >= 0x0300 */
+#endif /* ODBCVER >= 0x0300 */
 
-
-} // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H

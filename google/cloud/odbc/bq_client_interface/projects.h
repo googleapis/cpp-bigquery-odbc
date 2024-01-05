@@ -20,23 +20,21 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
-  ListAllProjects(
-    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient &project_client,
-    ::google::cloud::Options const& options);
+ListAllProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
+                    project_client,
+                ::google::cloud::Options const& options);
 
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project>
-  GetProject(
-    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient &project_client,
-    std::string const& project_id,
-    ::google::cloud::Options const& options);
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project> GetProject(
+    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
+        project_client,
+    std::string const& project_id, ::google::cloud::Options const& options);
 
 StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
-  FilterProjects(
-    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient &project_client,
-    std::vector<std::string> const& project_ids,
-    ::google::cloud::Options const& options);
+FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
+                   project_client,
+               std::vector<std::string> const& project_ids,
+               ::google::cloud::Options const& options);
 
+}  // namespace google::cloud::odbc_bigquery_client_interface
 
-} // namespace google::cloud::odbc_bigquery_client_interface
-
-#endif //GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_PROJECTS_H
+#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_PROJECTS_H

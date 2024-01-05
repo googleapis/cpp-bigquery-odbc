@@ -34,6 +34,6 @@ class Catalog {
       std::shared_ptr<ConnectionHandle> conn, std::string dataset = "");
 };
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CATALOG_H

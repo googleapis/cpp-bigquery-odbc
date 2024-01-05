@@ -32,10 +32,12 @@ std::map<std::string, Schema> kTables = {
       {"Date3", SQL_DATETIME}}}};
 
 // Drops all tables in a dataset
-void ClearDataset(std::string kDatasetName, std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {
+void ClearDataset(
+    std::string kDatasetName,
+    std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {
   auto conn = std::make_shared<ConnectionHandle>();
-      std::vector<std::string> table_names;
-  if(!table_names_ptr) {
+  std::vector<std::string> table_names;
+  if (!table_names_ptr) {
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
     table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
@@ -45,7 +47,7 @@ void ClearDataset(std::string kDatasetName, std::shared_ptr<std::vector<std::str
   }
 
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
-  for(auto table_name: table_names) {
+  for (auto table_name : table_names) {
     std::string table_name_full = kDatasetName + "." + table_name;
     Table(table_name_full).Drop(conn);
   }
@@ -57,7 +59,7 @@ TEST(CatalogTest, SQLTables) {
   auto conn = std::make_shared<ConnectionHandle>();
 
   // Create tables
-  for (auto it: kTables) {
+  for (auto it : kTables) {
     std::string table_name = it.first;
     std::string table_name_full = kDatasetName + "." + table_name;
     // Create Table
@@ -73,14 +75,16 @@ TEST(CatalogTest, SQLTables) {
 
   auto table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
   std::vector<std::string> test_table_names;
-  for(auto it: kTables) {
-    EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first), table_names.end());
+  for (auto it : kTables) {
+    EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first),
+              table_names.end());
     test_table_names.push_back(it.first);
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  ClearDataset(kDatasetName, std::make_shared<std::vector<std::string>>(test_table_names));
+  ClearDataset(kDatasetName,
+               std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
-} // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_tests

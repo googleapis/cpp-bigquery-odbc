@@ -32,7 +32,7 @@ io::run bazel test //google/cloud/odbc/integration_tests:* \
   --cache_test_results=no
 
 # Check there are no build issues with CMake
-io::run mapfile -t cmake_args < <(cmake::common_args)
+mapfile -t cmake_args < <(cmake::common_args)
 
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \

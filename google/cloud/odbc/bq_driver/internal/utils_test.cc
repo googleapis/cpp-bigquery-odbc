@@ -69,4 +69,4 @@ TEST(Parsing, ParseConfigIncorrectPath) {
   EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
 }
 
-} // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver_internal

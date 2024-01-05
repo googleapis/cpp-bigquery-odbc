@@ -12,34 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include "absl/strings/str_cat.h"
-
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/internal/getenv.h"
-
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/internal/getenv.h"
+#include "absl/strings/str_cat.h"
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_integration_tests_apis {
 
-using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
-using ::testing::HasSubstr;
+using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::PostQueryRequest;
-using bigquery_v2_minimal_internal::QueryRequest;
-using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::QueryParameter;
+using bigquery_v2_minimal_internal::QueryRequest;
+using google::cloud::internal::GetEnv;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
+using google::cloud::odbc_testing_util::StatusIs;
+using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(Query, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -54,16 +57,17 @@ TEST(Query, UserAccountAuth) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -78,13 +82,15 @@ TEST(Query, UserAccountAuth) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
-  EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
+  EXPECT_EQ(query_results_response.value().total_rows,
+            query_response.value().total_rows);
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(Query, ServiceAccountAuth) {
   auto options = CreateServiceAccountAuthentication();
@@ -100,16 +106,17 @@ TEST(Query, ServiceAccountAuth) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -124,11 +131,13 @@ TEST(Query, ServiceAccountAuth) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
-  EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
+  EXPECT_EQ(query_results_response.value().total_rows,
+            query_response.value().total_rows);
 }
 
 TEST(Query, ServiceAccountAuthWithClientId) {
@@ -145,16 +154,17 @@ TEST(Query, ServiceAccountAuthWithClientId) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -169,11 +179,13 @@ TEST(Query, ServiceAccountAuthWithClientId) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
-  EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
+  EXPECT_EQ(query_results_response.value().total_rows,
+            query_response.value().total_rows);
 }
 
 TEST(Query, ProjectNotExist) {
@@ -192,15 +204,17 @@ TEST(Query, ProjectNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(std::string(kNameForNonExistingProject));
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kInvalidArgument,
-    HasSubstr("Error in non-idempotent operation: Cannot parse  as CloudRegion")));
+  EXPECT_THAT(query_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Error in non-idempotent operation: Cannot "
+                                 "parse  as CloudRegion")));
 }
 
 TEST(Query, DatasetNotExist) {
@@ -212,21 +226,23 @@ TEST(Query, DatasetNotExist) {
   ASSERT_TRUE(project_id);
   ASSERT_TRUE(table_name);
 
-  std::string full_table_name = absl::StrCat("Not_existing_dataset.", *table_name);
+  std::string full_table_name =
+      absl::StrCat("Not_existing_dataset.", *table_name);
   std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Dataset")));
+  EXPECT_THAT(query_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Dataset")));
 }
 
 TEST(Query, TableNotExist) {
@@ -245,14 +261,15 @@ TEST(Query, TableNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Table")));
+  EXPECT_THAT(query_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Table")));
 }
 
 TEST(Query, ColumnNotExist) {
@@ -267,20 +284,22 @@ TEST(Query, ColumnNotExist) {
   ASSERT_TRUE(table_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT not_existing_column FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT not_existing_column FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Unrecognized name")));
+  EXPECT_THAT(query_response, StatusIs(StatusCode::kInvalidArgument,
+                                       HasSubstr("Unrecognized name")));
 }
 
 TEST(Query, SelectZeroRows) {
@@ -297,16 +316,17 @@ TEST(Query, SelectZeroRows) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT * FROM ", full_table_name, " WHERE 1 = 2");
+  std::string query_statement =
+      absl::StrCat("SELECT * FROM ", full_table_name, " WHERE 1 = 2");
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -329,17 +349,18 @@ TEST(Query, PageTokens) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   query_request.set_max_results(1);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -357,12 +378,16 @@ TEST(Query, PageTokens) {
   get_query_results_request.set_page_token(query_response.value().page_token);
   get_query_results_request.set_max_results(1);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
   EXPECT_EQ(query_results_response.value().rows.size(), 1);
-  EXPECT_FALSE(query_results_response.value().page_token.empty()); // There are more results, skipping it for this test
+  EXPECT_FALSE(
+      query_results_response.value()
+          .page_token
+          .empty());  // There are more results, skipping it for this test
 }
 
 TEST(QueryResukts, JobNotExist) {
@@ -377,9 +402,11 @@ TEST(QueryResukts, JobNotExist) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
 }
 
 TEST(QueryResults, LocationNotExist) {
@@ -400,10 +427,10 @@ TEST(QueryResults, LocationNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -416,9 +443,12 @@ TEST(QueryResults, LocationNotExist) {
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location("Not_existing_location");
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid value for location")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Invalid value for location")));
 }
 
 TEST(QueryResults, WrongLocation) {
@@ -439,10 +469,10 @@ TEST(QueryResults, WrongLocation) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -455,9 +485,11 @@ TEST(QueryResults, WrongLocation) {
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location("asia-south2");
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
 }
 
 TEST(Query, WithQueryParameters) {
@@ -474,7 +506,9 @@ TEST(Query, WithQueryParameters) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name, " WHERE ", *column_name, " > @min_age");
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name,
+                   " WHERE ", *column_name, " > @min_age");
   QueryRequest query_request;
   query_request.set_query(query_statement);
   QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
@@ -482,10 +516,9 @@ TEST(Query, WithQueryParameters) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "defaultDataset",
+       "maximumBytesBilled", "formatOptions", "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -498,14 +531,16 @@ TEST(Query, WithQueryParameters) {
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client.QueryResults(get_query_results_request);
 
   ASSERT_STATUS_OK(query_results_response);
   EXPECT_TRUE(query_results_response.value().job_complete);
-  EXPECT_EQ(query_results_response.value().total_rows, query_response.value().total_rows);
+  EXPECT_EQ(query_results_response.value().total_rows,
+            query_response.value().total_rows);
 }
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(Query, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -520,23 +555,26 @@ TEST(Query, NoAccessAccountAuth) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
-  EXPECT_THAT(query_response, StatusIs(StatusCode::kPermissionDenied,
-    HasSubstr("User does not have bigquery.jobs.create permission in project")));
+  EXPECT_THAT(query_response,
+              StatusIs(StatusCode::kPermissionDenied,
+                       HasSubstr("User does not have bigquery.jobs.create "
+                                 "permission in project")));
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(QueryResults, DifferentAccount) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
@@ -552,16 +590,17 @@ TEST(QueryResults, DifferentAccount) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -571,21 +610,24 @@ TEST(QueryResults, DifferentAccount) {
   // Getting results of previous Query with another account
   auto options_with_user_account = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
-    std::move(*options_with_user_account)));
+  auto job_client_with_user_account = JobClient(
+      MakeBigQueryJobConnection(std::move(*options_with_user_account)));
 
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client_with_user_account.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
-    HasSubstr("User does not have permission to access results of another user's job")));
+  EXPECT_THAT(query_results_response,
+              StatusIs(StatusCode::kPermissionDenied,
+                       HasSubstr("User does not have permission to access "
+                                 "results of another user's job")));
 }
 
-#ifdef USER_ACCOUNT_AUTH // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(QueryResults, NoAccessAccountAuth) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
@@ -600,38 +642,43 @@ TEST(QueryResults, NoAccessAccountAuth) {
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
-  std::string query_statement = absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
   QueryRequest query_request;
   query_request.set_query(query_statement);
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys({"preserveNulls", "labels", "requestId",
-                                           "queryParameters", "defaultDataset",
-                                           "maximumBytesBilled", "formatOptions",
-                                           "connectionProperties"});
+  post_query_request.set_json_filter_keys(
+      {"preserveNulls", "labels", "requestId", "queryParameters",
+       "defaultDataset", "maximumBytesBilled", "formatOptions",
+       "connectionProperties"});
 
   auto query_response = job_client.Query(post_query_request);
 
   ASSERT_STATUS_OK(query_response);
   EXPECT_TRUE(query_response.value().job_complete);
 
-  // Getting results of previous Query with another account with no access permission
+  // Getting results of previous Query with another account with no access
+  // permission
   auto options_with_user_account = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(MakeBigQueryJobConnection(
-    std::move(*options_with_user_account)));
+  auto job_client_with_user_account = JobClient(
+      MakeBigQueryJobConnection(std::move(*options_with_user_account)));
 
   std::string job_id = query_response.value().job_reference.job_id;
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(*project_id);
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response = job_client_with_user_account.QueryResults(get_query_results_request);
+  auto query_results_response =
+      job_client_with_user_account.QueryResults(get_query_results_request);
 
-  EXPECT_THAT(query_results_response, StatusIs(StatusCode::kPermissionDenied,
-    HasSubstr("Permission bigquery.jobs.get denied on job")));
+  EXPECT_THAT(
+      query_results_response,
+      StatusIs(StatusCode::kPermissionDenied,
+               HasSubstr("Permission bigquery.jobs.get denied on job")));
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

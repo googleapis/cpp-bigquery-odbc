@@ -53,4 +53,4 @@ StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
                 "OauthMechanism enum is invalid.");
 }
 
-} // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_bigquery_client_interface

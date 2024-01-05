@@ -26,12 +26,17 @@ using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::TableMetadataView;
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::
+    kNameForNonExistingProject;
 using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
@@ -254,6 +259,6 @@ TEST(GetTable, NoAccessAccountAuth) {
   EXPECT_THAT(table, StatusIs(StatusCode::kPermissionDenied,
                               HasSubstr("Access Denied: Table")));
 }
-#endif // USER_ACCOUNT_AUTH
+#endif  // USER_ACCOUNT_AUTH
 
-} // namespace google::cloud::odbc_integration_tests_apis
+}  // namespace google::cloud::odbc_integration_tests_apis

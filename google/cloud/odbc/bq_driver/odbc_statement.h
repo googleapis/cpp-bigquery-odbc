@@ -15,7 +15,6 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H
 
-
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC statements:
@@ -30,6 +29,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-} // namespace google::cloud::odbc_bq_driver
+}  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H
