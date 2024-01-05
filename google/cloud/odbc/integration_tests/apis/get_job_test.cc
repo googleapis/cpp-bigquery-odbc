@@ -22,15 +22,15 @@
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 
-namespace google::cloud::odbc_bigquery_v2_tests {
+namespace google::cloud::odbc_integration_tests_apis {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
-using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::InsertJob;
-using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
+using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthWithClientIdAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::InsertJob;
+using google::cloud::odbc_integration_tests_testing_util::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -197,4 +197,4 @@ TEST(GetJob, ProjectNotExist) {
   EXPECT_THAT(get_job_response, StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
 }
 
-} // namespace google::cloud::odbc_bigquery_v2_tests
+} // namespace google::cloud::odbc_integration_tests_apis

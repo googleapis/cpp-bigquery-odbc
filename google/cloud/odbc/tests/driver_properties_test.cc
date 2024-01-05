@@ -15,7 +15,7 @@
 #include "testing/connection.h"
 #include "testing/driver_properties.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 void CheckDataTypes(std::shared_ptr<ConnectionHandle> conn) {
   auto status = SQLGetTypeInfo(conn->hstmt, SQL_ALL_TYPES);
@@ -59,4 +59,4 @@ TEST(DriverPropertiesTest, SQLGetTypeInfo) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

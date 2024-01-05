@@ -28,7 +28,7 @@
 
 #include "google/cloud/status_or.h"
 
-namespace google::cloud::odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
@@ -81,6 +81,6 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
 #endif //_WIN32
 
-} // namespace google::cloud::odbc_bq_driver
+} // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

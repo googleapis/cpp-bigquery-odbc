@@ -30,7 +30,7 @@
 // We need sorting functions 
 #include <algorithm>
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 using Results = std::map<std::string, std::vector<std::string>>;
 
@@ -170,6 +170,6 @@ void DescribeCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column>
 // Executes the BindCol API to bind the Column struct data buffers to the statement handle
 void BindCol(std::shared_ptr<ConnectionHandle> conn, std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index);
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_COMMONS_H

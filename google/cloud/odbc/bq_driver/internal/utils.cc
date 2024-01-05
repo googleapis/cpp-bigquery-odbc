@@ -15,7 +15,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
-namespace google::cloud::odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
 
@@ -166,4 +166,4 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
 
 #endif //_WIN32
 
-} // namespace google::cloud::odbc_bq_driver
+} // namespace google::cloud::odbc_bq_driver_internal

@@ -28,7 +28,7 @@
 #include <cstdint>
 #include <mutex>
 
-namespace google::cloud::odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing. 
@@ -237,6 +237,6 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
 #endif  /* ODBCVER >= 0x0300 */
 
 
-} // namespace google::cloud::odbc_bq_driver
+} // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H

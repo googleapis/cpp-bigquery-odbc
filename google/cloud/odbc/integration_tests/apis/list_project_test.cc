@@ -20,15 +20,15 @@
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 
-namespace google::cloud::odbc_bigquery_v2_tests {
+namespace google::cloud::odbc_integration_tests_apis {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
-using google::cloud::odbc_testing_util_internal::CreateUserAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateServiceAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateWrongPathToAuthFileAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateWrongAuthentication;
-using google::cloud::odbc_testing_util_internal::CreateNoAccessAccountAuthentication;
+using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_integration_tests_testing_util::CreateUserAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateServiceAccountAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateWrongPathToAuthFileAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateWrongAuthentication;
+using google::cloud::odbc_integration_tests_testing_util::CreateNoAccessAccountAuthentication;
 using ::testing::HasSubstr;
 using bigquery_v2_minimal_internal::ProjectClient;
 using bigquery_v2_minimal_internal::MakeProjectConnection;
@@ -112,4 +112,4 @@ TEST(ListAllProjects, NoAccessAccountAuth) {
 }
 #endif // USER_ACCOUNT_AUTH
 
-} // namespace google::cloud::odbc_bigquery_v2_tests
+} // namespace google::cloud::odbc_integration_tests_apis

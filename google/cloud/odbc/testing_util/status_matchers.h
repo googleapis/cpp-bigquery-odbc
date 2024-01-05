@@ -17,7 +17,7 @@
 
 #include <gmock/gmock.h>
 
-namespace google::cloud::odbc_bigquery_testing_util_internal {
+namespace google::cloud::odbc_testing_util {
 
 #define ASSERT_STATUS_OK(expression) \
   ASSERT_TRUE(expression.ok()) << "Error message: " << expression.status().message() << "\n"
@@ -29,6 +29,6 @@ MATCHER_P2(StatusIs, code, matcher, "") {
   return true;
 }
 
-} // namespace google::cloud::odbc_bigquery_testing_util_internal
+} // namespace google::cloud::odbc_testing_util
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTS_TESTING_UTIL_STATUS_MATCHERS_H

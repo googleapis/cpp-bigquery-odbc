@@ -23,7 +23,7 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util::StatusIs;
 using ::testing::HasSubstr;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {

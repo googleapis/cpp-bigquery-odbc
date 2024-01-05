@@ -21,7 +21,7 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util::StatusIs;
 using google::cloud::odbc_bigquery_client_interface::ListAllProjects;
 using ::testing::HasSubstr;
 using ::testing::StrEq;

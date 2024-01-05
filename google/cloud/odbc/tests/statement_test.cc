@@ -15,7 +15,7 @@
 #include "testing/connection.h"
 #include "testing/statement.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 const StdRows kSampleData{
   { "Test String 1", 1, 1.1 },
@@ -339,4 +339,4 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

@@ -28,6 +28,8 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::TraceOptions;
+
 void TraceFunctionEntry_SQLAllocHandle(
     SQLSMALLINT handle_type, SQLHANDLE input_handle,
     SQLHANDLE *output_handle, TraceOptions& opts);

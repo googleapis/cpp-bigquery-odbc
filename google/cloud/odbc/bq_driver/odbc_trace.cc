@@ -16,6 +16,19 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ToCStr;
+using google::cloud::odbc_bq_driver_internal::FormatSqlHandle;
+using google::cloud::odbc_bq_driver_internal::FormatSqlHandleType;
+using google::cloud::odbc_bq_driver_internal::FormatSqlSmallInt;
+using google::cloud::odbc_bq_driver_internal::FormatSqlUSmallInt;
+using google::cloud::odbc_bq_driver_internal::FormatSqlInteger;
+using google::cloud::odbc_bq_driver_internal::FormatSqlChar;
+using google::cloud::odbc_bq_driver_internal::FormatSqlLen;
+using google::cloud::odbc_bq_driver_internal::FormatSqlULen;
+using google::cloud::odbc_bq_driver_internal::FormatSqlPointer;
+using google::cloud::odbc_bq_driver_internal::FormatString;
+using google::cloud::odbc_bq_driver_internal::FormatSqlSetPosiRow;
+
 // Following functionality stull needs to still be implmented for the
 // entry functions.
 //

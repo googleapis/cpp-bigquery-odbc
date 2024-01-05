@@ -14,7 +14,7 @@
 
 #include "testing/driver_properties.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 const map<SQLUSMALLINT, const std::string> kAllOdbc3Functions = {
   //{SQL_API_SQLALLOCENV, "SQL_API_SQLALLOCENV"},
@@ -96,4 +96,4 @@ SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

@@ -16,9 +16,9 @@
 #include "google/cloud/odbc/testing_util/status_matchers.h"
 #include <gtest/gtest.h>
 
-namespace google::cloud::odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
+using google::cloud::odbc_testing_util::StatusIs;
 using ::testing::HasSubstr;
 
 // Common Test Values.
@@ -437,4 +437,4 @@ TEST(TraceLoggingConsole, WindowHandles)
 }
 #endif  /* WIN32 */
 
-} // namespace google::cloud::odbc_bq_driver
+} // namespace google::cloud::odbc_bq_driver_internal

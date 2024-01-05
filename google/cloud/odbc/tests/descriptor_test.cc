@@ -14,7 +14,7 @@
 
 #include "testing/connection.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 // Defines the idiomatic ODBC descriptors
 // These fields can populated by a call to SQLGetDescRec
@@ -195,4 +195,4 @@ TEST(DescriptorFieldsTest, SQLSetDescField) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

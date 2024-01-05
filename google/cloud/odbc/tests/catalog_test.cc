@@ -15,7 +15,7 @@
 #include "testing/connection.h"
 #include "testing/catalog.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 std::map<std::string, Schema> kTables = {
   { "ODBC_SQLTables_TEST_1",
@@ -88,4 +88,4 @@ TEST(CatalogTest, SQLTables) {
   ClearDataset(kDatasetName, std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

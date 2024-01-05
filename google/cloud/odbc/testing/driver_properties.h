@@ -18,7 +18,7 @@
 
 #include "testing/commons.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 using std::map;
 
@@ -43,6 +43,6 @@ const map<std::string, SQLSMALLINT> kBqToSqlDataTypes = {
 
 SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn);
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H

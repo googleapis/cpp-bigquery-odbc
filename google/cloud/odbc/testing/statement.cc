@@ -15,7 +15,7 @@
 
 #include "testing/statement.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ConnectionHandle> conn) {
@@ -371,4 +371,4 @@ void InsertDataWithSqlPut(std::shared_ptr<ConnectionHandle> conn, std::string qu
   }
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

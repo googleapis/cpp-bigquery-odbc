@@ -14,7 +14,7 @@
 
 #include "testing/connection.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 std::vector<int> GetMajorMinorVer(std::string version_str) {
   std::vector<int> versions;
@@ -73,4 +73,4 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests

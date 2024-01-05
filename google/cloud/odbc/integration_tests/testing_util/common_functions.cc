@@ -18,7 +18,7 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/internal/getenv.h"
 
-namespace google::cloud::odbc_testing_util_internal {
+namespace google::cloud::odbc_integration_tests_testing_util {
 
 using google::cloud::internal::GetEnv;
 using bigquery_v2_minimal_internal::JobClient;
@@ -68,4 +68,4 @@ StatusOr<std::string> InsertJob(JobClient job_client) {
   return job_response.value().job_reference.job_id;
 }
 
-} // namespace google::cloud::odbc_testing_util_internal
+} // namespace google::cloud::odbc_integration_tests_testing_util

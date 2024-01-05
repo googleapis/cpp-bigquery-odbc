@@ -18,7 +18,7 @@
 
 #include "testing/commons.h"
 
-namespace google::cloud::bigquery_odbc {
+namespace google::cloud::odbc_tests {
 
 SQLRETURN InsertStatement(std::shared_ptr<ConnectionHandle> conn);
 
@@ -37,6 +37,6 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(std::shared_ptr<ConnectionHa
 
 void InsertDataWithSqlPut(std::shared_ptr<ConnectionHandle> conn, std::string query, std::vector<std::string> data);
 
-} // namespace google::cloud::bigquery_odbc
+} // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_STATEMENT_H

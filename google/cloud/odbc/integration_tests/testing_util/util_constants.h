@@ -15,10 +15,10 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
 
-namespace google::cloud::odbc_testing_util_internal {
+namespace google::cloud::odbc_integration_tests_testing_util {
 
 inline constexpr absl::string_view kNameForNonExistingProject = "non-existing-project";
 
-} // namespace google::cloud::odbc_testing_util_internal
+} // namespace google::cloud::odbc_integration_tests_testing_util
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
