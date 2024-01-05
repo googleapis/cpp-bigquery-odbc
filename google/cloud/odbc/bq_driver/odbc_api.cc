@@ -36,6 +36,8 @@
 // NOLINTBEGIN
 
 using ::google::cloud::odbc_bq_driver::TraceOptions;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::StatusOr;
