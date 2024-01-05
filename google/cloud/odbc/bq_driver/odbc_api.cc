@@ -29,38 +29,36 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Suppressing clang-tidy errors as we don't have function
-// implementation right now. Remove the lint blocks once 
+// implementation right now. Remove the lint blocks once
 // functions are implemented.
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // NOLINTBEGIN
 
-using ::google::cloud::odbc_bq_driver::TraceOptions;
+using ::google::cloud::Status;
+using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
-using ::google::cloud::StatusOr;
-using ::google::cloud::Status;
+using ::google::cloud::odbc_bq_driver::TraceOptions;
 
 // We want this to be created once on startup and shared by all APIs.
 // Replace the console call with the file version, for the final release.
-static const StatusOr<std::shared_ptr<TraceOptions>> trace_opts_console =
-    TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true, /*unused log_level*/ 0);
+static StatusOr<std::shared_ptr<TraceOptions>> const trace_opts_console =
+    TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
+                                            /*unused log_level*/ 0);
 
 // Internal Helper Functions
-namespace
-{
-    SQLRETURN RecordStatus(/* SQLSTATE state, */ Status const &s)
-    {
-        SQLRETURN rc = SQL_SUCCESS;
-        if (!s.ok())
-        {
-            // TODO: Record SQLSTATE for SQLGetDiagRec and SQLGetDiagField.
-            rc = SQL_ERROR;
-            TraceFunctionExit_SQLConnect(rc, *(*trace_opts_console));
-        }
-        return rc;
-    }
-} // anonymous
+namespace {
+SQLRETURN RecordStatus(/* SQLSTATE state, */ Status const& s) {
+  SQLRETURN rc = SQL_SUCCESS;
+  if (!s.ok()) {
+    // TODO: Record SQLSTATE for SQLGetDiagRec and SQLGetDiagField.
+    rc = SQL_ERROR;
+    TraceFunctionExit_SQLConnect(rc, *(*trace_opts_console));
+  }
+  return rc;
+}
+}  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // SQLAllocHandle allocates an environment, connection, statement,
@@ -69,69 +67,62 @@ namespace
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlallochandle-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLAllocHandle(
-    SQLSMALLINT handleType, SQLHANDLE inputHandle, SQLHANDLE *outputHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
-    if (!trace_opts_console.ok())
-        return RecordStatus(trace_opts_console.status());
+SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
+                                 SQLHANDLE* outputHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
+  if (!trace_opts_console.ok())
+    return RecordStatus(trace_opts_console.status());
 
-    switch (handleType)
-    {
-    case SQL_HANDLE_ENV:
-    {
-        // Call to Acquire mutex for environment handle in odbc_lock.h.
-        // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  switch (handleType) {
+    case SQL_HANDLE_ENV: {
+      // Call to Acquire mutex for environment handle in odbc_lock.h.
+      // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-        // Call to Allocate Environment handle in odbc_environment.h.
+      // Call to Allocate Environment handle in odbc_environment.h.
 
-        // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-        // Call to Release mutex for environment handle in odbc_lock.h.
-        break;
+      // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      // Call to Release mutex for environment handle in odbc_lock.h.
+      break;
     }
-    case SQL_HANDLE_DBC:
-    {
-        // Call to Acquire mutex for connection handle in odbc_lock.h.
-        // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-        TraceFunctionEntry_SQLAllocHandle(
-            handleType, inputHandle, outputHandle, *(*trace_opts_console));
+    case SQL_HANDLE_DBC: {
+      // Call to Acquire mutex for connection handle in odbc_lock.h.
+      // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+      TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                        *(*trace_opts_console));
 
-        // Call to Allocate connection handle in odbc_connection.h.
+      // Call to Allocate connection handle in odbc_connection.h.
 
-        // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-        TraceFunctionExit_SQLAllocHandle(rc, *(*trace_opts_console));
-        // Call to Release mutex for connection handle in odbc_lock.h.
-        break;
+      // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      TraceFunctionExit_SQLAllocHandle(rc, *(*trace_opts_console));
+      // Call to Release mutex for connection handle in odbc_lock.h.
+      break;
     }
-    case SQL_HANDLE_STMT:
-    {
-        // Call to Acquire mutex for statement handle in odbc_lock.h.
-        // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+    case SQL_HANDLE_STMT: {
+      // Call to Acquire mutex for statement handle in odbc_lock.h.
+      // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-        // Call to Allocate statement handle in odbc_statement.h.
+      // Call to Allocate statement handle in odbc_statement.h.
 
-        // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-        // Call to Release mutex for statement handle in odbc_lock.h.
-        break;
+      // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      // Call to Release mutex for statement handle in odbc_lock.h.
+      break;
     }
-    case SQL_HANDLE_DESC:
-    {
-        // Call to Acquire mutex for descriptor handle in odbc_lock.h.
-        // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+    case SQL_HANDLE_DESC: {
+      // Call to Acquire mutex for descriptor handle in odbc_lock.h.
+      // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-        // Call to Allocate descriptor handle in odbc_descriptor.h.
+      // Call to Allocate descriptor handle in odbc_descriptor.h.
 
-        // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-        // Call to Release mutex for descriptor handle in odbc_lock.h.
-        break;
+      // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      // Call to Release mutex for descriptor handle in odbc_lock.h.
+      break;
     }
-    default:
-    {
-        // Return: Invalid Handle Type Error.
+    default: {
+      // Return: Invalid Handle Type Error.
     }
-    }
+  }
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -141,47 +132,45 @@ SQLRETURN SQL_API SQLAllocHandle(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldriverconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLDriverConnect(
-    SQLHDBC connectionHandle, SQLHWND windowHandle, SQLCHAR *inConnectionString,
-    SQLSMALLINT inConnectionStringLen, SQLCHAR *outConnectionString,
-    SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen,
-    SQLUSMALLINT driverCompletion)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHDBC connectionHandle, SQLHWND windowHandle, SQLCHAR* inConnectionString,
+    SQLSMALLINT inConnectionStringLen, SQLCHAR* outConnectionString,
+    SQLSMALLINT outConnectionStringBufferLen,
+    SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
-    // in odbc_connection.h.
+  // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
+  // in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 //////////////////////////////////////
 // Unicode version of SQLDriverConnect.
 //////////////////////////////////////
 SQLRETURN SQL_API SQLDriverConnectW(
-    SQLHDBC connectionHandle, SQLHWND windowHandle, SQLWCHAR *inConnectionString,
-    SQLSMALLINT inConnectionStringLen, SQLWCHAR *outConnectionString,
-    SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen,
-    SQLUSMALLINT driverCompletion)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHDBC connectionHandle, SQLHWND windowHandle,
+    SQLWCHAR* inConnectionString, SQLSMALLINT inConnectionStringLen,
+    SQLWCHAR* outConnectionString, SQLSMALLINT outConnectionStringBufferLen,
+    SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
-    // in odbc_connection.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
+  // in odbc_connection.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -190,46 +179,48 @@ SQLRETURN SQL_API SQLDriverConnectW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbrowseconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLBrowseConnect(
-    SQLHDBC connectionHandle, SQLCHAR *inConnectionString,
-    SQLSMALLINT inConnectionStringLen, SQLCHAR *outConnectionString,
-    SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
+                                   SQLCHAR* inConnectionString,
+                                   SQLSMALLINT inConnectionStringLen,
+                                   SQLCHAR* outConnectionString,
+                                   SQLSMALLINT outConnectionStringBufferLen,
+                                   SQLSMALLINT* outConnectionStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
-    // in odbc_connection.h.
+  // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
+  // in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 //////////////////////////////////////
 // Unicode version of SQLBrowseConnect.
 //////////////////////////////////////
-SQLRETURN SQL_API SQLBrowseConnectW(
-    SQLHDBC connectionHandle, SQLWCHAR *inConnectionString,
-    SQLSMALLINT inConnectionStringLen, SQLWCHAR *outConnectionString,
-    SQLSMALLINT outConnectionStringBufferLen, SQLSMALLINT *outConnectionStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
+                                    SQLWCHAR* inConnectionString,
+                                    SQLSMALLINT inConnectionStringLen,
+                                    SQLWCHAR* outConnectionString,
+                                    SQLSMALLINT outConnectionStringBufferLen,
+                                    SQLSMALLINT* outConnectionStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
-    // in odbc_connection.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
+  // in odbc_connection.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -238,54 +229,50 @@ SQLRETURN SQL_API SQLBrowseConnectW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLConnect(
-    SQLHDBC connectionHandle,
-    SQLCHAR *serverName, SQLSMALLINT serverNameLen,
-    SQLCHAR *userName, SQLSMALLINT userNameLen,
-    SQLCHAR *authString, SQLSMALLINT authStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
-    if (!trace_opts_console.ok())
-        return RecordStatus(trace_opts_console.status());
+SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
+                             SQLSMALLINT serverNameLen, SQLCHAR* userName,
+                             SQLSMALLINT userNameLen, SQLCHAR* authString,
+                             SQLSMALLINT authStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
+  if (!trace_opts_console.ok())
+    return RecordStatus(trace_opts_console.status());
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-    TraceFunctionEntry_SQLConnect(connectionHandle, serverName, serverNameLen,
-                                  userName, userNameLen, authString,
-                                  authStringLen, *(*trace_opts_console));
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLConnect(connectionHandle, serverName, serverNameLen,
+                                userName, userNameLen, authString,
+                                authStringLen, *(*trace_opts_console));
 
-    // Call to internal common function for SQLConnect and SQLConnectW
-    // in odbc_connection.h.
+  // Call to internal common function for SQLConnect and SQLConnectW
+  // in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    TraceFunctionExit_SQLConnect(rc, *(*trace_opts_console));
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLConnect(rc, *(*trace_opts_console));
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 //////////////////////////////////////
 // Unicode version of SQLConnect.
 //////////////////////////////////////
-SQLRETURN SQL_API SQLConnectW(
-    SQLHDBC connectionHandle,
-    SQLWCHAR *serverName, SQLSMALLINT serverNameLen,
-    SQLWCHAR *userName, SQLSMALLINT userNameLen,
-    SQLWCHAR *authString, SQLSMALLINT authStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
+                              SQLSMALLINT serverNameLen, SQLWCHAR* userName,
+                              SQLSMALLINT userNameLen, SQLWCHAR* authString,
+                              SQLSMALLINT authStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLConnect and SQLConnectW
-    // in odbc_connection.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLConnect and SQLConnectW
+  // in odbc_connection.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -295,46 +282,44 @@ SQLRETURN SQL_API SQLConnectW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetinfo-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetInfo(
-    SQLHDBC connectionHandle,
-    SQLUSMALLINT infoType, SQLPOINTER infoValue,
-    SQLSMALLINT infoValueBufferLen, SQLSMALLINT *infoValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
+                             SQLPOINTER infoValue,
+                             SQLSMALLINT infoValueBufferLen,
+                             SQLSMALLINT* infoValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLGetInfo and SQLGetInfoW
-    // in odbc_driver_metadata.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 //////////////////////////////////////
 // Unicode version of SQLGetInfo.
 //////////////////////////////////////
-SQLRETURN SQL_API SQLGetInfoW(
-    SQLHDBC connectionHandle,
-    SQLUSMALLINT infoType, SQLPOINTER infoValue,
-    SQLSMALLINT infoValueBufferLen, SQLSMALLINT *infoValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
+                              SQLPOINTER infoValue,
+                              SQLSMALLINT infoValueBufferLen,
+                              SQLSMALLINT* infoValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLGetInfo and SQLGetInfoW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -343,21 +328,20 @@ SQLRETURN SQL_API SQLGetInfoW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetFunctions(
-    SQLHDBC connectionHandle,
-    SQLUSMALLINT functionId, SQLUSMALLINT *supportedFunction)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
+                                  SQLUSMALLINT functionId,
+                                  SQLUSMALLINT* supportedFunction) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLGetFunctions in odbc_driver_metadata.h.
+  // Call to internal function for SQLGetFunctions in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -366,17 +350,17 @@ SQLRETURN SQL_API SQLGetFunctions(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgettypeinfo-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle, SQLSMALLINT dataType)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
+                                 SQLSMALLINT dataType) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLGetTypeInfo in odbc_driver_metadata.h.
+  // Call to internal function for SQLGetTypeInfo in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -385,44 +369,42 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle, SQLSMALLINT dataType)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetConnectAttr(
-    SQLHDBC connectionHandle,
-    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
+                                    SQLINTEGER attribute, SQLPOINTER value,
+                                    SQLINTEGER valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLSetConnectAttr and SQLSetConnectAttrW
-    // in odbc_connection.h.
+  // Call to internal common function for SQLSetConnectAttr and
+  // SQLSetConnectAttrW in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSetConnectAttr.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLSetConnectAttrW(
-    SQLHDBC connectionHandle,
-    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
+                                     SQLINTEGER attribute, SQLPOINTER value,
+                                     SQLINTEGER valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLSetConnectAttr and SQLSetConnectAttrW
-    // in odbc_connection.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLSetConnectAttr and
+  // SQLSetConnectAttrW in odbc_connection.h. Handle Unicode conversion of
+  // output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -431,45 +413,44 @@ SQLRETURN SQL_API SQLSetConnectAttrW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetconnectattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetConnectAttr(
-    SQLHDBC connectionHandle,
-    SQLINTEGER attribute, SQLPOINTER value,
-    SQLINTEGER valueBufferLen, SQLINTEGER *valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
+                                    SQLINTEGER attribute, SQLPOINTER value,
+                                    SQLINTEGER valueBufferLen,
+                                    SQLINTEGER* valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLGetConnectAttr and SQLGetConnectAttrW
-    // in odbc_connection.h.
+  // Call to internal common function for SQLGetConnectAttr and
+  // SQLGetConnectAttrW in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetConnectAttr.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetConnectAttrW(
-    SQLHDBC connectionHandle, SQLINTEGER attribute, SQLPOINTER value,
-    SQLINTEGER valueBufferLen, SQLINTEGER *valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
+                                     SQLINTEGER attribute, SQLPOINTER value,
+                                     SQLINTEGER valueBufferLen,
+                                     SQLINTEGER* valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLGetConnectAttr and SQLGetConnectAttrW
-    // in odbc_connection.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLGetConnectAttr and
+  // SQLGetConnectAttrW in odbc_connection.h. Handle Unicode conversion of
+  // output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -478,40 +459,37 @@ SQLRETURN SQL_API SQLGetConnectAttrW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetStmtAttr(
-    SQLHSTMT statementHandle,
-    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
+                                 SQLPOINTER value, SQLINTEGER valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
-    // in odbc_statement.h.
+  // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
+  // in odbc_statement.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSetStmtAttr.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLSetStmtAttrW(
-    SQLHSTMT statementHandle,
-    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetStmtAttrW(SQLHSTMT statementHandle,
+                                  SQLINTEGER attribute, SQLPOINTER value,
+                                  SQLINTEGER valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
-    // in odbc_statement.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
+  // in odbc_statement.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -520,42 +498,39 @@ SQLRETURN SQL_API SQLSetStmtAttrW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetstmtattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetStmtAttr(
-    SQLHSTMT statementHandle,
-    SQLINTEGER attribute, SQLPOINTER value,
-    SQLINTEGER valueBufferLen, SQLINTEGER *valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
+                                 SQLPOINTER value, SQLINTEGER valueBufferLen,
+                                 SQLINTEGER* valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
-    // in odbc_statement.h.
+  // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
+  // in odbc_statement.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSetStmtAttr.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetStmtAttrW(
-    SQLHSTMT statementHandle,
-    SQLINTEGER attribute, SQLPOINTER value,
-    SQLINTEGER valueBufferLen, SQLINTEGER *valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
+                                  SQLINTEGER attribute, SQLPOINTER value,
+                                  SQLINTEGER valueBufferLen,
+                                  SQLINTEGER* valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
-    // in odbc_statement.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
+  // in odbc_statement.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -564,21 +539,19 @@ SQLRETURN SQL_API SQLGetStmtAttrW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetenvattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetEnvAttr(
-    SQLHENV environmentHandle,
-    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
+                                SQLPOINTER value, SQLINTEGER valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLSetEnvAttr in odbc_environment.h.
+  // Call to internal function for SQLSetEnvAttr in odbc_environment.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for environmentHandle handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -587,114 +560,110 @@ SQLRETURN SQL_API SQLSetEnvAttr(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetenvattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetEnvAttr(
-    SQLHENV environmentHandle,
-    SQLINTEGER attribute, SQLPOINTER value,
-    SQLINTEGER valueBufferLen, SQLINTEGER *valueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
+                                SQLPOINTER value, SQLINTEGER valueBufferLen,
+                                SQLINTEGER* valueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
+  // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for environmentHandle handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns the current setting or value of a single field of a descriptor record.
+// Returns the current setting or value of a single field of a descriptor
+// record.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdescfield-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDescField(
-    SQLHDESC descriptorHandle, SQLSMALLINT recNumber, SQLSMALLINT fieldId,
-    SQLPOINTER outDescValue, SQLINTEGER outDescValueBufferLen, SQLINTEGER *outDescValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
+                                  SQLSMALLINT recNumber, SQLSMALLINT fieldId,
+                                  SQLPOINTER outDescValue,
+                                  SQLINTEGER outDescValueBufferLen,
+                                  SQLINTEGER* outDescValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLGetDescField and SQLGetDescFieldW
-    // in odbc_descriptor.h.
+  // Call to common internal function for SQLGetDescField and SQLGetDescFieldW
+  // in odbc_descriptor.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetDescField.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDescFieldW(
-    SQLHDESC descriptorHandle,
-    SQLSMALLINT recNumber,
-    SQLSMALLINT fieldId,
-    SQLPOINTER outDescValue,
-    SQLINTEGER outDescValueBufferLen,
-    SQLINTEGER *outDescValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
+                                   SQLSMALLINT recNumber, SQLSMALLINT fieldId,
+                                   SQLPOINTER outDescValue,
+                                   SQLINTEGER outDescValueBufferLen,
+                                   SQLINTEGER* outDescValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLGetDescField and SQLGetDescFieldW
-    // in odbc_descriptor.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLGetDescField and SQLGetDescFieldW
+  // in odbc_descriptor.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns the current settings or values of multiple fields of a descriptor record.
+// Returns the current settings or values of multiple fields of a descriptor
+// record.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdescrec-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLGetDescRec(
-    SQLHDESC descriptorHandle, SQLSMALLINT recNumber,
-    SQLCHAR *name, SQLSMALLINT nameBufferLen, SQLSMALLINT *nameStringLen,
-    SQLSMALLINT *descType, SQLSMALLINT *descSubType, SQLLEN *descOctetLen,
-    SQLSMALLINT *descPrecision, SQLSMALLINT *descScale, SQLSMALLINT *nullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHDESC descriptorHandle, SQLSMALLINT recNumber, SQLCHAR* name,
+    SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
+    SQLSMALLINT* descType, SQLSMALLINT* descSubType, SQLLEN* descOctetLen,
+    SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLGetDescRec and SQLGetDescRecW
-    // in odbc_descriptor.h.
+  // Call to common internal function for SQLGetDescRec and SQLGetDescRecW
+  // in odbc_descriptor.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetDescRec.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLGetDescRecW(
-    SQLHDESC descriptorHandle, SQLSMALLINT recNumber,
-    SQLWCHAR *name, SQLSMALLINT nameBufferLen, SQLSMALLINT *nameStringLen,
-    SQLSMALLINT *descType, SQLSMALLINT *descSubType, SQLLEN *descOctetLen,
-    SQLSMALLINT *descPrecision, SQLSMALLINT *descScale, SQLSMALLINT *nullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHDESC descriptorHandle, SQLSMALLINT recNumber, SQLWCHAR* name,
+    SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
+    SQLSMALLINT* descType, SQLSMALLINT* descSubType, SQLLEN* descOctetLen,
+    SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLGetDescRec and SQLGetDescRecW
-    // in odbc_descriptor.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLGetDescRec and SQLGetDescRecW
+  // in odbc_descriptor.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -703,44 +672,42 @@ SQLRETURN SQL_API SQLGetDescRecW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetdescfield-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetDescField(
-    SQLHDESC descriptorHandle,
-    SQLSMALLINT recNumber, SQLSMALLINT fieldIdentifier,
-    SQLPOINTER descValue, SQLINTEGER descValueBufferLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
+                                  SQLSMALLINT recNumber,
+                                  SQLSMALLINT fieldIdentifier,
+                                  SQLPOINTER descValue,
+                                  SQLINTEGER descValueBufferLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLSetDescField and SQLSetDescFieldW
-    // in odbc_descriptor.h.
+  // Call to common internal function for SQLSetDescField and SQLSetDescFieldW
+  // in odbc_descriptor.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSetDescField.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLSetDescFieldW(
-    SQLHDESC descriptorHandle,
-    SQLSMALLINT recNumber,
-    SQLSMALLINT fieldIdentifier,
-    SQLPOINTER descValue,
-    SQLINTEGER descValueBufferLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetDescFieldW(SQLHDESC descriptorHandle,
+                                   SQLSMALLINT recNumber,
+                                   SQLSMALLINT fieldIdentifier,
+                                   SQLPOINTER descValue,
+                                   SQLINTEGER descValueBufferLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLSetDescField and SQLSetDescFieldW
-    // in odbc_descriptor.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLSetDescField and SQLSetDescFieldW
+  // in odbc_descriptor.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -750,21 +717,22 @@ SQLRETURN SQL_API SQLSetDescFieldW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetdescrec-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetDescRec(
-    SQLHDESC descriptorHandle, SQLSMALLINT recNumber,
-    SQLSMALLINT descType, SQLSMALLINT descSubType,
-    SQLLEN descOctetLen, SQLSMALLINT descPrecision, SQLSMALLINT descScale,
-    SQLPOINTER descData, SQLLEN *descOctetLenPtr, SQLLEN *descIndicator)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
+                                SQLSMALLINT recNumber, SQLSMALLINT descType,
+                                SQLSMALLINT descSubType, SQLLEN descOctetLen,
+                                SQLSMALLINT descPrecision,
+                                SQLSMALLINT descScale, SQLPOINTER descData,
+                                SQLLEN* descOctetLenPtr,
+                                SQLLEN* descIndicator) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLSetDescRec in odbc_descriptor.h.
+  // Call to internal function for SQLSetDescRec in odbc_descriptor.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -773,17 +741,17 @@ SQLRETURN SQL_API SQLSetDescRec(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcopydesc-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle, SQLHDESC targetDescHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
+                              SQLHDESC targetDescHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLCopyDesc in odbc_descriptor.h.
+  // Call to internal function for SQLCopyDesc in odbc_descriptor.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -792,38 +760,36 @@ SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle, SQLHDESC targetDescHand
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprepare-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLPrepare(
-    SQLHSTMT statementHandle, SQLCHAR *statementText, SQLINTEGER statementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
+                             SQLINTEGER statementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLPrepare and SQLPrepareW
-    // in odbc_sql_requests.h.
+  // Call to common internal function for SQLPrepare and SQLPrepareW
+  // in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLPrepare.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLPrepareW(
-    SQLHSTMT statementHandle, SQLWCHAR *statementText, SQLINTEGER statementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
+                              SQLINTEGER statementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLPrepare and SQLPrepareW
-    // in odbc_sql_requests.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLPrepare and SQLPrepareW
+  // in odbc_sql_requests.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -833,20 +799,19 @@ SQLRETURN SQL_API SQLPrepareW(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLBindParameter(
-    SQLHSTMT statementHandle, SQLUSMALLINT paramNumber,
-    SQLSMALLINT paramType, SQLSMALLINT paramCType, SQLSMALLINT paramSqlType,
-    SQLULEN paramColSize, SQLSMALLINT paramScale,
-    SQLPOINTER paramDataValue, SQLLEN paramDataValueBufferLen, SQLLEN *paramDataValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLUSMALLINT paramNumber, SQLSMALLINT paramType,
+    SQLSMALLINT paramCType, SQLSMALLINT paramSqlType, SQLULEN paramColSize,
+    SQLSMALLINT paramScale, SQLPOINTER paramDataValue,
+    SQLLEN paramDataValueBufferLen, SQLLEN* paramDataValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLBindParameter in odbc_sql_requests.h.
+  // Call to internal function for SQLBindParameter in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -855,40 +820,40 @@ SQLRETURN SQL_API SQLBindParameter(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetcursorname-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetCursorName(
-    SQLHSTMT statementHandle,
-    SQLCHAR *cursorName, SQLSMALLINT cursorNameBufferLen, SQLSMALLINT *cursorNameStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetCursorName(SQLHSTMT statementHandle,
+                                   SQLCHAR* cursorName,
+                                   SQLSMALLINT cursorNameBufferLen,
+                                   SQLSMALLINT* cursorNameStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
-    // in odbc_sql_requests.h.
+  // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
+  // in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetCursorName.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetCursorNameW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *cursorName, SQLSMALLINT cursorNameBufferLen, SQLSMALLINT *cursorNameStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
+                                    SQLWCHAR* cursorName,
+                                    SQLSMALLINT cursorNameBufferLen,
+                                    SQLSMALLINT* cursorNameStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
-    // in odbc_sql_requests.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
+  // in odbc_sql_requests.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -897,151 +862,151 @@ SQLRETURN SQL_API SQLGetCursorNameW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetcursorname-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLSetCursorName(
-    SQLHSTMT statementHandle, SQLCHAR *cursorName, SQLSMALLINT cursorNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
+                                   SQLCHAR* cursorName,
+                                   SQLSMALLINT cursorNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
-    // in odbc_sql_requests.h.
+  // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
+  // in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSetCursorName.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLSetCursorNameW(
-    SQLHSTMT statementHandle, SQLWCHAR *cursorName, SQLSMALLINT cursorNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
+                                    SQLWCHAR* cursorName,
+                                    SQLSMALLINT cursorNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
-    // in odbc_sql_requests.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
+  // in odbc_sql_requests.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Executes a prepared statement, using the current values of the parameter marker
-// variables if any parameter markers exist in the statement.
+// Executes a prepared statement, using the current values of the parameter
+// marker variables if any parameter markers exist in the statement.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlexecute-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLExecute in odbc_sql_requests.h.
+  // Call to internal function for SQLExecute in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Executes a prepared statement, using the current values of the parameter marker
-// variables if any parameter markers exist in the statement.
+// Executes a prepared statement, using the current values of the parameter
+// marker variables if any parameter markers exist in the statement.
 //
 // Fastest way to submit a SQL statement for one-time execution
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlexecdirect-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLExecDirect(
-    SQLHSTMT statementHandle, SQLCHAR *statementText, SQLINTEGER statementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
+                                SQLCHAR* statementText,
+                                SQLINTEGER statementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLExecDirect and SQLExecDirectW
-    // in odbc_sql_requests.h.
+  // Call to common internal function for SQLExecDirect and SQLExecDirectW
+  // in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLExecDirect.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLExecDirectW(
-    SQLHSTMT statementHandle, SQLWCHAR *statementText, SQLINTEGER statementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
+                                 SQLWCHAR* statementText,
+                                 SQLINTEGER statementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLExecDirect and SQLExecDirectW
-    // in odbc_sql_requests.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLExecDirect and SQLExecDirectW
+  // in odbc_sql_requests.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns the SQL string as modified by the driver. Does not execute the SQL statement.
+// Returns the SQL string as modified by the driver. Does not execute the SQL
+// statement.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnativesql-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLNativeSql(
-    SQLHDBC connectionHandle,
-    SQLCHAR *inStatementText, SQLINTEGER inStatementTextLen,
-    SQLCHAR *outStatementText, SQLINTEGER outStatementTextBufferLen,
-    SQLINTEGER *outStatementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
+                               SQLCHAR* inStatementText,
+                               SQLINTEGER inStatementTextLen,
+                               SQLCHAR* outStatementText,
+                               SQLINTEGER outStatementTextBufferLen,
+                               SQLINTEGER* outStatementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLNativeSql and SQLNativeSqlW
-    // in odbc_sql_requests.h.
+  // Call to common internal function for SQLNativeSql and SQLNativeSqlW
+  // in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLNativeSql.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLNativeSqlW(
-    SQLHDBC connectionHandle,
-    SQLWCHAR *inStatementText, SQLINTEGER inStatementTextLen,
-    SQLWCHAR *outStatementText, SQLINTEGER outStatementTextBufferLen,
-    SQLINTEGER *outStatementTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
+                                SQLWCHAR* inStatementText,
+                                SQLINTEGER inStatementTextLen,
+                                SQLWCHAR* outStatementText,
+                                SQLINTEGER outStatementTextBufferLen,
+                                SQLINTEGER* outStatementTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLNativeSql and SQLNativeSqlW
-    // in odbc_sql_requests.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLNativeSql and SQLNativeSqlW
+  // in odbc_sql_requests.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1050,37 +1015,37 @@ SQLRETURN SQL_API SQLNativeSqlW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnumparams-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle, SQLSMALLINT *paramCount)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
+                               SQLSMALLINT* paramCount) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLNumParams in odbc_sql_requests.h.
+  // Call to internal function for SQLNumParams in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Used together with SQLPutData to supply parameter data at statement execution time,
-// and with SQLGetData to retrieve streamed output parameter data.
+// Used together with SQLPutData to supply parameter data at statement execution
+// time, and with SQLGetData to retrieve streamed output parameter data.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlparamdata-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle, SQLPOINTER *paramOrTargetValue)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
+                               SQLPOINTER* paramOrTargetValue) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLParamData in odbc_sql_requests.h.
+  // Call to internal function for SQLParamData in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1090,18 +1055,17 @@ SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle, SQLPOINTER *paramOrTarg
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlputdata-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLPutData(
-    SQLHSTMT statementHandle, SQLPOINTER paramData, SQLLEN paramDataLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLPutData(SQLHSTMT statementHandle, SQLPOINTER paramData,
+                             SQLLEN paramDataLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLPutData in odbc_sql_requests.h.
+  // Call to internal function for SQLPutData in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1111,20 +1075,20 @@ SQLRETURN SQL_API SQLPutData(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldescribeparam-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLDescribeParam(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT paramNumber, SQLSMALLINT *paramSqlType, SQLULEN *paramSize,
-    SQLSMALLINT *paramScale, SQLSMALLINT *paramNullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLDescribeParam(SQLHSTMT statementHandle,
+                                   SQLUSMALLINT paramNumber,
+                                   SQLSMALLINT* paramSqlType,
+                                   SQLULEN* paramSize, SQLSMALLINT* paramScale,
+                                   SQLSMALLINT* paramNullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLDescribeParam in odbc_sql_requests.h.
+  // Call to internal function for SQLDescribeParam in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1133,20 +1097,20 @@ SQLRETURN SQL_API SQLDescribeParam(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdata-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetData(
-    SQLHSTMT statementHandle, SQLUSMALLINT columnNumber,
-    SQLSMALLINT targetCType, SQLPOINTER targetValue, SQLLEN targetValueBufferLen,
-    SQLLEN *targetValueStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
+                             SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
+                             SQLPOINTER targetValue,
+                             SQLLEN targetValueBufferLen,
+                             SQLLEN* targetValueStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLGetData in odbc_sql_results.h.
+  // Call to internal function for SQLGetData in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1155,17 +1119,17 @@ SQLRETURN SQL_API SQLGetData(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnumresultcols-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle, SQLSMALLINT *columnCount)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
+                                   SQLSMALLINT* columnCount) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLNumResultCols in odbc_sql_results.h.
+  // Call to internal function for SQLNumResultCols in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1175,88 +1139,89 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle, SQLSMALLINT *column
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLFetch in odbc_sql_results.h.
+  // Call to internal function for SQLFetch in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Fetches the specified rowset of data from the result set and returns data for all
-// bound columns.
-// Rowsets can be specified at an absolute or relative position or by bookmark.
+// Fetches the specified rowset of data from the result set and returns data for
+// all bound columns. Rowsets can be specified at an absolute or relative
+// position or by bookmark.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlextendedfetch-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLExtendedFetch(
-    SQLHSTMT statementHandletmt,
-    SQLUSMALLINT fetchOrientation, SQLLEN fetchOffset,
-    SQLULEN *rowCount, SQLUSMALLINT *rowStatusArray)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLExtendedFetch(SQLHSTMT statementHandletmt,
+                                   SQLUSMALLINT fetchOrientation,
+                                   SQLLEN fetchOffset, SQLULEN* rowCount,
+                                   SQLUSMALLINT* rowStatusArray) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLExtendedFetch in odbc_sql_results.h.
+  // Call to internal function for SQLExtendedFetch in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns descriptor information for a column in a result set. Descriptor information
-// is returned as a character string, a descriptor-dependent value, or an integer value.
+// Returns descriptor information for a column in a result set. Descriptor
+// information is returned as a character string, a descriptor-dependent value,
+// or an integer value.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLColAttribute(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLUSMALLINT fieldIdentifier,
-    SQLPOINTER characterAttribute, SQLSMALLINT characterAttributeBufferLen,
-    SQLSMALLINT *characterAttributeStringLen, SQLLEN *numericAttribute)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
+                                  SQLUSMALLINT columnNumber,
+                                  SQLUSMALLINT fieldIdentifier,
+                                  SQLPOINTER characterAttribute,
+                                  SQLSMALLINT characterAttributeBufferLen,
+                                  SQLSMALLINT* characterAttributeStringLen,
+                                  SQLLEN* numericAttribute) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLColAttribute and SQLColAttributeW
-    // in odbc_sql_results.h.
+  // Call to common internal function for SQLColAttribute and SQLColAttributeW
+  // in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLColAttribute.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLColAttributeW(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLUSMALLINT fieldIdentifier,
-    SQLPOINTER characterAttribute, SQLSMALLINT characterAttributeBufferLen,
-    SQLSMALLINT *characterAttributeStringLen, SQLLEN *numericAttribute)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
+                                   SQLUSMALLINT columnNumber,
+                                   SQLUSMALLINT fieldIdentifier,
+                                   SQLPOINTER characterAttribute,
+                                   SQLSMALLINT characterAttributeBufferLen,
+                                   SQLSMALLINT* characterAttributeStringLen,
+                                   SQLLEN* numericAttribute) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLColAttribute and SQLColAttributeW
-    // in odbc_sql_results.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLColAttribute and SQLColAttributeW
+  // in odbc_sql_results.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1266,44 +1231,46 @@ SQLRETURN SQL_API SQLColAttributeW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattributes-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLColAttributes(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLUSMALLINT fieldIdentifier,
-    SQLPOINTER characterAttribute, SQLSMALLINT characterAttributeBufferLen,
-    SQLSMALLINT *characterAttributeStringLen, SQLLEN *numericAttribute)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColAttributes(SQLHSTMT statementHandle,
+                                   SQLUSMALLINT columnNumber,
+                                   SQLUSMALLINT fieldIdentifier,
+                                   SQLPOINTER characterAttribute,
+                                   SQLSMALLINT characterAttributeBufferLen,
+                                   SQLSMALLINT* characterAttributeStringLen,
+                                   SQLLEN* numericAttribute) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLColAttribute and SQLColAttributeW
-    // in odbc_sql_results.h.
+  // Call to common internal function for SQLColAttribute and SQLColAttributeW
+  // in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLColAttributes.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLColAttributesW(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLUSMALLINT fieldIdentifier,
-    SQLPOINTER characterAttribute, SQLSMALLINT characterAttributeBufferLen,
-    SQLSMALLINT *characterAttributeStringLen, SQLLEN *numericAttribute)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColAttributesW(SQLHSTMT statementHandle,
+                                    SQLUSMALLINT columnNumber,
+                                    SQLUSMALLINT fieldIdentifier,
+                                    SQLPOINTER characterAttribute,
+                                    SQLSMALLINT characterAttributeBufferLen,
+                                    SQLSMALLINT* characterAttributeStringLen,
+                                    SQLLEN* numericAttribute) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLColAttribute and SQLColAttributeW
-    // in odbc_sql_results.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLColAttribute and SQLColAttributeW
+  // in odbc_sql_results.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1313,45 +1280,41 @@ SQLRETURN SQL_API SQLColAttributesW(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldescribecol-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLDescribeCol(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLCHAR *columnName,
-    SQLSMALLINT columnNameBufferLen, SQLSMALLINT *columnNameLe,
-    SQLSMALLINT *columnSQLdataType, SQLULEN *columnSize,
-    SQLSMALLINT *decimalDigits, SQLSMALLINT *columnNullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLUSMALLINT columnNumber, SQLCHAR* columnName,
+    SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLe,
+    SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
+    SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLDescribeCol and SQLDescribeColW
-    // in odbc_sql_results.h.
+  // Call to common internal function for SQLDescribeCol and SQLDescribeColW
+  // in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLDescribeCol.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLDescribeColW(
-    SQLHSTMT statementHandle,
-    SQLUSMALLINT columnNumber, SQLWCHAR *columnName,
-    SQLSMALLINT columnNameBufferLen, SQLSMALLINT *columnNameLen,
-    SQLSMALLINT *columnSQLdataType, SQLULEN *columnSize,
-    SQLSMALLINT *decimalDigits, SQLSMALLINT *columnNullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLUSMALLINT columnNumber, SQLWCHAR* columnName,
+    SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLen,
+    SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
+    SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLDescribeCol and SQLDescribeColW
-    // in odbc_sql_results.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLDescribeCol and SQLDescribeColW
+  // in odbc_sql_results.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1360,39 +1323,39 @@ SQLRETURN SQL_API SQLDescribeColW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLBindCol(
-    SQLHSTMT statementHandle, SQLUSMALLINT columnNumber,
-    SQLSMALLINT targetCType, SQLPOINTER targetValue,
-    SQLLEN targetValueBufferLen, SQLLEN *targetValueStrLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
+                             SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
+                             SQLPOINTER targetValue,
+                             SQLLEN targetValueBufferLen,
+                             SQLLEN* targetValueStrLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLBindCol in odbc_sql_results.h.
+  // Call to internal function for SQLBindCol in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns the number of rows affected by an UPDATE, INSERT, or DELETE statement.
+// Returns the number of rows affected by an UPDATE, INSERT, or DELETE
+// statement.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN *rowCount)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN* rowCount) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLRowCount in odbc_sql_results.h.
+  // Call to internal function for SQLRowCount in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1402,89 +1365,90 @@ SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN *rowCount)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetchscroll-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLFetchScroll(
-    SQLHSTMT statementHandle, SQLSMALLINT fetchOrientation, SQLLEN fetchOffset)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
+                                 SQLSMALLINT fetchOrientation,
+                                 SQLLEN fetchOffset) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLFetchScroll in odbc_sql_results.h.
+  // Call to internal function for SQLFetchScroll in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Determines whether more results are available on a statement containing
-// SELECT, UPDATE, INSERT, or DELETE statements and, if so, initializes processing
-// for those results.
+// SELECT, UPDATE, INSERT, or DELETE statements and, if so, initializes
+// processing for those results.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlmoreresults-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLMoreResults in odbc_sql_results.h.
+  // Call to internal function for SQLMoreResults in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-// Returns the current value of a field of a record of the diagnostic data structure
-// (associated with a specified handle) that contains error, warning,
+// Returns the current value of a field of a record of the diagnostic data
+// structure (associated with a specified handle) that contains error, warning,
 // and status information.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdiagfield-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDiagField(
-    SQLSMALLINT handleType, SQLHANDLE handle,
-    SQLSMALLINT recNumber, SQLSMALLINT diagIdentifier,
-    SQLPOINTER diagInfo, SQLSMALLINT diagInfoBufferLen, SQLSMALLINT *diagInfoStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
+                                  SQLSMALLINT recNumber,
+                                  SQLSMALLINT diagIdentifier,
+                                  SQLPOINTER diagInfo,
+                                  SQLSMALLINT diagInfoBufferLen,
+                                  SQLSMALLINT* diagInfoStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
-    // in odbc_diagnostics.h.
+  // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
+  // in odbc_diagnostics.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetDiagField.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDiagFieldW(
-    SQLSMALLINT handleType, SQLHANDLE handle,
-    SQLSMALLINT recNumber, SQLSMALLINT diagIdentifier,
-    SQLPOINTER diagInfo, SQLSMALLINT diagInfoBufferLen, SQLSMALLINT *diagInfoStringLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
+                                   SQLSMALLINT recNumber,
+                                   SQLSMALLINT diagIdentifier,
+                                   SQLPOINTER diagInfo,
+                                   SQLSMALLINT diagInfoBufferLen,
+                                   SQLSMALLINT* diagInfoStringLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
-    // in odbc_diagnostics.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
+  // in odbc_diagnostics.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1494,48 +1458,46 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdiagrec-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDiagRec(
-    SQLSMALLINT handleType, SQLHANDLE handle,
-    SQLSMALLINT recNumber, SQLCHAR *sqlState,
-    SQLINTEGER *nativeError, SQLCHAR *messageText,
-    SQLSMALLINT messageTextBufferLen, SQLSMALLINT *messageTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
+                                SQLSMALLINT recNumber, SQLCHAR* sqlState,
+                                SQLINTEGER* nativeError, SQLCHAR* messageText,
+                                SQLSMALLINT messageTextBufferLen,
+                                SQLSMALLINT* messageTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
-    // in odbc_diagnostics.h.
+  // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
+  // in odbc_diagnostics.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLGetDiagRec.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLGetDiagRecW(
-    SQLSMALLINT handleType,
-    SQLHANDLE handle, SQLSMALLINT recNumber,
-    SQLWCHAR *sqlState, SQLINTEGER *nativeError,
-    SQLWCHAR *messageText, SQLSMALLINT messageTextBufferLen, SQLSMALLINT *messageTextLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
+                                 SQLSMALLINT recNumber, SQLWCHAR* sqlState,
+                                 SQLINTEGER* nativeError, SQLWCHAR* messageText,
+                                 SQLSMALLINT messageTextBufferLen,
+                                 SQLSMALLINT* messageTextLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
-    // in odbc_diagnostics.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
+  // in odbc_diagnostics.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1544,46 +1506,42 @@ SQLRETURN SQL_API SQLGetDiagRecW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLColumns(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColumns(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                             SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                             SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                             SQLSMALLINT tableNameLen, SQLCHAR* columnName,
+                             SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLColumns and SQLColumnsW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLColumns and SQLColumnsW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLColumns.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLColumnsW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLWCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
+                              SQLSMALLINT catalogNameLen, SQLWCHAR* schemaName,
+                              SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+                              SQLSMALLINT tableNameLen, SQLWCHAR* columnName,
+                              SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLColumns and SQLColumnsW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLColumns and SQLColumnsW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1593,46 +1551,42 @@ SQLRETURN SQL_API SQLColumnsW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqltables-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLTables(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLCHAR *tableType, SQLSMALLINT tableTypeLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLTables(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                            SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                            SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                            SQLSMALLINT tableNameLen, SQLCHAR* tableType,
+                            SQLSMALLINT tableTypeLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLTables and SQLTablesW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLTables and SQLTablesW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLTables.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLTablesW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLWCHAR *tableType, SQLSMALLINT tableTypeLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
+                             SQLSMALLINT catalogNameLen, SQLWCHAR* schemaName,
+                             SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+                             SQLSMALLINT tableNameLen, SQLWCHAR* tableType,
+                             SQLSMALLINT tableTypeLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLTables and SQLTablesW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLTables and SQLTablesW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1641,93 +1595,83 @@ SQLRETURN SQL_API SQLTablesW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprimarykeys-function.
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLPrimaryKeys(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLPrimaryKeys(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                                 SQLSMALLINT catalogNameLen,
+                                 SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
+                                 SQLCHAR* tableName, SQLSMALLINT tableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLPrimaryKeys.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLPrimaryKeysW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+    SQLSMALLINT tableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Returns the list of input and output parameters, as well as the columns that make up
-// the result set for the specified procedures.
+// Returns the list of input and output parameters, as well as the columns that
+// make up the result set for the specified procedures.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprocedurecolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLProcedureColumns(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *procName, SQLSMALLINT procNameLen,
-    SQLCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* procName,
+    SQLSMALLINT procNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLProcedureColumns and SQLProcedureColumnsW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLProcedureColumns and
+  // SQLProcedureColumnsW in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLProcedureColumns.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLProcedureColumnsW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *procName, SQLSMALLINT procNameLen,
-    SQLWCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* procName,
+    SQLSMALLINT procNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLProcedureColumns and SQLProcedureColumnsW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLProcedureColumns and
+  // SQLProcedureColumnsW in odbc_driver_metadata.h. Handle Unicode conversion
+  // of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1736,44 +1680,42 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprocedures-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLProcedures(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *procName, SQLSMALLINT procNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLProcedures(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                                SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                                SQLSMALLINT schemaNameLen, SQLCHAR* procName,
+                                SQLSMALLINT procNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLProcedures and SQLProceduresW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLProcedures and SQLProceduresW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLProcedures.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLProceduresW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *procName, SQLSMALLINT procNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
+                                 SQLWCHAR* catalogName,
+                                 SQLSMALLINT catalogNameLen,
+                                 SQLWCHAR* schemaName,
+                                 SQLSMALLINT schemaNameLen, SQLWCHAR* procName,
+                                 SQLSMALLINT procNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLProcedures and SQLProceduresW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLProcedures and SQLProceduresW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1786,197 +1728,186 @@ SQLRETURN SQL_API SQLProceduresW(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlspecialcolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLSpecialColumns(
-    SQLHSTMT statementHandle, SQLUSMALLINT identifierType,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLUSMALLINT minRowIdScope, SQLUSMALLINT colNullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLUSMALLINT identifierType, SQLCHAR* catalogName,
+    SQLSMALLINT catalogNameLen, SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
+    SQLCHAR* tableName, SQLSMALLINT tableNameLen, SQLUSMALLINT minRowIdScope,
+    SQLUSMALLINT colNullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLSpecialColumns and SQLSpecialColumnsW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLSpecialColumns and
+  // SQLSpecialColumnsW in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLSpecialColumns.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLSpecialColumnsW(
     SQLHSTMT statementHandle, SQLUSMALLINT identifierType,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLUSMALLINT minRowIdScope, SQLUSMALLINT colNullable)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen, SQLWCHAR* schemaName,
+    SQLSMALLINT schemaNameLen, SQLWCHAR* tableName, SQLSMALLINT tableNameLen,
+    SQLUSMALLINT minRowIdScope, SQLUSMALLINT colNullable) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLSpecialColumns and SQLSpecialColumnsW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLSpecialColumns and
+  // SQLSpecialColumnsW in odbc_driver_metadata.h. Handle Unicode conversion of
+  // output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Retrieves a list of statistics about a single table and the indexes associated with the
-// table. The driver returns the information as a result set.
+// Retrieves a list of statistics about a single table and the indexes
+// associated with the table. The driver returns the information as a result
+// set.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlstatistics-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLStatistics(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLUSMALLINT indexType, SQLUSMALLINT reserved)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLStatistics(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                                SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                                SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                                SQLSMALLINT tableNameLen,
+                                SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLStatistics and SQLStatisticsW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLStatistics and SQLStatisticsW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLStatistics.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLStatisticsW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLUSMALLINT indexType, SQLUSMALLINT reserved)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+    SQLSMALLINT tableNameLen, SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLStatistics and SQLStatisticsW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLStatistics and SQLStatisticsW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Returns a list of tables and the privileges associated with each table.
-// The driver returns the information as a result set on the specified statement..
+// The driver returns the information as a result set on the specified
+// statement..
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqltableprivileges-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLTablePrivileges(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+    SQLSMALLINT tableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLTablePrivileges and SQLTablePrivilegesW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLTablePrivileges and
+  // SQLTablePrivilegesW in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLTablePrivileges.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLTablePrivilegesW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+    SQLSMALLINT tableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLTablePrivileges and SQLTablePrivilegesW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLTablePrivileges and
+  // SQLTablePrivilegesW in odbc_driver_metadata.h. Handle Unicode conversion of
+  // output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Returns
-//   -- A list of foreign keys in the specified table (columns in the specified table that
+//   -- A list of foreign keys in the specified table (columns in the specified
+//   table that
 //      refer to primary keys in other tables).
-//   -- A list of foreign keys in other tables that refer to the primary key in the
+//   -- A list of foreign keys in other tables that refer to the primary key in
+//   the
 //      specified table.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLForeignKeys(
-    SQLHSTMT statementHandle,
-    SQLCHAR *pkCatalogName, SQLSMALLINT pkCatalogNameLen,
-    SQLCHAR *pkSchemaName, SQLSMALLINT pkSchemaNameLen,
-    SQLCHAR *pkTableName, SQLSMALLINT pkTableNameLen,
-    SQLCHAR *fkCatalogName, SQLSMALLINT fkCatalogNameLen,
-    SQLCHAR *fkSchemaName, SQLSMALLINT fkSchemaNameLen,
-    SQLCHAR *fkTableName, SQLSMALLINT fkTableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API
+SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
+               SQLSMALLINT pkCatalogNameLen, SQLCHAR* pkSchemaName,
+               SQLSMALLINT pkSchemaNameLen, SQLCHAR* pkTableName,
+               SQLSMALLINT pkTableNameLen, SQLCHAR* fkCatalogName,
+               SQLSMALLINT fkCatalogNameLen, SQLCHAR* fkSchemaName,
+               SQLSMALLINT fkSchemaNameLen, SQLCHAR* fkTableName,
+               SQLSMALLINT fkTableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
+  // in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLForeignKeys.
 ////////////////////////////////////////
-SQLRETURN SQL_API SQLForeignKeysW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *pkCatalogName, SQLSMALLINT pkCatalogNameLen,
-    SQLWCHAR *pkSchemaName, SQLSMALLINT pkSchemaNameLen,
-    SQLWCHAR *pkTableName, SQLSMALLINT pkTableNameLen,
-    SQLWCHAR *fkCatalogName, SQLSMALLINT fkCatalogNameLen,
-    SQLWCHAR *fkSchemaName, SQLSMALLINT fkSchemaNameLen,
-    SQLWCHAR *fkTableName, SQLSMALLINT fkTableNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API
+SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
+                SQLSMALLINT pkCatalogNameLen, SQLWCHAR* pkSchemaName,
+                SQLSMALLINT pkSchemaNameLen, SQLWCHAR* pkTableName,
+                SQLSMALLINT pkTableNameLen, SQLWCHAR* fkCatalogName,
+                SQLSMALLINT fkCatalogNameLen, SQLWCHAR* fkSchemaName,
+                SQLSMALLINT fkSchemaNameLen, SQLWCHAR* fkTableName,
+                SQLSMALLINT fkTableNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1986,68 +1917,61 @@ SQLRETURN SQL_API SQLForeignKeysW(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumnprivileges-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLColumnPrivileges(
-    SQLHSTMT statementHandle,
-    SQLCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+    SQLSMALLINT tableNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to common internal function for SQLColumnPrivileges and SQLColumnPrivilegesW
-    // in odbc_driver_metadata.h.
+  // Call to common internal function for SQLColumnPrivileges and
+  // SQLColumnPrivilegesW in odbc_driver_metadata.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 ////////////////////////////////////////
 // Unicode version of SQLColumnPrivileges.
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLColumnPrivilegesW(
-    SQLHSTMT statementHandle,
-    SQLWCHAR *catalogName, SQLSMALLINT catalogNameLen,
-    SQLWCHAR *schemaName, SQLSMALLINT schemaNameLen,
-    SQLWCHAR *tableName, SQLSMALLINT tableNameLen,
-    SQLWCHAR *columnName, SQLSMALLINT columnNameLen)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+    SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
+    SQLSMALLINT tableNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
-    // Handle Unicode conversion of input parameters.
-    // Call to common internal function for SQLColumnPrivileges and SQLColumnPrivilegesW
-    // in odbc_driver_metadata.h.
-    // Handle Unicode conversion of output parameters.
+  // Handle Unicode conversion of input parameters.
+  // Call to common internal function for SQLColumnPrivileges and
+  // SQLColumnPrivilegesW in odbc_driver_metadata.h. Handle Unicode conversion
+  // of output parameters.
 
-    // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Stops processing associated with a specific statement, closes any open cursors associated
-// with the statement, discards pending results, or, optionally, frees all resources
-// associated with the statement handle.
+// Stops processing associated with a specific statement, closes any open
+// cursors associated with the statement, discards pending results, or,
+// optionally, frees all resources associated with the statement handle.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfreestmt-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for statement handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLFreeStmt in odbc_statement.h.
+  // Call to internal function for SQLFreeStmt in odbc_statement.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for statement handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2057,19 +1981,21 @@ SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlendtran-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle, SQLSMALLINT completionType)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
+                             SQLSMALLINT completionType) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type passed in.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  // passed in. Call to Trace function entry in odbc_trace.h if tracing is
+  // enabled.
 
-    // Call to internal function for SQLEndTran in odbc_statement.h.
+  // Call to internal function for SQLEndTran in odbc_statement.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h, as applicable for the handle type passed in.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  // passed in.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2078,36 +2004,35 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle, SQLSMALLI
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcancel-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLCancel in odbc_statement.h.
+  // Call to internal function for SQLCancel in odbc_statement.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Closes a cursor that has been opened on a statement and discards pending results.
+// Closes a cursor that has been opened on a statement and discards pending
+// results.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlclosecursor-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLCloseCursor in odbc_sql_results.h.
+  // Call to internal function for SQLCloseCursor in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2116,19 +2041,18 @@ SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldisconnect-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex for connection handle in odbc_lock.h.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLCancel in odbc_connection.h.
+  // Call to internal function for SQLCancel in odbc_connection.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex for connection handle in odbc_lock.h.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2138,19 +2062,20 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfreehandle-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type passed in.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  // passed in. Call to Trace function entry in odbc_trace.h if tracing is
+  // enabled.
 
-    // Call to internal function for SQLFreeHandle in odbc_environment.h
+  // Call to internal function for SQLFreeHandle in odbc_environment.h
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h, as applicable for the handle type passed in.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  // passed in.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -2165,60 +2090,59 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle)
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcancelhandle-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQLCancelHandle(SQLSMALLINT handleType, SQLHANDLE handle)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQLCancelHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type passed in.
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  // passed in. Call to Trace function entry in odbc_trace.h if tracing is
+  // enabled.
 
-    // Call to internal function for SQLCancelHandle in odbc_environment.h
+  // Call to internal function for SQLCancelHandle in odbc_environment.h
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-    // Call to Release mutex in odbc_lock.h, as applicable for the handle type passed in.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  // passed in.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Sets the cursor position in a rowset and allows an application to refresh data in the
-// rowset or to update or delete data in the result set.
+// Sets the cursor position in a rowset and allows an application to refresh
+// data in the rowset or to update or delete data in the result set.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetpos-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQLSetPos(
-    SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
-    SQLUSMALLINT operation, SQLUSMALLINT lockType)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
+                    SQLUSMALLINT operation, SQLUSMALLINT lockType) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLSetPos in odbc_sql_results.h.
+  // Call to internal function for SQLSetPos in odbc_sql_results.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-// Performs bulk insertions and bulk bookmark operations, including update, delete,
-// and fetch by bookmark.
+// Performs bulk insertions and bulk bookmark operations, including update,
+// delete, and fetch by bookmark.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbulkoperations-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLBulkOperations(SQLHSTMT statementHandle, SQLSMALLINT operation)
-{
-    SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN SQL_API SQLBulkOperations(SQLHSTMT statementHandle,
+                                    SQLSMALLINT operation) {
+  SQLRETURN rc = SQL_SUCCESS;
 
-    // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-    // Call to internal function for SQLBulkOperations in odbc_sql_requests.h.
+  // Call to internal function for SQLBulkOperations in odbc_sql_requests.h.
 
-    // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
-    return rc;
+  return rc;
 }
 // NOLINTEND
