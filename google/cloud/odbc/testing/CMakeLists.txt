@@ -18,14 +18,37 @@ if (NOT ODBC_INTEGRATION_TESTING AND NOT ODBC_UNIT_TESTING AND NOT CLIENT_LIBRAR
     return()
 endif ()
 
+if (NOT COMMAND create_bazel_config)
+  include(CreateOdbcBazelConfig)
+endif()
+
 add_library(
-    odbc_bigquery_testing_util
-    status_matchers.h
-    status_matchers.cc)
+    google_cloud_odbc_testing # cmake-format: sort
+    commons.cc
+    commons.h
+    connection.cc
+    connection.h
+    driver_properties.cc
+    driver_properties.h
+    statement.cc
+    statement.h
+    catalog.cc
+    catalog.h)
 
 target_link_libraries(
-    odbc_bigquery_testing_util
+    google_cloud_odbc_testing
     google-cloud-cpp::experimental-bigquery_rest
     GTest::gmock)
 
-create_bazel_config(odbc_bigquery_testing_util YEAR 2023)
+add_library(
+    google_cloud_odbc_testing_utils # cmake-format: sort
+    utils/status_matchers.cc
+    utils/status_matchers.h)
+
+target_link_libraries(
+    google_cloud_odbc_testing_utils
+    google-cloud-cpp::experimental-bigquery_rest
+    GTest::gmock)
+
+create_bazel_config(google_cloud_odbc_testing YEAR 2023)
+create_bazel_config(google_cloud_odbc_testing_utils YEAR 2023)

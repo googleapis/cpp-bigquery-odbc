@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
 // Common Test Values.

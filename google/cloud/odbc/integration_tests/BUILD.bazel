@@ -23,7 +23,7 @@ licenses(["notice"])  # Apache 2.0
     tags = ["scheduled-integration-tests"],
     deps = [
         "//google/cloud/odbc/integration_tests/testing_util:cpp_bigquery_odbc_integration_testing_util",
-        "//google/cloud/odbc/testing_util:odbc_bigquery_testing_util",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_googletest//:gtest_main",
     ],

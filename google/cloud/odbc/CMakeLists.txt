@@ -36,6 +36,8 @@ else()
   find_package(GTest CONFIG REQUIRED)
 endif()
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
+
 function (odbc_define_tests)
   if (NOT ODBC_INTEGRATION_TESTING)
     return()
@@ -45,11 +47,6 @@ function (odbc_define_tests)
 
   add_executable(
     all_tests
-    testing/commons.cc
-    testing/connection.cc
-    testing/driver_properties.cc
-    testing/statement.cc
-    testing/catalog.cc
     tests/connection_test.cc
     tests/driver_properties_test.cc
     tests/descriptor_test.cc
@@ -60,6 +57,7 @@ function (odbc_define_tests)
   target_link_libraries(
     all_tests
     odbc
+    google_cloud_odbc_testing
     GTest::gtest_main
     GTest::gmock
   )

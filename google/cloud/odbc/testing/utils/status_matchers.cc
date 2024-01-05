@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace google::cloud::odbc_testing_util {
+namespace google::cloud::odbc_testing_utils {
 
-}  // namespace google::cloud::odbc_testing_util
+}  // namespace google::cloud::odbc_tests

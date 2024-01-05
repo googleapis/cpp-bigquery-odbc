@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTS_TESTING_UTIL_STATUS_MATCHERS_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTS_TESTING_UTIL_STATUS_MATCHERS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_STATUS_MATCHERS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_STATUS_MATCHERS_H
 
 #include <gmock/gmock.h>
 
-namespace google::cloud::odbc_testing_util {
+namespace google::cloud::odbc_testing_utils {
 
 #define ASSERT_STATUS_OK(expression) \
   ASSERT_TRUE(expression.ok())       \
@@ -31,6 +31,6 @@ MATCHER_P2(StatusIs, code, matcher, "") {
   return true;
 }
 
-}  // namespace google::cloud::odbc_testing_util
+}  // namespace google::cloud::odbc_tests
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTS_TESTING_UTIL_STATUS_MATCHERS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_STATUS_MATCHERS_H

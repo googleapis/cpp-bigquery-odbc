@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
-#include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 #include <fstream>
@@ -21,7 +21,7 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {

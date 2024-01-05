@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
-#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -26,7 +26,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_bigquery_client_interface::ListAllProjects;
-using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 using ::testing::StrEq;
 

@@ -14,8 +14,8 @@
 
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
-#include "google/cloud/odbc/testing_util/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/absl_str_cat_quiet.h"
 #include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
@@ -41,7 +41,7 @@ using google::cloud::odbc_integration_tests_testing_util::
     CreateUserAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
-using google::cloud::odbc_testing_util::StatusIs;
+using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed

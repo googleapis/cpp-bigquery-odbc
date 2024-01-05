@@ -16,27 +16,29 @@ package(default_visibility = ["//:__subpackages__"])
 
 licenses(["notice"])  # Apache 2.0
 
-load(":odbc_bq_client_interface.bzl", "odbc_bq_client_interface_hdrs", "odbc_bq_client_interface_srcs")
+load(":google_cloud_odbc_testing.bzl", "google_cloud_odbc_testing_hdrs", "google_cloud_odbc_testing_srcs")
+load(":google_cloud_odbc_testing_utils.bzl", "google_cloud_odbc_testing_utils_hdrs", "google_cloud_odbc_testing_utils_srcs")
 
 cc_library(
-    name = "odbc_bq_client_interface",
-    srcs = odbc_bq_client_interface_srcs,
-    hdrs = odbc_bq_client_interface_hdrs,
+    name = "google_cloud_odbc_testing",
+    testonly = True,
+    srcs = google_cloud_odbc_testing_srcs,
+    hdrs = google_cloud_odbc_testing_hdrs,
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "@com_google_googletest//:gtest",
     ],
 )
 
-[cc_test(
-    name = bq_client_interface_test.replace("/", "_").replace(".cc", ""),
-    srcs = [bq_client_interface_test],
-    tags = ["unit-tests"],
+cc_library(
+    name = "google_cloud_odbc_testing_utils",
+    testonly = True,
+    srcs = google_cloud_odbc_testing_utils_srcs,
+    hdrs = google_cloud_odbc_testing_utils_hdrs,
+    visibility = ["//visibility:public"],
     deps = [
-        "//:odbc_bq_client_interface",
-        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-        "@com_google_cloud_cpp//:experimental-bigquery-rest_mocks",
-        "@com_google_cloud_cpp//:mocks",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "@com_google_googletest//:gtest",
     ],
-) for bq_client_interface_test in glob(["*_test.cc"])]
+)

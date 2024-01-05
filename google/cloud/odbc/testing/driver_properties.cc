@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "testing/driver_properties.h"
+#include "driver_properties.h"
 
 namespace google::cloud::odbc_tests {
 

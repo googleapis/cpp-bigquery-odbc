@@ -52,12 +52,10 @@ function (client_interface_define_unit_tests)
       ${bq_client_interface_unit_tests_cc}
   )
 
-  add_subdirectory(${CMAKE_SOURCE_DIR}/google/cloud/odbc/testing_util testing_util)
-
   target_link_libraries(
       odbc_bq_client_interface_unit_tests
       odbc_bq_client_interface
-      odbc_bigquery_testing_util
+      google_cloud_odbc_testing_utils
       GTest::gtest_main)
 
   include(GoogleTest)
