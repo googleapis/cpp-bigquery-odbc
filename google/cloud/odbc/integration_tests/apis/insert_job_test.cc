@@ -30,7 +30,6 @@ using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_bigquery_testing_util_internal::StatusIs;
 using google::cloud::odbc_integration_tests_testing_util::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -42,15 +41,6 @@ using google::cloud::odbc_integration_tests_testing_util::
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
 using google::cloud::odbc_testing_util::StatusIs;
-using google::cloud::odbc_testing_util_internal::
-    CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::
-    CreateServiceAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::
-    CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_testing_util_internal::
-    CreateUserAccountAuthentication;
-using google::cloud::odbc_testing_util_internal::kNameForNonExistingProject;
 using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
