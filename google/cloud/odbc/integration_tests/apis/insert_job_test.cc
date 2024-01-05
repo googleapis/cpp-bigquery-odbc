@@ -22,6 +22,7 @@
 
 namespace google::cloud::odbc_integration_tests_apis {
 
+using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::InsertJobRequest;
 using bigquery_v2_minimal_internal::Job;
 using bigquery_v2_minimal_internal::JobClient;
