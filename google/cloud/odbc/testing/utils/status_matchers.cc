@@ -14,4 +14,4 @@
 
 namespace google::cloud::odbc_testing_utils {
 
-}  // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_testing_utils

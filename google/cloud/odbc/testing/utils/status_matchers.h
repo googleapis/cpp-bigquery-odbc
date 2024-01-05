@@ -31,6 +31,6 @@ MATCHER_P2(StatusIs, code, matcher, "") {
   return true;
 }
 
-}  // namespace google::cloud::odbc_tests
+}  // namespace google::cloud::odbc_testing_utils
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_STATUS_MATCHERS_H
