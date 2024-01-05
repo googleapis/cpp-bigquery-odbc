@@ -36,8 +36,6 @@ else()
   find_package(GTest CONFIG REQUIRED)
 endif()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
-
 function (odbc_define_tests)
   if (NOT ODBC_INTEGRATION_TESTING)
     return()
@@ -88,6 +86,8 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUN
 else()
   find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
 endif()
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 
 include(bq_driver.cmake)
 
