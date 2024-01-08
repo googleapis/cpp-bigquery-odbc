@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
 #include "google/cloud/odbc/testing_util/status_matchers.h"
+#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 #include <chrono>
