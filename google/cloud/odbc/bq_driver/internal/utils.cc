@@ -36,9 +36,12 @@ std::vector<std::string> Split(std::string const& s,
 }
 
 std::string Join(std::vector<std::string> v, std::string const& separator,
-                 unsigned int start_ind) {
-  if (v.empty()) {
+                 int start_ind) {
+  if (v.empty() || start_ind >= v.size()) {
     return "";
+  }
+  if (start_ind < 0) {
+    start_ind = 0;
   }
   std::string joined;
   for (; start_ind < v.size() - 1; start_ind++) {

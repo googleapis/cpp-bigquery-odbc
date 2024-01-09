@@ -69,10 +69,11 @@ inline void Trim(std::string& s) {
  * "ODBC"]
  */
 std::vector<std::string> Split(std::string const& s,
-                               std::string const& delimiter, int limit = 0);
+                               std::string const& delimiter = " ",
+                               int limit = 0);
 
 std::string Join(std::vector<std::string> v, std::string const& separator = "",
-                 unsigned int start_ind = 0);
+                 int start_ind = 0);
 
 #ifdef _WIN32
 

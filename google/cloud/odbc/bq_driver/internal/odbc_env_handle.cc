@@ -15,9 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 
 // NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
+namespace google::cloud::odbc_bq_driver_internal {
+}  // namespace google::cloud::odbc_bq_driver_internal
 // NOLINTEND(modernize-concat-nested-namespaces)

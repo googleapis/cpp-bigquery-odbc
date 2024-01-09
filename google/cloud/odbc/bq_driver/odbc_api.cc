@@ -19,6 +19,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/status_or.h"
 
@@ -81,7 +82,7 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       // Call to Acquire mutex for environment handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-      // Call to Allocate Environment handle in odbc_environment.h.
+      return google::cloud::odbc_bq_driver::SQLAllocEnvHandle(outputHandle);
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       // Call to Release mutex for environment handle in odbc_lock.h.
@@ -93,7 +94,8 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                         *(*trace_opts_console));
 
-      // Call to Allocate connection handle in odbc_connection.h.
+      return google::cloud::odbc_bq_driver::SQLAllocConnHandle(inputHandle,
+                                                               outputHandle);
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       TraceFunctionExit_SQLAllocHandle(rc, *(*trace_opts_console));
@@ -121,7 +123,7 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       break;
     }
     default: {
-      // Return: Invalid Handle Type Error.
+      return SQL_INVALID_HANDLE;
     }
   }
 

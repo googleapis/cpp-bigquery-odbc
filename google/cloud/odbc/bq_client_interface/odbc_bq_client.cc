@@ -29,7 +29,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 
-StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
+StatusOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
   auto credentials = CreateCredentials(oauth);
   if (!credentials) {
@@ -43,7 +43,7 @@ StatusOr<std::unique_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
   TableClient table_client = TableClient(MakeTableConnection(options));
 
-  return std::unique_ptr<ODBCBQClient>(new ODBCBQClient(
+  return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, table_client));
 }
 

@@ -18,12 +18,10 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
 enum AuthMechanism {
@@ -74,14 +72,13 @@ class ConnectionHandle {
 
  private:
   Dsn dsn_;
+  // We are storing this because we might need to handle connection retries.
+  //  We don't want to read this information from the env again and again.
   Authentication auth_;
   // The ODBCBQClient we will use for APIs interacting with BigQuery
-  ODBCBQClient client_;
+  std::shared_ptr<ODBCBQClient> client_;
 };
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+}  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H

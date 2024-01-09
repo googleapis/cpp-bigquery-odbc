@@ -15,6 +15,9 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC environment:
@@ -27,6 +30,9 @@
 ///////////////////////////////////////////////////////////
 
 namespace google::cloud::odbc_bq_driver {
+
+SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H

@@ -17,10 +17,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
 class EnvironmentHandle {
  public:
@@ -37,9 +34,6 @@ class EnvironmentHandle {
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 };
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+}  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_ENV_HANDLE_H

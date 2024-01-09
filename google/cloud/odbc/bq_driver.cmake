@@ -37,6 +37,7 @@ add_library(
 target_link_libraries(
   google_cloud_odbc_bq_driver_internal
   google-cloud-cpp::experimental-bigquery_rest # We need this dependency to use 'options' from client libraries
+  odbc_bq_client_interface
 )
 target_include_directories(google_cloud_odbc_bq_driver_internal PUBLIC ${CMAKE_SOURCE_DIR})
 target_include_directories(google_cloud_odbc_bq_driver_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
@@ -75,7 +76,7 @@ target_link_libraries(
   google_cloud_odbc_bq_driver_internal
 )
 
-target_link_libraries(google_cloud_odbc_bq_driver odbc_bq_client_interface)
+# target_link_libraries(google_cloud_odbc_bq_driver )
 add_subdirectory(bq_client_interface)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
@@ -100,6 +101,7 @@ function (bq_driver_define_unit_tests)
 
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
+    bq_driver/internal/odbc_conn_handle_test.cc
     bq_driver/internal/trace_utils_test.cc
     bq_driver/internal/utils_test.cc
   )

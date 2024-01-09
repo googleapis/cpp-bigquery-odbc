@@ -46,7 +46,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 ///
 class ODBCBQClient {
  public:
-  static StatusOr<std::unique_ptr<ODBCBQClient>> CreateBQClient(
+  static StatusOr<std::shared_ptr<ODBCBQClient>> CreateBQClient(
       Oauth const& oauth);
   ~ODBCBQClient() = default;
 

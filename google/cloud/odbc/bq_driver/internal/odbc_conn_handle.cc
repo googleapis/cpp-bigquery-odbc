@@ -15,14 +15,11 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
-namespace google {
-namespace cloud {
-namespace odbc_bq_driver {
+namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_bigquery_client_interface::Oauth;
-using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+ConnectionHandle::ConnectionHandle() = default;
+
+ConnectionHandle::~ConnectionHandle() = default;
 
 Status ConnectionHandle::Connect(Authentication& auth) {
   auth_ = auth;
@@ -49,18 +46,13 @@ Status ConnectionHandle::Connect(Authentication& auth) {
   if (!response.ok()) {
     return Status(response.status().code(), response.status().message());
   }
-  client_ = *response.value();
+  client_ = response.value();
 
   return Status(StatusCode::kOk, "");
 }
 
 void ConnectionHandle::SetDsn(Dsn& dsn) { dsn_ = dsn; }
 
-std::shared_ptr<ODBCBQClient> ConnectionHandle::GetClient() {
-  return std::make_shared<ODBCBQClient>(client_);
-}
+std::shared_ptr<ODBCBQClient> ConnectionHandle::GetClient() { return client_; }
 
-}  // namespace odbc_bq_driver
-}  // namespace cloud
-}  // namespace google
-// NOLINTEND(modernize-concat-nested-namespaces)
+}  // namespace google::cloud::odbc_bq_driver_internal

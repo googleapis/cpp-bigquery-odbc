@@ -37,6 +37,58 @@ Sections const kCommentedIniSections{
     {"SampleDSN", kCommentedDsnSection},
 };
 
+TEST(StringUtils, SplitBasic) {
+  std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::vector<std::string> v = Split(s, "\\", 2);
+  std::vector<std::string> v_expected{"SOFTWARE", "ODBC\\ODBC.INI"};
+  ASSERT_EQ(v_expected.size(), v.size());
+  for (int i = 0; i < v_expected.size(); i++) {
+    ASSERT_EQ(v_expected[i], v[i]);
+  }
+}
+
+TEST(StringUtils, SplitDefaultParams) {
+  std::string s = "SOFTWARE ODBC ODBC.INI";
+  std::vector<std::string> v = Split(s);
+  std::vector<std::string> v_expected{"SOFTWARE", "ODBC", "ODBC.INI"};
+  ASSERT_EQ(v_expected.size(), v.size());
+  for (int i = 0; i < v_expected.size(); i++) {
+    ASSERT_EQ(v_expected[i], v[i]);
+  }
+}
+
+TEST(StringUtils, NoSplitPossible) {
+  std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::vector<std::string> v = Split(s, "random_delimiter");
+  ASSERT_EQ(v.size(), 1);
+  EXPECT_EQ(v[0], s);
+}
+
+TEST(StringUtils, JoinBasic) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected_1 = "ODBC\\ODBC.INI";
+  std::string s = Join(v, "\\", 1);
+  EXPECT_EQ(s_expected_1, s);
+
+  std::string s_expected_0 = "SOFTWARE\\ODBC\\ODBC.INI";
+  s = Join(v, "\\", 0);
+  EXPECT_EQ(s_expected_0, s);
+}
+
+TEST(StringUtils, JoinDefaultParams) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected = "SOFTWAREODBCODBC.INI";
+  std::string s = Join(v);
+  EXPECT_EQ(s_expected, s);
+}
+
+TEST(StringUtils, JoinStartIndOutOfRange) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected = "";
+  std::string s = Join(v, "_", 3);
+  EXPECT_EQ(s_expected, s);
+}
+
 TEST(Parsing, ParseConfig) {
   std::string test_data_path =
       google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")

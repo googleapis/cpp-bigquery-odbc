@@ -13,12 +13,18 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/internal/getenv.h"
 
 // NOLINTBEGIN(misc-unused-parameters)
 // NOLINTBEGIN(readability-non-const-parameter)
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::Authentication;
+using google::cloud::odbc_bq_driver_internal::AuthMechanism;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::Dsn;
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -45,6 +51,23 @@ Dsn CreateDsnObj(Section& dsn_section) {
   dsn.driver = dsn_section["Driver"];
   dsn.catalog = dsn_section["Catalog"];
   return dsn;
+}
+
+SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
+  // Validate the handle
+  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
+  if (in_handle_wrapped->handle_type != HandleType::kEnvHandle) {
+    // TODO(#158): SQLGetDiagRec should handle this
+    return SQL_INVALID_HANDLE;
+  }
+
+  EnvironmentHandle env_handle =
+      *reinterpret_cast<EnvironmentHandle*>(in_handle_wrapped->handle_ref);
+
+  auto* conn_handle = new ConnectionHandle();
+  HandleWrapped wrapped_handle = {HandleType::kConnHandle, conn_handle};
+  *out_conn_handle = &wrapped_handle;
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
