@@ -24,8 +24,26 @@
 
 #endif  //_WIN32
 
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <odbcinst.h>
 #include <sql.h>
 #include <sqlext.h>
+
+// NOLINTBEGIN(modernize-concat-nested-namespaces)
+namespace google::cloud::odbc_bq_driver_internal {
+
+enum class HandleType {
+  kConnHandle,
+  kEnvHandle,
+  kStatementHandle,
+  kDescriptorHandle
+};
+
+struct HandleWrapped {
+  HandleType handle_type;
+  SQLHANDLE handle_ref;  // reference to the internal handle we created
+};
+
+}  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INCLUDES_H
