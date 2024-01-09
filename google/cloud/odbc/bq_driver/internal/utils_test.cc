@@ -22,7 +22,8 @@ Section const kDsnSection{
     {"Description", "Google BigQuery ODBC Connector"},
     {"Driver",
      "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so"},
-    {"PropertyWithoutValue", ""}};
+    {"PropertyWithoutValue", ""},
+    {"Value with equals", "I=am=a=value"}};
 
 Section const kOdbcSection{{"Trace", "1"}, {"TraceFile", "/tmp/odbc.log"}};
 
@@ -35,6 +36,58 @@ Sections const kSampleIniSections{{"SampleDSN", kDsnSection},
 Sections const kCommentedIniSections{
     {"SampleDSN", kCommentedDsnSection},
 };
+
+TEST(StringUtils, SplitBasic) {
+  std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::vector<std::string> v = Split(s, "\\", 2);
+  std::vector<std::string> v_expected{"SOFTWARE", "ODBC\\ODBC.INI"};
+  ASSERT_EQ(v_expected.size(), v.size());
+  for (int i = 0; i < v_expected.size(); i++) {
+    ASSERT_EQ(v_expected[i], v[i]);
+  }
+}
+
+TEST(StringUtils, SplitDefaultParams) {
+  std::string s = "SOFTWARE ODBC ODBC.INI";
+  std::vector<std::string> v = Split(s);
+  std::vector<std::string> v_expected{"SOFTWARE", "ODBC", "ODBC.INI"};
+  ASSERT_EQ(v_expected.size(), v.size());
+  for (int i = 0; i < v_expected.size(); i++) {
+    ASSERT_EQ(v_expected[i], v[i]);
+  }
+}
+
+TEST(StringUtils, NoSplitPossible) {
+  std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::vector<std::string> v = Split(s, "random_delimiter");
+  ASSERT_EQ(v.size(), 1);
+  EXPECT_EQ(v[0], s);
+}
+
+TEST(StringUtils, JoinBasic) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected_1 = "ODBC\\ODBC.INI";
+  std::string s = Join(v, "\\", 1);
+  EXPECT_EQ(s_expected_1, s);
+
+  std::string s_expected_0 = "SOFTWARE\\ODBC\\ODBC.INI";
+  s = Join(v, "\\", 0);
+  EXPECT_EQ(s_expected_0, s);
+}
+
+TEST(StringUtils, JoinDefaultParams) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected = "SOFTWAREODBCODBC.INI";
+  std::string s = Join(v);
+  EXPECT_EQ(s_expected, s);
+}
+
+TEST(StringUtils, JoinStartIndOutOfRange) {
+  std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
+  std::string s_expected = "";
+  std::string s = Join(v, "_", 3);
+  EXPECT_EQ(s_expected, s);
+}
 
 TEST(Parsing, ParseConfig) {
   std::string test_data_path =
@@ -67,6 +120,28 @@ TEST(Parsing, ParseConfig) {
 TEST(Parsing, ParseConfigIncorrectPath) {
   auto sections = ParseConfig("/invalid_file_name.ini");
   EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
+}
+
+TEST(Parsing, ParseConnectionString) {
+  Section testing_section = kDsnSection;
+  std::string conn_str = "";
+  // Create the connection string we will use for this test
+  for (auto const& it : testing_section) {
+    conn_str.append(it.first);
+    conn_str.append("=");
+    conn_str.append(it.second);
+    conn_str.append(";");
+  }
+
+  Section section_ret = ParseConnectionString(conn_str);
+
+  for (auto const& it : testing_section) {
+    std::string field = it.first;
+    std::string value = it.second;
+    Trim(field);
+    Trim(value);
+    EXPECT_EQ(section_ret[field], value);
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

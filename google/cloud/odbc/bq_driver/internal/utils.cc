@@ -16,6 +16,42 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+std::vector<std::string> Split(std::string const& s,
+                               std::string const& delimiter, int limit) {
+  int start_ind = 0;
+  int end_ind;
+  int len_del = delimiter.length();
+  std::string split;
+  std::vector<std::string> splits;
+
+  while ((end_ind = s.find(delimiter, start_ind)) != std::string::npos &&
+         --limit) {
+    split = s.substr(start_ind, end_ind - start_ind);
+    start_ind = end_ind + len_del;
+    splits.push_back(split);
+  }
+
+  splits.push_back(s.substr(start_ind));
+  return splits;
+}
+
+std::string Join(std::vector<std::string> v, std::string const& separator,
+                 int start_ind) {
+  if (v.empty() || start_ind >= v.size()) {
+    return "";
+  }
+  if (start_ind < 0) {
+    start_ind = 0;
+  }
+  std::string joined;
+  for (; start_ind < v.size() - 1; start_ind++) {
+    joined.append(v[start_ind]);
+    joined.append(separator);
+  }
+  joined.append(v[v.size() - 1]);
+  return joined;
+}
+
 #ifdef _WIN32
 
 StatusOr<std::shared_ptr<Section>> GetSectionWin(
@@ -141,5 +177,25 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
 }
 
 #endif  //_WIN32
+
+Section ParseConnectionString(std::string& str) {
+  Section section;
+  std::vector<std::string> splits = Split(str, ";");
+  for (std::string const& property : splits) {
+    std::vector<std::string> property_splits = Split(property, "=", 2);
+    if (property_splits.size() < 2) {
+      continue;
+    }
+    std::string field = property_splits[0];
+    std::string value = Join(property_splits, "", 1);
+    Trim(field);
+    Trim(value);
+    if (field.empty() || value.empty()) {
+      continue;
+    }
+    section[field] = value;
+  }
+  return section;
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -5,3 +5,5 @@ build-out/
 vcpkg_installed/
 .vscode/
 ci/gcloud
+MODULE.bazel
+MODULE.bazel.lock
