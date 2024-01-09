@@ -61,7 +61,11 @@ inline void Trim(std::string& s) {
  * included in the output
  *
  * @param limit The maximum size of the output list. Splitting stops when the
+<<<<<<< HEAD
  * size reaches this. 0/undefined imples it will find all possible splits
+=======
+ * size reaches this 0/undefined imples it will find all possible splits
+>>>>>>> 3df945e (impl(bq_driver): Added definitions for COnnectionHandle and EnvironmentHandle)
  *
  * @return Vector containing the substrings
  *
