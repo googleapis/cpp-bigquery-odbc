@@ -21,8 +21,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 class EnvironmentHandle {
  public:
-  explicit EnvironmentHandle();
-  ~EnvironmentHandle();
+  explicit EnvironmentHandle() = default;
+  ~EnvironmentHandle() = default;
 
   EnvironmentHandle(EnvironmentHandle const&) = default;
   EnvironmentHandle& operator=(EnvironmentHandle const&) = default;

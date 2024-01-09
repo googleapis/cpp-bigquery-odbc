@@ -61,7 +61,7 @@ inline void Trim(std::string& s) {
  * included in the output
  *
  * @param limit The maximum size of the output list. Splitting stops when the
- * size reaches this 0/undefined imples it will find all possible splits
+ * size reaches this. 0/undefined imples it will find all possible splits
  *
  * @return Vector containing the substrings
  *
@@ -110,7 +110,7 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
 #endif  //_WIN32
 
-Section ParseConnectionString(std::string& str);
+StatusOr<Section> ParseConnectionString(std::string& str);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

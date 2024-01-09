@@ -17,12 +17,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-ConnectionHandle::ConnectionHandle() = default;
-
-ConnectionHandle::~ConnectionHandle() = default;
-
 Status ConnectionHandle::Connect(Authentication& auth) {
-  auth_ = auth;
   Oauth oauth;
   switch (auth.auth_mechanism) {
     case AuthMechanism::kUserAuth:
@@ -42,17 +37,15 @@ Status ConnectionHandle::Connect(Authentication& auth) {
   }
   oauth.credentials_file_path = auth.key_file_path;
 
-  auto response = ODBCBQClient::CreateBQClient(oauth);
+  StatusOr<std::shared_ptr<ODBCBQClient>> response =
+      ODBCBQClient::CreateBQClient(oauth);
   if (!response.ok()) {
-    return Status(response.status().code(), response.status().message());
+    return response.status();
   }
   client_ = response.value();
+  auth_ = auth;
 
   return Status(StatusCode::kOk, "");
 }
-
-void ConnectionHandle::SetDsn(Dsn& dsn) { dsn_ = dsn; }
-
-std::shared_ptr<ODBCBQClient> ConnectionHandle::GetClient() { return client_; }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
