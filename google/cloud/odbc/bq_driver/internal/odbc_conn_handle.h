@@ -24,16 +24,9 @@ using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
-enum AuthMechanism {
-  kUserAuth = 0,
-  kServiceAuth = 1,
-  kApplicationDefaultAuth = 2,
-  kExternalAuth = 4
-};
-
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
-  AuthMechanism auth_mechanism;
+  OauthMechanism auth_mechanism;
   std::string email;
   std::string key_file_path;
   // NOTE: This should be removed if we decide that we will not support refresh

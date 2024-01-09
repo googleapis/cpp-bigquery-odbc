@@ -20,10 +20,10 @@
 // NOLINTBEGIN(readability-non-const-parameter)
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
-using google::cloud::odbc_bq_driver_internal::AuthMechanism;
-using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::HandleWrapped;
@@ -35,10 +35,11 @@ Authentication CreateAuth(Section& dsn_section) {
   try {
     auth_int = stoi(dsn_section["OAuthMechanism"]);
   } catch (std::exception const& ex) {
+    // TODO(#170): Add error tracing call here
     // TODO(#158): Add logging here
     auth_int = 0;
   }
-  auth.auth_mechanism = static_cast<AuthMechanism>(auth_int);
+  auth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
   auth.email = dsn_section["Email"];
   auth.key_file_path = dsn_section["KeyFilePath"];
   auth.refresh_token = dsn_section["RefreshToken"];
@@ -60,9 +61,13 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
+  if (conn_handle == NULL) {
+    return SQL_ERROR;
+  }
   // Validate the handle
   auto* handle_wrapped = reinterpret_cast<HandleWrapped*>(conn_handle);
   if (handle_wrapped->handle_type != HandleType::kConnHandle) {
+    // TODO(#170): Add error tracing call here
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_INVALID_HANDLE;
   }
@@ -70,13 +75,19 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   ConnectionHandle handle =
       *reinterpret_cast<ConnectionHandle*>(handle_wrapped->handle_ref);
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-  Section connection_params =
+  StatusOr<Section> connection_params_resp =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
-
-  std::string dsn_name = connection_params["DSN"];
+  if (!connection_params_resp.ok()) {
+    // The connection string is invalid
+    // TODO(#170): Add error tracing call here
+    // TODO(#158): SQLGetDiagRec should handle this
+    return SQL_ERROR;
+  }
+  std::string dsn_name = connection_params_resp.value()["DSN"];
   if (dsn_name.empty()) {
     // There is no DSN name in the connection string
+    // TODO(#170): Add error tracing call here
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_ERROR;
   }
@@ -90,6 +101,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
         google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
     if (!sections.ok()) {
       // The file path pointed by ODBCINI env is invalid
+      // TODO(#170): Add error tracing call here
       // TODO(#158): SQLGetDiagRec should handle this
       return SQL_ERROR;
     }
@@ -98,7 +110,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
   // Any parameters defined in the connection string should
   //  override the DSN section properties.
-  for (auto const& it : connection_params) {
+  for (auto const& it : connection_params_resp.value()) {
     std::string property = it.first;
     std::string value = it.second;
     dsn_section[property] = value;
@@ -110,6 +122,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   Status status = handle.Connect(auth);
   if (!status.ok()) {
     // Creating the connection failed
+    // TODO(#170): Add error tracing call here
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_ERROR;
   }

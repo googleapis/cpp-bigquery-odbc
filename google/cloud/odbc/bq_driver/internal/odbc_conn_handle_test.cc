@@ -18,6 +18,8 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+
 TEST(ConnectionHandle, Connect) {
   std::string test_data_path =
       google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
@@ -25,7 +27,7 @@ TEST(ConnectionHandle, Connect) {
   std::string credentials_file_path =
       test_data_path + "service_account_auth_keys.json";
 
-  Authentication auth = {AuthMechanism::kServiceAuth, "",
+  Authentication auth = {OauthMechanism::kServiceAccount, "",
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
@@ -39,7 +41,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
           .value_or("");
   std::string credentials_file_path = test_data_path + "random_file.json";
 
-  Authentication auth = {AuthMechanism::kServiceAuth, "",
+  Authentication auth = {OauthMechanism::kServiceAccount, "",
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
@@ -54,12 +56,31 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
   std::string credentials_file_path =
       test_data_path + "service_account_auth_keys.json";
 
-  Authentication auth = {AuthMechanism::kUserAuth, "", credentials_file_path};
+  Authentication auth = {OauthMechanism::kExternalUser, "",
+                         credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.code(), StatusCode::kUnimplemented);
   delete conn_handle;
 }
+
+TEST(ConnectionHandle, ConnectWithInvalidAuth) {
+  std::string test_data_path =
+      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
+          .value_or("");
+  std::string credentials_file_path =
+      test_data_path + "service_account_auth_keys.json";
+
+  Authentication auth = {static_cast<OauthMechanism>(7), "",
+                         credentials_file_path};
+  auto* conn_handle = new ConnectionHandle();
+  Status status = conn_handle->Connect(auth);
+  EXPECT_EQ(status.ok(), false);
+  EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
+  delete conn_handle;
+}
+
+// TODO(171): Add tests which use refresh token
 
 }  // namespace google::cloud::odbc_bq_driver_internal

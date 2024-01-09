@@ -41,8 +41,10 @@ using ::google::cloud::Status;
 using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 
 // We want this to be created once on startup and shared by all APIs.
@@ -140,19 +142,30 @@ SQLRETURN SQL_API SQLDriverConnect(
     SQLSMALLINT inConnectionStringLen, SQLCHAR* outConnectionString,
     SQLSMALLINT outConnectionStringBufferLen,
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
+  SQLRETURN rc = SQL_SUCCESS;
+  if (!trace_opts_console.ok())
+    return RecordStatus(trace_opts_console.status());
+
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLDriverConnect(
+      connectionHandle, windowHandle, inConnectionString, inConnectionStringLen,
+      outConnectionString, outConnectionStringBufferLen, outConnectionStringLen,
+      driverCompletion, *(*trace_opts_console));
 
   // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
   // in odbc_connection.h.
-
-  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-  // Call to Release mutex for connection handle in odbc_lock.h.
-
-  return google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
+  rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
       connectionHandle, windowHandle, inConnectionString, inConnectionStringLen,
       outConnectionString, outConnectionStringBufferLen, outConnectionStringLen,
       driverCompletion);
+
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLDriverConnect(rc, *(*trace_opts_console));
+
+  // Call to Release mutex for connection handle in odbc_lock.h.
+
+  return rc;
 }
 //////////////////////////////////////
 // Unicode version of SQLDriverConnect.

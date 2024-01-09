@@ -29,7 +29,6 @@
 #include <sql.h>
 #include <sqlext.h>
 
-// NOLINTBEGIN(modernize-concat-nested-namespaces)
 namespace google::cloud::odbc_bq_driver_internal {
 
 enum class HandleType {
