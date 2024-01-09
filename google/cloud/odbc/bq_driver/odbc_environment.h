@@ -15,6 +15,9 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC environment:
