@@ -15,8 +15,8 @@
 #include "google/cloud/odbc/integration_tests/testing_util/authentication.h"
 #include "google/cloud/odbc/integration_tests/testing_util/common_functions.h"
 #include "google/cloud/odbc/integration_tests/testing_util/util_constants.h"
-#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 

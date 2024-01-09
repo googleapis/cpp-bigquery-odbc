@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
-#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
