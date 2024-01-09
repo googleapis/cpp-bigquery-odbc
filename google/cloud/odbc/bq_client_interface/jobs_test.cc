@@ -24,6 +24,8 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
+using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::MockBigQueryJobConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
@@ -95,6 +97,82 @@ TEST(GetJob, GetJobFailure) {
       GetJob(job_client, project_id, job_id, location, options);
 
   EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
+TEST(ListAllJobs, ListZeroJobsSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    return mocks::MakeStreamRange<ListFormatJob>({});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(0, (*jobs).size());
+}
+
+TEST(ListAllJobs, ListAllJobsSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatJob expected{.id = "job_id"};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    return mocks::MakeStreamRange<ListFormatJob>({expected});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(expected.id, (*jobs)[0].id);
+}
+
+TEST(ListAllJobs, ListAllJobs_EmptyStrings) {
+  Options options;
+  std::string project_id;
+  ListFormatJob expected{.id = "job_id"};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    return mocks::MakeStreamRange<ListFormatJob>({expected});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(expected.id, (*jobs)[0].id);
+}
+
+TEST(ListAllJobs, ListAllJobsFailure) {
+  Options options;
+  std::string project_id = "project_id";
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    return mocks::MakeStreamRange<ListFormatJob>(
+        {}, Status(StatusCode::kUnauthenticated, "denied"));
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, options);
+
+  EXPECT_THAT(jobs, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

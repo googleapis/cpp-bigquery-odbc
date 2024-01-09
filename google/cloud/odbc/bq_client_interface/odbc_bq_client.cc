@@ -82,4 +82,12 @@ ODBCBQClient::GetJob(std::string const& project_id, std::string const& job_id,
       job_client_, project_id, job_id, location, options);
 }
 
+StatusOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
+ODBCBQClient::ListAllJobs(std::string const& project_id,
+                          ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::ListAllJobs(
+      job_client_, project_id, options);
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

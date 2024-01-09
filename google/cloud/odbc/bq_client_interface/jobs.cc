@@ -20,6 +20,8 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
+using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 
 StatusOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
                      std::string const& job_id, std::string const& location,
@@ -30,6 +32,26 @@ StatusOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_location(location);
 
   return job_client.GetJob(get_job_request, options);
+}
+
+StatusOr<std::vector<ListFormatJob>> ListAllJobs(
+    JobClient& job_client, std::string const& project_id,
+    ::google::cloud::Options const& options) {
+  ListJobsRequest request;
+  request.set_project_id(project_id);
+
+  StreamRange<ListFormatJob> jobs_response =
+      job_client.ListJobs(request, options);
+
+  std::vector<ListFormatJob> jobs;
+  for (auto const& job : jobs_response) {
+    if (!job) {
+      return job.status();
+    }
+    jobs.push_back(*job);
+  }
+
+  return jobs;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

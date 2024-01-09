@@ -84,6 +84,12 @@ class ODBCBQClient {
       std::string const& project_id, std::string const& job_id,
       std::string const& location, ::google::cloud::Options const& options);
 
+  // Returns all Jobs in a Project
+  StatusOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
+  ListAllJobs(std::string const& project_id,
+              ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
