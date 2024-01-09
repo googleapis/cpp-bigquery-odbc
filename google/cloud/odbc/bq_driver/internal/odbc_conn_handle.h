@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H
+#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_HANDLE_H
+#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_HANDLE_H
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
@@ -52,8 +52,8 @@ struct Dsn {
 
 class ConnectionHandle {
  public:
-  explicit ConnectionHandle();
-  ~ConnectionHandle();
+  explicit ConnectionHandle() = default;
+  ~ConnectionHandle() = default;
 
   ConnectionHandle(ConnectionHandle const&) = default;
   ConnectionHandle& operator=(ConnectionHandle const&) = default;
@@ -62,9 +62,9 @@ class ConnectionHandle {
 
   Status Connect(Authentication& auth);
 
-  void SetDsn(Dsn& dsn);
+  inline void SetDsn(Dsn& dsn) { dsn_ = dsn; }
 
-  std::shared_ptr<ODBCBQClient> GetClient();
+  std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
   SQLRETURN GetAttribute(SQLINTEGER attribute, void* value, void* length);
 
@@ -81,4 +81,4 @@ class ConnectionHandle {
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLES_H
+#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_HANDLE_H

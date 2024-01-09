@@ -178,13 +178,17 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
 
 #endif  //_WIN32
 
-Section ParseConnectionString(std::string& str) {
+StatusOr<Section> ParseConnectionString(std::string& str) {
   Section section;
   std::vector<std::string> splits = Split(str, ";");
-  for (std::string const& property : splits) {
+  for (std::string& property : splits) {
+    Trim(property);
+    if (property.empty()) {
+      continue;
+    }
     std::vector<std::string> property_splits = Split(property, "=", 2);
     if (property_splits.size() < 2) {
-      continue;
+      return Status(StatusCode::kInvalidArgument, "Invalid Connection String");
     }
     std::string field = property_splits[0];
     std::string value = Join(property_splits, "", 1);
