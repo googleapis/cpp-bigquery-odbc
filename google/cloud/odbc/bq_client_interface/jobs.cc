@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -39,6 +40,32 @@ StatusOr<std::vector<ListFormatJob>> ListAllJobs(
     ::google::cloud::Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
+
+  StreamRange<ListFormatJob> jobs_response =
+      job_client.ListJobs(request, options);
+
+  std::vector<ListFormatJob> jobs;
+  for (auto const& job : jobs_response) {
+    if (!job) {
+      return job.status();
+    }
+    jobs.push_back(*job);
+  }
+
+  return jobs;
+}
+
+StatusOr<std::vector<ListFormatJob>> FilterJobs(
+    JobClient& job_client, std::string const& project_id,
+    JobFilter const& job_filter, ::google::cloud::Options const& options) {
+  ListJobsRequest request;
+  request.set_project_id(project_id);
+  request.set_all_users(job_filter.allUsers);
+  request.set_max_creation_time(job_filter.max_creation_time);
+  request.set_min_creation_time(job_filter.min_creation_time);
+  request.set_state_filter(job_filter.state_filter);
+  request.set_parent_job_id(job_filter.parent_job_id);
+  request.set_projection(job_filter.projection);
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);

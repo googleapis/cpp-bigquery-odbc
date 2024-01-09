@@ -19,6 +19,23 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// Filters used for filtering a list of Jobs.
+// returned in Job response.
+struct JobFilter {
+  // Whether to include jobs by all users.
+  bool allUsers;
+  // Minimum point in time for job creation time.
+  std::chrono::system_clock::time_point min_creation_time;
+  // Maximum point in time for job creation time.
+  std::chrono::system_clock::time_point max_creation_time;
+  // Filtering by Job state: DONE, PENDING or RUNNING.
+  ::google::cloud::bigquery_v2_minimal_internal::StateFilter state_filter;
+  // Filters to return the child job of a specific parent.
+  std::string parent_job_id;
+  // Filtering based on specific Job fields: MINIMAL or FULL.
+  ::google::cloud::bigquery_v2_minimal_internal::Projection projection;
+};
+
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,
@@ -29,6 +46,12 @@ StatusOr<
 ListAllJobs(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, ::google::cloud::Options const& options);
+
+StatusOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
+FilterJobs(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+           std::string const& project_id, JobFilter const& job_filter,
+           ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 

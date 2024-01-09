@@ -175,4 +175,113 @@ TEST(ListAllJobs, ListAllJobsFailure) {
   EXPECT_THAT(jobs, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
 }
 
+TEST(FilterJobs, FilterZeroJobsSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  JobFilter job_filter;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(job_filter.allUsers, request.all_users());
+    EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
+    EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
+    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
+    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    return mocks::MakeStreamRange<ListFormatJob>({});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      FilterJobs(job_client, project_id, job_filter, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(0, (*jobs).size());
+}
+
+TEST(FilterJobs, FilterJobsSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  JobFilter job_filter{.allUsers = true,
+                       .min_creation_time = std::chrono::system_clock::now(),
+                       .max_creation_time = std::chrono::system_clock::now(),
+                       .state_filter = StateFilter::Done(),
+                       .parent_job_id = "parent_job_id",
+                       .projection = Projection::Full()};
+  ListFormatJob expected{.id = "job_id"};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(job_filter.allUsers, request.all_users());
+    EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
+    EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
+    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
+    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    return mocks::MakeStreamRange<ListFormatJob>({expected});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      FilterJobs(job_client, project_id, job_filter, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(expected.id, (*jobs)[0].id);
+}
+
+TEST(FilterJobs, FilterJobs_EmptyFilds) {
+  Options options;
+  std::string project_id;
+  JobFilter job_filter;
+  ListFormatJob expected{.id = "job_id"};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(job_filter.allUsers, request.all_users());
+    EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
+    EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
+    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
+    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    return mocks::MakeStreamRange<ListFormatJob>({expected});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      FilterJobs(job_client, project_id, job_filter, options);
+
+  ASSERT_STATUS_OK(jobs);
+  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(expected.id, (*jobs)[0].id);
+}
+
+TEST(FilterJobs, FilterJobs_Failure) {
+  Options options;
+  std::string project_id = "project_id";
+  JobFilter job_filter;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(job_filter.allUsers, request.all_users());
+    EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
+    EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
+    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
+    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    return mocks::MakeStreamRange<ListFormatJob>(
+        {}, Status(StatusCode::kUnauthenticated, "denied"));
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatJob>> jobs =
+      FilterJobs(job_client, project_id, job_filter, options);
+
+  EXPECT_THAT(jobs, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

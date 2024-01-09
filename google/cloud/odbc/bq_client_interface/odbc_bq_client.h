@@ -20,6 +20,7 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
+#include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -89,6 +90,13 @@ class ODBCBQClient {
       std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
   ListAllJobs(std::string const& project_id,
               ::google::cloud::Options const& options);
+
+  // Returns a filtered list of Jobs in a Project, based on the job filters
+  // passed in
+  StatusOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
+  FilterJobs(std::string const& project_id, JobFilter const& job_filter,
+             ::google::cloud::Options const& options);
 
  private:
   ODBCBQClient(
