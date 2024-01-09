@@ -58,4 +58,39 @@ function (define_integration_tests)
   gtest_discover_tests(scheduled_integration_tests)
 endfunction ()
 
+function (odbc_define_tests)
+  if (NOT ODBC_INTEGRATION_TESTING)
+    return()
+  endif ()
+
+  enable_testing()
+
+  add_executable(
+    all_tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/connection_test.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/driver_properties_test.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/descriptor_test.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/statement_test.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/catalog_test.cc
+  )
+
+  target_link_libraries(
+    all_tests
+    odbc
+    google_cloud_odbc_testing
+    GTest::gtest_main
+    GTest::gmock
+  )
+
+  target_include_directories(all_tests PUBLIC ${CMAKE_SOURCE_DIR})
+  target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
+
+  target_compile_features(all_tests PUBLIC cxx_std_17)
+
+  include(GoogleTest)
+  gtest_discover_tests(all_tests)
+endfunction ()
+
+odbc_define_tests()
+
 define_integration_tests()

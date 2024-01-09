@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "testing/statement.h"
-#include "testing/connection.h"
+#include "google/cloud/odbc/testing/statement.h"
+#include "google/cloud/odbc/testing/connection.h"
 
 namespace google::cloud::odbc_tests {
 

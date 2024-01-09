@@ -36,39 +36,6 @@ else()
   find_package(GTest CONFIG REQUIRED)
 endif()
 
-function (odbc_define_tests)
-  if (NOT ODBC_INTEGRATION_TESTING)
-    return()
-  endif ()
-
-  enable_testing()
-
-  add_executable(
-    all_tests
-    tests/connection_test.cc
-    tests/driver_properties_test.cc
-    tests/descriptor_test.cc
-    tests/statement_test.cc
-    tests/catalog_test.cc
-  )
-
-  target_link_libraries(
-    all_tests
-    odbc
-    google_cloud_odbc_testing
-    GTest::gtest_main
-    GTest::gmock
-  )
-
-  target_include_directories(all_tests PUBLIC ./)
-  target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
-
-  target_compile_features(all_tests PUBLIC cxx_std_17)
-
-  include(GoogleTest)
-  gtest_discover_tests(all_tests)
-endfunction ()
-
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
 if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUND)
@@ -93,7 +60,5 @@ include(bq_driver.cmake)
 
 add_library(odbc_bq_driver dummy.cc)
 target_link_libraries(odbc_bq_driver PRIVATE google_cloud_odbc_bq_driver)
-
-odbc_define_tests()
 
 add_subdirectory(integration_tests)
