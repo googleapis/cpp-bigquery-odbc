@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
+#include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/credentials.h"
@@ -71,6 +72,14 @@ ODBCBQClient::FilterProjects(std::vector<std::string> const& project_ids,
                              Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::FilterProjects(
       project_client_, project_ids, options);
+}
+
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job>
+ODBCBQClient::GetJob(std::string const& project_id, std::string const& job_id,
+                     std::string const& location,
+                     ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::GetJob(
+      job_client_, project_id, job_id, location, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

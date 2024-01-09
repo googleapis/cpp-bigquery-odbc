@@ -75,6 +75,15 @@ class ODBCBQClient {
   FilterProjects(std::vector<std::string> const& project_ids,
                  ::google::cloud::Options const& options);
 
+  ///////////////
+  // Job APIs
+  ///////////////
+
+  // Returns detailed info for a specific Job
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
+      std::string const& project_id, std::string const& job_id,
+      std::string const& location, ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
