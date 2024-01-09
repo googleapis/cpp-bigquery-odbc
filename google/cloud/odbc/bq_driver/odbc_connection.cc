@@ -54,6 +54,28 @@ Dsn CreateDsnObj(Section& dsn_section) {
   return dsn;
 }
 
+SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
+  if (in_handle == nullptr) {
+    // TODO(#170): Add error tracing call here
+    // TODO(#158): Add logging here
+    return SQL_ERROR;
+  }
+  // Validate the handle
+  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
+  if (in_handle_wrapped->handle_type != HandleType::kEnvHandle) {
+    // TODO(#158): SQLGetDiagRec should handle this
+    return SQL_INVALID_HANDLE;
+  }
+
+  EnvironmentHandle env_handle =
+      *reinterpret_cast<EnvironmentHandle*>(in_handle_wrapped->handle_ref);
+
+  auto conn_handle = new ConnectionHandle();
+  HandleWrapped wrapped_handle = {HandleType::kConnHandle, conn_handle};
+  *out_conn_handle = &wrapped_handle;
+  return SQL_SUCCESS;
+}
+
 SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLCHAR* in_conn_str,
                                    SQLSMALLINT in_conn_str_len,
@@ -61,7 +83,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
-  if (conn_handle == NULL) {
+  if (conn_handle == nullptr) {
     return SQL_ERROR;
   }
   // Validate the handle

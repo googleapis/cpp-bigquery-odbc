@@ -31,6 +31,8 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H

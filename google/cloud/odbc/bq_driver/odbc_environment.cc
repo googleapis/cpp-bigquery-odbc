@@ -12,8 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_environment.h"
 
 namespace google::cloud::odbc_bq_driver {
+
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::HandleType;
+using google::cloud::odbc_bq_driver_internal::HandleWrapped;
+
+SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
+  auto* env_handle = new EnvironmentHandle();
+  HandleWrapped wrapped_handle = {HandleType::kEnvHandle, env_handle};
+  *out_env_handle = &wrapped_handle;
+  return SQL_SUCCESS;
+}
 
 }  // namespace google::cloud::odbc_bq_driver
