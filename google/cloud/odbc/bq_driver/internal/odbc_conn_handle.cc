@@ -19,22 +19,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 Status ConnectionHandle::Connect(Authentication& auth) {
   Oauth oauth;
-  switch (auth.auth_mechanism) {
-    case AuthMechanism::kUserAuth:
-      return Status(StatusCode::kUnimplemented,
-                    "Currently not implemented user auth");
-    case AuthMechanism::kServiceAuth:
-      oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-      break;
-    case AuthMechanism::kApplicationDefaultAuth:
-      return Status(StatusCode::kUnimplemented,
-                    "Currently not implemented application default auth");
-    case AuthMechanism::kExternalAuth:
-      oauth.auth_mechanism = OauthMechanism::kExternalUser;
-      break;
-    default:
-      return Status(StatusCode::kInvalidArgument, "Invalid auth mechanism");
-  }
+  oauth.auth_mechanism = auth.auth_mechanism;
   oauth.credentials_file_path = auth.key_file_path;
 
   StatusOr<std::shared_ptr<ODBCBQClient>> response =
