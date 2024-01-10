@@ -67,11 +67,11 @@ function (odbc_define_tests)
 
   add_executable(
     all_tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/connection_test.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/driver_properties_test.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/descriptor_test.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/statement_test.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/odbc_driver_tests/catalog_test.cc
+    odbc_driver_tests/connection_test.cc
+    odbc_driver_tests/driver_properties_test.cc
+    odbc_driver_tests/descriptor_test.cc
+    odbc_driver_tests/statement_test.cc
+    odbc_driver_tests/catalog_test.cc
   )
 
   target_link_libraries(
