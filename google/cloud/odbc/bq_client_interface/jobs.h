@@ -23,7 +23,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 // returned in Job response.
 struct JobFilter {
   // Whether to include jobs by all users.
-  bool allUsers;
+  bool allUsers = false;
   // Minimum point in time for job creation time.
   std::chrono::system_clock::time_point min_creation_time;
   // Maximum point in time for job creation time.

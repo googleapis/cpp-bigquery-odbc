@@ -26,7 +26,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 
 StatusOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
                      std::string const& job_id, std::string const& location,
-                     ::google::cloud::Options const& options) {
+                     Options const& options) {
   GetJobRequest get_job_request;
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
@@ -35,9 +35,9 @@ StatusOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   return job_client.GetJob(get_job_request, options);
 }
 
-StatusOr<std::vector<ListFormatJob>> ListAllJobs(
-    JobClient& job_client, std::string const& project_id,
-    ::google::cloud::Options const& options) {
+StatusOr<std::vector<ListFormatJob>> ListAllJobs(JobClient& job_client,
+                                                 std::string const& project_id,
+                                                 Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
 
@@ -55,9 +55,10 @@ StatusOr<std::vector<ListFormatJob>> ListAllJobs(
   return jobs;
 }
 
-StatusOr<std::vector<ListFormatJob>> FilterJobs(
-    JobClient& job_client, std::string const& project_id,
-    JobFilter const& job_filter, ::google::cloud::Options const& options) {
+StatusOr<std::vector<ListFormatJob>> FilterJobs(JobClient& job_client,
+                                                std::string const& project_id,
+                                                JobFilter const& job_filter,
+                                                Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
   request.set_all_users(job_filter.allUsers);
