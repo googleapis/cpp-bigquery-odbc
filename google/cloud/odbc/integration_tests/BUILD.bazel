@@ -27,4 +27,4 @@ licenses(["notice"])  # Apache 2.0
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_googletest//:gtest_main",
     ],
-) for api_test in glob(["apis/*.cc"])]
+) for api_test in glob(["bq_apis/*.cc"])]

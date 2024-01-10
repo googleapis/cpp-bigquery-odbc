@@ -28,7 +28,7 @@ function (define_integration_tests)
   file(
       GLOB client_library_tests_cc
       RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-      "apis/*.cc"
+      "bq_apis/*.cc"
   )
   add_executable(
       scheduled_integration_tests
