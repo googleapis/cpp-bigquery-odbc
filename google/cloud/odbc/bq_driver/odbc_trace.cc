@@ -93,7 +93,7 @@ void TraceFunctionEntry_SQLDriverConnect(
   }
 }
 
-void TraceFunctionSQLDriverConnect_Exit(SQLRETURN ret_code,
+void TraceFunctionExit_SQLDriverConnect(SQLRETURN ret_code,
                                         TraceOptions& opts) {
   ExitInternal("SQLDriverConnect_Exit", ret_code, opts);
 }
@@ -105,7 +105,7 @@ void TraceFunctionEntry_SQLDriverConnectW(
     SQLSMALLINT* out_conn_str_len, SQLUSMALLINT driver_completion,
     TraceOptions& opts) {}
 
-void TraceFunctionSQLDriverConnect_ExitW(SQLRETURN ret_code,
+void TraceFunctionExit_SQLDriverConnectW(SQLRETURN ret_code,
                                          TraceOptions& opts) {
   ExitInternal("SQLDriverConnectW_Exit", ret_code, opts);
 }

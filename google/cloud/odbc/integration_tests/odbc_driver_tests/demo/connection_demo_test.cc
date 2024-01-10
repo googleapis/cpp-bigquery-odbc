@@ -1,0 +1,63 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include <gtest/gtest.h>
+#include <iostream>
+
+namespace google::cloud::odbc_tests {
+
+HENV henv = SQL_NULL_HANDLE;
+HDBC hdbc = SQL_NULL_HANDLE;
+
+// Helper functions for this test only.
+namespace {
+SQLSMALLINT NUMTCHAR(SQLTCHAR x) { return (sizeof(x) / sizeof(SQLTCHAR)); }
+}  // namespace
+
+TEST(ConnectionDemoTest, SQLDriverConnect) {
+  short buf_len;
+  std::string in_conn_str =
+      "Driver=Google BigQuery Driver;"
+      "Description=Google Driver For BigQuery;"
+      "OAuthMechanism=0;"
+      "Email=<TODO>;"        // This needs to be a real value that can actually
+                             // connect to the datasource.
+      "KeyFilePath=<TODO>;"  // This needs to be a real value that can actually
+                             // connect to the datasource.
+      "Catalog=bigquery-devtools-drivers";
+  short in_conn_str_len = strlen(in_conn_str.c_str());
+  SQLTCHAR out_conn_str[4096];
+  SQLSMALLINT out_conn_str_buf_len = (sizeof(out_conn_str) / sizeof(SQLTCHAR));
+  SQLRETURN rc = SQL_SUCCESS;
+
+  // 1) Allocate the environment handle.
+  std::cout << "Allocating environment handle..." << std::endl;
+  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &henv), SQL_SUCCESS);
+  std::cout << "Successfully allocated environment handle" << std::endl;
+  // 2) Allocate the connection handle.
+  std::cout << "Allocating connection handle..." << std::endl;
+  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc), SQL_SUCCESS);
+  std::cout << "Successfully allocated connection handle" << std::endl;
+  // 3) Connect to the data source.
+  std::cout << "Connecting to the data source" << std::endl;
+  // Uncomment after Email and KeyFilePath are known.
+  // rc = SQLDriverConnect(hdbc, 0, (SQLCHAR*)in_conn_str.c_str(), SQL_NTS,
+  //                            (SQLCHAR*)out_conn_str, out_conn_str_buf_len,
+  //                            &buf_len, SQL_DRIVER_COMPLETE);
+  EXPECT_EQ(rc, SQL_SUCCESS);
+  std::cout << "Successfully connected to the data source!" << std::endl;
+}
+
+}  // namespace google::cloud::odbc_tests

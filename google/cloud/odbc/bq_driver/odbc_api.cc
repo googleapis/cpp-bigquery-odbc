@@ -83,10 +83,13 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
     case SQL_HANDLE_ENV: {
       // Call to Acquire mutex for environment handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+      TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                        *(*trace_opts_console));
 
-      return google::cloud::odbc_bq_driver::SQLAllocEnvHandle(outputHandle);
+      rc = google::cloud::odbc_bq_driver::SQLAllocEnvHandle(outputHandle);
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      TraceFunctionExit_SQLAllocHandle(rc, *(*trace_opts_console));
       // Call to Release mutex for environment handle in odbc_lock.h.
       break;
     }
@@ -96,8 +99,8 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                         *(*trace_opts_console));
 
-      return google::cloud::odbc_bq_driver::SQLAllocConnHandle(inputHandle,
-                                                               outputHandle);
+      rc = google::cloud::odbc_bq_driver::SQLAllocConnHandle(inputHandle,
+                                                             outputHandle);
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       TraceFunctionExit_SQLAllocHandle(rc, *(*trace_opts_console));
