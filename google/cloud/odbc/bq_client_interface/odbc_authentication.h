@@ -15,8 +15,8 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 
-#include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/credentials.h"
+#include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include "absl/strings/string_view.h"
 

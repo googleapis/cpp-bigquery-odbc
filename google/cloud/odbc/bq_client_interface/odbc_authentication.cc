@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
-#include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
+#include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include <fstream>
 
