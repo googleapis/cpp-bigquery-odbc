@@ -15,7 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
 
-#include <absl/strings/string_view.h>
+#include "absl/strings/string_view.h"
 
 namespace google::cloud::odbc_integration_tests_testing_util {
 
