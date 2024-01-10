@@ -33,6 +33,8 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle);
+
 SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLCHAR* in_conn_str,
                                    SQLSMALLINT in_conn_str_len,
