@@ -51,10 +51,9 @@ TEST(ConnectionDemoTest, SQLDriverConnect) {
   std::cout << "Successfully allocated connection handle" << std::endl;
   // 3) Connect to the data source.
   std::cout << "Connecting to the data source" << std::endl;
-  // Uncomment after Email and KeyFilePath are known.
-  // rc = SQLDriverConnect(hdbc, 0, (SQLCHAR*)in_conn_str.c_str(), SQL_NTS,
-  //                            (SQLCHAR*)out_conn_str, out_conn_str_buf_len,
-  //                            &buf_len, SQL_DRIVER_COMPLETE);
+  rc = SQLDriverConnect(hdbc, 0, (SQLCHAR*)in_conn_str.c_str(), in_conn_str_len,
+                        (SQLCHAR*)out_conn_str, out_conn_str_buf_len, &buf_len,
+                        SQL_DRIVER_COMPLETE);
   EXPECT_EQ(rc, SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl;
 }
