@@ -28,8 +28,14 @@ Status ConnectionHandle::Connect(Authentication& auth) {
     return response.status();
   }
   client_ = response.value();
-  auth_ = auth;
 
+  // Verify the credentials by calling ODBCBQClient::GetOAuth2Token
+  StatusOr<AccessToken> access_token_resp = client_->GetOAuth2Token();
+  if (!access_token_resp.ok()) {
+    return access_token_resp.status();
+  }
+
+  auth_ = auth;
   return Status(StatusCode::kOk, "");
 }
 

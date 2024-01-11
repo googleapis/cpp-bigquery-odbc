@@ -218,8 +218,7 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install
 
-# Install the Cloud SDK and some of the emulators. We use the emulators to run
-# integration tests for the client libraries.
+# Install the Cloud SDK
 COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
 WORKDIR /var/tmp/downloads
 RUN /var/tmp/ci/install-cloud-sdk.sh

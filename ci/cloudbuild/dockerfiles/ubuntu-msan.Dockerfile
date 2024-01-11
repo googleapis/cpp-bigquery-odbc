@@ -205,6 +205,13 @@ RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/relea
     chmod +x /usr/bin/bazelisk && \
     ln -s /usr/bin/bazelisk /usr/bin/bazel
 
+# Install the Cloud SDK
+COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
+WORKDIR /var/tmp/downloads
+RUN /var/tmp/ci/install-cloud-sdk.sh
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
+
 # iODBC Driver Manager
 RUN echo 'Installing iODBC Driver Manager...'
 WORKDIR /var/tmp/iODBC

@@ -17,8 +17,8 @@
 # This bash library has various helper functions for our unit tests.
 
 # Make our include guard clean against set -o nounset.
-test -n "${CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__=0
-if ((CI_CLOUDBUILD_BUILDS_LIB_INTEGRATION_SH__++ != 0)); then
+test -n "${CI_CLOUDBUILD_BUILDS_LIB_UNIT_TESTS_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_UNIT_TESTS_SH__=0
+if ((CI_CLOUDBUILD_BUILDS_LIB_UNIT_TESTS_SH__++ != 0)); then
   return 0
 fi # include guard
 

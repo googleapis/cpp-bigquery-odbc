@@ -18,16 +18,13 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 
 TEST(ConnectionHandle, Connect) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
   std::string credentials_file_path =
-      test_data_path + "service_account_auth_keys.json";
-
-  Authentication auth = {OauthMechanism::kServiceAccount, "",
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
@@ -41,7 +38,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
           .value_or("");
   std::string credentials_file_path = test_data_path + "random_file.json";
 
-  Authentication auth = {OauthMechanism::kServiceAccount, "",
+  Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
@@ -56,8 +53,7 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
   std::string credentials_file_path =
       test_data_path + "service_account_auth_keys.json";
 
-  Authentication auth = {OauthMechanism::kExternalUser, "",
-                         credentials_file_path};
+  Authentication auth = {OauthMechanism::kExternalUser, credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -72,8 +68,7 @@ TEST(ConnectionHandle, ConnectWithInvalidAuth) {
   std::string credentials_file_path =
       test_data_path + "service_account_auth_keys.json";
 
-  Authentication auth = {static_cast<OauthMechanism>(7), "",
-                         credentials_file_path};
+  Authentication auth = {static_cast<OauthMechanism>(7), credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);

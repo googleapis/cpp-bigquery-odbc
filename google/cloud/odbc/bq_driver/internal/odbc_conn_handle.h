@@ -27,8 +27,8 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
   OauthMechanism auth_mechanism;
-  std::string email;
   std::string key_file_path;
+  std::string email;
   // NOTE: This should be removed if we decide that we will not support refresh
   // tokens
   std::string refresh_token;

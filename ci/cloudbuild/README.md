@@ -144,7 +144,7 @@ We initially created the pool with the following command:
 ```
 $ gcloud beta builds worker-pools create \
   --region=us-east1 \
-  --project=cloud-cpp-testing-resources \
+  --project=bigquery-devtools-drivers \
   --worker-machine-type=e2-standard-16 \
   --worker-disk-size=100 \
   cpp-bigquery-odbc-pool
