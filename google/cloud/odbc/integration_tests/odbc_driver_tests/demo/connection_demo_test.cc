@@ -25,15 +25,7 @@ SQLSMALLINT NUMTCHAR(SQLTCHAR x) { return (sizeof(x) / sizeof(SQLTCHAR)); }
 
 TEST(ConnectionDemoTest, SQLDriverConnect) {
   short buf_len;
-  std::string in_conn_str =
-      "Driver=Google BigQuery Driver;"
-      "Description=Google Driver For BigQuery;"
-      "OAuthMechanism=0;"
-      "Email=<TODO>;"        // This needs to be a real value that can actually
-                             // connect to the datasource.
-      "KeyFilePath=<TODO>;"  // This needs to be a real value that can actually
-                             // connect to the datasource.
-      "Catalog=bigquery-devtools-drivers";
+  std::string in_conn_str = "DSN=SampleDSN";
   short in_conn_str_len = strlen(in_conn_str.c_str());
   SQLTCHAR out_conn_str[4096];
   SQLSMALLINT out_conn_str_buf_len = (sizeof(out_conn_str) / sizeof(SQLTCHAR));
