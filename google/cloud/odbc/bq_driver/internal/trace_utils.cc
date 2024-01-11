@@ -24,9 +24,8 @@ std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
-namespace {
-Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
-                       std::shared_ptr<Sections> const& config_sections) {
+Status TraceOptions::LoadFromConfigs(
+    std::shared_ptr<Sections> const& config_sections) {
   if (!config_sections) {
     return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
   }
@@ -51,16 +50,16 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
     }
   }
   if (logging_enabled) {
-    opts->log_level = log_level;
-    opts->logging_enabled = logging_enabled;
+    options_file_->log_level = log_level;
+    options_file_->logging_enabled = logging_enabled;
     if (!log_file.empty()) {
       // We are not creating a default log file. If log file is not specified
       // then we will log to console.
-      if (!opts->trace_file.is_open()) {
-        opts->trace_file.open(log_file,
-                              std::ofstream::out | std::ofstream::app);
+      if (!options_file_->trace_file.is_open()) {
+        options_file_->trace_file.open(log_file,
+                                       std::ofstream::out | std::ofstream::app);
       }
-      if (!opts->trace_file.is_open()) {
+      if (!options_file_->trace_file.is_open()) {
         return Status(StatusCode::kInternal,
                       "Can't open  trace file: " + log_file);
       }
@@ -69,7 +68,6 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
 
   return Status(StatusCode::kOk, "");
 }
-}  // namespace
 
 StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsConsole(
     bool logging_enabled, int log_level) {
@@ -96,7 +94,7 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
     options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  auto status = LoadFromConfigs(options_file_, *configs);
+  auto status = LoadFromConfigs(*configs);
   if (!status.ok()) {
     return std::move(status);
   }
@@ -116,7 +114,7 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
     options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  auto status = LoadFromConfigs(options_file_, config_sections);
+  auto status = LoadFromConfigs(config_sections);
   if (!status.ok()) {
     return std::move(status);
   }
