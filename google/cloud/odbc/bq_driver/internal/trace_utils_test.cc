@@ -22,17 +22,17 @@ using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
 // Common Test Values.
-Section const kOdbcSection1{{"LogLevel", "1"}, {"LogFile", "/tmp/odbc.log"}};
-Section const kOdbcSection2{{"LogLevel", "0"}, {"LogFile", "/tmp/odbc.log"}};
-Section const kOdbcSection3{{"LogFile", "/tmp/odbc.log"}};
-Section const kOdbcSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
-Section const kOdbcSection5{{"LogLevel", "1"}};
+Section const kDriverSection1{{"LogLevel", "1"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kDriverSection2{{"LogLevel", "0"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kDriverSection3{{"LogFile", "/tmp/odbc.log"}};
+Section const kDriverSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kDriverSection5{{"LogLevel", "1"}};
 
-Sections const kConfigSections1{{"Driver", kOdbcSection1}};
-Sections const kConfigSections2{{"Driver", kOdbcSection2}};
-Sections const kConfigSections3{{"Driver", kOdbcSection3}};
-Sections const kConfigSections4{{"Driver", kOdbcSection4}};
-Sections const kConfigSections5{{"Driver", kOdbcSection5}};
+Sections const kConfigSections1{{"Driver", kDriverSection1}};
+Sections const kConfigSections2{{"Driver", kDriverSection2}};
+Sections const kConfigSections3{{"Driver", kDriverSection3}};
+Sections const kConfigSections4{{"Driver", kDriverSection4}};
+Sections const kConfigSections5{{"Driver", kDriverSection5}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
     TraceOptions::CreateTraceOptionsConsole(true, 0).value();
@@ -81,6 +81,8 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(4, (*test_opts_file)->log_level);
+
+  (*test_opts_file)->trace_file.close();
 }
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
@@ -99,7 +101,7 @@ TEST(TraceLogging, TraceOptionsFromConfigEmpty) {
   auto opts = TraceOptions::CreateTraceOptionsFile(configs);
 
   EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument,
-                             HasSubstr("Invalid ODBC Config")));
+                             HasSubstr("Invalid ODBC Driver Config")));
 }
 
 TEST(TraceLoggingConsole, BasicODBCTypes) {

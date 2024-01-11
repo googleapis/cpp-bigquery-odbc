@@ -38,13 +38,12 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
   }
 
   std::string log_file;
+  int log_level = 0;
   bool logging_enabled = false;
-  opts->log_level = 0;
-  opts->logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == "LogLevel") {
-      opts->log_level = std::stoi(s.second);
-      if (opts->log_level > 0) {
+      log_level = std::stoi(s.second);
+      if (log_level > 0) {
         logging_enabled = true;
       }
     } else if (s.first == "LogFile") {
@@ -52,7 +51,8 @@ Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
     }
   }
   if (logging_enabled) {
-    opts->logging_enabled = true;
+    opts->log_level = log_level;
+    opts->logging_enabled = logging_enabled;
     if (!log_file.empty()) {
       // We are not creating a default log file. If log file is not specified
       // then we will log to console.
@@ -107,7 +107,7 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
 StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
     std::shared_ptr<Sections> const& config_sections) {
   if (config_sections == nullptr) {
-    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
+    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
   }
 
   std::lock_guard<std::mutex> lk(mu_);
