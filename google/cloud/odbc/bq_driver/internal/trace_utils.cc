@@ -28,38 +28,42 @@ namespace {
 Status LoadFromConfigs(std::shared_ptr<TraceOptions>& opts,
                        std::shared_ptr<Sections> const& config_sections) {
   if (!config_sections) {
-    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Config");
+    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
   }
 
   Section trace_sections;
-  auto const odbc_section = config_sections->find("ODBC");
+  auto const odbc_section = config_sections->find("Driver");
   if (odbc_section != config_sections->end()) {
     trace_sections = odbc_section->second;
   }
 
-  std::string trace_file;
-  bool tracing_enabled = false;
+  std::string log_file;
+  bool logging_enabled = false;
   opts->log_level = 0;
   opts->logging_enabled = false;
   for (auto const& s : trace_sections) {
-    if (s.first == "Trace") {
-      int val = std::stoi(s.second);
-      if (val == 1) {
-        tracing_enabled = true;
+    if (s.first == "LogLevel") {
+      opts->log_level = std::stoi(s.second);
+      if (opts->log_level > 0) {
+        logging_enabled = true;
       }
-    } else if (s.first == "TraceFile") {
-      trace_file = s.second;
+    } else if (s.first == "LogFile") {
+      log_file = s.second;
     }
   }
-  if (tracing_enabled && !trace_file.empty()) {
+  if (logging_enabled) {
     opts->logging_enabled = true;
-    if (!opts->trace_file.is_open()) {
-      opts->trace_file.open(trace_file,
-                            std::ofstream::out | std::ofstream::app);
-    }
-    if (!opts->trace_file.is_open()) {
-      return Status(StatusCode::kInternal,
-                    "Can't open  trace file: " + trace_file);
+    if (!log_file.empty()) {
+      // We are not creating a default log file. If log file is not specified
+      // then we will log to console.
+      if (!opts->trace_file.is_open()) {
+        opts->trace_file.open(log_file,
+                              std::ofstream::out | std::ofstream::app);
+      }
+      if (!opts->trace_file.is_open()) {
+        return Status(StatusCode::kInternal,
+                      "Can't open  trace file: " + log_file);
+      }
     }
   }
 

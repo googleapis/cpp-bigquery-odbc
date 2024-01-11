@@ -22,15 +22,17 @@ using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
 // Common Test Values.
-Section const kOdbcSection1{{"Trace", "1"}, {"TraceFile", "/tmp/odbc.log"}};
-Section const kOdbcSection2{{"Trace", "0"}, {"TraceFile", "/tmp/odbc.log"}};
-Section const kOdbcSection3{{"TraceFile", "/tmp/odbc.log"}};
-Section const kOdbcSection4{{"Trace", "4"}, {"TraceFile", "/tmp/odbc.log"}};
+Section const kOdbcSection1{{"LogLevel", "1"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kOdbcSection2{{"LogLevel", "0"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kOdbcSection3{{"LogFile", "/tmp/odbc.log"}};
+Section const kOdbcSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kOdbcSection5{{"LogLevel", "1"}};
 
-Sections const kConfigSections1{{"ODBC", kOdbcSection1}};
-Sections const kConfigSections2{{"ODBC", kOdbcSection2}};
-Sections const kConfigSections3{{"ODBC", kOdbcSection3}};
-Sections const kConfigSections4{{"ODBC", kOdbcSection4}};
+Sections const kConfigSections1{{"Driver", kOdbcSection1}};
+Sections const kConfigSections2{{"Driver", kOdbcSection2}};
+Sections const kConfigSections3{{"Driver", kOdbcSection3}};
+Sections const kConfigSections4{{"Driver", kOdbcSection4}};
+Sections const kConfigSections5{{"Driver", kOdbcSection5}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
     TraceOptions::CreateTraceOptionsConsole(true, 0).value();
@@ -43,7 +45,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
+  EXPECT_EQ(1, (*test_opts_file)->log_level);
 
   (*test_opts_file)->trace_file.close();
 }
@@ -76,9 +78,20 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
       TraceOptions::CreateTraceOptionsFile(config_sections);
   ASSERT_STATUS_OK(test_opts_file);
 
-  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(4, (*test_opts_file)->log_level);
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections5);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_OK(test_opts_file);
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
+  EXPECT_EQ(1, (*test_opts_file)->log_level);
 }
 
 TEST(TraceLogging, TraceOptionsFromConfigEmpty) {
