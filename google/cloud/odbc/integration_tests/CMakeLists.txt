@@ -92,7 +92,7 @@ function (odbc_define_tests)
 endfunction ()
 
 function (odbc_define_demo_tests)
-  if (NOT ODBC_INTEGRATION_TESTING)
+  if (NOT ODBC_DEMO_TESTING)
     return()
   endif ()
 

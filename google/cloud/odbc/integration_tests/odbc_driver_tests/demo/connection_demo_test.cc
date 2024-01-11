@@ -18,9 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-HENV henv = SQL_NULL_HANDLE;
-HDBC hdbc = SQL_NULL_HANDLE;
-
 // Helper functions for this test only.
 namespace {
 SQLSMALLINT NUMTCHAR(SQLTCHAR x) { return (sizeof(x) / sizeof(SQLTCHAR)); }
@@ -40,6 +37,8 @@ TEST(ConnectionDemoTest, SQLDriverConnect) {
   short in_conn_str_len = strlen(in_conn_str.c_str());
   SQLTCHAR out_conn_str[4096];
   SQLSMALLINT out_conn_str_buf_len = (sizeof(out_conn_str) / sizeof(SQLTCHAR));
+  HENV henv;
+  HDBC hdbc;
   SQLRETURN rc = SQL_SUCCESS;
 
   // 1) Allocate the environment handle.
