@@ -24,9 +24,31 @@ std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
-Status TraceOptions::LoadFromConfigs(
+StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsConsole(
+    bool logging_enabled, int log_level) {
+  std::lock_guard<std::mutex> lk(mu_);
+  if (options_console_ == nullptr) {
+    // Cannot use std::make_shared because constructor is protected.
+    options_console_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+
+  options_console_->log_level = log_level;
+  options_console_->logging_enabled = logging_enabled;
+
+  return options_console_;
+}
+
+StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
+    std::string const& file_path) {
+  auto configs = ParseConfig(file_path);
+  if (!configs.ok()) return std::move(configs).status();
+
+  return CreateTraceOptionsFile(*configs);
+}
+
+StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
     std::shared_ptr<Sections> const& config_sections) {
-  if (!config_sections) {
+  if (config_sections == nullptr) {
     return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
   }
 
@@ -49,74 +71,27 @@ Status TraceOptions::LoadFromConfigs(
       log_file = s.second;
     }
   }
-  if (logging_enabled) {
-    options_file_->log_level = log_level;
-    options_file_->logging_enabled = logging_enabled;
-    if (!log_file.empty()) {
-      // We are not creating a default log file. If log file is not specified
-      // then we will log to console.
-      if (!options_file_->trace_file.is_open()) {
-        options_file_->trace_file.open(log_file,
-                                       std::ofstream::out | std::ofstream::app);
-      }
-      if (!options_file_->trace_file.is_open()) {
-        return Status(StatusCode::kInternal,
-                      "Can't open  trace file: " + log_file);
-      }
+
+  std::lock_guard<std::mutex> lk(mu_);
+  if (options_file_ == nullptr) {
+    // Cannot use std::make_shared because constructor is protected.
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+
+  options_file_->log_level = log_level;
+  options_file_->logging_enabled = logging_enabled;
+
+  if (logging_enabled && !log_file.empty()) {
+    // We are not creating a default log file. If log file is not specified
+    // then we will log to console.
+    if (!options_file_->trace_file.is_open()) {
+      options_file_->trace_file.open(log_file,
+                                     std::ofstream::out | std::ofstream::app);
     }
-  }
-
-  return Status(StatusCode::kOk, "");
-}
-
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsConsole(
-    bool logging_enabled, int log_level) {
-  std::lock_guard<std::mutex> lk(mu_);
-  if (options_console_ == nullptr) {
-    // Cannot use std::make_shared because constructor is protected.
-    options_console_ = std::shared_ptr<TraceOptions>(new TraceOptions());
-  }
-
-  options_console_->log_level = log_level;
-  options_console_->logging_enabled = logging_enabled;
-
-  return options_console_;
-}
-
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
-    std::string const& file_path) {
-  auto configs = ParseConfig(file_path);
-  if (!configs.ok()) return std::move(configs).status();
-
-  std::lock_guard<std::mutex> lk(mu_);
-  if (options_file_ == nullptr) {
-    // Cannot use std::make_shared because constructor is protected.
-    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
-  }
-
-  auto status = LoadFromConfigs(*configs);
-  if (!status.ok()) {
-    return std::move(status);
-  }
-
-  return options_file_;
-}
-
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
-    std::shared_ptr<Sections> const& config_sections) {
-  if (config_sections == nullptr) {
-    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
-  }
-
-  std::lock_guard<std::mutex> lk(mu_);
-  if (options_file_ == nullptr) {
-    // Cannot use std::make_shared because constructor is protected.
-    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
-  }
-
-  auto status = LoadFromConfigs(config_sections);
-  if (!status.ok()) {
-    return std::move(status);
+    if (!options_file_->trace_file.is_open()) {
+      return Status(StatusCode::kInternal,
+                    "Can't open  trace file: " + log_file);
+    }
   }
 
   return options_file_;
