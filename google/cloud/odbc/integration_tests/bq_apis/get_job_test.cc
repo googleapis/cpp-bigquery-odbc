@@ -198,8 +198,6 @@ TEST(GetJob, ProjectNotExist) {
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
 
   GetJobRequest get_job_request;
   get_job_request.set_project_id(std::string(kNameForNonExistingProject));
@@ -209,6 +207,38 @@ TEST(GetJob, ProjectNotExist) {
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
+}
+
+TEST(GetJob, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+
+  GetJobRequest get_job_request;
+  get_job_request.set_project_id("");
+  get_job_request.set_job_id("Not_existing_job");
+
+  auto get_job_response = job_client.GetJob(get_job_request);
+
+  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kInvalidArgument,
+                                         HasSubstr("Project Id is empty")));
+}
+
+TEST(GetJob, JobIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+
+  GetJobRequest get_job_request;
+  get_job_request.set_project_id(project_id);
+  get_job_request.set_job_id("");
+
+  auto get_job_response = job_client.GetJob(get_job_request);
+
+  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kInvalidArgument,
+                                         HasSubstr("Job Id is empty")));
 }
 
 }  // namespace google::cloud::odbc_integration_tests_apis

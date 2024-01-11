@@ -27,8 +27,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::MockBigQueryJobConnection;
-using ::google::cloud::bigquery_v2_minimal_internal::Projection;
-using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
 
@@ -186,9 +184,10 @@ TEST(FilterJobs, FilterZeroJobsSuccess) {
     EXPECT_EQ(job_filter.allUsers, request.all_users());
     EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
     EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
-    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(convert(job_filter.state_filter).value,
+              request.state_filter().value);
     EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
-    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    EXPECT_EQ(convert(job_filter.projection).value, request.projection().value);
     return mocks::MakeStreamRange<ListFormatJob>({});
   });
   JobClient job_client(std::move(mock));
@@ -206,9 +205,9 @@ TEST(FilterJobs, FilterJobsSuccess) {
   JobFilter job_filter{.allUsers = true,
                        .min_creation_time = std::chrono::system_clock::now(),
                        .max_creation_time = std::chrono::system_clock::now(),
-                       .state_filter = StateFilter::Done(),
+                       .state_filter = StateFilter::kDone,
                        .parent_job_id = "parent_job_id",
-                       .projection = Projection::Full()};
+                       .projection = Projection::kFull};
   ListFormatJob expected{.id = "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
@@ -217,9 +216,10 @@ TEST(FilterJobs, FilterJobsSuccess) {
     EXPECT_EQ(job_filter.allUsers, request.all_users());
     EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
     EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
-    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(convert(job_filter.state_filter).value,
+              request.state_filter().value);
     EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
-    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    EXPECT_EQ(convert(job_filter.projection).value, request.projection().value);
     return mocks::MakeStreamRange<ListFormatJob>({expected});
   });
   JobClient job_client(std::move(mock));
@@ -244,9 +244,10 @@ TEST(FilterJobs, FilterJobs_EmptyFilds) {
     EXPECT_EQ(job_filter.allUsers, request.all_users());
     EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
     EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
-    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(convert(job_filter.state_filter).value,
+              request.state_filter().value);
     EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
-    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    EXPECT_EQ(convert(job_filter.projection).value, request.projection().value);
     return mocks::MakeStreamRange<ListFormatJob>({expected});
   });
   JobClient job_client(std::move(mock));
@@ -270,9 +271,10 @@ TEST(FilterJobs, FilterJobs_Failure) {
     EXPECT_EQ(job_filter.allUsers, request.all_users());
     EXPECT_EQ(job_filter.min_creation_time, request.min_creation_time());
     EXPECT_EQ(job_filter.max_creation_time, request.max_creation_time());
-    EXPECT_EQ(job_filter.state_filter.value, request.state_filter().value);
+    EXPECT_EQ(convert(job_filter.state_filter).value,
+              request.state_filter().value);
     EXPECT_EQ(job_filter.parent_job_id, request.parent_job_id());
-    EXPECT_EQ(job_filter.projection.value, request.projection().value);
+    EXPECT_EQ(convert(job_filter.projection).value, request.projection().value);
     return mocks::MakeStreamRange<ListFormatJob>(
         {}, Status(StatusCode::kUnauthenticated, "denied"));
   });

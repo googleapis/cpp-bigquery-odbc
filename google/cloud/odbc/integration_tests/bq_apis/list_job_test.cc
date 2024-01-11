@@ -160,6 +160,70 @@ TEST(ListJobs, ProjectNotExist) {
   }
 }
 
+TEST(ListJobs, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+
+  ListJobsRequest request;
+  request.set_project_id("");
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    EXPECT_THAT(job, StatusIs(StatusCode::kInvalidArgument,
+                              HasSubstr("Project Id is empty")));
+  }
+}
+
+TEST(ListJobs, FilterStateIsWrong) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
+
+  ListJobsRequest request;
+  request.set_project_id(*project_id);
+  StateFilter state_filter;
+  state_filter.value = "not-valid-state";
+  request.set_state_filter(state_filter);
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    EXPECT_THAT(job, StatusIs(StatusCode::kInvalidArgument,
+                              HasSubstr("Invalid value at 'state_filter'")));
+  }
+}
+
+TEST(ListJobs, FilterProjectionIsWrong) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
+
+  ListJobsRequest request;
+  request.set_project_id(*project_id);
+  Projection projection;
+  projection.value = "not-valid-projection";
+  request.set_projection(projection);
+
+  auto range = job_client.ListJobs(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& job : range) {
+    EXPECT_THAT(job, StatusIs(StatusCode::kInvalidArgument,
+                              HasSubstr("Invalid value at 'projection'")));
+  }
+}
+
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();
