@@ -161,8 +161,6 @@ TEST(ListJobs, ProjectNotExist) {
 }
 
 TEST(ListJobs, ProjectIdIsEmpty) {
-      setenv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY", "/usr/local/google/home/meilakh/client_id_auth_keys.json", 1);
-//      setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT", "bigquery-devtools-drivers", 1);
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
@@ -177,7 +175,7 @@ TEST(ListJobs, ProjectIdIsEmpty) {
   for (auto const& job : range) {
     // BQ API error
     EXPECT_THAT(job, StatusIs(StatusCode::kNotFound,
-                                           HasSubstr("Request couldn't be served")));
+                              HasSubstr("Request couldn't be served")));
   }
 }
 
