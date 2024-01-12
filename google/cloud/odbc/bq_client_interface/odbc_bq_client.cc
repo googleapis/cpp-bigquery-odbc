@@ -79,9 +79,17 @@ ODBCBQClient::FilterProjects(std::vector<std::string> const& project_ids,
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Dataset>
 ODBCBQClient::GetDataset(std::string const& project_id,
                          std::string const& dataset_id,
-                         ::google::cloud::Options const& options) {
+                         Options const& options) {
   return google::cloud::odbc_bigquery_client_interface::GetDataset(
       dataset_client_, project_id, dataset_id, options);
+}
+
+StatusOr<std::vector<
+    ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
+ODBCBQClient::ListAllDatasets(std::string const& project_id,
+                              Options const& options) {
+  return google::cloud::odbc_bigquery_client_interface::ListAllDatasets(
+      dataset_client_, project_id, options);
 }
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table>

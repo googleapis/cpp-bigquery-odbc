@@ -134,6 +134,44 @@ TEST(GetDataset, ProjectNotExist) {
                        HasSubstr("Project " + project_id + " is not found")));
 }
 
+TEST(GetDataset, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(dataset_id);
+
+  GetDatasetRequest request;
+  request.set_project_id("");
+  request.set_dataset_id(*dataset_id);
+
+  auto dataset = dataset_client.GetDataset(request);
+
+  // BQ API error
+  EXPECT_THAT(dataset, StatusIs(StatusCode::kNotFound,
+                                HasSubstr("Request couldn't be served")));
+}
+
+TEST(GetDataset, DatasetIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  ASSERT_TRUE(project_id);
+
+  GetDatasetRequest request;
+  request.set_project_id(*project_id);
+  request.set_dataset_id("");
+
+  auto dataset = dataset_client.GetDataset(request);
+
+  // BQ API error
+  EXPECT_THAT(dataset, StatusIs(StatusCode::kInternal,
+                                HasSubstr("Not a valid Json Dataset object")));
+}
+
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(GetDataset, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();

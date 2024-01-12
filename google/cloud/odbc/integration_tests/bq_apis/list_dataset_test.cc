@@ -232,6 +232,25 @@ TEST(ListDatasets, ProjectNotExist) {
   }
 }
 
+TEST(ListDatasets, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  ListDatasetsRequest request;
+  request.set_project_id("");
+
+  auto range = dataset_client.ListDatasets(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& dataset : range) {
+    // BQ API error
+    EXPECT_THAT(dataset, StatusIs(StatusCode::kNotFound,
+                                  HasSubstr("Request couldn't be served")));
+  }
+}
+
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListDatasets, NoAccessAccountAuth) {
   auto options = CreateNoAccessAccountAuthentication();

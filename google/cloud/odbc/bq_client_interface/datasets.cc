@@ -20,6 +20,8 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 
 StatusOr<Dataset> GetDataset(DatasetClient& dataset_client,
                              std::string const& project_id,
@@ -30,6 +32,26 @@ StatusOr<Dataset> GetDataset(DatasetClient& dataset_client,
   request.set_dataset_id(dataset_id);
 
   return dataset_client.GetDataset(request, options);
+}
+
+StatusOr<std::vector<ListFormatDataset>> ListAllDatasets(
+    DatasetClient& dataset_client, std::string const& project_id,
+    Options const& options) {
+  ListDatasetsRequest request;
+  request.set_project_id(project_id);
+
+  StreamRange<ListFormatDataset> datasets_response =
+      dataset_client.ListDatasets(request, options);
+
+  std::vector<ListFormatDataset> datasets;
+  for (auto const& dataset : datasets_response) {
+    if (!dataset) {
+      return dataset.status();
+    }
+    datasets.push_back(*dataset);
+  }
+
+  return datasets;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

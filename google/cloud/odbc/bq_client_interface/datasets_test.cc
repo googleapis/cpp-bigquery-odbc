@@ -15,7 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_dataset_connection.h"
-// #include "google/cloud/mocks/mock_stream_range.h"
+#include "google/cloud/mocks/mock_stream_range.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -23,6 +23,8 @@ namespace google::cloud::odbc_bigquery_client_interface {
 using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using ::google::cloud::bigquery_v2_minimal_internal::MockDatasetConnection;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
@@ -90,6 +92,88 @@ TEST(GetDataset, GetDatasetFailure) {
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
   EXPECT_THAT(dataset, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
+TEST(ListAllDatasets, ListZeroDatasetsSuccess) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>({});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets =
+      ListAllDatasets(mocked_dataset_client, project_id, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(0, (*datasets).size());
+}
+
+TEST(ListAllDatasets, ListAllDatasetsSuccess) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected{.id = "dataset_id"};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>({expected});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets =
+      ListAllDatasets(mocked_dataset_client, project_id, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(expected.id, (*datasets)[0].id);
+}
+
+TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyStrings) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id;
+  ListFormatDataset expected{.id = "dataset_id"};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>({expected});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets =
+      ListAllDatasets(mocked_dataset_client, project_id, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(expected.id, (*datasets)[0].id);
+}
+
+TEST(ListAllDatasets, ListAllDatasetsFailure) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected{.id = "dataset_id"};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {}, Status(StatusCode::kUnauthenticated, "denied"));
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets =
+      ListAllDatasets(mocked_dataset_client, project_id, options);
+
+  EXPECT_THAT(datasets,
+              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
