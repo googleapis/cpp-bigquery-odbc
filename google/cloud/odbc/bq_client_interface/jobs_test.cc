@@ -78,7 +78,7 @@ TEST(GetJob, EmptyStrings) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, GetJobFailure) {
+TEST(GetJob, UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
