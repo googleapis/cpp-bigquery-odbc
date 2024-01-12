@@ -22,7 +22,6 @@ odbc_bq_client_interface_hdrs = [
     "odbc_authentication.h",
     "odbc_bq_client.h",
     "setenv.h",
-    "job_utils.h",
 ]
 
 odbc_bq_client_interface_srcs = [
@@ -31,5 +30,4 @@ odbc_bq_client_interface_srcs = [
     "odbc_authentication.cc",
     "odbc_bq_client.cc",
     "setenv.cc",
-    "job_utils.cc",
 ]
