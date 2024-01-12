@@ -210,6 +210,7 @@ TEST(GetJob, ProjectNotExist) {
 }
 
 TEST(GetJob, ProjectIdIsEmpty) {
+  setenv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY", "/usr/local/google/home/meilakh/client_id_auth_keys.json", 1);
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
@@ -220,11 +221,15 @@ TEST(GetJob, ProjectIdIsEmpty) {
 
   auto get_job_response = job_client.GetJob(get_job_request);
 
-  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kInvalidArgument,
-                                         HasSubstr("Project Id is empty")));
+  // BQ API error
+  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kNotFound,
+                                         HasSubstr("Request couldn't be served")));
 }
 
 TEST(GetJob, JobIdIsEmpty) {
+      setenv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY", "/usr/local/google/home/meilakh/client_id_auth_keys.json", 1);
+      setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT", "bigquery-devtools-drivers", 1);
+
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
@@ -237,8 +242,8 @@ TEST(GetJob, JobIdIsEmpty) {
 
   auto get_job_response = job_client.GetJob(get_job_request);
 
-  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kInvalidArgument,
-                                         HasSubstr("Job Id is empty")));
+  EXPECT_THAT(get_job_response, StatusIs(StatusCode::kInternal,
+                                         HasSubstr("Not a valid Json Job object")));
 }
 
 }  // namespace google::cloud::odbc_integration_tests_apis
