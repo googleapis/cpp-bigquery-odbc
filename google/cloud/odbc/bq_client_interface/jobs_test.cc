@@ -55,7 +55,7 @@ TEST(GetJob, GetJobSuccess) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, EmptyStrings) {
+TEST(GetJob, UseEmptyStringsForInputParameters) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -137,7 +137,7 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
   EXPECT_EQ(expected.id, (*jobs)[0].id);
 }
 
-TEST(ListAllJobs, ListAllJobs_EmptyStrings) {
+TEST(ListAllJobs, ListAllJobs_EmptyProjectId) {
   Options options;
   std::string project_id;
   ListFormatJob expected{.id = "job_id"};
@@ -157,7 +157,7 @@ TEST(ListAllJobs, ListAllJobs_EmptyStrings) {
   EXPECT_EQ(expected.id, (*jobs)[0].id);
 }
 
-TEST(ListAllJobs, ListAllJobsFailure) {
+TEST(ListAllJobs, UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   auto mock = std::make_shared<MockBigQueryJobConnection>();
@@ -232,7 +232,7 @@ TEST(FilterJobs, FilterJobsSuccess) {
   EXPECT_EQ(expected.id, (*jobs)[0].id);
 }
 
-TEST(FilterJobs, FilterJobs_EmptyFilds) {
+TEST(FilterJobs, FilterJobs_UseEmptyStringsForInputParameters) {
   Options options;
   std::string project_id;
   JobFilter job_filter;
@@ -259,7 +259,7 @@ TEST(FilterJobs, FilterJobs_EmptyFilds) {
   EXPECT_EQ(expected.id, (*jobs)[0].id);
 }
 
-TEST(FilterJobs, FilterJobs_Failure) {
+TEST(FilterJobs, UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   JobFilter job_filter;
