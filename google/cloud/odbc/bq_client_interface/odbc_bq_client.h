@@ -115,6 +115,12 @@ class ODBCBQClient {
   FilterJobs(std::string const& project_id, JobFilter const& job_filter,
              ::google::cloud::Options const& options);
 
+  // Inserts a BQ job for execution
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> InsertJob(
+      std::string const& project_id,
+      ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
+      ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient

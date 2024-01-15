@@ -119,4 +119,13 @@ ODBCBQClient::FilterJobs(std::string const& project_id,
       job_client_, project_id, job_filter, options);
 }
 
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job>
+ODBCBQClient::InsertJob(
+    std::string const& project_id,
+    ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
+    ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::InsertJob(
+      job_client_, project_id, job, options);
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -44,6 +44,11 @@ using google::cloud::odbc_integration_tests_testing_util::
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
+std::vector<std::string> const kKeysToFilter{
+    {"statistics", "status", "destinationTable", "maximumBytesBilled",
+     "defaultDataset", "timePartitioning", "rangePartitioning", "clustering",
+     "keyResultStatement", "systemVariables", "location"}};
+
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(InsertJob, UserAccountAuth) {
   auto options = CreateUserAccountAuthentication();
@@ -72,13 +77,7 @@ TEST(InsertJob, UserAccountAuth) {
   request.set_project_id(*project_id);
   request.set_job(job);
 
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -102,6 +101,13 @@ TEST(InsertJob, UserAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ServiceAccountAuth) {
+  setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT",
+         "bigquery-devtools-drivers", 1);
+  setenv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET", "INTEGRATION_TESTS", 1);
+  setenv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME", "Test_Table", 1);
+  setenv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE", "age", 1);
+  setenv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY",
+         "/usr/local/google/home/meilakh/service_account_auth_keys.json", 1);
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
@@ -127,14 +133,7 @@ TEST(InsertJob, ServiceAccountAuth) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -182,14 +181,7 @@ TEST(InsertJob, ServiceAccountAuthWithClientId) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -232,14 +224,7 @@ TEST(InsertJob, ProjectNotExist) {
   InsertJobRequest request;
   request.set_project_id(std::string(kNameForNonExistingProject));
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -271,14 +256,7 @@ TEST(InsertJob, DatasetNotExist) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -324,14 +302,7 @@ TEST(InsertJob, NoQueryParameters) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -368,14 +339,7 @@ TEST(InsertJob, NoJobConfiguration) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -400,14 +364,7 @@ TEST(InsertJob, NoJobConfigurationQuery) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -439,14 +396,7 @@ TEST(InsertJob, NoAccessAccountAuth) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -480,14 +430,7 @@ TEST(InsertJob, DifferentAccount) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -533,14 +476,7 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   InsertJobRequest request;
   request.set_project_id(*project_id);
   request.set_job(job);
-
-  request.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response = job_client.InsertJob(request);
 
@@ -570,14 +506,7 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   InsertJobRequest request_dml;
   request_dml.set_project_id(*project_id);
   request_dml.set_job(job_dml);
-
-  request_dml.set_json_filter_keys(
-      {"statistics", "status", "labels", "destinationTable",
-       "maximumBytesBilled", "userDefinedFunctionResources", "defaultDataset",
-       "schemaUpdateOptions", "timePartitioning", "rangePartitioning",
-       "clustering", "destinationEncryptionConfiguration", "scriptOptions",
-       "connectionProperties", "systemVariables", "structTypes", "structValues",
-       "location"});
+  request.set_json_filter_keys(kKeysToFilter);
 
   auto job_response_dml = job_client.InsertJob(request_dml);
 
@@ -595,6 +524,36 @@ TEST(InsertJob, CreateTableAndInsertRow) {
 
   ASSERT_STATUS_OK(query_results_response_dml);
   EXPECT_TRUE(query_results_response_dml.value().job_complete);
+}
+
+TEST(InsertJob, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
+  auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
+  ASSERT_TRUE(column_name);
+  Job job;
+  JobConfiguration job_configuration;
+  JobConfigurationQuery job_configuration_query;
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  job_configuration.query = job_configuration_query;
+  job.configuration = job_configuration;
+  InsertJobRequest request;
+  request.set_project_id("");
+  request.set_job(job);
+  request.set_json_filter_keys(kKeysToFilter);
+
+  auto job_response = job_client.InsertJob(request);
+
+  // BQ API error
+  EXPECT_THAT(job_response, StatusIs(StatusCode::kNotFound,
+                                     HasSubstr("Request couldn't be served")));
 }
 
 }  // namespace google::cloud::odbc_integration_tests_apis

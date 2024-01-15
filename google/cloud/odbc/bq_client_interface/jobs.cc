@@ -14,15 +14,46 @@
 
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include <utility>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::InsertJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
+
+std::vector<std::string> GetFilterKeys(Job const& job) {
+  std::vector<std::string> default_filtered_keys{
+      "statistics",        "status",     "timePartitioning",
+      "rangePartitioning", "clustering", "systemVariables"};
+  if (job.configuration.query.default_dataset.project_id.empty() &&
+      job.configuration.query.default_dataset.dataset_id.empty()) {
+    default_filtered_keys.emplace_back("defaultDataset");
+  }
+  if (job.configuration.query.destination_table.project_id.empty() &&
+      job.configuration.query.destination_table.dataset_id.empty() &&
+      job.configuration.query.destination_table.table_id.empty()) {
+    default_filtered_keys.emplace_back("destinationTable");
+  }
+  if (job.configuration.query.maximum_bytes_billed <= 0) {
+    default_filtered_keys.emplace_back("maximumBytesBilled");
+  }
+  if (job.configuration.query.script_options.key_result_statement.value
+          .empty()) {
+    default_filtered_keys.emplace_back("keyResultStatement");
+  }
+  if (job.job_reference.project_id.empty() &&
+      job.job_reference.job_id.empty()) {
+    default_filtered_keys.emplace_back("jobReference");
+  } else if (job.job_reference.location.empty()) {
+    default_filtered_keys.emplace_back("location");
+  }
+  return default_filtered_keys;
+}
 
 StatusOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
                      std::string const& job_id, std::string const& location,
@@ -80,6 +111,16 @@ StatusOr<std::vector<ListFormatJob>> FilterJobs(JobClient& job_client,
   }
 
   return jobs;
+}
+
+StatusOr<Job> InsertJob(JobClient& job_client, std::string const& project_id,
+                        Job const& job, Options const& options) {
+  InsertJobRequest request;
+  request.set_project_id(project_id);
+  request.set_job(job);
+  request.set_json_filter_keys(GetFilterKeys(job));
+
+  return job_client.InsertJob(request, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
