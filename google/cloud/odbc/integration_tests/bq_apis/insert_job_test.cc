@@ -44,10 +44,11 @@ using google::cloud::odbc_integration_tests_testing_util::
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-std::vector<std::string> const kKeysToFilter{
-    {"statistics", "status", "destinationTable", "maximumBytesBilled",
-     "defaultDataset", "timePartitioning", "rangePartitioning", "clustering",
-     "keyResultStatement", "systemVariables", "location"}};
+static std::vector<std::string> const kKeysToFilter{
+    "statistics",         "status",         "destinationTable",
+    "maximumBytesBilled", "defaultDataset", "timePartitioning",
+    "rangePartitioning",  "clustering",     "keyResultStatement",
+    "systemVariables",    "location"};
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(InsertJob, UserAccountAuth) {
@@ -499,7 +500,7 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   InsertJobRequest request_dml;
   request_dml.set_project_id(*project_id);
   request_dml.set_job(job_dml);
-  request.set_json_filter_keys(kKeysToFilter);
+  request_dml.set_json_filter_keys(kKeysToFilter);
 
   auto job_response_dml = job_client.InsertJob(request_dml);
 
