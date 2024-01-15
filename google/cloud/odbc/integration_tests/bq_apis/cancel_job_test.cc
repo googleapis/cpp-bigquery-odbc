@@ -212,4 +212,21 @@ TEST(CancelJob, ProjectNotExist) {
               StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
 }
 
+TEST(CancelJob, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+
+  CancelJobRequest cancel_job_request;
+  cancel_job_request.set_project_id("");
+  cancel_job_request.set_job_id("job_id");
+
+  auto cancel_job_response = job_client.CancelJob(cancel_job_request);
+
+  // BQ API error
+  EXPECT_THAT(
+      cancel_job_response,
+      StatusIs(StatusCode::kNotFound, HasSubstr("Request couldn't be served")));
+}
+
 }  // namespace google::cloud::odbc_integration_tests_apis

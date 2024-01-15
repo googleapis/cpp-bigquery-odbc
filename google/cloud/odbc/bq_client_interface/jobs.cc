@@ -14,11 +14,11 @@
 
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include <utility>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::CancelJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::InsertJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
@@ -26,7 +26,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 
-std::vector<std::string> GetFilterKeys(Job const& job) {
+std::vector<std::string> CreateKeysToFilterOut(Job const& job) {
   std::vector<std::string> default_filtered_keys{
       "statistics",        "status",     "timePartitioning",
       "rangePartitioning", "clustering", "systemVariables"};
@@ -118,9 +118,21 @@ StatusOr<Job> InsertJob(JobClient& job_client, std::string const& project_id,
   InsertJobRequest request;
   request.set_project_id(project_id);
   request.set_job(job);
-  request.set_json_filter_keys(GetFilterKeys(job));
+  request.set_json_filter_keys(CreateKeysToFilterOut(job));
 
   return job_client.InsertJob(request, options);
+}
+
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
+    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options) {
+  CancelJobRequest request;
+  request.set_project_id(project_id);
+  request.set_job_id(job_id);
+  request.set_location(location);
+
+  return job_client.CancelJob(request, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

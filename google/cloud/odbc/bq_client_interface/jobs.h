@@ -59,6 +59,11 @@ StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> InsertJob(
     ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
     ::google::cloud::Options const& options);
 
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
+    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options);
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_JOBS_H

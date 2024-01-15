@@ -128,4 +128,12 @@ ODBCBQClient::InsertJob(
       job_client_, project_id, job, options);
 }
 
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job>
+ODBCBQClient::CancelJob(std::string const& project_id,
+                        std::string const& job_id, std::string const& location,
+                        ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::CancelJob(
+      job_client_, project_id, job_id, location, options);
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

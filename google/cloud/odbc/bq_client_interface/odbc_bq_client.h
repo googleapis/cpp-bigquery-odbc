@@ -121,6 +121,11 @@ class ODBCBQClient {
       ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
       ::google::cloud::Options const& options);
 
+  // Cancels an already running BQ Job
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
+      std::string const& project_id, std::string const& job_id,
+      std::string const& location, ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient

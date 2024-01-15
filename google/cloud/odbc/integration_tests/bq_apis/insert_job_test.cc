@@ -101,13 +101,6 @@ TEST(InsertJob, UserAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ServiceAccountAuth) {
-  setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT",
-         "bigquery-devtools-drivers", 1);
-  setenv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET", "INTEGRATION_TESTS", 1);
-  setenv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME", "Test_Table", 1);
-  setenv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE", "age", 1);
-  setenv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY",
-         "/usr/local/google/home/meilakh/service_account_auth_keys.json", 1);
   auto options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
