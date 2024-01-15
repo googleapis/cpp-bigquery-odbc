@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_DATASETS_H
+#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_DATASETS_H
+
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -47,3 +50,5 @@ FilterDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
+
+#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_DATASETS_H
