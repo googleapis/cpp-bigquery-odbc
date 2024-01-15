@@ -51,7 +51,7 @@ TEST(GetDataset, GetDatasetSuccess) {
   EXPECT_EQ(expected.id, (*dataset).id);
 }
 
-TEST(GetDataset, EmptyStrings) {
+TEST(GetDataset, UseEmptyStringsForInputParameters) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -73,7 +73,7 @@ TEST(GetDataset, EmptyStrings) {
   EXPECT_EQ(expected.id, (*dataset).id);
 }
 
-TEST(GetDataset, GetDatasetFailure) {
+TEST(GetDataset, UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -134,7 +134,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
   EXPECT_EQ(expected.id, (*datasets)[0].id);
 }
 
-TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyStrings) {
+TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyProjectId) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -155,7 +155,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyStrings) {
   EXPECT_EQ(expected.id, (*datasets)[0].id);
 }
 
-TEST(ListAllDatasets, ListAllDatasetsFailure) {
+TEST(ListAllDatasets, UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -171,6 +171,99 @@ TEST(ListAllDatasets, ListAllDatasetsFailure) {
 
   StatusOr<std::vector<ListFormatDataset>> datasets =
       ListAllDatasets(mocked_dataset_client, project_id, options);
+
+  EXPECT_THAT(datasets,
+              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
+TEST(FilterDatasets, FilterZeroDatasetsSuccess) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  DatasetFilter dataset_filter{.filter = "filtering", .all = true};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(dataset_filter.filter, request.filter());
+        EXPECT_EQ(dataset_filter.all, request.all_datasets());
+        return mocks::MakeStreamRange<ListFormatDataset>({});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+      mocked_dataset_client, project_id, dataset_filter, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(0, (*datasets).size());
+}
+
+TEST(FilterDatasets, FilterAllDatasetsSuccess) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  DatasetFilter dataset_filter{.filter = "filtering", .all = true};
+  ListFormatDataset expected{.id = "dataset_id"};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(dataset_filter.filter, request.filter());
+        EXPECT_EQ(dataset_filter.all, request.all_datasets());
+        return mocks::MakeStreamRange<ListFormatDataset>({expected});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+      mocked_dataset_client, project_id, dataset_filter, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(expected.id, (*datasets)[0].id);
+}
+
+TEST(FilterDatasets, FilterAllDatasetsSuccess_EmptyProjectId) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id;
+  DatasetFilter dataset_filter;
+  ListFormatDataset expected{.id = "dataset_id"};
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(dataset_filter.filter, request.filter());
+        EXPECT_EQ(dataset_filter.all, request.all_datasets());
+        return mocks::MakeStreamRange<ListFormatDataset>({expected});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+      mocked_dataset_client, project_id, dataset_filter, options);
+
+  ASSERT_STATUS_OK(datasets);
+  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(expected.id, (*datasets)[0].id);
+}
+
+TEST(FilterDatasets, UnauthenticatedRequest) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  DatasetFilter dataset_filter;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(dataset_filter.filter, request.filter());
+        EXPECT_EQ(dataset_filter.all, request.all_datasets());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {}, Status(StatusCode::kUnauthenticated, "denied"));
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+      mocked_dataset_client, project_id, dataset_filter, options);
 
   EXPECT_THAT(datasets,
               StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));

@@ -16,6 +16,15 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// Filters used for filtering a list of Datasets
+// returned in Dataset response.
+struct DatasetFilter {
+  // Allows filtering of datasets by labels.
+  std::string filter;
+  // Whether to include hidden datasets in results.
+  bool all = false;
+};
+
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Dataset> GetDataset(
     ::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
         dataset_client,
@@ -28,5 +37,13 @@ ListAllDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                     dataset_client,
                 std::string const& project_id,
                 ::google::cloud::Options const& options);
+
+StatusOr<std::vector<
+    ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
+FilterDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
+                   dataset_client,
+               std::string const& project_id,
+               DatasetFilter const& dataset_filter,
+               ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
