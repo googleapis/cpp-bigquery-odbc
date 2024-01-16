@@ -63,9 +63,15 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == "LogLevel") {
-      log_level = std::stoi(s.second);
-      if (log_level > 0) {
-        logging_enabled = true;
+      try {
+        log_level = std::stoi(s.second);
+        if (log_level > 0) {
+          logging_enabled = true;
+        }
+      } catch (std::invalid_argument& e) {
+        std::string msg = "Invalid log level: ";
+        msg.append(e.what());
+        return Status(StatusCode::kInvalidArgument, msg);
       }
     } else if (s.first == "LogFile") {
       log_file = s.second;

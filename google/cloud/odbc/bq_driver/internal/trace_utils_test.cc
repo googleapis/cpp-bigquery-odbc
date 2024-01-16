@@ -98,6 +98,21 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
   EXPECT_EQ(1, (*test_opts_file)->log_level);
 }
 
+TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
+  std::shared_ptr<Sections> config_sections = nullptr;
+  auto opts = TraceOptions::CreateTraceOptionsFile(config_sections);
+  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument,
+                             "Invalid ODBC Driver Config"));
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigBadLogLevel) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections6);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  EXPECT_THAT(test_opts_file, StatusIs(StatusCode::kInvalidArgument,
+                                       HasSubstr("Invalid log level")));
+}
+
 TEST(TraceLoggingConsole, BasicODBCTypes) {
   std::string fmt1 = FormatSqlSmallInt(1);
   std::string fmt2 = FormatSqlUSmallInt(2);
