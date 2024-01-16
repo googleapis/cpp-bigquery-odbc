@@ -84,6 +84,15 @@ ODBCBQClient::GetTable(std::string const& project_id,
       table_client_, project_id, dataset_id, table_id, options);
 }
 
+StatusOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
+ODBCBQClient::ListAllTables(std::string const& project_id,
+                            std::string const& dataset_id,
+                            ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::ListAllTables(
+      table_client_, project_id, dataset_id, options);
+}
+
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job>
 ODBCBQClient::GetJob(std::string const& project_id, std::string const& job_id,
                      std::string const& location,

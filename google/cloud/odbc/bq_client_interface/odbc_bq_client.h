@@ -85,6 +85,12 @@ class ODBCBQClient {
       std::string const& project_id, std::string const& dataset_id,
       std::string const& table_id, ::google::cloud::Options const& options);
 
+  // Returns all Tables in a Dataset
+  StatusOr<std::vector<
+      ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
+  ListAllTables(std::string const& project_id, std::string const& dataset_id,
+                ::google::cloud::Options const& options);
+
   ///////////////
   // Job APIs
   ///////////////

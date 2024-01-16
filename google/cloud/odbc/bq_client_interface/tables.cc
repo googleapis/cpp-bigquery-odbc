@@ -18,6 +18,8 @@ namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::GetTableRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable;
+using ::google::cloud::bigquery_v2_minimal_internal::ListTablesRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 
@@ -31,6 +33,27 @@ StatusOr<Table> GetTable(TableClient& table_client,
   request.set_table_id(table_id);
 
   return table_client.GetTable(request, options);
+}
+
+StatusOr<std::vector<ListFormatTable>> ListAllTables(
+    TableClient& table_client, std::string const& project_id,
+    std::string const& dataset_id, Options const& options) {
+  ListTablesRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+
+  StreamRange<ListFormatTable> tables_response =
+      table_client.ListTables(request, options);
+
+  std::vector<ListFormatTable> tables;
+  for (auto const& table : tables_response) {
+    if (!table) {
+      return table.status();
+    }
+    tables.push_back(*table);
+  }
+
+  return tables;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -20,9 +20,16 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
-    ::google::cloud::bigquery_v2_minimal_internal::TableClient& project_client,
+    ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
     std::string const& table_id, ::google::cloud::Options const& options);
+
+StatusOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
+ListAllTables(
+    ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
+    std::string const& project_id, std::string const& dataset_id,
+    ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
