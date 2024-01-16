@@ -28,6 +28,7 @@ Section const kDriverSection3{{"LogFile", "/tmp/odbc.log"}};
 Section const kDriverSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
 Section const kDriverSection5{{"LogLevel", "1"}};
 Section const kDriverSection6{{"LogLevel", ""}};
+Section const kDriverSection7{{"LogLevel", "INVALID"}};
 
 Sections const kConfigSections1{{"Driver", kDriverSection1}};
 Sections const kConfigSections2{{"Driver", kDriverSection2}};
@@ -35,6 +36,7 @@ Sections const kConfigSections3{{"Driver", kDriverSection3}};
 Sections const kConfigSections4{{"Driver", kDriverSection4}};
 Sections const kConfigSections5{{"Driver", kDriverSection5}};
 Sections const kConfigSections6{{"Driver", kDriverSection6}};
+Sections const kConfigSections7{{"Driver", kDriverSection7}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
     TraceOptions::CreateTraceOptionsConsole(true, 0).value();
@@ -105,12 +107,24 @@ TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
                              "Invalid ODBC Driver Config"));
 }
 
-TEST(TraceLoggingFile, TraceOptionsFromConfigBadLogLevel) {
+TEST(TraceLoggingFile, TraceOptionsFromConfigEmptyLogLevel) {
   auto config_sections = std::make_shared<Sections>(kConfigSections6);
   StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  EXPECT_THAT(test_opts_file, StatusIs(StatusCode::kInvalidArgument,
-                                       HasSubstr("Invalid log level")));
+
+  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(0, (*test_opts_file)->log_level);
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigInvalidLogLevel) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections7);
+  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+
+  EXPECT_FALSE((*test_opts_file)->logging_enabled);
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
 TEST(TraceLoggingConsole, BasicODBCTypes) {
