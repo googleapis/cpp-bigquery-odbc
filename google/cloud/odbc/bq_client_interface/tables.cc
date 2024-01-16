@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/tables.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -54,6 +55,20 @@ StatusOr<std::vector<ListFormatTable>> ListAllTables(
   }
 
   return tables;
+}
+
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetFilteredTable(
+    TableClient& table_client, std::string const& project_id,
+    std::string const& dataset_id, std::string const& table_id,
+    TableFilter const& table_filter, ::google::cloud::Options const& options) {
+  GetTableRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+  request.set_table_id(table_id);
+  request.set_selected_fields(table_filter.selected_fields);
+  request.set_view(table_filter.view);
+
+  return table_client.GetTable(request, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

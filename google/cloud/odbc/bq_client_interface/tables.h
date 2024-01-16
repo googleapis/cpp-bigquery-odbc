@@ -19,6 +19,14 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// Filters used for filtering Table details returned in Table response.
+struct TableFilter {
+  // Allows selected fields to be returned in the Table details.
+  std::vector<std::string> const& selected_fields;
+  // Allows filtering of table information by view.
+  ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView view;
+};
+
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
@@ -29,6 +37,12 @@ StatusOr<
 ListAllTables(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
+    ::google::cloud::Options const& options);
+
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetFilteredTable(
+    ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
+    std::string const& project_id, std::string const& dataset_id,
+    std::string const& table_id, TableFilter const& table_filter,
     ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

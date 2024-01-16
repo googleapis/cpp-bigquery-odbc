@@ -186,4 +186,83 @@ TEST(ListAllTables, UnauthenticatedRequest) {
   EXPECT_THAT(tables, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
 }
 
+TEST(GetFilteredTable, GetFilteredTableSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string dataset_id = "dataset_id";
+  std::string table_id = "table_id";
+  TableFilter table_filter{.selected_fields = {"filed_1"},
+                           .view =
+                               ::google::cloud::bigquery_v2_minimal_internal::
+                                   TableMetadataView::Full()};
+  Table table{.id = "table_id"};
+  auto mock = std::make_shared<MockTableConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(dataset_id, request.dataset_id());
+    EXPECT_EQ(table_id, request.table_id());
+    EXPECT_EQ(table_filter.selected_fields, request.selected_fields());
+    EXPECT_EQ(table_filter.view.value, request.view().value);
+    return make_status_or(table);
+  });
+  TableClient table_client(std::move(mock));
+
+  StatusOr<Table> actual = GetFilteredTable(
+      table_client, project_id, dataset_id, table_id, table_filter, options);
+
+  ASSERT_STATUS_OK(actual);
+  EXPECT_EQ(actual->id, table.id);
+}
+
+TEST(GetFilteredTable, UseEmptyStringsForInputParameters) {
+  Options options;
+  std::string project_id;
+  std::string dataset_id;
+  std::string table_id;
+  TableFilter table_filter{.selected_fields = {}};
+  Table table{.id = "table_id"};
+  auto mock = std::make_shared<MockTableConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(dataset_id, request.dataset_id());
+    EXPECT_EQ(table_id, request.table_id());
+    EXPECT_EQ(table_filter.selected_fields, request.selected_fields());
+    EXPECT_EQ(table_filter.view.value, request.view().value);
+    return make_status_or(table);
+  });
+  TableClient table_client(std::move(mock));
+
+  StatusOr<Table> actual = GetFilteredTable(
+      table_client, project_id, dataset_id, table_id, table_filter, options);
+
+  ASSERT_STATUS_OK(actual);
+  EXPECT_EQ(actual->id, table.id);
+}
+
+TEST(GetFilteredTable, UnauthenticatedRequest) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string dataset_id = "dataset_id";
+  std::string table_id = "table_id";
+  TableFilter table_filter{.selected_fields = {}};
+  auto mock = std::make_shared<MockTableConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(dataset_id, request.dataset_id());
+    EXPECT_EQ(table_id, request.table_id());
+    EXPECT_EQ(table_filter.selected_fields, request.selected_fields());
+    EXPECT_EQ(table_filter.view.value, request.view().value);
+    return Status(StatusCode::kUnauthenticated, "denied");
+  });
+  TableClient table_client(std::move(mock));
+
+  StatusOr<Table> actual = GetFilteredTable(
+      table_client, project_id, dataset_id, table_id, table_filter, options);
+
+  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
