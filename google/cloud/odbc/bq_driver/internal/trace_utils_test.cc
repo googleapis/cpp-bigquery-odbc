@@ -27,12 +27,14 @@ Section const kDriverSection2{{"LogLevel", "0"}, {"LogFile", "/tmp/odbc.log"}};
 Section const kDriverSection3{{"LogFile", "/tmp/odbc.log"}};
 Section const kDriverSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
 Section const kDriverSection5{{"LogLevel", "1"}};
+Section const kDriverSection6{{"LogLevel", ""}};
 
 Sections const kConfigSections1{{"Driver", kDriverSection1}};
 Sections const kConfigSections2{{"Driver", kDriverSection2}};
 Sections const kConfigSections3{{"Driver", kDriverSection3}};
 Sections const kConfigSections4{{"Driver", kDriverSection4}};
 Sections const kConfigSections5{{"Driver", kDriverSection5}};
+Sections const kConfigSections6{{"Driver", kDriverSection6}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
     TraceOptions::CreateTraceOptionsConsole(true, 0).value();
@@ -102,6 +104,12 @@ TEST(TraceLogging, TraceOptionsFromConfigEmpty) {
 
   EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument,
                              HasSubstr("Invalid ODBC Driver Config")));
+}
+
+TEST(TraceLogging, TraceOptionsFromBadLogLevel) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections6);
+  EXPECT_THROW(TraceOptions::CreateTraceOptionsFile(config_sections),
+               std::invalid_argument);
 }
 
 TEST(TraceLoggingConsole, BasicODBCTypes) {

@@ -48,7 +48,7 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
 
 StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
     std::shared_ptr<Sections> const& config_sections) {
-  if (config_sections == nullptr) {
+  if (!config_sections) {
     return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
   }
 
