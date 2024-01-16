@@ -77,6 +77,15 @@ class ODBCBQClient {
                  ::google::cloud::Options const& options);
 
   ///////////////
+  // Table APIs
+  ///////////////
+
+  // Returns detailed info for a specific Table
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
+      std::string const& project_id, std::string const& dataset_id,
+      std::string const& table_id, ::google::cloud::Options const& options);
+
+  ///////////////
   // Job APIs
   ///////////////
 

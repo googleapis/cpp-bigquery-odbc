@@ -21,7 +21,6 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::MakeProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;

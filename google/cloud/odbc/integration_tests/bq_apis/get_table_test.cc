@@ -261,4 +261,61 @@ TEST(GetTable, NoAccessAccountAuth) {
 }
 #endif  // USER_ACCOUNT_AUTH
 
+TEST(GetTable, ProjectIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
+  GetTableRequest request;
+  request.set_project_id("");
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id(*table_name);
+
+  auto table = table_client.GetTable(request);
+
+  EXPECT_THAT(table, StatusIs(StatusCode::kNotFound,
+                              HasSubstr("Request couldn't be served")));
+}
+
+TEST(GetTable, DatasetIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(table_name);
+  GetTableRequest request;
+  request.set_project_id(*project_id);
+  request.set_dataset_id("");
+  request.set_table_id(*table_name);
+
+  auto table = table_client.GetTable(request);
+
+  EXPECT_THAT(table, StatusIs(StatusCode::kNotFound,
+                              HasSubstr("Request couldn't be served")));
+}
+
+TEST(GetTable, TableIdIsEmpty) {
+  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  GetTableRequest request;
+  request.set_project_id(*project_id);
+  request.set_dataset_id(*dataset_id);
+  request.set_table_id("");
+
+  auto table = table_client.GetTable(request);
+
+  EXPECT_THAT(table, StatusIs(StatusCode::kInternal,
+                              HasSubstr("Not a valid Json Table object")));
+}
+
 }  // namespace google::cloud::odbc_integration_tests_apis

@@ -26,6 +26,8 @@ add_library(
     odbc_bq_client.cc
     setenv.h
     setenv.cc
+    tables.h
+    tables.cc
 )
 
 target_link_libraries(
