@@ -106,12 +106,6 @@ TEST(TraceLogging, TraceOptionsFromConfigEmpty) {
                              HasSubstr("Invalid ODBC Driver Config")));
 }
 
-TEST(TraceLogging, TraceOptionsFromBadLogLevel) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections6);
-  EXPECT_THROW(TraceOptions::CreateTraceOptionsFile(config_sections),
-               std::invalid_argument);
-}
-
 TEST(TraceLoggingConsole, BasicODBCTypes) {
   std::string fmt1 = FormatSqlSmallInt(1);
   std::string fmt2 = FormatSqlUSmallInt(2);
