@@ -48,6 +48,8 @@ create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
 add_library(
     google_cloud_odbc_bq_driver # cmake-format: sort
     bq_driver/odbc_api.cc
+    bq_driver/odbc_commons.cc
+    bq_driver/odbc_commons.h
     bq_driver/odbc_connection.cc
     bq_driver/odbc_connection.h
     bq_driver/odbc_descriptor.cc
@@ -102,6 +104,7 @@ function (bq_driver_define_unit_tests)
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
     bq_driver/internal/odbc_conn_handle_test.cc
+    bq_driver/internal/odbc_includes_test.cc
     bq_driver/internal/trace_utils_test.cc
     bq_driver/internal/utils_test.cc
   )

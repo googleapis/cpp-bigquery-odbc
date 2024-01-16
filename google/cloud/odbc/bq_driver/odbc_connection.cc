@@ -54,7 +54,7 @@ Dsn CreateDsnObj(Section& dsn_section) {
 }
 
 SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
-  if (in_handle == nullptr) {
+  if (!in_handle) {
     // TODO(#170): Add error tracing call here
     // TODO(#158): Add logging here
     return SQL_ERROR;

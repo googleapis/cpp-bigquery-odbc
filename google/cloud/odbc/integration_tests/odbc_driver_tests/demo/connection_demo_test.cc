@@ -47,7 +47,14 @@ TEST(ConnectionDemoTest, SQLDriverConnect) {
                         (SQLCHAR*)out_conn_str, out_conn_str_buf_len, &buf_len,
                         SQL_DRIVER_COMPLETE);
   EXPECT_EQ(rc, SQL_SUCCESS);
-  std::cout << "Successfully connected to the data source!" << std::endl;
+  std::cout << "Successfully connected to the data source!" << std::endl
+            << std::endl;
+
+  std::cout << "Freeing connection handle" << std::endl;
+  rc = SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
+  std::cout << "Freeing environment handle" << std::endl;
+  rc = SQLFreeHandle(SQL_HANDLE_ENV, henv);
+  std::cout << "Successfully freed all handles!" << std::endl;
 }
 
 }  // namespace google::cloud::odbc_tests

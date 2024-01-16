@@ -18,6 +18,7 @@
 //////////////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
@@ -42,9 +43,12 @@ using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
+
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 
 // We want this to be created once on startup and shared by all APIs.
@@ -2090,10 +2094,13 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
+  TraceFunctionEntry_SQLFreeHandle(handleType, handle, *(*trace_opts_console));
 
-  // Call to internal function for SQLFreeHandle in odbc_environment.h
+  // Call to internal function for SQLFreeHandle in odbc_commons.h
+  rc = google::cloud::odbc_bq_driver::SQLFreeHandleInternal(handleType, handle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLFreeHandle(rc, *(*trace_opts_console));
   // Call to Release mutex in odbc_lock.h, as applicable for the handle type
   // passed in.
 

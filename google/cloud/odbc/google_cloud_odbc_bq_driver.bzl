@@ -17,6 +17,7 @@
 """Automatically generated source lists for google_cloud_odbc_bq_driver - DO NOT EDIT."""
 
 google_cloud_odbc_bq_driver_hdrs = [
+    "bq_driver/odbc_commons.h",
     "bq_driver/odbc_connection.h",
     "bq_driver/odbc_descriptor.h",
     "bq_driver/odbc_diagnostics.h",
@@ -31,6 +32,7 @@ google_cloud_odbc_bq_driver_hdrs = [
 
 google_cloud_odbc_bq_driver_srcs = [
     "bq_driver/odbc_api.cc",
+    "bq_driver/odbc_commons.cc",
     "bq_driver/odbc_connection.cc",
     "bq_driver/odbc_descriptor.cc",
     "bq_driver/odbc_diagnostics.cc",
