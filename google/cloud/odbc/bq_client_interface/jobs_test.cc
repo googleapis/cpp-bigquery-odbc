@@ -117,7 +117,7 @@ TEST(ListAllJobs, ListZeroJobsSuccess) {
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(0, (*jobs).size());
+  EXPECT_EQ(0, jobs->size());
 }
 
 TEST(ListAllJobs, ListAllJobsSuccess) {
@@ -137,7 +137,7 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
 
   ASSERT_STATUS_OK(jobs);
   EXPECT_EQ(1, (*jobs).size());
-  EXPECT_EQ(expected.id, (*jobs)[0].id);
+  EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
 TEST(ListAllJobs, ListAllJobs_EmptyProjectId) {
@@ -157,7 +157,7 @@ TEST(ListAllJobs, ListAllJobs_EmptyProjectId) {
 
   ASSERT_STATUS_OK(jobs);
   EXPECT_EQ(1, (*jobs).size());
-  EXPECT_EQ(expected.id, (*jobs)[0].id);
+  EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
 TEST(ListAllJobs, UnauthenticatedRequest) {
@@ -200,7 +200,7 @@ TEST(FilterJobs, FilterZeroJobsSuccess) {
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(0, (*jobs).size());
+  EXPECT_EQ(0, jobs->size());
 }
 
 TEST(FilterJobs, FilterJobsSuccess) {
@@ -232,7 +232,7 @@ TEST(FilterJobs, FilterJobsSuccess) {
 
   ASSERT_STATUS_OK(jobs);
   EXPECT_EQ(1, (*jobs).size());
-  EXPECT_EQ(expected.id, (*jobs)[0].id);
+  EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
 TEST(FilterJobs, FilterJobs_UseEmptyStringsForInputParameters) {
@@ -259,7 +259,7 @@ TEST(FilterJobs, FilterJobs_UseEmptyStringsForInputParameters) {
 
   ASSERT_STATUS_OK(jobs);
   EXPECT_EQ(1, (*jobs).size());
-  EXPECT_EQ(expected.id, (*jobs)[0].id);
+  EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
 TEST(FilterJobs, UnauthenticatedRequest) {
@@ -306,7 +306,7 @@ TEST(InsertJob, InsertJobSuccess) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(InsertJob, InsertJobSuccess_EmptyProjectId) {
+TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   Options options;
   std::string project_id;
   Job job{.id = "job_id"};
@@ -427,7 +427,7 @@ TEST(CancelJob, CancelJobSuccess) {
   ASSERT_STATUS_OK(actual);
 }
 
-TEST(CancelJob, UseEmptyStringsForInputParameters) {
+TEST(CancelJob, CancelJob_EmptyInputParams) {
   Options options;
   std::string project_id;
   std::string job_id;
