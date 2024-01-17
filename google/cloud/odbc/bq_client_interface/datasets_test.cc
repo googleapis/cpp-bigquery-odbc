@@ -48,7 +48,7 @@ TEST(GetDataset, GetDatasetSuccess) {
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
   ASSERT_STATUS_OK(dataset);
-  EXPECT_EQ(expected.id, (*dataset).id);
+  EXPECT_EQ(expected.id, dataset->id);
 }
 
 TEST(GetDataset, UseEmptyStringsForInputParameters) {
@@ -70,7 +70,7 @@ TEST(GetDataset, UseEmptyStringsForInputParameters) {
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
   ASSERT_STATUS_OK(dataset);
-  EXPECT_EQ(expected.id, (*dataset).id);
+  EXPECT_EQ(expected.id, dataset->id);
 }
 
 TEST(GetDataset, UnauthenticatedRequest) {
@@ -110,7 +110,7 @@ TEST(ListAllDatasets, ListZeroDatasetsSuccess) {
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(0, (*datasets).size());
+  EXPECT_EQ(0, datasets->size());
 }
 
 TEST(ListAllDatasets, ListAllDatasetsSuccess) {
@@ -131,7 +131,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
 
   ASSERT_STATUS_OK(datasets);
   EXPECT_EQ(1, (*datasets).size());
-  EXPECT_EQ(expected.id, (*datasets)[0].id);
+  EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
 TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyProjectId) {
@@ -152,7 +152,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyProjectId) {
 
   ASSERT_STATUS_OK(datasets);
   EXPECT_EQ(1, (*datasets).size());
-  EXPECT_EQ(expected.id, (*datasets)[0].id);
+  EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
 TEST(ListAllDatasets, UnauthenticatedRequest) {
@@ -195,7 +195,7 @@ TEST(FilterDatasets, FilterZeroDatasetsSuccess) {
       mocked_dataset_client, project_id, dataset_filter, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(0, (*datasets).size());
+  EXPECT_EQ(0, datasets->size());
 }
 
 TEST(FilterDatasets, FilterAllDatasetsSuccess) {
@@ -219,7 +219,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
 
   ASSERT_STATUS_OK(datasets);
   EXPECT_EQ(1, (*datasets).size());
-  EXPECT_EQ(expected.id, (*datasets)[0].id);
+  EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
 TEST(FilterDatasets, FilterAllDatasetsSuccess_EmptyProjectId) {
@@ -243,7 +243,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess_EmptyProjectId) {
 
   ASSERT_STATUS_OK(datasets);
   EXPECT_EQ(1, (*datasets).size());
-  EXPECT_EQ(expected.id, (*datasets)[0].id);
+  EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
 TEST(FilterDatasets, UnauthenticatedRequest) {

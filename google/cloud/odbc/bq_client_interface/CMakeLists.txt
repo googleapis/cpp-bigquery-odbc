@@ -16,10 +16,10 @@
 
 add_library(
     odbc_bq_client_interface
-    jobs.h
-    jobs.cc
     datasets.h
     datasets.cc
+    jobs.h
+    jobs.cc
     projects.h
     projects.cc
     odbc_authentication.h
