@@ -16,10 +16,13 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/projects.h"
+#include "google/cloud/odbc/bq_client_interface/storage.h"
 #include "google/cloud/credentials.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
+using ::google::cloud::bigquery_storage_v1::MakeBigQueryReadConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -45,9 +48,12 @@ StatusOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   TableClient table_client = TableClient(MakeTableConnection(options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
+  BigQueryReadClient bigquery_read_client =
+      BigQueryReadClient(MakeBigQueryReadConnection(options));
 
-  return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
-      dataset_client, job_client, project_client, table_client, generator));
+  return std::shared_ptr<ODBCBQClient>(
+      new ODBCBQClient(dataset_client, job_client, project_client, table_client,
+                       generator, bigquery_read_client));
 }
 
 StatusOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
@@ -97,6 +103,24 @@ ODBCBQClient::FilterJobs(std::string const& project_id,
                          ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::FilterJobs(
       job_client_, project_id, job_filter, options);
+}
+
+StatusOr<::google::cloud::bigquery::storage::v1::ReadSession>
+ODBCBQClient::CreateReadSession(
+    ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest const&
+        read_session_request,
+    ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::CreateReadSession(
+      bigquery_read_client_, read_session_request, options);
+}
+
+StatusOr<std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
+ODBCBQClient::ReadRows(
+    ::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
+        read_rows_request,
+    int max_read_responses, ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::ReadRows(
+      bigquery_read_client_, read_rows_request, max_read_responses, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

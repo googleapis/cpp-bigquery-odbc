@@ -43,7 +43,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT google_cloud_cpp_common_FOUN
   set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
   set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
   set(BUILD_TESTING OFF)
-  set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2)
+  set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery)
 
   FetchContent_Declare(
     google-cloud-cpp
