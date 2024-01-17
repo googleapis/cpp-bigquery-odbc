@@ -357,6 +357,26 @@ TEST(TraceLoggingConsole, ExitInternalTraceDisabled) {
   test_opts_console->logging_enabled = true;
 }
 
+TEST(TraceLoggingConsole, TracePrintInternalEmptyString) {
+  std::string empty_s;
+
+  EXPECT_EQ("", TracePrintInternal(*test_opts_console, empty_s));
+}
+
+TEST(TraceLoggingConsole, TracePrintInternalLoggingDisabled) {
+  std::string empty_s;
+
+  test_opts_console->logging_enabled = false;
+  EXPECT_EQ("", TracePrintInternal(*test_opts_console, empty_s));
+  test_opts_console->logging_enabled = true;
+}
+
+TEST(TraceLoggingConsole, TracePrintInternalSuccess) {
+  std::string msg = "hello world";
+
+  EXPECT_EQ(msg, TracePrintInternal(*test_opts_console, msg));
+}
+
 #if (ODBCVER >= 0x0300)
 
 TEST(TraceLoggingConsole, FormatNumericStructPositive) {

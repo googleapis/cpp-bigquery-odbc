@@ -116,10 +116,12 @@ std::string CollectAndPrintArgsFile(std::string const& func_name,
 // Below are Helper methods for the above.
 
 // Prints the trace string to stdout.
-int TracePrintInternalStdOut(TraceOptions& opts, std::string& s);
+int TracePrintInternalStdOut(TraceOptions& opts, std::string const& s);
 // Prints the trace string to a trace file.
 // It is the responsibility of the caller to open and close the time
-int TracePrintInternalFile(TraceOptions& opts, std::string& s);
+int TracePrintInternalFile(TraceOptions& opts, std::string const& s);
+// Writes the string to file or stdout based on trace options.
+std::string TracePrintInternal(TraceOptions& opts, std::string const& s);
 // Collects all the passed in arguments and returns a
 // formatted string to be traced for all the args.
 std::string CollectArgs(va_list src_args, int num_args);

@@ -97,7 +97,7 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
   return options_file_;
 }
 
-int TracePrintInternalStdOut(TraceOptions& opts, std::string& s) {
+int TracePrintInternalStdOut(TraceOptions& opts, std::string const& s) {
   if (!opts.logging_enabled || s.empty()) {
     return -1;
   }
@@ -107,7 +107,7 @@ int TracePrintInternalStdOut(TraceOptions& opts, std::string& s) {
   return 0;
 }
 
-int TracePrintInternalFile(TraceOptions& opts, std::string& s) {
+int TracePrintInternalFile(TraceOptions& opts, std::string const& s) {
   if (!opts.logging_enabled || s.empty()) {
     return -1;
   }
@@ -117,8 +117,26 @@ int TracePrintInternalFile(TraceOptions& opts, std::string& s) {
     return -1;
   }
   opts.trace_file << s << std::endl;
-  ;
+
   return 0;
+}
+
+std::string TracePrintInternal(TraceOptions& opts, std::string const& s) {
+  if (!opts.logging_enabled || s.empty()) {
+    return "";
+  }
+
+  int ret = 0;
+  if (opts.trace_file.is_open()) {
+    ret = TracePrintInternalFile(opts, s);
+  } else {
+    ret = TracePrintInternalStdOut(opts, s);
+  }
+  if (ret < 0) {
+    return "";
+  }
+
+  return s;
 }
 
 std::string CollectArgs(va_list src_args, int num_args) {
