@@ -19,15 +19,18 @@ set -euo pipefail
 source "$(dirname "$0")/../../lib/init.sh"
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/bazel.sh
+source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/integration.sh
 source module ci/lib/io.sh
 
 mapfile -t args < <(bazel::common_args)
 mapfile -t integration_args < <(integration::bazel_args)
+mapfile -t secrets_bazel < <(secrets::bazel_args)
 integration::setup
 
 io::run bazel test //google/cloud/odbc/integration_tests:* \
   "${args[@]}" \
+  "${secrets_bazel[@]}" \
   "${integration_args[@]}" \
   --cache_test_results=no
 
