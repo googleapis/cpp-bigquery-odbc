@@ -17,8 +17,8 @@
 """Automatically generated source lists for odbc_bq_client_interface - DO NOT EDIT."""
 
 odbc_bq_client_interface_hdrs = [
-    "jobs.h",
     "datasets.h",
+    "jobs.h",
     "projects.h",
     "odbc_authentication.h",
     "odbc_bq_client.h",
@@ -27,8 +27,8 @@ odbc_bq_client_interface_hdrs = [
 ]
 
 odbc_bq_client_interface_srcs = [
-    "jobs.cc",
     "datasets.cc",
+    "jobs.cc",
     "projects.cc",
     "odbc_authentication.cc",
     "odbc_bq_client.cc",
