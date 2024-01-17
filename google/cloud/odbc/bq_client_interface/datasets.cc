@@ -40,6 +40,7 @@ StatusOr<std::vector<ListFormatDataset>> ListAllDatasets(
     Options const& options) {
   ListDatasetsRequest request;
   request.set_project_id(project_id);
+  request.set_all_datasets(true);
 
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
