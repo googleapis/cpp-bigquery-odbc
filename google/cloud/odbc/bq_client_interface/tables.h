@@ -30,19 +30,14 @@ struct TableFilter {
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
-    std::string const& table_id, ::google::cloud::Options const& options);
+    std::string const& table_id, TableFilter const& table_filter,
+    ::google::cloud::Options const& options);
 
 StatusOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
 ListAllTables(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
-    ::google::cloud::Options const& options);
-
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetFilteredTable(
-    ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
-    std::string const& project_id, std::string const& dataset_id,
-    std::string const& table_id, TableFilter const& table_filter,
     ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

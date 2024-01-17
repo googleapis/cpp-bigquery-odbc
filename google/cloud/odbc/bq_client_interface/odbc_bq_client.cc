@@ -79,9 +79,10 @@ StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table>
 ODBCBQClient::GetTable(std::string const& project_id,
                        std::string const& dataset_id,
                        std::string const& table_id,
+                       TableFilter const& table_filter,
                        ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::GetTable(
-      table_client_, project_id, dataset_id, table_id, options);
+      table_client_, project_id, dataset_id, table_id, table_filter, options);
 }
 
 StatusOr<
@@ -91,16 +92,6 @@ ODBCBQClient::ListAllTables(std::string const& project_id,
                             ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ListAllTables(
       table_client_, project_id, dataset_id, options);
-}
-
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table>
-ODBCBQClient::GetFilteredTable(std::string const& project_id,
-                               std::string const& dataset_id,
-                               std::string const& table_id,
-                               TableFilter const& table_filter,
-                               ::google::cloud::Options const& options) {
-  return ::google::cloud::odbc_bigquery_client_interface::GetFilteredTable(
-      table_client_, project_id, dataset_id, table_id, table_filter, options);
 }
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job>

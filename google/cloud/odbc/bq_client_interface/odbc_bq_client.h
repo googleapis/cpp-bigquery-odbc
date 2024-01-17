@@ -84,19 +84,14 @@ class ODBCBQClient {
   // Returns detailed info for a specific Table
   StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
       std::string const& project_id, std::string const& dataset_id,
-      std::string const& table_id, ::google::cloud::Options const& options);
+      std::string const& table_id, TableFilter const& table_filter,
+      ::google::cloud::Options const& options);
 
   // Returns all Tables in a Dataset
   StatusOr<std::vector<
       ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
   ListAllTables(std::string const& project_id, std::string const& dataset_id,
                 ::google::cloud::Options const& options);
-
-  // Returns info (amount of info depends on the filter) for a specific Table
-  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table>
-  GetFilteredTable(std::string const& project_id, std::string const& dataset_id,
-                   std::string const& table_id, TableFilter const& table_filter,
-                   ::google::cloud::Options const& options);
 
   ///////////////
   // Job APIs
