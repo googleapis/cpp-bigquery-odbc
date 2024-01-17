@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
@@ -171,6 +172,26 @@ class ODBCBQClient {
                      QueryResultsFilterParams const& query_results_filter,
                      ::google::cloud::Options const& options);
 
+  ///////////////
+  // Storage APIs
+  ///////////////
+
+  // Creates a new read session for dividing BQ Table contents into one or more
+  // streams, to be read later.
+  StatusOr<::google::cloud::bigquery::storage::v1::ReadSession>
+  CreateReadSession(
+      ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest const&
+          read_session_request,
+      ::google::cloud::Options const& options);
+
+  // Reads rows from streams, in the format prescribed by the read session.
+  // Allows to limit the number of read responses returned via the
+  // max_read_responses parameter. By default, all read responses is returned
+  StatusOr<std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
+  ReadRows(::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
+               read_rows_request,
+           int max_read_responses, ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
@@ -180,12 +201,15 @@ class ODBCBQClient {
           project_client,
       ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client,
       std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
-          access_token_generator)
+          access_token_generator,
+      ::google::cloud::bigquery_storage_v1::BigQueryReadClient
+          bigquery_read_client)
       : dataset_client_(std::move(dataset_client)),
         job_client_(std::move(job_client)),
         project_client_(std::move(project_client)),
         table_client_(std::move(table_client)),
-        access_token_generator_(std::move(access_token_generator)) {}
+        access_token_generator_(std::move(access_token_generator)),
+        bigquery_read_client_(std::move(bigquery_read_client)) {}
 
   ::google::cloud::bigquery_v2_minimal_internal::DatasetClient dataset_client_;
   ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client_;
@@ -193,6 +217,8 @@ class ODBCBQClient {
   ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client_;
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
       access_token_generator_;
+  ::google::cloud::bigquery_storage_v1::BigQueryReadClient
+      bigquery_read_client_;
 };
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
