@@ -51,7 +51,7 @@ TEST(GetDataset, GetDatasetSuccess) {
   EXPECT_EQ(expected.id, dataset->id);
 }
 
-TEST(GetDataset, UseEmptyStringsForInputParameters) {
+TEST(GetDataset, GetDataset_EmptyInputParams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -134,7 +134,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(ListAllDatasets, ListAllDatasetsSuccess_EmptyProjectId) {
+TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -222,7 +222,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(FilterDatasets, FilterAllDatasetsSuccess_EmptyProjectId) {
+TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
