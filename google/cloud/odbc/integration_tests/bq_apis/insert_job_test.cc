@@ -521,14 +521,18 @@ TEST(InsertJob, CreateTableAndInsertRow) {
 }
 
 TEST(InsertJob, ProjectIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  absl::optional<std::string> dataset_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  absl::optional<std::string> table_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
   ASSERT_TRUE(dataset_id);
   ASSERT_TRUE(table_name);
-  auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
+  absl::optional<std::string> column_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
   ASSERT_TRUE(column_name);
   Job job;
   JobConfiguration job_configuration;
@@ -543,7 +547,7 @@ TEST(InsertJob, ProjectIdIsEmpty) {
   request.set_job(job);
   request.set_json_filter_keys(kKeysToFilter);
 
-  auto job_response = job_client.InsertJob(request);
+  StatusOr<Job> job_response = job_client.InsertJob(request);
 
   // BQ API error
   EXPECT_THAT(job_response, StatusIs(StatusCode::kNotFound,

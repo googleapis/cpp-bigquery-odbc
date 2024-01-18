@@ -53,12 +53,14 @@ FilterJobs(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
            std::string const& project_id, JobFilter const& job_filter,
            ::google::cloud::Options const& options);
 
+// Inserts a BQ job for execution
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> InsertJob(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id,
     ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
     ::google::cloud::Options const& options);
 
+// Cancels an already running BQ Job
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,

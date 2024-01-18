@@ -213,7 +213,8 @@ TEST(CancelJob, ProjectNotExist) {
 }
 
 TEST(CancelJob, ProjectIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
@@ -221,7 +222,7 @@ TEST(CancelJob, ProjectIdIsEmpty) {
   cancel_job_request.set_project_id("");
   cancel_job_request.set_job_id("job_id");
 
-  auto cancel_job_response = job_client.CancelJob(cancel_job_request);
+  StatusOr<Job> cancel_job_response = job_client.CancelJob(cancel_job_request);
 
   // BQ API error
   EXPECT_THAT(
