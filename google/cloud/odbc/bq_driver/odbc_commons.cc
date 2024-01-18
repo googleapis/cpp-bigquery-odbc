@@ -21,9 +21,6 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using google::cloud::odbc_bq_driver_internal::FreeHandle;
-using google::cloud::odbc_bq_driver_internal::HandleType;
-using google::cloud::odbc_bq_driver_internal::HandleWrapped;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
   if (!in_handle) {

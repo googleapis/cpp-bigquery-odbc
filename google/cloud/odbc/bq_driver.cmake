@@ -104,9 +104,9 @@ function (bq_driver_define_unit_tests)
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
     bq_driver/internal/odbc_conn_handle_test.cc
-    bq_driver/internal/odbc_includes_test.cc
     bq_driver/internal/trace_utils_test.cc
     bq_driver/internal/utils_test.cc
+    bq_driver/odbc_commons_test.cc
   )
 
   target_link_libraries(
