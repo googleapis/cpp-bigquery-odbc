@@ -20,6 +20,8 @@ namespace google::cloud::odbc_bigquery_client_interface {
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::CancelJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::InsertJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
@@ -172,6 +174,19 @@ StatusOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
   return job_client.Query(post_query_request, options);
+}
+
+StatusOr<GetQueryResults> GetAllQueryResults(JobClient& job_client,
+                                             std::string const& project_id,
+                                             std::string const& job_id,
+                                             std::string const& location,
+                                             Options const& options) {
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+  get_query_results_request.set_location(location);
+
+  return job_client.QueryResults(get_query_results_request, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -75,6 +75,13 @@ StatusOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults> Query(
         query_request,
     ::google::cloud::Options const& options);
 
+// Gets all the query results of a previously run query job.
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+GetAllQueryResults(
+    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options);
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_JOBS_H

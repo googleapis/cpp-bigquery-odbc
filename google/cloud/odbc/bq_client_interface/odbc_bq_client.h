@@ -158,6 +158,12 @@ class ODBCBQClient {
             query_request,
         ::google::cloud::Options const& options);
 
+  // Gets all the query results of a previously run query job.
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+  GetAllQueryResults(std::string const& project_id, std::string const& job_id,
+                     std::string const& location,
+                     ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
