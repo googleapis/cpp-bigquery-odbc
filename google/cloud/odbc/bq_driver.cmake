@@ -28,6 +28,8 @@ add_library(
   bq_driver/internal/odbc_env_handle.cc
   bq_driver/internal/odbc_conn_handle.h
   bq_driver/internal/odbc_conn_handle.cc
+  bq_driver/internal/odbc_sql_fns.h
+  bq_driver/internal/odbc_sql_fns.cc
   bq_driver/internal/trace_utils.h
   bq_driver/internal/trace_utils.cc
   bq_driver/internal/utils.h
@@ -104,15 +106,17 @@ function (bq_driver_define_unit_tests)
   add_executable(
     google_cloud_odbc_bq_driver_unit_tests
     bq_driver/internal/odbc_conn_handle_test.cc
+    bq_driver/internal/odbc_sql_fns_test.cc
     bq_driver/internal/trace_utils_test.cc
     bq_driver/internal/utils_test.cc
     bq_driver/odbc_commons_test.cc
+    bq_driver/odbc_driver_metadata_test.cc
   )
 
   target_link_libraries(
     google_cloud_odbc_bq_driver_unit_tests
     google_cloud_odbc_testing_utils
-    google_cloud_odbc_bq_driver_internal
+    google_cloud_odbc_bq_driver
     GTest::gtest_main
   )
 

@@ -34,7 +34,21 @@
 // SQLColumnPrivilegesInternal
 ///////////////////////////////////////////////////////////
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
+
 namespace google::cloud::odbc_bq_driver {
+
+// Implements the semantics for SQLGetFunctions
+// as per the ODBC 3.8 spec. For details on
+// semantics please refer to:
+//
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
+SQLRETURN SQLGetFunctionsInternal(
+    SQLHDBC connectionHandle, SQLUSMALLINT functionId,
+    SQLUSMALLINT* supportedFunction,
+    ::google::cloud::odbc_bq_driver_internal::TraceOptions& opts);
 
 }  // namespace google::cloud::odbc_bq_driver
 
