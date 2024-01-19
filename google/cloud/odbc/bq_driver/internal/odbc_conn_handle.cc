@@ -17,6 +17,12 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+void ConnectionHandle::SetUp(Section& dsn_section) {
+  dsn_.description = dsn_section["Description"];
+  dsn_.driver = dsn_section["Driver"];
+  dsn_.catalog = dsn_section["Catalog"];
+}
+
 Status ConnectionHandle::Connect(Authentication& auth) {
   Oauth oauth;
   oauth.auth_mechanism = auth.auth_mechanism;

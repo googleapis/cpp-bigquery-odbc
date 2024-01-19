@@ -23,7 +23,6 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
-using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::Section;
 
@@ -46,14 +45,6 @@ Authentication CreateAuth(Section& dsn_section) {
   auth.key_file_path = dsn_section["KeyFilePath"];
   auth.refresh_token = dsn_section["RefreshToken"];
   return auth;
-}
-
-Dsn CreateDsnObj(Section& dsn_section) {
-  Dsn dsn;
-  dsn.description = dsn_section["Description"];
-  dsn.driver = dsn_section["Driver"];
-  dsn.catalog = dsn_section["Catalog"];
-  return dsn;
 }
 
 void OverrideDsnSectionFromEnv(Section& dsn_section,
@@ -145,10 +136,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
   }
 
-  Dsn dsn = CreateDsnObj(dsn_section);
   Authentication auth = CreateAuth(dsn_section);
-
-  handle.SetDsn(dsn);
   Status status = handle.Connect(auth);
   if (!status.ok()) {
     // Creating the connection failed

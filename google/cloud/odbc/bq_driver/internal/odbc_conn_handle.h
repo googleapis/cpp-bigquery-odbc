@@ -55,7 +55,7 @@ class ConnectionHandle {
 
   Status Connect(Authentication& auth);
 
-  inline void SetDsn(Dsn& dsn) { dsn_ = dsn; }
+  void SetUp(Section& dsn_section);
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
