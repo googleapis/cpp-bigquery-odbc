@@ -26,6 +26,7 @@ using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::PostQueryRequest;
+using bigquery_v2_minimal_internal::PostQueryResults;
 using bigquery_v2_minimal_internal::QueryParameter;
 using bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::internal::GetEnv;
@@ -41,6 +42,9 @@ using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+static std::vector<std::string> const kKeysToFilter{
+    "preserveNulls", "defaultDataset", "maximumBytesBilled"};
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(Query, UserAccountAuth) {
@@ -64,10 +68,7 @@ TEST(Query, UserAccountAuth) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -113,10 +114,7 @@ TEST(Query, ServiceAccountAuth) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -141,6 +139,13 @@ TEST(Query, ServiceAccountAuth) {
 }
 
 TEST(Query, ServiceAccountAuthWithClientId) {
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY",
+  //      "/usr/local/google/home/meilakh/service_account_auth_keys.json", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT",
+  //      "bigquery-devtools-drivers", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET", "INTEGRATION_TESTS",
+  //      1); setenv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME", "Test_Table", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME", "name", 1);
   auto options = CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
@@ -161,10 +166,7 @@ TEST(Query, ServiceAccountAuthWithClientId) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -204,10 +206,7 @@ TEST(Query, ProjectNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(std::string(kNameForNonExistingProject));
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -234,10 +233,7 @@ TEST(Query, DatasetNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -261,10 +257,7 @@ TEST(Query, TableNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -291,10 +284,7 @@ TEST(Query, ColumnNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -323,10 +313,7 @@ TEST(Query, SelectZeroRows) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -357,10 +344,7 @@ TEST(Query, PageTokens) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -427,10 +411,7 @@ TEST(QueryResults, LocationNotExist) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -469,10 +450,7 @@ TEST(QueryResults, WrongLocation) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -516,9 +494,7 @@ TEST(Query, WithQueryParameters) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "defaultDataset",
-       "maximumBytesBilled", "formatOptions", "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -562,10 +538,7 @@ TEST(Query, NoAccessAccountAuth) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -597,10 +570,7 @@ TEST(QueryResults, DifferentAccount) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -649,10 +619,7 @@ TEST(QueryResults, NoAccessAccountAuth) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(*project_id);
   post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(
-      {"preserveNulls", "labels", "requestId", "queryParameters",
-       "defaultDataset", "maximumBytesBilled", "formatOptions",
-       "connectionProperties"});
+  post_query_request.set_json_filter_keys(kKeysToFilter);
 
   auto query_response = job_client.Query(post_query_request);
 
@@ -680,5 +647,45 @@ TEST(QueryResults, NoAccessAccountAuth) {
                HasSubstr("Permission bigquery.jobs.get denied on job")));
 }
 #endif  // USER_ACCOUNT_AUTH
+
+TEST(Query, ProjectIdIsEmpty) {
+  //        setenv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY",
+  //        "/usr/local/google/home/meilakh/client_id_auth_keys.json", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT",
+  //      "bigquery-devtools-drivers", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET", "INTEGRATION_TESTS",
+  //      1); setenv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME", "Test_Table", 1);
+  //      setenv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME", "name", 1);
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  absl::optional<std::string> dataset_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  absl::optional<std::string> table_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
+  absl::optional<std::string> column_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+  ASSERT_TRUE(column_name);
+
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  QueryRequest query_request;
+  query_request.set_query(query_statement);
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id("");
+  post_query_request.set_query_request(query_request);
+  post_query_request.set_json_filter_keys(kKeysToFilter);
+
+  StatusOr<PostQueryResults> query_response =
+      job_client.Query(post_query_request);
+
+  EXPECT_THAT(
+      query_response,
+      StatusIs(StatusCode::kNotFound, HasSubstr("Request couldn't be served")));
+}
 
 }  // namespace google::cloud::odbc_integration_tests_apis

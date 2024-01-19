@@ -150,6 +150,14 @@ class ODBCBQClient {
       std::string const& project_id, std::string const& job_id,
       std::string const& location, ::google::cloud::Options const& options);
 
+  // Runs a BQ SQL query synchronously and returns query
+  // results if the query completes within a specified timeout.
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+  Query(std::string const& project_id,
+        ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
+            query_request,
+        ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient

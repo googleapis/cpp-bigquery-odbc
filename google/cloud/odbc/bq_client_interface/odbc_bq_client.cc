@@ -162,4 +162,14 @@ ODBCBQClient::CancelJob(std::string const& project_id,
       job_client_, project_id, job_id, location, options);
 }
 
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+ODBCBQClient::Query(
+    std::string const& project_id,
+    ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
+        query_request,
+    ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::Query(
+      job_client_, project_id, query_request, options);
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

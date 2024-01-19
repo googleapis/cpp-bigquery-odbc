@@ -66,6 +66,15 @@ StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
     std::string const& project_id, std::string const& job_id,
     std::string const& location, ::google::cloud::Options const& options);
 
+// Runs a BQ SQL query synchronously and returns query
+// results if the query completes within a specified timeout.
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults> Query(
+    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+    std::string const& project_id,
+    ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
+        query_request,
+    ::google::cloud::Options const& options);
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_JOBS_H
