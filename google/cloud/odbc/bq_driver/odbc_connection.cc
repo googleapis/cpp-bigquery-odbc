@@ -27,6 +27,10 @@ using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::Section;
 
+/////////////////////////////
+// Internal Helper Functions
+/////////////////////////////
+
 Authentication CreateAuth(Section& dsn_section) {
   Authentication auth;
   int auth_int;
@@ -51,6 +55,27 @@ Dsn CreateDsnObj(Section& dsn_section) {
   dsn.catalog = dsn_section["Catalog"];
   return dsn;
 }
+
+void OverrideDsnSectionFromEnv(Section& dsn_section,
+                               std::string const& dsn_name) {
+  // TODO(#159): this has to handle windows too
+  std::string odbcini_path =
+      google::cloud::internal::GetEnv("ODBCINI").value_or("");
+  if (!odbcini_path.empty()) {
+    auto sections =
+        google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
+    if (!sections.ok()) {
+      // The file path pointed by ODBCINI env is invalid
+      // TODO(#170): Add error tracing call here
+      return;
+    }
+    dsn_section = (*sections.value())[dsn_name];
+  }
+}
+
+//////////////////////
+// Public Functions
+//////////////////////
 
 SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   if (!in_handle) {
@@ -105,37 +130,21 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_ERROR;
   }
-  std::string dsn_name = connection_params_resp.value()["DSN"];
-  if (dsn_name.empty()) {
-    // There is no DSN name in the connection string
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_ERROR;
-  }
 
   Section dsn_section;
-  // TODO(#159): this has to handle windows too
-  std::string odbcini_path =
-      google::cloud::internal::GetEnv("ODBCINI").value_or("");
-  if (!odbcini_path.empty()) {
-    auto sections =
-        google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
-    if (!sections.ok()) {
-      // The file path pointed by ODBCINI env is invalid
-      // TODO(#170): Add error tracing call here
-      // TODO(#158): SQLGetDiagRec should handle this
-      return SQL_ERROR;
-    }
-    dsn_section = (*sections.value())[dsn_name];
-  }
-
-  // Any parameters defined in the connection string should
-  //  override the DSN section properties.
   for (auto const& it : connection_params_resp.value()) {
     std::string property = it.first;
     std::string value = it.second;
     dsn_section[property] = value;
   }
+
+  // Any parameters defined in the env should
+  //  override the DSN section properties.
+  std::string dsn_name = connection_params_resp.value()["DSN"];
+  if (!dsn_name.empty()) {
+    OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+  }
+
   Dsn dsn = CreateDsnObj(dsn_section);
   Authentication auth = CreateAuth(dsn_section);
 
