@@ -164,6 +164,13 @@ class ODBCBQClient {
                      std::string const& location,
                      ::google::cloud::Options const& options);
 
+  // Gets query results, based on the filter passed in.
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+  FilterQueryResults(std::string const& project_id, std::string const& job_id,
+                     std::string const& location,
+                     QueryResultsFilterParams const& query_results_filter,
+                     ::google::cloud::Options const& options);
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient

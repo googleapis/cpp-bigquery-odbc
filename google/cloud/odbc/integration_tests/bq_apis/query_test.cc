@@ -22,6 +22,7 @@
 
 namespace google::cloud::odbc_integration_tests_apis {
 
+using bigquery_v2_minimal_internal::GetQueryResults;
 using bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
@@ -675,16 +676,21 @@ TEST(Query, ProjectIdIsEmpty) {
 }
 
 TEST(QueryResults, ProjectIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> dataset_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  absl::optional<std::string> table_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
   ASSERT_TRUE(project_id);
   ASSERT_TRUE(dataset_id);
   ASSERT_TRUE(table_name);
-  auto column_name = GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+  absl::optional<std::string> column_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
   ASSERT_TRUE(column_name);
 
   std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
@@ -697,7 +703,8 @@ TEST(QueryResults, ProjectIdIsEmpty) {
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(kKeysToFilter);
 
-  auto query_response = job_client.Query(post_query_request);
+  StatusOr<PostQueryResults> query_response =
+      job_client.Query(post_query_request);
 
   ASSERT_STATUS_OK(query_response);
   EXPECT_TRUE(query_response.value().job_complete);
@@ -710,7 +717,7 @@ TEST(QueryResults, ProjectIdIsEmpty) {
   get_query_results_request.set_project_id("");
   get_query_results_request.set_job_id(job_id);
 
-  auto query_results_response =
+  StatusOr<GetQueryResults> query_results_response =
       job_client.QueryResults(get_query_results_request);
 
   EXPECT_THAT(

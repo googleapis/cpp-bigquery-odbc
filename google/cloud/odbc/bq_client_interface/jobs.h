@@ -27,13 +27,23 @@ struct JobFilter {
   // Minimum point in time for job creation time.
   std::chrono::system_clock::time_point min_creation_time;
   // Maximum point in time for job creation time.
-  std::chrono::system_clock::time_point max_creation_time;
+  std::chrono::system_clock::time_point max_creation_time =
+      std::chrono::system_clock::now();
   // Filtering by Job state: DONE, PENDING or RUNNING.
   ::google::cloud::bigquery_v2_minimal_internal::StateFilter state_filter;
   // Filters to return the child job of a specific parent.
   std::string parent_job_id;
   // Filtering based on specific Job fields: MINIMAL or FULL.
   ::google::cloud::bigquery_v2_minimal_internal::Projection projection;
+};
+
+// Allows filtering of query results.
+struct QueryResultsFilterParams {
+  // Zero based index of the starting row.
+  std::uint64_t start_index = 0;
+  // Maximum amount of time (in millis) the client is
+  // willing to wait for the query completion.
+  std::int64_t query_timeout_ms = 10000;  // 10s is the default value for BQ API
 };
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
@@ -81,6 +91,15 @@ GetAllQueryResults(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,
     std::string const& location, ::google::cloud::Options const& options);
+
+// Gets query results, based on the filter passed in.
+StatusOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+FilterQueryResults(
+    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location,
+    QueryResultsFilterParams const& query_results_filter,
+    ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 

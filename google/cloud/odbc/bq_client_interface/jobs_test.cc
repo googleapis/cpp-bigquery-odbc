@@ -651,4 +651,93 @@ TEST(GetAllQueryResults, UnauthenticatedRequest) {
   EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
 }
 
+TEST(FilterQueryResults, FilterQueryResultsSuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string job_id = "job_id";
+  std::string location = "location";
+  QueryResultsFilterParams query_results_filter_params{.start_index = 1,
+                                                       .query_timeout_ms = 100};
+  GetQueryResults expected;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, QueryResults)
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(job_id, request.job_id());
+        EXPECT_EQ(location, request.location());
+        EXPECT_EQ(query_results_filter_params.start_index,
+                  request.start_index());
+        EXPECT_EQ(query_results_filter_params.query_timeout_ms,
+                  request.timeout().count());
+        return make_status_or(expected);
+      });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<GetQueryResults> actual =
+      FilterQueryResults(job_client, project_id, job_id, location,
+                         query_results_filter_params, options);
+
+  ASSERT_STATUS_OK(actual);
+}
+
+TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
+  Options options;
+  std::string project_id;
+  std::string job_id;
+  std::string location;
+  QueryResultsFilterParams query_results_filter_params;
+  GetQueryResults expected;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, QueryResults)
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(job_id, request.job_id());
+        EXPECT_EQ(location, request.location());
+        EXPECT_EQ(query_results_filter_params.start_index,
+                  request.start_index());
+        EXPECT_EQ(query_results_filter_params.query_timeout_ms,
+                  request.timeout().count());
+        return make_status_or(expected);
+      });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<GetQueryResults> actual =
+      FilterQueryResults(job_client, project_id, job_id, location,
+                         query_results_filter_params, options);
+
+  ASSERT_STATUS_OK(actual);
+}
+
+TEST(FilterQueryResults, UnauthenticatedRequest) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string job_id = "job_id";
+  std::string location = "location";
+  QueryResultsFilterParams query_results_filter_params{.start_index = 1,
+                                                       .query_timeout_ms = 100};
+  GetQueryResults expected;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, QueryResults)
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(job_id, request.job_id());
+        EXPECT_EQ(location, request.location());
+        EXPECT_EQ(query_results_filter_params.start_index,
+                  request.start_index());
+        EXPECT_EQ(query_results_filter_params.query_timeout_ms,
+                  request.timeout().count());
+        return Status(StatusCode::kUnauthenticated, "denied");
+      });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<GetQueryResults> actual =
+      FilterQueryResults(job_client, project_id, job_id, location,
+                         query_results_filter_params, options);
+
+  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

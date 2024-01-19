@@ -189,4 +189,20 @@ StatusOr<GetQueryResults> GetAllQueryResults(JobClient& job_client,
   return job_client.QueryResults(get_query_results_request, options);
 }
 
+StatusOr<GetQueryResults> FilterQueryResults(
+    JobClient& job_client, std::string const& project_id,
+    std::string const& job_id, std::string const& location,
+    QueryResultsFilterParams const& query_results_filter,
+    Options const& options) {
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+  get_query_results_request.set_location(location);
+  get_query_results_request.set_start_index(query_results_filter.start_index);
+  get_query_results_request.set_timeout(
+      std::chrono::milliseconds(query_results_filter.query_timeout_ms));
+
+  return job_client.QueryResults(get_query_results_request, options);
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
