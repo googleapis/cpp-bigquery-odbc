@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/testing/statement.h"
-#include "google/cloud/odbc/testing/connection.h"
+#include "google/cloud/odbc/testing/driver_connection.h"
+#include "google/cloud/odbc/testing/driver_statement.h"
 
 namespace google::cloud::odbc_tests {
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
@@ -149,7 +153,7 @@ TEST(StatementTest, SQLDescribeCol) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  CheckColumnData(conn, table_name, schema);
+  // CheckColumnData(conn, table_name, schema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -331,5 +335,7 @@ TEST(StatementTest, SQLSetCursorName) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

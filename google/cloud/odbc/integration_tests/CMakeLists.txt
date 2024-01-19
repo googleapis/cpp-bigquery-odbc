@@ -63,6 +63,11 @@ function (odbc_define_tests)
     return()
   endif ()
 
+  # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
+  if (BQ_DRIVER_INTEGRATION_TESTS)
+    add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+  endif()
+
   enable_testing()
 
   add_executable(
@@ -76,7 +81,6 @@ function (odbc_define_tests)
 
   target_link_libraries(
     all_tests
-    odbc
     google_cloud_odbc_testing
     GTest::gtest_main
     GTest::gmock

@@ -24,21 +24,32 @@ endif()
 
 add_library(
     google_cloud_odbc_testing # cmake-format: sort
-    commons.cc
-    commons.h
-    connection.cc
-    connection.h
+    driver_commons.cc
+    driver_commons.h
+    driver_connection.cc
+    driver_connection.h
     driver_properties.cc
     driver_properties.h
-    statement.cc
-    statement.h
-    catalog.cc
-    catalog.h)
+    driver_statement.cc
+    driver_statement.h
+    driver_catalog.cc
+    driver_catalog.h)
 
 target_link_libraries(
     google_cloud_odbc_testing
     google-cloud-cpp::experimental-bigquery_rest
     GTest::gmock)
+
+# Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver target
+if (BQ_DRIVER_INTEGRATION_TESTS)
+    target_link_libraries(
+        google_cloud_odbc_testing
+        google_cloud_odbc_bq_driver)
+else()
+    target_link_libraries(
+        google_cloud_odbc_testing
+        odbc)
+endif()
 
 add_library(
     google_cloud_odbc_testing_utils # cmake-format: sort

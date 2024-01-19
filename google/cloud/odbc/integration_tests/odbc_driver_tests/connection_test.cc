@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/testing/connection.h"
+#include "google/cloud/odbc/testing/driver_connection.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -47,6 +47,10 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(ConnectionTest, SQLConnect) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
@@ -77,5 +81,7 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

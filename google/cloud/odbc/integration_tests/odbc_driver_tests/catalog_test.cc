@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/testing/catalog.h"
-#include "google/cloud/odbc/testing/connection.h"
+#include "google/cloud/odbc/testing/driver_catalog.h"
+#include "google/cloud/odbc/testing/driver_connection.h"
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 namespace google::cloud::odbc_tests {
 
@@ -88,3 +92,5 @@ TEST(CatalogTest, SQLTables) {
 }
 
 }  // namespace google::cloud::odbc_tests
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS

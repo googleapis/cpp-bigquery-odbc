@@ -17,17 +17,17 @@
 """Automatically generated source lists for google_cloud_odbc_testing - DO NOT EDIT."""
 
 google_cloud_odbc_testing_hdrs = [
-    "commons.h",
-    "connection.h",
+    "driver_commons.h",
+    "driver_connection.h",
     "driver_properties.h",
-    "statement.h",
-    "catalog.h",
+    "driver_statement.h",
+    "driver_catalog.h",
 ]
 
 google_cloud_odbc_testing_srcs = [
-    "commons.cc",
-    "connection.cc",
+    "driver_commons.cc",
+    "driver_connection.cc",
     "driver_properties.cc",
-    "statement.cc",
-    "catalog.cc",
+    "driver_statement.cc",
+    "driver_catalog.cc",
 ]
