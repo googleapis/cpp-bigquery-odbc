@@ -28,7 +28,7 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 SQLRETURN SQLGetFunctionsInternal(
     SQLHDBC connectionHandle, SQLUSMALLINT functionId,
     SQLUSMALLINT* supportedFunction,
-    ::google::cloud::odbc_bq_driver_internal::TraceOptions& opts) {
+    TraceOptions& opts) {
   SQLRETURN rc = SQL_SUCCESS;
   // We are only checking the validity of the handle here.
   // No connection to data source is necessary for this ODBC API.
