@@ -87,7 +87,7 @@ Status PopulateSupportedODBC3Functions(TraceOptions& opts,
 
   // Populate ODBC 2 functions first.
   for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
-    int val = IsOdbcFunctionIdSupported((UWORD)i);
+    int val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
     if (val == TRUE) {
       ENABLE_SQL_FUNCTION_BIT(supportedFunction, i);
     }
@@ -95,7 +95,7 @@ Status PopulateSupportedODBC3Functions(TraceOptions& opts,
 
   // Populate ODBC 3 functions.
   for (int i = SQL_ODBC3_API_START; i <= SQL_ODBC3_API_LAST; i++) {
-    int val = IsOdbcFunctionIdSupported((UWORD)i);
+    int val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
     if (val == TRUE) {
       ENABLE_SQL_FUNCTION_BIT(supportedFunction, i);
     }
@@ -115,8 +115,7 @@ Status PopulateSupportedODBC2Functions(TraceOptions& opts,
   }
   // Populate ODBC 2 functions only.
   for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
-    supportedFunction[i] = IsOdbcFunctionIdSupported((UWORD)i);
-    ;
+    supportedFunction[i] = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
   }
   return Status(StatusCode::kOk, "");
 }
@@ -137,17 +136,11 @@ int IsOdbcFunctionIdSupported(UWORD fid) {
 }
 
 bool IsFunctionIdOdbc3(UWORD fid) {
-  if (odbc_3_fns.find(fid) != odbc_3_fns.end()) {
-    return true;
-  }
-  return false;
+  return (odbc_3_fns.find(fid) != odbc_3_fns.end());
 }
 
 bool IsFunctionIdOdbc2(UWORD fid) {
-  if (odbc_2_fns.find(fid) != odbc_2_fns.end()) {
-    return true;
-  }
-  return false;
+  return (odbc_2_fns.find(fid) != odbc_2_fns.end());
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
