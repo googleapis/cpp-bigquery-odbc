@@ -1,5 +1,4 @@
-
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 
-#include "commons.h"
+namespace google::cloud::odbc_bq_driver_internal {
 
-namespace google::cloud::odbc_tests {
-
-SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn);
-
-}  // namespace google::cloud::odbc_tests
-
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H
+}  // namespace google::cloud::odbc_bq_driver_internal

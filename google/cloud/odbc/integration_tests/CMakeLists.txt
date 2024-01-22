@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(cpp-bigquery-odbc-integration-testing LANGUAGES CXX)
 
-function (define_integration_tests)
+function (define_client_library_integration_tests)
     if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
         return()
     endif ()
@@ -106,4 +106,4 @@ odbc_define_demo_tests()
 
 odbc_define_tests()
 
-define_integration_tests()
+define_client_library_integration_tests()

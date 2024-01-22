@@ -16,7 +16,7 @@
 
 namespace google::cloud::odbc_tests {
 
-map<SQLUSMALLINT, std::string const> const kAllOdbc3Functions = {
+std::map<SQLUSMALLINT, std::string const> const kAllOdbc3Functions = {
     //{SQL_API_SQLALLOCENV, "SQL_API_SQLALLOCENV"},
     {SQL_API_SQLALLOCHANDLE, "SQL_API_SQLALLOCHANDLE"},
     {SQL_API_SQLGETDESCFIELD, "SQL_API_SQLGETDESCFIELD"},
