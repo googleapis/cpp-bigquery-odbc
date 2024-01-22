@@ -44,6 +44,10 @@ struct QueryResultsFilterParams {
   // Maximum amount of time (in millis) the client is
   // willing to wait for the query completion.
   std::int64_t query_timeout_ms = 10000;  // 10s is the default value for BQ API
+  // Maximum number of results to return.
+  std::uint32_t max_results = 0;
+  // Allows for pagination of results.
+  std::string page_token;
 };
 
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(

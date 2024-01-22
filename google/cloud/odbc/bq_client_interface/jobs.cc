@@ -186,7 +186,33 @@ StatusOr<GetQueryResults> GetAllQueryResults(JobClient& job_client,
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location(location);
 
-  return job_client.QueryResults(get_query_results_request, options);
+  GetQueryResults get_query_results;
+
+  while (true) {
+    StatusOr<GetQueryResults> get_query_results_partial =
+        job_client.QueryResults(get_query_results_request, options);
+
+    if (!get_query_results_partial) {
+      return get_query_results_partial.status();
+    }
+
+    if (get_query_results.rows.empty()) {
+      // It's the first response. Copy it.
+      get_query_results = *get_query_results_partial;
+    } else {
+      get_query_results.rows.insert(get_query_results.rows.end(),
+                                    get_query_results_partial->rows.begin(),
+                                    get_query_results_partial->rows.end());
+    }
+    if (get_query_results_partial->page_token.empty()) {
+      get_query_results.page_token = "";
+      break;
+    }
+    get_query_results_request.set_page_token(
+        get_query_results_partial->page_token);
+  }
+
+  return get_query_results;
 }
 
 StatusOr<GetQueryResults> FilterQueryResults(
@@ -201,6 +227,8 @@ StatusOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_start_index(query_results_filter.start_index);
   get_query_results_request.set_timeout(
       std::chrono::milliseconds(query_results_filter.query_timeout_ms));
+  get_query_results_request.set_max_results(query_results_filter.max_results);
+  get_query_results_request.set_page_token(query_results_filter.page_token);
 
   return job_client.QueryResults(get_query_results_request, options);
 }

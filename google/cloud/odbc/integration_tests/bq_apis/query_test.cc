@@ -725,4 +725,77 @@ TEST(QueryResults, ProjectIdIsEmpty) {
       StatusIs(StatusCode::kNotFound, HasSubstr("Request couldn't be served")));
 }
 
+TEST(Query, QueryResultsPagination) {
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> dataset_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  absl::optional<std::string> table_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  ASSERT_TRUE(project_id);
+  ASSERT_TRUE(dataset_id);
+  ASSERT_TRUE(table_name);
+  absl::optional<std::string> column_name =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+  ASSERT_TRUE(column_name);
+
+  std::string full_table_name = absl::StrCat(*dataset_id, ".", *table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", *column_name, " FROM ", full_table_name);
+  QueryRequest query_request;
+  query_request.set_query(query_statement);
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(*project_id);
+  post_query_request.set_query_request(query_request);
+  post_query_request.set_json_filter_keys(kKeysToFilter);
+
+  StatusOr<PostQueryResults> query_response =
+      job_client.Query(post_query_request);
+
+  ASSERT_STATUS_OK(query_response);
+  EXPECT_TRUE(query_response.value().job_complete);
+  EXPECT_EQ(query_response.value().schema.fields.size(), 1);
+  EXPECT_GT(query_response.value().total_rows, 1);
+
+  // Getting results of previous Query
+  std::string job_id = query_response.value().job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(*project_id);
+  get_query_results_request.set_job_id(job_id);
+  get_query_results_request.set_max_results(1);
+
+  GetQueryResults query_results_response;
+
+  while (true) {
+    StatusOr<GetQueryResults> query_results_response_partial =
+        job_client.QueryResults(get_query_results_request);
+    ASSERT_STATUS_OK(query_results_response_partial);
+
+    if (query_results_response.rows.empty()) {
+      // It's the first response. Copy it.
+      query_results_response = *query_results_response_partial;
+    } else {
+      query_results_response.rows.insert(
+          query_results_response.rows.end(),
+          query_results_response_partial->rows.begin(),
+          query_results_response_partial->rows.end());
+    }
+
+    if (query_results_response_partial->page_token.empty()) {
+      query_results_response.page_token = "";
+      break;
+    }
+    get_query_results_request.set_page_token(
+        query_results_response_partial->page_token);
+  }
+
+  EXPECT_TRUE(query_results_response.job_complete);
+  EXPECT_EQ(query_results_response.total_rows,
+            query_response.value().total_rows);
+}
+
 }  // namespace google::cloud::odbc_integration_tests_apis

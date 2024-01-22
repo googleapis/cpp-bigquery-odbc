@@ -605,6 +605,37 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
   ASSERT_STATUS_OK(actual);
 }
 
+TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string job_id = "job_id";
+  std::string location = "location";
+  GetQueryResults expected_1{
+      .page_token = "token",
+      .rows = {{.fields = {{"1", {.value_kind = "value_1"}}}}}};
+  GetQueryResults expected_2{
+      .rows = {{.fields = {{"1", {.value_kind = "value_2"}}}}}};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, QueryResults)
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_TRUE(request.page_token().empty());
+        return make_status_or(expected_1);
+      })
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_EQ(expected_1.page_token, request.page_token());
+        return make_status_or(expected_2);
+      });
+  JobClient job_client(std::move(mock));
+
+  StatusOr<GetQueryResults> actual =
+      GetAllQueryResults(job_client, project_id, job_id, location, options);
+
+  ASSERT_STATUS_OK(actual);
+  EXPECT_EQ(2, actual->rows.size());
+  EXPECT_TRUE(actual->page_token.empty());
+}
+
 TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
   Options options;
   std::string project_id;
@@ -657,7 +688,9 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess) {
   std::string job_id = "job_id";
   std::string location = "location";
   QueryResultsFilterParams query_results_filter_params{.start_index = 1,
-                                                       .query_timeout_ms = 100};
+                                                       .query_timeout_ms = 100,
+                                                       .max_results = 15,
+                                                       .page_token = "token"};
   GetQueryResults expected;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
@@ -670,6 +703,9 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess) {
                   request.start_index());
         EXPECT_EQ(query_results_filter_params.query_timeout_ms,
                   request.timeout().count());
+        EXPECT_EQ(query_results_filter_params.max_results,
+                  request.max_results());
+        EXPECT_EQ(query_results_filter_params.page_token, request.page_token());
         return make_status_or(expected);
       });
   JobClient job_client(std::move(mock));
@@ -699,6 +735,9 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
                   request.start_index());
         EXPECT_EQ(query_results_filter_params.query_timeout_ms,
                   request.timeout().count());
+        EXPECT_EQ(query_results_filter_params.max_results,
+                  request.max_results());
+        EXPECT_EQ(query_results_filter_params.page_token, request.page_token());
         return make_status_or(expected);
       });
   JobClient job_client(std::move(mock));
@@ -715,8 +754,7 @@ TEST(FilterQueryResults, UnauthenticatedRequest) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  QueryResultsFilterParams query_results_filter_params{.start_index = 1,
-                                                       .query_timeout_ms = 100};
+  QueryResultsFilterParams query_results_filter_params;
   GetQueryResults expected;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
