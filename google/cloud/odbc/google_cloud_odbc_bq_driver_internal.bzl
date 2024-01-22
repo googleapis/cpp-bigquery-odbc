@@ -17,23 +17,31 @@
 """Automatically generated source lists for google_cloud_odbc_bq_driver_internal - DO NOT EDIT."""
 
 google_cloud_odbc_bq_driver_internal_hdrs = [
+    "bq_driver/internal/data_translation.h",
     "bq_driver/internal/diagnostics.h",
     "bq_driver/internal/odbc_conn_handle.h",
     "bq_driver/internal/odbc_env_handle.h",
     "bq_driver/internal/odbc_handle.h",
+    "bq_driver/internal/odbc_query.h",
     "bq_driver/internal/odbc_sql_fns.h",
     "bq_driver/internal/odbc_sql_info.h",
+    "bq_driver/internal/odbc_sql_type_info.h",
+    "bq_driver/internal/odbc_statement_handle.h",
     "bq_driver/internal/trace_utils.h",
     "bq_driver/internal/utils.h",
 ]
 
 google_cloud_odbc_bq_driver_internal_srcs = [
+    "bq_driver/internal/data_translation.cc",
     "bq_driver/internal/diagnostics.cc",
     "bq_driver/internal/odbc_conn_handle.cc",
     "bq_driver/internal/odbc_env_handle.cc",
     "bq_driver/internal/odbc_handle.cc",
+    "bq_driver/internal/odbc_query.cc",
     "bq_driver/internal/odbc_sql_fns.cc",
     "bq_driver/internal/odbc_sql_info.cc",
+    "bq_driver/internal/odbc_sql_type_info.cc",
+    "bq_driver/internal/odbc_statement_handle.cc",
     "bq_driver/internal/trace_utils.cc",
     "bq_driver/internal/utils.cc",
 ]

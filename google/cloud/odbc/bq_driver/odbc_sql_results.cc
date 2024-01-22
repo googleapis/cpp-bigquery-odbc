@@ -16,4 +16,18 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+// NOLINTBEGIN(misc-unused-parameters)
+
+SQLRETURN SQLBindColInternal(SQLHSTMT statementHandle,
+                             SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
+                             SQLPOINTER targetValue,
+                             SQLLEN targetValueBufferLen,
+                             SQLLEN* targetValueStrLen) {
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLFetchInternal(SQLHSTMT statementHandle) { return SQL_SUCCESS; }
+
+// NOLINTEND(misc-unused-parameters)
+
 }  // namespace google::cloud::odbc_bq_driver

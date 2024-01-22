@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
@@ -42,18 +43,24 @@
 using ::google::cloud::Status;
 using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 
@@ -390,12 +397,21 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
 SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
                                  SQLSMALLINT dataType) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLGetTypeInfo(statementHandle, dataType,
+                                    *(*kTraceOptsConsole));
 
-  // Call to internal function for SQLGetTypeInfo in odbc_driver_metadata.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetTypeInfoInternal(statementHandle,
+                                                               dataType);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLGetTypeInfo(rc, *(*kTraceOptsConsole));
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
 }
@@ -1178,12 +1194,19 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLFetch(statementHandle, *(*kTraceOptsConsole));
 
-  // Call to internal function for SQLFetch in odbc_sql_results.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLFetchInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLFetch(rc, *(*kTraceOptsConsole));
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
 }
@@ -1366,12 +1389,23 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStrLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLBindCol(statementHandle, columnNumber, targetCType,
+                                targetValue, targetValueBufferLen,
+                                targetValueStrLen, *(*kTraceOptsConsole));
 
-  // Call to internal function for SQLBindCol in odbc_sql_results.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLBindColInternal(
+      statementHandle, columnNumber, targetCType, targetValue,
+      targetValueBufferLen, targetValueStrLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLBindCol(rc, *(*kTraceOptsConsole));
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
 }

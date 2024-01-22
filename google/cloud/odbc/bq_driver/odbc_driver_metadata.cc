@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 
@@ -222,5 +223,14 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 
   return InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
 }
+
+// NOLINTBEGIN(misc-unused-parameters)
+
+SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
+                                 SQLSMALLINT dataType) {
+  return SQL_SUCCESS;
+}
+
+// NOLINTEND(misc-unused-parameters)
 
 }  // namespace google::cloud::odbc_bq_driver
