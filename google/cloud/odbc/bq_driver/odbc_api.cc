@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/status_or.h"
@@ -44,11 +45,13 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 
@@ -350,13 +353,19 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
                                   SQLUSMALLINT functionId,
                                   SQLUSMALLINT* supportedFunction) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLGetFunctions(connectionHandle, functionId,
+                                     supportedFunction, *(*kTraceOptsConsole));
 
   // Call to internal function for SQLGetFunctions in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetFunctionsInternal(
+      connectionHandle, functionId, supportedFunction);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
