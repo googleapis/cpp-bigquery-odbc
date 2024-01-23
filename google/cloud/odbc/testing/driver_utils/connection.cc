@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "driver_connection.h"
+#include "connection.h"
 
 namespace google::cloud::odbc_tests {
 

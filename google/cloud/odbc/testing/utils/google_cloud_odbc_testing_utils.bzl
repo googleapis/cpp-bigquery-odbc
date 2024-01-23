@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 """Automatically generated source lists for google_cloud_odbc_testing_utils - DO NOT EDIT."""
 
 google_cloud_odbc_testing_utils_hdrs = [
-    "utils/status_matchers.h",
+    "status_matchers.h",
 ]
 
 google_cloud_odbc_testing_utils_srcs = [
-    "utils/status_matchers.cc",
+    "status_matchers.cc",
 ]
