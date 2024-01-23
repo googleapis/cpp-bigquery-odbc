@@ -45,10 +45,9 @@ namespace google::cloud::odbc_bq_driver {
 // semantics please refer to:
 //
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
-SQLRETURN SQLGetFunctionsInternal(
-    SQLHDBC connectionHandle, SQLUSMALLINT functionId,
-    SQLUSMALLINT* supportedFunction,
-    ::google::cloud::odbc_bq_driver_internal::TraceOptions& opts);
+SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
+                                  SQLUSMALLINT functionId,
+                                  SQLUSMALLINT* supportedFunction);
 
 }  // namespace google::cloud::odbc_bq_driver
 

@@ -25,15 +25,11 @@ using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-std::shared_ptr<TraceOptions> test_driver_fn_opts_console =
-    TraceOptions::CreateTraceOptionsConsole(true, 0).value();
-
 TEST(SQLGetFunctionsInternal, AllSupportedOdbc3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
   SQLHDBC handle;
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns,
-                              *test_driver_fn_opts_console);
+      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLALLOCHANDLE));
@@ -99,8 +95,7 @@ TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
   SQLHDBC handle;
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns,
-                              *test_driver_fn_opts_console);
+      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLBULKOPERATIONS));
@@ -111,8 +106,7 @@ TEST(SQLGetFunctionsInternal, ODBC3FunctionIdSupported) {
   SQLHDBC handle;
   SQLUSMALLINT supported;
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_SQLMORERESULTS, &supported,
-                              *test_driver_fn_opts_console);
+      SQLGetFunctionsInternal(&handle, SQL_API_SQLMORERESULTS, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_TRUE, supported);
 }
@@ -120,8 +114,8 @@ TEST(SQLGetFunctionsInternal, ODBC3FunctionIdSupported) {
 TEST(SQLGetFunctionsInternal, ODBC3FunctionIdNotSupported) {
   SQLHDBC handle;
   SQLUSMALLINT supported;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_SQLSETPOS, &supported,
-                                         *test_driver_fn_opts_console);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(&handle, SQL_API_SQLSETPOS, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_FALSE, supported);
 }
@@ -129,8 +123,7 @@ TEST(SQLGetFunctionsInternal, ODBC3FunctionIdNotSupported) {
 TEST(SQLGetFunctionsInternal, ODBC2FunctionIdNotSupported) {
   SQLHDBC handle;
   SQLUSMALLINT supported;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_SQLERROR, &supported,
-                                         *test_driver_fn_opts_console);
+  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_SQLERROR, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_FALSE, supported);
 }
@@ -138,8 +131,8 @@ TEST(SQLGetFunctionsInternal, ODBC2FunctionIdNotSupported) {
 TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc2Functions) {
   SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
   SQLHDBC handle;
-  SQLRETURN rc = SQLGetFunctionsInternal(
-      &handle, SQL_API_ALL_FUNCTIONS, odbc2_fns, *test_driver_fn_opts_console);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(&handle, SQL_API_ALL_FUNCTIONS, odbc2_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLERROR]);
@@ -162,30 +155,29 @@ TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc2Functions) {
 
 TEST(SQLGetFunctionsInternal, Odbc2NullConnectionHandle) {
   SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
-  SQLRETURN rc = SQLGetFunctionsInternal(
-      nullptr, SQL_API_ALL_FUNCTIONS, odbc2_fns, *test_driver_fn_opts_console);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(nullptr, SQL_API_ALL_FUNCTIONS, odbc2_fns);
   EXPECT_EQ(SQL_INVALID_HANDLE, rc);
 }
 
 TEST(SQLGetFunctionsInternal, Odbc3NullConnectionHandle) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
   SQLRETURN rc =
-      SQLGetFunctionsInternal(nullptr, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns,
-                              *test_driver_fn_opts_console);
+      SQLGetFunctionsInternal(nullptr, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
   EXPECT_EQ(SQL_INVALID_HANDLE, rc);
 }
 
 TEST(SQLGetFunctionsInternal, Odbc2NullSupportedFunctionPtr) {
   SQLHDBC handle;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_ALL_FUNCTIONS,
-                                         nullptr, *test_driver_fn_opts_console);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(&handle, SQL_API_ALL_FUNCTIONS, nullptr);
   EXPECT_EQ(SQL_ERROR, rc);
 }
 
 TEST(SQLGetFunctionsInternal, Odbc3NullSupportedFunctionPtr) {
   SQLHDBC handle;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS,
-                                         nullptr, *test_driver_fn_opts_console);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
   EXPECT_EQ(SQL_ERROR, rc);
 }
 

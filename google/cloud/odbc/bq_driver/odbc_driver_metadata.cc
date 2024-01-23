@@ -20,6 +20,7 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
@@ -27,9 +28,9 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
                                   SQLUSMALLINT functionId,
-                                  SQLUSMALLINT* supportedFunction,
-                                  TraceOptions& opts) {
+                                  SQLUSMALLINT* supportedFunction) {
   SQLRETURN rc = SQL_SUCCESS;
+  TraceOptions& opts = *(*kTraceOptsConsole);
   // We are only checking the validity of the handle here.
   // No connection to data source is necessary for this ODBC API.
   if (!connectionHandle) {
