@@ -14,9 +14,9 @@
 
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
+#include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 #include <chrono>
 
@@ -28,7 +28,6 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_integration_tests_testing_util::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -39,6 +38,7 @@ using google::cloud::odbc_integration_tests_testing_util::
     CreateUserAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
+using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -47,12 +47,11 @@ TEST(ListJobs, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before =
       std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
@@ -73,12 +72,11 @@ TEST(ListJobs, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before =
       std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
@@ -99,12 +97,11 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before =
       std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
@@ -125,12 +122,11 @@ TEST(ListJobs, MoreRequestArguments) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   // Listing jobs only for the last week to make the test faster
   auto week_before =
       std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
@@ -193,12 +189,11 @@ TEST(ListJobs, FilterStateIsWrong) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   StateFilter state_filter;
   state_filter.value = "not-valid-state";
   request.set_state_filter(state_filter);
@@ -219,12 +214,11 @@ TEST(ListJobs, FilterProjectionIsWrong) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   Projection projection;
   projection.value = "not-valid-projection";
   request.set_projection(projection);
@@ -245,12 +239,11 @@ TEST(ListJobs, NoAccessAccountAuth) {
   StatusOr<Options> options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   ListJobsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 

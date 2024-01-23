@@ -24,6 +24,8 @@ endif()
 
 add_library(
     google_cloud_odbc_testing_utils # cmake-format: sort
+    env_vars.h
+    env_vars.cc
     status_matchers.cc
     status_matchers.h)
 

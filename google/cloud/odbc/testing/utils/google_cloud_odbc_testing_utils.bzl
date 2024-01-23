@@ -17,9 +17,11 @@
 """Automatically generated source lists for google_cloud_odbc_testing_utils - DO NOT EDIT."""
 
 google_cloud_odbc_testing_utils_hdrs = [
+    "env_vars.h",
     "status_matchers.h",
 ]
 
 google_cloud_odbc_testing_utils_srcs = [
+    "env_vars.cc",
     "status_matchers.cc",
 ]

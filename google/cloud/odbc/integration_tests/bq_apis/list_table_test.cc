@@ -14,9 +14,9 @@
 
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
+#include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
-#include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_integration_tests_apis {
@@ -25,7 +25,6 @@ using bigquery_v2_minimal_internal::ListFormatTable;
 using bigquery_v2_minimal_internal::ListTablesRequest;
 using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::TableClient;
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_integration_tests_testing_util::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -36,6 +35,7 @@ using google::cloud::odbc_integration_tests_testing_util::
     CreateUserAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
+using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -44,15 +44,14 @@ TEST(ListAllTables, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
-  request.set_project_id(*project_id);
-  request.set_dataset_id(*dataset_id);
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -68,15 +67,14 @@ TEST(ListAllTables, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
-  request.set_project_id(*project_id);
-  request.set_dataset_id(*dataset_id);
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -92,15 +90,14 @@ TEST(ListAllTables, ServiceAccountAuthWithClientId) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
-  request.set_project_id(*project_id);
-  request.set_dataset_id(*dataset_id);
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -116,12 +113,11 @@ TEST(ListAllTables, DatasetNotExist) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
   ListTablesRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_dataset_id("Non_existing_dataset");
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
@@ -140,13 +136,13 @@ TEST(ListAllTables, ProjectNotExist) {
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(dataset_id);
   std::string project_id = std::string(kNameForNonExistingProject);
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
   request.set_project_id(project_id);
-  request.set_dataset_id(*dataset_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -164,15 +160,14 @@ TEST(ListAllTables, NoAccessAccountAuth) {
   StatusOr<Options> options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
-  request.set_project_id(*project_id);
-  request.set_dataset_id(*dataset_id);
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -190,12 +185,12 @@ TEST(ListAllTables, ProjectIdIEmpty) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(dataset_id);
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListTablesRequest request;
   request.set_project_id("");
-  request.set_dataset_id(*dataset_id);
+  request.set_dataset_id(dataset_id);
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);
 
@@ -212,11 +207,11 @@ TEST(ListAllTables, DatasetIdIEmpty) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
   ListTablesRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_dataset_id("");
 
   StreamRange<ListFormatTable> range = table_client.ListTables(request);

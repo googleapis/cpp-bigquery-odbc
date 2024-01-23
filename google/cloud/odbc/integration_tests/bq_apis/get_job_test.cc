@@ -15,9 +15,9 @@
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/common_functions.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
+#include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_integration_tests_apis {
@@ -29,7 +29,6 @@ using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_integration_tests_testing_util::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -39,6 +38,7 @@ using google::cloud::odbc_integration_tests_testing_util::
 using google::cloud::odbc_integration_tests_testing_util::InsertJob;
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
+using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -51,7 +51,7 @@ TEST(GetJob, UserAccountAuth) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job
   GetJobRequest get_job_request;
@@ -73,7 +73,7 @@ TEST(GetJob, ServiceAccountAuth) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job
   GetJobRequest get_job_request;
@@ -95,7 +95,7 @@ TEST(GetJob, ServiceAccountAuthWithClientId) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job
   GetJobRequest get_job_request;
@@ -117,7 +117,7 @@ TEST(GetJob, DifferentAccount) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job with another account
   StatusOr<Options> options_with_user_account =
@@ -145,7 +145,7 @@ TEST(GetJob, WrongLocation) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job
   GetJobRequest get_job_request;
@@ -168,7 +168,7 @@ TEST(GetJob, LocationNotExist) {
   StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   // Getting previous Job
   GetJobRequest get_job_request;
@@ -188,12 +188,11 @@ TEST(GetJob, JobNotExist) {
       CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   GetJobRequest get_job_request;
-  get_job_request.set_project_id(*project_id);
+  get_job_request.set_project_id(project_id);
   get_job_request.set_job_id("Not_existing_job");
 
   StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
@@ -242,7 +241,7 @@ TEST(GetJob, JobIdIsEmpty) {
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
   GetJobRequest get_job_request;
   get_job_request.set_project_id(project_id);

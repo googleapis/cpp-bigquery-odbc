@@ -14,9 +14,9 @@
 
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
+#include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
-#include "google/cloud/internal/getenv.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_integration_tests_apis {
@@ -25,7 +25,6 @@ using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::ListDatasetsRequest;
 using bigquery_v2_minimal_internal::ListFormatDataset;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_integration_tests_testing_util::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -36,6 +35,7 @@ using google::cloud::odbc_integration_tests_testing_util::
     CreateUserAccountAuthentication;
 using google::cloud::odbc_integration_tests_testing_util::
     kNameForNonExistingProject;
+using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -45,14 +45,13 @@ TEST(ListDatasets, UserAccountAuth) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
 
@@ -61,7 +60,7 @@ TEST(ListDatasets, UserAccountAuth) {
   bool found = false;
   for (auto const& dataset : range) {
     ASSERT_STATUS_OK(dataset);
-    found = dataset.value().dataset_reference.dataset_id == *dataset_id;
+    found = dataset.value().dataset_reference.dataset_id == dataset_id;
     if (found) break;
   }
   ASSERT_EQ(found, true);
@@ -73,14 +72,13 @@ TEST(ListDatasets, ServiceAccountAuth) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
 
@@ -89,7 +87,7 @@ TEST(ListDatasets, ServiceAccountAuth) {
   bool found = false;
   for (auto const& dataset : range) {
     ASSERT_STATUS_OK(dataset);
-    found = dataset.value().dataset_reference.dataset_id == *dataset_id;
+    found = dataset.value().dataset_reference.dataset_id == dataset_id;
     if (found) break;
   }
   ASSERT_EQ(found, true);
@@ -101,14 +99,13 @@ TEST(ListDatasets, ServiceAccountAuthWithClientId) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
 
@@ -117,7 +114,7 @@ TEST(ListDatasets, ServiceAccountAuthWithClientId) {
   bool found = false;
   for (auto const& dataset : range) {
     ASSERT_STATUS_OK(dataset);
-    found = dataset.value().dataset_reference.dataset_id == *dataset_id;
+    found = dataset.value().dataset_reference.dataset_id == dataset_id;
     if (found) break;
   }
   ASSERT_EQ(found, true);
@@ -129,15 +126,13 @@ TEST(ListDatasets, UsingFilter) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_filter(
       "labels.dataset_label_to_filter:dataset_label_value_to_filter");
 
@@ -148,7 +143,7 @@ TEST(ListDatasets, UsingFilter) {
   bool found = false;
   for (auto const& dataset : range) {
     ASSERT_STATUS_OK(dataset);
-    found = dataset.value().dataset_reference.dataset_id == *dataset_id;
+    found = dataset.value().dataset_reference.dataset_id == dataset_id;
     if (found) break;
   }
   ASSERT_EQ(found, true);
@@ -160,12 +155,11 @@ TEST(ListDatasets, UsingFilterNoDatasets) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_filter(
       "labels.dataset_label_to_filter:zero_datasets_for_such_filter");
 
@@ -181,12 +175,11 @@ TEST(ListDatasets, WrongFilter) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_filter("not-valid-filter");
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
@@ -207,15 +200,13 @@ TEST(ListDatasets, HiddenDatasets) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  absl::optional<std::string> dataset_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  ASSERT_TRUE(project_id);
-  ASSERT_TRUE(dataset_id);
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
   request.set_all_datasets(true);
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
@@ -225,7 +216,7 @@ TEST(ListDatasets, HiddenDatasets) {
   bool found = false;
   for (auto const& dataset : range) {
     ASSERT_STATUS_OK(dataset);
-    found = dataset.value().dataset_reference.dataset_id == *dataset_id;
+    found = dataset.value().dataset_reference.dataset_id == dataset_id;
     if (found) break;
   }
   ASSERT_EQ(found, true);
@@ -257,6 +248,7 @@ TEST(ListDatasets, ProjectIdIsEmpty) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+
   ListDatasetsRequest request;
   request.set_project_id("");
 
@@ -277,12 +269,11 @@ TEST(ListDatasets, NoAccessAccountAuth) {
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  absl::optional<std::string> project_id =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  ASSERT_TRUE(project_id);
   ListDatasetsRequest request;
-  request.set_project_id(*project_id);
+  request.set_project_id(project_id);
 
   StreamRange<ListFormatDataset> range = dataset_client.ListDatasets(request);
 
