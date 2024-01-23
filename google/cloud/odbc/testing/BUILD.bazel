@@ -17,6 +17,13 @@ package(default_visibility = ["//:__subpackages__"])
 licenses(["notice"])  # Apache 2.0
 
 cc_library(
+    name = "google_cloud_odbc_testing_client_library_utils",
+    testonly = True,
+    visibility = ["//visibility:public"],
+    deps = ["//google/cloud/odbc/testing/client_library_utils:google_cloud_odbc_testing_client_library_utils"],
+)
+
+cc_library(
     name = "google_cloud_odbc_testing_driver_utils",
     testonly = True,
     visibility = ["//visibility:public"],

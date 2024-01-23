@@ -18,6 +18,8 @@ if (NOT ODBC_INTEGRATION_TESTING AND NOT ODBC_UNIT_TESTING AND NOT CLIENT_LIBRAR
     return()
 endif ()
 
-add_subdirectory(utils)
+add_subdirectory(client_library_utils)
 
 add_subdirectory(driver_utils)
+
+add_subdirectory(utils)

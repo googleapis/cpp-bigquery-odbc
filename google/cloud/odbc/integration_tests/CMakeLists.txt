@@ -35,12 +35,10 @@ function (define_integration_tests)
       ${client_library_tests_cc}
   )
 
-  add_subdirectory(testing_util)
-
   target_link_libraries(
       scheduled_integration_tests PUBLIC
       google-cloud-cpp::experimental-bigquery_rest
-      cpp_bigquery_odbc_integration_testing_util
+      google_cloud_odbc_testing_client_library_utils
       google_cloud_odbc_testing_utils
       GTest::gtest_main
   )
