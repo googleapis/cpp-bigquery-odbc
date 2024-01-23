@@ -23,6 +23,7 @@
 namespace google::cloud::odbc_integration_tests_apis {
 
 using bigquery_v2_minimal_internal::JobClient;
+using bigquery_v2_minimal_internal::ListFormatJob;
 using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
@@ -43,10 +44,11 @@ using ::testing::HasSubstr;
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, UserAccountAuth) {
-  auto options = CreateUserAccountAuthentication();
+  StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -57,7 +59,7 @@ TEST(ListJobs, UserAccountAuth) {
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -68,10 +70,11 @@ TEST(ListJobs, UserAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(ListJobs, ServiceAccountAuth) {
-  auto options = CreateServiceAccountAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -82,7 +85,7 @@ TEST(ListJobs, ServiceAccountAuth) {
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -92,10 +95,12 @@ TEST(ListJobs, ServiceAccountAuth) {
 }
 
 TEST(ListJobs, ServiceAccountAuthWithClientId) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -106,7 +111,7 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
   request.set_min_creation_time(week_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -116,10 +121,12 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
 }
 
 TEST(ListJobs, MoreRequestArguments) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -133,7 +140,7 @@ TEST(ListJobs, MoreRequestArguments) {
   request.set_all_users(true);
   request.set_state_filter(StateFilter::Done());
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -143,14 +150,15 @@ TEST(ListJobs, MoreRequestArguments) {
 }
 
 TEST(ListJobs, ProjectNotExist) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
   ListJobsRequest request;
   request.set_project_id(std::string(kNameForNonExistingProject));
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -161,14 +169,15 @@ TEST(ListJobs, ProjectNotExist) {
 }
 
 TEST(ListJobs, ProjectIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
   ListJobsRequest request;
   request.set_project_id("");
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -180,10 +189,12 @@ TEST(ListJobs, ProjectIdIsEmpty) {
 }
 
 TEST(ListJobs, FilterStateIsWrong) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -192,7 +203,7 @@ TEST(ListJobs, FilterStateIsWrong) {
   state_filter.value = "not-valid-state";
   request.set_state_filter(state_filter);
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -204,10 +215,12 @@ TEST(ListJobs, FilterStateIsWrong) {
 }
 
 TEST(ListJobs, FilterProjectionIsWrong) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
@@ -216,7 +229,7 @@ TEST(ListJobs, FilterProjectionIsWrong) {
   projection.value = "not-valid-projection";
   request.set_projection(projection);
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -229,16 +242,17 @@ TEST(ListJobs, FilterProjectionIsWrong) {
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListJobs, NoAccessAccountAuth) {
-  auto options = CreateNoAccessAccountAuthentication();
+  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   ListJobsRequest request;
   request.set_project_id(*project_id);
 
-  auto range = job_client.ListJobs(request);
+  StreamRange<ListFormatJob> range = job_client.ListJobs(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());

@@ -22,6 +22,7 @@ namespace google::cloud::odbc_integration_tests_apis {
 
 using bigquery_v2_minimal_internal::ListProjectsRequest;
 using bigquery_v2_minimal_internal::MakeProjectConnection;
+using bigquery_v2_minimal_internal::Project;
 using bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_integration_tests_testing_util::
@@ -42,13 +43,13 @@ using ::testing::HasSubstr;
 // It's timing out after 15 minutes because of a big number of available
 // projects.
 TEST(ListAllProjects, UserAccountAuth) {
-  auto options = CreateUserAccountAuthentication();
+  StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client =
       ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request);
+  StreamRange<Project> range = project_client.ListProjects(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -59,13 +60,13 @@ TEST(ListAllProjects, UserAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(ListAllProjects, ServiceAccountAuth) {
-  auto options = CreateServiceAccountAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client =
       ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request);
+  StreamRange<Project> range = project_client.ListProjects(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -75,13 +76,13 @@ TEST(ListAllProjects, ServiceAccountAuth) {
 }
 
 TEST(ListAllProjects, WrongPathToAuthFile) {
-  auto options = CreateWrongPathToAuthFileAuthentication();
+  StatusOr<Options> options = CreateWrongPathToAuthFileAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client =
       ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request);
+  StreamRange<Project> range = project_client.ListProjects(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -92,13 +93,13 @@ TEST(ListAllProjects, WrongPathToAuthFile) {
 }
 
 TEST(ListAllProjects, WrongAuthntication) {
-  auto options = CreateWrongAuthentication();
+  StatusOr<Options> options = CreateWrongAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client =
       ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request);
+  StreamRange<Project> range = project_client.ListProjects(request);
 
   auto begin = range.begin();
   ASSERT_NE(begin, range.end());
@@ -110,13 +111,13 @@ TEST(ListAllProjects, WrongAuthntication) {
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(ListAllProjects, NoAccessAccountAuth) {
-  auto options = CreateNoAccessAccountAuthentication();
+  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto project_client =
       ProjectClient(MakeProjectConnection(std::move(*options)));
   ListProjectsRequest request;
 
-  auto range = project_client.ListProjects(request);
+  StreamRange<Project> range = project_client.ListProjects(request);
 
   auto begin = range.begin();
   EXPECT_EQ(begin, range.end());

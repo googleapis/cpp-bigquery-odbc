@@ -27,21 +27,23 @@ using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using google::cloud::internal::GetEnv;
 
 StatusOr<std::string> InsertJob(JobClient job_client) {
-  auto project_id_optional =
+  absl::optional<std::string> project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  auto dataset_id_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  auto table_name_optional = GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  if (project_id_optional->empty()) {
+  absl::optional<std::string> dataset_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  absl::optional<std::string> table_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  if (project_id->empty()) {
     return Status(StatusCode::kInvalidArgument,
                   "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT environment "
                   "variable is not set");
   }
-  if (dataset_id_optional->empty()) {
+  if (dataset_id->empty()) {
     return Status(StatusCode::kInvalidArgument,
                   "CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET environment "
                   "variable is not set");
   }
-  if (table_name_optional->empty()) {
+  if (table_id->empty()) {
     return Status(
         StatusCode::kInvalidArgument,
         "CPP_BIGQUERY_ODBC_TEST_TABLE_NAME environment variable is not set");
@@ -50,13 +52,12 @@ StatusOr<std::string> InsertJob(JobClient job_client) {
   Job job;
   JobConfiguration job_configuration;
   JobConfigurationQuery job_configuration_query;
-  std::string table_name = absl::StrCat(dataset_id_optional.value(), ".",
-                                        table_name_optional.value());
+  std::string table_name = absl::StrCat(*dataset_id, ".", *table_id);
   job_configuration_query.query = absl::StrCat("SELECT * FROM ", table_name);
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
   InsertJobRequest request;
-  request.set_project_id(project_id_optional.value());
+  request.set_project_id(*project_id);
   request.set_job(job);
 
   request.set_json_filter_keys(
@@ -67,7 +68,7 @@ StatusOr<std::string> InsertJob(JobClient job_client) {
        "connectionProperties", "systemVariables", "structTypes", "structValues",
        "location"});
 
-  auto job_response = job_client.InsertJob(request);
+  StatusOr<Job> job_response = job_client.InsertJob(request);
 
   if (!job_response.ok()) {
     return job_response.status();

@@ -45,12 +45,12 @@ using ::testing::HasSubstr;
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(GetJob, UserAccountAuth) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateUserAccountAuthentication();
+  StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job
@@ -58,7 +58,7 @@ TEST(GetJob, UserAccountAuth) {
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id.value());
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
@@ -67,12 +67,12 @@ TEST(GetJob, UserAccountAuth) {
 
 TEST(GetJob, ServiceAccountAuth) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateServiceAccountAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job
@@ -80,7 +80,7 @@ TEST(GetJob, ServiceAccountAuth) {
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id.value());
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
@@ -88,12 +88,13 @@ TEST(GetJob, ServiceAccountAuth) {
 
 TEST(GetJob, ServiceAccountAuthWithClientId) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job
@@ -101,7 +102,7 @@ TEST(GetJob, ServiceAccountAuthWithClientId) {
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id.value());
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
@@ -109,16 +110,18 @@ TEST(GetJob, ServiceAccountAuthWithClientId) {
 
 TEST(GetJob, DifferentAccount) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job with another account
-  auto options_with_user_account = CreateServiceAccountAuthentication();
+  StatusOr<Options> options_with_user_account =
+      CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options_with_user_account);
   auto job_client_with_user_account = JobClient(
       MakeBigQueryJobConnection(std::move(*options_with_user_account)));
@@ -126,7 +129,8 @@ TEST(GetJob, DifferentAccount) {
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id.value());
 
-  auto get_job_response = job_client_with_user_account.GetJob(get_job_request);
+  StatusOr<Job> get_job_response =
+      job_client_with_user_account.GetJob(get_job_request);
 
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
@@ -134,12 +138,13 @@ TEST(GetJob, DifferentAccount) {
 
 TEST(GetJob, WrongLocation) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job
@@ -148,7 +153,7 @@ TEST(GetJob, WrongLocation) {
   get_job_request.set_job_id(job_id.value());
   get_job_request.set_location("asia-south2");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
@@ -156,12 +161,13 @@ TEST(GetJob, WrongLocation) {
 
 TEST(GetJob, LocationNotExist) {
   // First we create a job, so later we could 'get' it
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto job_id = InsertJob(job_client);
+  StatusOr<std::string> job_id = InsertJob(job_client);
   ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   // Getting previous Job
@@ -170,7 +176,7 @@ TEST(GetJob, LocationNotExist) {
   get_job_request.set_job_id(job_id.value());
   get_job_request.set_location("Not_existing_location");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kInvalidArgument,
@@ -178,24 +184,27 @@ TEST(GetJob, LocationNotExist) {
 }
 
 TEST(GetJob, JobNotExist) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id = GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  absl::optional<std::string> project_id =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   ASSERT_TRUE(project_id);
 
   GetJobRequest get_job_request;
   get_job_request.set_project_id(*project_id);
   get_job_request.set_job_id("Not_existing_job");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Job")));
 }
 
 TEST(GetJob, ProjectNotExist) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
@@ -203,14 +212,15 @@ TEST(GetJob, ProjectNotExist) {
   get_job_request.set_project_id(std::string(kNameForNonExistingProject));
   get_job_request.set_job_id("Not_existing_job");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kNotFound, HasSubstr("Not found: Project")));
 }
 
 TEST(GetJob, ProjectIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
@@ -218,7 +228,7 @@ TEST(GetJob, ProjectIdIsEmpty) {
   get_job_request.set_project_id("");
   get_job_request.set_job_id("Not_existing_job");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   // BQ API error
   EXPECT_THAT(
@@ -227,17 +237,18 @@ TEST(GetJob, ProjectIdIsEmpty) {
 }
 
 TEST(GetJob, JobIdIsEmpty) {
-  auto options = CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options =
+      CreateServiceAccountAuthWithClientIdAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  auto project_id =
+  std::string project_id =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT").value_or("");
 
   GetJobRequest get_job_request;
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id("");
 
-  auto get_job_response = job_client.GetJob(get_job_request);
+  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
 
   EXPECT_THAT(get_job_response,
               StatusIs(StatusCode::kInternal,
