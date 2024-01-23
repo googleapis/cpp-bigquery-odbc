@@ -28,12 +28,14 @@ struct DatasetFilter {
   bool all = false;
 };
 
+// Returns detailed info for a specific Dataset.
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Dataset> GetDataset(
     ::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
         dataset_client,
     std::string const& project_id, std::string const& dataset_id,
     ::google::cloud::Options const& options);
 
+// Returns all Datasets in a Project.
 StatusOr<std::vector<
     ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
 ListAllDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
@@ -41,6 +43,8 @@ ListAllDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                 std::string const& project_id,
                 ::google::cloud::Options const& options);
 
+// Returns filtered list of datasets in a Project, based on the dataset
+// filters passed in.
 StatusOr<std::vector<
     ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
 FilterDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&

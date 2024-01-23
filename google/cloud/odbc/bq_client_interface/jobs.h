@@ -50,17 +50,21 @@ struct QueryResultsFilterParams {
   std::string page_token;
 };
 
+// Returns detailed info for a specific Job
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,
     std::string const& location, ::google::cloud::Options const& options);
 
+// Returns all Jobs in a Project
 StatusOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
 ListAllJobs(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, ::google::cloud::Options const& options);
 
+// Returns a filtered list of Jobs in a Project, based on the job filters
+// passed in
 StatusOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
 FilterJobs(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,

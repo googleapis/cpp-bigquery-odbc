@@ -19,16 +19,19 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// Get detailed project information for the project passed in.
 StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
 ListAllProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                     project_client,
                 ::google::cloud::Options const& options);
 
+// Lists all projects for the user.
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project> GetProject(
     ::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
         project_client,
     std::string const& project_id, ::google::cloud::Options const& options);
 
+// Filter projects for the user, based on project_ids.
 StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
 FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                    project_client,

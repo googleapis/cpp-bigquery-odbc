@@ -114,7 +114,7 @@ TEST(GetTable, GetTable_InvalidFilterParameters) {
   EXPECT_EQ(actual->id, table.id);
 }
 
-TEST(GetTable, UnauthenticatedRequest) {
+TEST(GetTable, GetTableFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
@@ -156,7 +156,7 @@ TEST(ListAllTables, ListZeroTablesSuccess) {
       ListAllTables(table_client, project_id, dataset_id, options);
 
   ASSERT_STATUS_OK(tables);
-  EXPECT_EQ(0, (*tables).size());
+  EXPECT_EQ(0, tables->size());
 }
 
 TEST(ListAllTables, ListAllTablesSuccess) {
@@ -178,8 +178,8 @@ TEST(ListAllTables, ListAllTablesSuccess) {
       ListAllTables(table_client, project_id, dataset_id, options);
 
   ASSERT_STATUS_OK(tables);
-  EXPECT_EQ(1, (*tables).size());
-  EXPECT_EQ(expected.id, (*tables)[0].id);
+  EXPECT_EQ(1, tables->size());
+  EXPECT_EQ(expected.id, tables->at(0).id);
 }
 
 TEST(ListAllTables, ListAllTablesSuccess_EmptyInputParams) {
@@ -201,11 +201,11 @@ TEST(ListAllTables, ListAllTablesSuccess_EmptyInputParams) {
       ListAllTables(table_client, project_id, dataset_id, options);
 
   ASSERT_STATUS_OK(tables);
-  EXPECT_EQ(1, (*tables).size());
-  EXPECT_EQ(expected.id, (*tables)[0].id);
+  EXPECT_EQ(1, tables->size());
+  EXPECT_EQ(expected.id, tables->at(0).id);
 }
 
-TEST(ListAllTables, UnauthenticatedRequest) {
+TEST(ListAllTables, ListAllTablesFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";

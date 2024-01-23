@@ -41,7 +41,7 @@ TEST(ListAllProjects, ListZeroProjects) {
   StatusOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
-  EXPECT_EQ(0, (*projects).size());
+  EXPECT_EQ(0, projects->size());
 }
 
 TEST(ListAllProjects, ListOneProject) {
@@ -58,11 +58,11 @@ TEST(ListAllProjects, ListOneProject) {
   StatusOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
-  EXPECT_EQ(1, (*projects).size());
-  EXPECT_EQ(expected.id, (*projects)[0].id);
+  EXPECT_EQ(1, projects->size());
+  EXPECT_EQ(expected.id, projects->at(0).id);
 }
 
-TEST(ListAllProjects, ListProjectsFailure) {
+TEST(ListAllProjects, ListProjectsFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -93,10 +93,10 @@ TEST(GetProjects, GetOneProject) {
   StatusOr<Project> project =
       GetProject(mocked_project_client, expected.id, options);
 
-  EXPECT_EQ(expected.id, (*project).id);
+  EXPECT_EQ(expected.id, project->id);
 }
 
-TEST(GetProjects, ProjectNotFound) {
+TEST(GetProjects, GetProjectFailure_ProjectNotFound) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -113,7 +113,7 @@ TEST(GetProjects, ProjectNotFound) {
   EXPECT_THAT(project, StatusIs(StatusCode::kNotFound, HasSubstr("not found")));
 }
 
-TEST(GetProjects, GetProjectFailure) {
+TEST(GetProjects, GetProjectFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -140,7 +140,7 @@ TEST(FilterProjects, FilterZeroProjects) {
   StatusOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {"id_1", "id_2"}, options);
 
-  EXPECT_EQ(0, (*projects).size());
+  EXPECT_EQ(0, projects->size());
 }
 
 TEST(FilterProjects, FilterOneProject) {
@@ -158,11 +158,11 @@ TEST(FilterProjects, FilterOneProject) {
   StatusOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {response_1.id, "id_2"}, options);
 
-  EXPECT_EQ(1, (*projects).size());
-  EXPECT_EQ(response_1.id, (*projects)[0].id);
+  EXPECT_EQ(1, projects->size());
+  EXPECT_EQ(response_1.id, projects->at(0).id);
 }
 
-TEST(FilterProjects, FilterProjectsFailure) {
+TEST(FilterProjects, FilterProjectsFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);

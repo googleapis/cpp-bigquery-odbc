@@ -27,12 +27,14 @@ struct TableFilter {
   ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView view;
 };
 
+// Returns detailed info for a specific Table
 StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
     std::string const& table_id, TableFilter const& table_filter,
     ::google::cloud::Options const& options);
 
+// Returns all Tables in a Dataset
 StatusOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
 ListAllTables(

@@ -63,7 +63,7 @@ TEST(GetJob, GetJobSuccess) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, UseEmptyStringsForInputParameters) {
+TEST(GetJob, GetJob_EmptyInputParams) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -86,7 +86,7 @@ TEST(GetJob, UseEmptyStringsForInputParameters) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, UnauthenticatedRequest) {
+TEST(GetJob, GetJobFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -141,11 +141,11 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(ListAllJobs, ListAllJobs_EmptyProjectId) {
+TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
   Options options;
   std::string project_id;
   ListFormatJob expected{.id = "job_id"};
@@ -161,11 +161,11 @@ TEST(ListAllJobs, ListAllJobs_EmptyProjectId) {
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(ListAllJobs, UnauthenticatedRequest) {
+TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   auto mock = std::make_shared<MockBigQueryJobConnection>();
@@ -236,11 +236,11 @@ TEST(FilterJobs, FilterJobsSuccess) {
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(FilterJobs, FilterJobs_UseEmptyStringsForInputParameters) {
+TEST(FilterJobs, FilterJobs_EmptyInputParams) {
   Options options;
   std::string project_id;
   JobFilter job_filter;
@@ -263,11 +263,11 @@ TEST(FilterJobs, FilterJobs_UseEmptyStringsForInputParameters) {
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_OK(jobs);
-  EXPECT_EQ(1, (*jobs).size());
+  EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(FilterJobs, UnauthenticatedRequest) {
+TEST(FilterJobs, FilterJobsFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   JobFilter job_filter;
@@ -330,7 +330,7 @@ TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(InsertJob, UnauthenticatedRequest) {
+TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   Job job{.id = "job_id"};
@@ -454,7 +454,7 @@ TEST(CancelJob, CancelJob_EmptyInputParams) {
   ASSERT_STATUS_OK(actual);
 }
 
-TEST(CancelJob, UnauthenticatedRequest) {
+TEST(CancelJob, CancelJobFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -516,7 +516,7 @@ TEST(Query, QuerySuccess_EmptyInputParams) {
   ASSERT_STATUS_OK(actual);
 }
 
-TEST(Query, UnauthenticatedRequest) {
+TEST(Query, QueryFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -659,7 +659,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
   ASSERT_STATUS_OK(actual);
 }
 
-TEST(GetAllQueryResults, UnauthenticatedRequest) {
+TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -749,7 +749,7 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
   ASSERT_STATUS_OK(actual);
 }
 
-TEST(FilterQueryResults, UnauthenticatedRequest) {
+TEST(FilterQueryResults, FilterQueryResultsFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";

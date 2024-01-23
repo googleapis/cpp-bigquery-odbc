@@ -73,7 +73,7 @@ TEST(GetDataset, GetDataset_EmptyInputParams) {
   EXPECT_EQ(expected.id, dataset->id);
 }
 
-TEST(GetDataset, UnauthenticatedRequest) {
+TEST(GetDataset, GetDatasetFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -130,7 +130,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
@@ -151,11 +151,11 @@ TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(ListAllDatasets, UnauthenticatedRequest) {
+TEST(ListAllDatasets, ListAllDatasetsFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -218,7 +218,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
       mocked_dataset_client, project_id, dataset_filter, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
@@ -242,11 +242,11 @@ TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
       mocked_dataset_client, project_id, dataset_filter, options);
 
   ASSERT_STATUS_OK(datasets);
-  EXPECT_EQ(1, (*datasets).size());
+  EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(FilterDatasets, UnauthenticatedRequest) {
+TEST(FilterDatasets, FilterDatasetsFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
