@@ -23,7 +23,7 @@ if (NOT COMMAND create_bazel_config)
 endif()
 
 add_library(
-    google_cloud_odbc_testing_driver_utils # cmake-format: sort
+    google_cloud_odbc_testing_odbc_utils # cmake-format: sort
     commons.cc
     commons.h
     connection.cc
@@ -36,19 +36,19 @@ add_library(
     catalog.h)
 
 target_link_libraries(
-    google_cloud_odbc_testing_driver_utils
+    google_cloud_odbc_testing_odbc_utils
     google-cloud-cpp::experimental-bigquery_rest
     GTest::gmock)
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver target
 if (BQ_DRIVER_INTEGRATION_TESTS)
     target_link_libraries(
-        google_cloud_odbc_testing_driver_utils
+        google_cloud_odbc_testing_odbc_utils
         google_cloud_odbc_bq_driver)
 else()
     target_link_libraries(
-        google_cloud_odbc_testing_driver_utils
+        google_cloud_odbc_testing_odbc_utils
         odbc)
 endif()
 
-create_bazel_config(google_cloud_odbc_testing_driver_utils YEAR 2024)
+create_bazel_config(google_cloud_odbc_testing_odbc_utils YEAR 2024)

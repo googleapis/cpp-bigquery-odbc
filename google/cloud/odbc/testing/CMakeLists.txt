@@ -20,6 +20,6 @@ endif ()
 
 add_subdirectory(client_library_utils)
 
-add_subdirectory(driver_utils)
+add_subdirectory(odbc_utils)
 
 add_subdirectory(utils)

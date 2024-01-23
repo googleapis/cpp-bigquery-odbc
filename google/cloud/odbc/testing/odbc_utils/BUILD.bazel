@@ -16,13 +16,13 @@ package(default_visibility = ["//:__subpackages__"])
 
 licenses(["notice"])  # Apache 2.0
 
-load(":google_cloud_odbc_testing_driver_utils.bzl", "google_cloud_odbc_testing_driver_utils_hdrs", "google_cloud_odbc_testing_driver_utils_srcs")
+load(":google_cloud_odbc_testing_odbc_utils.bzl", "google_cloud_odbc_testing_odbc_utils_hdrs", "google_cloud_odbc_testing_odbc_utils_srcs")
 
 cc_library(
-    name = "google_cloud_odbc_testing_driver_utils",
+    name = "google_cloud_odbc_testing_odbc_utils",
     testonly = True,
-    srcs = google_cloud_odbc_testing_driver_utils_srcs,
-    hdrs = google_cloud_odbc_testing_driver_utils_hdrs,
+    srcs = google_cloud_odbc_testing_odbc_utils_srcs,
+    hdrs = google_cloud_odbc_testing_odbc_utils_hdrs,
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",

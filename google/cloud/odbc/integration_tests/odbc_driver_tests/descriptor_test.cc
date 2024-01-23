@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/testing/driver_utils/connection.h"
+#include "google/cloud/odbc/testing/odbc_utils/connection.h"
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs

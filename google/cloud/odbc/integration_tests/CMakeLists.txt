@@ -79,7 +79,7 @@ function (odbc_define_tests)
 
   target_link_libraries(
     all_tests
-    google_cloud_odbc_testing_driver_utils
+    google_cloud_odbc_testing_odbc_utils
     GTest::gtest_main
     GTest::gmock
   )
