@@ -238,6 +238,12 @@ std::string FormatIntervalDaySecondStruct(SQL_DAY_SECOND_STRUCT ds);
 std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
 #endif /* ODBCVER >= 0x0300 */
 
+// We want this to be created once on startup and shared by all APIs.
+// Replace the console call with the file version, for the final release.
+static StatusOr<std::shared_ptr<TraceOptions>> const kTraceOptsConsole =
+    TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
+                                            /*unused log_level*/ 0);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
