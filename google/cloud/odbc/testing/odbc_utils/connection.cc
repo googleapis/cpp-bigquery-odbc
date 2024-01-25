@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "connection.h"
+#include <bitset>
 
 namespace google::cloud::odbc_tests {
 
@@ -147,6 +148,7 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
 
   return status;
 }
+
 
 // Gets Info about the driver and populates conn.metadata
 SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
@@ -340,8 +342,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::map<std::string, std::string> supported_sqlusmallint;
   std::map<std::string, std::string> unsupported_sqluinteger;
   std::map<std::string, std::string> supported_sqluinteger;
-  std::map<std::string, std::string> unsupported_bitmask;
-  std::map<std::string, std::string> supported_bitmask;
+  std::map<std::string, std::bitset<8>> unsupported_bitmask;
+  std::map<std::string, std::bitset<8>> supported_bitmask;
   for (auto elem : kCharMap) {
     auto info_type = std::get<0>(elem);
     auto info_name = std::get<1>(elem);
@@ -364,7 +366,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "SUPPORTED SQLCHAR " << std::endl;
+  std::cout << "SUPPORTED SQLCHAR: [" << supported_char.size()
+            << "], kCharMap[" << kCharMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -378,7 +381,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "UNSUPPORTED SQLCHAR " << std::endl;
+  std::cout << "UNSUPPORTED SQLCHAR: [" << unsupported_char.size()
+            << "], kCharMap[" << kCharMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -411,7 +415,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "SUPPORTED SQLUSMALLINT " << std::endl;
+  std::cout << "SUPPORTED SQLUSMALLINT [" << supported_sqlusmallint.size()
+            << "], kSqlUSmallIntMap[" << kSqlUSmallIntMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -425,8 +430,9 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "UNSUPPORTED SQLUSMALLINT " << std::endl;
-  std::cout << "************************************" << std::endl;
+  std::cout << "UNSUPPORTED SQLUSMALLINT [" << unsupported_sqlusmallint.size()
+            << "], kSqlUSmallIntMap[" << kSqlUSmallIntMap.size() << "]" << std::endl;
+  std::cout << "************************************" << std::endl;;
   std::cout << std::endl;
   std::cout << std::endl;
 
@@ -459,7 +465,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "SUPPORTED SQLUINTEGER " << std::endl;
+  std::cout << "SUPPORTED SQLUINTEGER [" << supported_sqluinteger.size()
+            << "], kSqlUIntegerMap[" << kSqlUIntegerMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -473,7 +480,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "UNSUPPORTED SQLUINTEGER " << std::endl;
+  std::cout << "UNSUPPORTED SQLUINTEGER [" << unsupported_sqluinteger.size()
+            << "], kSqlUIntegerMap[" << kSqlUIntegerMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
@@ -495,10 +503,13 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
         std::runtime_error("Buffer size is not enough for " + info_name +
                            " InfoType");
       }
+
+      std::bitset<8> b = 0;
       if (sqlBitmaskBuf == 0 || sqlBitmaskBuf == 0L) {
-        unsupported_bitmask.insert({info_name, std::to_string(sqlBitmaskBuf)});
+        unsupported_bitmask.insert({info_name, b});
       } else {
-        supported_bitmask.insert({info_name, std::to_string(sqlBitmaskBuf)});
+        b |= sqlBitmaskBuf;
+        supported_bitmask.insert({info_name, b});
       }
     }
   }
@@ -506,28 +517,30 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "SUPPORTED BITMASK " << std::endl;
+  std::cout << "SUPPORTED BITMASK: [" << supported_bitmask.size()
+            << "], kBitMaskMap[" << kBitMaskMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 
   for (auto elem : supported_bitmask) {
     std::string type = std::get<0>(elem);
-    std::string val = std::get<1>(elem);
+    auto val = std::get<1>(elem);
     std ::cout << type << "=" << val << std::endl;
     std::cout << std::endl;
   }
   std::cout << std::endl;
   std::cout << std::endl;
   std::cout << "************************************" << std::endl;
-  std::cout << "UNSUPPORTED BITMASK " << std::endl;
+  std::cout << "UNSUPPORTED BITMASK: [" << unsupported_bitmask.size()
+            << "], kBitMaskMap[" << kBitMaskMap.size() << "]" << std::endl;
   std::cout << "************************************" << std::endl;
   std::cout << std::endl;
   std::cout << std::endl;
 
   for (auto elem : unsupported_bitmask) {
     std::string type = std::get<0>(elem);
-    std::string val = std::get<1>(elem);
+    auto val = std::get<1>(elem);
     std ::cout << type << "=" << val << std::endl;
     std::cout << std::endl;
   }
