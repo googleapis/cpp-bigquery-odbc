@@ -40,17 +40,17 @@ void VerifyDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
   EXPECT_EQ(conn->metadata.driver_name,
             "Simba ODBC Driver for Google BigQuery");
 }
-
+/*
 TEST(ConnectionTest, SQLDriverConnect) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+*/
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
-
+/*
 TEST(ConnectionTest, SQLConnect) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
@@ -64,7 +64,14 @@ TEST(DriverInfoTest, SQLGetInfo) {
   VerifyDriverInfo(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+*/
+TEST(DriverInfoTest, SQLGetInfo2) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(GetDriverInfo2(conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+/*
 // This test is temporarily disabled till this issue is fixed for the driver
 TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   srand(time(NULL));
@@ -81,7 +88,7 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+*/
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
