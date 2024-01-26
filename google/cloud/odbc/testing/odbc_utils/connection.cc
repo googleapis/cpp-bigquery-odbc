@@ -360,6 +360,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
       } else {
         supported_char.insert({info_name, val});
       }
+    } else {
+      std::cout << "SQLGETINFO FAILED: " << status << std::endl;
     }
   }
 
@@ -410,6 +412,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
         supported_sqlusmallint.insert(
             {info_name, std::to_string(sqlUSmallIntBuf)});
       }
+    } else {
+      std::cout << "SQLGETINFO FAILED: " << status << std::endl;
     }
   }
   std::cout << std::endl;
@@ -459,6 +463,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
         supported_sqluinteger.insert(
             {info_name, std::to_string(sqlUIntegerBuf)});
       }
+    }  else {
+      std::cout << "SQLGETINFO FAILED: " << status << std::endl;
     }
   }
 
@@ -511,6 +517,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
         b |= sqlBitmaskBuf;
         supported_bitmask.insert({info_name, b});
       }
+    }  else {
+      std::cout << "SQLGETINFO FAILED: " << status << std::endl;
     }
   }
 
