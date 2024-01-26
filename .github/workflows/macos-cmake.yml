@@ -63,7 +63,7 @@ jobs:
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
         /usr/local/bin/bash ci/gha/builds/macos-cmake.sh
     env:
-      USE_BAZEL_VERSION: 6.2.1
+      USE_BAZEL_VERSION: 7.0.0
       BAZEL_REMOTE_CACHE: https://storage.googleapis.com/cpp-bigquery-odbc-gha-cache/bazel-cache/${{ matrix.os }}
       SCCACHE_GCS_BUCKET: cpp-bigquery-odbc-gha-cache
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}
