@@ -51,7 +51,7 @@ void OverrideDsnSectionFromEnv(Section& dsn_section,
                                std::string const& dsn_name) {
   // TODO(#159): this has to handle windows too
   std::string odbcini_path =
-      google::cloud::internal::GetEnv("ODBCINI").value_or("");
+      google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni();
   if (!odbcini_path.empty()) {
     auto sections =
         google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);

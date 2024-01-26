@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -200,6 +201,18 @@ StatusOr<Section> ParseConnectionString(std::string& str) {
     section[field] = value;
   }
   return section;
+}
+
+std::string GetPathToOdbcIni() {
+  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+  if (path) {
+    return *path;
+  }
+  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  if (home) {
+    return *home + "/.odbc.ini";
+  }
+  return "";
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

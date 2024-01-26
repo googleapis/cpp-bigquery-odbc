@@ -112,6 +112,8 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
 
 StatusOr<Section> ParseConnectionString(std::string& str);
 
+std::string GetPathToOdbcIni();
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
