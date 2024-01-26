@@ -34,8 +34,6 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        libc++-dev \
-        libc++abi-dev \
         libc-ares-dev \
         libcurl4-openssl-dev \
         libgrpc++1 \
@@ -63,7 +61,7 @@ RUN apt-get update && \
 # with updates from:
 #     https://github.com/google/sanitizers/issues/1685
 WORKDIR /var/tmp/build
-RUN git clone --depth=1 --branch llvmorg-16.0.6 https://github.com/llvm/llvm-project
+RUN git clone --depth=1 --branch llvmorg-17.0.3 https://github.com/llvm/llvm-project
 WORKDIR /var/tmp/build/llvm-project
 # configure cmake
 RUN cmake -GNinja -S runtimes -B build \

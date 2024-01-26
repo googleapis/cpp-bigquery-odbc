@@ -32,7 +32,5 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 
 args+=("--config=msan")
-# TODO(#196) - remove once grpc in google-cloud-cpp is fixed
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" \
-  --test_tag_filters=integration-test,unit-tests ... \
-  --test_arg=--gtest_filter=-ODBCBQClient.CreateBQClient:ConnectionHandle.Connect
+  --test_tag_filters=integration-test,unit-tests ...
