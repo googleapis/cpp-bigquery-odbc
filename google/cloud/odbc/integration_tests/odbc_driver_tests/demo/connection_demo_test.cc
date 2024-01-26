@@ -35,18 +35,18 @@ TEST(ConnectionDemoTest, SQLDriverConnect) {
 
   // 1) Allocate the environment handle.
   std::cout << "Allocating environment handle..." << std::endl;
-  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &henv), SQL_SUCCESS);
+  ASSERT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &henv), SQL_SUCCESS);
   std::cout << "Successfully allocated environment handle" << std::endl;
   // 2) Allocate the connection handle.
   std::cout << "Allocating connection handle..." << std::endl;
-  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc), SQL_SUCCESS);
+  ASSERT_EQ(SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc), SQL_SUCCESS);
   std::cout << "Successfully allocated connection handle" << std::endl;
   // 3) Connect to the data source.
   std::cout << "Connecting to the data source" << std::endl;
   rc = SQLDriverConnect(hdbc, 0, (SQLCHAR*)in_conn_str.c_str(), in_conn_str_len,
                         (SQLCHAR*)out_conn_str, out_conn_str_buf_len, &buf_len,
                         SQL_DRIVER_COMPLETE);
-  EXPECT_EQ(rc, SQL_SUCCESS);
+  ASSERT_EQ(rc, SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
 
