@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
@@ -155,6 +156,31 @@ TEST(Parsing, ParseConnectionString_InvalidString) {
   StatusOr<Section> section_resp = ParseConnectionString(conn_str);
   EXPECT_THAT(section_resp,
               StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid")));
+}
+
+TEST(GetPathToOdbcIni, GetPath_EnvVar) {
+  std::string expected = "my_path";
+  google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(GetPathToOdbcIni, GetPath_HomeVar) {
+  ASSERT_TRUE(google::cloud::internal::GetEnv("HOME"));
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
+}
+
+TEST(GetPathToOdbcIni, GetEmptyPath) {
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_EQ(actual, "");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
