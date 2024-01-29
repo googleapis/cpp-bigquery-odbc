@@ -36,6 +36,7 @@ function unit_tests::bazel_args() {
 
   args+=(
     "--test_env=CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/"
+    "--test_env=HOME=$HOME"
   )
   printf "%s\n" "${args[@]}"
 }
