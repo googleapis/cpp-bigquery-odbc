@@ -158,7 +158,7 @@ TEST(Parsing, ParseConnectionString_InvalidString) {
               StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid")));
 }
 
-TEST(GetPathToOdbcIni_1, GetPath_EnvVar) {
+TEST(GetPathToOdbcIni, GetPath_EnvVar) {
   std::string expected = "my_path";
   google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
 
@@ -168,7 +168,7 @@ TEST(GetPathToOdbcIni_1, GetPath_EnvVar) {
   google::cloud::odbc_bigquery_client_interface::UnsetEnv("ODBCINI");
 }
 
-TEST(GetPathToOdbcIni_2, GetPath_HomeVar) {
+TEST(GetPathToOdbcIni, GetPath_HomeVar) {
   ASSERT_TRUE(::google::cloud::internal::GetEnv("HOME"));
 
   std::string actual = GetPathToOdbcIni();
@@ -176,7 +176,7 @@ TEST(GetPathToOdbcIni_2, GetPath_HomeVar) {
   EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
 }
 
-TEST(GetPathToOdbcIni_3, GetEmptyPath) {
+TEST(GetPathToOdbcIni, GetEmptyPath) {
   auto home = ::google::cloud::internal::GetEnv("HOME");
   google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
 
