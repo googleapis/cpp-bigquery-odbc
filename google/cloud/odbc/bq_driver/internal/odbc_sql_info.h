@@ -23,47 +23,47 @@ namespace google::cloud::odbc_bq_driver_internal {
 // Shared template functions that will be moved to a
 // common data translation library.
 template <typename ReturnType>
-StatusOr<ReturnType> SupportedInfoType(SQLUSMALLINT const info_type) {
+StatusOr<ReturnType> SupportedInfoType(SQLUSMALLINT info_type) {
   return ReturnType::GetSupportedInfoType(info_type);
 }
 
 template <typename ReturnType>
-StatusOr<ReturnType> UnSupportedInfoType(SQLUSMALLINT const info_type) {
+StatusOr<ReturnType> UnSupportedInfoType(SQLUSMALLINT info_type) {
   return ReturnType::GetUnSupportedInfoType(info_type);
 }
 
 struct SQLGetInfoSqlChar {
   static StatusOr<SQLGetInfoSqlChar> GetSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoSqlChar> GetUnSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
 
   SQLCHAR* info_val;
 };
 
 struct SQLGetInfoBitmask {
   static StatusOr<SQLGetInfoBitmask> GetSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoBitmask> GetUnSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
 
   SQLUINTEGER info_val;
 };
 
 struct SQLGetInfoSqlUInt {
   static StatusOr<SQLGetInfoSqlUInt> GetSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoSqlUInt> GetUnSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
 
   SQLUINTEGER info_val;
 };
 
 struct SQLGetInfoSqlUSmallInt {
   static StatusOr<SQLGetInfoSqlUSmallInt> GetSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoSqlUSmallInt> GetUnSupportedInfoType(
-      SQLUSMALLINT const info_type);
+      SQLUSMALLINT info_type);
 
   SQLUSMALLINT info_val;
 };
