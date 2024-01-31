@@ -22,13 +22,13 @@ using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 constexpr int kUnsupportedCharBufSize = 256;
 
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const /*info_type*/) {
   // Not yet Implemented.
   return Status(StatusCode::kUnimplemented, "Not yet Implemented");
 }
 
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const info_type) {
   SQLGetInfoSqlChar result;
   switch (info_type) {
     case SQL_KEYWORDS:
@@ -62,13 +62,13 @@ StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const /*info_type*/) {
   // Not yet Implemented.
   return Status(StatusCode::kUnimplemented, "Not yet Implemented");
 }
 
 StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const info_type) {
   SQLGetInfoSqlUSmallInt result;
 
   switch (info_type) {
@@ -100,13 +100,13 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const /*info_type*/) {
   // Not yet Implemented.
   return Status(StatusCode::kUnimplemented, "Not yet Implemented");
 }
 
 StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const info_type) {
   SQLGetInfoSqlUInt result;
 
   switch (info_type) {
@@ -138,13 +138,13 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const /*info_type*/) {
   // Not yet Implemented.
   return Status(StatusCode::kUnimplemented, "Not yet Implemented");
 }
 
 StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
-    const SQLUSMALLINT info_type) {
+    SQLUSMALLINT const info_type) {
   SQLGetInfoBitmask result;
 
   switch (info_type) {
