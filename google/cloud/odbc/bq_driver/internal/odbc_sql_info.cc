@@ -21,6 +21,17 @@ using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 
 constexpr int kUnsupportedCharBufSize = 256;
 
+// Helper functions
+namespace {
+Status InvalidType(SQLUSMALLINT info_type) {
+  std::string msg = "Invalid infoType: ";
+  msg.append(std::to_string(info_type));
+  TracePrintInternal(*(*kTraceOptsConsole), msg);
+  return Status(StatusCode::kInvalidArgument, msg);
+}
+
+}  // namespace
+
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
     SQLUSMALLINT /*info_type*/) {
   // Not yet Implemented.
@@ -51,10 +62,7 @@ StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
       break;
     }
     default: {
-      std::string msg = "Invalid infoType: ";
-      msg.append(std::to_string(info_type));
-      TracePrintInternal(*(*kTraceOptsConsole), msg);
-      return Status(StatusCode::kInvalidArgument, msg);
+      return InvalidType(info_type);
     }
   }
 
@@ -89,10 +97,7 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
       break;
     }
     default: {
-      std::string msg = "Invalid infoType: ";
-      msg.append(std::to_string(info_type));
-      TracePrintInternal(*(*kTraceOptsConsole), msg);
-      return Status(StatusCode::kInvalidArgument, msg);
+      return InvalidType(info_type);
     }
   }
 
@@ -127,10 +132,7 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
       break;
     }
     default: {
-      std::string msg = "Invalid infoType: ";
-      msg.append(std::to_string(info_type));
-      TracePrintInternal(*(*kTraceOptsConsole), msg);
-      return Status(StatusCode::kInvalidArgument, msg);
+      return InvalidType(info_type);
     }
   }
 
@@ -201,10 +203,7 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
       break;
     }
     default: {
-      std::string msg = "Invalid infoType: ";
-      msg.append(std::to_string(info_type));
-      TracePrintInternal(*(*kTraceOptsConsole), msg);
-      return Status(StatusCode::kInvalidArgument, msg);
+      return InvalidType(info_type);
     }
   }
 

@@ -24,13 +24,13 @@ using ::testing::HasSubstr;
 constexpr SQLUSMALLINT SUPPORTED_INFO_TYPE =
     static_cast<SQLUSMALLINT>(SQL_DATABASE_NAME);
 
-std::map<SQLUSMALLINT, std::string> kUnsupportedEmptyCharMap = {
+static std::map<SQLUSMALLINT, std::string> const kUnsupportedEmptyCharMap = {
     {SQL_KEYWORDS, ""},
     {SQL_PROCEDURE_TERM, ""},
     {SQL_SPECIAL_CHARACTERS, ""},
     {SQL_USER_NAME, ""}};
 
-std::map<SQLUSMALLINT, std::string> kUnsupportedNCharMap = {
+static std::map<SQLUSMALLINT, std::string> const kUnsupportedNCharMap = {
     {SQL_ACCESSIBLE_PROCEDURES, "N"},
     {SQL_DATA_SOURCE_READ_ONLY, "N"},
     {SQL_INTEGRITY, "N"},
@@ -41,7 +41,7 @@ std::map<SQLUSMALLINT, std::string> kUnsupportedNCharMap = {
     {SQL_ORDER_BY_COLUMNS_IN_SELECT, "N"},
     {SQL_ROW_UPDATES, "N"}};
 
-std::map<SQLUSMALLINT, SQLUSMALLINT> kUnsupportedUSmallIntMap = {
+static std::map<SQLUSMALLINT, SQLUSMALLINT> const kUnsupportedUSmallIntMap = {
     {SQL_ACTIVE_ENVIRONMENTS, 0},
     {SQL_CONCAT_NULL_BEHAVIOR, 0},
     {SQL_FILE_USAGE, 0},
@@ -56,7 +56,7 @@ std::map<SQLUSMALLINT, SQLUSMALLINT> kUnsupportedUSmallIntMap = {
     {SQL_MAX_USER_NAME_LEN, 0},
     {SQL_NON_NULLABLE_COLUMNS, 0}};
 
-std::map<SQLUSMALLINT, SQLUINTEGER> kUnsupportedUIntMap = {
+static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedUIntMap = {
     {SQL_BATCH_ROW_COUNT, 0},
     {SQL_BATCH_SUPPORT, 0},
     {SQL_BOOKMARK_PERSISTENCE, 0},
@@ -71,7 +71,7 @@ std::map<SQLUSMALLINT, SQLUINTEGER> kUnsupportedUIntMap = {
     {SQL_PARAM_ARRAY_ROW_COUNTS, 0},
     {SQL_PARAM_ARRAY_SELECTS, 0}};
 
-std::map<SQLUSMALLINT, SQLUINTEGER> kUnsupportedBitmaskMap = {
+static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedBitmaskMap = {
     {SQL_ALTER_DOMAIN, 0L},
     {SQL_ALTER_TABLE, 0L},
     {SQL_CONVERT_BINARY, 0L},
