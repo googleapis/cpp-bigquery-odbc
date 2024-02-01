@@ -20,6 +20,52 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// Constants specific to SQLGetInfo Information type
+// values for SQLGetInfoSqlChar.
+auto constexpr kSupportedCharY = "Y";
+auto constexpr kCatalogSeparator = ".";
+auto constexpr kCatalogTerm = "Project";
+auto constexpr kDefaultCollation = "UTF-16LE_BINARY";
+auto constexpr kDbmsName = "BigQuery";
+auto constexpr kDbmsVer = "2";
+auto constexpr kDriverName = "Google ODBC Driver For BigQuery";
+auto constexpr kDriverOdbcVer = "03.80";
+auto constexpr kDriverVer = "1.0.0.0000";
+auto constexpr kIdentifierQuoteChar = "`";
+auto constexpr kSchemaTerm = "Dataset";
+auto constexpr kSearchPatternEscape = "\\";
+auto constexpr kSqlServerName = "Google";
+auto constexpr kSqlTableTerm = "Table";
+
+// Constants specific to SQLGetInfo Information type
+// values for SQLGetInfoSqlUSmallInt value.
+auto constexpr kCatalogLocation = SQL_CL_START;
+auto constexpr kCorrelationName = SQL_CN_ANY;
+auto constexpr kCursorCommitBehavior = SQL_CB_CLOSE;
+auto constexpr kCursorRollbackBehavior = SQL_CB_CLOSE;
+auto constexpr kGroupBy = SQL_GB_GROUP_BY_CONTAINS_SELECT;
+auto constexpr kIdentifierCase = SQL_IC_SENSITIVE;
+auto constexpr kMaxCatalogNameLen = 128;
+auto constexpr kMaxColsInTable = 10000;
+auto constexpr kMaxColNameLen = 128;
+auto constexpr kMaxIdentifierLen = 255;
+auto constexpr kMaxSchemaNameLen = 1024;
+auto constexpr kMaxTablesInSelect = 1000;
+auto constexpr kMaxTableNameLen = 1024;
+auto constexpr KNullCollation = SQL_NC_LOW;
+auto constexpr kQuotedIdentifierCase = SQL_IC_SENSITIVE;
+auto constexpr kTxnCapable = SQL_TC_DML;
+
+// Constants specific to SQLGetInfo Information type
+// values for SQLGetInfoSqlUInteger value.
+auto constexpr kAsyncMode = SQL_AM_STATEMENT;
+auto constexpr kDefaultTxnIsolation = SQL_TXN_SERIALIZABLE;
+auto constexpr kOdbcInterfaceConformance = SQL_OIC_CORE;
+auto constexpr kSqlConformance = SQL_OIC_CORE;
+
+// Constants specific to SQLGetInfo Information type
+// values for SQLGetInfoSqlUInteger bitmask value.
+
 // Shared template functions that will be moved to a
 // common data translation library.
 template <typename ReturnType>

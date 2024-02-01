@@ -33,9 +33,90 @@ Status InvalidType(SQLUSMALLINT info_type) {
 }  // namespace
 
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
-    SQLUSMALLINT /*info_type*/) {
-  // Not yet Implemented.
-  return Status(StatusCode::kUnimplemented, "Not yet Implemented");
+    SQLUSMALLINT info_type) {
+  SQLGetInfoSqlChar result;
+  switch (info_type) {
+    case SQL_CATALOG_NAME:
+    case SQL_COLUMN_ALIAS:
+    case SQL_DESCRIBE_PARAMETER:
+    case SQL_EXPRESSIONS_IN_ORDERBY:
+    case SQL_MULTIPLE_ACTIVE_TXN:
+    case SQL_PROCEDURES:
+    case SQL_ACCESSIBLE_TABLES: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kSupportedCharY));
+      break;
+    }
+    case SQL_CATALOG_NAME_SEPARATOR: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalogSeparator));
+      break;
+    }
+    case SQL_CATALOG_TERM: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalogTerm));
+      break;
+    }
+    case SQL_COLLATION_SEQ: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDefaultCollation));
+      break;
+    }
+    case SQL_DBMS_NAME: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDbmsName));
+      break;
+    }
+    case SQL_DBMS_VER: {
+      result.info_val = reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDbmsVer));
+      break;
+    }
+    case SQL_DRIVER_NAME: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDriverName));
+      break;
+    }
+    case SQL_DRIVER_ODBC_VER: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDriverOdbcVer));
+      break;
+    }
+    case SQL_DRIVER_VER: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDriverVer));
+      break;
+    }
+    case SQL_IDENTIFIER_QUOTE_CHAR: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kIdentifierQuoteChar));
+      break;
+    }
+    case SQL_SCHEMA_TERM: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kSchemaTerm));
+      break;
+    }
+    case SQL_SEARCH_PATTERN_ESCAPE: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kSearchPatternEscape));
+      break;
+    }
+    case SQL_SERVER_NAME: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kSqlServerName));
+      break;
+    }
+    case SQL_TABLE_TERM: {
+      result.info_val =
+          reinterpret_cast<SQLCHAR*>(const_cast<char*>(kSqlTableTerm));
+      break;
+    }
+    default: {
+      return InvalidType(info_type);
+    }
+  }
+
+  return result;
 }
 
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
@@ -70,9 +151,80 @@ StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
-    SQLUSMALLINT /*info_type*/) {
-  // Not yet Implemented.
-  return Status(StatusCode::kUnimplemented, "Not yet Implemented");
+    SQLUSMALLINT info_type) {
+  SQLGetInfoSqlUSmallInt result;
+
+  switch (info_type) {
+    case SQL_CATALOG_LOCATION: {
+      result.info_val = static_cast<SQLUSMALLINT>(kCatalogLocation);
+      break;
+    }
+    case SQL_CORRELATION_NAME: {
+      result.info_val = static_cast<SQLUSMALLINT>(kCorrelationName);
+      break;
+    }
+    case SQL_CURSOR_COMMIT_BEHAVIOR: {
+      result.info_val = static_cast<SQLUSMALLINT>(kCursorCommitBehavior);
+      break;
+    }
+    case SQL_CURSOR_ROLLBACK_BEHAVIOR: {
+      result.info_val = static_cast<SQLUSMALLINT>(kCursorRollbackBehavior);
+      break;
+    }
+    case SQL_GROUP_BY: {
+      result.info_val = static_cast<SQLUSMALLINT>(kGroupBy);
+      break;
+    }
+    case SQL_IDENTIFIER_CASE: {
+      result.info_val = static_cast<SQLUSMALLINT>(kIdentifierCase);
+      break;
+    }
+    case SQL_MAX_CATALOG_NAME_LEN: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxCatalogNameLen);
+      break;
+    }
+    case SQL_MAX_COLUMNS_IN_TABLE: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxColsInTable);
+      break;
+    }
+    case SQL_MAX_COLUMN_NAME_LEN: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxColNameLen);
+      break;
+    }
+    case SQL_MAX_IDENTIFIER_LEN: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxIdentifierLen);
+      break;
+    }
+    case SQL_MAX_SCHEMA_NAME_LEN: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxSchemaNameLen);
+      break;
+    }
+    case SQL_MAX_TABLES_IN_SELECT: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxTablesInSelect);
+      break;
+    }
+    case SQL_MAX_TABLE_NAME_LEN: {
+      result.info_val = static_cast<SQLUSMALLINT>(kMaxTableNameLen);
+      break;
+    }
+    case SQL_NULL_COLLATION: {
+      result.info_val = static_cast<SQLUSMALLINT>(KNullCollation);
+      break;
+    }
+    case SQL_QUOTED_IDENTIFIER_CASE: {
+      result.info_val = static_cast<SQLUSMALLINT>(kQuotedIdentifierCase);
+      break;
+    }
+    case SQL_TXN_CAPABLE: {
+      result.info_val = static_cast<SQLUSMALLINT>(kTxnCapable);
+      break;
+    }
+    default: {
+      return InvalidType(info_type);
+    }
+  }
+
+  return result;
 }
 
 StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
@@ -105,9 +257,32 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
-    SQLUSMALLINT /*info_type*/) {
-  // Not yet Implemented.
-  return Status(StatusCode::kUnimplemented, "Not yet Implemented");
+    SQLUSMALLINT info_type) {
+  SQLGetInfoSqlUInt result;
+
+  switch (info_type) {
+    case SQL_ASYNC_MODE: {
+      result.info_val = static_cast<SQLUINTEGER>(kAsyncMode);
+      break;
+    }
+    case SQL_DEFAULT_TXN_ISOLATION: {
+      result.info_val = static_cast<SQLUINTEGER>(kDefaultTxnIsolation);
+      break;
+    }
+    case SQL_ODBC_INTERFACE_CONFORMANCE: {
+      result.info_val = static_cast<SQLUINTEGER>(kOdbcInterfaceConformance);
+      break;
+    }
+    case SQL_SQL_CONFORMANCE: {
+      result.info_val = static_cast<SQLUINTEGER>(kSqlConformance);
+      break;
+    }
+    default: {
+      return InvalidType(info_type);
+    }
+  }
+
+  return result;
 }
 
 StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(

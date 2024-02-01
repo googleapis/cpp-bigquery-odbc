@@ -23,6 +23,8 @@ using ::testing::HasSubstr;
 
 constexpr SQLUSMALLINT SUPPORTED_INFO_TYPE =
     static_cast<SQLUSMALLINT>(SQL_DATABASE_NAME);
+constexpr SQLUSMALLINT UNSUPPORTED_INFO_TYPE =
+    static_cast<SQLUSMALLINT>(SQL_KEYWORDS);
 
 static std::map<SQLUSMALLINT, std::string> const kUnsupportedEmptyCharMap = {
     {SQL_KEYWORDS, ""},
@@ -41,6 +43,28 @@ static std::map<SQLUSMALLINT, std::string> const kUnsupportedNCharMap = {
     {SQL_ORDER_BY_COLUMNS_IN_SELECT, "N"},
     {SQL_ROW_UPDATES, "N"}};
 
+static std::map<SQLUSMALLINT, std::string> const kSupportedCharMap = {
+    {SQL_ACCESSIBLE_TABLES, kSupportedCharY},
+    {SQL_CATALOG_NAME, kSupportedCharY},
+    {SQL_CATALOG_NAME_SEPARATOR, kCatalogSeparator},
+    {SQL_CATALOG_TERM, kCatalogTerm},
+    {SQL_COLLATION_SEQ, kDefaultCollation},
+    {SQL_COLUMN_ALIAS, kSupportedCharY},
+    {SQL_DBMS_NAME, kDbmsName},
+    {SQL_DBMS_VER, kDbmsVer},
+    {SQL_DESCRIBE_PARAMETER, kSupportedCharY},
+    {SQL_DRIVER_NAME, kDriverName},
+    {SQL_DRIVER_ODBC_VER, kDriverOdbcVer},
+    {SQL_DRIVER_VER, kDriverVer},
+    {SQL_EXPRESSIONS_IN_ORDERBY, kSupportedCharY},
+    {SQL_IDENTIFIER_QUOTE_CHAR, kIdentifierQuoteChar},
+    {SQL_MULTIPLE_ACTIVE_TXN, kSupportedCharY},
+    {SQL_PROCEDURES, kSupportedCharY},
+    {SQL_SCHEMA_TERM, kSchemaTerm},
+    {SQL_SEARCH_PATTERN_ESCAPE, kSearchPatternEscape},
+    {SQL_SERVER_NAME, kSqlServerName},
+    {SQL_TABLE_TERM, kSqlTableTerm}};
+
 static std::map<SQLUSMALLINT, SQLUSMALLINT> const kUnsupportedUSmallIntMap = {
     {SQL_ACTIVE_ENVIRONMENTS, 0},
     {SQL_CONCAT_NULL_BEHAVIOR, 0},
@@ -55,6 +79,30 @@ static std::map<SQLUSMALLINT, SQLUSMALLINT> const kUnsupportedUSmallIntMap = {
     {SQL_MAX_PROCEDURE_NAME_LEN, 0},
     {SQL_MAX_USER_NAME_LEN, 0},
     {SQL_NON_NULLABLE_COLUMNS, 0}};
+
+static std::map<SQLUSMALLINT, SQLUSMALLINT> const kSupportedUSmallIntMap = {
+    {SQL_CATALOG_LOCATION, kCatalogLocation},
+    {SQL_CORRELATION_NAME, kCorrelationName},
+    {SQL_CURSOR_COMMIT_BEHAVIOR, kCursorCommitBehavior},
+    {SQL_CURSOR_ROLLBACK_BEHAVIOR, kCursorRollbackBehavior},
+    {SQL_GROUP_BY, kGroupBy},
+    {SQL_IDENTIFIER_CASE, kIdentifierCase},
+    {SQL_MAX_CATALOG_NAME_LEN, kMaxCatalogNameLen},
+    {SQL_MAX_COLUMNS_IN_TABLE, kMaxColsInTable},
+    {SQL_MAX_COLUMN_NAME_LEN, kMaxColNameLen},
+    {SQL_MAX_IDENTIFIER_LEN, kMaxIdentifierLen},
+    {SQL_MAX_SCHEMA_NAME_LEN, kMaxSchemaNameLen},
+    {SQL_MAX_TABLES_IN_SELECT, kMaxTablesInSelect},
+    {SQL_MAX_TABLE_NAME_LEN, kMaxTableNameLen},
+    {SQL_NULL_COLLATION, KNullCollation},
+    {SQL_QUOTED_IDENTIFIER_CASE, kQuotedIdentifierCase},
+    {SQL_TXN_CAPABLE, kTxnCapable}};
+
+static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedUIntMap = {
+    {SQL_ASYNC_MODE, kAsyncMode},
+    {SQL_DEFAULT_TXN_ISOLATION, kDefaultTxnIsolation},
+    {SQL_ODBC_INTERFACE_CONFORMANCE, kOdbcInterfaceConformance},
+    {SQL_SQL_CONFORMANCE, kSqlConformance}};
 
 static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedUIntMap = {
     {SQL_BATCH_ROW_COUNT, 0},
@@ -208,6 +256,62 @@ TEST(SQLGetInfo_Unsupported, BitmaskValue) {
 TEST(SQLGetInfo_Unsupported, BitmaskInvalid) {
   StatusOr<SQLGetInfoBitmask> actual_info =
       UnSupportedInfoType<SQLGetInfoBitmask>(SUPPORTED_INFO_TYPE);
+  EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
+                                    HasSubstr("Invalid infoType")));
+}
+
+TEST(SQLGetInfo_Supported, SqlChar) {
+  for (auto const& elem : kSupportedCharMap) {
+    SQLUSMALLINT info_type = elem.first;
+    std::string info_val = elem.second;
+    SQLCHAR* expected_info_val =
+        reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
+    StatusOr<SQLGetInfoSqlChar> actual_info =
+        SupportedInfoType<SQLGetInfoSqlChar>(info_type);
+    ASSERT_STATUS_OK(actual_info);
+    EXPECT_EQ(*expected_info_val, *(actual_info->info_val));
+  }
+}
+
+TEST(SQLGetInfo_Supported, SqlCharInvalid) {
+  StatusOr<SQLGetInfoSqlChar> actual_info =
+      SupportedInfoType<SQLGetInfoSqlChar>(UNSUPPORTED_INFO_TYPE);
+  EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
+                                    HasSubstr("Invalid infoType")));
+}
+
+TEST(SQLGetInfo_Supported, SqlUSmallInt) {
+  for (auto const& elem : kSupportedUSmallIntMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUSMALLINT expected_info_val = elem.second;
+    StatusOr<SQLGetInfoSqlUSmallInt> actual_info =
+        SupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type);
+    ASSERT_STATUS_OK(actual_info);
+    EXPECT_EQ(expected_info_val, actual_info->info_val);
+  }
+}
+
+TEST(SQLGetInfo_Supported, SqlUSmallIntInvalid) {
+  StatusOr<SQLGetInfoSqlUSmallInt> actual_info =
+      SupportedInfoType<SQLGetInfoSqlUSmallInt>(UNSUPPORTED_INFO_TYPE);
+  EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
+                                    HasSubstr("Invalid infoType")));
+}
+
+TEST(SQLGetInfo_Supported, SqlUInteger) {
+  for (auto const& elem : kSupportedUIntMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUINTEGER expected_info_val = elem.second;
+    StatusOr<SQLGetInfoSqlUInt> actual_info =
+        SupportedInfoType<SQLGetInfoSqlUInt>(info_type);
+    ASSERT_STATUS_OK(actual_info);
+    EXPECT_EQ(expected_info_val, actual_info->info_val);
+  }
+}
+
+TEST(SQLGetInfo_Supported, SqlUIntegerInvalid) {
+  StatusOr<SQLGetInfoSqlUInt> actual_info =
+      SupportedInfoType<SQLGetInfoSqlUInt>(UNSUPPORTED_INFO_TYPE);
   EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
                                     HasSubstr("Invalid infoType")));
 }
