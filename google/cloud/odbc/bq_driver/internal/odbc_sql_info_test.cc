@@ -125,9 +125,9 @@ static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedBitmaskMap = {
     {SQL_UNION, 0L}};
 
 TEST(SQLGetInfo_Unsupported, SqlCharEmpty) {
-  for (auto elem : kUnsupportedEmptyCharMap) {
-    SQLUSMALLINT info_type = std::get<0>(elem);
-    std::string info_val = std::get<1>(elem);
+  for (auto const& elem : kUnsupportedEmptyCharMap) {
+    SQLUSMALLINT info_type = elem.first;
+    std::string info_val = elem.second;
     SQLCHAR* expected_info_val =
         reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
     StatusOr<SQLGetInfoSqlChar> actual_info =
@@ -138,9 +138,9 @@ TEST(SQLGetInfo_Unsupported, SqlCharEmpty) {
 }
 
 TEST(SQLGetInfo_Unsupported, SqlCharN) {
-  for (auto elem : kUnsupportedNCharMap) {
-    SQLUSMALLINT info_type = std::get<0>(elem);
-    std::string info_val = std::get<1>(elem);
+  for (auto const& elem : kUnsupportedNCharMap) {
+    SQLUSMALLINT info_type = elem.first;
+    std::string info_val = elem.second;
     SQLCHAR* expected_info_val =
         reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
     StatusOr<SQLGetInfoSqlChar> actual_info =
@@ -159,9 +159,9 @@ TEST(SQLGetInfo_Unsupported, SqlCharInvalid) {
 }
 
 TEST(SQLGetInfo_Unsupported, SQLUSmallIntValue) {
-  for (auto elem : kUnsupportedUSmallIntMap) {
-    SQLUSMALLINT info_type = std::get<0>(elem);
-    SQLUSMALLINT expected_info_val = std::get<1>(elem);
+  for (auto const& elem : kUnsupportedUSmallIntMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUSMALLINT expected_info_val = elem.second;
     StatusOr<SQLGetInfoSqlUSmallInt> actual_info =
         UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type);
     ASSERT_STATUS_OK(actual_info);
@@ -177,9 +177,9 @@ TEST(SQLGetInfo_Unsupported, SQLUSmallIntInvalid) {
 }
 
 TEST(SQLGetInfo_Unsupported, SQLUIntValue) {
-  for (auto elem : kUnsupportedUIntMap) {
-    SQLUSMALLINT info_type = std::get<0>(elem);
-    SQLUINTEGER expected_info_val = std::get<1>(elem);
+  for (auto const& elem : kUnsupportedUIntMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUINTEGER expected_info_val = elem.second;
     StatusOr<SQLGetInfoSqlUInt> actual_info =
         UnSupportedInfoType<SQLGetInfoSqlUInt>(info_type);
     ASSERT_STATUS_OK(actual_info);
@@ -195,9 +195,9 @@ TEST(SQLGetInfo_Unsupported, SQLUIntInvalid) {
 }
 
 TEST(SQLGetInfo_Unsupported, BitmaskValue) {
-  for (auto elem : kUnsupportedBitmaskMap) {
-    SQLUSMALLINT info_type = std::get<0>(elem);
-    SQLUINTEGER expected_info_val = std::get<1>(elem);
+  for (auto const& elem : kUnsupportedBitmaskMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUINTEGER expected_info_val = elem.second;
     StatusOr<SQLGetInfoBitmask> actual_info =
         UnSupportedInfoType<SQLGetInfoBitmask>(info_type);
     ASSERT_STATUS_OK(actual_info);
