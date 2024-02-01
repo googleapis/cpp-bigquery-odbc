@@ -156,67 +156,67 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
 
   switch (info_type) {
     case SQL_CATALOG_LOCATION: {
-      result.info_val = static_cast<SQLUSMALLINT>(kCatalogLocation);
+      result.info_val = kCatalogLocation;
       break;
     }
     case SQL_CORRELATION_NAME: {
-      result.info_val = static_cast<SQLUSMALLINT>(kCorrelationName);
+      result.info_val = kCorrelationName;
       break;
     }
     case SQL_CURSOR_COMMIT_BEHAVIOR: {
-      result.info_val = static_cast<SQLUSMALLINT>(kCursorCommitBehavior);
+      result.info_val = kCursorCommitBehavior;
       break;
     }
     case SQL_CURSOR_ROLLBACK_BEHAVIOR: {
-      result.info_val = static_cast<SQLUSMALLINT>(kCursorRollbackBehavior);
+      result.info_val = kCursorRollbackBehavior;
       break;
     }
     case SQL_GROUP_BY: {
-      result.info_val = static_cast<SQLUSMALLINT>(kGroupBy);
+      result.info_val = kGroupBy;
       break;
     }
     case SQL_IDENTIFIER_CASE: {
-      result.info_val = static_cast<SQLUSMALLINT>(kIdentifierCase);
+      result.info_val = kIdentifierCase;
       break;
     }
     case SQL_MAX_CATALOG_NAME_LEN: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxCatalogNameLen);
+      result.info_val = kMaxCatalogNameLen;
       break;
     }
     case SQL_MAX_COLUMNS_IN_TABLE: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxColsInTable);
+      result.info_val = kMaxColsInTable;
       break;
     }
     case SQL_MAX_COLUMN_NAME_LEN: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxColNameLen);
+      result.info_val = kMaxColNameLen;
       break;
     }
     case SQL_MAX_IDENTIFIER_LEN: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxIdentifierLen);
+      result.info_val = kMaxIdentifierLen;
       break;
     }
     case SQL_MAX_SCHEMA_NAME_LEN: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxSchemaNameLen);
+      result.info_val = kMaxSchemaNameLen;
       break;
     }
     case SQL_MAX_TABLES_IN_SELECT: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxTablesInSelect);
+      result.info_val = kMaxTablesInSelect;
       break;
     }
     case SQL_MAX_TABLE_NAME_LEN: {
-      result.info_val = static_cast<SQLUSMALLINT>(kMaxTableNameLen);
+      result.info_val = kMaxTableNameLen;
       break;
     }
     case SQL_NULL_COLLATION: {
-      result.info_val = static_cast<SQLUSMALLINT>(kNullCollation);
+      result.info_val = kNullCollation;
       break;
     }
     case SQL_QUOTED_IDENTIFIER_CASE: {
-      result.info_val = static_cast<SQLUSMALLINT>(kQuotedIdentifierCase);
+      result.info_val = kQuotedIdentifierCase;
       break;
     }
     case SQL_TXN_CAPABLE: {
-      result.info_val = static_cast<SQLUSMALLINT>(kTxnCapable);
+      result.info_val = kTxnCapable;
       break;
     }
     default: {
@@ -262,19 +262,19 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
 
   switch (info_type) {
     case SQL_ASYNC_MODE: {
-      result.info_val = static_cast<SQLUINTEGER>(kAsyncMode);
+      result.info_val = kAsyncMode;
       break;
     }
     case SQL_DEFAULT_TXN_ISOLATION: {
-      result.info_val = static_cast<SQLUINTEGER>(kDefaultTxnIsolation);
+      result.info_val = kDefaultTxnIsolation;
       break;
     }
     case SQL_ODBC_INTERFACE_CONFORMANCE: {
-      result.info_val = static_cast<SQLUINTEGER>(kOdbcInterfaceConformance);
+      result.info_val = kOdbcInterfaceConformance;
       break;
     }
     case SQL_SQL_CONFORMANCE: {
-      result.info_val = static_cast<SQLUINTEGER>(kSqlConformance);
+      result.info_val = kSqlConformance;
       break;
     }
     default: {
@@ -315,9 +315,23 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
 }
 
 StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
-    SQLUSMALLINT /*info_type*/) {
-  // Not yet Implemented.
-  return Status(StatusCode::kUnimplemented, "Not yet Implemented");
+    SQLUSMALLINT info_type) {
+  SQLGetInfoBitmask result;
+
+  switch (info_type) {
+    case SQL_AGGREGATE_FUNCTIONS: {
+      result.info_val = kAggregateFns;
+      break;
+    }
+    case SQL_CATALOG_USAGE: {
+      result.info_val = kCatalogUsage;
+      break;
+    }
+    default: {
+      return InvalidType(info_type);
+    }
+  }
+  return result;
 }
 
 StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(

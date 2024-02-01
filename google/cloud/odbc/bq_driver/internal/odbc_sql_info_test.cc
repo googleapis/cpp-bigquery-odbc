@@ -44,26 +44,26 @@ static std::map<SQLUSMALLINT, std::string> const kUnsupportedNCharMap = {
     {SQL_ROW_UPDATES, "N"}};
 
 static std::map<SQLUSMALLINT, std::string> const kSupportedCharMap = {
-    {SQL_ACCESSIBLE_TABLES, kSupportedCharY},
-    {SQL_CATALOG_NAME, kSupportedCharY},
-    {SQL_CATALOG_NAME_SEPARATOR, kCatalogSeparator},
-    {SQL_CATALOG_TERM, kCatalogTerm},
-    {SQL_COLLATION_SEQ, kDefaultCollation},
-    {SQL_COLUMN_ALIAS, kSupportedCharY},
-    {SQL_DBMS_NAME, kDbmsName},
-    {SQL_DBMS_VER, kDbmsVer},
-    {SQL_DESCRIBE_PARAMETER, kSupportedCharY},
-    {SQL_DRIVER_NAME, kDriverName},
-    {SQL_DRIVER_ODBC_VER, kDriverOdbcVer},
-    {SQL_DRIVER_VER, kDriverVer},
-    {SQL_EXPRESSIONS_IN_ORDERBY, kSupportedCharY},
-    {SQL_IDENTIFIER_QUOTE_CHAR, kIdentifierQuoteChar},
-    {SQL_MULTIPLE_ACTIVE_TXN, kSupportedCharY},
-    {SQL_PROCEDURES, kSupportedCharY},
-    {SQL_SCHEMA_TERM, kSchemaTerm},
-    {SQL_SEARCH_PATTERN_ESCAPE, kSearchPatternEscape},
-    {SQL_SERVER_NAME, kSqlServerName},
-    {SQL_TABLE_TERM, kSqlTableTerm}};
+    {SQL_ACCESSIBLE_TABLES, "Y"},
+    {SQL_CATALOG_NAME, "Y"},
+    {SQL_CATALOG_NAME_SEPARATOR, "."},
+    {SQL_CATALOG_TERM, "Project"},
+    {SQL_COLLATION_SEQ, "UTF-16LE_BINARY"},
+    {SQL_COLUMN_ALIAS, "Y"},
+    {SQL_DBMS_NAME, "BigQuery"},
+    {SQL_DBMS_VER, "2"},
+    {SQL_DESCRIBE_PARAMETER, "Y"},
+    {SQL_DRIVER_NAME, "Google ODBC Driver For BigQuery"},
+    {SQL_DRIVER_ODBC_VER, "03.80"},
+    {SQL_DRIVER_VER, "1.0.0.0000"},
+    {SQL_EXPRESSIONS_IN_ORDERBY, "Y"},
+    {SQL_IDENTIFIER_QUOTE_CHAR, "`"},
+    {SQL_MULTIPLE_ACTIVE_TXN, "Y"},
+    {SQL_PROCEDURES, "Y"},
+    {SQL_SCHEMA_TERM, "Dataset"},
+    {SQL_SEARCH_PATTERN_ESCAPE, "\\"},
+    {SQL_SERVER_NAME, "Google"},
+    {SQL_TABLE_TERM, "Table"}};
 
 static std::map<SQLUSMALLINT, SQLUSMALLINT> const kUnsupportedUSmallIntMap = {
     {SQL_ACTIVE_ENVIRONMENTS, 0},
@@ -81,28 +81,28 @@ static std::map<SQLUSMALLINT, SQLUSMALLINT> const kUnsupportedUSmallIntMap = {
     {SQL_NON_NULLABLE_COLUMNS, 0}};
 
 static std::map<SQLUSMALLINT, SQLUSMALLINT> const kSupportedUSmallIntMap = {
-    {SQL_CATALOG_LOCATION, kCatalogLocation},
-    {SQL_CORRELATION_NAME, kCorrelationName},
-    {SQL_CURSOR_COMMIT_BEHAVIOR, kCursorCommitBehavior},
-    {SQL_CURSOR_ROLLBACK_BEHAVIOR, kCursorRollbackBehavior},
-    {SQL_GROUP_BY, kGroupBy},
-    {SQL_IDENTIFIER_CASE, kIdentifierCase},
-    {SQL_MAX_CATALOG_NAME_LEN, kMaxCatalogNameLen},
-    {SQL_MAX_COLUMNS_IN_TABLE, kMaxColsInTable},
-    {SQL_MAX_COLUMN_NAME_LEN, kMaxColNameLen},
-    {SQL_MAX_IDENTIFIER_LEN, kMaxIdentifierLen},
-    {SQL_MAX_SCHEMA_NAME_LEN, kMaxSchemaNameLen},
-    {SQL_MAX_TABLES_IN_SELECT, kMaxTablesInSelect},
-    {SQL_MAX_TABLE_NAME_LEN, kMaxTableNameLen},
-    {SQL_NULL_COLLATION, kNullCollation},
-    {SQL_QUOTED_IDENTIFIER_CASE, kQuotedIdentifierCase},
-    {SQL_TXN_CAPABLE, kTxnCapable}};
+    {SQL_CATALOG_LOCATION, 1},
+    {SQL_CORRELATION_NAME, 2},
+    {SQL_CURSOR_COMMIT_BEHAVIOR, 1},
+    {SQL_CURSOR_ROLLBACK_BEHAVIOR, 1},
+    {SQL_GROUP_BY, 2},
+    {SQL_IDENTIFIER_CASE, 3},
+    {SQL_MAX_CATALOG_NAME_LEN, 128},
+    {SQL_MAX_COLUMNS_IN_TABLE, 10000},
+    {SQL_MAX_COLUMN_NAME_LEN, 128},
+    {SQL_MAX_IDENTIFIER_LEN, 255},
+    {SQL_MAX_SCHEMA_NAME_LEN, 1024},
+    {SQL_MAX_TABLES_IN_SELECT, 1000},
+    {SQL_MAX_TABLE_NAME_LEN, 1024},
+    {SQL_NULL_COLLATION, 1},
+    {SQL_QUOTED_IDENTIFIER_CASE, 3},
+    {SQL_TXN_CAPABLE, 1}};
 
 static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedUIntMap = {
-    {SQL_ASYNC_MODE, kAsyncMode},
-    {SQL_DEFAULT_TXN_ISOLATION, kDefaultTxnIsolation},
-    {SQL_ODBC_INTERFACE_CONFORMANCE, kOdbcInterfaceConformance},
-    {SQL_SQL_CONFORMANCE, kSqlConformance}};
+    {SQL_ASYNC_MODE, 2},
+    {SQL_DEFAULT_TXN_ISOLATION, 8},
+    {SQL_ODBC_INTERFACE_CONFORMANCE, 1},
+    {SQL_SQL_CONFORMANCE, 1}};
 
 static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedUIntMap = {
     {SQL_BATCH_ROW_COUNT, 0},

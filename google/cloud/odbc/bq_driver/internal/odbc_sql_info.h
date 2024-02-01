@@ -22,49 +22,53 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 // Constants specific to SQLGetInfo Information type
 // values for SQLGetInfoSqlChar.
-auto constexpr kSupportedCharY = "Y";
-auto constexpr kCatalogSeparator = ".";
-auto constexpr kCatalogTerm = "Project";
-auto constexpr kDefaultCollation = "UTF-16LE_BINARY";
-auto constexpr kDbmsName = "BigQuery";
-auto constexpr kDbmsVer = "2";
-auto constexpr kDriverName = "Google ODBC Driver For BigQuery";
-auto constexpr kDriverOdbcVer = "03.80";
-auto constexpr kDriverVer = "1.0.0.0000";
-auto constexpr kIdentifierQuoteChar = "`";
-auto constexpr kSchemaTerm = "Dataset";
-auto constexpr kSearchPatternEscape = "\\";
-auto constexpr kSqlServerName = "Google";
-auto constexpr kSqlTableTerm = "Table";
+constexpr char const* kSupportedCharY = "Y";
+constexpr char const* kCatalogSeparator = ".";
+constexpr char const* kCatalogTerm = "Project";
+constexpr char const* kDefaultCollation = "UTF-16LE_BINARY";
+constexpr char const* kDbmsName = "BigQuery";
+constexpr char const* kDbmsVer = "2";
+constexpr char const* kDriverName = "Google ODBC Driver For BigQuery";
+constexpr char const* kDriverOdbcVer = "03.80";
+constexpr char const* kDriverVer = "1.0.0.0000";
+constexpr char const* kIdentifierQuoteChar = "`";
+constexpr char const* kSchemaTerm = "Dataset";
+constexpr char const* kSearchPatternEscape = "\\";
+constexpr char const* kSqlServerName = "Google";
+constexpr char const* kSqlTableTerm = "Table";
 
 // Constants specific to SQLGetInfo Information type
 // values for SQLGetInfoSqlUSmallInt value.
-auto constexpr kCatalogLocation = SQL_CL_START;
-auto constexpr kCorrelationName = SQL_CN_ANY;
-auto constexpr kCursorCommitBehavior = SQL_CB_CLOSE;
-auto constexpr kCursorRollbackBehavior = SQL_CB_CLOSE;
-auto constexpr kGroupBy = SQL_GB_GROUP_BY_CONTAINS_SELECT;
-auto constexpr kIdentifierCase = SQL_IC_SENSITIVE;
-auto constexpr kMaxCatalogNameLen = 128;
-auto constexpr kMaxColsInTable = 10000;
-auto constexpr kMaxColNameLen = 128;
-auto constexpr kMaxIdentifierLen = 255;
-auto constexpr kMaxSchemaNameLen = 1024;
-auto constexpr kMaxTablesInSelect = 1000;
-auto constexpr kMaxTableNameLen = 1024;
-auto constexpr kNullCollation = SQL_NC_LOW;
-auto constexpr kQuotedIdentifierCase = SQL_IC_SENSITIVE;
-auto constexpr kTxnCapable = SQL_TC_DML;
+constexpr SQLUSMALLINT kCatalogLocation = SQL_CL_START;
+constexpr SQLUSMALLINT kCorrelationName = SQL_CN_ANY;
+constexpr SQLUSMALLINT kCursorCommitBehavior = SQL_CB_CLOSE;
+constexpr SQLUSMALLINT kCursorRollbackBehavior = SQL_CB_CLOSE;
+constexpr SQLUSMALLINT kGroupBy = SQL_GB_GROUP_BY_CONTAINS_SELECT;
+constexpr SQLUSMALLINT kIdentifierCase = SQL_IC_SENSITIVE;
+constexpr SQLUSMALLINT kMaxCatalogNameLen = 128;
+constexpr SQLUSMALLINT kMaxColsInTable = 10000;
+constexpr SQLUSMALLINT kMaxColNameLen = 128;
+constexpr SQLUSMALLINT kMaxIdentifierLen = 255;
+constexpr SQLUSMALLINT kMaxSchemaNameLen = 1024;
+constexpr SQLUSMALLINT kMaxTablesInSelect = 1000;
+constexpr SQLUSMALLINT kMaxTableNameLen = 1024;
+constexpr SQLUSMALLINT kNullCollation = SQL_NC_LOW;
+constexpr SQLUSMALLINT kQuotedIdentifierCase = SQL_IC_SENSITIVE;
+constexpr SQLUSMALLINT kTxnCapable = SQL_TC_DML;
 
 // Constants specific to SQLGetInfo Information type
 // values for SQLGetInfoSqlUInteger value.
-auto constexpr kAsyncMode = SQL_AM_STATEMENT;
-auto constexpr kDefaultTxnIsolation = SQL_TXN_SERIALIZABLE;
-auto constexpr kOdbcInterfaceConformance = SQL_OIC_CORE;
-auto constexpr kSqlConformance = SQL_OIC_CORE;
+constexpr SQLUINTEGER kAsyncMode = SQL_AM_STATEMENT;
+constexpr SQLUINTEGER kDefaultTxnIsolation = SQL_TXN_SERIALIZABLE;
+constexpr SQLUINTEGER kOdbcInterfaceConformance = SQL_OIC_CORE;
+constexpr SQLUINTEGER kSqlConformance = SQL_OIC_CORE;
 
 // Constants specific to SQLGetInfo Information type
-// values for SQLGetInfoSqlUInteger bitmask value.
+// values for SQLGetInfoSqlUInteger Bitmask value.
+constexpr SQLUINTEGER kAggregateFns = SQL_AF_ALL | SQL_AF_AVG | SQL_AF_COUNT |
+                                      SQL_AF_DISTINCT | SQL_AF_MAX |
+                                      SQL_AF_MIN | SQL_AF_SUM;
+constexpr SQLUINTEGER kCatalogUsage = SQL_CU_DML_STATEMENTS;
 
 // Shared template functions that will be moved to a
 // common data translation library.
