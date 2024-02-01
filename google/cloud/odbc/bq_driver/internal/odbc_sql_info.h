@@ -52,7 +52,7 @@ auto constexpr kMaxIdentifierLen = 255;
 auto constexpr kMaxSchemaNameLen = 1024;
 auto constexpr kMaxTablesInSelect = 1000;
 auto constexpr kMaxTableNameLen = 1024;
-auto constexpr KNullCollation = SQL_NC_LOW;
+auto constexpr kNullCollation = SQL_NC_LOW;
 auto constexpr kQuotedIdentifierCase = SQL_IC_SENSITIVE;
 auto constexpr kTxnCapable = SQL_TC_DML;
 

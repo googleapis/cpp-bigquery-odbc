@@ -94,7 +94,7 @@ static std::map<SQLUSMALLINT, SQLUSMALLINT> const kSupportedUSmallIntMap = {
     {SQL_MAX_SCHEMA_NAME_LEN, kMaxSchemaNameLen},
     {SQL_MAX_TABLES_IN_SELECT, kMaxTablesInSelect},
     {SQL_MAX_TABLE_NAME_LEN, kMaxTableNameLen},
-    {SQL_NULL_COLLATION, KNullCollation},
+    {SQL_NULL_COLLATION, kNullCollation},
     {SQL_QUOTED_IDENTIFIER_CASE, kQuotedIdentifierCase},
     {SQL_TXN_CAPABLE, kTxnCapable}};
 

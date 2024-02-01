@@ -208,7 +208,7 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
       break;
     }
     case SQL_NULL_COLLATION: {
-      result.info_val = static_cast<SQLUSMALLINT>(KNullCollation);
+      result.info_val = static_cast<SQLUSMALLINT>(kNullCollation);
       break;
     }
     case SQL_QUOTED_IDENTIFIER_CASE: {
