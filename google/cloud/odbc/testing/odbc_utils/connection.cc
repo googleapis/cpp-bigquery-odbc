@@ -342,8 +342,8 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
   std::map<std::string, std::string> supported_sqlusmallint;
   std::map<std::string, std::string> unsupported_sqluinteger;
   std::map<std::string, std::string> supported_sqluinteger;
-  std::map<std::string, std::bitset<8>> unsupported_bitmask;
-  std::map<std::string, std::bitset<8>> supported_bitmask;
+  std::map<std::string, SQLUINTEGER> unsupported_bitmask;
+  std::map<std::string, SQLUINTEGER> supported_bitmask;
   for (auto elem : kCharMap) {
     auto info_type = std::get<0>(elem);
     auto info_name = std::get<1>(elem);
@@ -510,12 +510,10 @@ SQLRETURN GetDriverInfo2(std::shared_ptr<ConnectionHandle> conn) {
                            " InfoType");
       }
 
-      std::bitset<8> b = 0;
       if (sqlBitmaskBuf == 0 || sqlBitmaskBuf == 0L) {
-        unsupported_bitmask.insert({info_name, b});
+        unsupported_bitmask.insert({info_name, sqlBitmaskBuf});
       } else {
-        b |= sqlBitmaskBuf;
-        supported_bitmask.insert({info_name, b});
+        supported_bitmask.insert({info_name, sqlBitmaskBuf});
       }
     }  else {
       std::cout << "SQLGETINFO FAILED: " << status << std::endl;
