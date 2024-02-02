@@ -172,6 +172,39 @@ static std::map<SQLUSMALLINT, SQLUINTEGER> const kUnsupportedBitmaskMap = {
     {SQL_STATIC_CURSOR_ATTRIBUTES2, 0L},
     {SQL_UNION, 0L}};
 
+static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedBitmaskMap = {
+    {SQL_AGGREGATE_FUNCTIONS, 127},
+    {SQL_CATALOG_USAGE, 1},
+    {SQL_CONVERT_BIT, 20736},
+    {SQL_CONVERT_DATE, 164096},
+    {SQL_CONVERT_DOUBLE, 16768},
+    {SQL_CONVERT_FUNCTIONS, 3},
+    {SQL_CONVERT_TIME, 65792},
+    {SQL_CONVERT_VARBINARY, 2304},
+    {SQL_CONVERT_VARCHAR, 252288},
+    {SQL_DATETIME_LITERALS, 4},
+    {SQL_GETDATA_EXTENSIONS, 15},
+    {SQL_NUMERIC_FUNCTIONS, 14221311},
+    {SQL_CONVERT_TIMESTAMP, 196864},
+    {SQL_OJ_CAPABILITIES, 127},
+    {SQL_SCROLL_OPTIONS, 1},
+    {SQL_SCHEMA_USAGE, 31},
+    {SQL_SUBQUERIES, 31},
+    {SQL_TXN_ISOLATION_OPTION, 8},
+    {SQL_TIMEDATE_FUNCTIONS, 2097151},
+    {SQL_SYSTEM_FUNCTIONS, 4},
+    {SQL_TIMEDATE_ADD_INTERVALS, 510},
+    {SQL_TIMEDATE_DIFF_INTERVALS, 478},
+    {SQL_SQL92_PREDICATES, 16135},
+    {SQL_SQL92_RELATIONAL_JOIN_OPERATORS, 346},
+    {SQL_SQL92_ROW_VALUE_CONSTRUCTOR, 15},
+    {SQL_SQL92_DATETIME_FUNCTIONS, 7},
+    {SQL_SQL92_STRING_FUNCTIONS, 254},
+    {SQL_SQL92_VALUE_EXPRESSIONS, 2},
+    {SQL_STANDARD_CLI_CONFORMANCE, 2},
+    {SQL_STRING_FUNCTIONS, 15756697},
+    {SQL_CONVERT_BIGINT, 20864}};
+
 TEST(SQLGetInfo_Unsupported, SqlCharEmpty) {
   for (auto const& elem : kUnsupportedEmptyCharMap) {
     SQLUSMALLINT info_type = elem.first;
@@ -312,6 +345,24 @@ TEST(SQLGetInfo_Supported, SqlUInteger) {
 TEST(SQLGetInfo_Supported, SqlUIntegerInvalid) {
   StatusOr<SQLGetInfoSqlUInt> actual_info =
       SupportedInfoType<SQLGetInfoSqlUInt>(UNSUPPORTED_INFO_TYPE);
+  EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
+                                    HasSubstr("Invalid infoType")));
+}
+
+TEST(SQLGetInfo_Supported, SqlBitmask) {
+  for (auto const& elem : kSupportedBitmaskMap) {
+    SQLUSMALLINT info_type = elem.first;
+    SQLUINTEGER expected_info_val = elem.second;
+    StatusOr<SQLGetInfoBitmask> actual_info =
+        SupportedInfoType<SQLGetInfoBitmask>(info_type);
+    ASSERT_STATUS_OK(actual_info);
+    EXPECT_EQ(expected_info_val, actual_info->info_val);
+  }
+}
+
+TEST(SQLGetInfo_Supported, SqlBitmaskInvalid) {
+  StatusOr<SQLGetInfoBitmask> actual_info =
+      SupportedInfoType<SQLGetInfoBitmask>(UNSUPPORTED_INFO_TYPE);
   EXPECT_THAT(actual_info, StatusIs(StatusCode::kInvalidArgument,
                                     HasSubstr("Invalid infoType")));
 }

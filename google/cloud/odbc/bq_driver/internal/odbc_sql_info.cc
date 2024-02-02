@@ -327,6 +327,122 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
       result.info_val = kCatalogUsage;
       break;
     }
+    case SQL_CONVERT_BIGINT: {
+      result.info_val = kConvertBigInt;
+      break;
+    }
+    case SQL_CONVERT_BIT: {
+      result.info_val = kConvertBit;
+      break;
+    }
+    case SQL_CONVERT_DATE: {
+      result.info_val = kConvertDate;
+      break;
+    }
+    case SQL_CONVERT_DOUBLE: {
+      result.info_val = kConvertDouble;
+      break;
+    }
+    case SQL_CONVERT_FUNCTIONS: {
+      result.info_val = kConvertFn;
+      break;
+    }
+    case SQL_CONVERT_TIME: {
+      result.info_val = kConvertTime;
+      break;
+    }
+    case SQL_CONVERT_TIMESTAMP: {
+      result.info_val = kConvertTimestamp;
+      break;
+    }
+    case SQL_CONVERT_VARBINARY: {
+      result.info_val = kConvertVarBinary;
+      break;
+    }
+    case SQL_CONVERT_VARCHAR: {
+      result.info_val = kConvertVarChar;
+      break;
+    }
+    case SQL_DATETIME_LITERALS: {
+      result.info_val = kDateTimeLiterals;
+      break;
+    }
+    case SQL_SQL92_DATETIME_FUNCTIONS: {
+      result.info_val = kDateTimeFns;
+      break;
+    }
+    case SQL_GETDATA_EXTENSIONS: {
+      result.info_val = kGetDataExtns;
+      break;
+    }
+    case SQL_STRING_FUNCTIONS: {
+      result.info_val = kStrFns;
+      break;
+    }
+    case SQL_SYSTEM_FUNCTIONS: {
+      result.info_val = kSystemFns;
+      break;
+    }
+    case SQL_TIMEDATE_FUNCTIONS: {
+      result.info_val = kTimeDateFns;
+      break;
+    }
+    case SQL_TXN_ISOLATION_OPTION: {
+      result.info_val = kTxnSerializable;
+      break;
+    }
+    case SQL_TIMEDATE_ADD_INTERVALS: {
+      result.info_val = kTimeDateAddIntervals;
+      break;
+    }
+    case SQL_TIMEDATE_DIFF_INTERVALS: {
+      result.info_val = kTimeDateDiffIntervals;
+      break;
+    }
+    case SQL_SUBQUERIES: {
+      result.info_val = kSubQueries;
+      break;
+    }
+    case SQL_SQL92_PREDICATES: {
+      result.info_val = kPredicates;
+      break;
+    }
+    case SQL_SQL92_STRING_FUNCTIONS: {
+      result.info_val = kSql92StrFns;
+      break;
+    }
+    case SQL_STANDARD_CLI_CONFORMANCE: {
+      result.info_val = kCliConformance;
+      break;
+    }
+    case SQL_SQL92_VALUE_EXPRESSIONS: {
+      result.info_val = kValueExpressions;
+      break;
+    }
+    case SQL_SQL92_ROW_VALUE_CONSTRUCTOR: {
+      result.info_val = kRowValueCtr;
+      break;
+    }
+    case SQL_SQL92_RELATIONAL_JOIN_OPERATORS: {
+      result.info_val = kJoinOperators;
+      break;
+    }
+    case SQL_SCROLL_OPTIONS: {
+      result.info_val = kScrollOptions;
+      break;
+    }
+    case SQL_OJ_CAPABILITIES: {
+      result.info_val = kOJCapabilities;
+      break;
+    }
+    case SQL_SCHEMA_USAGE: {
+      result.info_val = kSchemaUsage;
+      break;
+    }
+    case SQL_NUMERIC_FUNCTIONS: {
+      result.info_val = kNumericFns;
+      break;
+    }
     default: {
       return InvalidType(info_type);
     }
