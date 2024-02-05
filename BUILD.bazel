@@ -37,3 +37,9 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = ["//google/cloud/odbc:google_cloud_odbc_bq_driver_internal"],
 )
+
+cc_library(
+    name = "odbc_internal",
+    visibility = ["//visibility:public"],
+    deps = ["//google/cloud/odbc/internal:odbc_internal"],
+)

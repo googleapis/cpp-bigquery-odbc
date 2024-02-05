@@ -15,7 +15,7 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 
-#include "odbc_includes.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include "utils.h"
 #include <algorithm>
 #include <cstdarg>

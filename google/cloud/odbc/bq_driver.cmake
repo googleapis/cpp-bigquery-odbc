@@ -23,11 +23,14 @@ endif ()
 # BQ Driver Internal Library
 add_library(
     google_cloud_odbc_bq_driver_internal # cmake-format: sort
+    bq_driver/internal/diagnostics.cc
+    bq_driver/internal/diagnostics.h
     bq_driver/internal/odbc_conn_handle.cc
     bq_driver/internal/odbc_conn_handle.h
     bq_driver/internal/odbc_env_handle.cc
     bq_driver/internal/odbc_env_handle.h
-    bq_driver/internal/odbc_includes.h
+    bq_driver/internal/odbc_handle.cc
+    bq_driver/internal/odbc_handle.h
     bq_driver/internal/odbc_sql_fns.cc
     bq_driver/internal/odbc_sql_fns.h
     bq_driver/internal/odbc_sql_info.cc
@@ -42,7 +45,8 @@ target_link_libraries(
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
-    odbc_bq_client_interface)
+    odbc_bq_client_interface
+    odbc_internal)
 target_include_directories(google_cloud_odbc_bq_driver_internal
                            PUBLIC ${CMAKE_SOURCE_DIR})
 target_include_directories(google_cloud_odbc_bq_driver_internal
@@ -85,6 +89,7 @@ target_link_libraries(google_cloud_odbc_bq_driver
 
 # target_link_libraries(google_cloud_odbc_bq_driver )
 add_subdirectory(bq_client_interface)
+add_subdirectory(internal)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
@@ -107,6 +112,7 @@ function (bq_driver_define_unit_tests)
 
     add_executable(
         google_cloud_odbc_bq_driver_unit_tests
+        bq_driver/internal/diagnostics_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_sql_fns_test.cc
         bq_driver/internal/odbc_sql_info_test.cc

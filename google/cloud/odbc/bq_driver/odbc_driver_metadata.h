@@ -34,9 +34,9 @@
 // SQLColumnPrivilegesInternal
 ///////////////////////////////////////////////////////////
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
 

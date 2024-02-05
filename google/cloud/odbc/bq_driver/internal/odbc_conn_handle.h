@@ -16,7 +16,9 @@
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_HANDLE_H
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -44,7 +46,7 @@ struct Dsn {
   bool is_bq_legacy_sql;
 };
 
-class ConnectionHandle {
+class ConnectionHandle : public Handle {
  public:
   explicit ConnectionHandle() = default;
   ~ConnectionHandle() = default;

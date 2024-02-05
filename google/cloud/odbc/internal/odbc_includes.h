@@ -24,7 +24,6 @@
 
 #endif  //_WIN32
 
-#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <odbcinst.h>
 #include <sql.h>
 #include <sqlext.h>

@@ -15,11 +15,12 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_ENV_HANDLE_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_ENV_HANDLE_H
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-class EnvironmentHandle {
+class EnvironmentHandle : public Handle {
  public:
   explicit EnvironmentHandle() = default;
   ~EnvironmentHandle() = default;

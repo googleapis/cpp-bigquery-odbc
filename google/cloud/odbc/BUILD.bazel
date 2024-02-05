@@ -26,6 +26,7 @@ cc_library(
     visibility = ["//:__pkg__"],
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
+        "//google/cloud/odbc/internal:odbc_internal",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",  # We need this dependency to use 'options' from client libraries
     ],
 )

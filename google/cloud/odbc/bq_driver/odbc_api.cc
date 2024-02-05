@@ -17,12 +17,12 @@
 // ODBC APIs defined in <sql.h>, <sqlext.h> and <sqlucode.h>
 //////////////////////////////////////////////////////////////////
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_includes.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////

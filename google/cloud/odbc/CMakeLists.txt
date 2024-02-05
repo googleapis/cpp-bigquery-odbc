@@ -35,6 +35,8 @@ else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
 
+find_package(absl CONFIG REQUIRED)
+
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
 if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
