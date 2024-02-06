@@ -30,8 +30,8 @@ constexpr char const* kDbmsName = "BigQuery";
 constexpr char const* kDbmsVer = "2";
 constexpr char const* kDriverName = "Google ODBC Driver For BigQuery";
 constexpr char const* kDriverOdbcVer = "03.80";
-// TODO: Revisit thiswhen a proper versioning is defined for the Google Driver.
-// Similar to
+// TODO(jsrinnn): Revisit this when a proper versioning is defined for the
+// Google Driver. Similar to
 // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/version.cc
 constexpr char const* kDriverVer = "1.0.0.0000";
 constexpr char const* kIdentifierQuoteChar = "`";
