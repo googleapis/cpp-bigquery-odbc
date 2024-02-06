@@ -14,13 +14,8 @@
 
 FROM ubuntu:22.04
 
-# ENV for unixODBC driver manager
+# ENV for iODBC driver manager
 ENV GCS_BUCKET=bq-dev-tools-testing-drivers
-RUN echo 'GCS_BUCKET='${GCS_BUCKET}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
-RUN echo 'ODBC_SECRET='${ODBC_SECRET}
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
@@ -49,6 +44,8 @@ RUN apt-get update && \
         python3-dev \
         python3-pip \
         tar \
+        unixodbc \
+        unixodbc-dev \
         unzip \
         zip \
         wget \
@@ -245,13 +242,13 @@ RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
     then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
 
 # iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-WORKDIR /var/tmp/iODBC
-RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    autoreconf --install && \
-    ./configure && \
-    make install -j $(nproc)
+# RUN echo 'Installing iODBC Driver Manager...'
+# WORKDIR /var/tmp/iODBC
+# RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
+#     tar -zxf - --strip-components=1 && \
+#     autoreconf --install && \
+#     ./configure && \
+#     make install -j $(nproc)
 
 ## END Installs pre-requisites for the ODBC Driver.
 

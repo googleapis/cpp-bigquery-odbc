@@ -271,6 +271,7 @@ if [[ -n "${CLOUD_FLAG}" ]]; then
   subs=("_DISTRO=${DISTRO_FLAG}")
   subs+=("_BUILD_NAME=${BUILD_FLAG}")
   subs+=("_TRIGGER_SOURCE=manual-${account}")
+  subs=("_DRIVER_MANAGER=iODBC")
   subs+=("_PR_NUMBER=") # Must be empty or a number, and this is not a PR
   subs+=("_LOGS_BUCKET=${CLOUD_FLAG}_cloudbuild")
   subs+=("BRANCH_NAME=${BRANCH_NAME}")
@@ -310,6 +311,7 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
   build_flags=(
     -t "${image}"
     "--build-arg=NCPU=$(nproc)"
+    "--build-arg=DRIVER_MANAGER=${DRIVER_MANAGER}"
     -f "ci/cloudbuild/dockerfiles/${DISTRO_FLAG}.Dockerfile"
   )
   if [[ -n "${ARCH_FLAG}" ]]; then
