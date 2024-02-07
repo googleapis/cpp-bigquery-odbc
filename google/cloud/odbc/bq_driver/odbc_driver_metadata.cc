@@ -208,7 +208,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  
+
   std::string msg = "SQLGetInfoInternal - Invalid infoType: ";
   msg.append(std::to_string(info_type));
   TracePrintInternal(opts, msg);
