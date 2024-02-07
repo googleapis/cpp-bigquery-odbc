@@ -14,41 +14,102 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
+#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
+using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
+using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
+using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
+using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
+using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
 
-SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
-                                  SQLUSMALLINT functionId,
-                                  SQLUSMALLINT* supportedFunction) {
+TraceOptions& opts = *(*kTraceOptsConsole);
+
+// Internal helper functions.
+namespace {
+SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
+                                           SQLUSMALLINT info_type,
+                                           SQLPOINTER info_value_ptr,
+                                           SQLSMALLINT in_buffer_len,
+                                           SQLSMALLINT* str_len_ptr) {
+  // We are mainly checking the validity of the handle here.
+  // No connection to data source is necessary for this ODBC API.
+  if (!connection_handle) {
+    TracePrintInternal(opts, "Null Connection handle!");
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField.
+    return SQL_INVALID_HANDLE;
+  }
+  // Validate the connection handle.
+  auto* conn_handle_wrapped =
+      reinterpret_cast<HandleWrapped*>(connection_handle);
+  if (conn_handle_wrapped->handle_type != HandleType::kConnHandle) {
+    TracePrintInternal(opts, "Invalid Connection handle!");
+    // TODO(#158): SQLGetDiagRec should handle this
+    return SQL_INVALID_HANDLE;
+  }
+  auto* handle =
+      reinterpret_cast<ConnectionHandle*>(conn_handle_wrapped->handle_ref);
+
+  SQLGetInfoSqlChar info_val_char;
+  switch (info_type) {
+    case SQL_DATA_SOURCE_NAME: {
+      SQLCHAR* dsn_name = reinterpret_cast<SQLCHAR*>(
+          const_cast<char*>(handle->GetDsn().dsn_name.c_str()));
+      info_val_char.info_val = dsn_name;
+      return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
+                                             str_len_ptr);
+    }
+    case SQL_DATABASE_NAME: {
+      SQLCHAR* database_name = reinterpret_cast<SQLCHAR*>(
+          const_cast<char*>(handle->GetDsn().catalog.c_str()));
+      info_val_char.info_val = database_name;
+      return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
+                                             str_len_ptr);
+    }
+  }
+
+  std::string msg = "Invalid connection infoType: ";
+  msg.append(std::to_string(info_type));
+  TracePrintInternal(opts, msg);
+  return SQL_ERROR;
+}
+}  // namespace
+
+SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
+                                  SQLUSMALLINT function_id,
+                                  SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  TraceOptions& opts = *(*kTraceOptsConsole);
   // We are only checking the validity of the handle here.
   // No connection to data source is necessary for this ODBC API.
-  if (!connectionHandle) {
+  if (!connection_handle) {
     TracePrintInternal(opts, "Invalid Connection handle!");
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField.
     return SQL_INVALID_HANDLE;
   }
   // Assumption here is memory for output is managed/owned by the caller.
-  if (!supportedFunction) {
-    TracePrintInternal(opts, "Argument supportedFunction cannot be null");
+  if (!supported_fn) {
+    TracePrintInternal(opts, "Argument supported_fn cannot be null");
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField.
     return SQL_ERROR;
   }
-  switch (functionId) {
+  switch (function_id) {
     case SQL_API_ODBC3_ALL_FUNCTIONS: {
-      Status status = PopulateSupportedODBC3Functions(opts, supportedFunction);
+      Status status = PopulateSupportedODBC3Functions(opts, supported_fn);
       if (!status.ok()) {
         TracePrintInternal(opts,
                            "Internal Error: PopulateSupportedODBCFunctions() "
@@ -61,7 +122,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
       return rc;
     }
     case SQL_API_ALL_FUNCTIONS: {
-      Status status = PopulateSupportedODBC2Functions(opts, supportedFunction);
+      Status status = PopulateSupportedODBC2Functions(opts, supported_fn);
       if (!status.ok()) {
         TracePrintInternal(opts,
                            "Internal Error: PopulateSupportedODBCFunctions() "
@@ -76,7 +137,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
     default:
       break;
   }
-  if (IsFunctionIdOdbc3(functionId)) {
+  if (IsFunctionIdOdbc3(function_id)) {
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
     Status status = PopulateSupportedODBC3Functions(opts, odbc3_fns);
     if (!status.ok()) {
@@ -88,8 +149,8 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
       // SQLDiagRec and/or SQLDiagField.
       return SQL_ERROR;
     }
-    *supportedFunction = SQL_FUNC_EXISTS(odbc3_fns, functionId);
-  } else if (IsFunctionIdOdbc2(functionId)) {
+    *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
+  } else if (IsFunctionIdOdbc2(function_id)) {
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
     Status status = PopulateSupportedODBC2Functions(opts, odbc2_fns);
     if (!status.ok()) {
@@ -101,9 +162,73 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
       // SQLDiagRec and/or SQLDiagField.
       return SQL_ERROR;
     }
-    *supportedFunction = odbc2_fns[functionId];
+    *supported_fn = odbc2_fns[function_id];
   }
   return rc;
+}
+
+SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
+                             SQLPOINTER info_value_ptr,
+                             SQLSMALLINT in_buffer_len,
+                             SQLSMALLINT* str_len_ptr) {
+  SQLRETURN rc = SQL_SUCCESS;
+  if (!info_value_ptr) {
+    TracePrintInternal(opts, "Invalid InfoValuePtr");
+    // TODO(#158): SQLGetDiagRec should handle this
+    return SQL_ERROR;
+  }
+  // Handle information types dependent on connection handle.
+  if (info_type == SQL_DATA_SOURCE_NAME || info_type == SQL_DATABASE_NAME) {
+    return HandleConnectionInformationTypes(connection_handle, info_type,
+                                            info_value_ptr, in_buffer_len,
+                                            str_len_ptr);
+  }
+  // Handle rest of the information types not dependent on the connection
+  // handle.
+  Status status;
+  if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = SupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = SupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = SupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+  if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
+    return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  } else {
+    status = r.status();
+  }
+
+  TracePrintInternal(opts, status.message());
+  return SQL_ERROR;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

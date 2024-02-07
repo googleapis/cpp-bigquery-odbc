@@ -30,6 +30,16 @@ Status InvalidType(SQLUSMALLINT info_type) {
   return Status(StatusCode::kInvalidArgument, msg);
 }
 
+SQLRETURN IntInfoValToResponse(SQLPOINTER info_val_ptr, SQLUINTEGER info_val,
+                               SQLSMALLINT* str_len_ptr) {
+  SQLUINTEGER* uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
+  *uint_val = info_val;
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUINTEGER));
+  }
+  return SQL_SUCCESS;
+}
+
 }  // namespace
 
 StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
@@ -513,6 +523,48 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
   }
 
   return result;
+}
+
+SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
+                                               SQLSMALLINT in_buffer_len,
+                                               SQLSMALLINT* str_len_ptr) {
+  char* src = reinterpret_cast<char*>(info_val);
+  char* dest = reinterpret_cast<char*>(info_val_ptr);
+  auto src_len = strlen(src);
+
+  if (src_len == 0 || in_buffer_len == 0) {
+    *dest = '\0';
+  } else if (src_len < in_buffer_len) {
+    strncpy(dest, src, src_len);
+    dest[src_len] = '\0';
+  } else {
+    strncpy(dest, src, (in_buffer_len - 1));
+    dest[in_buffer_len - 1] = '\0';
+  }
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(src_len);
+  }
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetInfoSqlUInt::InfoValToResponse(SQLPOINTER info_val_ptr,
+                                               SQLSMALLINT* str_len_ptr) {
+  return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
+}
+
+SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
+                                               SQLSMALLINT* str_len_ptr) {
+  return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
+}
+
+SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(SQLPOINTER info_val_ptr,
+                                                    SQLSMALLINT* str_len_ptr) {
+  SQLUSMALLINT* usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
+  *usmallint_val = info_val;
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT));
+  }
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

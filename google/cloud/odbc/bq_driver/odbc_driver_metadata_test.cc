@@ -14,16 +14,27 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::odbc_bq_driver::SQLAllocConnHandle;
+using ::google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
+using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+std::string const kDsnDescription = "test-dsn";
+std::string const kDsnCatalog = "bigquery-test";
+std::string const kDsnDriver = "test-driver";
+std::string const kDsnName = "SampleDSN";
 
 TEST(SQLGetFunctionsInternal, AllSupportedOdbc3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
@@ -179,6 +190,176 @@ TEST(SQLGetFunctionsInternal, Odbc3NullSupportedFunctionPtr) {
   SQLRETURN rc =
       SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
   EXPECT_EQ(SQL_ERROR, rc);
+}
+
+TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
+  auto* conn_handle = new ConnectionHandle();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+
+  Section dsn_section;
+  dsn_section["Description"] = kDsnDescription;
+  dsn_section["Driver"] = kDsnDriver;
+  dsn_section["Catalog"] = kDsnCatalog;
+  conn_handle->SetUp(dsn_section, kDsnName);
+
+  SQLCHAR dest[256];
+  SQLSMALLINT in_buffer_len = 256;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS,
+            SQLGetInfoInternal(reinterpret_cast<HDBC>(wrapped_handle),
+                               SQL_DATA_SOURCE_NAME,
+                               reinterpret_cast<SQLPOINTER>(&dest),
+                               in_buffer_len, &str_len_ptr));
+
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ(kDsnName, actual);
+  EXPECT_EQ(str_len_ptr, 9);
+
+  delete conn_handle;
+  delete wrapped_handle;
+}
+
+TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
+  auto* conn_handle = new ConnectionHandle();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+
+  Section dsn_section;
+  dsn_section["Description"] = kDsnDescription;
+  dsn_section["Driver"] = kDsnDriver;
+  dsn_section["Catalog"] = kDsnCatalog;
+  conn_handle->SetUp(dsn_section, kDsnName);
+
+  SQLCHAR dest[256];
+  SQLSMALLINT in_buffer_len = 256;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(
+      SQL_SUCCESS,
+      SQLGetInfoInternal(reinterpret_cast<HDBC>(wrapped_handle),
+                         SQL_DATABASE_NAME, reinterpret_cast<SQLPOINTER>(&dest),
+                         in_buffer_len, &str_len_ptr));
+
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ(kDsnCatalog, actual);
+  EXPECT_EQ(str_len_ptr, 13);
+
+  delete conn_handle;
+  delete wrapped_handle;
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
+  HDBC handle;
+
+  SQLCHAR dest[10];
+  SQLSMALLINT in_buffer_len = 10;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_NAME,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ("Y", actual);
+  EXPECT_EQ(str_len_ptr, 1);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
+  HDBC handle;
+
+  SQLCHAR dest[10];
+  SQLSMALLINT in_buffer_len = 10;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ACCESSIBLE_PROCEDURES,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ("N", actual);
+  EXPECT_EQ(str_len_ptr, 1);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoUSmallIntSupported) {
+  HDBC handle;
+
+  SQLUSMALLINT dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_LOCATION,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(SQL_CL_START, dest);
+  EXPECT_EQ(str_len_ptr, 2);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoUSmallIntUnSupported) {
+  HDBC handle;
+
+  SQLUSMALLINT dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ACTIVE_ENVIRONMENTS,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(0, dest);
+  EXPECT_EQ(str_len_ptr, 2);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoUIntSupported) {
+  HDBC handle;
+
+  SQLUINTEGER dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_DEFAULT_TXN_ISOLATION,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(SQL_TXN_SERIALIZABLE, dest);
+  EXPECT_EQ(str_len_ptr, 4);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoUIntUnSupported) {
+  HDBC handle;
+
+  SQLUINTEGER dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_BATCH_ROW_COUNT,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(0, dest);
+  EXPECT_EQ(str_len_ptr, 4);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoBitmaskSupported) {
+  HDBC handle;
+
+  SQLUINTEGER dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_USAGE,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(SQL_CU_DML_STATEMENTS, dest);
+  EXPECT_EQ(str_len_ptr, 4);
+}
+
+TEST(SQLGetInfoInternal, SQLGetInfoBitmaskIntUnSupported) {
+  HDBC handle;
+
+  SQLUINTEGER dest;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ALTER_DOMAIN,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
+
+  EXPECT_EQ(0L, dest);
+  EXPECT_EQ(str_len_ptr, 4);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

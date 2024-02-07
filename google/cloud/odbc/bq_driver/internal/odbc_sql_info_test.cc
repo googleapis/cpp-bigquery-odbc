@@ -367,4 +367,116 @@ TEST(SQLGetInfo_Supported, SqlBitmaskInvalid) {
                                     HasSubstr("Invalid infoType")));
 }
 
+TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_GT_SrcLen) {
+  SQLGetInfoSqlChar info_val_char;
+  info_val_char.info_val =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = 15;
+  SQLCHAR dest[15];
+  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+                                  buffer_len, &str_len);
+
+  std::string actual = reinterpret_cast<char*>(dest);
+
+  EXPECT_EQ("sample-test", actual);
+  EXPECT_EQ(str_len, 11);
+}
+
+TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
+  SQLGetInfoSqlChar info_val_char;
+  info_val_char.info_val =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = 5;
+  SQLCHAR dest[5];
+  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+                                  buffer_len, &str_len);
+
+  std::string actual = reinterpret_cast<char*>(dest);
+
+  EXPECT_EQ("samp", actual);
+  EXPECT_EQ(str_len, 11);
+}
+
+TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
+  SQLGetInfoSqlChar info_val_char;
+  info_val_char.info_val =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>("sampl"));
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = 5;
+  SQLCHAR dest[5];
+  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+                                  buffer_len, &str_len);
+
+  std::string actual = reinterpret_cast<char*>(dest);
+
+  EXPECT_EQ("samp", actual);
+  EXPECT_EQ(str_len, 5);
+}
+
+TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
+  SQLGetInfoSqlChar info_val_char;
+  info_val_char.info_val =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = 0;
+  SQLCHAR dest[15];
+  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+                                  buffer_len, &str_len);
+
+  std::string actual = reinterpret_cast<char*>(dest);
+
+  EXPECT_EQ("", actual);
+  EXPECT_EQ(str_len, 11);
+}
+
+TEST(InfoValToResponse, SQLGetInfoChar_SrcLenZero) {
+  SQLGetInfoSqlChar info_val_char;
+  info_val_char.info_val = reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = 15;
+  SQLCHAR dest[15];
+  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+                                  buffer_len, &str_len);
+
+  std::string actual = reinterpret_cast<char*>(dest);
+
+  EXPECT_EQ("", actual);
+  EXPECT_EQ(str_len, 0);
+}
+
+TEST(InfoValToResponse, SQLGetInfoBitmask) {
+  SQLGetInfoBitmask info_val_bit;
+  info_val_bit.info_val = static_cast<SQLUINTEGER>(127);
+  SQLSMALLINT str_len;
+  SQLUINTEGER dest;
+  info_val_bit.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
+
+  EXPECT_EQ(info_val_bit.info_val, dest);
+  EXPECT_EQ(4, str_len);
+}
+
+TEST(InfoValToResponse, SQLGetInfoInt) {
+  SQLGetInfoSqlUInt info_val_i;
+  info_val_i.info_val = static_cast<SQLUINTEGER>(10);
+  SQLSMALLINT str_len;
+  SQLUINTEGER dest;
+  info_val_i.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
+
+  EXPECT_EQ(info_val_i.info_val, dest);
+  EXPECT_EQ(4, str_len);
+}
+
+TEST(InfoValToResponse, SQLGetInfoSmallInt) {
+  SQLGetInfoSqlUSmallInt info_val_si;
+  info_val_si.info_val = static_cast<SQLUSMALLINT>(10);
+  SQLSMALLINT str_len;
+  SQLUSMALLINT dest;
+  info_val_si.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
+
+  EXPECT_EQ(info_val_si.info_val, dest);
+  EXPECT_EQ(2, str_len);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

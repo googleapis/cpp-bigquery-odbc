@@ -165,6 +165,10 @@ struct SQLGetInfoSqlChar {
   static StatusOr<SQLGetInfoSqlChar> GetUnSupportedInfoType(
       SQLUSMALLINT info_type);
 
+  SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
+                              SQLSMALLINT in_buffer_len,
+                              SQLSMALLINT* str_len_ptr);
+
   SQLCHAR* info_val;
 };
 
@@ -173,6 +177,9 @@ struct SQLGetInfoBitmask {
       SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoBitmask> GetUnSupportedInfoType(
       SQLUSMALLINT info_type);
+
+  SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
+                              SQLSMALLINT* str_len_ptr);
 
   SQLUINTEGER info_val;
 };
@@ -183,6 +190,9 @@ struct SQLGetInfoSqlUInt {
   static StatusOr<SQLGetInfoSqlUInt> GetUnSupportedInfoType(
       SQLUSMALLINT info_type);
 
+  SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
+                              SQLSMALLINT* str_len_ptr);
+
   SQLUINTEGER info_val;
 };
 
@@ -191,6 +201,9 @@ struct SQLGetInfoSqlUSmallInt {
       SQLUSMALLINT info_type);
   static StatusOr<SQLGetInfoSqlUSmallInt> GetUnSupportedInfoType(
       SQLUSMALLINT info_type);
+
+  SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
+                              SQLSMALLINT* str_len_ptr);
 
   SQLUSMALLINT info_val;
 };

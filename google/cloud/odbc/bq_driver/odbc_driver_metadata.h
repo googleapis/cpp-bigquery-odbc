@@ -45,9 +45,23 @@ namespace google::cloud::odbc_bq_driver {
 // semantics please refer to:
 //
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
-SQLRETURN SQLGetFunctionsInternal(SQLHDBC connectionHandle,
-                                  SQLUSMALLINT functionId,
-                                  SQLUSMALLINT* supportedFunction);
+SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
+                                  SQLUSMALLINT function_id,
+                                  SQLUSMALLINT* supported_fn);
+
+// Implements the semantics for SQLGetInfo ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// Design Doc: http://goto.google.com/sql-get-info-design
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetinfo-function
+SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
+                             SQLPOINTER info_value_ptr,
+                             SQLSMALLINT in_buffer_len,
+                             SQLSMALLINT* str_len_ptr);
 
 }  // namespace google::cloud::odbc_bq_driver
 
