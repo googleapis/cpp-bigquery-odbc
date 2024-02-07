@@ -167,7 +167,7 @@ struct SQLGetInfoSqlChar {
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
                               SQLSMALLINT in_buffer_len,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLCHAR* info_val;
 };
@@ -179,7 +179,7 @@ struct SQLGetInfoBitmask {
       SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUINTEGER info_val;
 };
@@ -191,7 +191,7 @@ struct SQLGetInfoSqlUInt {
       SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUINTEGER info_val;
 };
@@ -203,7 +203,7 @@ struct SQLGetInfoSqlUSmallInt {
       SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUSMALLINT info_val;
 };

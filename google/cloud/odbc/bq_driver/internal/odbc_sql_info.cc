@@ -32,7 +32,7 @@ Status InvalidType(SQLUSMALLINT info_type) {
 
 SQLRETURN IntInfoValToResponse(SQLPOINTER info_val_ptr, SQLUINTEGER info_val,
                                SQLSMALLINT* str_len_ptr) {
-  SQLUINTEGER* uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
+  auto uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
   *uint_val = info_val;
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUINTEGER));
@@ -527,7 +527,7 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
 
 SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT in_buffer_len,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   char* src = reinterpret_cast<char*>(info_val);
   char* dest = reinterpret_cast<char*>(info_val_ptr);
   SQLSMALLINT src_len = strlen(src);
@@ -548,18 +548,18 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
 }
 
 SQLRETURN SQLGetInfoSqlUInt::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
 }
 
 SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
 }
 
-SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                                    SQLSMALLINT* str_len_ptr) {
-  SQLUSMALLINT* usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
+SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(
+    SQLPOINTER info_val_ptr, SQLSMALLINT* str_len_ptr) const {
+  auto usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
   *usmallint_val = info_val;
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT));

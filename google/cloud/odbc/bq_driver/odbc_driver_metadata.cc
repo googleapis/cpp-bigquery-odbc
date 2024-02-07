@@ -171,7 +171,6 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
-  SQLRETURN rc = SQL_SUCCESS;
   if (!info_value_ptr) {
     TracePrintInternal(opts, "Invalid InfoValuePtr");
     // TODO(#158): SQLGetDiagRec should handle this
