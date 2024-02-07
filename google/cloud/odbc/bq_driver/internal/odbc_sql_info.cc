@@ -530,7 +530,7 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT* str_len_ptr) {
   char* src = reinterpret_cast<char*>(info_val);
   char* dest = reinterpret_cast<char*>(info_val_ptr);
-  auto src_len = strlen(src);
+  SQLSMALLINT src_len = strlen(src);
 
   if (src_len == 0 || in_buffer_len == 0) {
     *dest = '\0';
