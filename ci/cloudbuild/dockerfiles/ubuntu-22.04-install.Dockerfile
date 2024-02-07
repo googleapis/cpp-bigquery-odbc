@@ -250,6 +250,14 @@ RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
 #     ./configure && \
 #     make install -j $(nproc)
 
+RUN echo 'Installing iODBC Driver Manager...'
+WORKDIR /var/tmp/iODBC
+RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    autoreconf --install && \
+    ./configure && \
+    make install -j $(nproc)
+
 ## END Installs pre-requisites for the ODBC Driver.
 
 # Check gcloud is installed.

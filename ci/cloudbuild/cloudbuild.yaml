@@ -38,6 +38,7 @@ options:
 substitutions:
   _DISTRO: 'unknown'
   _BUILD_NAME: 'unknown'
+  _DRIVER_MANAGER: 'iODBC'
   _CACHE_BUCKET: '${PROJECT_ID}_cloudbuild'
   _IMAGE: 'cloudbuild/${_DISTRO}'
   _TRIGGER_SOURCE: '${_PR_NUMBER:-main}'
