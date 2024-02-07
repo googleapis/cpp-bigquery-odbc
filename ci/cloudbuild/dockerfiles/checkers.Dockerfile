@@ -38,12 +38,11 @@ RUN curl -L -o /usr/bin/buildifier https://github.com/bazelbuild/buildtools/rele
 RUN curl -L -o /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.4.3/shfmt_v3.4.3_linux_${ARCH} && \
     chmod 755 /usr/local/bin/shfmt
 
-RUN pip3 install --upgrade pip
-RUN pip3 install cmake_format==0.6.13
-RUN pip3 install black==22.3.0
-RUN pip3 install mdformat-gfm==0.3.5 \
-                 mdformat-frontmatter==0.4.1 \
-                 mdformat-footnote==0.1.1
+COPY ./requirements.txt /var/tmp/ci/requirements.txt
+WORKDIR /var/tmp/downloads
+RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
+    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
+RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 
 RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-${ARCH}" && \
     chmod +x /usr/bin/bazelisk && \

@@ -104,6 +104,10 @@ for running integration tests. The steps to add a new build are:
    $ ./trigger.sh --import triggers/<new-build-name>-ci.yaml
    ```
 
+*IMPORTANT NOTE*: In dockerfiles, python dependencies should be installed only
+from requirements.txt file with hashes, otherwise a
+[vulnerability](http://b/318945552) will be detected for our repository on GoB
+
 ## Testing principles
 
 We want our code to work for our customers. We don't know their exact

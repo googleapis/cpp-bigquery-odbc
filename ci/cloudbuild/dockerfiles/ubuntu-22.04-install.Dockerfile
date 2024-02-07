@@ -65,7 +65,7 @@ COPY ./requirements.txt /var/tmp/ci/requirements.txt
 WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
-RUN pip3 install --require-hashes -r /var/tmp/ci/requirements.txt
+RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
