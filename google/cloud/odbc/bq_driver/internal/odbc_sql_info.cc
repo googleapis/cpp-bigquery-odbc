@@ -32,7 +32,7 @@ Status InvalidType(SQLUSMALLINT info_type) {
 
 SQLRETURN IntInfoValToResponse(SQLPOINTER info_val_ptr, SQLUINTEGER info_val,
                                SQLSMALLINT* str_len_ptr) {
-  auto uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
+  auto* uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
   *uint_val = info_val;
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUINTEGER));
@@ -559,7 +559,7 @@ SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
 
 SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(
     SQLPOINTER info_val_ptr, SQLSMALLINT* str_len_ptr) const {
-  auto usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
+  auto* usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
   *usmallint_val = info_val;
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT));
