@@ -136,6 +136,10 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
   }
 
+  // Populate the DSN info inside the handle.
+  // This wasn't being called before.
+  handle.SetUp(dsn_section, dsn_name);
+
   Authentication auth = CreateAuth(dsn_section);
   Status status = handle.Connect(auth);
   if (!status.ok()) {

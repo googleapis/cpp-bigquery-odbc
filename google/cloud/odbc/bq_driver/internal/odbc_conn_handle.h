@@ -40,6 +40,7 @@ struct Dsn {
   std::string description;
   std::string driver;
   std::string catalog;
+  std::string dsn_name;
   bool is_bq_legacy_sql;
 };
 
@@ -55,7 +56,9 @@ class ConnectionHandle {
 
   Status Connect(Authentication& auth);
 
-  void SetUp(Section& dsn_section);
+  void SetUp(Section& dsn_section, std::string const& dsn_name);
+
+  Dsn GetDsn() { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 

@@ -17,10 +17,12 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-void ConnectionHandle::SetUp(Section& dsn_section) {
+void ConnectionHandle::SetUp(Section& dsn_section,
+                             std::string const& dsn_name) {
   dsn_.description = dsn_section["Description"];
   dsn_.driver = dsn_section["Driver"];
   dsn_.catalog = dsn_section["Catalog"];
+  dsn_.dsn_name = dsn_name;
 }
 
 Status ConnectionHandle::Connect(Authentication& auth) {

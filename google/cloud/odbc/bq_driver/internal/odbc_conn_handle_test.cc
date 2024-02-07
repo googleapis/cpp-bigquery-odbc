@@ -21,6 +21,11 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 
+std::string const kDsnDescription = "test-dsn";
+std::string const kDsnCatalog = "bigquery-test";
+std::string const kDsnDriver = "test-driver";
+std::string const kDsnName = "SampleDSN";
+
 TEST(ConnectionHandle, Connect) {
   std::string credentials_file_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
@@ -73,6 +78,24 @@ TEST(ConnectionHandle, ConnectWithInvalidAuth) {
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, DsnSetup) {
+  auto* conn_handle = new ConnectionHandle();
+  Section dsn_section;
+  dsn_section["Description"] = kDsnDescription;
+  dsn_section["Driver"] = kDsnDriver;
+  dsn_section["Catalog"] = kDsnCatalog;
+
+  conn_handle->SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle->GetDsn();
+
+  EXPECT_EQ(actual.catalog, kDsnCatalog);
+  EXPECT_EQ(actual.driver, kDsnDriver);
+  EXPECT_EQ(actual.description, kDsnDescription);
+  EXPECT_EQ(actual.dsn_name, kDsnName);
+
   delete conn_handle;
 }
 
