@@ -32,6 +32,7 @@ fi
 # Pick a location to install the artifacts, e.g., `/usr/local` or `/opt`
 PREFIX="${HOME}/cpp-bigquery-odbc-installed"
 cmake -S. -Bcmake-out \
+  -DCMAKE_CXX_STANDARD=17 \
   "${cmake_config_testing_details[@]}"
 cmake --build cmake-out -- -j "$(nproc)"
 cmake --build cmake-out --target install

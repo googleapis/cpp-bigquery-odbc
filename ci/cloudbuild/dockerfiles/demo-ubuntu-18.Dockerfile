@@ -181,6 +181,21 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
+WORKDIR /var/tmp/google-cloud-cpp
+# Temporary points to a specific commit with a fix which we need. Later it should be updated with a releaze commit
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/965a52ba9665a691682ed757ed77496c512ccbbe.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
+        -DBUILD_TESTING=OFF \
+        -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
+        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out -- -j $(nproc) && \
+    cmake --build cmake-out --target install
+
 RUN echo 'Installing unixODBC Driver Manager...'
 WORKDIR /var/tmp/unixODBC
 RUN curl -fsSL https://www.unixodbc.org/unixODBC-2.3.12.tar.gz | \
