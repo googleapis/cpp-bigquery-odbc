@@ -221,11 +221,10 @@ RUN /var/tmp/ci/install-cloud-sdk.sh
 ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
-# iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-WORKDIR /var/tmp/iODBC
-RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
+RUN echo 'Installing unixODBC Driver Manager...'
+WORKDIR /var/tmp/unixODBC
+RUN curl -fsSL https://www.unixodbc.org/unixODBC-2.3.12.tar.gz | \
     tar -zxf - --strip-components=1 && \
-    autoreconf --install && \
     ./configure && \
+    make && \
     make install -j $(nproc)
