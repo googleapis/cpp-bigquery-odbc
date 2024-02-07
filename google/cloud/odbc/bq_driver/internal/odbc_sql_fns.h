@@ -30,7 +30,7 @@ Status PopulateSupportedODBC3Functions(TraceOptions& opts,
 Status PopulateSupportedODBC2Functions(TraceOptions& opts,
                                        SQLUSMALLINT* supportedFunction);
 
-int IsOdbcFunctionIdSupported(UWORD fid);
+bool IsOdbcFunctionIdSupported(UWORD fid);
 bool IsFunctionIdOdbc3(UWORD fid);
 bool IsFunctionIdOdbc2(UWORD fid);
 }  // namespace google::cloud::odbc_bq_driver_internal

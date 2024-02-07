@@ -311,7 +311,6 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
   build_flags=(
     -t "${image}"
     "--build-arg=NCPU=$(nproc)"
-    "--build-arg=DRIVER_MANAGER=${DRIVER_MANAGER}"
     -f "ci/cloudbuild/dockerfiles/${DISTRO_FLAG}.Dockerfile"
   )
   if [[ -n "${ARCH_FLAG}" ]]; then

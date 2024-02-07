@@ -454,7 +454,7 @@ std::string FormatSqlULen(SQLULEN l) {
 
 std::string FormatSqlSetPosiRow(SQLSETPOSIROW rp) {
   char buf[kCharBufSize1];
-  sprintf(buf, "\t\t%-s, %hu\n", "SQLSETPOSIROW", rp);
+  // sprintf(buf, "\t\t%-s, %hu\n", "SQLSETPOSIROW", rp);
   return buf;
 }
 
