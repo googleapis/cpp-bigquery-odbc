@@ -362,4 +362,13 @@ TEST(SQLGetInfoInternal, SQLGetInfoBitmaskIntUnSupported) {
   EXPECT_EQ(str_len_ptr, 4);
 }
 
+TEST(SQLGetInfoInternal, InfoValueNullPtr) {
+  SQLHDBC handle;
+  SQLSMALLINT in_buffer_len = 0;
+  SQLSMALLINT str_len_ptr;
+  SQLRETURN rc = SQLGetInfoInternal(&handle, SQL_ALTER_DOMAIN, nullptr,
+                                    in_buffer_len, &str_len_ptr);
+  EXPECT_EQ(SQL_ERROR, rc);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

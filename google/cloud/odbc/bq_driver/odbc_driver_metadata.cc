@@ -184,49 +184,34 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   }
   // Handle rest of the information types not dependent on the connection
   // handle.
-  Status status;
   if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = SupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = SupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = SupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
-  } else {
-    status = r.status();
   }
-
-  TracePrintInternal(opts, status.message());
+  
+  std::string msg = "SQLGetInfoInternal - Invalid infoType: ";
+  msg.append(std::to_string(info_type));
+  TracePrintInternal(opts, msg);
   return SQL_ERROR;
 }
 
