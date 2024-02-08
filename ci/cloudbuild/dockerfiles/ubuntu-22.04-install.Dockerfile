@@ -265,7 +265,7 @@ RUN if [ $(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip) -eq 0 ] 
 RUN echo 'Configuring Connection Credentials...'
 RUN mkdir -p /opt/odbc-driver/connection
 WORKDIR /opt/odbc-driver
-RUN gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
+RUN gcloud secrets versions access 3 --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
 RUN echo 'Verifying Connection Keys File Size...'
 RUN if [ $(stat -c%s /opt/odbc-driver/connection/key.json) -lt 100 ] ; \
     then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
