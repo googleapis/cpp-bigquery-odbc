@@ -374,6 +374,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_GT_SrcLen) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
+
   info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
 
@@ -390,6 +391,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
+
   info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
 
@@ -406,6 +408,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
+
   info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
 
@@ -422,6 +425,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 0;
   SQLCHAR dest[15];
+
   info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
 
@@ -437,6 +441,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_SrcLenZero) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
+
   info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
 
@@ -451,6 +456,7 @@ TEST(InfoValToResponse, SQLGetInfoBitmask) {
   info_val_bit.info_val = static_cast<SQLUINTEGER>(127);
   SQLSMALLINT str_len;
   SQLUINTEGER dest;
+
   info_val_bit.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
 
   EXPECT_EQ(info_val_bit.info_val, dest);
@@ -462,6 +468,7 @@ TEST(InfoValToResponse, SQLGetInfoInt) {
   info_val_i.info_val = static_cast<SQLUINTEGER>(10);
   SQLSMALLINT str_len;
   SQLUINTEGER dest;
+
   info_val_i.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
 
   EXPECT_EQ(info_val_i.info_val, dest);
@@ -473,6 +480,7 @@ TEST(InfoValToResponse, SQLGetInfoSmallInt) {
   info_val_si.info_val = static_cast<SQLUSMALLINT>(10);
   SQLSMALLINT str_len;
   SQLUSMALLINT dest;
+
   info_val_si.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
 
   EXPECT_EQ(info_val_si.info_val, dest);

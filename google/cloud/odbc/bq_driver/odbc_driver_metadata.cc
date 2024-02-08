@@ -39,6 +39,14 @@ TraceOptions& opts = *(*kTraceOptsConsole);
 
 // Internal helper functions.
 namespace {
+
+SQLRETURN InvalidType(char const* mesg, SQLUSMALLINT info_type) {
+  std::string message = mesg;
+  message.append(std::to_string(info_type));
+  TracePrintInternal(opts, message);
+  return SQL_ERROR;
+}
+
 SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                            SQLUSMALLINT info_type,
                                            SQLPOINTER info_value_ptr,
@@ -81,11 +89,10 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
     }
   }
 
-  std::string msg = "Invalid connection infoType: ";
-  msg.append(std::to_string(info_type));
-  TracePrintInternal(opts, msg);
-  return SQL_ERROR;
+  return InvalidType("HandleConnectionInformationTypes - Invalid infoType: ",
+                     info_type);
 }
+
 }  // namespace
 
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
@@ -209,10 +216,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
 
-  std::string msg = "SQLGetInfoInternal - Invalid infoType: ";
-  msg.append(std::to_string(info_type));
-  TracePrintInternal(opts, msg);
-  return SQL_ERROR;
+  return InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
