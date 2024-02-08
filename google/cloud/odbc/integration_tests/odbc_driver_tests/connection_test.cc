@@ -82,6 +82,18 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#else
+
+// This test should not be run for Simba Driver since different values are
+// returned between google and Simba for some information types. For more
+// details please look at design doc: http://goto.google.com/sql-get-info-design
+TEST(BQDriverInfoTest, SQLGetInfo) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(GetBQDriverInfo(conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

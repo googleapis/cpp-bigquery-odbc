@@ -46,12 +46,14 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 
@@ -308,14 +310,22 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
                              SQLSMALLINT infoValueBufferLen,
                              SQLSMALLINT* infoValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLGetInfo(connectionHandle, infoType, infoValue,
+                                infoValueBufferLen, infoValueStringLen,
+                                *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
   // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetInfoInternal(
+      connectionHandle, infoType, infoValue, infoValueBufferLen,
+      infoValueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLGetInfo(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
