@@ -17,8 +17,8 @@
 """Automatically generated source lists for odbc_internal - DO NOT EDIT."""
 
 odbc_internal_hdrs = [
-    "odbc_includes.h",
     "diagnostic_records.h",
+    "odbc_includes.h",
     "sql_state_constants.h",
     "status_record_or.h",
 ]

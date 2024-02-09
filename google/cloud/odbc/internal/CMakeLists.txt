@@ -15,25 +15,17 @@
 # ~~~
 
 if (NOT COMMAND create_bazel_config)
-  include(CreateOdbcBazelConfig)
-endif()
+    include(CreateOdbcBazelConfig)
+endif ()
 
 add_library(
-    odbc_internal
-    odbc_includes.h
-    diagnostic_records.h
-    sql_state_constants.h
-    status_record_or.h
-    status_record_or.cc
-)
+    odbc_internal diagnostic_records.h odbc_includes.h sql_state_constants.h
+                  status_record_or.cc status_record_or.h)
 
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(
-    odbc_internal
-    absl::strings
-)
+target_link_libraries(odbc_internal absl::strings)
 
 target_compile_features(odbc_internal PUBLIC cxx_std_17)
 
@@ -50,18 +42,12 @@ function (odbc_internal_define_unit_tests)
     file(
         GLOB odbc_internal_unit_tests_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "*_test.cc"
-    )
+        "*_test.cc")
 
-    add_executable(
-        odbc_internal_unit_tests
-        ${odbc_internal_unit_tests_cc}
-    )
+    add_executable(odbc_internal_unit_tests ${odbc_internal_unit_tests_cc})
 
-    target_link_libraries(
-        odbc_internal_unit_tests
-        odbc_internal
-        GTest::gtest_main)
+    target_link_libraries(odbc_internal_unit_tests odbc_internal
+                          GTest::gtest_main)
 
     include(GoogleTest)
     gtest_discover_tests(odbc_internal_unit_tests)
