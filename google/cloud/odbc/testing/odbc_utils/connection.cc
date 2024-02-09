@@ -148,10 +148,6 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-
 // TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
 SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
