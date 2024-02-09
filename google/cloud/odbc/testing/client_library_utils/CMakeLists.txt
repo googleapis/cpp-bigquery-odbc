@@ -15,25 +15,19 @@
 # ~~~
 
 if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
-  return()
+    return()
 endif ()
 
 if (NOT COMMAND create_bazel_config)
-  include(CreateOdbcBazelConfig)
-endif()
+    include(CreateOdbcBazelConfig)
+endif ()
 
 add_library(
     google_cloud_odbc_testing_client_library_utils
-    authentication.h
-    authentication.cc
-    common_functions.h
-    common_functions.cc
-    util_constants.h
-    util_constants.cc)
+    authentication.cc authentication.h common_functions.cc common_functions.h
+    util_constants.cc util_constants.h)
 
-target_link_libraries(
-    google_cloud_odbc_testing_client_library_utils
-    google-cloud-cpp::experimental-bigquery_rest
-    GTest::gmock)
+target_link_libraries(google_cloud_odbc_testing_client_library_utils
+                      google-cloud-cpp::experimental-bigquery_rest GTest::gmock)
 
 create_bazel_config(google_cloud_odbc_testing_client_library_utils YEAR 2024)

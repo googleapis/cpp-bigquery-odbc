@@ -39,9 +39,9 @@ endfunction ()
 # cpp_bigquery_odbc_add_executable : adds an executable w/ the given source and
 # prefix name
 #
-# Computes the target name using `cpp_bigquery_odbc_set_target_name` (see above),
-# then adds an executable with a few common properties. Sets the `target` in the
-# caller's scope to the name of the computed target name.
+# Computes the target name using `cpp_bigquery_odbc_set_target_name` (see
+# above), then adds an executable with a few common properties. Sets the
+# `target` in the caller's scope to the name of the computed target name.
 #
 # * target the name of the variable to be set in the parent scope to hold the
 #   target name.

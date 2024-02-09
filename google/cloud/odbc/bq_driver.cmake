@@ -17,34 +17,36 @@
 # To avoid maintaining the list of files for the library, export them to a .bzl
 # file.
 if (NOT COMMAND create_bazel_config)
-  include(CreateOdbcBazelConfig)
-endif()
+    include(CreateOdbcBazelConfig)
+endif ()
 
 # BQ Driver Internal Library
 add_library(
-  google_cloud_odbc_bq_driver_internal # cmake-format: sort
-  bq_driver/internal/odbc_includes.h
-  bq_driver/internal/odbc_env_handle.h
-  bq_driver/internal/odbc_env_handle.cc
-  bq_driver/internal/odbc_conn_handle.h
-  bq_driver/internal/odbc_conn_handle.cc
-  bq_driver/internal/odbc_sql_fns.h
-  bq_driver/internal/odbc_sql_fns.cc
-  bq_driver/internal/odbc_sql_info.h
-  bq_driver/internal/odbc_sql_info.cc
-  bq_driver/internal/trace_utils.h
-  bq_driver/internal/trace_utils.cc
-  bq_driver/internal/utils.h
-  bq_driver/internal/utils.cc
-)
+    google_cloud_odbc_bq_driver_internal # cmake-format: sort
+    bq_driver/internal/odbc_conn_handle.cc
+    bq_driver/internal/odbc_conn_handle.h
+    bq_driver/internal/odbc_env_handle.cc
+    bq_driver/internal/odbc_env_handle.h
+    bq_driver/internal/odbc_includes.h
+    bq_driver/internal/odbc_sql_fns.cc
+    bq_driver/internal/odbc_sql_fns.h
+    bq_driver/internal/odbc_sql_info.cc
+    bq_driver/internal/odbc_sql_info.h
+    bq_driver/internal/trace_utils.cc
+    bq_driver/internal/trace_utils.h
+    bq_driver/internal/utils.cc
+    bq_driver/internal/utils.h)
 
 target_link_libraries(
-  google_cloud_odbc_bq_driver_internal
-  google-cloud-cpp::experimental-bigquery_rest # We need this dependency to use 'options' from client libraries
-  odbc_bq_client_interface
-)
-target_include_directories(google_cloud_odbc_bq_driver_internal PUBLIC ${CMAKE_SOURCE_DIR})
-target_include_directories(google_cloud_odbc_bq_driver_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
+    google_cloud_odbc_bq_driver_internal
+    google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
+                                                 # use 'options' from client
+                                                 # libraries
+    odbc_bq_client_interface)
+target_include_directories(google_cloud_odbc_bq_driver_internal
+                           PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(google_cloud_odbc_bq_driver_internal
+                           PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
 create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
 
@@ -76,11 +78,10 @@ add_library(
     bq_driver/odbc_trace.h)
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
-target_include_directories(google_cloud_odbc_bq_driver PRIVATE $ENV{ODBC_INCLUDE_PATH})
-target_link_libraries(
-  google_cloud_odbc_bq_driver
-  google_cloud_odbc_bq_driver_internal
-)
+target_include_directories(google_cloud_odbc_bq_driver
+                           PRIVATE $ENV{ODBC_INCLUDE_PATH})
+target_link_libraries(google_cloud_odbc_bq_driver
+                      google_cloud_odbc_bq_driver_internal)
 
 # target_link_libraries(google_cloud_odbc_bq_driver )
 add_subdirectory(bq_client_interface)
@@ -92,41 +93,37 @@ set_target_properties(
                VERSION "${PROJECT_VERSION}"
                SOVERSION "${PROJECT_VERSION_MAJOR}")
 
-add_library(google-cloud-odbc::bq-driver ALIAS
-            google_cloud_odbc_bq_driver)
+add_library(google-cloud-odbc::bq-driver ALIAS google_cloud_odbc_bq_driver)
 
 create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
 
 # Function for running for unit tests
 function (bq_driver_define_unit_tests)
-  if (NOT ODBC_UNIT_TESTING)
-    return()
-  endif ()
+    if (NOT ODBC_UNIT_TESTING)
+        return()
+    endif ()
 
-  enable_testing()
+    enable_testing()
 
-  add_executable(
-    google_cloud_odbc_bq_driver_unit_tests
-    bq_driver/internal/odbc_conn_handle_test.cc
-    bq_driver/internal/odbc_sql_fns_test.cc
-    bq_driver/internal/odbc_sql_info_test.cc
-    bq_driver/internal/trace_utils_test.cc
-    bq_driver/internal/utils_test.cc
-    bq_driver/odbc_commons_test.cc
-    bq_driver/odbc_driver_metadata_test.cc
-  )
+    add_executable(
+        google_cloud_odbc_bq_driver_unit_tests
+        bq_driver/internal/odbc_conn_handle_test.cc
+        bq_driver/internal/odbc_sql_fns_test.cc
+        bq_driver/internal/odbc_sql_info_test.cc
+        bq_driver/internal/trace_utils_test.cc
+        bq_driver/internal/utils_test.cc
+        bq_driver/odbc_commons_test.cc
+        bq_driver/odbc_driver_metadata_test.cc)
 
-  target_link_libraries(
-    google_cloud_odbc_bq_driver_unit_tests
-    google_cloud_odbc_testing_utils
-    google_cloud_odbc_bq_driver
-    GTest::gtest_main
-  )
+    target_link_libraries(
+        google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils
+        google_cloud_odbc_bq_driver GTest::gtest_main)
 
-  target_compile_features(google_cloud_odbc_bq_driver_unit_tests PUBLIC cxx_std_17)
+    target_compile_features(google_cloud_odbc_bq_driver_unit_tests
+                            PUBLIC cxx_std_17)
 
-  include(GoogleTest)
-  gtest_discover_tests(google_cloud_odbc_bq_driver_unit_tests)
+    include(GoogleTest)
+    gtest_discover_tests(google_cloud_odbc_bq_driver_unit_tests)
 endfunction ()
 
 bq_driver_define_unit_tests()

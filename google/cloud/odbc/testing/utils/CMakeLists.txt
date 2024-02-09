@@ -14,24 +14,20 @@
 # limitations under the License.
 # ~~~
 
-if (NOT ODBC_INTEGRATION_TESTING AND NOT ODBC_UNIT_TESTING AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
+if (NOT ODBC_INTEGRATION_TESTING
+    AND NOT ODBC_UNIT_TESTING
+    AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
     return()
 endif ()
 
 if (NOT COMMAND create_bazel_config)
-  include(CreateOdbcBazelConfig)
-endif()
+    include(CreateOdbcBazelConfig)
+endif ()
 
-add_library(
-    google_cloud_odbc_testing_utils # cmake-format: sort
-    env_vars.h
-    env_vars.cc
-    status_matchers.cc
-    status_matchers.h)
+add_library(google_cloud_odbc_testing_utils # cmake-format: sort
+            env_vars.cc env_vars.h status_matchers.cc status_matchers.h)
 
-target_link_libraries(
-    google_cloud_odbc_testing_utils
-    google-cloud-cpp::experimental-bigquery_rest
-    GTest::gmock)
+target_link_libraries(google_cloud_odbc_testing_utils
+                      google-cloud-cpp::experimental-bigquery_rest GTest::gmock)
 
 create_bazel_config(google_cloud_odbc_testing_utils YEAR 2024)

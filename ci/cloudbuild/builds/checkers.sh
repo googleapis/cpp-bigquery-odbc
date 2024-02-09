@@ -146,6 +146,14 @@ time {
     xargs -r -P "$(nproc)" -n 50 -0 clang-format -i
 }
 
+# Apply cmake_format to all the CMake list files.
+#     https://github.com/cheshirekow/cmake_format
+printf "%-50s" "Running cmake-format:" >&2
+time {
+  git_files -z -- 'CMakeLists.txt' '**/CMakeLists.txt' '*.cmake' |
+    xargs -r -P "$(nproc)" -n 50 -0 cmake-format -i
+}
+
 # mdformat does `tempfile.mkstemp(); ...; os.replace(tmp_path, path)`,
 # which results in the new .md file having mode 0600. So, run a second
 # pass to reset the group/other permissions to something more reasonable.

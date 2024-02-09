@@ -16,29 +16,26 @@
 
 add_library(
     odbc_bq_client_interface
-    datasets.h
     datasets.cc
-    jobs.h
+    datasets.h
     jobs.cc
-    projects.h
-    projects.cc
-    odbc_authentication.h
+    jobs.h
     odbc_authentication.cc
-    odbc_bq_client.h
+    odbc_authentication.h
     odbc_bq_client.cc
-    setenv.h
+    odbc_bq_client.h
+    projects.cc
+    projects.h
     setenv.cc
-    storage.h
+    setenv.h
     storage.cc
-    tables.h
+    storage.h
     tables.cc
-)
+    tables.h)
 
 target_link_libraries(
-    odbc_bq_client_interface
-    google-cloud-cpp::bigquery
-    google-cloud-cpp::experimental-bigquery_rest
-    google-cloud-cpp::oauth2)
+    odbc_bq_client_interface google-cloud-cpp::bigquery
+    google-cloud-cpp::experimental-bigquery_rest google-cloud-cpp::oauth2)
 
 target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
 
@@ -48,31 +45,26 @@ create_bazel_config(odbc_bq_client_interface YEAR 2023)
 
 # Function for running unit tests
 function (client_interface_define_unit_tests)
-  if (NOT ODBC_UNIT_TESTING)
-    return()
-  endif ()
+    if (NOT ODBC_UNIT_TESTING)
+        return()
+    endif ()
 
-  enable_testing()
+    enable_testing()
 
-  file(
-      GLOB bq_client_interface_unit_tests_cc
-      RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-      "*_test.cc"
-  )
+    file(
+        GLOB bq_client_interface_unit_tests_cc
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "*_test.cc")
 
-  add_executable(
-      odbc_bq_client_interface_unit_tests
-      ${bq_client_interface_unit_tests_cc}
-  )
+    add_executable(odbc_bq_client_interface_unit_tests
+                   ${bq_client_interface_unit_tests_cc})
 
-  target_link_libraries(
-      odbc_bq_client_interface_unit_tests
-      odbc_bq_client_interface
-      google_cloud_odbc_testing_utils
-      GTest::gtest_main)
+    target_link_libraries(
+        odbc_bq_client_interface_unit_tests odbc_bq_client_interface
+        google_cloud_odbc_testing_utils GTest::gtest_main)
 
-  include(GoogleTest)
-  gtest_discover_tests(odbc_bq_client_interface_unit_tests)
+    include(GoogleTest)
+    gtest_discover_tests(odbc_bq_client_interface_unit_tests)
 endfunction ()
 
 client_interface_define_unit_tests()

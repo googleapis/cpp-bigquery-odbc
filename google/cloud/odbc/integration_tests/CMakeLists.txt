@@ -15,110 +15,91 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
-project(
-  cpp-bigquery-odbc-integration-testing
-  LANGUAGES CXX
-)
+project(cpp-bigquery-odbc-integration-testing LANGUAGES CXX)
 
 function (define_integration_tests)
-  if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
-    return()
-  endif ()
+    if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
+        return()
+    endif ()
 
-  file(
-      GLOB client_library_tests_cc
-      RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-      "bq_apis/*.cc"
-  )
-  add_executable(
-      scheduled_integration_tests
-      ${client_library_tests_cc}
-  )
+    file(
+        GLOB client_library_tests_cc
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "bq_apis/*.cc")
+    add_executable(scheduled_integration_tests ${client_library_tests_cc})
 
-  target_link_libraries(
-      scheduled_integration_tests PUBLIC
-      google-cloud-cpp::experimental-bigquery_rest
-      google_cloud_odbc_testing_client_library_utils
-      google_cloud_odbc_testing_utils
-      GTest::gtest_main
-  )
+    target_link_libraries(
+        scheduled_integration_tests
+        PUBLIC google-cloud-cpp::experimental-bigquery_rest
+               google_cloud_odbc_testing_client_library_utils
+               google_cloud_odbc_testing_utils GTest::gtest_main)
 
-  target_include_directories(scheduled_integration_tests PUBLIC ${CMAKE_SOURCE_DIR})
+    target_include_directories(scheduled_integration_tests
+                               PUBLIC ${CMAKE_SOURCE_DIR})
 
-  target_compile_features(scheduled_integration_tests PUBLIC cxx_std_17)
+    target_compile_features(scheduled_integration_tests PUBLIC cxx_std_17)
 
-  option(USER_ACCOUNT_AUTH "Run tests using User Authentication" OFF)
-  if (USER_ACCOUNT_AUTH)
-      add_definitions(-DUSER_ACCOUNT_AUTH)
-  endif()
+    option(USER_ACCOUNT_AUTH "Run tests using User Authentication" OFF)
+    if (USER_ACCOUNT_AUTH)
+        add_definitions(-DUSER_ACCOUNT_AUTH)
+    endif ()
 
-  include(GoogleTest)
-  gtest_discover_tests(scheduled_integration_tests)
+    include(GoogleTest)
+    gtest_discover_tests(scheduled_integration_tests)
 endfunction ()
 
 function (odbc_define_tests)
-  if (NOT ODBC_INTEGRATION_TESTING)
-    return()
-  endif ()
+    if (NOT ODBC_INTEGRATION_TESTING)
+        return()
+    endif ()
 
-  # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
-  if (BQ_DRIVER_INTEGRATION_TESTS)
-    add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
-  endif()
+    # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
+    if (BQ_DRIVER_INTEGRATION_TESTS)
+        add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+    endif ()
 
-  enable_testing()
+    enable_testing()
 
-  add_executable(
-    all_tests
-    odbc_driver_tests/connection_test.cc
-    odbc_driver_tests/driver_properties_test.cc
-    odbc_driver_tests/descriptor_test.cc
-    odbc_driver_tests/statement_test.cc
-    odbc_driver_tests/catalog_test.cc
-  )
+    add_executable(
+        all_tests
+        odbc_driver_tests/catalog_test.cc
+        odbc_driver_tests/connection_test.cc
+        odbc_driver_tests/descriptor_test.cc
+        odbc_driver_tests/driver_properties_test.cc
+        odbc_driver_tests/statement_test.cc)
 
-  target_link_libraries(
-    all_tests
-    google_cloud_odbc_testing_odbc_utils
-    GTest::gtest_main
-    GTest::gmock
-  )
+    target_link_libraries(all_tests google_cloud_odbc_testing_odbc_utils
+                          GTest::gtest_main)
 
-  target_include_directories(all_tests PUBLIC ${CMAKE_SOURCE_DIR})
-  target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
+    target_include_directories(all_tests PUBLIC ${CMAKE_SOURCE_DIR})
+    target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
-  target_compile_features(all_tests PUBLIC cxx_std_17)
+    target_compile_features(all_tests PUBLIC cxx_std_17)
 
-  include(GoogleTest)
-  gtest_discover_tests(all_tests)
+    include(GoogleTest)
+    gtest_discover_tests(all_tests)
 endfunction ()
 
 function (odbc_define_demo_tests)
-  if (NOT ODBC_DEMO_TESTING)
-    return()
-  endif ()
+    if (NOT ODBC_DEMO_TESTING)
+        return()
+    endif ()
 
-  enable_testing()
+    enable_testing()
 
-  add_executable(
-    all_demo_tests
-    odbc_driver_tests/demo/connection_demo_test.cc
-  )
+    add_executable(all_demo_tests
+                   odbc_driver_tests/demo/connection_demo_test.cc)
 
-  target_link_libraries(
-    all_demo_tests
-    google_cloud_odbc_bq_driver
-    GTest::gtest_main
-    GTest::gmock
-  )
+    target_link_libraries(all_demo_tests google_cloud_odbc_bq_driver
+                          GTest::gtest_main)
 
-  target_include_directories(all_demo_tests PUBLIC ${CMAKE_SOURCE_DIR})
-  target_include_directories(all_demo_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
+    target_include_directories(all_demo_tests PUBLIC ${CMAKE_SOURCE_DIR})
+    target_include_directories(all_demo_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
-  target_compile_features(all_demo_tests PUBLIC cxx_std_17)
+    target_compile_features(all_demo_tests PUBLIC cxx_std_17)
 
-  include(GoogleTest)
-  gtest_discover_tests(all_demo_tests)
+    include(GoogleTest)
+    gtest_discover_tests(all_demo_tests)
 endfunction ()
 
 odbc_define_demo_tests()

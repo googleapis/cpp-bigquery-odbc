@@ -17,17 +17,17 @@
 """Automatically generated source lists for google_cloud_odbc_testing_odbc_utils - DO NOT EDIT."""
 
 google_cloud_odbc_testing_odbc_utils_hdrs = [
+    "catalog.h",
     "commons.h",
     "connection.h",
     "properties.h",
     "statement.h",
-    "catalog.h",
 ]
 
 google_cloud_odbc_testing_odbc_utils_srcs = [
+    "catalog.cc",
     "commons.cc",
     "connection.cc",
     "properties.cc",
     "statement.cc",
-    "catalog.cc",
 ]

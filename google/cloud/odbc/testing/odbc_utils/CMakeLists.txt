@@ -14,16 +14,20 @@
 # limitations under the License.
 # ~~~
 
-if (NOT ODBC_INTEGRATION_TESTING AND NOT ODBC_UNIT_TESTING AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
+if (NOT ODBC_INTEGRATION_TESTING
+    AND NOT ODBC_UNIT_TESTING
+    AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
     return()
 endif ()
 
 if (NOT COMMAND create_bazel_config)
-  include(CreateOdbcBazelConfig)
-endif()
+    include(CreateOdbcBazelConfig)
+endif ()
 
 add_library(
     google_cloud_odbc_testing_odbc_utils # cmake-format: sort
+    catalog.cc
+    catalog.h
     commons.cc
     commons.h
     connection.cc
@@ -31,24 +35,18 @@ add_library(
     properties.cc
     properties.h
     statement.cc
-    statement.h
-    catalog.cc
-    catalog.h)
+    statement.h)
 
-target_link_libraries(
-    google_cloud_odbc_testing_odbc_utils
-    google-cloud-cpp::experimental-bigquery_rest
-    GTest::gmock)
+target_link_libraries(google_cloud_odbc_testing_odbc_utils
+                      google-cloud-cpp::experimental-bigquery_rest GTest::gmock)
 
-# Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver target
+# Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
+# target
 if (BQ_DRIVER_INTEGRATION_TESTS)
-    target_link_libraries(
-        google_cloud_odbc_testing_odbc_utils
-        google_cloud_odbc_bq_driver)
-else()
-    target_link_libraries(
-        google_cloud_odbc_testing_odbc_utils
-        odbc)
-endif()
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils
+                          google_cloud_odbc_bq_driver)
+else ()
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc)
+endif ()
 
 create_bazel_config(google_cloud_odbc_testing_odbc_utils YEAR 2024)

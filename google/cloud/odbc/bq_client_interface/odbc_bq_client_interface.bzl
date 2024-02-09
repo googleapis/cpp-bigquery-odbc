@@ -19,9 +19,9 @@
 odbc_bq_client_interface_hdrs = [
     "datasets.h",
     "jobs.h",
-    "projects.h",
     "odbc_authentication.h",
     "odbc_bq_client.h",
+    "projects.h",
     "setenv.h",
     "storage.h",
     "tables.h",
@@ -30,9 +30,9 @@ odbc_bq_client_interface_hdrs = [
 odbc_bq_client_interface_srcs = [
     "datasets.cc",
     "jobs.cc",
-    "projects.cc",
     "odbc_authentication.cc",
     "odbc_bq_client.cc",
+    "projects.cc",
     "setenv.cc",
     "storage.cc",
     "tables.cc",
