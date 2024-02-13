@@ -68,7 +68,7 @@ class ConnectionHandle : public Handle {
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
-  bool IsConnected() const { return is_connected_; }
+  [[nodiscard]] bool IsConnected() const { return is_connected_; }
 
  private:
   Dsn dsn_;
