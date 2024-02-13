@@ -44,6 +44,7 @@ Status ConnectionHandle::Connect(Authentication& auth) {
   }
 
   auth_ = auth;
+  is_connected_ = true;
   return Status(StatusCode::kOk, "");
 }
 

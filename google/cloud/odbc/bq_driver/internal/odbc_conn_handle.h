@@ -68,6 +68,8 @@ class ConnectionHandle : public Handle {
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
+  bool IsConnected() { return is_connected_; }
+
  private:
   Dsn dsn_;
   // We are storing this because we might need to handle connection retries.
@@ -75,6 +77,7 @@ class ConnectionHandle : public Handle {
   Authentication auth_;
   // The ODBCBQClient we will use for APIs interacting with BigQuery
   std::shared_ptr<ODBCBQClient> client_;
+  bool is_connected_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

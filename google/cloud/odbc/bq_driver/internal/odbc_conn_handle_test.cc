@@ -34,6 +34,7 @@ TEST(ConnectionHandle, Connect) {
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), true);
+  EXPECT_TRUE(conn_handle->IsConnected());
   delete conn_handle;
 }
 
@@ -48,6 +49,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
   auto* conn_handle = new ConnectionHandle();
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
+  EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }
 
@@ -63,6 +65,7 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.code(), StatusCode::kUnimplemented);
+  EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }
 
@@ -78,6 +81,7 @@ TEST(ConnectionHandle, ConnectWithInvalidAuth) {
   Status status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
+  EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }
 
@@ -95,6 +99,7 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.driver, kDsnDriver);
   EXPECT_EQ(actual.description, kDsnDescription);
   EXPECT_EQ(actual.dsn_name, kDsnName);
+  EXPECT_FALSE(conn_handle->IsConnected());
 
   delete conn_handle;
 }
