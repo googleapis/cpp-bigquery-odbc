@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -52,24 +53,17 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                            SQLPOINTER info_value_ptr,
                                            SQLSMALLINT in_buffer_len,
                                            SQLSMALLINT* str_len_ptr) {
-  // We are mainly checking the validity of the handle here.
-  // No connection to data source is necessary for this ODBC API.
-  if (!connection_handle) {
-    TracePrintInternal(opts, "Null Connection handle!");
+  StatusOr<std::shared_ptr<ConnectionHandle>> handle_result =
+      ValidateConnectionHandle(connection_handle);
+  if (!handle_result.ok()) {
+    TracePrintInternal(
+        opts, "Invalid Connection handle: " + handle_result.status().message());
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField.
     return SQL_INVALID_HANDLE;
   }
-  // Validate the connection handle.
-  auto* conn_handle_wrapped =
-      reinterpret_cast<HandleWrapped*>(connection_handle);
-  if (conn_handle_wrapped->handle_type != HandleType::kConnHandle) {
-    TracePrintInternal(opts, "Invalid Connection handle!");
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_INVALID_HANDLE;
-  }
-  auto* handle =
-      reinterpret_cast<ConnectionHandle*>(conn_handle_wrapped->handle_ref);
+
+  auto handle = *handle_result;
 
   SQLGetInfoSqlChar info_val_char;
   switch (info_type) {
@@ -99,10 +93,11 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  // We are only checking the validity of the handle here.
-  // No connection to data source is necessary for this ODBC API.
-  if (!connection_handle) {
-    TracePrintInternal(opts, "Invalid Connection handle!");
+  StatusOr<std::shared_ptr<ConnectionHandle>> handle_result =
+      ValidateConnectionHandle(connection_handle);
+  if (!ValidateConnectionHandle(connection_handle).ok()) {
+    TracePrintInternal(
+        opts, "Invalid Connection handle: " + handle_result.status().message());
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField.
     return SQL_INVALID_HANDLE;

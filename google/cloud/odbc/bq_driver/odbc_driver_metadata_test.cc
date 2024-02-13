@@ -36,11 +36,26 @@ std::string const kDsnCatalog = "bigquery-test";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
 
+namespace {
+class ConnectionHandleTest : public ConnectionHandle {
+ public:
+  explicit ConnectionHandleTest() = default;
+  void SetConnected() { is_connected_ = true; }
+};
+
+}  // namespace
+
 TEST(SQLGetFunctionsInternal, AllSupportedOdbc3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-  SQLHDBC handle;
+
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
+      SQLGetFunctionsInternal(handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLALLOCHANDLE));
@@ -100,50 +115,90 @@ TEST(SQLGetFunctionsInternal, AllSupportedOdbc3Functions) {
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLFOREIGNKEYS));
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLTABLEPRIVILEGES));
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLMORERESULTS));
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-  SQLHDBC handle;
+
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
+      SQLGetFunctionsInternal(handle, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLBULKOPERATIONS));
   EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLSETPOS));
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, ODBC3FunctionIdSupported) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLUSMALLINT supported;
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_SQLMORERESULTS, &supported);
+      SQLGetFunctionsInternal(handle, SQL_API_SQLMORERESULTS, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_TRUE, supported);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, ODBC3FunctionIdNotSupported) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLUSMALLINT supported;
-  SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_SQLSETPOS, &supported);
+  SQLRETURN rc = SQLGetFunctionsInternal(handle, SQL_API_SQLSETPOS, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_FALSE, supported);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, ODBC2FunctionIdNotSupported) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLUSMALLINT supported;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle, SQL_API_SQLERROR, &supported);
+  SQLRETURN rc = SQLGetFunctionsInternal(handle, SQL_API_SQLERROR, &supported);
   EXPECT_EQ(SQL_SUCCESS, rc);
   EXPECT_EQ(SQL_FALSE, supported);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc2Functions) {
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
-  SQLHDBC handle;
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ALL_FUNCTIONS, odbc2_fns);
+      SQLGetFunctionsInternal(handle, SQL_API_ALL_FUNCTIONS, odbc2_fns);
   EXPECT_EQ(SQL_SUCCESS, rc);
 
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLERROR]);
@@ -162,6 +217,9 @@ TEST(SQLGetFunctionsInternal, AllUnSupportedOdbc2Functions) {
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETCONNECTOPTION]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETSTMTOPTION]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLTRANSACT]);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, Odbc2NullConnectionHandle) {
@@ -179,23 +237,39 @@ TEST(SQLGetFunctionsInternal, Odbc3NullConnectionHandle) {
 }
 
 TEST(SQLGetFunctionsInternal, Odbc2NullSupportedFunctionPtr) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ALL_FUNCTIONS, nullptr);
-  EXPECT_EQ(SQL_ERROR, rc);
+      SQLGetFunctionsInternal(handle, SQL_API_ALL_FUNCTIONS, nullptr);
+  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetFunctionsInternal, Odbc3NullSupportedFunctionPtr) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLRETURN rc =
-      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
-  EXPECT_EQ(SQL_ERROR, rc);
+      SQLGetFunctionsInternal(handle, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
+  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
-  auto* conn_handle = new ConnectionHandle();
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   Section dsn_section;
   dsn_section["Description"] = kDsnDescription;
@@ -206,11 +280,9 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
   SQLCHAR dest[256];
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS,
-            SQLGetInfoInternal(reinterpret_cast<HDBC>(wrapped_handle),
-                               SQL_DATA_SOURCE_NAME,
-                               reinterpret_cast<SQLPOINTER>(&dest),
-                               in_buffer_len, &str_len_ptr));
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_DATA_SOURCE_NAME,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ(kDsnName, actual);
@@ -221,9 +293,11 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
 }
 
 TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
-  auto* conn_handle = new ConnectionHandle();
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   Section dsn_section;
   dsn_section["Description"] = kDsnDescription;
@@ -234,11 +308,9 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
   SQLCHAR dest[256];
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(
-      SQL_SUCCESS,
-      SQLGetInfoInternal(reinterpret_cast<HDBC>(wrapped_handle),
-                         SQL_DATABASE_NAME, reinterpret_cast<SQLPOINTER>(&dest),
-                         in_buffer_len, &str_len_ptr));
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_DATABASE_NAME,
+                                            reinterpret_cast<SQLPOINTER>(&dest),
+                                            in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ(kDsnCatalog, actual);
@@ -249,126 +321,190 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_NAME,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_CATALOG_NAME,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("Y", actual);
   EXPECT_EQ(str_len_ptr, 1);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ACCESSIBLE_PROCEDURES,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_ACCESSIBLE_PROCEDURES,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("N", actual);
   EXPECT_EQ(str_len_ptr, 1);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoUSmallIntSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUSMALLINT dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_LOCATION,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_CATALOG_LOCATION,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(SQL_CL_START, dest);
   EXPECT_EQ(str_len_ptr, 2);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoUSmallIntUnSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUSMALLINT dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ACTIVE_ENVIRONMENTS,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_ACTIVE_ENVIRONMENTS,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(0, dest);
   EXPECT_EQ(str_len_ptr, 2);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoUIntSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUINTEGER dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_DEFAULT_TXN_ISOLATION,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_DEFAULT_TXN_ISOLATION,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(SQL_TXN_SERIALIZABLE, dest);
   EXPECT_EQ(str_len_ptr, 4);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoUIntUnSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUINTEGER dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_BATCH_ROW_COUNT,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_BATCH_ROW_COUNT,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(0, dest);
   EXPECT_EQ(str_len_ptr, 4);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoBitmaskSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUINTEGER dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_CATALOG_USAGE,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_CATALOG_USAGE,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(SQL_CU_DML_STATEMENTS, dest);
   EXPECT_EQ(str_len_ptr, 4);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoBitmaskIntUnSupported) {
-  HDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
 
   SQLUINTEGER dest;
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(&handle, SQL_ALTER_DOMAIN,
+  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle, SQL_ALTER_DOMAIN,
                                             reinterpret_cast<SQLPOINTER>(&dest),
                                             in_buffer_len, &str_len_ptr));
 
   EXPECT_EQ(0L, dest);
   EXPECT_EQ(str_len_ptr, 4);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 TEST(SQLGetInfoInternal, InfoValueNullPtr) {
-  SQLHDBC handle;
+  auto* conn_handle = new ConnectionHandleTest();
+  conn_handle->SetConnected();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kConnHandle, conn_handle);
+  SQLHDBC handle = wrapped_handle;
+
   SQLSMALLINT in_buffer_len = 0;
   SQLSMALLINT str_len_ptr;
-  SQLRETURN rc = SQLGetInfoInternal(&handle, SQL_ALTER_DOMAIN, nullptr,
+  SQLRETURN rc = SQLGetInfoInternal(handle, SQL_ALTER_DOMAIN, nullptr,
                                     in_buffer_len, &str_len_ptr);
   EXPECT_EQ(SQL_ERROR, rc);
+
+  delete conn_handle;
+  delete wrapped_handle;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -79,7 +79,9 @@ add_library(
     bq_driver/odbc_statement.cc
     bq_driver/odbc_statement.h
     bq_driver/odbc_trace.cc
-    bq_driver/odbc_trace.h)
+    bq_driver/odbc_trace.h
+    bq_driver/odbc_utils.cc
+    bq_driver/odbc_utils.h)
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver
@@ -119,7 +121,8 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/trace_utils_test.cc
         bq_driver/internal/utils_test.cc
         bq_driver/odbc_commons_test.cc
-        bq_driver/odbc_driver_metadata_test.cc)
+        bq_driver/odbc_driver_metadata_test.cc
+        bq_driver/odbc_utils_test.cc)
 
     target_link_libraries(
         google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils
