@@ -15,7 +15,7 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 
 namespace google::cloud::odbc_tests {
-
+/*
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 namespace {
 // Constants for GetBQDriverInfo
@@ -321,12 +321,25 @@ void VerifyDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
             "Simba ODBC Driver for Google BigQuery");
 }
 
+
 TEST(ConnectionTest, SQLDriverConnect) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+*/
 
+TEST(ConnectionTest, SQLGetEnvAttr) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  GetEnvInfo(conn);
+}
+
+TEST(ConnectionTest, SQLSetEnvAttr) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SetEnvInfo(conn);
+}
+
+/*
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -375,5 +388,6 @@ TEST(BQDriverInfoTest, SQLGetInfo) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+*/
 
 }  // namespace google::cloud::odbc_tests

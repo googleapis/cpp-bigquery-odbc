@@ -151,15 +151,248 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
 // TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
 SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
-  SQLUINTEGER buf;
-  auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
-                              (SQLPOINTER)&buf, SQL_IS_UINTEGER, NULL);
-  if (SQL_SUCCEEDED(status) && buf == SQL_OV_ODBC3) {
-    printf("****************************************\n");
-    printf("Environment is ODBC3\n");
-    printf("****************************************\n\n");
-    return status;
+  auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLUINTEGER uIntbuf;
+  SQLINTEGER intBuf;
+  SQLINTEGER uIntbufLen = sizeof(SQLUINTEGER);
+  SQLINTEGER intbufLen = sizeof(SQLINTEGER);
+
+  status =
+      SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                    reinterpret_cast<SQLPOINTER>(&uIntbuf), uIntbufLen, NULL);
+  CheckError(status, "SQLGetEnvAttr", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (uIntbuf == SQL_CP_OFF) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_CONNECTION_POOLING = SQL_CP_OFF\n");
+      printf("****************************************\n\n");
+    } else if (uIntbuf == SQL_CP_ONE_PER_DRIVER) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_CONNECTION_POOLING = SQL_CP_ONE_PER_DRIVER\n");
+      printf("****************************************\n\n");
+    } else if (uIntbuf == SQL_CP_ONE_PER_HENV) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_CONNECTION_POOLING = SQL_CP_ONE_PER_HENV\n");
+      printf("****************************************\n\n");
+    } else {
+      std::string val = "SQL_ATTR_CONNECTION_POOLING (unknown value) = ";
+      val.append(std::to_string(uIntbuf));
+      val.append("\n");
+      printf("****************************************\n");
+      printf(val.c_str());
+      printf("****************************************\n\n");
+    }
   }
+
+  status =
+      SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH,
+                    reinterpret_cast<SQLPOINTER>(&uIntbuf), uIntbufLen, NULL);
+  CheckError(status, "SQLGetEnvAttr", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (uIntbuf == SQL_CP_STRICT_MATCH) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_CP_MATCH = SQL_CP_STRICT_MATCH\n");
+      printf("****************************************\n\n");
+    } else if (uIntbuf == SQL_CP_RELAXED_MATCH) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_CP_MATCH = SQL_CP_RELAXED_MATCH\n");
+      printf("****************************************\n\n");
+    } else {
+      std::string val = "SQL_ATTR_CP_MATCH (unknown value) = ";
+      val.append(std::to_string(uIntbuf));
+      val.append("\n");
+      printf("****************************************\n");
+      printf(val.c_str());
+      printf("****************************************\n\n");
+    }
+  }
+
+  status =
+      SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
+                    reinterpret_cast<SQLPOINTER>(&intBuf), intbufLen, NULL);
+  CheckError(status, "SQLGetEnvAttr", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (intBuf == SQL_OV_ODBC3) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_ODBC_VERSION = SQL_OV_ODBC3\n");
+      printf("****************************************\n\n");
+    } else if (intBuf == SQL_OV_ODBC2) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_ODBC_VERSION = SQL_OV_ODBC2\n");
+      printf("****************************************\n\n");
+    } else {
+      std::string val = "SQL_ATTR_ODBC_VERSION (unknown value) = ";
+      val.append(std::to_string(intBuf));
+      val.append("\n");
+      printf("****************************************\n");
+      printf(val.c_str());
+      printf("****************************************\n\n");
+    }
+  }
+
+  status =
+      SQLGetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS,
+                    reinterpret_cast<SQLPOINTER>(&intBuf), intbufLen, NULL);
+  CheckError(status, "SQLGetEnvAttr", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (intBuf == SQL_TRUE) {
+      printf("****************************************\n");
+      printf("SQL_ATTR_OUTPUT_NTS = SQL_TRUE\n");
+      printf("****************************************\n\n");
+    } else {
+      printf("****************************************\n");
+      printf("SQL_ATTR_OUTPUT_NTS = SQL_FALSE\n");
+      printf("****************************************\n\n");
+    }
+  }
+
+  return status;
+}
+
+SQLRETURN SetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
+  auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                         reinterpret_cast<SQLPOINTER>(SQL_CP_OFF), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("SUCCESSFULLY set value:SQL_ATTR_CONNECTION_POOLING =  SQL_CP_OFF");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf("UNABLE TO SET value:SQL_ATTR_CONNECTION_POOLING =  SQL_CP_OFF");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status =
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                    reinterpret_cast<SQLPOINTER>(SQL_CP_ONE_PER_DRIVER), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf(
+        "SUCCESSFULLY set value:SQL_ATTR_CONNECTION_POOLING =  "
+        "SQL_CP_ONE_PER_DRIVER");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_CONNECTION_POOLING =  "
+        "SQL_CP_ONE_PER_DRIVER");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                         reinterpret_cast<SQLPOINTER>(SQL_CP_ONE_PER_HENV), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf(
+        "SUCCESSFULLY set value:SQL_ATTR_CONNECTION_POOLING =  "
+        "SQL_CP_ONE_PER_HENV");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_CONNECTION_POOLING =  "
+        "SQL_CP_ONE_PER_HENV");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH,
+                         reinterpret_cast<SQLPOINTER>(SQL_CP_STRICT_MATCH), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("SUCCESSFULLY set value:SQL_ATTR_CP_MATCH =  SQL_CP_STRICT_MATCH");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_CP_MATCH =  "
+        "SQL_CP_STRICT_MATCH");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH,
+                         reinterpret_cast<SQLPOINTER>(SQL_CP_RELAXED_MATCH), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("SUCCESSFULLY set value:SQL_ATTR_CP_MATCH =  SQL_CP_RELAXED_MATCH");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_CP_MATCH =  "
+        "SQL_CP_RELAXED_MATCH");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
+                         reinterpret_cast<SQLPOINTER>(SQL_OV_ODBC3), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("SUCCESSFULLY set value:SQL_ATTR_ODBC_VERSION =  SQL_OV_ODBC3");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_ODBC_VERSION =  "
+        "SQL_OV_ODBC3");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
+                         reinterpret_cast<SQLPOINTER>(SQL_OV_ODBC2), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("SUCCESSFULLY set value:SQL_ATTR_ODBC_VERSION =  SQL_OV_ODBC2");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_ODBC_VERSION =  "
+        "SQL_OV_ODBC2");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS,
+                         reinterpret_cast<SQLPOINTER>(SQL_TRUE), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("Successfully set value:SQL_ATTR_OUTPUT_NTS =  SQL_TRUE");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_OUTPUT_NTS =  "
+        "SQL_TRUE");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS,
+                         reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  if (SQL_SUCCEEDED(status)) {
+    printf("****************************************\n");
+    printf("Successfully set value:SQL_ATTR_OUTPUT_NTS =  SQL_FALSE");
+    printf("****************************************\n\n");
+  } else {
+    printf("****************************************\n");
+    printf(
+        "UNABLE TO SET value:SQL_ATTR_OUTPUT_NTS =  "
+        "SQL_FALSE");
+    printf("****************************************\n\n");
+  }
+  CheckError(status, "SQLSetEnvAttr", conn);
+
   return status;
 }
 
