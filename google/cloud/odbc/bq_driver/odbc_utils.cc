@@ -35,7 +35,7 @@ StatusOr<std::shared_ptr<ConnectionHandle>> ValidateConnectionHandle(
 
   auto* handle =
       reinterpret_cast<ConnectionHandle*>(conn_handle_wrapped->handle_ref);
-  // Endure the handle validity.
+  // Ensure the handle validity.
   if (!handle->IsConnected()) {
     return Status(StatusCode::kInvalidArgument, "Invalid connection handle");
   }

@@ -95,7 +95,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   SQLRETURN rc = SQL_SUCCESS;
   StatusOr<std::shared_ptr<ConnectionHandle>> handle_result =
       ValidateConnectionHandle(connection_handle);
-  if (!ValidateConnectionHandle(connection_handle).ok()) {
+  if (!handle_result.ok()) {
     TracePrintInternal(
         opts, "Invalid Connection handle: " + handle_result.status().message());
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
@@ -173,6 +173,15 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
+  StatusOr<std::shared_ptr<ConnectionHandle>> handle_result =
+      ValidateConnectionHandle(connection_handle);
+  if (!handle_result.ok()) {
+    TracePrintInternal(
+        opts, "Invalid Connection handle: " + handle_result.status().message());
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField.
+    return SQL_INVALID_HANDLE;
+  }
   if (!info_value_ptr) {
     TracePrintInternal(opts, "Invalid InfoValuePtr");
     // TODO(#158): SQLGetDiagRec should handle this

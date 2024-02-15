@@ -24,24 +24,29 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
 
-class ConnectionHandleTest : public ConnectionHandle {
+// Helper class and functions specific to odbc utils unit tests.
+namespace {
+class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
  public:
-  explicit ConnectionHandleTest() = default;
+  explicit OdbcUtilsConnectionHandleTest() = default;
   void SetConnected() { is_connected_ = true; }
 };
 
+SQLHDBC GetHandle(HandleType const& type, bool connected = true) {
+  auto conn_handle = std::make_shared<OdbcUtilsConnectionHandleTest>();
+  if (connected) {
+    conn_handle->SetConnected();
+  }
+  auto wrapped_handle =
+      std::make_shared<HandleWrapped>(type, conn_handle.get());
+  return wrapped_handle.get();
+}
+
+}  // namespace
+
 TEST(ValidateConnectionHandle, Success) {
-  auto* conn_handle = new ConnectionHandleTest();
-  conn_handle->SetConnected();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kConnHandle, conn_handle);
-  SQLHDBC handle = wrapped_handle;
-
-  auto result = ValidateConnectionHandle(handle);
+  auto result = ValidateConnectionHandle(GetHandle(HandleType::kConnHandle));
   ASSERT_STATUS_OK(result);
-
-  delete conn_handle;
-  delete wrapped_handle;
 }
 
 TEST(ValidateConnectionHandle, InvalidNullPtr) {
@@ -52,32 +57,18 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleType) {
-  auto* conn_handle = new ConnectionHandleTest();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, conn_handle);
-  SQLHDBC handle = wrapped_handle;
-
-  auto result = ValidateConnectionHandle(handle);
+  auto result = ValidateConnectionHandle(GetHandle(HandleType::kEnvHandle));
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid connection handle type")));
-
-  delete conn_handle;
-  delete wrapped_handle;
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
-  auto* conn_handle = new ConnectionHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kConnHandle, conn_handle);
-  SQLHDBC handle = wrapped_handle;
-
-  auto result = ValidateConnectionHandle(handle);
+  auto result = ValidateConnectionHandle(
+      GetHandle(HandleType::kConnHandle, /* connected */ false));
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid connection handle")));
-
-  delete conn_handle;
-  delete wrapped_handle;
 }
 
 }  // namespace google::cloud::odbc_bq_driver
