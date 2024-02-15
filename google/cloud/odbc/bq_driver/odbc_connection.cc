@@ -108,9 +108,12 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_INVALID_HANDLE;
   }
+  // Get the internal handle reference and the
+  // internal connection handle object.
+  auto* handle_ref =
+      reinterpret_cast<ConnectionHandle*>(handle_wrapped->handle_ref);
+  ConnectionHandle handle = *handle_ref;
 
-  ConnectionHandle handle =
-      *reinterpret_cast<ConnectionHandle*>(handle_wrapped->handle_ref);
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
   StatusOr<Section> connection_params_resp =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
@@ -148,6 +151,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_ERROR;
   }
+  // Update the internal handle reference to point to the
+  // updated handle.
+  *handle_ref = handle;
   return SQL_SUCCESS;
 }
 
