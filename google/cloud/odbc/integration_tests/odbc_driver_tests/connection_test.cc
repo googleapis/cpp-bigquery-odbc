@@ -465,6 +465,17 @@ TEST(BQDriverTest, SQLGetFunctions_AllSupportedODBC3) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(BQDriverTest, SQLGetFunctions_AllUnSupportedODBC2) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT odbc2_fns[100];
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_SUCCESS,
+            SQLGetFunctions(conn->hdbc, SQL_API_ALL_FUNCTIONS, odbc2_fns));
+  AssertUnSupportedFnsODBC2(odbc2_fns);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
