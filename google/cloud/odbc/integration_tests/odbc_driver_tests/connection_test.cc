@@ -524,6 +524,48 @@ TEST(BQDriverTest, SQLGetFunctions_ODBC2_AllUnSupported) {
   AssertUnSupportedFnsODBC2(odbc2_fns);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+// Negative test cases for SQLGetFunctions
+
+TEST(SQLGetFunctionsInternal, SQLGetFunctions_ODBC2_NullConnectionHandle) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT odbc2_fns[100];
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_INVALID_HANDLE,
+            SQLGetFunctions(nullptr, SQL_API_ALL_FUNCTIONS, odbc2_fns));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetFunctionsInternal, SQLGetFunctions_ODBC3_NullConnectionHandle) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_INVALID_HANDLE,
+            SQLGetFunctions(nullptr, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetFunctionsInternal,
+     SQLGetFunctions_ODBC2_InvalidConnectionHandleType) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  EXPECT_EQ(SQL_INVALID_HANDLE,
+            SQLGetFunctions(conn->henv, SQL_API_ALL_FUNCTIONS, nullptr));
+}
+
+TEST(SQLGetFunctionsInternal,
+     SQLGetFunctions_ODBC3_InvalidConnectionHandleType) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  EXPECT_EQ(SQL_INVALID_HANDLE,
+            SQLGetFunctions(conn->henv, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr));
+}
+
+TEST(SQLGetFunctionsInternal,
+     SQLGetFunctions_ODBC3_ConnectionHandleNotConnectedFailure) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  EXPECT_EQ(SQL_INVALID_HANDLE,
+            SQLGetFunctions(conn->hdbc, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr));
+}
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
