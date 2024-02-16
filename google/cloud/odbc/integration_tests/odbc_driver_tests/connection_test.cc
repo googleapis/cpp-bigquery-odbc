@@ -453,7 +453,7 @@ TEST(BQDriverTest, SQLGetInfo) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(BQDriverTest, SQLGetFunctions_AllSupportedODBC3) {
+TEST(BQDriverTest, SQLGetFunctions_ODBC3_AllSupported) {
   auto conn = std::make_shared<ConnectionHandle>();
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
 
@@ -465,7 +465,56 @@ TEST(BQDriverTest, SQLGetFunctions_AllSupportedODBC3) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(BQDriverTest, SQLGetFunctions_AllUnSupportedODBC2) {
+TEST(BQDriverTest, SQLGetFunctions_ODBC3_AllUnSupported) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(
+      SQL_SUCCESS,
+      SQLGetFunctions(conn->hdbc, SQL_API_ODBC3_ALL_FUNCTIONS, odbc3_fns));
+  EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLBULKOPERATIONS));
+  EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLSETPOS));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(BQDriverTest, SQLGetFunctions_ODBC3_FunctionIdSupported) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT supported;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_SUCCESS,
+            SQLGetFunctions(conn->hdbc, SQL_API_SQLMORERESULTS, &supported));
+
+  EXPECT_EQ(SQL_TRUE, supported);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(BQDriverTest, SQLGetFunctions_ODBC3_FunctionIdNotSupported) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT supported;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_SUCCESS,
+            SQLGetFunctions(conn->hdbc, SQL_API_SQLSETPOS, &supported));
+
+  EXPECT_EQ(SQL_FALSE, supported);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(BQDriverTest, SQLGetFunctions_ODBC2_FunctionIdNotSupported) {
+  auto conn = std::make_shared<ConnectionHandle>();
+  SQLUSMALLINT supported;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQL_SUCCESS,
+            SQLGetFunctions(conn->hdbc, SQL_API_SQLERROR, &supported));
+
+  EXPECT_EQ(SQL_FALSE, supported);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(BQDriverTest, SQLGetFunctions_ODBC2_AllUnSupported) {
   auto conn = std::make_shared<ConnectionHandle>();
   SQLUSMALLINT odbc2_fns[100];
 
