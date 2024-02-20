@@ -28,19 +28,19 @@ TEST(EnvAttrConnectionPool, ConnectionPoolDefault) {
 }
 
 TEST(EnvAttrConnectionPool, ConnectionPool_CPOff) {
-  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::CP_OFF);
+  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::kCpOff);
   EXPECT_EQ(val.Name(), "SQL_CP_OFF");
   EXPECT_EQ(val.Value(), SQL_CP_OFF);
 }
 
 TEST(EnvAttrConnectionPool, ConnectionPool_OnePerDriver) {
-  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::ONE_PER_DRIVER);
+  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::kOnePerDriver);
   EXPECT_EQ(val.Name(), "SQL_CP_ONE_PER_DRIVER");
   EXPECT_EQ(val.Value(), SQL_CP_ONE_PER_DRIVER);
 }
 
 TEST(EnvAttrConnectionPool, ConnectionPool_OnePerHEnv) {
-  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::ONE_PER_HENV);
+  EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::kOnePerHenv);
   EXPECT_EQ(val.Name(), "SQL_CP_ONE_PER_HENV");
   EXPECT_EQ(val.Value(), SQL_CP_ONE_PER_HENV);
 }
@@ -49,28 +49,28 @@ TEST(EnvAttrConnectionPool, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_DEFAULT;
   auto status = EnvAttrConnectionPool::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::CP_OFF);
+  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_CPOff) {
   SQLUINTEGER val = SQL_CP_OFF;
   auto status = EnvAttrConnectionPool::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::CP_OFF);
+  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerDriver) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
   auto status = EnvAttrConnectionPool::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::ONE_PER_DRIVER);
+  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerDriver);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerHenv) {
   SQLUINTEGER val = SQL_CP_ONE_PER_HENV;
   auto status = EnvAttrConnectionPool::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::ONE_PER_HENV);
+  EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerHenv);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_NullVal) {
@@ -99,13 +99,13 @@ TEST(EnvAttrConnectionPoolMatch, ConnectionPoolMatchDefault) {
 }
 
 TEST(EnvAttrConnectionPoolMatch, ConnectionPoolStrictMatch) {
-  EnvAttrConnectionPoolMatch val(EnvAttrCPMatchVal::STRICT_MATCH);
+  EnvAttrConnectionPoolMatch val(EnvAttrCPMatchVal::kStrictMatch);
   EXPECT_EQ(val.Name(), "SQL_CP_STRICT_MATCH");
   EXPECT_EQ(val.Value(), SQL_CP_STRICT_MATCH);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ConnectionPoolRelaxedMatch) {
-  EnvAttrConnectionPoolMatch val(EnvAttrCPMatchVal::RELAXED_MATCH);
+  EnvAttrConnectionPoolMatch val(EnvAttrCPMatchVal::kRelaxedMatch);
   EXPECT_EQ(val.Name(), "SQL_CP_RELAXED_MATCH");
   EXPECT_EQ(val.Value(), SQL_CP_RELAXED_MATCH);
 }
@@ -114,21 +114,21 @@ TEST(EnvAttrConnectionPoolMatch, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_MATCH_DEFAULT;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrCPMatchVal::STRICT_MATCH);
+  EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_StrictMatch) {
   SQLUINTEGER val = SQL_CP_STRICT_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrCPMatchVal::STRICT_MATCH);
+  EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_RelaxedMatch) {
   SQLUINTEGER val = SQL_CP_RELAXED_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrCPMatchVal::RELAXED_MATCH);
+  EXPECT_EQ(*status, EnvAttrCPMatchVal::kRelaxedMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_NullVal) {
@@ -159,13 +159,13 @@ TEST(EnvAttrOdbcVersion, OdbcVersDefault) {
 }
 
 TEST(EnvAttrOdbcVersion, OdbcVers2) {
-  EnvAttrOdbcVersion val(EnvAttrOdbcVersVal::ODBC_2);
+  EnvAttrOdbcVersion val(EnvAttrOdbcVersVal::kOdbc2);
   EXPECT_EQ(val.Name(), "SQL_OV_ODBC2");
   EXPECT_EQ(val.Value(), SQL_OV_ODBC2);
 }
 
 TEST(EnvAttrOdbcVersion, OdbcVers3) {
-  EnvAttrOdbcVersion val(EnvAttrOdbcVersVal::ODBC_3);
+  EnvAttrOdbcVersion val(EnvAttrOdbcVersVal::kOdbc3);
   EXPECT_EQ(val.Name(), "SQL_OV_ODBC3");
   EXPECT_EQ(val.Value(), SQL_OV_ODBC3);
 }
@@ -174,14 +174,14 @@ TEST(EnvAttrOdbcVersion, ParseVal_ODBC2) {
   SQLINTEGER val = SQL_OV_ODBC2;
   auto status = EnvAttrOdbcVersion::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrOdbcVersVal::ODBC_2);
+  EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc2);
 }
 
 TEST(EnvAttrOdbcVersion, ParseVal_ODBC3) {
   SQLINTEGER val = SQL_OV_ODBC3;
   auto status = EnvAttrOdbcVersion::ParseVal(&val);
   ASSERT_STATUS_OK(status);
-  EXPECT_EQ(*status, EnvAttrOdbcVersVal::ODBC_3);
+  EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc3);
 }
 
 TEST(EnvAttrOdbcVersion, ParseVal_NullVal) {

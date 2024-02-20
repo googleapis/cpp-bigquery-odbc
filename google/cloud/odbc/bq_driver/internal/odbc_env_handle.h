@@ -22,10 +22,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-enum EnvAttrConnectionPoolVal { CP_OFF, ONE_PER_DRIVER, ONE_PER_HENV };
-enum EnvAttrCPMatchVal { STRICT_MATCH, RELAXED_MATCH };
-enum EnvAttrOdbcVersVal { ODBC_2, ODBC_3 };
-enum EnvAttrOutputNTSVal { NTS_TRUE };
+enum EnvAttrConnectionPoolVal { kCpOff, kOnePerDriver, kOnePerHenv };
+enum EnvAttrCPMatchVal { kStrictMatch, kRelaxedMatch };
+enum EnvAttrOdbcVersVal { kOdbc2, kOdbc3 };
+enum EnvAttrOutputNTSVal { kNtsTrue };
 
 class EnvAttrConnectionPool {
  public:
@@ -39,8 +39,8 @@ class EnvAttrConnectionPool {
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool&&) = default;
 
   static StatusOr<EnvAttrConnectionPoolVal> ParseVal(void* value);
-  inline std::string Name() { return name_; }
-  inline SQLUINTEGER Value() { return val_; }
+  inline std::string Name() const { return name_; }
+  inline SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -61,8 +61,8 @@ struct EnvAttrConnectionPoolMatch {
   EnvAttrConnectionPoolMatch& operator=(EnvAttrConnectionPoolMatch&&) = default;
 
   static StatusOr<EnvAttrCPMatchVal> ParseVal(void* value);
-  inline std::string Name() { return name_; }
-  inline SQLUINTEGER Value() { return val_; }
+  inline std::string Name() const { return name_; }
+  inline SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -81,8 +81,8 @@ struct EnvAttrOdbcVersion {
   EnvAttrOdbcVersion& operator=(EnvAttrOdbcVersion&&) = default;
 
   static StatusOr<EnvAttrOdbcVersVal> ParseVal(void* value);
-  inline std::string Name() { return name_; }
-  inline SQLUINTEGER Value() { return val_; }
+  inline std::string Name() const { return name_; }
+  inline SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -91,7 +91,7 @@ struct EnvAttrOdbcVersion {
 
 struct EnvAttrOutputNTS {
  public:
-  explicit EnvAttrOutputNTS() : name_("SQL_TRUE"), val_(SQL_TRUE) {}
+  explicit EnvAttrOutputNTS() = default;
   ~EnvAttrOutputNTS() = default;
 
   EnvAttrOutputNTS(EnvAttrOutputNTS const&) = default;
@@ -100,12 +100,12 @@ struct EnvAttrOutputNTS {
   EnvAttrOutputNTS& operator=(EnvAttrOutputNTS&&) = default;
 
   static Status ParseVal(void* value);
-  inline std::string Name() { return name_; }
-  inline SQLUINTEGER Value() { return val_; }
+  inline std::string Name() const { return name_; }
+  inline SQLUINTEGER Value() const { return val_; }
 
  private:
-  std::string name_;
-  SQLINTEGER val_;
+  std::string name_{"SQL_TRUE"};
+  SQLINTEGER val_{SQL_TRUE};
 };
 
 class EnvironmentHandle : public Handle {

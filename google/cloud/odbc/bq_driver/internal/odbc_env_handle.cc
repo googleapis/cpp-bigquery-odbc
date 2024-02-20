@@ -22,17 +22,17 @@ using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 EnvAttrConnectionPool::EnvAttrConnectionPool(
     EnvAttrConnectionPoolVal const& val) {
   switch (val) {
-    case EnvAttrConnectionPoolVal::CP_OFF: {
+    case EnvAttrConnectionPoolVal::kCpOff: {
       name_ = "SQL_CP_OFF";
       val_ = SQL_CP_OFF;
       break;
     }
-    case EnvAttrConnectionPoolVal::ONE_PER_DRIVER: {
+    case EnvAttrConnectionPoolVal::kOnePerDriver: {
       name_ = "SQL_CP_ONE_PER_DRIVER";
       val_ = SQL_CP_ONE_PER_DRIVER;
       break;
     }
-    case EnvAttrConnectionPoolVal::ONE_PER_HENV: {
+    case EnvAttrConnectionPoolVal::kOnePerHenv: {
       name_ = "SQL_CP_ONE_PER_HENV";
       val_ = SQL_CP_ONE_PER_HENV;
       break;
@@ -43,12 +43,12 @@ EnvAttrConnectionPool::EnvAttrConnectionPool(
 EnvAttrConnectionPoolMatch::EnvAttrConnectionPoolMatch(
     EnvAttrCPMatchVal const& val) {
   switch (val) {
-    case EnvAttrCPMatchVal::RELAXED_MATCH: {
+    case EnvAttrCPMatchVal::kRelaxedMatch: {
       name_ = "SQL_CP_RELAXED_MATCH";
       val_ = SQL_CP_RELAXED_MATCH;
       break;
     }
-    case EnvAttrCPMatchVal::STRICT_MATCH: {
+    case EnvAttrCPMatchVal::kStrictMatch: {
       name_ = "SQL_CP_STRICT_MATCH";
       val_ = SQL_CP_STRICT_MATCH;
       break;
@@ -58,12 +58,12 @@ EnvAttrConnectionPoolMatch::EnvAttrConnectionPoolMatch(
 
 EnvAttrOdbcVersion::EnvAttrOdbcVersion(EnvAttrOdbcVersVal const& val) {
   switch (val) {
-    case EnvAttrOdbcVersVal::ODBC_2: {
+    case EnvAttrOdbcVersVal::kOdbc2: {
       name_ = "SQL_OV_ODBC2";
       val_ = SQL_OV_ODBC2;
       break;
     }
-    case EnvAttrOdbcVersVal::ODBC_3: {
+    case EnvAttrOdbcVersVal::kOdbc3: {
       name_ = "SQL_OV_ODBC3";
       val_ = SQL_OV_ODBC3;
       break;
@@ -82,13 +82,13 @@ StatusOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
   SQLUINTEGER* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
   switch (*actual_value) {
     case SQL_CP_OFF: {
-      return EnvAttrConnectionPoolVal::CP_OFF;
+      return EnvAttrConnectionPoolVal::kCpOff;
     }
     case SQL_CP_ONE_PER_DRIVER: {
-      return EnvAttrConnectionPoolVal::ONE_PER_DRIVER;
+      return EnvAttrConnectionPoolVal::kOnePerDriver;
     }
     case SQL_CP_ONE_PER_HENV: {
-      return EnvAttrConnectionPoolVal::ONE_PER_HENV;
+      return EnvAttrConnectionPoolVal::kOnePerHenv;
     }
     default: {
       std::string msg =
@@ -111,10 +111,10 @@ StatusOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(void* value) {
   SQLUINTEGER* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
   switch (*actual_value) {
     case SQL_CP_RELAXED_MATCH: {
-      return EnvAttrCPMatchVal::RELAXED_MATCH;
+      return EnvAttrCPMatchVal::kRelaxedMatch;
     }
     case SQL_CP_STRICT_MATCH: {
-      return EnvAttrCPMatchVal::STRICT_MATCH;
+      return EnvAttrCPMatchVal::kStrictMatch;
     }
     default: {
       std::string msg =
@@ -136,10 +136,10 @@ StatusOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
   SQLINTEGER* actual_value = reinterpret_cast<SQLINTEGER*>(value);
   switch (*actual_value) {
     case SQL_OV_ODBC2: {
-      return EnvAttrOdbcVersVal::ODBC_2;
+      return EnvAttrOdbcVersVal::kOdbc2;
     }
     case SQL_OV_ODBC3: {
-      return EnvAttrOdbcVersVal::ODBC_3;
+      return EnvAttrOdbcVersVal::kOdbc3;
     }
     default: {
       std::string msg = "Unsupported attribute value for EnvAttrOdbcVersion: ";
@@ -308,10 +308,10 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
 
 EnvironmentHandle::EnvironmentHandle() {
   connection_pool_ =
-      std::make_shared<EnvAttrConnectionPool>(EnvAttrConnectionPoolVal::CP_OFF);
+      std::make_shared<EnvAttrConnectionPool>(EnvAttrConnectionPoolVal::kCpOff);
   connection_pool_match_ = std::make_shared<EnvAttrConnectionPoolMatch>(
-      EnvAttrCPMatchVal::STRICT_MATCH);
-  odbc_ver_ = std::make_shared<EnvAttrOdbcVersion>(EnvAttrOdbcVersVal::ODBC_3);
+      EnvAttrCPMatchVal::kStrictMatch);
+  odbc_ver_ = std::make_shared<EnvAttrOdbcVersion>(EnvAttrOdbcVersVal::kOdbc3);
   output_nts_ = std::make_shared<EnvAttrOutputNTS>();
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
