@@ -18,29 +18,55 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 
-StatusOr<std::shared_ptr<ConnectionHandle>> ValidateConnectionHandle(
-    SQLHDBC connection_handle) {
+StatusOr<ConnectionHandle> ValidateConnectionHandle(SQLHDBC connection_handle) {
   // Validate nullness.
   if (!connection_handle) {
     return Status(StatusCode::kInvalidArgument, "Null connection handle");
   }
-  // Validate the connection handle type.
+  // Validate the connection internal members.
   auto* conn_handle_wrapped =
       reinterpret_cast<HandleWrapped*>(connection_handle);
-  if (conn_handle_wrapped->handle_type != HandleType::kConnHandle) {
-    return Status(StatusCode::kInvalidArgument,
-                  "Invalid connection handle type");
-  }
 
-  auto* handle =
-      reinterpret_cast<ConnectionHandle*>(conn_handle_wrapped->handle_ref);
-  // Ensure the handle validity.
-  if (!handle->IsConnected()) {
-    return Status(StatusCode::kInvalidArgument, "Invalid connection handle");
-  }
+  return ValidateHandle<ConnectionHandle>(HandleType::kConnHandle,
+                                          conn_handle_wrapped);
+}
 
-  return std::make_shared<ConnectionHandle>(*handle);
+StatusOr<EnvironmentHandle> ValidateEnvironmentHandle(
+    SQLHENV environment_handle) {
+  // Validate nullness.
+  if (!environment_handle) {
+    return Status(StatusCode::kInvalidArgument, "Null environment handle");
+  }
+  // Validate the internal members.
+  auto* env_handle_wrapped =
+      reinterpret_cast<HandleWrapped*>(environment_handle);
+
+  return ValidateHandle<EnvironmentHandle>(HandleType::kEnvHandle,
+                                           env_handle_wrapped);
+}
+
+Status UpdateEnvironmentHandle(
+    SQLHENV environment_handle,
+    google::cloud::odbc_bq_driver_internal::EnvironmentHandle const&
+        new_handle) {
+  auto* env_handle_wrapped =
+      reinterpret_cast<HandleWrapped*>(environment_handle);
+
+  return UpdateHandle<EnvironmentHandle>(HandleType::kEnvHandle,
+                                         env_handle_wrapped, new_handle);
+}
+
+Status UpdateConnectionHandle(
+    SQLHDBC connection_handle,
+    google::cloud::odbc_bq_driver_internal::ConnectionHandle const&
+        new_handle) {
+  auto* conn_handle_wrapped =
+      reinterpret_cast<HandleWrapped*>(connection_handle);
+
+  return UpdateHandle<ConnectionHandle>(HandleType::kConnHandle,
+                                        conn_handle_wrapped, new_handle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

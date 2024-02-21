@@ -21,6 +21,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
 
@@ -69,6 +70,46 @@ TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid connection handle")));
+}
+
+TEST(ValidateEnvironmentHandle, Success) {
+  SQLHENV env_handle;
+  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  auto result = ValidateEnvironmentHandle(env_handle);
+  ASSERT_STATUS_OK(result);
+  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
+}
+
+TEST(ValidateEnvironmentHandle, InvalidNullPtr) {
+  auto result = ValidateEnvironmentHandle(nullptr);
+
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Null environment handle")));
+}
+
+TEST(ValidateEnvironmentHandle, InvalidHandleType) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  EXPECT_EQ(SQL_SUCCESS, SQLAllocConnHandle(env_handle, &conn_handle));
+  auto result = ValidateEnvironmentHandle(conn_handle);
+
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Invalid handle type")));
+
+  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle));
+  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
+}
+
+TEST(ValidateEnvironmentHandle, InvalidInternalEnvironmentHandle) {
+  SQLHENV env_handle;
+  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
+
+  auto result = ValidateEnvironmentHandle(env_handle);
+
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Invalid handle type")));
 }
 
 }  // namespace google::cloud::odbc_bq_driver
