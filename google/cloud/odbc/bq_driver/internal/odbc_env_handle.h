@@ -39,8 +39,8 @@ class EnvAttrConnectionPool {
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool&&) = default;
 
   static StatusOr<EnvAttrConnectionPoolVal> ParseVal(void* value);
-  inline std::string Name() const { return name_; }
-  inline SQLUINTEGER Value() const { return val_; }
+  [[nodiscard]] std::string Name() const { return name_; }
+  [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -61,8 +61,8 @@ struct EnvAttrConnectionPoolMatch {
   EnvAttrConnectionPoolMatch& operator=(EnvAttrConnectionPoolMatch&&) = default;
 
   static StatusOr<EnvAttrCPMatchVal> ParseVal(void* value);
-  inline std::string Name() const { return name_; }
-  inline SQLUINTEGER Value() const { return val_; }
+  [[nodiscard]] std::string Name() const { return name_; }
+  [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -81,8 +81,8 @@ struct EnvAttrOdbcVersion {
   EnvAttrOdbcVersion& operator=(EnvAttrOdbcVersion&&) = default;
 
   static StatusOr<EnvAttrOdbcVersVal> ParseVal(void* value);
-  inline std::string Name() const { return name_; }
-  inline SQLUINTEGER Value() const { return val_; }
+  [[nodiscard]] std::string Name() const { return name_; }
+  [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_;
@@ -100,8 +100,8 @@ struct EnvAttrOutputNTS {
   EnvAttrOutputNTS& operator=(EnvAttrOutputNTS&&) = default;
 
   static Status ParseVal(void* value);
-  inline std::string Name() const { return name_; }
-  inline SQLUINTEGER Value() const { return val_; }
+  [[nodiscard]] std::string Name() const { return name_; }
+  [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
  private:
   std::string name_{"SQL_TRUE"};

@@ -79,7 +79,7 @@ StatusOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
     TracePrintInternal(opts, msg);
     return Status(StatusCode::kInvalidArgument, msg);
   }
-  SQLUINTEGER* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
+  auto* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
   switch (*actual_value) {
     case SQL_CP_OFF: {
       return EnvAttrConnectionPoolVal::kCpOff;
@@ -108,7 +108,7 @@ StatusOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(void* value) {
     TracePrintInternal(opts, msg);
     return Status(StatusCode::kInvalidArgument, msg);
   }
-  SQLUINTEGER* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
+  auto* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
   switch (*actual_value) {
     case SQL_CP_RELAXED_MATCH: {
       return EnvAttrCPMatchVal::kRelaxedMatch;
@@ -133,7 +133,7 @@ StatusOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
     TracePrintInternal(opts, msg);
     return Status(StatusCode::kInvalidArgument, msg);
   }
-  SQLINTEGER* actual_value = reinterpret_cast<SQLINTEGER*>(value);
+  auto* actual_value = reinterpret_cast<SQLINTEGER*>(value);
   switch (*actual_value) {
     case SQL_OV_ODBC2: {
       return EnvAttrOdbcVersVal::kOdbc2;
@@ -157,7 +157,7 @@ Status EnvAttrOutputNTS::ParseVal(void* value) {
     TracePrintInternal(opts, msg);
     return Status(StatusCode::kInvalidArgument, msg);
   }
-  SQLINTEGER* actual_value = reinterpret_cast<SQLINTEGER*>(value);
+  auto* actual_value = reinterpret_cast<SQLINTEGER*>(value);
   switch (*actual_value) {
     case SQL_TRUE: {
       return Status(StatusCode::kOk, "");
@@ -172,7 +172,7 @@ Status EnvAttrOutputNTS::ParseVal(void* value) {
 }
 
 SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
-                                          void* length) {
+                                          void* /*length*/) {
   TraceOptions& opts = *(*kTraceOptsConsole);
   if (value == nullptr) {
     TracePrintInternal(opts, "Null attribute output value ptr");
@@ -191,7 +191,7 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
         // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
         return SQL_ERROR;
       }
-      SQLUINTEGER* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
+      auto* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
       *attrib_val = connection_pool_->Value();
       break;
     }
@@ -204,7 +204,7 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
         // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
         return SQL_ERROR;
       }
-      SQLUINTEGER* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
+      auto* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
       *attrib_val = connection_pool_match_->Value();
       break;
     }
@@ -217,7 +217,7 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
         // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
         return SQL_ERROR;
       }
-      SQLINTEGER* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
+      auto* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
       *attrib_val = odbc_ver_->Value();
       break;
     }
@@ -230,7 +230,7 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
         // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
         return SQL_ERROR;
       }
-      SQLINTEGER* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
+      auto* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
       *attrib_val = output_nts_->Value();
       break;
     }
@@ -248,7 +248,7 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
 }
 
 SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
-                                          void* length) {
+                                          void* /*length*/) {
   TraceOptions& opts = *(*kTraceOptsConsole);
   switch (attribute) {
     case SQL_ATTR_CONNECTION_POOLING: {
