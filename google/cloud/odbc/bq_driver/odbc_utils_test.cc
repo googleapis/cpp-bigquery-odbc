@@ -61,15 +61,17 @@ TEST(ValidateConnectionHandle, InvalidHandleType) {
   auto result = ValidateConnectionHandle(GetHandle(HandleType::kEnvHandle));
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid connection handle type")));
+                               StrEq("Invalid handle type")));
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
   auto result = ValidateConnectionHandle(
       GetHandle(HandleType::kConnHandle, /* connected */ false));
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid connection handle")));
+  EXPECT_THAT(
+      result,
+      StatusIs(StatusCode::kInvalidArgument,
+               StrEq("Connection handle not connected to data source")));
 }
 
 TEST(ValidateEnvironmentHandle, Success) {

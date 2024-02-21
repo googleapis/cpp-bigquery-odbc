@@ -25,12 +25,25 @@ StatusOr<ConnectionHandle> ValidateConnectionHandle(SQLHDBC connection_handle) {
   if (!connection_handle) {
     return Status(StatusCode::kInvalidArgument, "Null connection handle");
   }
-  // Validate the connection internal members.
+  // Common validation for internal members.
   auto* conn_handle_wrapped =
       reinterpret_cast<HandleWrapped*>(connection_handle);
 
-  return ValidateHandle<ConnectionHandle>(HandleType::kConnHandle,
-                                          conn_handle_wrapped);
+  auto status = ValidateHandle<ConnectionHandle>(HandleType::kConnHandle,
+                                                 conn_handle_wrapped);
+  if (!status.ok()) {
+    return status;
+  }
+  // Validation specific to connection handle.
+  auto* conn_handle_ptr =
+      reinterpret_cast<ConnectionHandle*>(conn_handle_wrapped->handle_ref);
+
+  if (!conn_handle_ptr->IsConnected()) {
+    return Status(StatusCode::kInvalidArgument,
+                  "Connection handle not connected to data source");
+  }
+
+  return *conn_handle_ptr;
 }
 
 StatusOr<EnvironmentHandle> ValidateEnvironmentHandle(
