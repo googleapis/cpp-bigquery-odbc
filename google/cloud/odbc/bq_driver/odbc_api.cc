@@ -1390,7 +1390,7 @@ SQLRETURN SQL_API SQLDescribeColW(
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
                              SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
-                             SQLPOINTER targetValue,
+                             SQLPOINTER targetValuePtr,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStrLen) {
   SQLRETURN rc = SQL_SUCCESS;
@@ -1399,13 +1399,13 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
   // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   TraceFunctionEntry_SQLBindCol(statementHandle, columnNumber, targetCType,
-                                targetValue, targetValueBufferLen,
+                                targetValuePtr, targetValueBufferLen,
                                 targetValueStrLen, *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
   // in odbc_driver_metadata.h.
   rc = ::google::cloud::odbc_bq_driver::SQLBindColInternal(
-      statementHandle, columnNumber, targetCType, targetValue,
+      statementHandle, columnNumber, targetCType, targetValuePtr,
       targetValueBufferLen, targetValueStrLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.

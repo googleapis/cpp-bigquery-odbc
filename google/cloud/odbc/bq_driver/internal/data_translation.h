@@ -30,7 +30,7 @@ struct DataBuffer {
   SQLLEN buflen;
 
   // Length of the result populated by the driver
-  SQLLEN* result_len;
+  const SQLLEN* result_len;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

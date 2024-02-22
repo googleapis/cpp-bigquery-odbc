@@ -25,7 +25,7 @@ TEST(GetDiagnostics, GetDiagnosticsSuccess) {
 
   auto diagnostics = handle.GetDiagnostics();
 
-  EXPECT_FALSE(diagnostics.GetStatusRecord().empty());
+  EXPECT_FALSE(diagnostics.GetStatusRecords().empty());
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

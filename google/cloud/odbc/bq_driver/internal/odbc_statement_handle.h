@@ -38,8 +38,8 @@ class StatementHandle : public Handle {
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
-  SQLRETURN BindColumn(SQLSMALLINT data_type, SQLPOINTER buf, SQLLEN buf_len,
-                       SQLLEN* res_len);
+  SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
+                       SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
 
  private:
   std::map<int, DataBuffer> column_bindings_;

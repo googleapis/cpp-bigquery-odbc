@@ -44,7 +44,7 @@ class OdbcMetadataConnectionHandleTest : public ConnectionHandle {
   void SetConnected() { is_connected_ = true; }
 };
 
-SQLHDBC GetHandle(HandleType const& type, bool connected, bool setup_dsn) {
+SQLHDBC GetConnHandle(HandleType const& type, bool connected, bool setup_dsn) {
   auto conn_handle = std::make_shared<OdbcMetadataConnectionHandleTest>();
   if (connected) {
     conn_handle->SetConnected();
@@ -62,18 +62,18 @@ SQLHDBC GetHandle(HandleType const& type, bool connected, bool setup_dsn) {
 }
 
 SQLHDBC GetConnectedHandle(HandleType const& type) {
-  return GetHandle(type, /* connected= */ true,
-                   /*setup_dsn=*/false);
+  return GetConnHandle(type, /* connected= */ true,
+                       /*setup_dsn=*/false);
 }
 
 SQLHDBC GetDisconnectedHandle(HandleType const& type) {
-  return GetHandle(type, /* connected= */ false,
-                   /*setup_dsn=*/false);
+  return GetConnHandle(type, /* connected= */ false,
+                       /*setup_dsn=*/false);
 }
 
 SQLHDBC GetConnectedHandleWithDsn(HandleType const& type) {
-  return GetHandle(type, /* connected= */ true,
-                   /*setup_dsn=*/true);
+  return GetConnHandle(type, /* connected= */ true,
+                       /*setup_dsn=*/true);
 }
 
 }  // namespace

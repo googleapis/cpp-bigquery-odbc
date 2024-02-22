@@ -20,14 +20,27 @@
 
 namespace google::cloud::odbc_internal {
 
-// SQLSTATE list
-// (https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/appendix-a-odbc-error-codes?view=sql-server-ver16)
-// As the list is very long and we don't need them all,
-// new values can be added once they are needed.
-static std::string const k01000 = "01000";
-static std::string const k28000 = "28000";
-static std::string const k42000 = "42000";
-static std::string const kHY001 = "HY001";
+struct SQLStates {
+ public:
+  explicit SQLStates() = delete;
+  ~SQLStates() = delete;
+
+  SQLStates(SQLStates const&) = delete;
+  SQLStates& operator=(SQLStates const&) = delete;
+  SQLStates(SQLStates&&) = delete;
+  SQLStates& operator=(SQLStates&&) = delete;
+
+  // SQLSTATE list
+  // (https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/appendix-a-odbc-error-codes?view=sql-server-ver16)
+  // As the list is very long and we don't need them all,
+  // new values can be added once they are needed.
+  static inline std::string k_01000() { return "01000"; };
+  static inline std::string k_28000() { return "28000"; };
+  static inline std::string k_42000() { return "42000"; };
+  static inline std::string k_HY000() { return "HY000"; };
+  static inline std::string k_HY001() { return "HY001"; };
+  static inline std::string k_HY090() { return "HY090"; };
+};
 
 }  // namespace google::cloud::odbc_internal
 
