@@ -123,6 +123,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/utils_test.cc
         bq_driver/odbc_commons_test.cc
         bq_driver/odbc_driver_metadata_test.cc
+        bq_driver/odbc_environment_test.cc
         bq_driver/odbc_utils_test.cc)
 
     target_link_libraries(
