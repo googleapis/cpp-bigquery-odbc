@@ -33,6 +33,15 @@ namespace google::cloud::odbc_bq_driver {
 
 SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle);
 
+// Methods related to setting and getting Environment attributes.
+SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
+                                        SQLINTEGER attribute, SQLPOINTER value,
+                                        SQLINTEGER val_str_len);
+SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
+                                        SQLINTEGER attribute, SQLPOINTER value,
+                                        SQLINTEGER value_buffer_len,
+                                        SQLINTEGER* val_str_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H

@@ -13,17 +13,81 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 
 SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
   auto* env_handle = new EnvironmentHandle();
   auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, env_handle);
   *out_env_handle = wrapped_handle;
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
+                                        SQLINTEGER attribute, SQLPOINTER value,
+                                        SQLINTEGER val_str_len) {
+  TraceOptions& opts = *(*kTraceOptsConsole);
+
+  StatusOr<EnvironmentHandle> new_env_handle =
+      ValidateEnvironmentHandle(environment_handle);
+
+  if (!new_env_handle.ok()) {
+    TracePrintInternal(opts, new_env_handle.status().message());
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+    return SQL_ERROR;
+  }
+
+  if (value == nullptr) {
+    TracePrintInternal(
+        opts,
+        "Input attribute value argument for SQLSetEnvAttr cannot be null");
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+    return SQL_ERROR;
+  }
+
+  SQLRETURN rc = new_env_handle->SetAttribute(attribute, value, &val_str_len);
+  if (rc == SQL_SUCCESS) {
+    // update the passed in environment_handle to point to the updated handle;
+    UpdateEnvironmentHandle(environment_handle, *new_env_handle);
+  }
+  return rc;
+}
+
+SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
+                                        SQLINTEGER attribute, SQLPOINTER value,
+                                        SQLINTEGER value_buffer_len,
+                                        SQLINTEGER* val_str_len) {
+  TraceOptions& opts = *(*kTraceOptsConsole);
+
+  StatusOr<EnvironmentHandle> env_handle =
+      ValidateEnvironmentHandle(environment_handle);
+
+  if (!env_handle.ok()) {
+    TracePrintInternal(opts, env_handle.status().message());
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+    return SQL_ERROR;
+  }
+
+  if (value == nullptr) {
+    TracePrintInternal(
+        opts,
+        "Output attribute value argument for SQLGetEnvAttr cannot be null");
+    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
+    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+    return SQL_ERROR;
+  }
+
+  return env_handle->GetAttribute(attribute, value, &val_str_len);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
