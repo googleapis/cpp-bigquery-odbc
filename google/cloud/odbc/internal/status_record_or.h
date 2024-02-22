@@ -268,7 +268,7 @@ class StatusRecordOr final {
 
  private:
   static StatusRecord MakeDefaultStatusRecord() {
-    return StatusRecord{kHY001, "default"};
+    return StatusRecord{SQLStates::k_HY001(), "default"};
   }
 
   void CheckHasValue() const& {

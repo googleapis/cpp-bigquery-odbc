@@ -27,11 +27,11 @@ TEST(ClearDiagnostics, ClearDiagnosticsSuccess) {
   diagnostics->GetHeaderRecord().cursor_row_count = 111;
   diagnostics->GetHeaderRecord().row_count = 111;
   diagnostics->AddStatusRecord({});
-  EXPECT_FALSE(diagnostics->GetStatusRecord().empty());
+  EXPECT_FALSE(diagnostics->GetStatusRecords().empty());
 
   diagnostics->ClearDiagnostics();
 
-  EXPECT_TRUE(diagnostics->GetStatusRecord().empty());
+  EXPECT_TRUE(diagnostics->GetStatusRecords().empty());
   HeaderRecord expected;
   HeaderRecord actual = diagnostics->GetHeaderRecord();
   EXPECT_EQ(expected.function, actual.function);

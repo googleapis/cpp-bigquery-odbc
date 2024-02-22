@@ -21,6 +21,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
 
@@ -32,7 +33,7 @@ class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
   void SetConnected() { is_connected_ = true; }
 };
 
-SQLHDBC GetHandle(HandleType const& type, bool connected = true) {
+SQLHDBC GetConnHandle(HandleType const& type, bool connected = true) {
   auto conn_handle = std::make_shared<OdbcUtilsConnectionHandleTest>();
   if (connected) {
     conn_handle->SetConnected();
@@ -44,8 +45,13 @@ SQLHDBC GetHandle(HandleType const& type, bool connected = true) {
 
 }  // namespace
 
+///////////////////////////////////////
+// Connection Handle Validation Tests
+///////////////////////////////////////
+
 TEST(ValidateConnectionHandle, Success) {
-  auto result = ValidateConnectionHandle(GetHandle(HandleType::kConnHandle));
+  auto result =
+      ValidateConnectionHandle(GetConnHandle(HandleType::kConnHandle));
   ASSERT_STATUS_OK(result);
 }
 
@@ -57,7 +63,7 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleType) {
-  auto result = ValidateConnectionHandle(GetHandle(HandleType::kEnvHandle));
+  auto result = ValidateConnectionHandle(GetConnHandle(HandleType::kEnvHandle));
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid connection handle type")));
@@ -65,10 +71,37 @@ TEST(ValidateConnectionHandle, InvalidHandleType) {
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
   auto result = ValidateConnectionHandle(
-      GetHandle(HandleType::kConnHandle, /* connected */ false));
+      GetConnHandle(HandleType::kConnHandle, /* connected */ false));
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid connection handle")));
+}
+
+///////////////////////////////////////
+// Statement Handle Validation Tests
+///////////////////////////////////////
+
+TEST(ValidateStatementHandle, Success) {
+  auto stmt_handle = std::make_shared<StatementHandle>();
+  auto wrapped_handle = std::make_shared<HandleWrapped>(
+      HandleType::kStatementHandle, stmt_handle.get());
+  auto result = ValidateStatementHandle(wrapped_handle.get());
+  ASSERT_STATUS_OK(result);
+}
+
+TEST(ValidateStatementHandle, InvalidNullPtr) {
+  auto result = ValidateStatementHandle(nullptr);
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Null statement handle")));
+}
+
+TEST(ValidateStatementHandle, InvalidHandleType) {
+  auto stmt_handle = std::make_shared<StatementHandle>();
+  auto wrapped_handle = std::make_shared<HandleWrapped>(HandleType::kEnvHandle,
+                                                        stmt_handle.get());
+  auto result = ValidateStatementHandle(wrapped_handle.get());
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Invalid statement handle type")));
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -12,19 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "odbc_sql_results.h"
+#include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver {
 
-// NOLINTBEGIN(misc-unused-parameters)
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
-SQLRETURN SQLBindColInternal(SQLHSTMT statementHandle,
-                             SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
-                             SQLPOINTER targetValue,
-                             SQLLEN targetValueBufferLen,
-                             SQLLEN* targetValueStrLen) {
-  return SQL_SUCCESS;
+TraceOptions& opts = *(*kTraceOptsConsole);
+
+SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
+                             SQLUSMALLINT column_number,
+                             SQLSMALLINT target_c_type, SQLPOINTER target_value,
+                             SQLLEN target_value_buffer_len,
+                             SQLLEN* target_value_str_len) {
+  StatusOr<std::shared_ptr<StatementHandle>> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result.ok()) {
+    TracePrintInternal(
+        opts, "Invalid Statement handle: " + handle_result.status().message());
+    return SQL_INVALID_HANDLE;
+  }
+  StatementHandle handle = *(handle_result.value());
+  handle.GetDiagnostics().ClearDiagnostics();
+
+  return handle.BindColumn(column_number, target_c_type, target_value,
+                           target_value_buffer_len, target_value_str_len);
 }
+
+// NOLINTBEGIN(misc-unused-parameters)
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statementHandle) { return SQL_SUCCESS; }
 

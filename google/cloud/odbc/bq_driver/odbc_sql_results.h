@@ -33,7 +33,6 @@
 // SQLSetPosInternal
 ///////////////////////////////////////////////////////////
 
-#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -47,11 +46,11 @@ namespace google::cloud::odbc_bq_driver {
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function?view=sql-server-ver16
-SQLRETURN SQLBindColInternal(SQLHSTMT statementHandle,
-                             SQLUSMALLINT columnNumber, SQLSMALLINT targetCType,
-                             SQLPOINTER targetValue,
-                             SQLLEN targetValueBufferLen,
-                             SQLLEN* targetValueStrLen);
+SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
+                             SQLUSMALLINT column_number,
+                             SQLSMALLINT target_c_type, SQLPOINTER target_value,
+                             SQLLEN target_value_buffer_len,
+                             SQLLEN* target_value_str_len);
 
 // Implements the semantics for SQLFetch ODBC API
 // as per the ODBC 3.8 spec and the design doc.
@@ -62,7 +61,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statementHandle,
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
-SQLRETURN SQLFetchInternal(SQLHSTMT statementHandle);
+SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 

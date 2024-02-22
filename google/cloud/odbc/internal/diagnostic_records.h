@@ -16,6 +16,7 @@
 #define GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include <string>
 
 namespace google::cloud::odbc_internal {

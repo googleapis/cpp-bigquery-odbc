@@ -18,6 +18,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 StatusOr<std::shared_ptr<ConnectionHandle>> ValidateConnectionHandle(
     SQLHDBC connection_handle) {
@@ -41,6 +42,25 @@ StatusOr<std::shared_ptr<ConnectionHandle>> ValidateConnectionHandle(
   }
 
   return std::make_shared<ConnectionHandle>(*handle);
+}
+
+StatusOr<std::shared_ptr<StatementHandle>> ValidateStatementHandle(
+    SQLHDBC statement_handle) {
+  // Validate nullness.
+  if (!statement_handle) {
+    return Status(StatusCode::kInvalidArgument, "Null statement handle");
+  }
+  // Validate the connection handle type.
+  auto* stmt_handle_wrapped =
+      reinterpret_cast<HandleWrapped*>(statement_handle);
+  if (stmt_handle_wrapped->handle_type != HandleType::kStatementHandle) {
+    return Status(StatusCode::kInvalidArgument,
+                  "Invalid statement handle type");
+  }
+
+  auto* handle =
+      reinterpret_cast<StatementHandle*>(stmt_handle_wrapped->handle_ref);
+  return std::make_shared<StatementHandle>(*handle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -36,8 +36,12 @@ class Diagnostics {
 
   void ClearDiagnostics();
 
-  std::vector<odbc_internal::StatusRecord> const& GetStatusRecord() {
+  std::vector<odbc_internal::StatusRecord> const& GetStatusRecords() {
     return status_records_;
+  }
+
+  inline odbc_internal::StatusRecord const& GetLastStatusRecord() {
+    return status_records_[status_records_.size() - 1];
   }
 
   odbc_internal::HeaderRecord& GetHeaderRecord() { return header_record_; }

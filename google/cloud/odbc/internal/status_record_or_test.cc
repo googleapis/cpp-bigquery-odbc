@@ -38,32 +38,33 @@ TEST(ConstructorTest, DefaultConstructor) {
 }
 
 TEST(ConstructorTest, StatusRecordConstructor) {
-  StatusRecordOr<int> actual(StatusRecord{k01000, "message"});
+  StatusRecordOr<int> actual(StatusRecord{SQLStates::k_01000(), "message"});
 
   EXPECT_FALSE(actual.Ok());
   EXPECT_FALSE(actual);
-  EXPECT_EQ(k01000, actual.GetStatusRecord().sql_state);
+  EXPECT_EQ(SQLStates::k_01000(), actual.GetStatusRecord().sql_state);
   EXPECT_EQ("message", actual.GetStatusRecord().message);
 }
 
 TEST(ConstructorTest, StatusRecordAndReturnCodeConstructor) {
-  StatusRecordOr<int> actual(StatusRecord{k01000, "message"}, SQL_NO_DATA);
+  StatusRecordOr<int> actual(StatusRecord{SQLStates::k_01000(), "message"},
+                             SQL_NO_DATA);
 
   EXPECT_FALSE(actual.Ok());
   EXPECT_FALSE(actual);
-  EXPECT_EQ(k01000, actual.GetStatusRecord().sql_state);
+  EXPECT_EQ(SQLStates::k_01000(), actual.GetStatusRecord().sql_state);
   EXPECT_EQ("message", actual.GetStatusRecord().message);
   EXPECT_EQ(SQL_NO_DATA, actual.GetCalculatedReturnCode());
 }
 
 TEST(AssignmentOperator, StatusAssignment) {
-  StatusRecord status_record{k01000, "message"};
+  StatusRecord status_record{SQLStates::k_01000(), "message"};
   StatusRecordOr<int> actual;
 
   actual = status_record;
 
   EXPECT_FALSE(actual);
-  EXPECT_EQ(k01000, actual.GetStatusRecord().sql_state);
+  EXPECT_EQ(SQLStates::k_01000(), actual.GetStatusRecord().sql_state);
 }
 
 TEST(ConstructorTest, ValueConstructor) {
@@ -83,36 +84,36 @@ TEST(ConstructorTest, ValueConstAccessors) {
 }
 
 TEST(ConstructorTest, NewClassOfAnotherTypeSuccess) {
-  StatusRecordOr<char> error(StatusRecord{k01000, "message"});
+  StatusRecordOr<char> error(StatusRecord{SQLStates::k_01000(), "message"});
   EXPECT_FALSE(error);
 
   StatusRecordOr<int> same_error(error.GetStatusRecord(),
                                  error.GetReturnCode());
   EXPECT_FALSE(same_error);
-  EXPECT_EQ(k01000, same_error.GetStatusRecord().sql_state);
+  EXPECT_EQ(SQLStates::k_01000(), same_error.GetStatusRecord().sql_state);
   EXPECT_FALSE(same_error.GetReturnCode().has_value());
 }
 
 TEST(ValueAccessors, ThrowError) {
-  StatusRecord status_record{k01000, "message"};
+  StatusRecord status_record{SQLStates::k_01000(), "message"};
   StatusRecordOr<int> actual(status_record);
 
   EXPECT_THROW(actual.GetValue(), std::runtime_error);
 }
 
 TEST(ValueAccessors, ThrowError_AfterMove) {
-  StatusRecord status_record{k01000, "message"};
+  StatusRecord status_record{SQLStates::k_01000(), "message"};
   StatusRecordOr<int> actual(status_record);
 
   EXPECT_THROW(std::move(actual).GetValue(), std::runtime_error);
 }
 
 TEST(StatusRecordAccessors, StatusConstAccessors) {
-  StatusRecord status_record{k01000, "message"};
+  StatusRecord status_record{SQLStates::k_01000(), "message"};
   StatusRecordOr<int> const actual(status_record);
 
   EXPECT_FALSE(actual);
-  EXPECT_EQ(k01000, actual.GetStatusRecord().sql_state);
+  EXPECT_EQ(SQLStates::k_01000(), actual.GetStatusRecord().sql_state);
   EXPECT_EQ("message", actual.GetStatusRecord().message);
 }
 
@@ -176,19 +177,22 @@ TEST(ReturnCode, Success) {
 }
 
 TEST(ReturnCode, ReturnAssigned) {
-  StatusRecordOr<std::string> actual({k01000, "message"}, SQL_NO_DATA);
+  StatusRecordOr<std::string> actual({SQLStates::k_01000(), "message"},
+                                     SQL_NO_DATA);
 
   EXPECT_EQ(SQL_NO_DATA, actual.GetCalculatedReturnCode());
 }
 
 TEST(ReturnCode, ReturnNotAssigned_SQL_SUCCESS_WITH_INFO) {
-  StatusRecordOr<std::string> actual(StatusRecord{k01000, "message"});
+  StatusRecordOr<std::string> actual(
+      StatusRecord{SQLStates::k_01000(), "message"});
 
   EXPECT_EQ(SQL_SUCCESS_WITH_INFO, actual.GetCalculatedReturnCode());
 }
 
 TEST(ReturnCode, ReturnNotAssigned_SQL_ERROR) {
-  StatusRecordOr<std::string> actual(StatusRecord{k42000, "message"});
+  StatusRecordOr<std::string> actual(
+      StatusRecord{SQLStates::k_42000(), "message"});
 
   EXPECT_EQ(SQL_ERROR, actual.GetCalculatedReturnCode());
 }

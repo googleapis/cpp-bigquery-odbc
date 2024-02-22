@@ -30,7 +30,7 @@ using ::google::cloud::odbc_bq_driver_internal::TypeInfoRow;
 void CheckDataTypes(std::shared_ptr<ConnectionHandle> conn,
                     SQLSMALLINT in_data_type = SQL_ALL_TYPES,
                     bool is_supported = true) {
-  auto status = SQLGetTypeInfo(conn->hstmt, in_data_type);
+  SQLRETURN status = SQLGetTypeInfo(conn->hstmt, in_data_type);
   CheckError(status, "SQLGetTypeInfo", conn);
 
   SQLCHAR type_name[kBufferLength];

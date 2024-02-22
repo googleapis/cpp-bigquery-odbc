@@ -15,6 +15,7 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
@@ -30,6 +31,11 @@ namespace google::cloud::odbc_bq_driver {
 StatusOr<
     std::shared_ptr<google::cloud::odbc_bq_driver_internal::ConnectionHandle>>
 ValidateConnectionHandle(SQLHDBC connection_handle);
+
+StatusOr<
+    std::shared_ptr<google::cloud::odbc_bq_driver_internal::StatementHandle>>
+ValidateStatementHandle(SQLHDBC statement_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H
