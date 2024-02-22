@@ -64,7 +64,7 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
 
 SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
-                                        SQLINTEGER value_buffer_len,
+                                        SQLINTEGER /*value_buffer_len*/,
                                         SQLINTEGER* val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
