@@ -37,7 +37,7 @@ class EnvAttrConnectionPool {
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool const&) = default;
   EnvAttrConnectionPool(EnvAttrConnectionPool&&) = default;
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool&&) = default;
-
+  // TODO(b/326401873): Replace with StatusRecordOr.
   static StatusOr<EnvAttrConnectionPoolVal> ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
@@ -47,7 +47,7 @@ class EnvAttrConnectionPool {
   SQLUINTEGER val_;
 };
 
-struct EnvAttrConnectionPoolMatch {
+class EnvAttrConnectionPoolMatch {
  public:
   explicit EnvAttrConnectionPoolMatch()
       : name_("SQL_CP_STRICT_MATCH"), val_(SQL_CP_STRICT_MATCH) {}
@@ -60,6 +60,7 @@ struct EnvAttrConnectionPoolMatch {
   EnvAttrConnectionPoolMatch(EnvAttrConnectionPoolMatch&&) = default;
   EnvAttrConnectionPoolMatch& operator=(EnvAttrConnectionPoolMatch&&) = default;
 
+  // TODO(b/326401873): Replace with StatusRecordOr.
   static StatusOr<EnvAttrCPMatchVal> ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
@@ -69,7 +70,7 @@ struct EnvAttrConnectionPoolMatch {
   SQLUINTEGER val_;
 };
 
-struct EnvAttrOdbcVersion {
+class EnvAttrOdbcVersion {
  public:
   explicit EnvAttrOdbcVersion() : name_("SQL_OV_ODBC3"), val_(SQL_OV_ODBC3) {}
   explicit EnvAttrOdbcVersion(EnvAttrOdbcVersVal const& val);
@@ -80,6 +81,7 @@ struct EnvAttrOdbcVersion {
   EnvAttrOdbcVersion(EnvAttrOdbcVersion&&) = default;
   EnvAttrOdbcVersion& operator=(EnvAttrOdbcVersion&&) = default;
 
+  // TODO(b/326401873): Replace with StatusRecordOr.
   static StatusOr<EnvAttrOdbcVersVal> ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
@@ -89,7 +91,7 @@ struct EnvAttrOdbcVersion {
   SQLINTEGER val_;
 };
 
-struct EnvAttrOutputNTS {
+class EnvAttrOutputNTS {
  public:
   explicit EnvAttrOutputNTS() = default;
   ~EnvAttrOutputNTS() = default;
@@ -99,6 +101,7 @@ struct EnvAttrOutputNTS {
   EnvAttrOutputNTS(EnvAttrOutputNTS&&) = default;
   EnvAttrOutputNTS& operator=(EnvAttrOutputNTS&&) = default;
 
+  // TODO(b/326401873): Replace with StatusRecordOr.
   static Status ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
