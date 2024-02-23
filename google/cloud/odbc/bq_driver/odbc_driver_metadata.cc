@@ -53,7 +53,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                            SQLPOINTER info_value_ptr,
                                            SQLSMALLINT in_buffer_len,
                                            SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle> handle_result =
+  StatusOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result.ok()) {
     TracePrintInternal(
@@ -69,14 +69,14 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   switch (info_type) {
     case SQL_DATA_SOURCE_NAME: {
       SQLCHAR* dsn_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle.GetDsn().dsn_name.c_str()));
+          const_cast<char*>(handle->GetDsn().dsn_name.c_str()));
       info_val_char.info_val = dsn_name;
       return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
                                              str_len_ptr);
     }
     case SQL_DATABASE_NAME: {
       SQLCHAR* database_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle.GetDsn().catalog.c_str()));
+          const_cast<char*>(handle->GetDsn().catalog.c_str()));
       info_val_char.info_val = database_name;
       return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
                                              str_len_ptr);
@@ -93,7 +93,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  StatusOr<ConnectionHandle> handle_result =
+  StatusOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result.ok()) {
     TracePrintInternal(
@@ -173,7 +173,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle> handle_result =
+  StatusOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result.ok()) {
     TracePrintInternal(

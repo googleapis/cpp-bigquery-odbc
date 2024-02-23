@@ -112,7 +112,6 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   // internal connection handle object.
   auto* handle_ref =
       reinterpret_cast<ConnectionHandle*>(handle_wrapped->handle_ref);
-  ConnectionHandle handle = *handle_ref;
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
   StatusOr<Section> connection_params_resp =
@@ -141,19 +140,16 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
-  handle.SetUp(dsn_section, dsn_name);
+  handle_ref->SetUp(dsn_section, dsn_name);
 
   Authentication auth = CreateAuth(dsn_section);
-  Status status = handle.Connect(auth);
+  Status status = handle_ref->Connect(auth);
   if (!status.ok()) {
     // Creating the connection failed
     // TODO(#170): Add error tracing call here
     // TODO(#158): SQLGetDiagRec should handle this
     return SQL_ERROR;
   }
-  // Update the internal handle reference to point to the
-  // updated handle.
-  *handle_ref = handle;
   return SQL_SUCCESS;
 }
 
