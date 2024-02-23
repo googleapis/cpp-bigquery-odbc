@@ -45,15 +45,6 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
     return SQL_ERROR;
   }
 
-  if (value == nullptr) {
-    TracePrintInternal(
-        opts,
-        "Input attribute value argument for SQLSetEnvAttr cannot be null");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
-  }
-
   EnvironmentHandle* env_handle = *env_handle_status;
 
   return env_handle->SetAttribute(attribute, value, &val_str_len);

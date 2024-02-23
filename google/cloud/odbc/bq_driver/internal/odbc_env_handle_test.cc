@@ -47,44 +47,35 @@ TEST(EnvAttrConnectionPool, ConnectionPool_OnePerHEnv) {
 
 TEST(EnvAttrConnectionPool, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_DEFAULT;
-  auto status = EnvAttrConnectionPool::ParseVal(&val);
+  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_CPOff) {
   SQLUINTEGER val = SQL_CP_OFF;
-  auto status = EnvAttrConnectionPool::ParseVal(&val);
+  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerDriver) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  auto status = EnvAttrConnectionPool::ParseVal(&val);
+  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerDriver);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerHenv) {
   SQLUINTEGER val = SQL_CP_ONE_PER_HENV;
-  auto status = EnvAttrConnectionPool::ParseVal(&val);
+  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerHenv);
 }
 
-TEST(EnvAttrConnectionPool, ParseVal_NullVal) {
-  auto status = EnvAttrConnectionPool::ParseVal(nullptr);
-  EXPECT_THAT(
-      status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
-          HasSubstr("Invalid null attribute value for EnvAttrConnectionPool")));
-}
-
 TEST(EnvAttrConnectionPool, ParseVal_UnsupportedVal) {
   SQLUINTEGER val = 12345;
-  auto status = EnvAttrConnectionPool::ParseVal(&val);
+  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
       StatusIs(
@@ -112,38 +103,28 @@ TEST(EnvAttrConnectionPoolMatch, ConnectionPoolRelaxedMatch) {
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_MATCH_DEFAULT;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
+  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_StrictMatch) {
   SQLUINTEGER val = SQL_CP_STRICT_MATCH;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
+  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_RelaxedMatch) {
   SQLUINTEGER val = SQL_CP_RELAXED_MATCH;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
+  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kRelaxedMatch);
 }
 
-TEST(EnvAttrConnectionPoolMatch, ParseVal_NullVal) {
-  auto status = EnvAttrConnectionPoolMatch::ParseVal(nullptr);
-  EXPECT_THAT(
-      status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
-          HasSubstr(
-              "Invalid null attribute value for EnvAttrConnectionPoolMatch")));
-}
-
 TEST(EnvAttrConnectionPoolMatch, ParseVal_UnsupportedVal) {
   SQLUINTEGER val = 12345;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal(&val);
+  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
       StatusIs(
@@ -172,30 +153,21 @@ TEST(EnvAttrOdbcVersion, OdbcVers3) {
 
 TEST(EnvAttrOdbcVersion, ParseVal_ODBC2) {
   SQLINTEGER val = SQL_OV_ODBC2;
-  auto status = EnvAttrOdbcVersion::ParseVal(&val);
+  auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc2);
 }
 
 TEST(EnvAttrOdbcVersion, ParseVal_ODBC3) {
   SQLINTEGER val = SQL_OV_ODBC3;
-  auto status = EnvAttrOdbcVersion::ParseVal(&val);
+  auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
   ASSERT_STATUS_OK(status);
   EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc3);
 }
 
-TEST(EnvAttrOdbcVersion, ParseVal_NullVal) {
-  auto status = EnvAttrOdbcVersion::ParseVal(nullptr);
-  EXPECT_THAT(
-      status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
-          HasSubstr("Invalid null attribute value for EnvAttrOdbcVersion")));
-}
-
 TEST(EnvAttrOdbcVersion, ParseVal_UnsupportedVal) {
   SQLINTEGER val = -1;
-  auto status = EnvAttrOdbcVersion::ParseVal(&val);
+  auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
       StatusIs(
@@ -211,18 +183,13 @@ TEST(EnvAttrOutputNTS, OutputNTSDefault) {
 
 TEST(EnvAttrOutputNTS, ParseVal_True) {
   SQLINTEGER val = SQL_TRUE;
-  auto status = EnvAttrOutputNTS::ParseVal(&val);
+  auto status = EnvAttrOutputNTS::ParseVal((SQLPOINTER)val);
   EXPECT_EQ(status.code(), StatusCode::kOk);
-}
-
-TEST(EnvAttrOutputNTS, ParseVal_NullVal) {
-  auto status = EnvAttrOutputNTS::ParseVal(nullptr);
-  EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
 }
 
 TEST(EnvAttrOutputNTS, ParseVal_UnsupportedVal) {
   SQLINTEGER val = SQL_FALSE;
-  auto status = EnvAttrOutputNTS::ParseVal(&val);
+  auto status = EnvAttrOutputNTS::ParseVal((SQLPOINTER)val);
   EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
 }
 
@@ -230,7 +197,7 @@ TEST(GetSetAttribute, ConnectionPool_Default) {
   SQLUINTEGER set_val = SQL_CP_DEFAULT;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
-                                             &set_val, nullptr));
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS, handle.GetAttribute(SQL_ATTR_CONNECTION_POOLING,
                                              &get_val, nullptr));
@@ -241,7 +208,7 @@ TEST(GetSetAttribute, ConnectionPool_CPOff) {
   SQLUINTEGER set_val = SQL_CP_OFF;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
-                                             &set_val, nullptr));
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS, handle.GetAttribute(SQL_ATTR_CONNECTION_POOLING,
                                              &get_val, nullptr));
@@ -252,7 +219,7 @@ TEST(GetSetAttribute, ConnectionPool_OnePerDriver) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
-                                             &set_val, nullptr));
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS, handle.GetAttribute(SQL_ATTR_CONNECTION_POOLING,
                                              &get_val, nullptr));
@@ -263,33 +230,25 @@ TEST(GetSetAttribute, ConnectionPool_OnePerHenv) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_HENV;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
-                                             &set_val, nullptr));
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS, handle.GetAttribute(SQL_ATTR_CONNECTION_POOLING,
                                              &get_val, nullptr));
   EXPECT_EQ(get_val, SQL_CP_ONE_PER_HENV);
 }
 
-TEST(GetSetAttribute, ConnectionPool_Null) {
-  EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING, nullptr, nullptr));
-  EXPECT_EQ(SQL_ERROR,
-            handle.GetAttribute(SQL_ATTR_CONNECTION_POOLING, nullptr, nullptr));
-}
-
 TEST(GetSetAttribute, ConnectionPool_UnsupportedVal) {
   SQLUINTEGER val = 12345;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING, &val, nullptr));
+  EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
+                                           (SQLPOINTER)val, nullptr));
 }
 
 TEST(GetSetAttribute, ConnectionPoolDefaultMatch) {
   SQLUINTEGER set_val = SQL_CP_MATCH_DEFAULT;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_CP_MATCH, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CP_MATCH,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_CP_MATCH, &get_val, nullptr));
@@ -299,8 +258,8 @@ TEST(GetSetAttribute, ConnectionPoolDefaultMatch) {
 TEST(GetSetAttribute, ConnectionPoolStrictMatch) {
   SQLUINTEGER set_val = SQL_CP_STRICT_MATCH;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_CP_MATCH, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CP_MATCH,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_CP_MATCH, &get_val, nullptr));
@@ -310,33 +269,26 @@ TEST(GetSetAttribute, ConnectionPoolStrictMatch) {
 TEST(GetSetAttribute, ConnectionPoolRelaxedMatch) {
   SQLUINTEGER set_val = SQL_CP_RELAXED_MATCH;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_CP_MATCH, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CP_MATCH,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_CP_MATCH, &get_val, nullptr));
   EXPECT_EQ(get_val, SQL_CP_RELAXED_MATCH);
 }
 
-TEST(GetSetAttribute, ConnectionPoolMatchNullPtr) {
-  EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_CP_MATCH, nullptr, nullptr));
-  EXPECT_EQ(SQL_ERROR,
-            handle.GetAttribute(SQL_ATTR_CP_MATCH, nullptr, nullptr));
-}
-
 TEST(GetSetAttribute, ConnectionPoolMatchUnsupportedVal) {
   SQLUINTEGER val = 12345;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_CP_MATCH, &val, nullptr));
+  EXPECT_EQ(SQL_ERROR,
+            handle.SetAttribute(SQL_ATTR_CP_MATCH, (SQLPOINTER)val, nullptr));
 }
 
 TEST(GetSetAttribute, ODBCVersionODBC2) {
   SQLINTEGER set_val = SQL_OV_ODBC2;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_ODBC_VERSION, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_ODBC_VERSION,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_ODBC_VERSION, &get_val, nullptr));
@@ -346,61 +298,46 @@ TEST(GetSetAttribute, ODBCVersionODBC2) {
 TEST(GetSetAttribute, ODBCVersionODBC3) {
   SQLINTEGER set_val = SQL_OV_ODBC3;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_ODBC_VERSION, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_ODBC_VERSION,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_ODBC_VERSION, &get_val, nullptr));
   EXPECT_EQ(get_val, SQL_OV_ODBC3);
 }
 
-TEST(GetSetAttribute, ODBCVersionNull) {
-  EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_ODBC_VERSION, nullptr, nullptr));
-  EXPECT_EQ(SQL_ERROR,
-            handle.GetAttribute(SQL_ATTR_ODBC_VERSION, nullptr, nullptr));
-}
-
 TEST(GetSetAttribute, ODBCVersionInvalidValue) {
   SQLINTEGER val = -1;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_ODBC_VERSION, &val, nullptr));
+  EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_ODBC_VERSION,
+                                           (SQLPOINTER)val, nullptr));
 }
 
 TEST(GetSetAttribute, OutputNTSTrue) {
   SQLINTEGER set_val = SQL_TRUE;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_SUCCESS,
-            handle.SetAttribute(SQL_ATTR_OUTPUT_NTS, &set_val, nullptr));
+  EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_OUTPUT_NTS,
+                                             (SQLPOINTER)set_val, nullptr));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             handle.GetAttribute(SQL_ATTR_OUTPUT_NTS, &get_val, nullptr));
   EXPECT_EQ(get_val, SQL_TRUE);
 }
 
-TEST(GetSetAttribute, OutputNTSNull) {
-  EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_OUTPUT_NTS, nullptr, nullptr));
-  EXPECT_EQ(SQL_ERROR,
-            handle.GetAttribute(SQL_ATTR_OUTPUT_NTS, nullptr, nullptr));
-}
-
 TEST(GetSetAttribute, OutputNTSInvalid) {
   SQLINTEGER val = SQL_FALSE;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_OUTPUT_NTS, &val, nullptr));
+  EXPECT_EQ(SQL_ERROR,
+            handle.SetAttribute(SQL_ATTR_OUTPUT_NTS, (SQLPOINTER)val, nullptr));
 }
 
 TEST(GetSetAttribute, InvalidEnvironmentAttribute) {
   SQLINTEGER val = SQL_FALSE;
   EnvironmentHandle handle;
-  EXPECT_EQ(SQL_ERROR,
-            handle.SetAttribute(SQL_ATTR_ACCESS_MODE, &val, nullptr));
-  EXPECT_EQ(SQL_ERROR,
-            handle.GetAttribute(SQL_ATTR_ACCESS_MODE, &val, nullptr));
+  EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_ACCESS_MODE,
+                                           (SQLPOINTER)val, nullptr));
+  EXPECT_EQ(SQL_ERROR, handle.GetAttribute(SQL_ATTR_ACCESS_MODE,
+                                           (SQLPOINTER)val, nullptr));
 }
 
 TEST(GetSetAttribute, DefaultValues) {

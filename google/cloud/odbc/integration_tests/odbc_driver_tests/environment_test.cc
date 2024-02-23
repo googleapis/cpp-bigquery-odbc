@@ -26,7 +26,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerDriver) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val, 0),
             SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),
@@ -41,7 +42,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_Default) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val, 0),
             SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),
@@ -56,7 +58,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_CPOff) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val, 0),
             SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),
@@ -71,7 +74,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerHenv) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val, 0),
             SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),
@@ -86,8 +90,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_Default) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &get_val, 0, nullptr),
             SQL_SUCCESS);
   EXPECT_EQ(get_val, SQL_CP_STRICT_MATCH);
@@ -100,8 +105,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_StrictMatch) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &get_val, 0, nullptr),
             SQL_SUCCESS);
   EXPECT_EQ(get_val, SQL_CP_STRICT_MATCH);
@@ -114,8 +120,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
   SQLUINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &get_val, 0, nullptr),
             SQL_SUCCESS);
   EXPECT_EQ(get_val, SQL_CP_RELAXED_MATCH);
@@ -128,8 +135,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
   SQLINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &get_val, 0, nullptr),
       SQL_SUCCESS);
@@ -143,8 +151,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC3) {
   SQLINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &get_val, 0, nullptr),
       SQL_SUCCESS);
@@ -158,8 +167,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
   SQLINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, &set_val, 0),
-            SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, (SQLPOINTER)set_val, 0),
+      SQL_SUCCESS);
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, &get_val, 0, nullptr),
       SQL_SUCCESS);
@@ -199,15 +209,18 @@ TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
   SQLUINTEGER set_val2 = 12345;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &set_val1, 0),
-            SQL_ERROR);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, &set_val1, 0),
-            SQL_ERROR);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &set_val2, 0),
-            SQL_ERROR);
   EXPECT_EQ(
-      SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val2, 0),
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)set_val1, 0),
       SQL_ERROR);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, (SQLPOINTER)set_val1, 0),
+      SQL_ERROR);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val2, 0),
+      SQL_ERROR);
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val2, 0),
+            SQL_ERROR);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
@@ -217,21 +230,11 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
   SQLINTEGER get_val;
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ACCESS_MODE, &set_val, 0), SQL_ERROR);
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ACCESS_MODE, (SQLPOINTER)set_val, 0),
+            SQL_ERROR);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ACCESS_MODE, &get_val, 0, nullptr),
             SQL_ERROR);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-}
-
-TEST(BQDriverTest, SQLGetSetEnvAttr_NullHandle) {
-  SQLUINTEGER set_val = SQL_CP_OFF;
-  SQLUINTEGER get_val;
-
-  EXPECT_EQ(SQLSetEnvAttr(nullptr, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
-            SQL_ERROR);
-  EXPECT_EQ(
-      SQLGetEnvAttr(nullptr, SQL_ATTR_CONNECTION_POOLING, &get_val, 0, nullptr),
-      SQL_ERROR);
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
@@ -241,7 +244,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
 
   EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &set_val, 0),
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val, 0),
             SQL_ERROR);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),

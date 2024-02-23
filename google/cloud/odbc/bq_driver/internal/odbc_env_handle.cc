@@ -74,13 +74,8 @@ EnvAttrOdbcVersion::EnvAttrOdbcVersion(EnvAttrOdbcVersVal const& val) {
 StatusOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
     void* value) {
   TraceOptions& opts = *(*kTraceOptsConsole);
-  if (value == nullptr) {
-    std::string msg = "Invalid null attribute value for EnvAttrConnectionPool";
-    TracePrintInternal(opts, msg);
-    return Status(StatusCode::kInvalidArgument, msg);
-  }
-  auto* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
-  switch (*actual_value) {
+  auto actual_value = reinterpret_cast<std::size_t>(value);
+  switch (actual_value) {
     case SQL_CP_OFF: {
       return EnvAttrConnectionPoolVal::kCpOff;
     }
@@ -93,7 +88,7 @@ StatusOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
     default: {
       std::string msg =
           "Unsupported attribute value for EnvAttrConnectionPool: ";
-      msg.append(std::to_string(*actual_value));
+      msg.append(std::to_string(actual_value));
       TracePrintInternal(opts, msg);
       return Status(StatusCode::kInvalidArgument, msg);
     }
@@ -102,14 +97,8 @@ StatusOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
 
 StatusOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(void* value) {
   TraceOptions& opts = *(*kTraceOptsConsole);
-  if (value == nullptr) {
-    std::string msg =
-        "Invalid null attribute value for EnvAttrConnectionPoolMatch";
-    TracePrintInternal(opts, msg);
-    return Status(StatusCode::kInvalidArgument, msg);
-  }
-  auto* actual_value = reinterpret_cast<SQLUINTEGER*>(value);
-  switch (*actual_value) {
+  auto actual_value = reinterpret_cast<std::size_t>(value);
+  switch (actual_value) {
     case SQL_CP_RELAXED_MATCH: {
       return EnvAttrCPMatchVal::kRelaxedMatch;
     }
@@ -119,7 +108,7 @@ StatusOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(void* value) {
     default: {
       std::string msg =
           "Unsupported attribute value for EnvAttrConnectionPoolMatch: ";
-      msg.append(std::to_string(*actual_value));
+      msg.append(std::to_string(actual_value));
       TracePrintInternal(opts, msg);
       return Status(StatusCode::kInvalidArgument, msg);
     }
@@ -128,13 +117,8 @@ StatusOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(void* value) {
 
 StatusOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
   TraceOptions& opts = *(*kTraceOptsConsole);
-  if (value == nullptr) {
-    std::string msg = "Invalid null attribute value for EnvAttrOdbcVersion";
-    TracePrintInternal(opts, msg);
-    return Status(StatusCode::kInvalidArgument, msg);
-  }
-  auto* actual_value = reinterpret_cast<SQLINTEGER*>(value);
-  switch (*actual_value) {
+  auto actual_value = reinterpret_cast<std::size_t>(value);
+  switch (actual_value) {
     case SQL_OV_ODBC2: {
       return EnvAttrOdbcVersVal::kOdbc2;
     }
@@ -143,7 +127,7 @@ StatusOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
     }
     default: {
       std::string msg = "Unsupported attribute value for EnvAttrOdbcVersion: ";
-      msg.append(std::to_string(*actual_value));
+      msg.append(std::to_string(actual_value));
       TracePrintInternal(opts, msg);
       return Status(StatusCode::kInvalidArgument, msg);
     }
@@ -152,19 +136,14 @@ StatusOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
 
 Status EnvAttrOutputNTS::ParseVal(void* value) {
   TraceOptions& opts = *(*kTraceOptsConsole);
-  if (value == nullptr) {
-    std::string msg = "Invalid null attribute value for EnvAttrOutputNTS";
-    TracePrintInternal(opts, msg);
-    return Status(StatusCode::kInvalidArgument, msg);
-  }
-  auto* actual_value = reinterpret_cast<SQLINTEGER*>(value);
-  switch (*actual_value) {
+  auto actual_value = reinterpret_cast<std::size_t>(value);
+  switch (actual_value) {
     case SQL_TRUE: {
       return Status(StatusCode::kOk, "");
     }
     default: {
       std::string msg = "Unsupported attribute value for EnvAttrOutputNTS: ";
-      msg.append(std::to_string(*actual_value));
+      msg.append(std::to_string(actual_value));
       TracePrintInternal(opts, msg);
       return Status(StatusCode::kInvalidArgument, msg);
     }
@@ -174,13 +153,6 @@ Status EnvAttrOutputNTS::ParseVal(void* value) {
 SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
                                           void* /*length*/) {
   TraceOptions& opts = *(*kTraceOptsConsole);
-  if (value == nullptr) {
-    TracePrintInternal(opts, "Null attribute output value ptr");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
-  }
-
   switch (attribute) {
     case SQL_ATTR_CONNECTION_POOLING: {
       if (connection_pool_ == nullptr) {

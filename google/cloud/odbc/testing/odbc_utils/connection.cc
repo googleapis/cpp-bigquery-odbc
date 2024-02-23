@@ -20,8 +20,8 @@ void SetAttributes(std::shared_ptr<ConnectionHandle> conn, int timeout) {
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
 
-  SQLUINTEGER set_val = SQL_OV_ODBC3;
-  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &set_val, 0);
+  status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
+                         (SQLPOINTER)SQL_OV_ODBC3, 0);
   CheckError(status, "SQLSetEnvAttr", conn);
 
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);

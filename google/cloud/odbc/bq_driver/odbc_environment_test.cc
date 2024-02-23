@@ -26,25 +26,17 @@ TEST(SetEnvAttr, Success) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  EXPECT_EQ(SQL_SUCCESS, SQLSetEnvAttrInternal(
-                             env_handle, SQL_ATTR_CONNECTION_POOLING, &val, 0));
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
-}
-
-TEST(SetEnvAttr, NullValue) {
-  SQLHENV env_handle;
-
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  EXPECT_EQ(SQL_ERROR,
+  EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  nullptr, 0));
+                                  (SQLPOINTER)val, 0));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
 TEST(SetEnvAttr, InvalidHandle) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  EXPECT_EQ(SQL_ERROR, SQLSetEnvAttrInternal(
-                           nullptr, SQL_ATTR_CONNECTION_POOLING, &val, 0));
+  EXPECT_EQ(SQL_ERROR,
+            SQLSetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING,
+                                  (SQLPOINTER)val, 0));
 }
 
 TEST(GetEnvAttr, Success) {
@@ -54,7 +46,7 @@ TEST(GetEnvAttr, Success) {
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  &set_val, 0));
+                                  (SQLPOINTER)set_val, 0));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             SQLGetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
