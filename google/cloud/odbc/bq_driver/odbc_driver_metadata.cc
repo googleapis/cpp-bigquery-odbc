@@ -63,7 +63,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
     return SQL_INVALID_HANDLE;
   }
 
-  auto handle = *handle_result;
+  auto* handle = *handle_result;
 
   SQLGetInfoSqlChar info_val_char;
   switch (info_type) {
