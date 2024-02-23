@@ -66,6 +66,7 @@ function (odbc_define_tests)
         odbc_driver_tests/connection_test.cc
         odbc_driver_tests/descriptor_test.cc
         odbc_driver_tests/driver_properties_test.cc
+        odbc_driver_tests/environment_test.cc
         odbc_driver_tests/statement_test.cc)
 
     target_link_libraries(all_tests google_cloud_odbc_testing_odbc_utils

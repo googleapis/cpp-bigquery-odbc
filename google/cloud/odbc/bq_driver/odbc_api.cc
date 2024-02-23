@@ -49,9 +49,11 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
@@ -59,9 +61,11 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 
@@ -600,13 +604,19 @@ SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
   // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLSetEnvAttr(environmentHandle, attribute, value,
+                                   valueStringLen, *(*kTraceOptsConsole));
 
   // Call to internal function for SQLSetEnvAttr in odbc_environment.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLSetEnvAttrInternal(
+      environmentHandle, attribute, value, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLSetEnvAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
   return rc;
@@ -622,13 +632,20 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueBufferLen,
                                 SQLINTEGER* valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
   // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  TraceFunctionEntry_SQLGetEnvAttr(environmentHandle, attribute, value,
+                                   valueBufferLen, valueStringLen,
+                                   *(*kTraceOptsConsole));
 
   // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetEnvAttrInternal(
+      environmentHandle, attribute, value, valueBufferLen, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  TraceFunctionExit_SQLGetEnvAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
   return rc;
