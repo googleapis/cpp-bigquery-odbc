@@ -15,11 +15,13 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_STATEMENT_H
 
+#include "google/cloud/odbc/bq_driver/odbc_commons.h"
+
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC statements:
 //
-// SQLAllocStmtInternal
+// SQLAllocStmtHandle
 // SQLSetStmtAttrInternal
 // SQLGetStmtAttrInternal
 // SQLFreeStmtInternal
@@ -28,6 +30,8 @@
 ///////////////////////////////////////////////////////////
 
 namespace google::cloud::odbc_bq_driver {
+
+SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 

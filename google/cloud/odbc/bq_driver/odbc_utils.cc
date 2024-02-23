@@ -19,6 +19,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 StatusOr<ConnectionHandle*> ValidateConnectionHandle(
     SQLHDBC connection_handle) {
@@ -58,6 +59,18 @@ StatusOr<EnvironmentHandle*> ValidateEnvironmentHandle(
 
   return ValidateHandle<EnvironmentHandle>(HandleType::kEnvHandle,
                                            env_handle_wrapped);
+}
+
+StatusOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
+  // Validate nullness.
+  if (!stmt_handle) {
+    return Status(StatusCode::kInvalidArgument, "Null statement handle");
+  }
+  // Validate the internal members.
+  auto* stmt_handle_wrapped = reinterpret_cast<HandleWrapped*>(stmt_handle);
+
+  return ValidateHandle<StatementHandle>(HandleType::kStatementHandle,
+                                         stmt_handle_wrapped);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

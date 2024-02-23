@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
+#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
@@ -118,13 +119,17 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       break;
     }
     case SQL_HANDLE_STMT: {
-      // Call to Acquire mutex for statement handle in odbc_lock.h.
+      // Call to Acquire mutex for connection handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+      TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                        *(*kTraceOptsConsole));
 
-      // Call to Allocate statement handle in odbc_statement.h.
+      rc = google::cloud::odbc_bq_driver::SQLAllocStmtHandle(inputHandle,
+                                                             outputHandle);
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-      // Call to Release mutex for statement handle in odbc_lock.h.
+      TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
+      // Call to Release mutex for connection handle in odbc_lock.h.
       break;
     }
     case SQL_HANDLE_DESC: {

@@ -13,14 +13,13 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
   if (!in_handle) {
@@ -38,6 +37,9 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
     case SQL_HANDLE_DBC:
       return FreeHandle<ConnectionHandle>(HandleType::kConnHandle,
                                           in_handle_wrapped);
+    case SQL_HANDLE_STMT:
+      return FreeHandle<StatementHandle>(HandleType::kStatementHandle,
+                                         in_handle_wrapped);
   }
   // TODO(#158): SQLGetDiagRec should handle this
   return SQL_INVALID_HANDLE;

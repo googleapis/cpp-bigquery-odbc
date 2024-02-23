@@ -16,6 +16,8 @@
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {

@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
@@ -51,6 +52,9 @@ ValidateConnectionHandle(SQLHDBC connection_handle);
 
 StatusOr<google::cloud::odbc_bq_driver_internal::EnvironmentHandle*>
 ValidateEnvironmentHandle(SQLHENV environment_handle);
+
+StatusOr<google::cloud::odbc_bq_driver_internal::StatementHandle*>
+ValidateStatementHandle(SQLHENV stmt_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 
