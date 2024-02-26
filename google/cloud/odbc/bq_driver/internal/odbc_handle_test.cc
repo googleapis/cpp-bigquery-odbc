@@ -12,29 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLE_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLE_H
-
-#include "google/cloud/odbc/bq_driver/internal/diagnostics.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
+#include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-class Handle {
- public:
-  explicit Handle() = default;
-  ~Handle() = default;
+TEST(GetDiagnostics, GetDiagnosticsSuccess) {
+  Handle handle;
+  handle.GetDiagnostics().AddStatusRecord(
+      odbc_internal::StatusRecord{"00000", "message"});
 
-  Handle(Handle const&) = default;
-  Handle& operator=(Handle const&) = default;
-  Handle(Handle&&) = default;
-  Handle& operator=(Handle&&) = default;
+  auto diagnostics = handle.GetDiagnostics();
 
-  Diagnostics& GetDiagnostics() { return diagnostics_; }
-
- private:
-  Diagnostics diagnostics_;
-};
+  EXPECT_FALSE(diagnostics.GetStatusRecord().empty());
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
-
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_HANDLE_H

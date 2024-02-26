@@ -199,6 +199,25 @@ TEST(ReturnCode, ReturnNotAssigned_EmptyCode) {
   EXPECT_EQ(SQL_ERROR, actual.GetCalculatedReturnCode());
 }
 
+StatusRecordOr<std::string> ReturnString() {
+  std::string a = "ok";
+  return a;
+}
+
+StatusRecordOr<std::string> ReturnFailure() {
+  return StatusRecord{k42000, "message"};
+}
+
+TEST(ImplicitConversion, ReturnSuccess) {
+  StatusRecordOr<std::string> success = ReturnString();
+  EXPECT_TRUE(success);
+}
+
+TEST(ImplicitConversion, ReturnFailure) {
+  StatusRecordOr<std::string> success = ReturnFailure();
+  EXPECT_FALSE(success);
+}
+
 /// A class without a default constructor.
 class NoDefaultConstructor {
  public:

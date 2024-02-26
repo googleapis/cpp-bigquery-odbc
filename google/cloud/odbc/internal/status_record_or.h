@@ -69,13 +69,13 @@ class StatusRecordOr final {
    *
    * @param rhs the status to initialize the object.
    */
-  explicit StatusRecordOr(StatusRecord status)
-      : status_record_(std::move(status)) {}
-  explicit StatusRecordOr(StatusRecord status, SQLRETURN return_code)
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  StatusRecordOr(StatusRecord status) : status_record_(std::move(status)) {}
+  StatusRecordOr(StatusRecord status, SQLRETURN return_code)
       : status_record_(std::move(status)),
         return_code_(std::move(return_code)) {}
-  explicit StatusRecordOr(std::optional<StatusRecord> status,
-                          std::optional<SQLRETURN> return_code)
+  StatusRecordOr(std::optional<StatusRecord> status,
+                 std::optional<SQLRETURN> return_code)
       : status_record_(std::move(status)),
         return_code_(std::move(return_code)) {}
 
@@ -120,7 +120,8 @@ class StatusRecordOr final {
    *
    * @throws ... If `T`'s move constructor throws.
    */
-  explicit StatusRecordOr(T&& rhs) : value_(std::move(rhs)) {}
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  StatusRecordOr(T&& rhs) : value_(std::move(rhs)) {}
 
   /**
    * Creates a new `StatusRecordOr<T>` holding the value @p rhs.
