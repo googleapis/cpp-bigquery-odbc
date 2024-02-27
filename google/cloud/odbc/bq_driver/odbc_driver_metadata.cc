@@ -91,7 +91,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
 
 }  // namespace
 
-SQLRETURN SQLGetFunctionsInternal(ConnectionHandle*  /*connection_handle*/,
+SQLRETURN SQLGetFunctionsInternal(ConnectionHandle* /*connection_handle*/,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;

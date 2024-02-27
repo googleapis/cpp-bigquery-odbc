@@ -17,7 +17,6 @@
 // ODBC APIs defined in <sql.h>, <sqlext.h> and <sqlucode.h>
 //////////////////////////////////////////////////////////////////
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"

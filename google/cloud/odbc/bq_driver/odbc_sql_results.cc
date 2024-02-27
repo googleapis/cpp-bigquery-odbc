@@ -15,13 +15,11 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
 SQLRETURN SQLBindColInternal(StatementHandle* statement_handle,
                              SQLUSMALLINT column_number,
