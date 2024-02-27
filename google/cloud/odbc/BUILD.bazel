@@ -32,16 +32,16 @@ cc_library(
 )
 
 [cc_test(
-    name = driver_utils_test.replace("/", "_").replace(".cc", ""),
+    name = driver_internal_utils_test.replace("/", "_").replace(".cc", ""),
     timeout = "long",
-    srcs = [driver_utils_test],
+    srcs = [driver_internal_utils_test],
     tags = ["unit-tests"],
     deps = [
         "//:google_cloud_odbc_bq_driver_internal",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
     ],
-) for driver_utils_test in glob(["bq_driver/internal/*_test.cc"])]
+) for driver_internal_utils_test in glob(["bq_driver/internal/*_test.cc"])]
 
 # Library target for the Driver
 
@@ -56,3 +56,14 @@ cc_library(
         "//:google_cloud_odbc_bq_driver_internal",
     ],
 )
+
+[cc_test(
+    name = driver_utils_test.replace("/", "_").replace(".cc", ""),
+    srcs = [driver_utils_test],
+    tags = ["unit-tests"],
+    deps = [
+        "//:google_cloud_odbc_bq_driver",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
+        "@com_google_googletest//:gtest_main",
+    ],
+) for driver_utils_test in glob(["bq_driver/*_test.cc"])]
