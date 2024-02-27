@@ -343,8 +343,9 @@ TEST(InsertJob, NoJobConfiguration) {
 
   StatusOr<Job> job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument,
-                                     HasSubstr("Invalid Job object")));
+  EXPECT_THAT(job_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Required parameter is missing: query")));
 }
 
 TEST(InsertJob, NoJobConfigurationQuery) {
@@ -369,8 +370,9 @@ TEST(InsertJob, NoJobConfigurationQuery) {
 
   StatusOr<Job> job_response = job_client.InsertJob(request);
 
-  EXPECT_THAT(job_response, StatusIs(StatusCode::kInvalidArgument,
-                                     HasSubstr("Invalid Job object")));
+  EXPECT_THAT(job_response,
+              StatusIs(StatusCode::kInvalidArgument,
+                       HasSubstr("Required parameter is missing: query")));
 }
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
