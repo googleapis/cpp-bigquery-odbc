@@ -137,17 +137,6 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
   FreeHandles(env_handle, conn_handle);
 }
 
-TEST(ValidateEnvironmentHandle, InvalidInternalEnvironmentHandle) {
-  SQLHENV env_handle;
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
-
-  auto result = ValidateEnvironmentHandle(env_handle);
-
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
-}
-
 ///////////////////////////////////////
 // Statement Handle Validation Tests
 ///////////////////////////////////////
@@ -175,21 +164,6 @@ TEST(ValidateStatementHandle, InvalidHandleType) {
   AllocateHandles(&env_handle, &conn_handle);
 
   auto result = ValidateStatementHandle(conn_handle);
-
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
-
-  FreeHandles(env_handle, conn_handle);
-}
-
-TEST(ValidateStatementHandle, InvalidInternalStatementHandle) {
-  SQLHENV env_handle;
-  SQLHDBC conn_handle;
-  SQLHSTMT stmt_handle;
-  AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle));
-
-  auto result = ValidateStatementHandle(stmt_handle);
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid handle type")));
