@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -25,6 +26,8 @@ using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
+using google::cloud::odbc_tests::AllocateHandles;
+using google::cloud::odbc_tests::FreeHandles;
 using ::testing::StrEq;
 
 // Helper class and functions specific to odbc utils unit tests.
@@ -34,23 +37,6 @@ class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
   explicit OdbcUtilsConnectionHandleTest() = default;
   void SetConnected() { is_connected_ = true; }
 };
-
-void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(env_handle_ref));
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocConnHandle(*env_handle_ref, conn_handle_ref));
-}
-
-void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle));
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
-}
-
-void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle,
-                 SQLHSTMT stmt_handle) {
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle));
-  FreeHandles(env_handle, conn_handle);
-}
-
 }  // namespace
 
 ///////////////////////////////////////
@@ -79,12 +65,12 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
 TEST(ValidateConnectionHandle, InvalidHandleType) {
   SQLHENV env_handle;
   SQLHDBC conn_handle;
-  AllocateHandles(&env_handle, &conn_handle);
+  ASSERT_EQ(SQL_SUCCESS, AllocateHandles(&env_handle, &conn_handle));
   auto result = ValidateConnectionHandle(env_handle);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
-  FreeHandles(env_handle, conn_handle);
+  EXPECT_EQ(SQL_SUCCESS, FreeHandles(env_handle, conn_handle));
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
@@ -123,13 +109,13 @@ TEST(ValidateEnvironmentHandle, InvalidNullPtr) {
 TEST(ValidateEnvironmentHandle, InvalidHandleType) {
   SQLHENV env_handle;
   SQLHDBC conn_handle;
-  AllocateHandles(&env_handle, &conn_handle);
+  ASSERT_EQ(SQL_SUCCESS, AllocateHandles(&env_handle, &conn_handle));
   auto result = ValidateEnvironmentHandle(conn_handle);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
 
-  FreeHandles(env_handle, conn_handle);
+  EXPECT_EQ(SQL_SUCCESS, FreeHandles(env_handle, conn_handle));
 }
 
 ///////////////////////////////////////
@@ -158,14 +144,14 @@ TEST(ValidateStatementHandle, InvalidNullPtr) {
 TEST(ValidateStatementHandle, InvalidHandleType) {
   SQLHENV env_handle;
   SQLHDBC conn_handle;
-  AllocateHandles(&env_handle, &conn_handle);
+  ASSERT_EQ(SQL_SUCCESS, AllocateHandles(&env_handle, &conn_handle));
 
   auto result = ValidateStatementHandle(conn_handle);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
 
-  FreeHandles(env_handle, conn_handle);
+  EXPECT_EQ(SQL_SUCCESS, FreeHandles(env_handle, conn_handle));
 }
 
 }  // namespace google::cloud::odbc_bq_driver

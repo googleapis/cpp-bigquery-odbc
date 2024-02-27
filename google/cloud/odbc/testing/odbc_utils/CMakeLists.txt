@@ -37,8 +37,10 @@ add_library(
     statement.cc
     statement.h)
 
-target_link_libraries(google_cloud_odbc_testing_odbc_utils
-                      google-cloud-cpp::experimental-bigquery_rest GTest::gmock)
+target_link_libraries(
+    google_cloud_odbc_testing_odbc_utils
+    google-cloud-cpp::experimental-bigquery_rest google_cloud_odbc_bq_driver
+    GTest::gmock)
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
 # target

@@ -166,6 +166,10 @@ std::string getSchemaStr(Schema schema);
 inline void CheckError(SQLRETURN status, std::string const api,
                        std::shared_ptr<ConnectionHandle> conn);
 
+SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref);
+
+SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
+
 void ExecuteStatement(std::shared_ptr<ConnectionHandle> conn, char stmt[]);
 
 // Executes the SQLDescribeCol API to initialize the Column struct

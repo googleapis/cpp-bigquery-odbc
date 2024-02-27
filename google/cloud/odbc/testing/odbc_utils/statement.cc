@@ -280,7 +280,7 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
         if (SQL_SUCCEEDED(status)) {
           status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, i_c + 1,
                                    &resp_status, SQL_INTEGER, &resp_status_len);
-          if (status = SQL_NO_DATA) {
+          if (status == SQL_NO_DATA) {
             break;
           }
           CheckError(status, "SQLGetDiagField", conn);
