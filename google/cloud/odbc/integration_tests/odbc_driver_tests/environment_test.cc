@@ -246,10 +246,10 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
   EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
                           (SQLPOINTER)set_val, 0),
-            SQL_ERROR);
+            SQL_INVALID_HANDLE);
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
                           nullptr),
-            SQL_ERROR);
+            SQL_INVALID_HANDLE);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS

@@ -42,7 +42,7 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
     TracePrintInternal(opts, env_handle_status.status().message());
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
+    return SQL_INVALID_HANDLE;
   }
 
   EnvironmentHandle* env_handle = *env_handle_status;
@@ -63,7 +63,7 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
     TracePrintInternal(opts, env_handle_status.status().message());
     // TODO(b/308656768,b/308656826): Record error or diagnostic info for
     // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
+    return SQL_INVALID_HANDLE;
   }
 
   if (value == nullptr) {

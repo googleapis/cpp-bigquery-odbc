@@ -34,7 +34,7 @@ TEST(SetEnvAttr, Success) {
 
 TEST(SetEnvAttr, InvalidHandle) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  EXPECT_EQ(SQL_ERROR,
+  EXPECT_EQ(SQL_INVALID_HANDLE,
             SQLSetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING,
                                   (SQLPOINTER)val, 0));
 }
@@ -67,7 +67,7 @@ TEST(GetEnvAttr, NullValue) {
 
 TEST(GetEnvAttr, InvalidHandle) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  EXPECT_EQ(SQL_ERROR,
+  EXPECT_EQ(SQL_INVALID_HANDLE,
             SQLGetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING, &val, 0,
                                   nullptr));
 }
