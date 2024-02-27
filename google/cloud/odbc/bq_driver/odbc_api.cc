@@ -25,6 +25,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
 
@@ -81,24 +82,6 @@ SQLRETURN RecordStatus(/* SQLSTATE state, */ Status const& s) {
   }
   return rc;
 }
-
-bool ClearDiagnostics(SQLHANDLE input_handle) {
-  if (input_handle == nullptr) {
-    return false;
-  }
-  auto* handle_wrapped =
-      reinterpret_cast<google::cloud::odbc_bq_driver::HandleWrapped*>(
-          input_handle);
-  if (handle_wrapped->handle_ref == nullptr) {
-    return false;
-  }
-  auto* internal_handle_ptr =
-      reinterpret_cast<google::cloud::odbc_bq_driver_internal::Handle*>(
-          handle_wrapped->handle_ref);
-
-  internal_handle_ptr->GetDiagnostics().ClearDiagnostics();
-  return true;
-}
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -128,9 +111,14 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       break;
     }
     case SQL_HANDLE_DBC: {
-      if (!ClearDiagnostics(inputHandle)) {
+      google::cloud::odbc_bq_driver_internal::EnvironmentHandle*
+          environment_handle =
+              google::cloud::odbc_bq_driver::CastToEnvironmentHandle(
+                  inputHandle);
+      if (environment_handle == nullptr) {
         return SQL_INVALID_HANDLE;
       }
+      environment_handle->GetDiagnostics().ClearDiagnostics();
       // Call to Acquire mutex for connection handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
       TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
@@ -145,9 +133,14 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       break;
     }
     case SQL_HANDLE_STMT: {
-      if (!ClearDiagnostics(inputHandle)) {
+      google::cloud::odbc_bq_driver_internal::ConnectionHandle*
+          connection_handle =
+              google::cloud::odbc_bq_driver::CastToConnectionHandle(
+                  inputHandle);
+      if (connection_handle == nullptr) {
         return SQL_INVALID_HANDLE;
       }
+      connection_handle->GetDiagnostics().ClearDiagnostics();
       // Call to Acquire mutex for connection handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
       TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
@@ -162,9 +155,13 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       break;
     }
     case SQL_HANDLE_DESC: {
-      if (!ClearDiagnostics(inputHandle)) {
+      google::cloud::odbc_bq_driver_internal::StatementHandle*
+          statement_handle =
+              google::cloud::odbc_bq_driver::CastToStatementHandle(inputHandle);
+      if (statement_handle == nullptr) {
         return SQL_INVALID_HANDLE;
       }
+      statement_handle->GetDiagnostics().ClearDiagnostics();
       // Call to Acquire mutex for descriptor handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
@@ -193,9 +190,12 @@ SQLRETURN SQL_API SQLDriverConnect(
     SQLSMALLINT inConnectionStringLen, SQLCHAR* outConnectionString,
     SQLSMALLINT outConnectionStringBufferLen,
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -228,9 +228,12 @@ SQLRETURN SQL_API SQLDriverConnectW(
     SQLWCHAR* inConnectionString, SQLSMALLINT inConnectionStringLen,
     SQLWCHAR* outConnectionString, SQLSMALLINT outConnectionStringBufferLen,
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -259,9 +262,6 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
                                    SQLCHAR* outConnectionString,
                                    SQLSMALLINT outConnectionStringBufferLen,
                                    SQLSMALLINT* outConnectionStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -284,9 +284,6 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                     SQLWCHAR* outConnectionString,
                                     SQLSMALLINT outConnectionStringBufferLen,
                                     SQLSMALLINT* outConnectionStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -313,9 +310,12 @@ SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
                              SQLSMALLINT serverNameLen, SQLCHAR* userName,
                              SQLSMALLINT userNameLen, SQLCHAR* authString,
                              SQLSMALLINT authStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -341,9 +341,12 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                               SQLSMALLINT serverNameLen, SQLWCHAR* userName,
                               SQLSMALLINT userNameLen, SQLWCHAR* authString,
                               SQLSMALLINT authStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -371,9 +374,12 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
                              SQLPOINTER infoValue,
                              SQLSMALLINT infoValueBufferLen,
                              SQLSMALLINT* infoValueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -402,9 +408,12 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
                               SQLPOINTER infoValue,
                               SQLSMALLINT infoValueBufferLen,
                               SQLSMALLINT* infoValueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -430,9 +439,12 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
 SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
                                   SQLUSMALLINT functionId,
                                   SQLUSMALLINT* supportedFunction) {
-  if (!ClearDiagnostics(connectionHandle)) {
+  google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle =
+      google::cloud::odbc_bq_driver::CastToConnectionHandle(connectionHandle);
+  if (connection_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  connection_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -460,9 +472,12 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
                                  SQLSMALLINT dataType) {
-  if (!ClearDiagnostics(statementHandle)) {
+  google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle =
+      google::cloud::odbc_bq_driver::CastToStatementHandle(statementHandle);
+  if (statement_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  statement_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -492,9 +507,6 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER valueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -514,9 +526,6 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
 SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
                                      SQLINTEGER attribute, SQLPOINTER value,
                                      SQLINTEGER valueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -543,9 +552,6 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER valueBufferLen,
                                     SQLINTEGER* valueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -566,9 +572,6 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                                      SQLINTEGER attribute, SQLPOINTER value,
                                      SQLINTEGER valueBufferLen,
                                      SQLINTEGER* valueStringLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -593,9 +596,6 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
                                  SQLPOINTER value, SQLINTEGER valueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -613,9 +613,6 @@ SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
 SQLRETURN SQL_API SQLSetStmtAttrW(SQLHSTMT statementHandle,
                                   SQLINTEGER attribute, SQLPOINTER value,
                                   SQLINTEGER valueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -639,9 +636,6 @@ SQLRETURN SQL_API SQLSetStmtAttrW(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLGetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
                                  SQLPOINTER value, SQLINTEGER valueBufferLen,
                                  SQLINTEGER* valueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -660,9 +654,6 @@ SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
                                   SQLINTEGER attribute, SQLPOINTER value,
                                   SQLINTEGER valueBufferLen,
                                   SQLINTEGER* valueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -685,9 +676,6 @@ SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueStringLen) {
-  if (!ClearDiagnostics(environmentHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -716,9 +704,6 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueBufferLen,
                                 SQLINTEGER* valueStringLen) {
-  if (!ClearDiagnostics(environmentHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -751,9 +736,6 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
                                   SQLPOINTER outDescValue,
                                   SQLINTEGER outDescValueBufferLen,
                                   SQLINTEGER* outDescValueStringLen) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -773,9 +755,6 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
                                    SQLPOINTER outDescValue,
                                    SQLINTEGER outDescValueBufferLen,
                                    SQLINTEGER* outDescValueStringLen) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -802,9 +781,6 @@ SQLRETURN SQL_API SQLGetDescRec(
     SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
     SQLSMALLINT* descType, SQLSMALLINT* descSubType, SQLLEN* descOctetLen,
     SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -824,9 +800,6 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
     SQLSMALLINT* descType, SQLSMALLINT* descSubType, SQLLEN* descOctetLen,
     SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -852,9 +825,6 @@ SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
                                   SQLSMALLINT fieldIdentifier,
                                   SQLPOINTER descValue,
                                   SQLINTEGER descValueBufferLen) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -874,9 +844,6 @@ SQLRETURN SQL_API SQLSetDescFieldW(SQLHDESC descriptorHandle,
                                    SQLSMALLINT fieldIdentifier,
                                    SQLPOINTER descValue,
                                    SQLINTEGER descValueBufferLen) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -905,9 +872,6 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
                                 SQLSMALLINT descScale, SQLPOINTER descData,
                                 SQLLEN* descOctetLenPtr,
                                 SQLLEN* descIndicator) {
-  if (!ClearDiagnostics(descriptorHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -927,12 +891,6 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
                               SQLHDESC targetDescHandle) {
-  if (!ClearDiagnostics(sourceDescHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
-  if (!ClearDiagnostics(targetDescHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -952,9 +910,6 @@ SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
                              SQLINTEGER statementTextLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -971,9 +926,6 @@ SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
 ////////////////////////////////////////
 SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
                               SQLINTEGER statementTextLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -999,9 +951,6 @@ SQLRETURN SQL_API SQLBindParameter(
     SQLSMALLINT paramCType, SQLSMALLINT paramSqlType, SQLULEN paramColSize,
     SQLSMALLINT paramScale, SQLPOINTER paramDataValue,
     SQLLEN paramDataValueBufferLen, SQLLEN* paramDataValueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1023,9 +972,6 @@ SQLRETURN SQL_API SQLGetCursorName(SQLHSTMT statementHandle,
                                    SQLCHAR* cursorName,
                                    SQLSMALLINT cursorNameBufferLen,
                                    SQLSMALLINT* cursorNameStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1044,9 +990,6 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
                                     SQLWCHAR* cursorName,
                                     SQLSMALLINT cursorNameBufferLen,
                                     SQLSMALLINT* cursorNameStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1070,9 +1013,6 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
                                    SQLCHAR* cursorName,
                                    SQLSMALLINT cursorNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1090,9 +1030,6 @@ SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
                                     SQLWCHAR* cursorName,
                                     SQLSMALLINT cursorNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1115,9 +1052,6 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlexecute-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1141,9 +1075,6 @@ SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
 SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
                                 SQLCHAR* statementText,
                                 SQLINTEGER statementTextLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1161,9 +1092,6 @@ SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
                                  SQLWCHAR* statementText,
                                  SQLINTEGER statementTextLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1191,9 +1119,6 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
                                SQLCHAR* outStatementText,
                                SQLINTEGER outStatementTextBufferLen,
                                SQLINTEGER* outStatementTextLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -1216,9 +1141,6 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
                                 SQLWCHAR* outStatementText,
                                 SQLINTEGER outStatementTextBufferLen,
                                 SQLINTEGER* outStatementTextLen) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -1243,9 +1165,6 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
                                SQLSMALLINT* paramCount) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1266,9 +1185,6 @@ SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
                                SQLPOINTER* paramOrTargetValue) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1289,9 +1205,6 @@ SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLPutData(SQLHSTMT statementHandle, SQLPOINTER paramData,
                              SQLLEN paramDataLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1315,9 +1228,6 @@ SQLRETURN SQL_API SQLDescribeParam(SQLHSTMT statementHandle,
                                    SQLSMALLINT* paramSqlType,
                                    SQLULEN* paramSize, SQLSMALLINT* paramScale,
                                    SQLSMALLINT* paramNullable) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1340,9 +1250,6 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
                              SQLPOINTER targetValue,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStringLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1362,9 +1269,6 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
                                    SQLSMALLINT* columnCount) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1384,9 +1288,12 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
-  if (!ClearDiagnostics(statementHandle)) {
+  google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle =
+      google::cloud::odbc_bq_driver::CastToStatementHandle(statementHandle);
+  if (statement_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  statement_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -1417,9 +1324,6 @@ SQLRETURN SQL_API SQLExtendedFetch(SQLHSTMT statementHandle,
                                    SQLUSMALLINT fetchOrientation,
                                    SQLLEN fetchOffset, SQLULEN* rowCount,
                                    SQLUSMALLINT* rowStatusArray) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1446,9 +1350,6 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLSMALLINT characterAttributeBufferLen,
                                   SQLSMALLINT* characterAttributeStringLen,
                                   SQLLEN* numericAttribute) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1470,9 +1371,6 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
                                    SQLSMALLINT characterAttributeBufferLen,
                                    SQLSMALLINT* characterAttributeStringLen,
                                    SQLLEN* numericAttribute) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1501,9 +1399,6 @@ SQLRETURN SQL_API SQLColAttributes(SQLHSTMT statementHandle,
                                    SQLSMALLINT characterAttributeBufferLen,
                                    SQLSMALLINT* characterAttributeStringLen,
                                    SQLLEN* numericAttribute) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1525,9 +1420,6 @@ SQLRETURN SQL_API SQLColAttributesW(SQLHSTMT statementHandle,
                                     SQLSMALLINT characterAttributeBufferLen,
                                     SQLSMALLINT* characterAttributeStringLen,
                                     SQLLEN* numericAttribute) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1553,9 +1445,6 @@ SQLRETURN SQL_API SQLDescribeCol(
     SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLe,
     SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1575,9 +1464,6 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLen,
     SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1603,9 +1489,12 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
                              SQLPOINTER targetValuePtr,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStrLen) {
-  if (!ClearDiagnostics(statementHandle)) {
+  google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle =
+      google::cloud::odbc_bq_driver::CastToStatementHandle(statementHandle);
+  if (statement_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  statement_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -1636,9 +1525,6 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function.
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN* rowCount) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1660,9 +1546,6 @@ SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN* rowCount) {
 SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
                                  SQLSMALLINT fetchOrientation,
                                  SQLLEN fetchOffset) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1683,9 +1566,6 @@ SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlmoreresults-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1711,9 +1591,6 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
                                   SQLPOINTER diagInfo,
                                   SQLSMALLINT diagInfoBufferLen,
                                   SQLSMALLINT* diagInfoStringLen) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
@@ -1736,9 +1613,6 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
                                    SQLPOINTER diagInfo,
                                    SQLSMALLINT diagInfoBufferLen,
                                    SQLSMALLINT* diagInfoStringLen) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
@@ -1767,9 +1641,6 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
                                 SQLINTEGER* nativeError, SQLCHAR* messageText,
                                 SQLSMALLINT messageTextBufferLen,
                                 SQLSMALLINT* messageTextLen) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
@@ -1791,9 +1662,6 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
                                  SQLINTEGER* nativeError, SQLWCHAR* messageText,
                                  SQLSMALLINT messageTextBufferLen,
                                  SQLSMALLINT* messageTextLen) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
@@ -1821,9 +1689,6 @@ SQLRETURN SQL_API SQLColumns(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                              SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
                              SQLSMALLINT tableNameLen, SQLCHAR* columnName,
                              SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1843,9 +1708,6 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
                               SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
                               SQLSMALLINT tableNameLen, SQLWCHAR* columnName,
                               SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1872,9 +1734,6 @@ SQLRETURN SQL_API SQLTables(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                             SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
                             SQLSMALLINT tableNameLen, SQLCHAR* tableType,
                             SQLSMALLINT tableTypeLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1894,9 +1753,6 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
                              SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
                              SQLSMALLINT tableNameLen, SQLWCHAR* tableType,
                              SQLSMALLINT tableTypeLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1921,9 +1777,6 @@ SQLRETURN SQL_API SQLPrimaryKeys(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                  SQLSMALLINT catalogNameLen,
                                  SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
                                  SQLCHAR* tableName, SQLSMALLINT tableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1942,9 +1795,6 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
     SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
     SQLSMALLINT tableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1970,9 +1820,6 @@ SQLRETURN SQL_API SQLProcedureColumns(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* procName,
     SQLSMALLINT procNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -1991,9 +1838,6 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
     SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* procName,
     SQLSMALLINT procNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2018,9 +1862,6 @@ SQLRETURN SQL_API SQLProcedures(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                 SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
                                 SQLSMALLINT schemaNameLen, SQLCHAR* procName,
                                 SQLSMALLINT procNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2041,9 +1882,6 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
                                  SQLWCHAR* schemaName,
                                  SQLSMALLINT schemaNameLen, SQLWCHAR* procName,
                                  SQLSMALLINT procNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2072,9 +1910,6 @@ SQLRETURN SQL_API SQLSpecialColumns(
     SQLSMALLINT catalogNameLen, SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
     SQLCHAR* tableName, SQLSMALLINT tableNameLen, SQLUSMALLINT minRowIdScope,
     SQLUSMALLINT colNullable) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2094,9 +1929,6 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
     SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen, SQLWCHAR* schemaName,
     SQLSMALLINT schemaNameLen, SQLWCHAR* tableName, SQLSMALLINT tableNameLen,
     SQLUSMALLINT minRowIdScope, SQLUSMALLINT colNullable) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2124,9 +1956,6 @@ SQLRETURN SQL_API SQLStatistics(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                 SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
                                 SQLSMALLINT tableNameLen,
                                 SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2145,9 +1974,6 @@ SQLRETURN SQL_API SQLStatisticsW(
     SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
     SQLSMALLINT tableNameLen, SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2174,9 +2000,6 @@ SQLRETURN SQL_API SQLTablePrivileges(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
     SQLSMALLINT tableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2195,9 +2018,6 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
     SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
     SQLSMALLINT tableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2232,9 +2052,6 @@ SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
                SQLSMALLINT fkCatalogNameLen, SQLCHAR* fkSchemaName,
                SQLSMALLINT fkSchemaNameLen, SQLCHAR* fkTableName,
                SQLSMALLINT fkTableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2257,9 +2074,6 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
                 SQLSMALLINT fkCatalogNameLen, SQLWCHAR* fkSchemaName,
                 SQLSMALLINT fkSchemaNameLen, SQLWCHAR* fkTableName,
                 SQLSMALLINT fkTableNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2284,9 +2098,6 @@ SQLRETURN SQL_API SQLColumnPrivileges(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
     SQLSMALLINT tableNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2305,9 +2116,6 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
     SQLHSTMT statementHandle, SQLWCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLWCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLWCHAR* tableName,
     SQLSMALLINT tableNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -2331,9 +2139,6 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfreestmt-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
@@ -2356,9 +2161,6 @@ SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
                              SQLSMALLINT completionType) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
@@ -2381,9 +2183,6 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcancel-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2403,9 +2202,6 @@ SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlclosecursor-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2424,9 +2220,6 @@ SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldisconnect-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle) {
-  if (!ClearDiagnostics(connectionHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
@@ -2448,9 +2241,6 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle) {
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfreehandle-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
@@ -2482,9 +2272,6 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcancelhandle-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQLCancelHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
-  if (!ClearDiagnostics(handle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
@@ -2509,9 +2296,6 @@ SQLRETURN SQLCancelHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
                     SQLUSMALLINT operation, SQLUSMALLINT lockType) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2532,9 +2316,6 @@ SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLBulkOperations(SQLHSTMT statementHandle,
                                     SQLSMALLINT operation) {
-  if (!ClearDiagnostics(statementHandle)) {
-    return SQL_INVALID_HANDLE;
-  }
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.

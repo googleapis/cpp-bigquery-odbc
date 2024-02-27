@@ -56,6 +56,15 @@ ValidateEnvironmentHandle(SQLHENV environment_handle);
 StatusOr<google::cloud::odbc_bq_driver_internal::StatementHandle*>
 ValidateStatementHandle(SQLHSTMT stmt_handle);
 
+google::cloud::odbc_bq_driver_internal::EnvironmentHandle*
+CastToEnvironmentHandle(SQLHENV environment_handle);
+
+google::cloud::odbc_bq_driver_internal::ConnectionHandle*
+CastToConnectionHandle(SQLHDBC connection_handle);
+
+google::cloud::odbc_bq_driver_internal::StatementHandle* CastToStatementHandle(
+    SQLHSTMT statement_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H

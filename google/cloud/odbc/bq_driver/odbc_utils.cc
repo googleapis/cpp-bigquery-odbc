@@ -13,12 +13,14 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 StatusOr<ConnectionHandle*> ValidateConnectionHandle(
@@ -71,6 +73,41 @@ StatusOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
 
   return ValidateHandle<StatementHandle>(HandleType::kStatementHandle,
                                          stmt_handle_wrapped);
+}
+
+template <typename T>
+T* CastToInternalHandle(SQLHANDLE input_handle, HandleType handle_type) {
+  if (input_handle == nullptr) {
+    TracePrintInternal(*(*kTraceOptsConsole), "Handle is null pointer");
+    return nullptr;
+  }
+  auto* handle_wrapped = reinterpret_cast<HandleWrapped*>(input_handle);
+  if (handle_wrapped->handle_ref == nullptr) {
+    TracePrintInternal(*(*kTraceOptsConsole), "Null internal handle reference");
+    return nullptr;
+  }
+
+  if (handle_type != handle_wrapped->handle_type) {
+    TracePrintInternal(*(*kTraceOptsConsole), "Invalid handle type");
+    return nullptr;
+  }
+
+  return reinterpret_cast<T*>(handle_wrapped->handle_ref);
+}
+
+EnvironmentHandle* CastToEnvironmentHandle(SQLHENV environment_handle) {
+  return CastToInternalHandle<EnvironmentHandle>(environment_handle,
+                                                 HandleType::kEnvHandle);
+}
+
+ConnectionHandle* CastToConnectionHandle(SQLHDBC connection_handle) {
+  return CastToInternalHandle<ConnectionHandle>(connection_handle,
+                                                HandleType::kConnHandle);
+}
+
+StatementHandle* CastToStatementHandle(SQLHSTMT statement_handle) {
+  return CastToInternalHandle<StatementHandle>(statement_handle,
+                                               HandleType::kDescriptorHandle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
