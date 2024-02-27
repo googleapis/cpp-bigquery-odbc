@@ -209,9 +209,9 @@ SQLRETURN SQL_API SQLDriverConnect(
   // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
   // in odbc_connection.h.
   rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-      connection_handle, windowHandle, inConnectionString, inConnectionStringLen,
-      outConnectionString, outConnectionStringBufferLen, outConnectionStringLen,
-      driverCompletion);
+      connection_handle, windowHandle, inConnectionString,
+      inConnectionStringLen, outConnectionString, outConnectionStringBufferLen,
+      outConnectionStringLen, driverCompletion);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOptsConsole));

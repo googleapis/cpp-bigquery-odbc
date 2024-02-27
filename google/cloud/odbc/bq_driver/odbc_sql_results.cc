@@ -20,7 +20,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
@@ -29,13 +28,17 @@ SQLRETURN SQLBindColInternal(StatementHandle* statement_handle,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_str_len) {
-  return statement_handle->BindColumn(column_number, target_c_type, target_value,
-                           target_value_buffer_len, target_value_str_len);
+  return statement_handle->BindColumn(column_number, target_c_type,
+                                      target_value, target_value_buffer_len,
+                                      target_value_str_len);
 }
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLFetchInternal(google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle) { return SQL_SUCCESS; }
+SQLRETURN SQLFetchInternal(
+    google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle) {
+  return SQL_SUCCESS;
+}
 
 // NOLINTEND(misc-unused-parameters)
 

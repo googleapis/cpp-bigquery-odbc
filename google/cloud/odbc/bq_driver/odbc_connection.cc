@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/internal/getenv.h"
 
@@ -69,7 +69,8 @@ void OverrideDsnSectionFromEnv(Section& dsn_section,
 // Public Functions
 //////////////////////
 
-SQLRETURN SQLAllocConnHandle(EnvironmentHandle* env_handle, SQLHANDLE* out_conn_handle) {
+SQLRETURN SQLAllocConnHandle(EnvironmentHandle* env_handle,
+                             SQLHANDLE* out_conn_handle) {
   auto* conn_handle = new ConnectionHandle();
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kConnHandle, conn_handle);
@@ -77,8 +78,8 @@ SQLRETURN SQLAllocConnHandle(EnvironmentHandle* env_handle, SQLHANDLE* out_conn_
   return SQL_SUCCESS;
 }
 
-SQLRETURN SQLDriverConnectInternal(ConnectionHandle* connection_handle, SQLHWND window_handle,
-                                   SQLCHAR* in_conn_str,
+SQLRETURN SQLDriverConnectInternal(ConnectionHandle* connection_handle,
+                                   SQLHWND window_handle, SQLCHAR* in_conn_str,
                                    SQLSMALLINT in_conn_str_len,
                                    SQLCHAR* out_conn_str,
                                    SQLSMALLINT out_conn_str_buflen,

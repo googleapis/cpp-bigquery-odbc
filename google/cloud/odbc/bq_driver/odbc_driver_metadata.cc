@@ -22,7 +22,6 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
-using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
@@ -33,6 +32,7 @@ using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
@@ -91,7 +91,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
 
 }  // namespace
 
-SQLRETURN SQLGetFunctionsInternal(ConnectionHandle* connection_handle,
+SQLRETURN SQLGetFunctionsInternal(ConnectionHandle*  /*connection_handle*/,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
@@ -162,8 +162,8 @@ SQLRETURN SQLGetFunctionsInternal(ConnectionHandle* connection_handle,
   return rc;
 }
 
-SQLRETURN SQLGetInfoInternal(ConnectionHandle* connection_handle, SQLUSMALLINT info_type,
-                             SQLPOINTER info_value_ptr,
+SQLRETURN SQLGetInfoInternal(ConnectionHandle* connection_handle,
+                             SQLUSMALLINT info_type, SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
   if (!info_value_ptr) {

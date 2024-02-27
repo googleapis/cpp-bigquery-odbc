@@ -19,7 +19,8 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
-SQLRETURN SQLAllocStmtHandle(ConnectionHandle* conn_handle, SQLHANDLE* out_conn_handle) {
+SQLRETURN SQLAllocStmtHandle(ConnectionHandle*  /*conn_handle*/,
+                             SQLHANDLE* out_conn_handle) {
   auto* stmt_handle = new StatementHandle();
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
