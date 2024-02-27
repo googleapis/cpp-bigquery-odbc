@@ -34,12 +34,16 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
+  std::shared_ptr<Query> GetQuery() { return query_; }
+
   SQLRETURN GetAttribute(SQLINTEGER attribute, void* value, void* length);
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
   SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
                        SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
+
+  SQLRETURN ExecuteTypeInfoQuery(SQLSMALLINT data_type);
 
  private:
   std::map<int, DataBuffer> column_bindings_;

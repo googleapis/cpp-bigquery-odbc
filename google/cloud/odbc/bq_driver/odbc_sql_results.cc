@@ -37,16 +37,30 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
         "Invalid Statement handle: " + handle_result.status().message());
     return SQL_INVALID_HANDLE;
   }
-  StatementHandle handle = *(handle_result.value());
-  handle.GetDiagnostics().ClearDiagnostics();
+  StatementHandle* handle = handle_result.value();
+  handle->GetDiagnostics().ClearDiagnostics();
 
-  return handle.BindColumn(column_number, target_c_type, target_value,
-                           target_value_buffer_len, target_value_str_len);
+  return handle->BindColumn(column_number, target_c_type, target_value,
+                            target_value_buffer_len, target_value_str_len);
 }
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
+SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
+  StatusOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result.ok()) {
+    TracePrintInternal(
+        **kTraceOptsConsole,
+        "Invalid Statement handle: " + handle_result.status().message());
+    return SQL_INVALID_HANDLE;
+  }
+  StatementHandle* handle = handle_result.value();
+
+  auto query = handle->GetQuery();
+
+  return SQL_SUCCESS;
+}
 
 // NOLINTEND(misc-unused-parameters)
 
