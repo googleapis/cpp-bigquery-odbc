@@ -26,23 +26,9 @@ using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::StrEq;
 
-// Helper class and functions specific to odbc utils unit tests.
-namespace {
-class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
- public:
-  explicit OdbcUtilsConnectionHandleTest() = default;
-  void SetConnected() { is_connected_ = true; }
-};
-
-SQLHDBC GetConnectionHandle(HandleType const& type, bool connected = true) {
-  auto conn_handle = std::make_shared<OdbcUtilsConnectionHandleTest>();
-  if (connected) {
-    conn_handle->SetConnected();
-  }
-  auto wrapped_handle =
-      std::make_shared<HandleWrapped>(type, conn_handle.get());
-  return wrapped_handle.get();
-}
+//////////////////////////////
+// Helper functions
+//////////////////////////////
 
 void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(env_handle_ref));
@@ -64,6 +50,24 @@ void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle,
                  SQLHSTMT stmt_handle) {
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle));
   FreeHandles(env_handle, conn_handle);
+}
+
+// Helper class and functions specific to odbc utils unit tests.
+namespace {
+class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
+ public:
+  explicit OdbcUtilsConnectionHandleTest() = default;
+  void SetConnected() { is_connected_ = true; }
+};
+
+SQLHDBC GetConnectionHandle(HandleType const& type, bool connected = true) {
+  auto conn_handle = std::make_shared<OdbcUtilsConnectionHandleTest>();
+  if (connected) {
+    conn_handle->SetConnected();
+  }
+  auto wrapped_handle =
+      std::make_shared<HandleWrapped>(type, conn_handle.get());
+  return wrapped_handle.get();
 }
 
 }  // namespace

@@ -16,4 +16,36 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+SQLRETURN TypeInfoQuery::Execute(SQLSMALLINT data_type) {
+  query_type_ = QueryType::kTypeInfo;
+  execution_state_ = ExecutionState::kRunning;
+
+  if (data_type == SQL_ALL_TYPES) {
+    for (auto [sql_data_type, bq_data_type_info] : kSqlToBqDataTypes) {
+      for (auto [bq_data_type, type_info] : bq_data_type_info) {
+        rows_.push_back(type_info);
+      }
+    }
+  } else {
+    for (auto [bq_data_type, type_info] : kSqlToBqDataTypes.at(data_type)) {
+      rows_.push_back(type_info);
+    }
+  }
+  execution_state_ = ExecutionState::kFinished;
+  cursor_ = 0;
+  return SQL_SUCCESS;
+}
+
+// NOLINTBEGIN(misc-unused-parameters)
+
+SQLRETURN TypeInfoQuery::GetColumn(int column_id, DataBuffer& buffer) {
+  return SQL_SUCCESS;
+}
+
+SQLRETURN TypeInfoQuery::FetchNextRow(int column_id, DataBuffer& buffer) {
+  return SQL_SUCCESS;
+}
+
+// NOLINTEND(misc-unused-parameters)
+
 }  // namespace google::cloud::odbc_bq_driver_internal

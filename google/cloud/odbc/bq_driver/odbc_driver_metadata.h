@@ -73,8 +73,8 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgettypeinfo-function?view=sql-server-ver16
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
-                                 SQLSMALLINT dataType);
+SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statement_handle,
+                                 SQLSMALLINT data_type);
 
 }  // namespace google::cloud::odbc_bq_driver
 

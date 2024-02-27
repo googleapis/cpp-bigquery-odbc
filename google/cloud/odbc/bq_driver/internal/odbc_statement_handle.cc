@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -48,4 +49,12 @@ SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
   column_bindings_[col_idx] = data_buffer;
   return SQL_SUCCESS;
 }
+
+SQLRETURN StatementHandle::ExecuteTypeInfoQuery(SQLSMALLINT data_type) {
+  auto type_info_query = std::make_shared<TypeInfoQuery>();
+  query_ = type_info_query;
+  type_info_query->Execute(data_type);
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

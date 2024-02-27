@@ -21,15 +21,25 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver::SQLAllocConnHandle;
 using ::google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+extern void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref);
+
+extern void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref,
+                            SQLHSTMT* stmt_handle_ref);
+
+extern void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
+
+extern void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle,
+                        SQLHSTMT stmt_handle);
 
 std::string const kDsnDescription = "test-dsn";
 std::string const kDsnCatalog = "bigquery-test";
@@ -38,6 +48,7 @@ std::string const kDsnName = "SampleDSN";
 
 // Helper class and functions specific to odbc metadata unit tests.
 namespace {
+
 class OdbcMetadataConnectionHandleTest : public ConnectionHandle {
  public:
   explicit OdbcMetadataConnectionHandleTest() = default;
@@ -75,6 +86,18 @@ SQLHDBC GetConnectedHandleWithDsn(HandleType const& type) {
   return GetConnHandle(type, /* connected= */ true,
                        /*setup_dsn=*/true);
 }
+
+std::vector<SQLSMALLINT> kSQLGetTypeInfoSupportedDataTypes = {
+    SQL_BIGINT,    SQL_BIT,       SQL_TYPE_DATE,
+    SQL_DOUBLE,    SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP,
+    SQL_VARBINARY, SQL_VARCHAR,   SQL_NUMERIC,
+};
+
+std::vector<SQLSMALLINT> kSQLGetTypeInfoUnsupportedDataTypes = {
+    SQL_CHAR,         SQL_LONGVARCHAR, SQL_WCHAR,    SQL_WVARCHAR,
+    SQL_WLONGVARCHAR, SQL_DECIMAL,     SQL_SMALLINT, SQL_INTEGER,
+    SQL_FLOAT,        SQL_TINYINT,     SQL_BINARY,   SQL_LONGVARBINARY,
+};
 
 }  // namespace
 
@@ -406,6 +429,56 @@ TEST(SQLGetInfoInternal, InfoValueNullPtr) {
                                     SQL_ALTER_DOMAIN, nullptr, in_buffer_len,
                                     &str_len_ptr);
   EXPECT_EQ(SQL_ERROR, rc);
+}
+
+//////////////////////////////////////
+// SQLGetTypeInfoInternal Unit Tests
+//////////////////////////////////////
+
+TEST(SQLGetTypeInfoInternal, SQL_ALL_TYPES_Basic) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  SQLHSTMT stmt_handle;
+  AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
+  SQLRETURN rc = SQLGetTypeInfoInternal(stmt_handle, SQL_ALL_TYPES);
+  EXPECT_EQ(SQL_SUCCESS, rc);
+}
+
+TEST(SQLGetTypeInfoInternal, SupportedDataTypes_Basic) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  SQLHSTMT stmt_handle;
+  AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
+  for (SQLSMALLINT data_type : kSQLGetTypeInfoSupportedDataTypes) {
+    SQLRETURN rc = SQLGetTypeInfoInternal(stmt_handle, data_type);
+    EXPECT_EQ(SQL_SUCCESS, rc);
+  }
+}
+
+TEST(SQLGetTypeInfoInternal, UnsupportedDataTypes_Basic) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  SQLHSTMT stmt_handle;
+  AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
+  for (SQLSMALLINT data_type : kSQLGetTypeInfoUnsupportedDataTypes) {
+    SQLRETURN rc = SQLGetTypeInfoInternal(stmt_handle, data_type);
+    EXPECT_EQ(SQL_ERROR, rc);
+  }
+  FreeHandles(env_handle, conn_handle, stmt_handle);
+}
+
+TEST(SQLGetTypeInfoInternal, NullHandle) {
+  SQLRETURN rc = SQLGetTypeInfoInternal(nullptr, SQL_ALL_TYPES);
+  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+}
+
+TEST(SQLGetTypeInfoInternal, InvalidHandle) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  AllocateHandles(&env_handle, &conn_handle);
+  SQLRETURN rc = SQLGetTypeInfoInternal(conn_handle, SQL_ALL_TYPES);
+  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+  FreeHandles(env_handle, conn_handle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

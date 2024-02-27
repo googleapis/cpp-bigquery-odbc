@@ -22,27 +22,29 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 enum class ExecutionState {
-  kStarted,
+  kNotStarted,
   kRunning,
   kFinished,
 };
 
 enum class QueryType {
+  kUninitializedQuery,
   kTypeInfo,
 };
 
 class Query {
  public:
-  virtual ~Query() = 0;
+  Query() = default;
+  ~Query() = default;
 
   virtual SQLRETURN GetColumn(int column_id, DataBuffer& buffer) = 0;
 
   virtual SQLRETURN FetchNextRow(int column_id, DataBuffer& buffer) = 0;
 
- private:
-  QueryType query_type_;
-  ExecutionState execution_state_;
-  int cursor_;
+ protected:
+  QueryType query_type_{QueryType::kUninitializedQuery};
+  ExecutionState execution_state_{ExecutionState::kNotStarted};
+  int cursor_{0};
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

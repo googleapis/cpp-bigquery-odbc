@@ -505,12 +505,18 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
 class TypeInfoQuery : public Query {
  public:
   explicit TypeInfoQuery() = default;
-  ~TypeInfoQuery() override = default;
+  ~TypeInfoQuery() = default;
 
   TypeInfoQuery(TypeInfoQuery const&) = default;
   TypeInfoQuery& operator=(TypeInfoQuery const&) = default;
   TypeInfoQuery(TypeInfoQuery&&) = default;
   TypeInfoQuery& operator=(TypeInfoQuery&&) = default;
+
+  SQLRETURN GetColumn(int column_id, DataBuffer& buffer) override;
+
+  SQLRETURN FetchNextRow(int column_id, DataBuffer& buffer) override;
+
+  SQLRETURN Execute(SQLSMALLINT data_type);
 
  private:
   std::vector<TypeInfoRow> rows_;
