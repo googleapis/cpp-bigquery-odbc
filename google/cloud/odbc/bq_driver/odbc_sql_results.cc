@@ -37,11 +37,11 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
         "Invalid Statement handle: " + handle_result.status().message());
     return SQL_INVALID_HANDLE;
   }
-  StatementHandle handle = *(handle_result.value());
-  handle.GetDiagnostics().ClearDiagnostics();
+  StatementHandle* handle = handle_result.value();
+  handle->GetDiagnostics().ClearDiagnostics();
 
-  return handle.BindColumn(column_number, target_c_type, target_value,
-                           target_value_buffer_len, target_value_str_len);
+  return handle->BindColumn(column_number, target_c_type, target_value,
+                            target_value_buffer_len, target_value_str_len);
 }
 
 // NOLINTBEGIN(misc-unused-parameters)

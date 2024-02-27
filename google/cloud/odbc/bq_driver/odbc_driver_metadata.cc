@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -25,6 +26,7 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using ::google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
@@ -32,14 +34,18 @@ using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
 
 TraceOptions& opts = *(*kTraceOptsConsole);
-
+///////////////////////////////
 // Internal helper functions.
+///////////////////////////////
 namespace {
 
 SQLRETURN InvalidType(char const* mesg, SQLUSMALLINT info_type) {
@@ -86,6 +92,11 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
 
   return InvalidType("HandleConnectionInformationTypes - Invalid infoType: ",
                      info_type);
+}
+
+bool IsSQLDataTypeSupported(SQLSMALLINT data_type) {
+  return (data_type == SQL_ALL_TYPES) ||
+         (kSqlToBqDataTypes.count(data_type) > 0);
 }
 
 }  // namespace
@@ -224,13 +235,27 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   return InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
 }
 
-// NOLINTBEGIN(misc-unused-parameters)
+SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statement_handle,
+                                 SQLSMALLINT data_type) {
+  StatusOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result.ok()) {
+    TracePrintInternal(
+        opts, "Invalid Statement handle: " + handle_result.status().message());
+    return SQL_INVALID_HANDLE;
+  }
+  StatementHandle* handle = *handle_result;
 
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
-                                 SQLSMALLINT dataType) {
+  if (!IsSQLDataTypeSupported(data_type)) {
+    StatusRecord status_record = {SQLStates::k_HY004(),
+                                  "Invalid SQL data type"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return SQL_ERROR;
+  }
+
+  handle->ExecuteTypeInfoQuery(data_type);
+
   return SQL_SUCCESS;
 }
-
-// NOLINTEND(misc-unused-parameters)
 
 }  // namespace google::cloud::odbc_bq_driver
