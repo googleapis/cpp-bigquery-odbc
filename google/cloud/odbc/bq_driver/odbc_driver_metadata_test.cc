@@ -330,7 +330,7 @@ TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
 // }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
-  SQLCHAR* dest = new SQLCHAR[10];
+  SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandle(HandleType::kConnHandle);
@@ -343,12 +343,11 @@ TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("Y", actual);
   EXPECT_EQ(str_len_ptr, 1);
-  delete[] dest;
   FreeHandles();
 }
 
 TEST(SQLGetInfoInternal, NotConnectedFailure) {
-  SQLCHAR* dest = new SQLCHAR[10];
+  SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateDisconnectedHandle(HandleType::kConnHandle);
@@ -359,12 +358,11 @@ TEST(SQLGetInfoInternal, NotConnectedFailure) {
                                     in_buffer_len, &str_len_ptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, rc);
-  delete[] dest;
   FreeHandles();
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
-  SQLCHAR* dest = new SQLCHAR[10];
+  SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandle(HandleType::kConnHandle);
@@ -378,7 +376,6 @@ TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("N", actual);
   EXPECT_EQ(str_len_ptr, 1);
-  delete[] dest;
   FreeHandles();
 }
 
