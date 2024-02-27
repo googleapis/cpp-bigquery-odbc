@@ -22,6 +22,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
@@ -90,19 +91,10 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
 
 }  // namespace
 
-SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
+SQLRETURN SQLGetFunctionsInternal(ConnectionHandle* connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  StatusOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_INVALID_HANDLE;
-  }
   // Assumption here is memory for output is managed/owned by the caller.
   if (!supported_fn) {
     TracePrintInternal(opts, "Argument supported_fn cannot be null");
@@ -170,19 +162,10 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   return rc;
 }
 
-SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
+SQLRETURN SQLGetInfoInternal(ConnectionHandle* connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_INVALID_HANDLE;
-  }
   if (!info_value_ptr) {
     TracePrintInternal(opts, "Invalid InfoValuePtr");
     // TODO(#158): SQLGetDiagRec should handle this
@@ -226,7 +209,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
+SQLRETURN SQLGetTypeInfoInternal(StatementHandle* statement_handle,
                                  SQLSMALLINT dataType) {
   return SQL_SUCCESS;
 }

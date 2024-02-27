@@ -46,7 +46,7 @@ namespace google::cloud::odbc_bq_driver {
 // semantics please refer to:
 //
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
-SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
+SQLRETURN SQLGetFunctionsInternal(google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn);
 
@@ -59,7 +59,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
 // Design Doc: http://goto.google.com/sql-get-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetinfo-function
-SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
+SQLRETURN SQLGetInfoInternal(google::cloud::odbc_bq_driver_internal::ConnectionHandle* connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr);
@@ -73,7 +73,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgettypeinfo-function?view=sql-server-ver16
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
+SQLRETURN SQLGetTypeInfoInternal(google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle,
                                  SQLSMALLINT dataType);
 
 }  // namespace google::cloud::odbc_bq_driver

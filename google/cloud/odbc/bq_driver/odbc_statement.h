@@ -31,7 +31,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle);
+SQLRETURN SQLAllocStmtHandle(google::cloud::odbc_bq_driver_internal::ConnectionHandle* conn_handle, SQLHANDLE* out_conn_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 

@@ -24,29 +24,18 @@ using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
-SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
+SQLRETURN SQLBindColInternal(StatementHandle* statement_handle,
                              SQLUSMALLINT column_number,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_str_len) {
-  StatusOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        **kTraceOptsConsole,
-        "Invalid Statement handle: " + handle_result.status().message());
-    return SQL_INVALID_HANDLE;
-  }
-  StatementHandle handle = *(handle_result.value());
-  handle.GetDiagnostics().ClearDiagnostics();
-
-  return handle.BindColumn(column_number, target_c_type, target_value,
+  return statement_handle->BindColumn(column_number, target_c_type, target_value,
                            target_value_buffer_len, target_value_str_len);
 }
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
+SQLRETURN SQLFetchInternal(google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle) { return SQL_SUCCESS; }
 
 // NOLINTEND(misc-unused-parameters)
 

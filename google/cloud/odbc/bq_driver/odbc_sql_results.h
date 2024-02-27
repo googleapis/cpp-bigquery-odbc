@@ -34,6 +34,7 @@
 ///////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -46,7 +47,7 @@ namespace google::cloud::odbc_bq_driver {
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function?view=sql-server-ver16
-SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
+SQLRETURN SQLBindColInternal(google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle,
                              SQLUSMALLINT column_number,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
@@ -61,7 +62,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 // Design Doc: http://goto.google.com/bq-odbc-sql-get-type-info-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
-SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
+SQLRETURN SQLFetchInternal(google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 

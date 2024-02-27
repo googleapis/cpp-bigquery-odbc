@@ -19,22 +19,7 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
-SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
-  if (!in_handle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
-  }
-  // Validate the handle
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  if (in_handle_wrapped->handle_type != HandleType::kConnHandle) {
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_INVALID_HANDLE;
-  }
-
-  ConnectionHandle conn_handle =
-      *reinterpret_cast<ConnectionHandle*>(in_handle_wrapped->handle_ref);
-
+SQLRETURN SQLAllocStmtHandle(ConnectionHandle* conn_handle, SQLHANDLE* out_conn_handle) {
   auto* stmt_handle = new StatementHandle();
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
