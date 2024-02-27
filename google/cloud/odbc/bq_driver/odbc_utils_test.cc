@@ -190,6 +190,8 @@ TEST(ValidateStatementHandle, InvalidInternalStatementHandle) {
 
   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
                                StrEq("Invalid handle type")));
+
+  FreeHandles(env_handle, conn_handle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
