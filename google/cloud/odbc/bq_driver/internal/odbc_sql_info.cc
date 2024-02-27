@@ -528,6 +528,10 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
 SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT in_buffer_len,
                                                SQLSMALLINT* str_len_ptr) const {
+  if (!info_val) {
+    TracePrintInternal(*(*kTraceOptsConsole), "info_val is null");
+    return SQL_ERROR;
+  }
   char* src = reinterpret_cast<char*>(info_val);
   char* dest = reinterpret_cast<char*>(info_val_ptr);
   SQLSMALLINT src_len = strlen(src);

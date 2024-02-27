@@ -169,7 +169,7 @@ struct SQLGetInfoSqlChar {
                               SQLSMALLINT in_buffer_len,
                               SQLSMALLINT* str_len_ptr) const;
 
-  SQLCHAR* info_val;
+  SQLCHAR* info_val{0};
 };
 
 struct SQLGetInfoBitmask {
