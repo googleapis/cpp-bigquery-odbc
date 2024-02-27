@@ -14,7 +14,6 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
-#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -34,7 +33,7 @@ SQLRETURN SQLBindColInternal(StatementHandle* statement_handle,
 // NOLINTBEGIN(misc-unused-parameters)
 
 SQLRETURN SQLFetchInternal(
-    google::cloud::odbc_bq_driver_internal::StatementHandle* statement_handle) {
+    google::cloud::odbc_bq_driver_internal::StatementHandle* /*statement_handle*/) {
   return SQL_SUCCESS;
 }
 
