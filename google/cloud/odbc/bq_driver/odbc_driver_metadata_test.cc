@@ -306,7 +306,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ(kDsnName, actual);
   EXPECT_EQ(str_len_ptr, 9);
-  delete dest;
+  delete[] dest;
   FreeHandles();
 }
 
@@ -324,7 +324,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ(kDsnCatalog, actual);
   EXPECT_EQ(str_len_ptr, 13);
-  delete dest;
+  delete[] dest;
   FreeHandles();
 }
 
@@ -342,7 +342,7 @@ TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("Y", actual);
   EXPECT_EQ(str_len_ptr, 1);
-  delete dest;
+  delete[] dest;
   FreeHandles();
 }
 
@@ -358,7 +358,7 @@ TEST(SQLGetInfoInternal, NotConnectedFailure) {
                                     in_buffer_len, &str_len_ptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, rc);
-  delete dest;
+  delete[] dest;
   FreeHandles();
 }
 
@@ -377,7 +377,7 @@ TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("N", actual);
   EXPECT_EQ(str_len_ptr, 1);
-  delete dest;
+  delete[] dest;
   FreeHandles();
 }
 
