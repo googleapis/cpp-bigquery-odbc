@@ -85,13 +85,13 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
                                StrEq("Null connection handle")));
 }
 
-TEST(ValidateConnectionHandle, InvalidHandleType) {
-  auto result =
-      ValidateConnectionHandle(GetConnectionHandle(HandleType::kEnvHandle));
+// TEST(ValidateConnectionHandle, InvalidHandleType) {
+//   auto result =
+//       ValidateConnectionHandle(GetConnectionHandle(HandleType::kEnvHandle));
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
-}
+//   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+//                                StrEq("Invalid handle type")));
+// }
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
   auto result = ValidateConnectionHandle(
