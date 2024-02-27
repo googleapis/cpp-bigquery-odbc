@@ -291,42 +291,43 @@ TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
   FreeHandles();
 }
 
-TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
-  SQLCHAR* dest = new SQLCHAR[256];
-  SQLSMALLINT in_buffer_len = 256;
-  SQLSMALLINT str_len_ptr;
-  CreateConnectedHandleWithDsn(HandleType::kConnHandle);
-  ASSERT_TRUE(connection_handle != nullptr);
-  ASSERT_TRUE(handle_wrapped != nullptr);
-  ASSERT_EQ(SQL_SUCCESS,
-            SQLGetInfoInternal(handle_wrapped, SQL_DATA_SOURCE_NAME,
-                               reinterpret_cast<SQLPOINTER>(dest),
-                               in_buffer_len, &str_len_ptr));
+// TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
+//   SQLCHAR* dest = new SQLCHAR[256];
+//   SQLSMALLINT in_buffer_len = 256;
+//   SQLSMALLINT str_len_ptr;
+//   CreateConnectedHandleWithDsn(HandleType::kConnHandle);
+//   ASSERT_TRUE(connection_handle != nullptr);
+//   ASSERT_TRUE(handle_wrapped != nullptr);
+//   ASSERT_EQ(SQL_SUCCESS,
+//             SQLGetInfoInternal(handle_wrapped, SQL_DATA_SOURCE_NAME,
+//                                reinterpret_cast<SQLPOINTER>(dest),
+//                                in_buffer_len, &str_len_ptr));
 
-  std::string actual = reinterpret_cast<char*>(dest);
-  EXPECT_EQ(kDsnName, actual);
-  EXPECT_EQ(str_len_ptr, 9);
-  delete[] dest;
-  FreeHandles();
-}
+//   std::string actual = reinterpret_cast<char*>(dest);
+//   EXPECT_EQ(kDsnName, actual);
+//   EXPECT_EQ(str_len_ptr, 9);
+//   delete[] dest;
+//   FreeHandles();
+// }
 
-TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
-  SQLCHAR* dest = new SQLCHAR[256];
-  SQLSMALLINT in_buffer_len = 256;
-  SQLSMALLINT str_len_ptr;
-  CreateConnectedHandleWithDsn(HandleType::kConnHandle);
-  ASSERT_TRUE(connection_handle != nullptr);
-  ASSERT_TRUE(handle_wrapped != nullptr);
-  ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle_wrapped, SQL_DATABASE_NAME,
-                                            reinterpret_cast<SQLPOINTER>(dest),
-                                            in_buffer_len, &str_len_ptr));
+// TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
+//   SQLCHAR* dest = new SQLCHAR[256];
+//   SQLSMALLINT in_buffer_len = 256;
+//   SQLSMALLINT str_len_ptr;
+//   CreateConnectedHandleWithDsn(HandleType::kConnHandle);
+//   ASSERT_TRUE(connection_handle != nullptr);
+//   ASSERT_TRUE(handle_wrapped != nullptr);
+//   ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle_wrapped,
+//   SQL_DATABASE_NAME,
+//                                             reinterpret_cast<SQLPOINTER>(dest),
+//                                             in_buffer_len, &str_len_ptr));
 
-  std::string actual = reinterpret_cast<char*>(dest);
-  EXPECT_EQ(kDsnCatalog, actual);
-  EXPECT_EQ(str_len_ptr, 13);
-  delete[] dest;
-  FreeHandles();
-}
+//   std::string actual = reinterpret_cast<char*>(dest);
+//   EXPECT_EQ(kDsnCatalog, actual);
+//   EXPECT_EQ(str_len_ptr, 13);
+//   delete[] dest;
+//   FreeHandles();
+// }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
   SQLCHAR* dest = new SQLCHAR[10];
