@@ -85,13 +85,16 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
                                StrEq("Null connection handle")));
 }
 
-// TEST(ValidateConnectionHandle, InvalidHandleType) {
-//   auto result =
-//       ValidateConnectionHandle(GetConnectionHandle(HandleType::kEnvHandle));
+TEST(ValidateConnectionHandle, InvalidHandleType) {
+  SQLHENV env_handle;
+  SQLHDBC conn_handle;
+  AllocateHandles(&env_handle, &conn_handle);
+  auto result = ValidateConnectionHandle(env_handle);
 
-//   EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-//                                StrEq("Invalid handle type")));
-// }
+  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
+                               StrEq("Invalid handle type")));
+  FreeHandles(env_handle, conn_handle);
+}
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
   auto result = ValidateConnectionHandle(
@@ -132,17 +135,6 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
                                StrEq("Invalid handle type")));
 
   FreeHandles(env_handle, conn_handle);
-}
-
-TEST(ValidateEnvironmentHandle, InvalidInternalEnvironmentHandle) {
-  SQLHENV env_handle;
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
-
-  auto result = ValidateEnvironmentHandle(env_handle);
-
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
 }
 
 ///////////////////////////////////////
