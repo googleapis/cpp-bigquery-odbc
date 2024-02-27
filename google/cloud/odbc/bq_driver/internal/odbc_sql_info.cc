@@ -533,8 +533,9 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
     return SQL_ERROR;
   }
   char* src = reinterpret_cast<char*>(info_val);
+  std::string src_val = src;
   char* dest = reinterpret_cast<char*>(info_val_ptr);
-  SQLSMALLINT src_len = strlen(src);
+  SQLSMALLINT src_len = src_val.length();
 
   if (src_len == 0 || in_buffer_len == 0) {
     *dest = '\0';
