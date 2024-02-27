@@ -292,7 +292,7 @@ TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
 }
 
 TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
-  SQLCHAR dest[256];
+  SQLCHAR dest[256] = {0};
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandleWithDsn(HandleType::kConnHandle);
@@ -310,7 +310,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
 }
 
 TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
-  SQLCHAR dest[256];
+  SQLCHAR dest[256] = {0};
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandleWithDsn(HandleType::kConnHandle);
@@ -327,7 +327,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
-  SQLCHAR dest[10];
+  SQLCHAR dest[10] = {0};
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandle(HandleType::kConnHandle);
@@ -344,7 +344,7 @@ TEST(SQLGetInfoInternal, SQLGetInfoCharSupported) {
 }
 
 TEST(SQLGetInfoInternal, NotConnectedFailure) {
-  SQLCHAR dest[10];
+  SQLCHAR dest[10] = {0};
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateDisconnectedHandle(HandleType::kConnHandle);
@@ -359,7 +359,7 @@ TEST(SQLGetInfoInternal, NotConnectedFailure) {
 }
 
 TEST(SQLGetInfoInternal, SQLGetInfoCharUnSupported) {
-  SQLCHAR dest[10];
+  SQLCHAR dest[10] = {0};
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandle(HandleType::kConnHandle);
