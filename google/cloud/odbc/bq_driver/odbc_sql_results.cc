@@ -32,8 +32,8 @@ SQLRETURN SQLBindColInternal(StatementHandle* statement_handle,
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLFetchInternal(
-    google::cloud::odbc_bq_driver_internal::StatementHandle* /*statement_handle*/) {
+SQLRETURN SQLFetchInternal(google::cloud::odbc_bq_driver_internal::
+                               StatementHandle* /*statement_handle*/) {
   return SQL_SUCCESS;
 }
 

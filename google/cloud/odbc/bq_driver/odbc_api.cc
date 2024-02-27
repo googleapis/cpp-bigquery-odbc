@@ -659,6 +659,14 @@ SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueStringLen) {
+  google::cloud::odbc_bq_driver_internal::EnvironmentHandle*
+      environment_handle =
+          google::cloud::odbc_bq_driver::CastToEnvironmentHandle(
+              environmentHandle);
+  if (environment_handle == nullptr) {
+    return SQL_INVALID_HANDLE;
+  }
+  environment_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -669,7 +677,7 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 
   // Call to internal function for SQLSetEnvAttr in odbc_environment.h.
   rc = ::google::cloud::odbc_bq_driver::SQLSetEnvAttrInternal(
-      environmentHandle, attribute, value, valueStringLen);
+      environment_handle, attribute, value, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   TraceFunctionExit_SQLSetEnvAttr(rc, *(*kTraceOptsConsole));
@@ -687,6 +695,14 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
                                 SQLPOINTER value, SQLINTEGER valueBufferLen,
                                 SQLINTEGER* valueStringLen) {
+  google::cloud::odbc_bq_driver_internal::EnvironmentHandle*
+      environment_handle =
+          google::cloud::odbc_bq_driver::CastToEnvironmentHandle(
+              environmentHandle);
+  if (environment_handle == nullptr) {
+    return SQL_INVALID_HANDLE;
+  }
+  environment_handle->GetDiagnostics().ClearDiagnostics();
   SQLRETURN rc = SQL_SUCCESS;
   if (!kTraceOptsConsole.ok()) return RecordStatus(kTraceOptsConsole.status());
 
@@ -698,7 +714,7 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 
   // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetEnvAttrInternal(
-      environmentHandle, attribute, value, valueBufferLen, valueStringLen);
+      environment_handle, attribute, value, valueBufferLen, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   TraceFunctionExit_SQLGetEnvAttr(rc, *(*kTraceOptsConsole));
