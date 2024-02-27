@@ -299,8 +299,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
   ASSERT_TRUE(connection_handle != nullptr);
   ASSERT_TRUE(handle_wrapped != nullptr);
   ASSERT_EQ(SQL_SUCCESS,
-            SQLGetInfoInternal(handle_wrapped, SQL_DATA_SOURCE_NAME,
-                               reinterpret_cast<SQLPOINTER>(dest),
+            SQLGetInfoInternal(handle_wrapped, SQL_DATA_SOURCE_NAME, dest,
                                in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
@@ -317,8 +316,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
   ASSERT_TRUE(connection_handle != nullptr);
   ASSERT_TRUE(handle_wrapped != nullptr);
   ASSERT_EQ(SQL_SUCCESS, SQLGetInfoInternal(handle_wrapped, SQL_DATABASE_NAME,
-                                            reinterpret_cast<SQLPOINTER>(dest),
-                                            in_buffer_len, &str_len_ptr));
+                                            dest, in_buffer_len, &str_len_ptr));
 
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ(kDsnCatalog, actual);
