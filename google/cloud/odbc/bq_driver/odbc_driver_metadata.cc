@@ -82,16 +82,16 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   }
 
   auto len = info_type_value.length();
-  if (info_val_char.info_val != nullptr) {
-    delete info_val_char.info_val;
+  if (info_val_char.info_val == nullptr) {
+    info_val_char.info_val = new SQLCHAR[len + 1];
   }
-
-  info_val_char.info_val = new SQLCHAR[len + 1];
   strcpy(reinterpret_cast<char*>(info_val_char.info_val),
          info_type_value.c_str());
 
-  return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
-                                         str_len_ptr);
+  SQLRETURN rc = info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
+                                                 str_len_ptr);
+  delete[] info_val_char.info_val;
+  return rc;
 }
 
 }  // namespace
