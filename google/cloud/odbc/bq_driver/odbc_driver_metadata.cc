@@ -59,33 +59,39 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   if (!handle_result.ok()) {
     TracePrintInternal(
         opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
     return SQL_INVALID_HANDLE;
   }
 
   auto* handle = *handle_result;
 
   SQLGetInfoSqlChar info_val_char;
+  std::string info_type_value;
   switch (info_type) {
     case SQL_DATA_SOURCE_NAME: {
-      SQLCHAR* dsn_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle->GetDsn().dsn_name.c_str()));
-      info_val_char.info_val = dsn_name;
-      return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
-                                             str_len_ptr);
+      info_type_value = handle->GetDsn().dsn_name;
+      break;
     }
     case SQL_DATABASE_NAME: {
-      SQLCHAR* database_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle->GetDsn().catalog.c_str()));
-      info_val_char.info_val = database_name;
-      return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
-                                             str_len_ptr);
+      info_type_value = handle->GetDsn().catalog;
+      break;
+    }
+    default: {
+      return InvalidType(
+          "HandleConnectionInformationTypes - Invalid infoType: ", info_type);
     }
   }
 
-  return InvalidType("HandleConnectionInformationTypes - Invalid infoType: ",
-                     info_type);
+  auto len = info_type_value.length();
+  if (info_val_char.info_val != nullptr) {
+    delete info_val_char.info_val;
+  }
+
+  info_val_char.info_val = new SQLCHAR[len + 1];
+  strcpy(reinterpret_cast<char*>(info_val_char.info_val),
+         info_type_value.c_str());
+
+  return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
+                                         str_len_ptr);
 }
 
 }  // namespace
