@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -20,20 +21,11 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
-  if (!in_handle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
-  }
-  // Validate the handle
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  if (in_handle_wrapped->handle_type != HandleType::kConnHandle) {
-    // TODO(#158): SQLGetDiagRec should handle this
+  ConnectionHandle* conn_handle = ValidateConnectionHandle(in_handle);
+  if (conn_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
-
-  ConnectionHandle conn_handle =
-      *reinterpret_cast<ConnectionHandle*>(in_handle_wrapped->handle_ref);
+  conn_handle->GetDiagnostics().ClearDiagnostics();
 
   auto* stmt_handle = new StatementHandle();
   auto* wrapped_handle =

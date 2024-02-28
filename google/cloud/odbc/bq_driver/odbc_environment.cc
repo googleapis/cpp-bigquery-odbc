@@ -35,17 +35,11 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
-  StatusOr<EnvironmentHandle*> env_handle_status =
-      ValidateEnvironmentHandle(environment_handle);
-
-  if (!env_handle_status.ok()) {
-    TracePrintInternal(opts, env_handle_status.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+  EnvironmentHandle* env_handle = ValidateEnvironmentHandle(environment_handle);
+  if (env_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
-
-  EnvironmentHandle* env_handle = *env_handle_status;
+  env_handle->GetDiagnostics().ClearDiagnostics();
 
   return env_handle->SetAttribute(attribute, value, &val_str_len);
 }
@@ -56,15 +50,11 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER* val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
-  StatusOr<EnvironmentHandle*> env_handle_status =
-      ValidateEnvironmentHandle(environment_handle);
-
-  if (!env_handle_status.ok()) {
-    TracePrintInternal(opts, env_handle_status.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
+  EnvironmentHandle* env_handle = ValidateEnvironmentHandle(environment_handle);
+  if (env_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  env_handle->GetDiagnostics().ClearDiagnostics();
 
   if (value == nullptr) {
     TracePrintInternal(
@@ -74,8 +64,6 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
     // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
     return SQL_ERROR;
   }
-
-  EnvironmentHandle* env_handle = *env_handle_status;
 
   return env_handle->GetAttribute(attribute, value, &val_str_len);
 }

@@ -21,13 +21,12 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver::SQLAllocConnHandle;
-using ::google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 
+using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -280,17 +279,6 @@ TEST(SQLGetFunctionsInternal, Odbc3InvalidConnectionHandleType) {
   FreeHandles();
 }
 
-TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
-  CreateDisconnectedHandle(HandleType::kConnHandle);
-  ASSERT_TRUE(connection_handle != nullptr);
-  ASSERT_TRUE(handle_wrapped != nullptr);
-
-  SQLRETURN rc = SQLGetFunctionsInternal(handle_wrapped,
-                                         SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
-  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
-  FreeHandles();
-}
-
 // TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
 //   SQLCHAR dest[256];
 //   SQLSMALLINT in_buffer_len = 256;
@@ -354,7 +342,10 @@ TEST(SQLGetInfoInternal, NotConnectedFailure) {
                                     reinterpret_cast<SQLPOINTER>(dest),
                                     in_buffer_len, &str_len_ptr);
 
-  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+  EXPECT_EQ(SQL_ERROR, rc);
+  EXPECT_EQ(
+      SQLStates::k_08003(),
+      connection_handle->GetDiagnostics().GetStatusRecords()[0].sql_state);
   FreeHandles();
 }
 

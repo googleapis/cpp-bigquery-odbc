@@ -21,56 +21,19 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
-StatusOr<ConnectionHandle*> ValidateConnectionHandle(
-    SQLHDBC connection_handle) {
-  // Validate nullness.
-  if (!connection_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null connection handle");
-  }
-  // Common validation for internal members.
-  auto* conn_handle_wrapped =
-      reinterpret_cast<HandleWrapped*>(connection_handle);
-
-  auto conn_handle_ptr_status = ValidateHandle<ConnectionHandle>(
-      HandleType::kConnHandle, conn_handle_wrapped);
-  if (!conn_handle_ptr_status.ok()) {
-    return conn_handle_ptr_status.status();
-  }
-
-  auto* conn_handle_ptr = *conn_handle_ptr_status;
-
-  if (!conn_handle_ptr->IsConnected()) {
-    return Status(StatusCode::kInvalidArgument,
-                  "Connection handle not connected to data source");
-  }
-
-  return conn_handle_ptr;
+EnvironmentHandle* ValidateEnvironmentHandle(SQLHENV environment_handle) {
+  return CastToInternalHandle<EnvironmentHandle>(environment_handle,
+                                                 HandleType::kEnvHandle);
 }
 
-StatusOr<EnvironmentHandle*> ValidateEnvironmentHandle(
-    SQLHENV environment_handle) {
-  // Validate nullness.
-  if (!environment_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null environment handle");
-  }
-  // Validate the internal members.
-  auto* env_handle_wrapped =
-      reinterpret_cast<HandleWrapped*>(environment_handle);
-
-  return ValidateHandle<EnvironmentHandle>(HandleType::kEnvHandle,
-                                           env_handle_wrapped);
+ConnectionHandle* ValidateConnectionHandle(SQLHDBC connection_handle) {
+  return CastToInternalHandle<ConnectionHandle>(connection_handle,
+                                                HandleType::kConnHandle);
 }
 
-StatusOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
-  // Validate nullness.
-  if (!stmt_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null statement handle");
-  }
-  // Validate the internal members.
-  auto* stmt_handle_wrapped = reinterpret_cast<HandleWrapped*>(stmt_handle);
-
-  return ValidateHandle<StatementHandle>(HandleType::kStatementHandle,
-                                         stmt_handle_wrapped);
+StatementHandle* ValidateStatementHandle(SQLHSTMT statement_handle) {
+  return CastToInternalHandle<StatementHandle>(statement_handle,
+                                               HandleType::kStatementHandle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

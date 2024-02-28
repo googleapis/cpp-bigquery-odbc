@@ -15,9 +15,9 @@
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -42,6 +42,8 @@ TraceOptions& opts = *(*kTraceOptsConsole);
 // Internal helper functions.
 namespace {
 
+using ::google::cloud::odbc_internal::SQLStates;
+
 SQLRETURN InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   std::string message = mesg;
   message.append(std::to_string(info_type));
@@ -49,35 +51,29 @@ SQLRETURN InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   return SQL_ERROR;
 }
 
-SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
+SQLRETURN HandleConnectionInformationTypes(ConnectionHandle* conn_handle,
                                            SQLUSMALLINT info_type,
                                            SQLPOINTER info_value_ptr,
                                            SQLSMALLINT in_buffer_len,
                                            SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_INVALID_HANDLE;
+  if (!conn_handle->IsConnected()) {
+    conn_handle->GetDiagnostics().AddStatusRecord(
+        {SQLStates::k_08003(),
+         "Connection to the datasource was not established"});
+    return SQL_ERROR;
   }
-
-  auto* handle = *handle_result;
-
   SQLGetInfoSqlChar info_val_char;
   switch (info_type) {
     case SQL_DATA_SOURCE_NAME: {
       SQLCHAR* dsn_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle->GetDsn().dsn_name.c_str()));
+          const_cast<char*>(conn_handle->GetDsn().dsn_name.c_str()));
       info_val_char.info_val = dsn_name;
       return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
                                              str_len_ptr);
     }
     case SQL_DATABASE_NAME: {
       SQLCHAR* database_name = reinterpret_cast<SQLCHAR*>(
-          const_cast<char*>(handle->GetDsn().catalog.c_str()));
+          const_cast<char*>(conn_handle->GetDsn().catalog.c_str()));
       info_val_char.info_val = database_name;
       return info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
                                              str_len_ptr);
@@ -94,15 +90,11 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  StatusOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
+  ConnectionHandle* conn_handle = ValidateConnectionHandle(connection_handle);
+  if (conn_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  conn_handle->GetDiagnostics().ClearDiagnostics();
   // Assumption here is memory for output is managed/owned by the caller.
   if (!supported_fn) {
     TracePrintInternal(opts, "Argument supported_fn cannot be null");
@@ -174,15 +166,11 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
+  ConnectionHandle* conn_handle = ValidateConnectionHandle(connection_handle);
+  if (conn_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
+  conn_handle->GetDiagnostics().ClearDiagnostics();
   if (!info_value_ptr) {
     TracePrintInternal(opts, "Invalid InfoValuePtr");
     // TODO(#158): SQLGetDiagRec should handle this
@@ -190,9 +178,8 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   }
   // Handle information types dependent on connection handle.
   if (info_type == SQL_DATA_SOURCE_NAME || info_type == SQL_DATABASE_NAME) {
-    return HandleConnectionInformationTypes(connection_handle, info_type,
-                                            info_value_ptr, in_buffer_len,
-                                            str_len_ptr);
+    return HandleConnectionInformationTypes(
+        conn_handle, info_type, info_value_ptr, in_buffer_len, str_len_ptr);
   }
   // Handle rest of the information types not dependent on the connection
   // handle.

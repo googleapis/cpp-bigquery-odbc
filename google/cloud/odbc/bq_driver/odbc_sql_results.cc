@@ -20,28 +20,21 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_str_len) {
-  StatusOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        **kTraceOptsConsole,
-        "Invalid Statement handle: " + handle_result.status().message());
+  StatementHandle* stmt_handle = ValidateStatementHandle(statement_handle);
+  if (stmt_handle == nullptr) {
     return SQL_INVALID_HANDLE;
   }
-  StatementHandle handle = *(handle_result.value());
-  handle.GetDiagnostics().ClearDiagnostics();
+  stmt_handle->GetDiagnostics().ClearDiagnostics();
 
-  return handle.BindColumn(column_number, target_c_type, target_value,
-                           target_value_buffer_len, target_value_str_len);
+  return stmt_handle->BindColumn(column_number, target_c_type, target_value,
+                                 target_value_buffer_len, target_value_str_len);
 }
 
 // NOLINTBEGIN(misc-unused-parameters)
