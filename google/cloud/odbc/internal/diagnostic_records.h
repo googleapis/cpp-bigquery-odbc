@@ -54,6 +54,8 @@ struct StatusRecord {
     }
   }
 
+  inline static StatusRecord Ok() { return {}; }
+
   [[nodiscard]] bool ok() const { return sql_state.empty() && message.empty(); }
 
   std::string sql_state;

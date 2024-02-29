@@ -87,4 +87,16 @@ TEST(ConvertFrom, kUnavailable) {
   EXPECT_EQ(500, status_record.native_error_code);
 }
 
+TEST(StatusRecordOk, Success) {
+  auto status = StatusRecord::Ok();
+
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(StatusRecordOk, Failure) {
+  auto status = StatusRecord{SQLStates::k_HY000(), "message"};
+
+  EXPECT_FALSE(status.ok());
+}
+
 }  // namespace google::cloud::odbc_internal

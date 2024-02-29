@@ -222,6 +222,28 @@ TEST(ImplicitConversion, ReturnFailure) {
   EXPECT_FALSE(success);
 }
 
+TEST(ConvertFromStatusOr, Success) {
+  StatusOr<std::string> expected("value");
+
+  StatusRecordOr<std::string> actual =
+      StatusRecordOr<std::string>::ConvertFromStatusOr(expected);
+
+  EXPECT_TRUE(actual);
+  EXPECT_EQ("value", *actual);
+}
+
+TEST(ConvertFromStatusOr, Failure) {
+  StatusOr<std::string> expected(
+      Status(StatusCode::kInvalidArgument, "message"));
+
+  StatusRecordOr<std::string> actual =
+      StatusRecordOr<std::string>::ConvertFromStatusOr(expected);
+
+  EXPECT_FALSE(actual);
+  EXPECT_EQ(SQLStates::k_42000(), actual.GetStatusRecord().sql_state);
+  EXPECT_EQ("[BigQuery] message", actual.GetStatusRecord().message);
+}
+
 /// A class without a default constructor.
 class NoDefaultConstructor {
  public:

@@ -49,7 +49,7 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
 
   auth_ = auth;
   is_connected_ = true;
-  return {};
+  return StatusRecord::Ok();
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
