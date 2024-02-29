@@ -23,11 +23,23 @@ namespace google::cloud::odbc_testing_utils {
   ASSERT_TRUE(expression.ok())       \
       << "Error message: " << expression.status().message() << "\n"
 
+#define ASSERT_STATUS_RECORD_OK(expression) \
+  ASSERT_TRUE(expression.Ok())       \
+      << "Error message: " << expression.GetStatusRecord().message << "\n"
+
 MATCHER_P2(StatusIs, code, matcher, "") {
   EXPECT_EQ(arg.status().code(), code)
       << "Expected code to be: " << StatusCodeToString(code)
       << ", but was: " << StatusCodeToString(arg.status().code());
   EXPECT_THAT(arg.status().message(), matcher);
+  return true;
+}
+
+MATCHER_P2(StatusRecordIs, sql_state, matcher, "") {
+  EXPECT_EQ(arg.GetStatusRecord().sql_state, sql_state)
+      << "Expected code to be: " << sql_state
+      << ", but was: " << arg.GetStatusRecord().sql_state;
+  EXPECT_THAT(arg.GetStatusRecord().message, matcher);
   return true;
 }
 

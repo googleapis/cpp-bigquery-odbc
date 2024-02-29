@@ -32,7 +32,7 @@ TEST(ODBCBQClient, CreateBQClient) {
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
       {OauthMechanism::kServiceAccount, credentials_file_path});
 
-  ASSERT_STATUS_OK(odbc_bq_client);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

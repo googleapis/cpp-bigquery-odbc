@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
@@ -25,9 +26,9 @@ using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_bigquery_client_interface::ListAllProjects;
-using google::cloud::odbc_testing_utils::StatusIs;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
+using google::cloud::odbc_internal::StatusRecordOr;
 using ::testing::HasSubstr;
-using ::testing::StrEq;
 
 TEST(ListAllProjects, ListZeroProjects) {
   auto mock = std::make_shared<MockProjectConnection>();
@@ -38,7 +39,7 @@ TEST(ListAllProjects, ListZeroProjects) {
   });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
   EXPECT_EQ(0, projects->size());
@@ -55,7 +56,7 @@ TEST(ListAllProjects, ListOneProject) {
       });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
   EXPECT_EQ(1, projects->size());
@@ -72,11 +73,11 @@ TEST(ListAllProjects, ListProjectsFailure_UnauthenticatedRequest) {
   });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
-  EXPECT_THAT(projects,
-              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(projects, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
+                                       HasSubstr("denied")));
 }
 
 TEST(GetProjects, GetOneProject) {
@@ -90,7 +91,7 @@ TEST(GetProjects, GetOneProject) {
       });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<Project> project =
+  StatusRecordOr<Project> project =
       GetProject(mocked_project_client, expected.id, options);
 
   EXPECT_EQ(expected.id, project->id);
@@ -107,10 +108,11 @@ TEST(GetProjects, GetProjectFailure_ProjectNotFound) {
       });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<Project> project =
+  StatusRecordOr<Project> project =
       GetProject(mocked_project_client, "unknown-id", options);
 
-  EXPECT_THAT(project, StatusIs(StatusCode::kNotFound, HasSubstr("not found")));
+  EXPECT_THAT(project, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                                      HasSubstr("not found")));
 }
 
 TEST(GetProjects, GetProjectFailure_UnauthenticatedRequest) {
@@ -123,9 +125,11 @@ TEST(GetProjects, GetProjectFailure_UnauthenticatedRequest) {
   });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<Project> project = GetProject(mocked_project_client, "id", options);
+  StatusRecordOr<Project> project =
+      GetProject(mocked_project_client, "id", options);
 
-  EXPECT_THAT(project, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(project, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
+                                      HasSubstr("denied")));
 }
 
 TEST(FilterProjects, FilterZeroProjects) {
@@ -137,7 +141,7 @@ TEST(FilterProjects, FilterZeroProjects) {
   });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {"id_1", "id_2"}, options);
 
   EXPECT_EQ(0, projects->size());
@@ -155,7 +159,7 @@ TEST(FilterProjects, FilterOneProject) {
       });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {response_1.id, "id_2"}, options);
 
   EXPECT_EQ(1, projects->size());
@@ -172,11 +176,11 @@ TEST(FilterProjects, FilterProjectsFailure_UnauthenticatedRequest) {
   });
   ProjectClient mocked_project_client(std::move(mock));
 
-  StatusOr<std::vector<Project>> projects =
+  StatusRecordOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {"id_1", "id_2"}, options);
 
-  EXPECT_THAT(projects,
-              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(projects, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
+                                       HasSubstr("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

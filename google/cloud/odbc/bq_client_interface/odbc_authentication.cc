@@ -19,50 +19,45 @@
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include <fstream>
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
 using ::google::cloud::odbc_bigquery_client_interface::SetEnv;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_internal::StatusRecord;
 
 auto const kSelfSignedJwtEnvVar =
     "GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT";
 
-StatusOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
+StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     std::string const& credentials_file_path) {
   if (credentials_file_path.empty()) {
-    return Status(StatusCode::kInvalidArgument,
-                  "The path to the file can't be empty.");
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "The path to the file can't be empty"};
   }
   auto is = std::ifstream(credentials_file_path);
   if (!is.is_open()) {
-    return Status(
-        StatusCode::kInvalidArgument,
-        "There was an error while opening the file: " + credentials_file_path);
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "There was an error while opening the file: " + credentials_file_path};
   }
   auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
   if (is.bad()) {
-    return Status(
-        StatusCode::kInternal,
-        "There was an error while reading the file: " + credentials_file_path);
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "There was an error while reading the file: " + credentials_file_path};
   }
   return ::google::cloud::MakeServiceAccountCredentials(contents);
 }
 
-StatusOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
+StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAccount:
       return CreateServiceCredentials(oauth.credentials_file_path);
-      break;
     case OauthMechanism::kExternalUser:
-      return Status(StatusCode::kUnimplemented, "Currently not implemented.");
-      break;
+      return StatusRecord{odbc_internal::SQLStates::k_HY000(), "Currently not implemented"};
   }
-  return Status(StatusCode::kInvalidArgument,
-                "OauthMechanism enum is invalid.");
+  return StatusRecord{odbc_internal::SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
 }
 
-StatusOr<AccessToken> GetOAuth2Token(
+StatusRecordOr<AccessToken> GetOAuth2Token(
     std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> const&
         generator) {
   // We need to set env var for service account to force it to make a request to
@@ -73,7 +68,7 @@ StatusOr<AccessToken> GetOAuth2Token(
   SetEnv(kSelfSignedJwtEnvVar, "true");
   StatusOr<AccessToken> access_token = generator->GetToken();
   SetEnv(kSelfSignedJwtEnvVar, self_signed_jwt_disabled);
-  return access_token;
+  return StatusRecordOr<AccessToken>::ConvertFromStatusOr(access_token);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

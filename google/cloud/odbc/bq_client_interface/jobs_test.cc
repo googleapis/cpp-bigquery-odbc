@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_job_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
@@ -36,9 +37,11 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
-using google::cloud::odbc_testing_utils::StatusIs;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::Contains;
-using ::testing::StrEq;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_internal::SQLStates;
+using ::testing::HasSubstr;
 
 TEST(GetJob, GetJobSuccess) {
   Options options;
@@ -56,10 +59,10 @@ TEST(GetJob, GetJobSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+  StatusRecordOr<Job> actual =
       GetJob(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
 }
 
@@ -79,10 +82,10 @@ TEST(GetJob, GetJob_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+      StatusRecordOr<Job> actual =
       GetJob(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
 }
 
@@ -101,10 +104,10 @@ TEST(GetJob, GetJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+      StatusRecordOr<Job> actual =
       GetJob(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(ListAllJobs, ListZeroJobsSuccess) {
@@ -118,10 +121,10 @@ TEST(ListAllJobs, ListZeroJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(0, jobs->size());
 }
 
@@ -137,10 +140,10 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
@@ -157,10 +160,10 @@ TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
@@ -177,10 +180,10 @@ TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
-  EXPECT_THAT(jobs, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(FilterJobs, FilterZeroJobsSuccess) {
@@ -201,10 +204,10 @@ TEST(FilterJobs, FilterZeroJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(0, jobs->size());
 }
 
@@ -232,10 +235,10 @@ TEST(FilterJobs, FilterJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
@@ -259,10 +262,10 @@ TEST(FilterJobs, FilterJobs_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
-  ASSERT_STATUS_OK(jobs);
+  ASSERT_STATUS_RECORD_OK(jobs);
   EXPECT_EQ(1, jobs->size());
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
@@ -286,10 +289,10 @@ TEST(FilterJobs, FilterJobsFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatJob>> jobs =
+      StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
-  EXPECT_THAT(jobs, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(InsertJob, InsertJobSuccess) {
@@ -305,9 +308,9 @@ TEST(InsertJob, InsertJobSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual = InsertJob(job_client, project_id, job, options);
+      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
 }
 
@@ -324,9 +327,9 @@ TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual = InsertJob(job_client, project_id, job, options);
+      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
 }
 
@@ -343,9 +346,9 @@ TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual = InsertJob(job_client, project_id, job, options);
+      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
@@ -364,9 +367,9 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual = InsertJob(job_client, project_id, job, options);
+      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(InsertJob, InsertJobSuccess_JobObjectIsFull) {
@@ -405,9 +408,9 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsFull) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual = InsertJob(job_client, project_id, job, options);
+      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(CancelJob, CancelJobSuccess) {
@@ -426,10 +429,10 @@ TEST(CancelJob, CancelJobSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+      StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(CancelJob, CancelJob_EmptyInputParams) {
@@ -448,10 +451,10 @@ TEST(CancelJob, CancelJob_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+      StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(CancelJob, CancelJobFailure_UnauthenticatedRequest) {
@@ -469,10 +472,10 @@ TEST(CancelJob, CancelJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<Job> actual =
+      StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(Query, QuerySuccess) {
@@ -490,10 +493,10 @@ TEST(Query, QuerySuccess) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<PostQueryResults> actual =
+  StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(Query, QuerySuccess_EmptyInputParams) {
@@ -510,10 +513,10 @@ TEST(Query, QuerySuccess_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<PostQueryResults> actual =
+  StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(Query, QueryFailure_UnauthenticatedRequest) {
@@ -529,10 +532,10 @@ TEST(Query, QueryFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<PostQueryResults> actual =
+  StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
@@ -550,10 +553,10 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<PostQueryResults> actual =
+  StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(Query, QuerySuccess_QueryRequestObjectIsFull) {
@@ -576,10 +579,10 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsFull) {
   });
   JobClient job_client(std::move(mock));
 
-  StatusOr<PostQueryResults> actual =
+  StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
@@ -599,10 +602,10 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       GetAllQueryResults(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
@@ -628,10 +631,10 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       GetAllQueryResults(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(2, actual->rows.size());
   EXPECT_TRUE(actual->page_token.empty());
 }
@@ -653,10 +656,10 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       GetAllQueryResults(job_client, project_id, job_id, location, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
@@ -676,10 +679,10 @@ TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       GetAllQueryResults(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(FilterQueryResults, FilterQueryResultsSuccess) {
@@ -710,11 +713,11 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       FilterQueryResults(job_client, project_id, job_id, location,
                          query_results_filter_params, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
@@ -742,11 +745,11 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       FilterQueryResults(job_client, project_id, job_id, location,
                          query_results_filter_params, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(FilterQueryResults, FilterQueryResultsFailure_UnauthenticatedRequest) {
@@ -771,11 +774,9 @@ TEST(FilterQueryResults, FilterQueryResultsFailure_UnauthenticatedRequest) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusOr<GetQueryResults> actual =
+  StatusRecordOr<GetQueryResults> actual =
       FilterQueryResults(job_client, project_id, job_id, location,
                          query_results_filter_params, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
-
-}  // namespace google::cloud::odbc_bigquery_client_interface

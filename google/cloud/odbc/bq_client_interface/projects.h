@@ -15,24 +15,29 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_PROJECTS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_PROJECTS_H
 
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 // Get detailed project information for the project passed in.
-StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
 ListAllProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                     project_client,
                 ::google::cloud::Options const& options);
 
 // Lists all projects for the user.
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Project> GetProject(
-    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
-        project_client,
-    std::string const& project_id, ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Project>
+GetProject(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
+               project_client,
+           std::string const& project_id,
+           ::google::cloud::Options const& options);
 
 // Filter projects for the user, based on project_ids.
-StatusOr<std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
 FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                    project_client,
                std::vector<std::string> const& project_ids,

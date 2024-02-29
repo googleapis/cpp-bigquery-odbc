@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -22,21 +23,23 @@ using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_internal::StatusRecord;
 
-StatusOr<ReadSession> CreateReadSession(
+StatusRecordOr<ReadSession> CreateReadSession(
     BigQueryReadClient& bigquery_read_client,
     CreateReadSessionRequest const& read_session_request,
     Options const& options) {
-  return bigquery_read_client.CreateReadSession(read_session_request, options);
+  return StatusRecordOr<ReadSession>::ConvertFromStatusOr(bigquery_read_client.CreateReadSession(read_session_request, options));
 }
 
-StatusOr<std::vector<ReadRowsResponse>> ReadRows(
+StatusRecordOr<std::vector<ReadRowsResponse>> ReadRows(
     BigQueryReadClient& bigquery_read_client,
     ReadRowsRequest const& read_rows_request, int max_read_responses,
     Options const& options) {
   if (max_read_responses < 0) {
-    return Status(StatusCode::kInvalidArgument,
-                  "max_read_responses should be non-negative");
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "max_read_responses should be non-negative"};
   }
   StreamRange<ReadRowsResponse> read_rows_response_range =
       bigquery_read_client.ReadRows(read_rows_request, options);
@@ -47,7 +50,7 @@ StatusOr<std::vector<ReadRowsResponse>> ReadRows(
       break;
     }
     if (!read_rows_response) {
-      return read_rows_response.status();
+      return StatusRecord::ConvertFrom(read_rows_response.status());
     }
     read_rows_responses.push_back(*read_rows_response);
   }

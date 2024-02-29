@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -20,9 +22,11 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
-StatusOr<std::vector<Project>> ListAllProjects(ProjectClient& project_client,
-                                               Options const& options) {
+StatusRecordOr<std::vector<Project>> ListAllProjects(
+    ProjectClient& project_client, Options const& options) {
   ListProjectsRequest request;
 
   StreamRange<Project> projects_response =
@@ -31,7 +35,7 @@ StatusOr<std::vector<Project>> ListAllProjects(ProjectClient& project_client,
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
     if (!project) {
-      return project.status();
+      return StatusRecord::ConvertFrom(project.status());
     }
     projects.push_back(*project);
   }
@@ -39,9 +43,9 @@ StatusOr<std::vector<Project>> ListAllProjects(ProjectClient& project_client,
   return projects;
 }
 
-StatusOr<Project> GetProject(ProjectClient& project_client,
-                             std::string const& project_id,
-                             Options const& options) {
+StatusRecordOr<Project> GetProject(ProjectClient& project_client,
+                                   std::string const& project_id,
+                                   Options const& options) {
   ListProjectsRequest request;
 
   StreamRange<Project> projects_response =
@@ -49,18 +53,18 @@ StatusOr<Project> GetProject(ProjectClient& project_client,
 
   for (auto const& project : projects_response) {
     if (!project) {
-      return project.status();
+      return StatusRecord::ConvertFrom(project.status());
     }
     if ((*project).id == project_id) {
       return *project;
     }
   }
 
-  return Status(StatusCode::kNotFound,
-                "The project " + project_id + " was not found");
+  return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                      "The project " + project_id + " was not found"};
 }
 
-StatusOr<std::vector<Project>> FilterProjects(
+StatusRecordOr<std::vector<Project>> FilterProjects(
     ProjectClient& project_client, std::vector<std::string> const& project_ids,
     Options const& options) {
   ListProjectsRequest request;
@@ -71,7 +75,7 @@ StatusOr<std::vector<Project>> FilterProjects(
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
     if (!project) {
-      return project.status();
+      return StatusRecord::ConvertFrom(project.status());
     }
     if (std::find(project_ids.begin(), project_ids.end(), (*project).id) !=
         project_ids.end()) {

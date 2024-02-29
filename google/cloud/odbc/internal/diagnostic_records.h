@@ -17,6 +17,7 @@
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/status.h"
 #include <string>
 
 namespace google::cloud::odbc_internal {
@@ -32,6 +33,27 @@ struct HeaderRecord {
 // Contains information about specific errors or warnings, happened during
 // function execution
 struct StatusRecord {
+  // Converts google-cloud-cpp::Status to odbc::StatusRecord
+  static StatusRecord ConvertFrom(Status const& status) {
+    std::string message = "[BigQuery] " + status.message();
+    switch (status.code()) {
+      case StatusCode::kInvalidArgument:
+        return {SQLStates::k_42000(), message, 400};
+      case StatusCode::kUnauthenticated:
+        return {SQLStates::k_28000(), message, 401};
+      case StatusCode::kPermissionDenied:
+        return {SQLStates::k_42000(), message, 403};
+      case StatusCode::kNotFound:
+        return {SQLStates::k_HY000(), message, 404};
+      case StatusCode::kAborted:
+        return {SQLStates::k_HY000(), message, 409};
+      case StatusCode::kInternal:
+        return {SQLStates::k_HY000(), message, 501};
+      default:
+        return {SQLStates::k_HY000(), message, 500};
+    }
+  }
+
   std::string sql_state;
   std::string message;
   int native_error_code = 0;

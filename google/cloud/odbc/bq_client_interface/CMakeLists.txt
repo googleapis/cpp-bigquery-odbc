@@ -35,7 +35,8 @@ add_library(
 
 target_link_libraries(
     odbc_bq_client_interface google-cloud-cpp::bigquery
-    google-cloud-cpp::experimental-bigquery_rest google-cloud-cpp::oauth2)
+    google-cloud-cpp::experimental-bigquery_rest google-cloud-cpp::oauth2
+    odbc_internal)
 
 target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
 

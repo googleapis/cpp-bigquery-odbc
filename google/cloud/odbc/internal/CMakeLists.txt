@@ -25,7 +25,8 @@ add_library(
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(odbc_internal absl::strings)
+target_link_libraries(odbc_internal
+                      google-cloud-cpp::experimental-bigquery_rest)
 
 target_compile_features(odbc_internal PUBLIC cxx_std_17)
 
