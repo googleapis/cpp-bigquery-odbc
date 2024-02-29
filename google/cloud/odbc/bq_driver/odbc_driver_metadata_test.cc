@@ -287,7 +287,7 @@ TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
 
   SQLRETURN rc = SQLGetFunctionsInternal(handle_wrapped,
                                          SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
-  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+  EXPECT_EQ(SQL_ERROR, rc);
   FreeHandles();
 }
 
@@ -352,7 +352,7 @@ TEST(SQLGetInfoInternal, NotConnectedFailure) {
                                     reinterpret_cast<SQLPOINTER>(dest),
                                     in_buffer_len, &str_len_ptr);
 
-  EXPECT_EQ(SQL_INVALID_HANDLE, rc);
+  EXPECT_EQ(SQL_ERROR, rc);
   FreeHandles();
 }
 

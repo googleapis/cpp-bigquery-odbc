@@ -23,7 +23,8 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using google::cloud::odbc_testing_utils::StatusIs;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::StrEq;
 
 // Helper class and functions specific to odbc utils unit tests.
@@ -68,7 +69,7 @@ TEST(ValidateConnectionHandle, Success) {
   auto wrapped_handle = new HandleWrapped(HandleType::kConnHandle, conn_handle);
 
   auto result = ValidateConnectionHandle(wrapped_handle);
-  ASSERT_STATUS_OK(result);
+  ASSERT_STATUS_RECORD_OK(result);
 
   delete conn_handle;
   delete wrapped_handle;
@@ -77,8 +78,8 @@ TEST(ValidateConnectionHandle, Success) {
 TEST(ValidateConnectionHandle, InvalidNullPtr) {
   auto result = ValidateConnectionHandle(nullptr);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Null connection handle")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Handle is null pointer")));
 }
 
 TEST(ValidateConnectionHandle, InvalidHandleType) {
@@ -87,8 +88,8 @@ TEST(ValidateConnectionHandle, InvalidHandleType) {
   AllocateHandles(&env_handle, &conn_handle);
   auto result = ValidateConnectionHandle(env_handle);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
   FreeHandles(env_handle, conn_handle);
 }
 
@@ -99,8 +100,8 @@ TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
 
   EXPECT_THAT(
       result,
-      StatusIs(StatusCode::kInvalidArgument,
-               StrEq("Connection handle not connected to data source")));
+      StatusRecordIs(SQLStates::k_08003(),
+                     StrEq("Connection handle not connected to data source")));
 
   delete conn_handle;
   delete wrapped_handle;
@@ -114,15 +115,15 @@ TEST(ValidateEnvironmentHandle, Success) {
   SQLHENV env_handle;
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
   auto result = ValidateEnvironmentHandle(env_handle);
-  ASSERT_STATUS_OK(result);
+  ASSERT_STATUS_RECORD_OK(result);
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
 TEST(ValidateEnvironmentHandle, InvalidNullPtr) {
   auto result = ValidateEnvironmentHandle(nullptr);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Null environment handle")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Handle is null pointer")));
 }
 
 TEST(ValidateEnvironmentHandle, InvalidHandleType) {
@@ -131,8 +132,8 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
   AllocateHandles(&env_handle, &conn_handle);
   auto result = ValidateEnvironmentHandle(conn_handle);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
 
   FreeHandles(env_handle, conn_handle);
 }
@@ -147,15 +148,15 @@ TEST(ValidateStatementHandle, Success) {
   SQLHSTMT stmt_handle;
   AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
   auto result = ValidateStatementHandle(stmt_handle);
-  ASSERT_STATUS_OK(result);
+  ASSERT_STATUS_RECORD_OK(result);
   FreeHandles(env_handle, conn_handle, stmt_handle);
 }
 
 TEST(ValidateStatementHandle, InvalidNullPtr) {
   auto result = ValidateStatementHandle(nullptr);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Null statement handle")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Handle is null pointer")));
 }
 
 TEST(ValidateStatementHandle, InvalidHandleType) {
@@ -165,8 +166,8 @@ TEST(ValidateStatementHandle, InvalidHandleType) {
 
   auto result = ValidateStatementHandle(conn_handle);
 
-  EXPECT_THAT(result, StatusIs(StatusCode::kInvalidArgument,
-                               StrEq("Invalid handle type")));
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
 
   FreeHandles(env_handle, conn_handle);
 }

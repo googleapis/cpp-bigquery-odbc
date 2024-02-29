@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -36,6 +37,7 @@ using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 TraceOptions& opts = *(*kTraceOptsConsole);
 
@@ -54,12 +56,12 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                            SQLPOINTER info_value_ptr,
                                            SQLSMALLINT in_buffer_len,
                                            SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle*> handle_result =
+  StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    return SQL_INVALID_HANDLE;
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOptsConsole,
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
 
   auto* handle = *handle_result;
@@ -100,14 +102,12 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
   SQLRETURN rc = SQL_SUCCESS;
-  StatusOr<ConnectionHandle*> handle_result =
+  StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_INVALID_HANDLE;
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOptsConsole,
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
   // Assumption here is memory for output is managed/owned by the caller.
   if (!supported_fn) {
@@ -180,14 +180,12 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
-  StatusOr<ConnectionHandle*> handle_result =
+  StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
-  if (!handle_result.ok()) {
-    TracePrintInternal(
-        opts, "Invalid Connection handle: " + handle_result.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_INVALID_HANDLE;
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOptsConsole,
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
   if (!info_value_ptr) {
     TracePrintInternal(opts, "Invalid InfoValuePtr");

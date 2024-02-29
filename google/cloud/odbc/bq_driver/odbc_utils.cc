@@ -14,63 +14,63 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
-StatusOr<ConnectionHandle*> ValidateConnectionHandle(
+StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
     SQLHDBC connection_handle) {
-  // Validate nullness.
-  if (!connection_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null connection handle");
-  }
-  // Common validation for internal members.
-  auto* conn_handle_wrapped =
-      reinterpret_cast<HandleWrapped*>(connection_handle);
-
-  auto conn_handle_ptr_status = ValidateHandle<ConnectionHandle>(
-      HandleType::kConnHandle, conn_handle_wrapped);
-  if (!conn_handle_ptr_status.ok()) {
-    return conn_handle_ptr_status.status();
+  auto conn_handle_ptr_status = CastToHandle<ConnectionHandle>(
+      HandleType::kConnHandle, connection_handle);
+  if (!conn_handle_ptr_status) {
+    return StatusRecordOr<ConnectionHandle*>(
+        conn_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);
   }
 
   auto* conn_handle_ptr = *conn_handle_ptr_status;
+  conn_handle_ptr->GetDiagnostics().ClearDiagnostics();
 
   if (!conn_handle_ptr->IsConnected()) {
-    return Status(StatusCode::kInvalidArgument,
-                  "Connection handle not connected to data source");
+    StatusRecord status_record{
+        SQLStates::k_08003(), "Connection handle not connected to data source"};
+    conn_handle_ptr->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
   }
 
   return conn_handle_ptr;
 }
 
-StatusOr<EnvironmentHandle*> ValidateEnvironmentHandle(
+StatusRecordOr<EnvironmentHandle*> ValidateEnvironmentHandle(
     SQLHENV environment_handle) {
-  // Validate nullness.
-  if (!environment_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null environment handle");
+  auto env_handle_ptr_status = CastToHandle<EnvironmentHandle>(
+      HandleType::kEnvHandle, environment_handle);
+  if (!env_handle_ptr_status) {
+    return StatusRecordOr<EnvironmentHandle*>(
+        env_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);
   }
-  // Validate the internal members.
-  auto* env_handle_wrapped =
-      reinterpret_cast<HandleWrapped*>(environment_handle);
+  (*env_handle_ptr_status)->GetDiagnostics().ClearDiagnostics();
 
-  return ValidateHandle<EnvironmentHandle>(HandleType::kEnvHandle,
-                                           env_handle_wrapped);
+  return *env_handle_ptr_status;
 }
 
-StatusOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
-  // Validate nullness.
-  if (!stmt_handle) {
-    return Status(StatusCode::kInvalidArgument, "Null statement handle");
+StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
+  auto stmt_handle_ptr_status =
+      CastToHandle<StatementHandle>(HandleType::kStatementHandle, stmt_handle);
+  if (!stmt_handle_ptr_status) {
+    return StatusRecordOr<StatementHandle*>(
+        stmt_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);
   }
-  // Validate the internal members.
-  auto* stmt_handle_wrapped = reinterpret_cast<HandleWrapped*>(stmt_handle);
+  (*stmt_handle_ptr_status)->GetDiagnostics().ClearDiagnostics();
 
-  return ValidateHandle<StatementHandle>(HandleType::kStatementHandle,
-                                         stmt_handle_wrapped);
+  return *stmt_handle_ptr_status;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -20,6 +20,8 @@
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
 #include <fstream>
@@ -31,29 +33,34 @@
 namespace google::cloud::odbc_bq_driver {
 
 template <typename T>
-inline StatusOr<T*> ValidateHandle(HandleType handle_type,
-                                   HandleWrapped* handle_wrapped) {
-  if (!handle_wrapped) {
-    return Status(StatusCode::kInvalidArgument, "Null handle");
+odbc_internal::StatusRecordOr<T*> CastToHandle(HandleType handle_type,
+                                               SQLHANDLE input_handle) {
+  if (input_handle == nullptr) {
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                                       "Handle is null pointer"};
   }
+  auto* handle_wrapped = reinterpret_cast<HandleWrapped*>(input_handle);
   if (handle_type != handle_wrapped->handle_type) {
-    return Status(StatusCode::kInvalidArgument, "Invalid handle type");
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                                       "Invalid handle type"};
   }
-  T* internal_handle_ptr = reinterpret_cast<T*>(handle_wrapped->handle_ref);
-  if (!internal_handle_ptr) {
-    return Status(StatusCode::kInvalidArgument,
-                  "Null internal handle reference");
+  if (handle_wrapped->handle_ref == nullptr) {
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                                       "Null internal handle reference"};
   }
-  return internal_handle_ptr;
+  return reinterpret_cast<T*>(handle_wrapped->handle_ref);
 }
 
-StatusOr<google::cloud::odbc_bq_driver_internal::ConnectionHandle*>
+odbc_internal::StatusRecordOr<
+    google::cloud::odbc_bq_driver_internal::ConnectionHandle*>
 ValidateConnectionHandle(SQLHDBC connection_handle);
 
-StatusOr<google::cloud::odbc_bq_driver_internal::EnvironmentHandle*>
+odbc_internal::StatusRecordOr<
+    google::cloud::odbc_bq_driver_internal::EnvironmentHandle*>
 ValidateEnvironmentHandle(SQLHENV environment_handle);
 
-StatusOr<google::cloud::odbc_bq_driver_internal::StatementHandle*>
+odbc_internal::StatusRecordOr<
+    google::cloud::odbc_bq_driver_internal::StatementHandle*>
 ValidateStatementHandle(SQLHSTMT stmt_handle);
 
 }  // namespace google::cloud::odbc_bq_driver

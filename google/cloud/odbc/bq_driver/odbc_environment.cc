@@ -16,12 +16,14 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
   auto* env_handle = new EnvironmentHandle();
@@ -35,14 +37,13 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
-  StatusOr<EnvironmentHandle*> env_handle_status =
+  StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
-  if (!env_handle_status.ok()) {
-    TracePrintInternal(opts, env_handle_status.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_INVALID_HANDLE;
+  if (!env_handle_status) {
+    TracePrintInternal(**kTraceOptsConsole,
+                       env_handle_status.GetStatusRecord().message);
+    return env_handle_status.GetCalculatedReturnCode();
   }
 
   EnvironmentHandle* env_handle = *env_handle_status;
@@ -56,14 +57,13 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER* val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
-  StatusOr<EnvironmentHandle*> env_handle_status =
+  StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
-  if (!env_handle_status.ok()) {
-    TracePrintInternal(opts, env_handle_status.status().message());
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_INVALID_HANDLE;
+  if (!env_handle_status) {
+    TracePrintInternal(**kTraceOptsConsole,
+                       env_handle_status.GetStatusRecord().message);
+    return env_handle_status.GetCalculatedReturnCode();
   }
 
   if (value == nullptr) {
