@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <iostream>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -32,6 +33,7 @@ std::string const kDsnName = "SampleDSN";
 TEST(ConnectionHandle, Connect) {
   std::string credentials_file_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  std::cout << "credentials_file_path:: " << credentials_file_path << std::endl;
   Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();

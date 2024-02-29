@@ -27,12 +27,16 @@ fi # include guard
 # the local machine. See the `rotate-keys.sh` script for details about how
 # these keys are rotated.
 readonly KEY_DIR="/dev/odbc-auth"
+# readonly KEY_DIR="/tmp/odbc-auth"
 mkdir "${KEY_DIR}"
 gcloud secrets versions access latest --secret=user-account-auth-keys --out-file="${KEY_DIR}/user_account_auth_keys.json"
 gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="${KEY_DIR}/service_account_auth_keys.json"
 gcloud secrets versions access latest --secret=client-id-auth-keys --out-file="${KEY_DIR}/client_id_auth_keys.json"
 gcloud secrets versions access latest --secret=wrong-account-auth-keys --out-file="${KEY_DIR}/wrong_account_auth_keys.json"
 gcloud secrets versions access latest --secret=no-access-account-auth-keys --out-file="${KEY_DIR}/no_access_account_auth_keys.json"
+
+echo "KEY FILE:::: "
+cat ${KEY_DIR}/service_account_auth_keys.json
 
 export CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY=${KEY_DIR}/user_account_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=${KEY_DIR}/service_account_auth_keys.json
