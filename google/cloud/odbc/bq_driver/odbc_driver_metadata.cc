@@ -59,7 +59,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(opts,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -105,7 +105,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(opts,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -183,7 +183,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(opts,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
