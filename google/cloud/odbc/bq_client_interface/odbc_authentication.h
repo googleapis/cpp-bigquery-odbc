@@ -15,11 +15,11 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_AUTHORIZATION_H
 
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include "absl/strings/string_view.h"
-#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -36,7 +36,8 @@ struct Oauth {
 };
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
-odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth);
+odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
+    Oauth const& oauth);
 
 /// Creates OAuth2 access_token
 odbc_internal::StatusRecordOr<AccessToken> GetOAuth2Token(

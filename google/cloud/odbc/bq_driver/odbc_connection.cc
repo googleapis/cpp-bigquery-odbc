@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/internal/getenv.h"
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
@@ -25,6 +26,7 @@ using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::Section;
+using google::cloud::odbc_internal::StatusRecord;
 
 /////////////////////////////
 // Internal Helper Functions
@@ -143,7 +145,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   handle_ref->SetUp(dsn_section, dsn_name);
 
   Authentication auth = CreateAuth(dsn_section);
-  Status status = handle_ref->Connect(auth);
+  StatusRecord status = handle_ref->Connect(auth);
   if (!status.ok()) {
     // Creating the connection failed
     // TODO(#170): Add error tracing call here

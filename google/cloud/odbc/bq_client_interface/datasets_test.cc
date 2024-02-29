@@ -26,8 +26,10 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using ::google::cloud::bigquery_v2_minimal_internal::MockDatasetConnection;
-using google::cloud::odbc_testing_utils::StatusIs;
-using ::testing::StrEq;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::HasSubstr;
 
 TEST(GetDataset, GetDatasetSuccess) {
   auto mock = std::make_shared<MockDatasetConnection>();
@@ -44,10 +46,10 @@ TEST(GetDataset, GetDatasetSuccess) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<Dataset> dataset =
+  StatusRecordOr<Dataset> dataset =
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
-  ASSERT_STATUS_OK(dataset);
+  ASSERT_STATUS_RECORD_OK(dataset);
   EXPECT_EQ(expected.id, dataset->id);
 }
 
@@ -66,10 +68,10 @@ TEST(GetDataset, GetDataset_EmptyInputParams) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<Dataset> dataset =
+  StatusRecordOr<Dataset> dataset =
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
-  ASSERT_STATUS_OK(dataset);
+  ASSERT_STATUS_RECORD_OK(dataset);
   EXPECT_EQ(expected.id, dataset->id);
 }
 
@@ -88,10 +90,11 @@ TEST(GetDataset, GetDatasetFailure_UnauthenticatedRequest) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<Dataset> dataset =
+  StatusRecordOr<Dataset> dataset =
       GetDataset(mocked_dataset_client, project_id, expected.id, options);
 
-  EXPECT_THAT(dataset, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(dataset,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(ListAllDatasets, ListZeroDatasetsSuccess) {
@@ -106,10 +109,10 @@ TEST(ListAllDatasets, ListZeroDatasetsSuccess) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets =
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(0, datasets->size());
 }
 
@@ -126,10 +129,10 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets =
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
@@ -147,10 +150,10 @@ TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets =
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
@@ -169,11 +172,11 @@ TEST(ListAllDatasets, ListAllDatasetsFailure_UnauthenticatedRequest) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets =
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       ListAllDatasets(mocked_dataset_client, project_id, options);
 
   EXPECT_THAT(datasets,
-              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(FilterDatasets, FilterZeroDatasetsSuccess) {
@@ -191,10 +194,10 @@ TEST(FilterDatasets, FilterZeroDatasetsSuccess) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
       mocked_dataset_client, project_id, dataset_filter, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(0, datasets->size());
 }
 
@@ -214,10 +217,10 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
       mocked_dataset_client, project_id, dataset_filter, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
@@ -238,10 +241,10 @@ TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
       mocked_dataset_client, project_id, dataset_filter, options);
 
-  ASSERT_STATUS_OK(datasets);
+  ASSERT_STATUS_RECORD_OK(datasets);
   EXPECT_EQ(1, datasets->size());
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
@@ -262,11 +265,11 @@ TEST(FilterDatasets, FilterDatasetsFailure_UnauthenticatedRequest) {
       });
   DatasetClient mocked_dataset_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets = FilterDatasets(
       mocked_dataset_client, project_id, dataset_filter, options);
 
   EXPECT_THAT(datasets,
-              StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

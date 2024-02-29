@@ -14,19 +14,21 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/setenv.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include <fstream>
-#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
 using ::google::cloud::odbc_bigquery_client_interface::SetEnv;
-using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 auto const kSelfSignedJwtEnvVar =
     "GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT";
@@ -34,27 +36,33 @@ auto const kSelfSignedJwtEnvVar =
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     std::string const& credentials_file_path) {
   if (credentials_file_path.empty()) {
-    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "The path to the file can't be empty"};
+    return StatusRecord{SQLStates::k_HY000(),
+                        "The path to the file can't be empty"};
   }
   auto is = std::ifstream(credentials_file_path);
   if (!is.is_open()) {
-    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "There was an error while opening the file: " + credentials_file_path};
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "There was an error while opening the file: " + credentials_file_path};
   }
   auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
   if (is.bad()) {
-    return StatusRecord{odbc_internal::SQLStates::k_HY000(), "There was an error while reading the file: " + credentials_file_path};
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "There was an error while reading the file: " + credentials_file_path};
   }
   return ::google::cloud::MakeServiceAccountCredentials(contents);
 }
 
-StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(Oauth const& oauth) {
+StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
+    Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAccount:
       return CreateServiceCredentials(oauth.credentials_file_path);
     case OauthMechanism::kExternalUser:
-      return StatusRecord{odbc_internal::SQLStates::k_HY000(), "Currently not implemented"};
+      return StatusRecord{SQLStates::k_HY000(), "Currently not implemented"};
   }
-  return StatusRecord{odbc_internal::SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
+  return StatusRecord{SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
 }
 
 StatusRecordOr<AccessToken> GetOAuth2Token(

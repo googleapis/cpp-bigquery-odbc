@@ -15,6 +15,7 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_TABLES_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_TABLES_H
 
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -28,14 +29,16 @@ struct TableFilter {
 };
 
 // Returns detailed info for a specific Table
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Table>
+GetTable(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,
     std::string const& project_id, std::string const& dataset_id,
     std::string const& table_id, TableFilter const& table_filter,
     ::google::cloud::Options const& options);
 
 // Returns all Tables in a Dataset
-StatusOr<
+odbc_internal::StatusRecordOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
 ListAllTables(
     ::google::cloud::bigquery_v2_minimal_internal::TableClient& table_client,

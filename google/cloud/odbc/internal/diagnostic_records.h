@@ -54,6 +54,8 @@ struct StatusRecord {
     }
   }
 
+  [[nodiscard]] bool ok() const { return sql_state.empty() && message.empty(); }
+
   std::string sql_state;
   std::string message;
   int native_error_code = 0;

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -23,14 +23,15 @@ using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
-using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<ReadSession> CreateReadSession(
     BigQueryReadClient& bigquery_read_client,
     CreateReadSessionRequest const& read_session_request,
     Options const& options) {
-  return StatusRecordOr<ReadSession>::ConvertFromStatusOr(bigquery_read_client.CreateReadSession(read_session_request, options));
+  return StatusRecordOr<ReadSession>::ConvertFromStatusOr(
+      bigquery_read_client.CreateReadSession(read_session_request, options));
 }
 
 StatusRecordOr<std::vector<ReadRowsResponse>> ReadRows(

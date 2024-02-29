@@ -51,8 +51,8 @@ namespace google::cloud::odbc_bigquery_client_interface {
 ///
 class ODBCBQClient {
  public:
-  static odbc_internal::StatusRecordOr<std::shared_ptr<ODBCBQClient>> CreateBQClient(
-      Oauth const& oauth);
+  static odbc_internal::StatusRecordOr<std::shared_ptr<ODBCBQClient>>
+  CreateBQClient(Oauth const& oauth);
   ~ODBCBQClient() = default;
 
   ODBCBQClient(ODBCBQClient const&) = default;
@@ -89,19 +89,20 @@ class ODBCBQClient {
   ///////////////
 
   // Returns detailed info for a specific Dataset.
-  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Dataset> GetDataset(
-      std::string const& project_id, std::string const& dataset_id,
-      ::google::cloud::Options const& options);
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::Dataset>
+  GetDataset(std::string const& project_id, std::string const& dataset_id,
+             ::google::cloud::Options const& options);
 
   // Returns all Datasets in a Project.
-  StatusOr<std::vector<
+  odbc_internal::StatusRecordOr<std::vector<
       ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
   ListAllDatasets(std::string const& project_id,
                   ::google::cloud::Options const& options);
 
   // Returns filtered list of datasets in a Project, based on the dataset
   // filters passed in.
-  StatusOr<std::vector<
+  odbc_internal::StatusRecordOr<std::vector<
       ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
   FilterDatasets(std::string const& project_id,
                  DatasetFilter const& dataset_filter,
@@ -112,13 +113,14 @@ class ODBCBQClient {
   ///////////////
 
   // Returns detailed info for a specific Table
-  StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
-      std::string const& project_id, std::string const& dataset_id,
-      std::string const& table_id, TableFilter const& table_filter,
-      ::google::cloud::Options const& options);
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::Table>
+  GetTable(std::string const& project_id, std::string const& dataset_id,
+           std::string const& table_id, TableFilter const& table_filter,
+           ::google::cloud::Options const& options);
 
   // Returns all Tables in a Dataset
-  StatusOr<std::vector<
+  odbc_internal::StatusRecordOr<std::vector<
       ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
   ListAllTables(std::string const& project_id, std::string const& dataset_id,
                 ::google::cloud::Options const& options);
@@ -128,9 +130,10 @@ class ODBCBQClient {
   ///////////////
 
   // Returns detailed info for a specific Job
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
-      std::string const& project_id, std::string const& job_id,
-      std::string const& location, ::google::cloud::Options const& options);
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::Job>
+  GetJob(std::string const& project_id, std::string const& job_id,
+         std::string const& location, ::google::cloud::Options const& options);
 
   // Returns all Jobs in a Project
   odbc_internal::StatusRecordOr<
@@ -146,32 +149,38 @@ class ODBCBQClient {
              ::google::cloud::Options const& options);
 
   // Inserts a BQ job for execution
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> InsertJob(
-      std::string const& project_id,
-      ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
-      ::google::cloud::Options const& options);
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::Job>
+  InsertJob(std::string const& project_id,
+            ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
+            ::google::cloud::Options const& options);
 
   // Cancels an already running BQ Job
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
-      std::string const& project_id, std::string const& job_id,
-      std::string const& location, ::google::cloud::Options const& options);
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::Job>
+  CancelJob(std::string const& project_id, std::string const& job_id,
+            std::string const& location,
+            ::google::cloud::Options const& options);
 
   // Runs a BQ SQL query synchronously and returns query
   // results if the query completes within a specified timeout.
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
   Query(std::string const& project_id,
         ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
             query_request,
         ::google::cloud::Options const& options);
 
   // Gets all the query results of a previously run query job.
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
   GetAllQueryResults(std::string const& project_id, std::string const& job_id,
                      std::string const& location,
                      ::google::cloud::Options const& options);
 
   // Gets query results, based on the filter passed in.
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
   FilterQueryResults(std::string const& project_id, std::string const& job_id,
                      std::string const& location,
                      QueryResultsFilterParams const& query_results_filter,
@@ -183,7 +192,8 @@ class ODBCBQClient {
 
   // Creates a new read session for dividing BQ Table contents into one or more
   // streams, to be read later.
-  odbc_internal::StatusRecordOr<::google::cloud::bigquery::storage::v1::ReadSession>
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery::storage::v1::ReadSession>
   CreateReadSession(
       ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest const&
           read_session_request,
@@ -192,7 +202,8 @@ class ODBCBQClient {
   // Reads rows from streams, in the format prescribed by the read session.
   // Allows to limit the number of read responses returned via the
   // max_read_responses parameter. By default, all read responses is returned
-  odbc_internal::StatusRecordOr<std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
+  odbc_internal::StatusRecordOr<
+      std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
   ReadRows(::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
                read_rows_request,
            int max_read_responses, ::google::cloud::Options const& options);

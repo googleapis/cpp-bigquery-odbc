@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/storage.h"
-#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/storage/v1/mocks/mock_bigquery_read_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
 #include <gmock/gmock.h>
@@ -27,9 +27,9 @@ using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
 using ::google::cloud::bigquery_storage_v1_mocks::MockBigQueryReadConnection;
-using google::cloud::odbc_testing_utils::StatusRecordIs;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecordOr;
-    using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 TEST(CreateReadSession, CreateReadSessionSuccess) {
@@ -47,7 +47,7 @@ TEST(CreateReadSession, CreateReadSessionSuccess) {
   StatusRecordOr<ReadSession> actual = CreateReadSession(
       mocked_bigquery_read_client, create_read_session_request, options);
 
-      ASSERT_STATUS_RECORD_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
 }
 
 TEST(ReadRows, ReadRowsSuccessSuccess) {
@@ -66,7 +66,7 @@ TEST(ReadRows, ReadRowsSuccessSuccess) {
       ReadRows(mocked_bigquery_read_client, read_rows_request,
                max_read_responses, options);
 
-      ASSERT_STATUS_RECORD_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(1, (*actual).size());
 }
 
@@ -102,9 +102,10 @@ TEST(ReadRows, MaxReadResponsesIsNegative) {
       ReadRows(mocked_bigquery_read_client, read_rows_request,
                max_read_responses, options);
 
-  EXPECT_THAT(actual,
-              StatusRecordIs(SQLStates::k_HY000(),
-                       HasSubstr("max_read_responses should be non-negative")));
+  EXPECT_THAT(
+      actual,
+      StatusRecordIs(SQLStates::k_HY000(),
+                     HasSubstr("max_read_responses should be non-negative")));
 }
 
 TEST(ReadRows, UnauthenticatedRequest) {
@@ -123,7 +124,8 @@ TEST(ReadRows, UnauthenticatedRequest) {
       ReadRows(mocked_bigquery_read_client, read_rows_request,
                max_read_responses, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

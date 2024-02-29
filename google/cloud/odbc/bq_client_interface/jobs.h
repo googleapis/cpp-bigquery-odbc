@@ -15,8 +15,8 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_JOBS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_JOBS_H
 
-#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -52,10 +52,11 @@ struct QueryResultsFilterParams {
 };
 
 // Returns detailed info for a specific Job
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> GetJob(
-    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
-    std::string const& project_id, std::string const& job_id,
-    std::string const& location, ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Job>
+GetJob(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+       std::string const& project_id, std::string const& job_id,
+       std::string const& location, ::google::cloud::Options const& options);
 
 // Returns all Jobs in a Project
 odbc_internal::StatusRecordOr<
@@ -73,36 +74,41 @@ FilterJobs(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
            ::google::cloud::Options const& options);
 
 // Inserts a BQ job for execution
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> InsertJob(
-    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
-    std::string const& project_id,
-    ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
-    ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Job>
+InsertJob(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+          std::string const& project_id,
+          ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
+          ::google::cloud::Options const& options);
 
 // Cancels an already running BQ Job
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job> CancelJob(
-    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
-    std::string const& project_id, std::string const& job_id,
-    std::string const& location, ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Job>
+CancelJob(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+          std::string const& project_id, std::string const& job_id,
+          std::string const& location, ::google::cloud::Options const& options);
 
 // Runs a BQ SQL query synchronously and returns query
 // results if the query completes within a specified timeout.
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults> Query(
-    ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
-    std::string const& project_id,
-    ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
-        query_request,
-    ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+Query(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+      std::string const& project_id,
+      ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
+          query_request,
+      ::google::cloud::Options const& options);
 
 // Gets all the query results of a previously run query job.
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
 GetAllQueryResults(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,
     std::string const& location, ::google::cloud::Options const& options);
 
 // Gets query results, based on the filter passed in.
-odbc_internal::StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
 FilterQueryResults(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,

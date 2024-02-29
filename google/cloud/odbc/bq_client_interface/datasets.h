@@ -15,6 +15,7 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_DATASETS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_DATASETS_H
 
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -29,14 +30,15 @@ struct DatasetFilter {
 };
 
 // Returns detailed info for a specific Dataset.
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Dataset> GetDataset(
-    ::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
-        dataset_client,
-    std::string const& project_id, std::string const& dataset_id,
-    ::google::cloud::Options const& options);
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Dataset>
+GetDataset(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
+               dataset_client,
+           std::string const& project_id, std::string const& dataset_id,
+           ::google::cloud::Options const& options);
 
 // Returns all Datasets in a Project.
-StatusOr<std::vector<
+odbc_internal::StatusRecordOr<std::vector<
     ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
 ListAllDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                     dataset_client,
@@ -45,7 +47,7 @@ ListAllDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
 
 // Returns filtered list of datasets in a Project, based on the dataset
 // filters passed in.
-StatusOr<std::vector<
+odbc_internal::StatusRecordOr<std::vector<
     ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
 FilterDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                    dataset_client,

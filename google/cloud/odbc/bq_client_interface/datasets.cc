@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -23,19 +24,22 @@ using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
-StatusOr<Dataset> GetDataset(DatasetClient& dataset_client,
-                             std::string const& project_id,
-                             std::string const& dataset_id,
-                             Options const& options) {
+StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
+                                   std::string const& project_id,
+                                   std::string const& dataset_id,
+                                   Options const& options) {
   GetDatasetRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
 
-  return dataset_client.GetDataset(request, options);
+  return StatusRecordOr<Dataset>::ConvertFromStatusOr(
+      dataset_client.GetDataset(request, options));
 }
 
-StatusOr<std::vector<ListFormatDataset>> ListAllDatasets(
+StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     Options const& options) {
   ListDatasetsRequest request;
@@ -48,7 +52,7 @@ StatusOr<std::vector<ListFormatDataset>> ListAllDatasets(
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {
     if (!dataset) {
-      return dataset.status();
+      return StatusRecord::ConvertFrom(dataset.status());
     }
     datasets.push_back(*dataset);
   }
@@ -56,7 +60,7 @@ StatusOr<std::vector<ListFormatDataset>> ListAllDatasets(
   return datasets;
 }
 
-StatusOr<std::vector<ListFormatDataset>> FilterDatasets(
+StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     DatasetFilter const& dataset_filter, Options const& options) {
   ListDatasetsRequest request;
@@ -70,7 +74,7 @@ StatusOr<std::vector<ListFormatDataset>> FilterDatasets(
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {
     if (!dataset) {
-      return dataset.status();
+      return StatusRecord::ConvertFrom(dataset.status());
     }
     datasets.push_back(*dataset);
   }

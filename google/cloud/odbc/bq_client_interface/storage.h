@@ -15,19 +15,22 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_STORAGE_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_STORAGE_H
 
-#include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-odbc_internal::StatusRecordOr<::google::cloud::bigquery::storage::v1::ReadSession> CreateReadSession(
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery::storage::v1::ReadSession>
+CreateReadSession(
     ::google::cloud::bigquery_storage_v1::BigQueryReadClient&
         bigquery_read_client,
     ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest const&
         read_session_request,
     ::google::cloud::Options const& options);
 
-odbc_internal::StatusRecordOr<std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
+odbc_internal::StatusRecordOr<
+    std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
 ReadRows(::google::cloud::bigquery_storage_v1::BigQueryReadClient&
              bigquery_read_client,
          ::google::cloud::bigquery::storage::v1::ReadRowsRequest const&

@@ -27,8 +27,10 @@ using ::google::cloud::bigquery_v2_minimal_internal::MockTableConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using google::cloud::odbc_bigquery_client_interface::GetTable;
-using google::cloud::odbc_testing_utils::StatusIs;
-using ::testing::StrEq;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::HasSubstr;
 
 TEST(GetTable, GetTableSuccess) {
   Options options;
@@ -52,10 +54,10 @@ TEST(GetTable, GetTableSuccess) {
   });
   TableClient table_client(std::move(mock));
 
-  StatusOr<Table> actual = GetTable(table_client, project_id, dataset_id,
-                                    table_id, table_filter, options);
+  StatusRecordOr<Table> actual = GetTable(table_client, project_id, dataset_id,
+                                          table_id, table_filter, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, table.id);
 }
 
@@ -78,10 +80,10 @@ TEST(GetTable, GetTable_EmptyInputParams) {
   });
   TableClient table_client(std::move(mock));
 
-  StatusOr<Table> actual = GetTable(table_client, project_id, dataset_id,
-                                    table_id, table_filter, options);
+  StatusRecordOr<Table> actual = GetTable(table_client, project_id, dataset_id,
+                                          table_id, table_filter, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, table.id);
 }
 
@@ -107,10 +109,10 @@ TEST(GetTable, GetTable_InvalidFilterParameters) {
   });
   TableClient table_client(std::move(mock));
 
-  StatusOr<Table> actual = GetTable(table_client, project_id, dataset_id,
-                                    table_id, table_filter, options);
+  StatusRecordOr<Table> actual = GetTable(table_client, project_id, dataset_id,
+                                          table_id, table_filter, options);
 
-  ASSERT_STATUS_OK(actual);
+  ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, table.id);
 }
 
@@ -132,10 +134,11 @@ TEST(GetTable, GetTableFailure_UnauthenticatedRequest) {
   });
   TableClient table_client(std::move(mock));
 
-  StatusOr<Table> actual = GetTable(table_client, project_id, dataset_id,
-                                    table_id, table_filter, options);
+  StatusRecordOr<Table> actual = GetTable(table_client, project_id, dataset_id,
+                                          table_id, table_filter, options);
 
-  EXPECT_THAT(actual, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(ListAllTables, ListZeroTablesSuccess) {
@@ -152,10 +155,10 @@ TEST(ListAllTables, ListZeroTablesSuccess) {
       });
   TableClient table_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatTable>> tables =
+  StatusRecordOr<std::vector<ListFormatTable>> tables =
       ListAllTables(table_client, project_id, dataset_id, options);
 
-  ASSERT_STATUS_OK(tables);
+  ASSERT_STATUS_RECORD_OK(tables);
   EXPECT_EQ(0, tables->size());
 }
 
@@ -174,10 +177,10 @@ TEST(ListAllTables, ListAllTablesSuccess) {
       });
   TableClient table_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatTable>> tables =
+  StatusRecordOr<std::vector<ListFormatTable>> tables =
       ListAllTables(table_client, project_id, dataset_id, options);
 
-  ASSERT_STATUS_OK(tables);
+  ASSERT_STATUS_RECORD_OK(tables);
   EXPECT_EQ(1, tables->size());
   EXPECT_EQ(expected.id, tables->at(0).id);
 }
@@ -197,10 +200,10 @@ TEST(ListAllTables, ListAllTablesSuccess_EmptyInputParams) {
       });
   TableClient table_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatTable>> tables =
+  StatusRecordOr<std::vector<ListFormatTable>> tables =
       ListAllTables(table_client, project_id, dataset_id, options);
 
-  ASSERT_STATUS_OK(tables);
+  ASSERT_STATUS_RECORD_OK(tables);
   EXPECT_EQ(1, tables->size());
   EXPECT_EQ(expected.id, tables->at(0).id);
 }
@@ -220,10 +223,11 @@ TEST(ListAllTables, ListAllTablesFailure_UnauthenticatedRequest) {
       });
   TableClient table_client(std::move(mock));
 
-  StatusOr<std::vector<ListFormatTable>> tables =
+  StatusRecordOr<std::vector<ListFormatTable>> tables =
       ListAllTables(table_client, project_id, dataset_id, options);
 
-  EXPECT_THAT(tables, StatusIs(StatusCode::kUnauthenticated, StrEq("denied")));
+  EXPECT_THAT(tables,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
@@ -20,6 +21,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 
 std::string const kDsnDescription = "test-dsn";
 std::string const kDsnCatalog = "bigquery-test";
@@ -32,7 +35,7 @@ TEST(ConnectionHandle, Connect) {
   Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
-  Status status = conn_handle->Connect(auth);
+  StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), true);
   EXPECT_TRUE(conn_handle->IsConnected());
   delete conn_handle;
@@ -47,7 +50,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
   Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
-  Status status = conn_handle->Connect(auth);
+  StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
@@ -62,9 +65,9 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
 
   Authentication auth = {OauthMechanism::kExternalUser, credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
-  Status status = conn_handle->Connect(auth);
+  StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
-  EXPECT_EQ(status.code(), StatusCode::kUnimplemented);
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
   EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }
@@ -78,9 +81,9 @@ TEST(ConnectionHandle, ConnectWithInvalidAuth) {
 
   Authentication auth = {static_cast<OauthMechanism>(7), credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
-  Status status = conn_handle->Connect(auth);
+  StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
-  EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
   EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }

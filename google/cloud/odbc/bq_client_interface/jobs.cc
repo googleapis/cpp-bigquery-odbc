@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
-#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -30,9 +30,9 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
-using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 // When 'Job' object is created, all members are created with default values,
 // usually empty strings. Client library doesn't provide any validation around
@@ -89,19 +89,21 @@ std::vector<std::string> CreateKeysToFilterOut(
 }
 
 StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
-                     std::string const& job_id, std::string const& location,
-                     Options const& options) {
+                           std::string const& job_id,
+                           std::string const& location,
+                           Options const& options) {
   GetJobRequest get_job_request;
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(job_client.GetJob(get_job_request, options));
+  return StatusRecordOr<Job>::ConvertFromStatusOr(
+      job_client.GetJob(get_job_request, options));
 }
 
-StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(JobClient& job_client,
-                                                 std::string const& project_id,
-                                                 Options const& options) {
+StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
+    JobClient& job_client, std::string const& project_id,
+    Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
 
@@ -119,10 +121,9 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(JobClient& job_client,
   return jobs;
 }
 
-StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(JobClient& job_client,
-                                                std::string const& project_id,
-                                                JobFilter const& job_filter,
-                                                Options const& options) {
+StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
+    JobClient& job_client, std::string const& project_id,
+    JobFilter const& job_filter, Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
   request.set_all_users(job_filter.allUsers);
@@ -146,44 +147,49 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(JobClient& job_client,
   return jobs;
 }
 
-StatusRecordOr<Job> InsertJob(JobClient& job_client, std::string const& project_id,
-                        Job const& job, Options const& options) {
+StatusRecordOr<Job> InsertJob(JobClient& job_client,
+                              std::string const& project_id, Job const& job,
+                              Options const& options) {
   InsertJobRequest request;
   request.set_project_id(project_id);
   request.set_job(job);
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(job_client.InsertJob(request, options));
+  return StatusRecordOr<Job>::ConvertFromStatusOr(
+      job_client.InsertJob(request, options));
 }
 
-StatusRecordOr<Job> CancelJob(JobClient& job_client, std::string const& project_id,
-                        std::string const& job_id, std::string const& location,
-                        Options const& options) {
+StatusRecordOr<Job> CancelJob(JobClient& job_client,
+                              std::string const& project_id,
+                              std::string const& job_id,
+                              std::string const& location,
+                              Options const& options) {
   CancelJobRequest request;
   request.set_project_id(project_id);
   request.set_job_id(job_id);
   request.set_location(location);
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(job_client.CancelJob(request, options));
+  return StatusRecordOr<Job>::ConvertFromStatusOr(
+      job_client.CancelJob(request, options));
 }
 
 StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
-                                 std::string const& project_id,
-                                 QueryRequest const& query_request,
-                                 Options const& options) {
+                                       std::string const& project_id,
+                                       QueryRequest const& query_request,
+                                       Options const& options) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
-  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(job_client.Query(post_query_request, options));
+  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
+      job_client.Query(post_query_request, options));
 }
 
-StatusRecordOr<GetQueryResults> GetAllQueryResults(JobClient& job_client,
-                                             std::string const& project_id,
-                                             std::string const& job_id,
-                                             std::string const& location,
-                                             Options const& options) {
+StatusRecordOr<GetQueryResults> GetAllQueryResults(
+    JobClient& job_client, std::string const& project_id,
+    std::string const& job_id, std::string const& location,
+    Options const& options) {
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(project_id);
   get_query_results_request.set_job_id(job_id);

@@ -37,10 +37,10 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::Contains;
-using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_internal::SQLStates;
 using ::testing::HasSubstr;
 
 TEST(GetJob, GetJobSuccess) {
@@ -82,7 +82,7 @@ TEST(GetJob, GetJob_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual =
+  StatusRecordOr<Job> actual =
       GetJob(job_client, project_id, job_id, location, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
@@ -104,10 +104,11 @@ TEST(GetJob, GetJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual =
+  StatusRecordOr<Job> actual =
       GetJob(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(ListAllJobs, ListZeroJobsSuccess) {
@@ -121,7 +122,7 @@ TEST(ListAllJobs, ListZeroJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -140,7 +141,7 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -160,7 +161,7 @@ TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -180,7 +181,7 @@ TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       ListAllJobs(job_client, project_id, options);
 
   EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
@@ -204,7 +205,7 @@ TEST(FilterJobs, FilterZeroJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -235,7 +236,7 @@ TEST(FilterJobs, FilterJobsSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -262,7 +263,7 @@ TEST(FilterJobs, FilterJobs_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
   ASSERT_STATUS_RECORD_OK(jobs);
@@ -289,7 +290,7 @@ TEST(FilterJobs, FilterJobsFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<std::vector<ListFormatJob>> jobs =
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
       FilterJobs(job_client, project_id, job_filter, options);
 
   EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
@@ -308,7 +309,7 @@ TEST(InsertJob, InsertJobSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
+  StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
@@ -327,7 +328,7 @@ TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
+  StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(actual->id, job.id);
@@ -346,9 +347,10 @@ TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
+  StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
@@ -367,7 +369,7 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
+  StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
 }
@@ -408,7 +410,7 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsFull) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
+  StatusRecordOr<Job> actual = InsertJob(job_client, project_id, job, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
 }
@@ -429,7 +431,7 @@ TEST(CancelJob, CancelJobSuccess) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual =
+  StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
@@ -451,7 +453,7 @@ TEST(CancelJob, CancelJob_EmptyInputParams) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual =
+  StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
   ASSERT_STATUS_RECORD_OK(actual);
@@ -472,10 +474,11 @@ TEST(CancelJob, CancelJobFailure_UnauthenticatedRequest) {
   });
   JobClient job_client(std::move(mock));
 
-      StatusRecordOr<Job> actual =
+  StatusRecordOr<Job> actual =
       CancelJob(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(Query, QuerySuccess) {
@@ -535,7 +538,8 @@ TEST(Query, QueryFailure_UnauthenticatedRequest) {
   StatusRecordOr<PostQueryResults> actual =
       Query(job_client, project_id, query_request, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
@@ -682,7 +686,8 @@ TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
   StatusRecordOr<GetQueryResults> actual =
       GetAllQueryResults(job_client, project_id, job_id, location, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
 TEST(FilterQueryResults, FilterQueryResultsSuccess) {
@@ -778,5 +783,8 @@ TEST(FilterQueryResults, FilterQueryResultsFailure_UnauthenticatedRequest) {
       FilterQueryResults(job_client, project_id, job_id, location,
                          query_results_filter_params, options);
 
-  EXPECT_THAT(actual, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
+
+}  // namespace google::cloud::odbc_bigquery_client_interface

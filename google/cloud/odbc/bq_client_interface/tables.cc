@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -23,11 +24,15 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable;
 using ::google::cloud::bigquery_v2_minimal_internal::ListTablesRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
-StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
-    TableClient& table_client, std::string const& project_id,
-    std::string const& dataset_id, std::string const& table_id,
-    TableFilter const& table_filter, ::google::cloud::Options const& options) {
+StatusRecordOr<Table> GetTable(TableClient& table_client,
+                               std::string const& project_id,
+                               std::string const& dataset_id,
+                               std::string const& table_id,
+                               TableFilter const& table_filter,
+                               ::google::cloud::Options const& options) {
   GetTableRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
@@ -35,10 +40,11 @@ StatusOr<::google::cloud::bigquery_v2_minimal_internal::Table> GetTable(
   request.set_selected_fields(table_filter.selected_fields);
   request.set_view(table_filter.view);
 
-  return table_client.GetTable(request, options);
+  return StatusRecordOr<Table>::ConvertFromStatusOr(
+      table_client.GetTable(request, options));
 }
 
-StatusOr<std::vector<ListFormatTable>> ListAllTables(
+StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
     TableClient& table_client, std::string const& project_id,
     std::string const& dataset_id, Options const& options) {
   ListTablesRequest request;
@@ -51,7 +57,7 @@ StatusOr<std::vector<ListFormatTable>> ListAllTables(
   std::vector<ListFormatTable> tables;
   for (auto const& table : tables_response) {
     if (!table) {
-      return table.status();
+      return StatusRecord::ConvertFrom(table.status());
     }
     tables.push_back(*table);
   }

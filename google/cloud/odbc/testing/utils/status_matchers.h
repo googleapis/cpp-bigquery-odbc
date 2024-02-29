@@ -24,7 +24,7 @@ namespace google::cloud::odbc_testing_utils {
       << "Error message: " << expression.status().message() << "\n"
 
 #define ASSERT_STATUS_RECORD_OK(expression) \
-  ASSERT_TRUE(expression.Ok())       \
+  ASSERT_TRUE(expression.Ok())              \
       << "Error message: " << expression.GetStatusRecord().message << "\n"
 
 MATCHER_P2(StatusIs, code, matcher, "") {

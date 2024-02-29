@@ -14,8 +14,12 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 void ConnectionHandle::SetUp(Section& dsn_section,
                              std::string const& dsn_name) {
@@ -25,27 +29,27 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.dsn_name = dsn_name;
 }
 
-Status ConnectionHandle::Connect(Authentication& auth) {
+StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   Oauth oauth;
   oauth.auth_mechanism = auth.auth_mechanism;
   oauth.credentials_file_path = auth.key_file_path;
 
-  StatusOr<std::shared_ptr<ODBCBQClient>> response =
+  StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(oauth);
-  if (!response.ok()) {
-    return response.status();
+  if (!response) {
+    return response.GetStatusRecord();
   }
-  client_ = response.value();
+  client_ = *response;
 
   // Verify the credentials by calling ODBCBQClient::GetOAuth2Token
-  StatusOr<AccessToken> access_token_resp = client_->GetOAuth2Token();
-  if (!access_token_resp.ok()) {
-    return access_token_resp.status();
+  StatusRecordOr<AccessToken> access_token_resp = client_->GetOAuth2Token();
+  if (!access_token_resp) {
+    return access_token_resp.GetStatusRecord();
   }
 
   auth_ = auth;
   is_connected_ = true;
-  return Status(StatusCode::kOk, "");
+  return {};
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

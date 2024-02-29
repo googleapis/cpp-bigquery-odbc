@@ -18,11 +18,11 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/status_or.h"
 #include "absl/strings/match.h"
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_internal {
 
@@ -33,8 +33,9 @@ class StatusRecordOr final {
                 "StatusRecordOr<T> requires T to **not** be a reference type");
 
   /**
-   * If status_or.ok() it returns StatusRecordOr with the value from status_or.value().
-   * If !status_or.ok() it returns StatusRecordOr with the status from status_or.status().
+   * If status_or.ok() it returns StatusRecordOr with the value from
+   * status_or.value(). If !status_or.ok() it returns StatusRecordOr with the
+   * status from status_or.status().
    *
    * @param status_or - google-cloud-cpp StatusOr object
    * @return StatusRecordOr converted from StatusOr object
@@ -43,7 +44,8 @@ class StatusRecordOr final {
     if (status_or) {
       return StatusRecordOr(*status_or);
     }
-    return StatusRecordOr(odbc_internal::StatusRecord::ConvertFrom(status_or.status()));
+    return StatusRecordOr(
+        odbc_internal::StatusRecord::ConvertFrom(status_or.status()));
   }
 
   /**
@@ -215,7 +217,7 @@ class StatusRecordOr final {
     return **this;
   }
 
-  T const& GetValue() const& {
+  [[nodiscard]] T const& GetValue() const& {
     CheckHasValue();
     return **this;
   }
@@ -225,7 +227,7 @@ class StatusRecordOr final {
     return std::move(**this);
   }
 
-  T const&& GetValue() const&& {
+  [[nodiscard]] T const&& GetValue() const&& {
     CheckHasValue();
     return std::move(**this);
   }

@@ -26,8 +26,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_bigquery_client_interface::ListAllProjects;
-using google::cloud::odbc_testing_utils::StatusRecordIs;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 TEST(ListAllProjects, ListZeroProjects) {

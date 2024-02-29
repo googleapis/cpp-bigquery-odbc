@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -56,7 +57,7 @@ class ConnectionHandle : public Handle {
   ConnectionHandle(ConnectionHandle&&) = default;
   ConnectionHandle& operator=(ConnectionHandle&&) = default;
 
-  Status Connect(Authentication& auth);
+  odbc_internal::StatusRecord Connect(Authentication& auth);
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
