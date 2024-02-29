@@ -38,6 +38,7 @@ target_link_libraries(
     google-cloud-cpp::experimental-bigquery_rest google-cloud-cpp::oauth2
     odbc_internal)
 
+target_include_directories(odbc_bq_client_interface PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})
 
 target_compile_features(odbc_bq_client_interface PUBLIC cxx_std_17)
