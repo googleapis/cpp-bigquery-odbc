@@ -25,9 +25,9 @@ namespace google::cloud::odbc_internal {
 // Contains general information about a function's execution
 struct HeaderRecord {
   std::string function;
-  int function_code = 0;
-  int cursor_row_count = 0;
-  int row_count = 0;
+  SQLINTEGER function_code = 0;
+  SQLLEN cursor_row_count = 0;
+  SQLLEN row_count = 0;
 };
 
 // Contains information about specific errors or warnings, happened during
@@ -60,9 +60,9 @@ struct StatusRecord {
 
   std::string sql_state;
   std::string message;
-  int native_error_code = 0;
-  int column_number = SQL_COLUMN_NUMBER_UNKNOWN;
-  int row_number = SQL_ROW_NUMBER_UNKNOWN;
+  SQLINTEGER native_error_code = 0;
+  SQLINTEGER column_number = SQL_COLUMN_NUMBER_UNKNOWN;
+  SQLLEN row_number = SQL_ROW_NUMBER_UNKNOWN;
   std::string connection_name;
   std::string server_name;
 };

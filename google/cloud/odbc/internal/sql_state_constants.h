@@ -35,6 +35,7 @@ struct SQLStates {
   // As the list is very long and we don't need them all,
   // new values can be added once they are needed.
   static inline std::string k_01000() { return "01000"; };
+  static inline std::string k_01004() { return "01004"; };
   static inline std::string k_28000() { return "28000"; };
   static inline std::string k_42000() { return "42000"; };
   static inline std::string k_08003() { return "08003"; };

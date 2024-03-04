@@ -43,6 +43,8 @@ add_library(
     bq_driver/internal/odbc_sql_type_info.h
     bq_driver/internal/odbc_statement_handle.cc
     bq_driver/internal/odbc_statement_handle.h
+    bq_driver/internal/odbc_type_utils.cc
+    bq_driver/internal/odbc_type_utils.h
     bq_driver/internal/trace_utils.cc
     bq_driver/internal/trace_utils.h
     bq_driver/internal/utils.cc
@@ -130,6 +132,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_sql_fns_test.cc
         bq_driver/internal/odbc_sql_info_test.cc
         bq_driver/internal/odbc_statement_handle_test.cc
+        bq_driver/internal/odbc_type_utils_test.cc
         bq_driver/internal/trace_utils_test.cc
         bq_driver/internal/utils_test.cc
         bq_driver/odbc_commons_test.cc
