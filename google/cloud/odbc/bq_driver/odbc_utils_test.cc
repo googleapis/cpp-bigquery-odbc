@@ -40,12 +40,6 @@ void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
   EXPECT_EQ(SQL_SUCCESS, SQLAllocConnHandle(*env_handle_ref, conn_handle_ref));
 }
 
-void AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref,
-                     SQLHSTMT* stmt_handle_ref) {
-  AllocateHandles(env_handle_ref, conn_handle_ref);
-  EXPECT_EQ(SQL_SUCCESS, SQLAllocStmtHandle(*conn_handle_ref, stmt_handle_ref));
-}
-
 void FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
@@ -143,13 +137,14 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
 ///////////////////////////////////////
 
 TEST(ValidateStatementHandle, Success) {
-  SQLHENV env_handle;
-  SQLHDBC conn_handle;
-  SQLHSTMT stmt_handle;
-  AllocateHandles(&env_handle, &conn_handle, &stmt_handle);
-  auto result = ValidateStatementHandle(stmt_handle);
+  auto* stmt_handle = new StatementHandle();
+  auto* wrapped_handle = new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
+
+  auto result = ValidateStatementHandle(wrapped_handle);
+
   ASSERT_STATUS_RECORD_OK(result);
-  FreeHandles(env_handle, conn_handle, stmt_handle);
+  delete stmt_handle;
+  delete wrapped_handle;
 }
 
 TEST(ValidateStatementHandle, InvalidNullPtr) {

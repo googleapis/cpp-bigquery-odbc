@@ -14,8 +14,11 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
@@ -25,8 +28,10 @@ using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 /////////////////////////////
 // Internal Helper Functions
@@ -71,20 +76,13 @@ void OverrideDsnSectionFromEnv(Section& dsn_section,
 //////////////////////
 
 SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
-  if (!in_handle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
+  StatusRecordOr<EnvironmentHandle*> handle_result =
+      ValidateEnvironmentHandle(in_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
-  // Validate the handle
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  if (in_handle_wrapped->handle_type != HandleType::kEnvHandle) {
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_INVALID_HANDLE;
-  }
-
-  EnvironmentHandle env_handle =
-      *reinterpret_cast<EnvironmentHandle*>(in_handle_wrapped->handle_ref);
 
   auto* conn_handle = new ConnectionHandle();
   auto* wrapped_handle =
@@ -100,20 +98,14 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
-  if (conn_handle == nullptr) {
-    return SQL_ERROR;
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
-  // Validate the handle
-  auto* handle_wrapped = reinterpret_cast<HandleWrapped*>(conn_handle);
-  if (handle_wrapped->handle_type != HandleType::kConnHandle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_INVALID_HANDLE;
-  }
-  // Get the internal handle reference and the
-  // internal connection handle object.
-  auto* handle_ref =
-      reinterpret_cast<ConnectionHandle*>(handle_wrapped->handle_ref);
+  auto* handle_ref = *handle_result;
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
   StatusOr<Section> connection_params_resp =

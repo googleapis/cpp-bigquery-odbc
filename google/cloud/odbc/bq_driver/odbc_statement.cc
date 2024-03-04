@@ -13,27 +13,25 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
-  if (!in_handle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(in_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
-  // Validate the handle
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  if (in_handle_wrapped->handle_type != HandleType::kConnHandle) {
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_INVALID_HANDLE;
-  }
-
-  ConnectionHandle conn_handle =
-      *reinterpret_cast<ConnectionHandle*>(in_handle_wrapped->handle_ref);
 
   auto* stmt_handle = new StatementHandle();
   auto* wrapped_handle =
