@@ -138,7 +138,8 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
 
 TEST(ValidateStatementHandle, Success) {
   auto* stmt_handle = new StatementHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
 
   auto result = ValidateStatementHandle(wrapped_handle);
 
