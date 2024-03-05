@@ -100,50 +100,39 @@ TEST(WriteStringToBufferOutput, Success_StcLenLen_Zero) {
   EXPECT_EQ(0, str_len);
 }
 
-TEST(WriteSQLINTEGERToBufferOutput, Success) {
+TEST(WriteToBufferOutput, Success_SQLINTEGER) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLINTEGER dest[15];
 
   SQLRETURN return_code =
-      WriteSQLINTEGERToBufferOutput(expected, dest, &str_len);
+      WriteToBufferOutput<SQLINTEGER>(expected, dest, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(42, *dest);
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(WriteSQLINTEGERToBufferOutput, Success_Dest_Null) {
+TEST(WriteToBufferOutput, Success_Dest_Null) {
   int expected = 42;
   SQLSMALLINT str_len;
 
   SQLRETURN return_code =
-      WriteSQLINTEGERToBufferOutput(expected, nullptr, &str_len);
+      WriteToBufferOutput<SQLINTEGER>(expected, nullptr, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(WriteSQLLENToBufferOutput, Success) {
+TEST(WriteToBufferOutput, Success_SQLLEN) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLLEN dest[15];
 
-  SQLRETURN return_code = WriteSQLLENToBufferOutput(expected, dest, &str_len);
+  SQLRETURN return_code = WriteToBufferOutput<SQLLEN>(expected, dest, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(42, *dest);
-  EXPECT_EQ(sizeof(SQLLEN), str_len);
-}
-
-TEST(WriteSQLLENToBufferOutput, Success_Dest_Null) {
-  int expected = 42;
-  SQLSMALLINT str_len;
-
-  SQLRETURN return_code =
-      WriteSQLLENToBufferOutput(expected, nullptr, &str_len);
-
-  ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 

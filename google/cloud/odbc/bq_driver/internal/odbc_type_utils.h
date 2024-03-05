@@ -24,11 +24,18 @@ odbc_internal::StatusRecord WriteStringToBufferOutput(char const* src,
                                                       SQLSMALLINT buffer_len,
                                                       SQLSMALLINT* str_len_ptr);
 
-SQLRETURN WriteSQLINTEGERToBufferOutput(SQLINTEGER val, SQLPOINTER buffer_ptr,
-                                        SQLSMALLINT* str_len_ptr);
-
-SQLRETURN WriteSQLLENToBufferOutput(SQLLEN val, SQLPOINTER buffer_ptr,
-                                    SQLSMALLINT* str_len_ptr);
+template <typename T>
+SQLRETURN WriteToBufferOutput(T val, SQLPOINTER buffer_ptr,
+                              SQLSMALLINT* str_len_ptr) {
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(T));
+  }
+  if (buffer_ptr) {
+    auto* val_ptr = reinterpret_cast<T*>(buffer_ptr);
+    *val_ptr = val;
+  }
+  return SQL_SUCCESS;
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

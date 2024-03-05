@@ -46,28 +46,4 @@ StatusRecord WriteStringToBufferOutput(char const* src, SQLPOINTER buffer_ptr,
   return StatusRecord::Ok();
 }
 
-SQLRETURN WriteSQLINTEGERToBufferOutput(SQLINTEGER val, SQLPOINTER buffer_ptr,
-                                        SQLSMALLINT* str_len_ptr) {
-  if (str_len_ptr) {
-    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLINTEGER));
-  }
-  if (buffer_ptr) {
-    auto* val_ptr = reinterpret_cast<SQLINTEGER*>(buffer_ptr);
-    *val_ptr = val;
-  }
-  return SQL_SUCCESS;
-}
-
-SQLRETURN WriteSQLLENToBufferOutput(SQLLEN val, SQLPOINTER buffer_ptr,
-                                    SQLSMALLINT* str_len_ptr) {
-  if (str_len_ptr) {
-    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLLEN));
-  }
-  if (buffer_ptr) {
-    auto* val_ptr = reinterpret_cast<SQLLEN*>(buffer_ptr);
-    *val_ptr = val;
-  }
-  return SQL_SUCCESS;
-}
-
 }  // namespace google::cloud::odbc_bq_driver_internal
