@@ -136,4 +136,16 @@ TEST(WriteToBufferOutput, Success_SQLLEN) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
+TEST(WriteToBufferOutput, Success_Implicit_SQLLEN) {
+  SQLLEN expected = 42;
+  SQLSMALLINT str_len;
+  SQLLEN dest[15];
+
+  SQLRETURN return_code = WriteToBufferOutput(expected, dest, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(42, *dest);
+  EXPECT_EQ(sizeof(SQLLEN), str_len);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
