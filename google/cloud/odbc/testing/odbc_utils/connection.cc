@@ -148,6 +148,352 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
+SQLRETURN SetConnectAttribute(std::shared_ptr<ConnectionHandle> conn) {
+  SQLCHAR buf[kBufferLength];
+  SQLSMALLINT out_len;
+  SQLUINTEGER timeout = 30;
+  SQLUINTEGER packet_size = 20;
+  SQLINTEGER translate_dll_opt = 1;
+  std::string catalog_name = "bigquery-devtools-drivers";
+  std::string trace_file_name = "trace-file-test";
+  std::string translate_lib_name = "traslate-lib-name";
+  SQLCHAR* catalog =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str()));
+  SQLCHAR* trace_file =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(trace_file_name.c_str()));
+  SQLCHAR* translate_lib =
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(translate_lib_name.c_str()));
+  SQLRETURN status;
+
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ACCESS_MODE,
+                             (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ACCESS_MODE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ACCESS_MODE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ACCESS_MODE, Info Val: SQL_MODE_READ_ONLY"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ACCESS_MODE,
+                             (SQLPOINTER)SQL_MODE_READ_WRITE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ACCESS_MODE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ACCESS_MODE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ACCESS_MODE, Info Val: SQL_MODE_READ_WRITE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                             (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ASYNC_ENABLE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ASYNC_ENABLE, Info Val: SQL_ASYNC_ENABLE_OFF"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                             (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ASYNC_ENABLE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ASYNC_ENABLE, Info Val: SQL_ASYNC_ENABLE_ON"
+              << std::endl;
+  }
+  status =
+      SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTO_IPD, (SQLPOINTER)SQL_TRUE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_AUTO_IPD)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_AUTO_IPD");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_AUTO_IPD, Info Val: SQL_TRUE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTO_IPD,
+                             (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_AUTO_IPD)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_AUTO_IPD");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_AUTO_IPD, Info Val: SQL_FALSE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                             (SQLPOINTER)SQL_AUTOCOMMIT_OFF, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_AUTOCOMMIT)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_AUTOCOMMIT");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_AUTOCOMMIT, Info Val: SQL_AUTOCOMMIT_OFF"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                             (SQLPOINTER)SQL_AUTOCOMMIT_ON, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_AUTOCOMMIT)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_AUTOCOMMIT");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_AUTOCOMMIT, Info Val: SQL_AUTOCOMMIT_ON"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_DEAD,
+                             (SQLPOINTER)SQL_CD_TRUE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_CONNECTION_DEAD)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_CONNECTION_DEAD");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_CONNECTION_DEAD, Info Val: SQL_CD_TRUE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_DEAD,
+                             (SQLPOINTER)SQL_CD_FALSE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_CONNECTION_DEAD)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_CONNECTION_DEAD");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_CONNECTION_DEAD, Info Val: SQL_CD_FALSE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                             (SQLPOINTER)catalog, catalog_name.length());
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_CURRENT_CATALOG)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_CURRENT_CATALOG");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_CURRENT_CATALOG, Info Val:"
+              << catalog << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
+                             (SQLPOINTER)timeout, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_CONNECTION_TIMEOUT)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_CONNECTION_TIMEOUT");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_CONNECTION_TIMEOUT, Info Val:"
+              << timeout << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
+                             (SQLPOINTER)timeout, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_LOGIN_TIMEOUT)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_LOGIN_TIMEOUT");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_LOGIN_TIMEOUT, Info Val:"
+              << timeout << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_METADATA_ID,
+                             (SQLPOINTER)SQL_TRUE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_METADATA_ID)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_METADATA_ID");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_METADATA_ID, Info Val: SQL_TRUE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_METADATA_ID,
+                             (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_METADATA_ID)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_METADATA_ID");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_METADATA_ID, Info Val: SQL_FALSE"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ODBC_CURSORS,
+                             (SQLPOINTER)SQL_CUR_USE_IF_NEEDED, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ODBC_CURSORS)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ODBC_CURSORS");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ODBC_CURSORS, Info Val: SQL_CUR_USE_IF_NEEDED"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ODBC_CURSORS,
+                             (SQLPOINTER)SQL_CUR_USE_ODBC, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ODBC_CURSORS)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ODBC_CURSORS");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ODBC_CURSORS, Info Val: SQL_CUR_USE_ODBC"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ODBC_CURSORS,
+                             (SQLPOINTER)SQL_CUR_USE_DRIVER, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_ODBC_CURSORS)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_ODBC_CURSORS");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_ODBC_CURSORS, Info Val: SQL_CUR_USE_DRIVER"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_PACKET_SIZE,
+                             (SQLPOINTER)packet_size, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_PACKET_SIZE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_PACKET_SIZE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_PACKET_SIZE, Info Val:"
+              << packet_size << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TRACE,
+                             (SQLPOINTER)SQL_OPT_TRACE_ON, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TRACE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TRACE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TRACE, Info Val: SQL_OPT_TRACE_ON"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TRACE,
+                             (SQLPOINTER)SQL_OPT_TRACE_OFF, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TRACE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TRACE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TRACE, Info Val: SQL_OPT_TRACE_OFF"
+              << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TRACEFILE,
+                             (SQLPOINTER)trace_file, trace_file_name.length());
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TRACEFILE)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TRACEFILE");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TRACEFILE, Info Val:"
+              << trace_file << std::endl;
+  }
+  status =
+      SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TRANSLATE_LIB,
+                        (SQLPOINTER)translate_lib, translate_lib_name.length());
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TRANSLATE_LIB)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TRANSLATE_LIB");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TRANSLATE_LIB, Info Val:"
+              << translate_lib << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TRANSLATE_OPTION,
+                             (SQLPOINTER)translate_dll_opt, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TRANSLATE_OPTION)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TRANSLATE_OPTION");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TRANSLATE_OPTION, Info Val:"
+              << translate_dll_opt << std::endl;
+  }
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_TXN_ISOLATION,
+                             (SQLPOINTER)SQL_TXN_SERIALIZABLE, 0);
+  CheckError(status, "SQLSetConnectAttr(SQL_ATTR_TXN_ISOLATION)", conn);
+  if (SQL_SUCCEEDED(status)) {
+    if (status == SQL_SUCCESS_WITH_INFO) {
+      std::runtime_error(
+          "SQLSetConnectAttr returned SQL_SUCCESS_WITH_INFO for info name: "
+          "SQL_ATTR_TXN_ISOLATION");
+    }
+    std::cout << "SetConnAttribute - Successful for Info Name: "
+                 "SQL_ATTR_TXN_ISOLATION, Info Val: SQL_TXN_SERIALIZABLE"
+              << std::endl;
+  }
+  return status;
+}
+
 // TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
 SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
