@@ -19,7 +19,6 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/status_or.h"
-#include "absl/strings/match.h"
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -279,10 +278,7 @@ class StatusRecordOr final {
     if (return_code_) {
       return return_code_.value();
     }
-    if (absl::StartsWith(status_record_->sql_state, "01")) {
-      return SQL_SUCCESS_WITH_INFO;
-    }
-    return SQL_ERROR;
+    return status_record_->CalculateReturnCode();
   }
 
  private:

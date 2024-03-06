@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/status.h"
+#include "absl/strings/match.h"
 #include <string>
 
 namespace google::cloud::odbc_internal {
@@ -52,6 +53,16 @@ struct StatusRecord {
       default:
         return {SQLStates::k_HY000(), message, 500};
     }
+  }
+
+  [[nodiscard]] SQLRETURN CalculateReturnCode() const {
+    if (ok()) {
+      return SQL_SUCCESS;
+    }
+    if (absl::StartsWith(sql_state, "01")) {
+      return SQL_SUCCESS_WITH_INFO;
+    }
+    return SQL_ERROR;
   }
 
   inline static StatusRecord Ok() { return {}; }
