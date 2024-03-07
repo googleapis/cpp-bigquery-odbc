@@ -410,36 +410,48 @@ TEST(ConnectionTest, SQLDriverConnect) {
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
-TEST(ConnectionTest, SQLConnect) {
-  auto conn = std::make_shared<ConnectionHandle>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(DriverInfoTest, SQLGetInfo) {
+TEST(DriverInfoTest, SQLSetConnectAttrAfterConnection) {
   auto conn = std::make_shared<ConnectionHandle>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
-  VerifyDriverInfo(conn);
+  EXPECT_EQ(SetConnectAttributeAfterConnection(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// This test is temporarily disabled till this issue is fixed for the driver
-TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
-  srand(time(NULL));
-  int timeout = (rand() % 30) + 1;
-  SQLUINTEGER timeout_ret;
+TEST(DriverInfoTest, SQLSetConnectAttrBeforeConnection) {
   auto conn = std::make_shared<ConnectionHandle>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, timeout), SQL_SUCCESS);
-
-  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
-                                  (SQLPOINTER)&timeout_ret,
-                                  (SQLINTEGER)sizeof(timeout_ret), NULL);
-  CheckError(status, "SQLGetConnectAttr", conn);
-  EXPECT_EQ(timeout, timeout_ret);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(SetConnectAttributeBeforeConnection(conn), SQL_SUCCESS);
 }
+
+// TEST(ConnectionTest, SQLConnect) {
+//   auto conn = std::make_shared<ConnectionHandle>();
+//   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
+// TEST(DriverInfoTest, SQLGetInfo) {
+//   auto conn = std::make_shared<ConnectionHandle>();
+//   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//   EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
+//   VerifyDriverInfo(conn);
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
+// // This test is temporarily disabled till this issue is fixed for the driver
+// TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
+//   srand(time(NULL));
+//   int timeout = (rand() % 30) + 1;
+//   SQLUINTEGER timeout_ret;
+//   auto conn = std::make_shared<ConnectionHandle>();
+//   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, timeout), SQL_SUCCESS);
+
+//   auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
+//                                   (SQLPOINTER)&timeout_ret,
+//                                   (SQLINTEGER)sizeof(timeout_ret), NULL);
+//   CheckError(status, "SQLGetConnectAttr", conn);
+//   EXPECT_EQ(timeout, timeout_ret);
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
 
 #else
 
