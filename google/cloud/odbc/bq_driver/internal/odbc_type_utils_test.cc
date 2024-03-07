@@ -21,14 +21,14 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-TEST(WriteStringToBufferOutput, Success_DestBufferLen_GT_SrcLen) {
+TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
 
-  StatusRecord status_record =
-      WriteStringToBufferOutput(expected.c_str(), dest, buffer_len, &str_len);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
 
   ASSERT_TRUE(status_record.ok());
   std::string actual = reinterpret_cast<char*>(dest);
@@ -36,14 +36,15 @@ TEST(WriteStringToBufferOutput, Success_DestBufferLen_GT_SrcLen) {
   EXPECT_EQ(11, str_len);
 }
 
-TEST(WriteStringToBufferOutput, SuccessWithInfo_DestBufferLen_LT_SrcLen) {
+TEST(StringValueToOutputBufferResponse,
+     SuccessWithInfo_DestBufferLen_LT_SrcLen) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
 
-  StatusRecord status_record =
-      WriteStringToBufferOutput(expected.c_str(), dest, buffer_len, &str_len);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
@@ -53,14 +54,14 @@ TEST(WriteStringToBufferOutput, SuccessWithInfo_DestBufferLen_LT_SrcLen) {
   EXPECT_EQ(11, str_len);
 }
 
-TEST(WriteStringToBufferOutput, Success_DestBufferLen_EQ_SrcLen) {
+TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_EQ_SrcLen) {
   std::string expected = "sampl";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
 
-  StatusRecord status_record =
-      WriteStringToBufferOutput(expected.c_str(), dest, buffer_len, &str_len);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
@@ -70,14 +71,14 @@ TEST(WriteStringToBufferOutput, Success_DestBufferLen_EQ_SrcLen) {
   EXPECT_EQ(5, str_len);
 }
 
-TEST(WriteStringToBufferOutput, Success_DestBufferLen_Zero) {
+TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_Zero) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 0;
   SQLCHAR dest[15];
 
-  StatusRecord status_record =
-      WriteStringToBufferOutput(expected.c_str(), dest, buffer_len, &str_len);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
 
   ASSERT_TRUE(status_record.ok());
   std::string actual = reinterpret_cast<char*>(dest);
@@ -85,14 +86,14 @@ TEST(WriteStringToBufferOutput, Success_DestBufferLen_Zero) {
   EXPECT_EQ(11, str_len);
 }
 
-TEST(WriteStringToBufferOutput, Success_StcLenLen_Zero) {
+TEST(StringValueToOutputBufferResponse, Success_StcLenLen_Zero) {
   std::string expected = "";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
 
-  StatusRecord status_record =
-      WriteStringToBufferOutput(expected.c_str(), dest, buffer_len, &str_len);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
 
   ASSERT_TRUE(status_record.ok());
   std::string actual = reinterpret_cast<char*>(dest);
@@ -100,48 +101,50 @@ TEST(WriteStringToBufferOutput, Success_StcLenLen_Zero) {
   EXPECT_EQ(0, str_len);
 }
 
-TEST(WriteToBufferOutput, Success_SQLINTEGER) {
+TEST(IntValueToOutputBufferResponse, Success_SQLINTEGER) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLINTEGER dest[15];
 
   SQLRETURN return_code =
-      WriteToBufferOutput<SQLINTEGER>(expected, dest, &str_len);
+      IntValueToOutputBufferResponse<SQLINTEGER>(expected, dest, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(42, *dest);
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(WriteToBufferOutput, Success_Dest_Null) {
+TEST(IntValueToOutputBufferResponse, Success_Dest_Null) {
   int expected = 42;
   SQLSMALLINT str_len;
 
   SQLRETURN return_code =
-      WriteToBufferOutput<SQLINTEGER>(expected, nullptr, &str_len);
+      IntValueToOutputBufferResponse<SQLINTEGER>(expected, nullptr, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(WriteToBufferOutput, Success_SQLLEN) {
+TEST(IntValueToOutputBufferResponse, Success_SQLLEN) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLLEN dest[15];
 
-  SQLRETURN return_code = WriteToBufferOutput<SQLLEN>(expected, dest, &str_len);
+  SQLRETURN return_code =
+      IntValueToOutputBufferResponse<SQLLEN>(expected, dest, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(42, *dest);
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
-TEST(WriteToBufferOutput, Success_Implicit_SQLLEN) {
+TEST(IntValueToOutputBufferResponse, Success_Implicit_SQLLEN) {
   SQLLEN expected = 42;
   SQLSMALLINT str_len;
   SQLLEN dest[15];
 
-  SQLRETURN return_code = WriteToBufferOutput(expected, dest, &str_len);
+  SQLRETURN return_code =
+      IntValueToOutputBufferResponse(expected, dest, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(42, *dest);

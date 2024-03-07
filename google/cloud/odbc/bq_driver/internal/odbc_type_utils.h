@@ -19,14 +19,13 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-odbc_internal::StatusRecord WriteStringToBufferOutput(char const* src,
-                                                      SQLPOINTER buffer_ptr,
-                                                      SQLSMALLINT buffer_len,
-                                                      SQLSMALLINT* str_len_ptr);
+odbc_internal::StatusRecord StringValueToOutputBufferResponse(
+    char const* src, SQLPOINTER buffer_ptr, SQLSMALLINT buffer_len,
+    SQLSMALLINT* str_len_ptr);
 
 template <typename T>
-SQLRETURN WriteToBufferOutput(T val, SQLPOINTER buffer_ptr,
-                              SQLSMALLINT* str_len_ptr) {
+SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
+                                         SQLSMALLINT* str_len_ptr) {
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(T));
   }

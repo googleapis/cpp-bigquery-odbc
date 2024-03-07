@@ -22,9 +22,10 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-StatusRecord WriteStringToBufferOutput(char const* src, SQLPOINTER buffer_ptr,
-                                       SQLSMALLINT buffer_len,
-                                       SQLSMALLINT* str_len_ptr) {
+StatusRecord StringValueToOutputBufferResponse(char const* src,
+                                               SQLPOINTER buffer_ptr,
+                                               SQLSMALLINT buffer_len,
+                                               SQLSMALLINT* str_len_ptr) {
   SQLSMALLINT src_len = strlen(src);
   *str_len_ptr = static_cast<SQLSMALLINT>(src_len);
   if (!buffer_ptr) {
