@@ -436,4 +436,19 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(8, diag_info_string_len);
 }
 
+TEST_F(EnvironmentHandleTest,
+       SQLGetDiagFieldInternal_Fail_DiagIdentifier_INVALID) {
+  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
+  SQLSMALLINT diag_identifier = 111;
+  SQLCHAR diag_info[15];
+  SQLSMALLINT diag_info_buffer_len = 15;
+  SQLSMALLINT diag_info_string_len;
+
+  SQLRETURN status = SQLGetDiagFieldInternal(
+      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      diag_info_buffer_len, &diag_info_string_len);
+
+  ASSERT_EQ(SQL_ERROR, status);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

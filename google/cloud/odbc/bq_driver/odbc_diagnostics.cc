@@ -187,6 +187,7 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handleType, SQLHANDLE handle,
     }
   }
   // diagIdentifier is invalid
+  TracePrintInternal(*(*kTraceOptsConsole), "diagIdentifier is invalid");
   return SQL_ERROR;
 }
 
