@@ -14,7 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -25,9 +25,9 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_bq_driver_utils::AllocateHandles;
+using google::cloud::odbc_testing_bq_driver_utils::FreeHandles;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
-using google::cloud::odbc_tests::AllocateHandles;
-using google::cloud::odbc_tests::FreeHandles;
 using ::testing::StrEq;
 
 // Helper class and functions specific to odbc utils unit tests.

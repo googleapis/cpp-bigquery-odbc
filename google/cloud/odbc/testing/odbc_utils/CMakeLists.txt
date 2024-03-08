@@ -37,14 +37,13 @@ add_library(
     statement.cc
     statement.h)
 
-target_link_libraries(
-    google_cloud_odbc_testing_odbc_utils
-    google-cloud-cpp::experimental-bigquery_rest google_cloud_odbc_bq_driver
-    GTest::gmock)
+target_include_directories(google_cloud_odbc_testing_odbc_utils
+                           PUBLIC ${CMAKE_SOURCE_DIR})
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
 # target
 if (BQ_DRIVER_INTEGRATION_TESTS)
+    add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
     target_link_libraries(google_cloud_odbc_testing_odbc_utils
                           google_cloud_odbc_bq_driver)
 else ()

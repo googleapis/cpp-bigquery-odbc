@@ -13,17 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
-#include "google/cloud/odbc/bq_driver/odbc_connection.h"
-#include "google/cloud/odbc/bq_driver/odbc_environment.h"
-#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 
 namespace google::cloud::odbc_tests {
-
-using google::cloud::odbc_bq_driver::SQLAllocConnHandle;
-using google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
-using google::cloud::odbc_bq_driver::SQLAllocStmtHandle;
-using google::cloud::odbc_bq_driver::SQLFreeHandleInternal;
 
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
@@ -119,22 +110,6 @@ inline void CheckError(SQLRETURN status, std::string const api,
     throw std::runtime_error(api +
                              " failed with status: " + std::to_string(status));
   }
-}
-
-SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
-  SQLRETURN status = SQLAllocEnvHandle(env_handle_ref);
-  if (status != SQL_SUCCESS) {
-    return status;
-  }
-  return SQLAllocConnHandle(*env_handle_ref, conn_handle_ref);
-}
-
-SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle);
-  if (status != SQL_SUCCESS) {
-    return status;
-  }
-  return SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle);
 }
 
 void Table::Create(std::shared_ptr<ConnectionHandle> conn,

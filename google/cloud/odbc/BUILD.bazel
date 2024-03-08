@@ -62,6 +62,8 @@ cc_library(
     srcs = [driver_utils_test],
     tags = ["unit-tests"],
     deps = [
-        "//google/cloud/odbc/testing:google_cloud_odbc_testing_odbc_utils",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
+        "@com_google_googletest//:gtest_main",
     ],
 ) for driver_utils_test in glob(["bq_driver/*_test.cc"])]

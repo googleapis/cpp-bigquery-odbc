@@ -16,7 +16,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_DRIVER_PROPERTIES_H
 
-#include "commons.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
 namespace google::cloud::odbc_tests {
 
