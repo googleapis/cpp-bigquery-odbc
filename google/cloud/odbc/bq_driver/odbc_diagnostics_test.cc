@@ -446,4 +446,73 @@ TEST_F(EnvironmentHandleTest,
   ASSERT_EQ(SQL_ERROR, status);
 }
 
+TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Success) {
+  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+  SQLCHAR sql_state[6];
+  SQLINTEGER native_error[1] = {0};
+  SQLCHAR message_text[15];
+  SQLSMALLINT message_text_buffer_len = 15;
+  SQLSMALLINT message_text_len;
+
+  SQLRETURN status = SQLGetDiagRecInternal(
+      SQL_HANDLE_ENV, wrapped_handle_, 1, sql_state, native_error, message_text,
+      message_text_buffer_len, &message_text_len);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(kRecord.native_error_code, *native_error);
+  std::string actual_sqlstate = reinterpret_cast<char*>(sql_state);
+  EXPECT_EQ(kRecord.sql_state, actual_sqlstate);
+  std::string actual_message = reinterpret_cast<char*>(message_text);
+  EXPECT_EQ(kRecord.message, actual_message);
+  EXPECT_EQ(kRecord.message.size(), message_text_len);
+}
+
+TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_NegativeRecNumber) {
+  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+  SQLCHAR sql_state[5];
+  SQLINTEGER native_error[1] = {0};
+  SQLCHAR message_text[15];
+  SQLSMALLINT message_text_buffer_len = 15;
+  SQLSMALLINT message_text_len;
+  SQLSMALLINT rec_number = -5;
+
+  SQLRETURN status = SQLGetDiagRecInternal(
+      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      message_text, message_text_buffer_len, &message_text_len);
+
+  ASSERT_EQ(SQL_ERROR, status);
+}
+
+TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_ZeroRecNumber) {
+  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+  SQLCHAR sql_state[5];
+  SQLINTEGER native_error[1] = {0};
+  SQLCHAR message_text[15];
+  SQLSMALLINT message_text_buffer_len = 15;
+  SQLSMALLINT message_text_len;
+  SQLSMALLINT rec_number = 0;
+
+  SQLRETURN status = SQLGetDiagRecInternal(
+      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      message_text, message_text_buffer_len, &message_text_len);
+
+  ASSERT_EQ(SQL_ERROR, status);
+}
+
+TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_RecNumber_GT_Size) {
+  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+  SQLCHAR sql_state[5];
+  SQLINTEGER native_error[1] = {0};
+  SQLCHAR message_text[15];
+  SQLSMALLINT message_text_buffer_len = 15;
+  SQLSMALLINT message_text_len;
+  SQLSMALLINT rec_number = 100;
+
+  SQLRETURN status = SQLGetDiagRecInternal(
+      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      message_text, message_text_buffer_len, &message_text_len);
+
+  ASSERT_EQ(SQL_NO_DATA, status);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

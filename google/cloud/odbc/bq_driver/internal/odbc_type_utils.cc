@@ -27,9 +27,14 @@ StatusRecord StringValueToOutputBufferResponse(char const* src,
                                                SQLSMALLINT buffer_len,
                                                SQLSMALLINT* str_len_ptr) {
   SQLSMALLINT src_len = strlen(src);
-  *str_len_ptr = static_cast<SQLSMALLINT>(src_len);
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(src_len);
+  }
   if (!buffer_ptr) {
     return StatusRecord::Ok();
+  }
+  if (buffer_len < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
   char* dest = reinterpret_cast<char*>(buffer_ptr);

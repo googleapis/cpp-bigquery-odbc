@@ -34,6 +34,12 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                                   SQLSMALLINT diag_info_buffer_len,
                                   SQLSMALLINT* diag_info_string_len);
 
+SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
+                                SQLSMALLINT rec_number, SQLCHAR* sql_state,
+                                SQLINTEGER* native_error, SQLCHAR* message_text,
+                                SQLSMALLINT message_text_buffer_len,
+                                SQLSMALLINT* message_text_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H

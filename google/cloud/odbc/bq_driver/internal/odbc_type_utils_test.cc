@@ -54,7 +54,8 @@ TEST(StringValueToOutputBufferResponse,
   EXPECT_EQ(11, str_len);
 }
 
-TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_EQ_SrcLen) {
+TEST(StringValueToOutputBufferResponse,
+     SuccessWithInfo_DestBufferLen_EQ_SrcLen) {
   std::string expected = "sampl";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
@@ -99,6 +100,21 @@ TEST(StringValueToOutputBufferResponse, Success_StcLenLen_Zero) {
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("", actual);
   EXPECT_EQ(0, str_len);
+}
+
+TEST(StringValueToOutputBufferResponse, Failure_BufferLen_Negative) {
+  std::string expected = "sample-test";
+  SQLSMALLINT str_len;
+  SQLSMALLINT buffer_len = -15;
+  SQLCHAR dest[15];
+
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_HY090(), status_record.sql_state);
+  EXPECT_EQ("Buffer length is negative", status_record.message);
+  EXPECT_EQ(11, str_len);
 }
 
 TEST(IntValueToOutputBufferResponse, Success_SQLINTEGER) {

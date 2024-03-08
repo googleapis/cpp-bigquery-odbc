@@ -51,51 +51,57 @@ static std::vector<std::string> const kOdbcSubclasses = {
     SQLStates::k_IM006(), SQLStates::k_IM007(), SQLStates::k_IM008(),
     SQLStates::k_IM010(), SQLStates::k_IM011(), SQLStates::k_IM012()};
 
+StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
+                                           SQLHANDLE handle) {
+  switch (handleType) {
+    case SQL_HANDLE_ENV: {
+      StatusRecordOr<EnvironmentHandle*> handle_ptr_status =
+          CastToHandle<EnvironmentHandle>(HandleType::kEnvHandle, handle);
+      if (!handle_ptr_status) {
+        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
+                                           SQL_INVALID_HANDLE);
+      }
+      return (*handle_ptr_status)->GetDiagnostics();
+    }
+    case SQL_HANDLE_DBC: {
+      StatusRecordOr<ConnectionHandle*> handle_ptr_status =
+          CastToHandle<ConnectionHandle>(HandleType::kConnHandle, handle);
+      if (!handle_ptr_status) {
+        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
+                                           SQL_INVALID_HANDLE);
+      }
+      return (*handle_ptr_status)->GetDiagnostics();
+    }
+    case SQL_HANDLE_STMT: {
+      StatusRecordOr<StatementHandle*> handle_ptr_status =
+          CastToHandle<StatementHandle>(HandleType::kStatementHandle, handle);
+      if (!handle_ptr_status) {
+        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
+                                           SQL_INVALID_HANDLE);
+      }
+      return (*handle_ptr_status)->GetDiagnostics();
+    }
+    default:
+      // TODO(308644787) - add Descriptor Handle once it's created
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Descriptor Handle is not implemented"};
+  }
+}
+
 SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT diag_identifier,
                                   SQLPOINTER diag_info,
                                   SQLSMALLINT diag_info_buffer_len,
                                   SQLSMALLINT* diag_info_string_len) {
-  Diagnostics diagnostics;
-  switch (handle_type) {
-    case SQL_HANDLE_ENV: {
-      StatusRecordOr<EnvironmentHandle*> handle_ptr_status =
-          CastToHandle<EnvironmentHandle>(HandleType::kEnvHandle, handle);
-      if (!handle_ptr_status) {
-        TracePrintInternal(*(*kTraceOptsConsole),
-                           handle_ptr_status.GetStatusRecord().message);
-        return SQL_INVALID_HANDLE;
-      }
-      diagnostics = (*handle_ptr_status)->GetDiagnostics();
-      break;
-    }
-    case SQL_HANDLE_DBC: {
-      StatusRecordOr<ConnectionHandle*> handle_ptr_status =
-          CastToHandle<ConnectionHandle>(HandleType::kConnHandle, handle);
-      if (!handle_ptr_status) {
-        TracePrintInternal(*(*kTraceOptsConsole),
-                           handle_ptr_status.GetStatusRecord().message);
-        return SQL_INVALID_HANDLE;
-      }
-      diagnostics = (*handle_ptr_status)->GetDiagnostics();
-      break;
-    }
-    case SQL_HANDLE_STMT: {
-      StatusRecordOr<StatementHandle*> handle_ptr_status =
-          CastToHandle<StatementHandle>(HandleType::kStatementHandle, handle);
-      if (!handle_ptr_status) {
-        TracePrintInternal(*(*kTraceOptsConsole),
-                           handle_ptr_status.GetStatusRecord().message);
-        return SQL_INVALID_HANDLE;
-      }
-      diagnostics = (*handle_ptr_status)->GetDiagnostics();
-      break;
-    }
-    default:
-      // TODO(308644787) - add Descriptor Handle once it's created
-      return SQL_ERROR;
+  StatusRecordOr<Diagnostics> diagnostic_status =
+      GetDiagnostics(handle_type, handle);
+  if (!diagnostic_status) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       diagnostic_status.GetStatusRecord().message);
+    return diagnostic_status.GetCalculatedReturnCode();
   }
+  Diagnostics diagnostics = *diagnostic_status;
 
   // Header Record diagnostics:
   auto header_record = diagnostics.GetHeaderRecord();
@@ -194,6 +200,53 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   // diagIdentifier is invalid
   TracePrintInternal(*(*kTraceOptsConsole), "diagIdentifier is invalid");
   return SQL_ERROR;
+}
+
+SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
+                                SQLSMALLINT rec_number, SQLCHAR* sql_state,
+                                SQLINTEGER* native_error, SQLCHAR* message_text,
+                                SQLSMALLINT message_text_buffer_len,
+                                SQLSMALLINT* message_text_len) {
+  StatusRecordOr<Diagnostics> diagnostic_status =
+      GetDiagnostics(handle_type, handle);
+  if (!diagnostic_status) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       diagnostic_status.GetStatusRecord().message);
+    return diagnostic_status.GetCalculatedReturnCode();
+  }
+
+  // recNumber validation
+  if (rec_number <= 0) {
+    TracePrintInternal(*(*kTraceOptsConsole), "recNumber is less than 1");
+    return SQL_ERROR;
+  }
+  if (static_cast<unsigned>(rec_number) >
+      diagnostic_status->GetStatusRecords().size()) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       "There is no Status Record for such recNumber");
+    return SQL_NO_DATA;
+  }
+
+  auto status_record = diagnostic_status->GetStatusRecords()[rec_number - 1];
+
+  // Writing down SqlState (always 5 characters + terminating NULL)
+  StatusRecord sqlstate_result = StringValueToOutputBufferResponse(
+      status_record.sql_state.c_str(), sql_state, 6, nullptr);
+  if (!sqlstate_result.ok()) {
+    TracePrintInternal(*(*kTraceOptsConsole), sqlstate_result.message);
+    return sqlstate_result.CalculateReturnCode();
+  }
+  // Writing down Message
+  StatusRecord message_result = StringValueToOutputBufferResponse(
+      status_record.message.c_str(), message_text, message_text_buffer_len,
+      message_text_len);
+  if (!message_result.ok()) {
+    TracePrintInternal(*(*kTraceOptsConsole), message_result.message);
+    return message_result.CalculateReturnCode();
+  }
+  // Writing down NativeErrorCode
+  return IntValueToOutputBufferResponse(status_record.native_error_code,
+                                        native_error, nullptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
