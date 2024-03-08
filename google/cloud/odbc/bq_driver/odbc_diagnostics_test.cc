@@ -25,22 +25,6 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-class EnvironmentHandleTest : public ::testing::Test {
- protected:
-  EnvironmentHandle* handle_;
-  HandleWrapped* wrapped_handle_;
-
-  void SetUp() override {
-    handle_ = new EnvironmentHandle();
-    wrapped_handle_ = new HandleWrapped(HandleType::kEnvHandle, handle_);
-  }
-
-  void TearDown() override {
-    delete wrapped_handle_;
-    delete handle_;
-  }
-};
-
 static StatusRecord const kRecord = {
     SQLStates::k_HY000(), "message", 11, 22, 33, "connection", "server"};
 
@@ -58,67 +42,61 @@ TEST(SQLGetDiagFieldInternal, InvalidHandle_Null) {
 }
 
 TEST(SQLGetDiagFieldInternal, InvalidHandle_EnvironmentHandle) {
-  auto* handle = new EnvironmentHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, handle);
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_DBC, wrapped_handle, 0, diag_identifier, diag_info,
+      SQL_HANDLE_DBC, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
-  delete wrapped_handle;
-  delete handle;
 }
 
 TEST(SQLGetDiagFieldInternal, InvalidHandle_ConnectionHandle) {
-  auto* handle = new ConnectionHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kConnHandle, handle);
+  ConnectionHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kConnHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_STMT, wrapped_handle, 0, diag_identifier, diag_info,
+      SQL_HANDLE_STMT, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
-  delete wrapped_handle;
-  delete handle;
 }
 
 TEST(SQLGetDiagFieldInternal, InvalidHandle_StatementHandle) {
-  auto* handle = new StatementHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kStatementHandle, handle);
+  StatementHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kStatementHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
-  delete wrapped_handle;
-  delete handle;
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_DYNAMIC_FUNCTION_Success) {
-  handle_->GetDiagnostics().GetHeaderRecord().function = "test-function";
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().GetHeaderRecord().function = "test-function";
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -127,16 +105,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(13, diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_DYNAMIC_FUNCTION_CODE_Success) {
-  handle_->GetDiagnostics().GetHeaderRecord().function_code = 11;
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_CODE_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().GetHeaderRecord().function_code = 11;
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION_CODE;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -144,16 +123,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_CURSOR_ROW_COUNT_Success) {
-  handle_->GetDiagnostics().GetHeaderRecord().cursor_row_count = 22;
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_CURSOR_ROW_COUNT_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().GetHeaderRecord().cursor_row_count = 22;
   SQLSMALLINT diag_identifier = SQL_DIAG_CURSOR_ROW_COUNT;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -161,16 +141,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_ROW_COUNT_Success) {
-  handle_->GetDiagnostics().GetHeaderRecord().row_count = 33;
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_COUNT_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().GetHeaderRecord().row_count = 33;
   SQLSMALLINT diag_identifier = SQL_DIAG_ROW_COUNT;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -178,15 +159,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_SQL_DIAG_NUMBER_Success) {
-  handle_->GetDiagnostics().AddStatusRecord({});
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_NUMBER_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({});
   SQLSMALLINT diag_identifier = SQL_DIAG_NUMBER;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 0, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 0, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -194,7 +177,9 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_SQL_DIAG_NUMBER_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_NegativeRecNumber) {
+TEST(SQLGetDiagFieldInternal, Fail_NegativeRecNumber) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
@@ -202,13 +187,15 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_NegativeRecNumber) {
   SQLSMALLINT rec_number = -5;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_ZeroRecNumber) {
+TEST(SQLGetDiagFieldInternal, Fail_ZeroRecNumber) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
@@ -216,13 +203,15 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_ZeroRecNumber) {
   SQLSMALLINT rec_number = 0;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_RecNumber_GT_Size) {
+TEST(SQLGetDiagFieldInternal, Fail_RecNumber_GT_Size) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
@@ -230,22 +219,23 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_Fail_RecNumber_GT_Size) {
   SQLSMALLINT rec_number = 100;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_NO_DATA, status);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_SQLSTATE_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_SQLSTATE_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -254,17 +244,18 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(kRecord.sql_state.size(), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_MESSAGE_TEXT_Success) {
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_MESSAGE_TEXT_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
   std::string expected = "[Google][ODBC BigQuery Driver]" + kRecord.message;
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_MESSAGE_TEXT;
   SQLCHAR diag_info[40];
   SQLSMALLINT diag_info_buffer_len = 40;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -273,15 +264,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(expected.size(), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_SQL_DIAG_NATIVE_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_NATIVE_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_NATIVE;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -289,16 +282,17 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagFieldInternal_SQL_DIAG_NATIVE_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_COLUMN_NUMBER_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_COLUMN_NUMBER_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_COLUMN_NUMBER;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -306,16 +300,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_ROW_NUMBER_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_NUMBER_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_ROW_NUMBER;
   SQLULEN diag_info[1] = {0};
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -323,16 +318,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_CONNECTION_NAME_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_CONNECTION_NAME_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_CONNECTION_NAME;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -341,16 +337,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(kRecord.connection_name.size(), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_SERVER_NAME_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_SERVER_NAME_Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_SERVER_NAME;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -359,16 +356,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(kRecord.server_name.size(), diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_CLASS_ORIGIN_Success_ODBC3) {
-  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ODBC3) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_CLASS_ORIGIN;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -377,16 +375,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_CLASS_ORIGIN_Success_ISO) {
-  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ISO) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_CLASS_ORIGIN;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -395,16 +394,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_SUBCLASS_ORIGIN_Success_ODBC3) {
-  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ODBC3) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_SUBCLASS_ORIGIN;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -413,16 +413,17 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_SQL_DIAG_SUBCLASS_ORIGIN_Success_ISO) {
-  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
+TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ISO) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_SUBCLASS_ORIGIN;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -431,23 +432,26 @@ TEST_F(EnvironmentHandleTest,
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST_F(EnvironmentHandleTest,
-       SQLGetDiagFieldInternal_Fail_DiagIdentifier_INVALID) {
-  handle_->GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
+TEST(SQLGetDiagFieldInternal, Fail_DiagIdentifier_INVALID) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = 111;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
   SQLSMALLINT diag_info_string_len;
 
   SQLRETURN status = SQLGetDiagFieldInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, diag_identifier, diag_info,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, diag_identifier, diag_info,
       diag_info_buffer_len, &diag_info_string_len);
 
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Success) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagRecInternal, Success) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[6];
   SQLINTEGER native_error[1] = {0};
   SQLCHAR message_text[15];
@@ -455,7 +459,7 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Success) {
   SQLSMALLINT message_text_len;
 
   SQLRETURN status = SQLGetDiagRecInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, 1, sql_state, native_error, message_text,
+      SQL_HANDLE_ENV, &wrapped_handle, 1, sql_state, native_error, message_text,
       message_text_buffer_len, &message_text_len);
 
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -467,8 +471,10 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Success) {
   EXPECT_EQ(kRecord.message.size(), message_text_len);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_NegativeRecNumber) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagRecInternal, Fail_NegativeRecNumber) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];
   SQLINTEGER native_error[1] = {0};
   SQLCHAR message_text[15];
@@ -477,14 +483,16 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_NegativeRecNumber) {
   SQLSMALLINT rec_number = -5;
 
   SQLRETURN status = SQLGetDiagRecInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, sql_state, native_error,
       message_text, message_text_buffer_len, &message_text_len);
 
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_ZeroRecNumber) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagRecInternal, Fail_ZeroRecNumber) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];
   SQLINTEGER native_error[1] = {0};
   SQLCHAR message_text[15];
@@ -493,14 +501,16 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_ZeroRecNumber) {
   SQLSMALLINT rec_number = 0;
 
   SQLRETURN status = SQLGetDiagRecInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, sql_state, native_error,
       message_text, message_text_buffer_len, &message_text_len);
 
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_RecNumber_GT_Size) {
-  handle_->GetDiagnostics().AddStatusRecord(kRecord);
+TEST(SQLGetDiagRecInternal, Fail_RecNumber_GT_Size) {
+  EnvironmentHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];
   SQLINTEGER native_error[1] = {0};
   SQLCHAR message_text[15];
@@ -509,7 +519,7 @@ TEST_F(EnvironmentHandleTest, SQLGetDiagRecInternal_Fail_RecNumber_GT_Size) {
   SQLSMALLINT rec_number = 100;
 
   SQLRETURN status = SQLGetDiagRecInternal(
-      SQL_HANDLE_ENV, wrapped_handle_, rec_number, sql_state, native_error,
+      SQL_HANDLE_ENV, &wrapped_handle, rec_number, sql_state, native_error,
       message_text, message_text_buffer_len, &message_text_len);
 
   ASSERT_EQ(SQL_NO_DATA, status);
