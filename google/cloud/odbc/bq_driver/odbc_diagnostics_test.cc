@@ -41,13 +41,8 @@ class EnvironmentHandleTest : public ::testing::Test {
   }
 };
 
-static StatusRecord const kRecord = {.sql_state = SQLStates::k_HY000(),
-                                     .message = "message",
-                                     .native_error_code = 11,
-                                     .column_number = 22,
-                                     .row_number = 33,
-                                     .connection_name = "connection",
-                                     .server_name = "server"};
+static StatusRecord const kRecord = {
+    SQLStates::k_HY000(), "message", 11, 22, 33, "connection", "server"};
 
 TEST(SQLGetDiagFieldInternal, InvalidHandle_Null) {
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;

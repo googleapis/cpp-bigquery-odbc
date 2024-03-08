@@ -51,14 +51,14 @@ static std::vector<std::string> const kOdbcSubclasses = {
     SQLStates::k_IM006(), SQLStates::k_IM007(), SQLStates::k_IM008(),
     SQLStates::k_IM010(), SQLStates::k_IM011(), SQLStates::k_IM012()};
 
-SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handleType, SQLHANDLE handle,
-                                  SQLSMALLINT recNumber,
-                                  SQLSMALLINT diagIdentifier,
-                                  SQLPOINTER diagInfo,
-                                  SQLSMALLINT diagInfoBufferLen,
-                                  SQLSMALLINT* diagInfoStringLen) {
+SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
+                                  SQLSMALLINT rec_number,
+                                  SQLSMALLINT diag_identifier,
+                                  SQLPOINTER diag_info,
+                                  SQLSMALLINT diag_info_buffer_len,
+                                  SQLSMALLINT* diag_info_string_len) {
   Diagnostics diagnostics;
-  switch (handleType) {
+  switch (handle_type) {
     case SQL_HANDLE_ENV: {
       StatusRecordOr<EnvironmentHandle*> handle_ptr_status =
           CastToHandle<EnvironmentHandle>(HandleType::kEnvHandle, handle);
@@ -99,79 +99,84 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Header Record diagnostics:
   auto header_record = diagnostics.GetHeaderRecord();
-  switch (diagIdentifier) {
+  switch (diag_identifier) {
     case SQL_DIAG_DYNAMIC_FUNCTION: {
       StatusRecord result = StringValueToOutputBufferResponse(
-          header_record.function.c_str(), diagInfo, diagInfoBufferLen,
-          diagInfoStringLen);
+          header_record.function.c_str(), diag_info, diag_info_buffer_len,
+          diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_DYNAMIC_FUNCTION_CODE: {
       return IntValueToOutputBufferResponse(header_record.function_code,
-                                            diagInfo, diagInfoStringLen);
+                                            diag_info, diag_info_string_len);
     }
     case SQL_DIAG_CURSOR_ROW_COUNT: {
       return IntValueToOutputBufferResponse(header_record.cursor_row_count,
-                                            diagInfo, diagInfoStringLen);
+                                            diag_info, diag_info_string_len);
     }
     case SQL_DIAG_ROW_COUNT:
-      return IntValueToOutputBufferResponse(header_record.row_count, diagInfo,
-                                            diagInfoStringLen);
+      return IntValueToOutputBufferResponse(header_record.row_count, diag_info,
+                                            diag_info_string_len);
     case SQL_DIAG_NUMBER:
       return IntValueToOutputBufferResponse<SQLINTEGER>(
-          diagnostics.GetStatusRecords().size(), diagInfo, diagInfoStringLen);
+          diagnostics.GetStatusRecords().size(), diag_info,
+          diag_info_string_len);
   }
 
   // recNumber validation
-  if (recNumber <= 0) {
+  if (rec_number <= 0) {
+    TracePrintInternal(*(*kTraceOptsConsole), "recNumber is less than 1");
     return SQL_ERROR;
   }
-  if (static_cast<unsigned>(recNumber) >
+  if (static_cast<unsigned>(rec_number) >
       diagnostics.GetStatusRecords().size()) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       "There is no Status Record for such recNumber");
     return SQL_NO_DATA;
   }
 
   // Status Records diagnostics:
-  auto status_record = diagnostics.GetStatusRecords()[recNumber - 1];
-  switch (diagIdentifier) {
+  auto status_record = diagnostics.GetStatusRecords()[rec_number - 1];
+  switch (diag_identifier) {
     case SQL_DIAG_SQLSTATE: {
       StatusRecord result = StringValueToOutputBufferResponse(
-          status_record.sql_state.c_str(), diagInfo, diagInfoBufferLen,
-          diagInfoStringLen);
+          status_record.sql_state.c_str(), diag_info, diag_info_buffer_len,
+          diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_MESSAGE_TEXT: {
       StatusRecord result = StringValueToOutputBufferResponse(
-          (kPrefix + status_record.message).c_str(), diagInfo,
-          diagInfoBufferLen, diagInfoStringLen);
+          (kPrefix + status_record.message).c_str(), diag_info,
+          diag_info_buffer_len, diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_NATIVE:
       return IntValueToOutputBufferResponse(status_record.native_error_code,
-                                            diagInfo, diagInfoStringLen);
+                                            diag_info, diag_info_string_len);
     case SQL_DIAG_COLUMN_NUMBER:
       return IntValueToOutputBufferResponse(status_record.column_number,
-                                            diagInfo, diagInfoStringLen);
+                                            diag_info, diag_info_string_len);
     case SQL_DIAG_ROW_NUMBER:
-      return IntValueToOutputBufferResponse(status_record.row_number, diagInfo,
-                                            diagInfoStringLen);
+      return IntValueToOutputBufferResponse(status_record.row_number, diag_info,
+                                            diag_info_string_len);
     case SQL_DIAG_CONNECTION_NAME: {
       StatusRecord result = StringValueToOutputBufferResponse(
-          status_record.connection_name.c_str(), diagInfo, diagInfoBufferLen,
-          diagInfoStringLen);
+          status_record.connection_name.c_str(), diag_info,
+          diag_info_buffer_len, diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_SERVER_NAME: {
       StatusRecord result = StringValueToOutputBufferResponse(
-          status_record.server_name.c_str(), diagInfo, diagInfoBufferLen,
-          diagInfoStringLen);
+          status_record.server_name.c_str(), diag_info, diag_info_buffer_len,
+          diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_CLASS_ORIGIN: {
       std::string class_origin =
           absl::StartsWith(status_record.sql_state, "IM") ? kOdbc3 : kIso9075;
       StatusRecord result = StringValueToOutputBufferResponse(
-          class_origin.c_str(), diagInfo, diagInfoBufferLen, diagInfoStringLen);
+          class_origin.c_str(), diag_info, diag_info_buffer_len,
+          diag_info_string_len);
       return result.CalculateReturnCode();
     }
     case SQL_DIAG_SUBCLASS_ORIGIN: {
@@ -181,8 +186,8 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handleType, SQLHANDLE handle,
               ? kOdbc3
               : kIso9075;
       StatusRecord result = StringValueToOutputBufferResponse(
-          subclass_origin.c_str(), diagInfo, diagInfoBufferLen,
-          diagInfoStringLen);
+          subclass_origin.c_str(), diag_info, diag_info_buffer_len,
+          diag_info_string_len);
       return result.CalculateReturnCode();
     }
   }
