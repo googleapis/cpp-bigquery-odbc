@@ -43,6 +43,8 @@ SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ConnectionHandle> conn,
 SQLRETURN Disconnect(std::shared_ptr<ConnectionHandle> conn);
 
 SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN GetConnectAttribute(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN GetConnectAttributeBeforeConnection(std::shared_ptr<ConnectionHandle> conn);
 
 SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn);
 
