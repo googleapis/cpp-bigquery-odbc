@@ -34,8 +34,8 @@ jobs:
     - id: auth
       uses: google-github-actions/auth@v1
       with:
-        workload_identity_provider: 'projects/752591810328/locations/global/workloadIdentityPools/odbc-gha/providers/github'
-        service_account: 'odbc-gha@moonlit-byway-383018.iam.gserviceaccount.com'
+        workload_identity_provider: 'projects/676884463303/locations/global/workloadIdentityPools/odbc-gha/providers/github'
+        service_account: 'odbc-gha@bigquery-devtools-drivers.iam.gserviceaccount.com'
     - uses: actions/setup-python@v4
       id: py311
       with:
@@ -83,9 +83,9 @@ jobs:
         export CMAKE_OUT='c:\b'
         ci/gha/builds/windows-cmake.sh
     env:
-      SCCACHE_GCS_BUCKET: cpp-bigquery-odbc-gha-cache
+      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-      VCPKG_BINARY_SOURCES: x-gcs,gs://cpp-bigquery-odbc-gha-cache/vcpkg-cache/${{ matrix.msvc }},readwrite
+      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
