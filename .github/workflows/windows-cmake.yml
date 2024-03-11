@@ -34,8 +34,8 @@ jobs:
     - id: auth
       uses: google-github-actions/auth@v1
       with:
-        workload_identity_provider: 'projects/752591810328/locations/global/workloadIdentityPools/odbc-gha/providers/github'
-        service_account: 'odbc-gha@moonlit-byway-383018.iam.gserviceaccount.com'
+        workload_identity_provider: 'projects/676884463303/locations/global/workloadIdentityPools/odbc-gha/providers/github'
+        service_account: 'bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam.gserviceaccount.com'
     - uses: actions/setup-python@v4
       id: py311
       with:
