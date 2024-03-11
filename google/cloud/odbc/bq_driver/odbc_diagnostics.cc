@@ -32,7 +32,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-static std::string const kPrefix = "[Google][ODBC BigQuery Driver]";
+static std::string const kPrefix = "[Google][ODBC BigQuery Driver] ";
 static std::string const kIso9075 = "ISO 9075";
 static std::string const kOdbc3 = "ODBC 3.0";
 static std::vector<std::string> const kOdbcSubclasses = {
@@ -238,8 +238,8 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   }
   // Writing down Message
   StatusRecord message_result = StringValueToOutputBufferResponse(
-      status_record.message.c_str(), message_text, message_text_buffer_len,
-      message_text_len);
+      (kPrefix + status_record.message).c_str(), message_text,
+      message_text_buffer_len, message_text_len);
   if (!message_result.ok()) {
     TracePrintInternal(*(*kTraceOptsConsole), message_result.message);
     return message_result.CalculateReturnCode();

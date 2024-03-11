@@ -19,6 +19,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/odbc_diagnostics.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
@@ -49,6 +50,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagField;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
@@ -61,6 +64,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagField;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
@@ -1536,14 +1541,25 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
                                   SQLSMALLINT diagInfoBufferLen,
                                   SQLSMALLINT* diagInfoStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagField");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLGetDiagField(
+        handleType, handle, recNumber, diagIdentifier, diagInfo,
+        diagInfoBufferLen, diagInfoStringLen, *(*kTraceOptsConsole));
 
   // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
   // in odbc_diagnostics.h.
+  rc = google::cloud::odbc_bq_driver::SQLGetDiagFieldInternal(
+      handleType, handle, recNumber, diagIdentifier, diagInfo,
+      diagInfoBufferLen, diagInfoStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDiagField(rc, *(*kTraceOptsConsole));
+
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
   return rc;
@@ -1586,14 +1602,25 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
                                 SQLSMALLINT messageTextBufferLen,
                                 SQLSMALLINT* messageTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRec");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLGetDiagRec(
+        handleType, handle, recNumber, sqlState, nativeError, messageText,
+        messageTextBufferLen, messageTextLen, *(*kTraceOptsConsole));
 
   // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
   // in odbc_diagnostics.h.
+  rc = google::cloud::odbc_bq_driver::SQLGetDiagRecInternal(
+      handleType, handle, recNumber, sqlState, nativeError, messageText,
+      messageTextBufferLen, messageTextLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDiagRec(rc, *(*kTraceOptsConsole));
+
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
   return rc;
