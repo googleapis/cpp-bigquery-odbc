@@ -25,15 +25,15 @@ using bigquery_v2_minimal_internal::MakeProjectConnection;
 using bigquery_v2_minimal_internal::Project;
 using bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateWrongAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateWrongPathToAuthFileAuthentication;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;

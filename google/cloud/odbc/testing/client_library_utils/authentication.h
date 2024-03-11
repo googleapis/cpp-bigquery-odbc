@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_AUTHENTICATION_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_AUTHENTICATION_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
 
 #include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
 
-namespace google::cloud::odbc_integration_tests_testing_util {
+namespace google::cloud::odbc_testing_client_library_utils {
 
 // Creates Options object which has credentials for User Account Authentication.
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
@@ -44,6 +44,6 @@ StatusOr<Options> CreateWrongAuthentication();
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateNoAccessAccountAuthentication();
 
-}  // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_testing_client_library_utils
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_AUTHENTICATION_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H

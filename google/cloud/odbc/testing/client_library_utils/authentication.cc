@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 
-namespace google::cloud::odbc_integration_tests_testing_util {
+namespace google::cloud::odbc_testing_client_library_utils {
 
 using google::cloud::internal::GetEnv;
 
@@ -100,4 +100,4 @@ StatusOr<Options> CreateNoAccessAccountAuthentication() {
       google::cloud::MakeGoogleDefaultCredentials());
 }
 
-}  // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_testing_client_library_utils

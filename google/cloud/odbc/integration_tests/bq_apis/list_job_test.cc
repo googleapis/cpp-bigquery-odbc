@@ -28,15 +28,15 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthWithClientIdAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     CreateUserAccountAuthentication;
-using google::cloud::odbc_integration_tests_testing_util::
+using google::cloud::odbc_testing_client_library_utils::
     kNameForNonExistingProject;
 using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;

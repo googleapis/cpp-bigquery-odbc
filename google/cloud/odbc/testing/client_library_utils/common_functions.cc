@@ -17,7 +17,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
-namespace google::cloud::odbc_integration_tests_testing_util {
+namespace google::cloud::odbc_testing_client_library_utils {
 
 using bigquery_v2_minimal_internal::InsertJobRequest;
 using bigquery_v2_minimal_internal::Job;
@@ -77,4 +77,4 @@ StatusOr<std::string> InsertJob(JobClient job_client) {
   return job_response.value().job_reference.job_id;
 }
 
-}  // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_testing_client_library_utils

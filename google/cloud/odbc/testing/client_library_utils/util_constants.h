@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_CONSTANTS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_CONSTANTS_H
 
 #include "absl/strings/string_view.h"
 
-namespace google::cloud::odbc_integration_tests_testing_util {
+namespace google::cloud::odbc_testing_client_library_utils {
 
 inline constexpr absl::string_view kNameForNonExistingProject =
     "non-existing-project";
 
-}  // namespace google::cloud::odbc_integration_tests_testing_util
+}  // namespace google::cloud::odbc_testing_client_library_utils
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTEGRATION_TESTS_TESTING_UTIL_CONSTANTS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_CONSTANTS_H
