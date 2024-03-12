@@ -14,7 +14,10 @@
 
 FROM ubuntu:20.04
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG INSTALL_GCLOUD
+RUN echo INSTALL_GCLOUD=$INSTALL_GCLOUD
+
+# ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
@@ -186,6 +189,31 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
 RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
     chmod +x /usr/bin/bazelisk && \
     ln -s /usr/bin/bazelisk /usr/bin/bazel
+
+RUN if [ "$DEBUG_MODE" = "true" ]; then \
+        ENV FLASK_ENV=development \
+        RUN pip install flask-debugtoolbar \
+    else \
+        ENV FLASK_ENV=production \
+    fi
+
+
+
+RUN if [ "$INSTALL_GCLOUD" = "YES" ] ; then \
+COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh \
+WORKDIR /var/tmp/downloads \
+RUN /var/tmp/ci/install-cloud-sdk.sh \
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk \
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH} \
+echo sks ; \
+echo dsks; \
+fi
+
+# COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
+# WORKDIR /var/tmp/downloads
+# RUN /var/tmp/ci/install-cloud-sdk.sh
+# ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+# ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 # iODBC Driver Manager
 RUN echo 'Installing iODBC Driver Manager...'

@@ -17,10 +17,6 @@ FROM ubuntu:22.04
 # ENV for unixODBC driver manager
 ENV GCS_BUCKET=bq-dev-tools-testing-drivers
 RUN echo 'GCS_BUCKET='${GCS_BUCKET}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
-RUN echo 'ODBC_SECRET='${ODBC_SECRET}
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \

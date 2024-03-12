@@ -26,8 +26,8 @@ fi # include guard
 # account key file. The key files are copied from a GCP Secret Manager and stored on
 # the local machine. See the `rotate-keys.sh` script for details about how
 # these keys are rotated.
-readonly KEY_DIR="/dev/odbc-auth"
-# readonly KEY_DIR="/tmp/odbc-auth"
+# readonly KEY_DIR="/dev/odbc-auth"
+readonly KEY_DIR="/tmp/odbc-auth"
 mkdir "${KEY_DIR}"
 gcloud secrets versions access latest --secret=user-account-auth-keys --out-file="${KEY_DIR}/user_account_auth_keys.json"
 gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="${KEY_DIR}/service_account_auth_keys.json"
