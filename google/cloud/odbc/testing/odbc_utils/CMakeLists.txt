@@ -16,6 +16,7 @@
 
 if (NOT ODBC_INTEGRATION_TESTING
     AND NOT ODBC_UNIT_TESTING
+    AND NOT CLIENT_INTERFACE_UNIT_TESTING
     AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
     return()
 endif ()
@@ -39,6 +40,8 @@ add_library(
 
 target_include_directories(google_cloud_odbc_testing_odbc_utils
                            PUBLIC ${CMAKE_SOURCE_DIR})
+
+target_link_libraries(google_cloud_odbc_testing_odbc_utils GTest::gtest)
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
 # target

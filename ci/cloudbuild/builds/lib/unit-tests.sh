@@ -31,6 +31,9 @@ fi # include guard
 #   mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 #   bazel test "${args[@]}" "${unit_tests_args[@]}"
 #
+
+export CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=${PROJECT_ROOT}/google/cloud/odbc/bq_driver/internal/test_data/
+
 function unit_tests::bazel_args() {
   declare -a args
 

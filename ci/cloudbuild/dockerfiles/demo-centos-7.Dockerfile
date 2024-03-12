@@ -29,7 +29,7 @@ RUN yum-config-manager --enable rhel-server-rhscl-7-rpms
 RUN yum makecache && \
     yum install -y automake curl-devel devtoolset-7 gcc gcc-c++ \
         git libtool make openssl-devel patch re2-devel tar wget which zlib-devel
-#RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake && ln -sf /usr/bin/ctest3 /usr/bin/ctest
+RUN yum update -y coreutils
 # ```
 
 ## [BEGIN IGNORED]
@@ -230,6 +230,13 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mkdir -p /usr/local/bin && \
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
+
+# Install the Cloud SDK
+COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
+WORKDIR /var/tmp/downloads
+RUN /var/tmp/ci/install-cloud-sdk.sh
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 # iODBC Driver Manager
 RUN echo 'Installing iODBC Driver Manager...'

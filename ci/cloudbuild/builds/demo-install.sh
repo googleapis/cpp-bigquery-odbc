@@ -18,10 +18,15 @@ set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
 source module ci/cloudbuild/builds/lib/cmake.sh
+source module ci/cloudbuild/builds/lib/secrets.sh
+source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 cmake_config_testing_details=(
   -DODBC_INTEGRATION_TESTING=OFF
+  -DBQ_DRIVER_INTEGRATION_TESTS=OFF
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DODBC_UNIT_TESTING=ON
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
@@ -36,3 +41,10 @@ cmake -S. -Bcmake-out \
 cmake --build cmake-out -- -j "$(nproc)"
 cmake --build cmake-out --target install
 ## [DONE packaging.md]
+
+mapfile -t ctest_args < <(ctest::common_args)
+# I am unable to upgrade coreutils on Centos 7. So,
+# `env -C cmake-out ctest "${ctest_args[@]}"` throws
+# `env: invalid option -- 'C'`
+cd cmake-out
+io::run ctest "${ctest_args[@]}"
