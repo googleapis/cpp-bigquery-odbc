@@ -16,7 +16,9 @@
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_ENV_HANDLE_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/status_or.h"
 #include <memory>
 
@@ -37,8 +39,10 @@ class EnvAttrConnectionPool {
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool const&) = default;
   EnvAttrConnectionPool(EnvAttrConnectionPool&&) = default;
   EnvAttrConnectionPool& operator=(EnvAttrConnectionPool&&) = default;
-  // TODO(b/326401873): Replace with StatusRecordOr.
-  static StatusOr<EnvAttrConnectionPoolVal> ParseVal(void* value);
+
+  static google::cloud::odbc_internal::StatusRecordOr<EnvAttrConnectionPoolVal>
+  ParseVal(void* value);
+
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
@@ -60,8 +64,8 @@ class EnvAttrConnectionPoolMatch {
   EnvAttrConnectionPoolMatch(EnvAttrConnectionPoolMatch&&) = default;
   EnvAttrConnectionPoolMatch& operator=(EnvAttrConnectionPoolMatch&&) = default;
 
-  // TODO(b/326401873): Replace with StatusRecordOr.
-  static StatusOr<EnvAttrCPMatchVal> ParseVal(void* value);
+  static google::cloud::odbc_internal::StatusRecordOr<EnvAttrCPMatchVal>
+  ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
@@ -81,8 +85,8 @@ class EnvAttrOdbcVersion {
   EnvAttrOdbcVersion(EnvAttrOdbcVersion&&) = default;
   EnvAttrOdbcVersion& operator=(EnvAttrOdbcVersion&&) = default;
 
-  // TODO(b/326401873): Replace with StatusRecordOr.
-  static StatusOr<EnvAttrOdbcVersVal> ParseVal(void* value);
+  static google::cloud::odbc_internal::StatusRecordOr<EnvAttrOdbcVersVal>
+  ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
@@ -101,7 +105,6 @@ class EnvAttrOutputNTS {
   EnvAttrOutputNTS(EnvAttrOutputNTS&&) = default;
   EnvAttrOutputNTS& operator=(EnvAttrOutputNTS&&) = default;
 
-  // TODO(b/326401873): Replace with StatusRecordOr.
   static Status ParseVal(void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }

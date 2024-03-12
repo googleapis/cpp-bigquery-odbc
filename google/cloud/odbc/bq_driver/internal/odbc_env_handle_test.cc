@@ -13,12 +13,14 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_testing_utils::StatusIs;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 TEST(EnvAttrConnectionPool, ConnectionPoolDefault) {
@@ -48,28 +50,28 @@ TEST(EnvAttrConnectionPool, ConnectionPool_OnePerHEnv) {
 TEST(EnvAttrConnectionPool, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_DEFAULT;
   auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_CPOff) {
   SQLUINTEGER val = SQL_CP_OFF;
   auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerDriver) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
   auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerDriver);
 }
 
 TEST(EnvAttrConnectionPool, ParseVal_OnePerHenv) {
   SQLUINTEGER val = SQL_CP_ONE_PER_HENV;
   auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerHenv);
 }
 
@@ -78,8 +80,8 @@ TEST(EnvAttrConnectionPool, ParseVal_UnsupportedVal) {
   auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
+      StatusRecordIs(
+          SQLStates::k_42000(),
           HasSubstr("Unsupported attribute value for EnvAttrConnectionPool")));
 }
 
@@ -104,21 +106,21 @@ TEST(EnvAttrConnectionPoolMatch, ConnectionPoolRelaxedMatch) {
 TEST(EnvAttrConnectionPoolMatch, ParseVal_Default) {
   SQLUINTEGER val = SQL_CP_MATCH_DEFAULT;
   auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_StrictMatch) {
   SQLUINTEGER val = SQL_CP_STRICT_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseVal_RelaxedMatch) {
   SQLUINTEGER val = SQL_CP_RELAXED_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kRelaxedMatch);
 }
 
@@ -127,8 +129,8 @@ TEST(EnvAttrConnectionPoolMatch, ParseVal_UnsupportedVal) {
   auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
+      StatusRecordIs(
+          SQLStates::k_42000(),
           HasSubstr(
               "Unsupported attribute value for EnvAttrConnectionPoolMatch")));
 }
@@ -154,14 +156,14 @@ TEST(EnvAttrOdbcVersion, OdbcVers3) {
 TEST(EnvAttrOdbcVersion, ParseVal_ODBC2) {
   SQLINTEGER val = SQL_OV_ODBC2;
   auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc2);
 }
 
 TEST(EnvAttrOdbcVersion, ParseVal_ODBC3) {
   SQLINTEGER val = SQL_OV_ODBC3;
   auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
-  ASSERT_STATUS_OK(status);
+  ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc3);
 }
 
@@ -170,8 +172,8 @@ TEST(EnvAttrOdbcVersion, ParseVal_UnsupportedVal) {
   auto status = EnvAttrOdbcVersion::ParseVal((SQLPOINTER)val);
   EXPECT_THAT(
       status,
-      StatusIs(
-          StatusCode::kInvalidArgument,
+      StatusRecordIs(
+          SQLStates::k_42000(),
           HasSubstr("Unsupported attribute value for EnvAttrOdbcVersion")));
 }
 
