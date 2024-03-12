@@ -37,7 +37,7 @@ TEST(GetDataset, GetDatasetSuccess) {
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
   EXPECT_CALL(*mock, options);
-  Dataset expected{.kind = "d-kind", .id = dataset_id};
+  Dataset expected{"d-kind", "d-etag", dataset_id};
   EXPECT_CALL(*mock, GetDataset)
       .WillOnce([&](GetDatasetRequest const& request) {
         EXPECT_EQ(project_id, request.project_id());
@@ -59,7 +59,7 @@ TEST(GetDataset, GetDataset_EmptyInputParams) {
   std::string project_id;
   std::string dataset_id;
   EXPECT_CALL(*mock, options);
-  Dataset expected{.kind = "d-kind", .id = dataset_id};
+  Dataset expected{"d-kind", "d-etag", dataset_id};
   EXPECT_CALL(*mock, GetDataset)
       .WillOnce([&](GetDatasetRequest const& request) {
         EXPECT_EQ(project_id, request.project_id());
@@ -81,7 +81,7 @@ TEST(GetDataset, GetDatasetFailure_UnauthenticatedRequest) {
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
   EXPECT_CALL(*mock, options);
-  Dataset expected{.kind = "d-kind", .id = dataset_id};
+  Dataset expected{"d-kind", "d-etag", dataset_id};
   EXPECT_CALL(*mock, GetDataset)
       .WillOnce([&](GetDatasetRequest const& request) {
         EXPECT_EQ(project_id, request.project_id());
@@ -120,7 +120,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
-  ListFormatDataset expected{.id = "dataset_id"};
+  ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {
@@ -141,7 +141,7 @@ TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
-  ListFormatDataset expected{.id = "dataset_id"};
+  ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {
@@ -162,7 +162,7 @@ TEST(ListAllDatasets, ListAllDatasetsFailure_UnauthenticatedRequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
-  ListFormatDataset expected{.id = "dataset_id"};
+  ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {
@@ -183,7 +183,7 @@ TEST(FilterDatasets, FilterZeroDatasetsSuccess) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
-  DatasetFilter dataset_filter{.filter = "filtering", .all = true};
+  DatasetFilter dataset_filter{"filtering", true};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {
@@ -206,7 +206,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
   Options options;
   std::string project_id = "project_id";
   DatasetFilter dataset_filter{.filter = "filtering", .all = true};
-  ListFormatDataset expected{.id = "dataset_id"};
+  ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {
@@ -230,7 +230,7 @@ TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
   Options options;
   std::string project_id;
   DatasetFilter dataset_filter;
-  ListFormatDataset expected{.id = "dataset_id"};
+  ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)
       .WillOnce([&](ListDatasetsRequest const& request) {

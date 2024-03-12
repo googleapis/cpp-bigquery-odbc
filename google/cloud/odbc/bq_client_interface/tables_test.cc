@@ -37,11 +37,10 @@ TEST(GetTable, GetTableSuccess) {
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
   std::string table_id = "table_id";
-  TableFilter table_filter{.selected_fields = {"filed_1"},
-                           .view =
-                               ::google::cloud::bigquery_v2_minimal_internal::
-                                   TableMetadataView::Full()};
-  Table table{.id = "table_id"};
+  TableFilter table_filter{
+      {"field_1"},
+      ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView::Full()};
+  Table table{"t-kind", "t-etag", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
@@ -67,7 +66,7 @@ TEST(GetTable, GetTable_EmptyInputParams) {
   std::string dataset_id;
   std::string table_id;
   TableFilter table_filter{.selected_fields = {}};
-  Table table{.id = "table_id"};
+  Table table{"t-kind", "t-etag", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
@@ -95,8 +94,8 @@ TEST(GetTable, GetTable_InvalidFilterParameters) {
   auto metadata_view =
       ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView::Full();
   metadata_view.value = "invalid-value";
-  TableFilter table_filter{.selected_fields = {}, .view = metadata_view};
-  Table table{.id = "table_id"};
+  TableFilter table_filter{{}, metadata_view};
+  Table table{"t-kind", "t-etag", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
@@ -121,7 +120,7 @@ TEST(GetTable, GetTableFailure_UnauthenticatedRequest) {
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
   std::string table_id = "table_id";
-  TableFilter table_filter{.selected_fields = {}};
+  TableFilter table_filter{{}};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
@@ -166,7 +165,7 @@ TEST(ListAllTables, ListAllTablesSuccess) {
   Options options;
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
-  ListFormatTable expected{.id = "table_id"};
+  ListFormatTable expected{"t-kind", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListTables)
@@ -189,7 +188,7 @@ TEST(ListAllTables, ListAllTablesSuccess_EmptyInputParams) {
   Options options;
   std::string project_id;
   std::string dataset_id;
-  ListFormatTable expected{.id = "table_id"};
+  ListFormatTable expected{"t-kind", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListTables)

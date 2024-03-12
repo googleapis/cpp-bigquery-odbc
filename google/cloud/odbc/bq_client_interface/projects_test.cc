@@ -49,7 +49,7 @@ TEST(ListAllProjects, ListOneProject) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
-  Project expected{.kind = "p-kind", .id = "p-id"};
+  Project expected{"p-kind", "p-id"};
   EXPECT_CALL(*mock, ListProjects)
       .WillOnce([expected](ListProjectsRequest const&) {
         return mocks::MakeStreamRange<Project>({expected});
@@ -84,7 +84,7 @@ TEST(GetProjects, GetOneProject) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
-  Project expected{.kind = "p-kind", .id = "p-id"};
+  Project expected{"p-kind", "p-id"};
   EXPECT_CALL(*mock, ListProjects)
       .WillOnce([expected](ListProjectsRequest const&) {
         return mocks::MakeStreamRange<Project>({expected});
@@ -101,7 +101,7 @@ TEST(GetProjects, GetProjectFailure_ProjectNotFound) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
-  Project expected{.kind = "p-kind", .id = "p-id"};
+  Project expected{"p-kind", "p-id"};
   EXPECT_CALL(*mock, ListProjects)
       .WillOnce([expected](ListProjectsRequest const&) {
         return mocks::MakeStreamRange<Project>({expected});
@@ -151,8 +151,8 @@ TEST(FilterProjects, FilterOneProject) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
-  Project response_1{.kind = "p-kind", .id = "p-id-1"};
-  Project response_2{.kind = "p-kind", .id = "p-id-2"};
+  Project response_1{"p-kind", "p-id-1"};
+  Project response_2{"p-kind", "p-id-2"};
   EXPECT_CALL(*mock, ListProjects)
       .WillOnce([response_1, response_2](ListProjectsRequest const&) {
         return mocks::MakeStreamRange<Project>({response_1, response_2});

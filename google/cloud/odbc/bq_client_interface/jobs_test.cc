@@ -29,6 +29,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::InsertJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
+using ::google::cloud::bigquery_v2_minimal_internal::JobConfiguration;
+using ::google::cloud::bigquery_v2_minimal_internal::JobConfigurationQuery;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::MockBigQueryJobConnection;
@@ -36,6 +38,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::ScriptOptions;
 using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -48,7 +51,7 @@ TEST(GetJob, GetJobSuccess) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  Job job{.id = "job_id"};
+  Job job{"j-kind", "j-etag", "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetJob).WillOnce([&](GetJobRequest const& request) {
@@ -71,7 +74,7 @@ TEST(GetJob, GetJob_EmptyInputParams) {
   std::string project_id;
   std::string job_id;
   std::string location;
-  Job job{.id = "job_id"};
+  Job job{"j-kind", "j-etag", "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, GetJob).WillOnce([&](GetJobRequest const& request) {
@@ -132,7 +135,7 @@ TEST(ListAllJobs, ListZeroJobsSuccess) {
 TEST(ListAllJobs, ListAllJobsSuccess) {
   Options options;
   std::string project_id = "project_id";
-  ListFormatJob expected{.id = "job_id"};
+  ListFormatJob expected{"job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
@@ -152,7 +155,7 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
 TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
   Options options;
   std::string project_id;
-  ListFormatJob expected{.id = "job_id"};
+  ListFormatJob expected{"job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
@@ -215,13 +218,14 @@ TEST(FilterJobs, FilterZeroJobsSuccess) {
 TEST(FilterJobs, FilterJobsSuccess) {
   Options options;
   std::string project_id = "project_id";
-  JobFilter job_filter{.allUsers = true,
-                       .min_creation_time = std::chrono::system_clock::now(),
-                       .max_creation_time = std::chrono::system_clock::now(),
-                       .state_filter = StateFilter::Done(),
-                       .parent_job_id = "parent_job_id",
-                       .projection = Projection::Full()};
-  ListFormatJob expected{.id = "job_id"};
+  JobFilter job_filter;
+  job_filter.allUsers = true;
+  job_filter.min_creation_time = std::chrono::system_clock::now();
+  job_filter.max_creation_time = std::chrono::system_clock::now();
+  job_filter.state_filter = StateFilter::Done();
+  job_filter.parent_job_id = "parent_job_id";
+  job_filter.projection = Projection::Full();
+  ListFormatJob expected{"job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
@@ -248,7 +252,7 @@ TEST(FilterJobs, FilterJobs_EmptyInputParams) {
   Options options;
   std::string project_id;
   JobFilter job_filter;
-  ListFormatJob expected{.id = "job_id"};
+  ListFormatJob expected{"job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
@@ -299,7 +303,7 @@ TEST(FilterJobs, FilterJobsFailure_UnauthenticatedRequest) {
 TEST(InsertJob, InsertJobSuccess) {
   Options options;
   std::string project_id = "project_id";
-  Job job{.id = "job_id"};
+  Job job{"j-kind", "j-etag", "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, InsertJob).WillOnce([&](InsertJobRequest const& request) {
@@ -318,7 +322,7 @@ TEST(InsertJob, InsertJobSuccess) {
 TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   Options options;
   std::string project_id;
-  Job job{.id = "job_id"};
+  Job job{"j-kind", "j-etag", "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, InsertJob).WillOnce([&](InsertJobRequest const& request) {
@@ -337,7 +341,7 @@ TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
 TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
   Options options;
   std::string project_id = "project_id";
-  Job job{.id = "job_id"};
+  Job job{"j-kind", "j-etag", "job_id"};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, InsertJob).WillOnce([&](InsertJobRequest const& request) {
@@ -377,22 +381,20 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
 TEST(InsertJob, InsertJobSuccess_JobObjectIsFull) {
   Options options;
   std::string project_id = "project_id";
-  Job job{.id = "job_id",
-          .job_reference = {.project_id = "project_id", .job_id = "job_id"},
-          .configuration = {
-              .query = {
-                  .maximum_bytes_billed = 111,
-                  .default_dataset = {.dataset_id = "dataset_id",
-                                      .project_id = "project_id"},
-                  .destination_table = {.project_id = "project_id",
-                                        .dataset_id = "dataset_id",
-                                        .table_id = "table_id"},
-
-                  .script_options =
-                      {.key_result_statement =
-                           ::google::cloud::bigquery_v2_minimal_internal::
-                               KeyResultStatementKind::UnSpecified()},
-              }}};
+  JobConfigurationQuery job_configuration_query;
+  job_configuration_query.maximum_bytes_billed = 111;
+  job_configuration_query.default_dataset = {"dataset_id", "project_id"};
+  job_configuration_query.destination_table = {"project_id", "dataset_id",
+                                               "table_id"};
+  ScriptOptions script_options;
+  script_options.key_result_statement = ::google::cloud::
+      bigquery_v2_minimal_internal::KeyResultStatementKind::UnSpecified();
+  job_configuration_query.script_options = script_options;
+  JobConfiguration job_configuration;
+  job_configuration.query = job_configuration_query;
+  Job job{"j-kind", "j-etag", "job_id"};
+  job.job_reference = {"project_id", "job_id"};
+  job.configuration = job_configuration;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, InsertJob).WillOnce([&](InsertJobRequest const& request) {
@@ -617,11 +619,11 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  GetQueryResults expected_1{
-      .page_token = "token",
-      .rows = {{.fields = {{"1", {.value_kind = "value_1"}}}}}};
-  GetQueryResults expected_2{
-      .rows = {{.fields = {{"1", {.value_kind = "value_2"}}}}}};
+  GetQueryResults expected_1;
+  expected_1.page_token = "token";
+  expected_1.rows = {{{{"1", {"value_1"}}}}};
+  GetQueryResults expected_2;
+  expected_2.rows = {{{{"1", {"value_2"}}}}};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, QueryResults)
@@ -695,10 +697,11 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  QueryResultsFilterParams query_results_filter_params{.start_index = 1,
-                                                       .query_timeout_ms = 100,
-                                                       .max_results = 15,
-                                                       .page_token = "token"};
+  QueryResultsFilterParams query_results_filter_params;
+  query_results_filter_params.start_index = 1;
+  query_results_filter_params.query_timeout_ms = 100;
+  query_results_filter_params.max_results = 15;
+  query_results_filter_params.page_token = "token";
   GetQueryResults expected;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);

@@ -48,7 +48,7 @@ create_bazel_config(odbc_bq_client_interface YEAR 2023)
 
 # Function for running unit tests
 function (client_interface_define_unit_tests)
-    if (NOT CLIENT_INTERFACE_UNIT_TESTING)
+    if (NOT ODBC_UNIT_TESTING)
         return()
     endif ()
 
