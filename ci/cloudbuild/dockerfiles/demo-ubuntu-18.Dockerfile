@@ -181,11 +181,6 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-# Install Bazel
-RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
-    chmod +x /usr/bin/bazelisk && \
-    ln -s /usr/bin/bazelisk /usr/bin/bazel
-
 # Install the Cloud SDK
 COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
 WORKDIR /var/tmp/downloads
