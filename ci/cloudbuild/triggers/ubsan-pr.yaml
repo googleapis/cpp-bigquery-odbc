@@ -9,6 +9,7 @@ name: ubsan-pr
 substitutions:
   _BUILD_NAME: ubsan
   _DISTRO: ubuntu-22.04-install
+  _DEPENDENCIES: 'iODBC,BAZEL'
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:

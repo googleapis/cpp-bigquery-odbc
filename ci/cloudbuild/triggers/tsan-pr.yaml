@@ -8,6 +8,7 @@ github:
 name: tsan-pr
 substitutions:
   _BUILD_NAME: tsan
+  _DEPENDENCIES: 'iODBC,BAZEL'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

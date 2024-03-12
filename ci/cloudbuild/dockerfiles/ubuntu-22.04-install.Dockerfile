@@ -219,15 +219,11 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
     cmake --build cmake-out --target install
 
 # Install the Cloud SDK
-COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
+COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
-RUN /var/tmp/ci/install-cloud-sdk.sh
+RUN /var/tmp/ci/dependencies/cloud-sdk.sh
 ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
-
-RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
-    chmod +x /usr/bin/bazelisk && \
-    ln -s /usr/bin/bazelisk /usr/bin/bazel
 
 #>>>>>>>>>>>>>>>>> ODBC Driver setup >>>>>>>>>>>>>>>
 

@@ -8,6 +8,7 @@ github:
 name: integration-bq-driver-pr
 substitutions:
   _BUILD_NAME: integration-bq-driver
+  _DEPENDENCIES: 'BAZEL'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

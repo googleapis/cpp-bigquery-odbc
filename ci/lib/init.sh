@@ -54,7 +54,6 @@ PROGRAM_PATH="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
 PROGRAM_NAME="$(basename "${PROGRAM_PATH}")"
 PROGRAM_DIR="$(dirname "${PROGRAM_PATH}")"
 PROJECT_ROOT="$(init::repo_root "${PROGRAM_DIR}")"
-#PROJECT_ROOT="//"
 
 # Sets the path to the `module` library in PATH so that it can be found when
 # callers use `source module <args>`

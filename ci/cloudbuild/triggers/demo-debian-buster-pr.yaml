@@ -8,6 +8,7 @@ github:
 name: demo-debian-buster-pr
 substitutions:
   _BUILD_NAME: demo-install
+  _DEPENDENCIES: 'iODBC'
   _DISTRO: demo-debian-buster
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

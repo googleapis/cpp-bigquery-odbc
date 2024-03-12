@@ -169,6 +169,7 @@ if [[ -n "${TRIGGER_FLAG}" ]]; then
   test -r "${trigger_file}" || die "Cannot open ${trigger_file}"
   : "${BUILD_FLAG:="$(grep _BUILD_NAME "${trigger_file}" | awk '{print $2}')"}"
   : "${DISTRO_FLAG:="$(grep _DISTRO "${trigger_file}" | awk '{print $2}')"}"
+  : "${DEPENDENCIES:="$(grep _DEPENDENCIES "${trigger_file}" | awk '{print $2}')"}"
 fi
 
 if [[ -z "${BUILD_FLAG}" ]]; then
@@ -182,14 +183,13 @@ fi
 : "${BRANCH_NAME:=$(git branch --show-current)}"
 : "${COMMIT_SHA:=$(git rev-parse HEAD)}"
 CODECOV_TOKEN="$(tr -d '[:space:]' <<<"${CODECOV_TOKEN:-}")"
-LOG_LINKER_PAT="$(tr -d '[:space:]' <<<"${LOG_LINKER_PAT:-}")"
 
 export CODECOV_TOKEN
 export BRANCH_NAME
 export COMMIT_SHA
+export DEPENDENCIES
 export TRIGGER_TYPE
 export VERBOSE_FLAG
-export LOG_LINKER_PAT
 
 # --local is the most fundamental build mode, in that all other builds
 # eventually call this one. For example, a --docker build will build the
@@ -260,12 +260,11 @@ if [[ -n "${CLOUD_FLAG}" ]]; then
   # project's "Secret Manager". This is true for our main production project, but
   # for personal projects we may need to create them (with empty strings).
   if [[ "${CLOUD_FLAG}" != "bigquery-devtools-drivers" ]]; then
-    for secret in "CODECOV_TOKEN" "LOG_LINKER_PAT"; do
-      if ! gcloud --project "${CLOUD_FLAG}" secrets describe "${secret}" >/dev/null; then
-        io::log_yellow "Adding missing secret ${secret} to ${CLOUD_FLAG}"
-        echo | gcloud --project "${CLOUD_FLAG}" secrets create "${secret}" --data-file=-
-      fi
-    done
+    secret="CODECOV_TOKEN"
+    if ! gcloud --project "${CLOUD_FLAG}" secrets describe "${secret}" >/dev/null; then
+      io::log_yellow "Adding missing secret ${secret} to ${CLOUD_FLAG}"
+      echo | gcloud --project "${CLOUD_FLAG}" secrets create "${secret}" --data-file=-
+    fi
   fi
   account="$(gcloud config get-value account 2>/dev/null)"
   subs=("_DISTRO=${DISTRO_FLAG}")
@@ -332,6 +331,7 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
     "--env=CODECOV_TOKEN=${CODECOV_TOKEN:-}"
     "--env=BRANCH_NAME=${BRANCH_NAME}"
     "--env=COMMIT_SHA=${COMMIT_SHA}"
+    "--env=DEPENDENCIES=${DEPENDENCIES:-}"
     "--env=TRIGGER_TYPE=${TRIGGER_TYPE:-}"
     "--env=VERBOSE_FLAG=${VERBOSE_FLAG:-}"
     "--env=USE_BAZEL_VERSION=${USE_BAZEL_VERSION:-}"

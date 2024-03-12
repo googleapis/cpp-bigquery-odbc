@@ -217,23 +217,3 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install
-
-RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64" && \
-    chmod +x /usr/bin/bazelisk && \
-    ln -s /usr/bin/bazelisk /usr/bin/bazel
-
-# Install the Cloud SDK
-COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
-WORKDIR /var/tmp/downloads
-RUN /var/tmp/ci/install-cloud-sdk.sh
-ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
-ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
-
-# iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-WORKDIR /var/tmp/iODBC
-RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    autoreconf --install && \
-    ./configure && \
-    make install -j $(nproc)

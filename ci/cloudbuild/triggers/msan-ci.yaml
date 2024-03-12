@@ -7,6 +7,7 @@ github:
 name: msan-ci
 substitutions:
   _BUILD_NAME: msan
+  _DEPENDENCIES: 'iODBC,BAZEL'
   _DISTRO: ubuntu-msan
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

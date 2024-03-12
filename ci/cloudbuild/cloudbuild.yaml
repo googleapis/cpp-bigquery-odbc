@@ -58,8 +58,6 @@ availableSecrets:
   secretManager:
   - versionName: 'projects/${PROJECT_ID}/secrets/CODECOV_TOKEN/versions/latest'
     env: 'CODECOV_TOKEN'
-  - versionName: 'projects/${PROJECT_ID}/secrets/LOG_LINKER_PAT/versions/latest'
-    env: 'LOG_LINKER_PAT'
   - versionName: projects/$PROJECT_ID/secrets/odbc-keys/versions/latest
     env: 'ODBC_SECRET'
 
@@ -102,9 +100,10 @@ steps:
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
   entrypoint: 'ci/cloudbuild/build.sh'
   args: [ '--local', '--build', '${_BUILD_NAME}' ]
-  secretEnv: ['CODECOV_TOKEN', 'LOG_LINKER_PAT']
+  secretEnv: ['CODECOV_TOKEN']
   env: [
     'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${_DISTRO}-${_BUILD_NAME}',
+    'DEPENDENCIES=${_DEPENDENCIES}',
     'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
     'SCCACHE_GCS_KEY_PREFIX=sccache/${_DISTRO}-${_BUILD_NAME}',
     'SCCACHE_GCS_RW_MODE=READ_WRITE',

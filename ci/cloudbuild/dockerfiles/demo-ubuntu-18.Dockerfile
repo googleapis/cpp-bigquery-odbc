@@ -181,21 +181,5 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-# Install the Cloud SDK
-COPY ./install-cloud-sdk.sh /var/tmp/ci/install-cloud-sdk.sh
-WORKDIR /var/tmp/downloads
-RUN /var/tmp/ci/install-cloud-sdk.sh
-ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
-ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
-
-# iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-WORKDIR /var/tmp/iODBC
-RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    autoreconf --install && \
-    ./configure && \
-    make install -j $(nproc)
-
 # Update the ld.conf cache in case any libraries were installed in /usr/local/lib*
 RUN ldconfig /usr/local/lib*

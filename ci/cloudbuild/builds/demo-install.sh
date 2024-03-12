@@ -17,8 +17,9 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
+source module ci/install-dependencies.sh
+
 source module ci/cloudbuild/builds/lib/cmake.sh
-source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 

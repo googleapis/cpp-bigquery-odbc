@@ -8,6 +8,7 @@ github:
 name: demo-sles-15-pr
 substitutions:
   _BUILD_NAME: demo-install
+  _DEPENDENCIES: 'iODBC'
   _DISTRO: demo-sles-15
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

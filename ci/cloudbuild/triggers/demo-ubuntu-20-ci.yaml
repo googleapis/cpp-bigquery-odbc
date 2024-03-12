@@ -7,6 +7,7 @@ github:
 name: demo-ubuntu-20-ci
 substitutions:
   _BUILD_NAME: demo-install
+  _DEPENDENCIES: 'iODBC'
   _DISTRO: demo-ubuntu-20
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

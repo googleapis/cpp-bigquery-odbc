@@ -20,15 +20,15 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
+source module ci/install-dependencies.sh
+
 source module ci/cloudbuild/builds/lib/bazel.sh
-source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 
 export CC=clang
 export CXX=clang++
 
 mapfile -t args < <(bazel::common_args)
-mapfile -t secrets_bazel < <(secrets::bazel_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 args+=("--config=asan")
-bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=integration-test,unit-tests ...
+bazel test "${args[@]}" "${unit_tests_args[@]}" --test_tag_filters=integration-test,unit-tests ...

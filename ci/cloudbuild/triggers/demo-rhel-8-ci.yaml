@@ -7,6 +7,7 @@ github:
 name: demo-rhel-8-ci
 substitutions:
   _BUILD_NAME: demo-install
+  _DEPENDENCIES: 'iODBC'
   _DISTRO: demo-rhel-8
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
