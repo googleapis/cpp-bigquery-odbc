@@ -37,6 +37,8 @@ using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 TraceOptions& opts = *(*kTraceOptsConsole);
@@ -104,40 +106,29 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  // Assumption here is memory for output is managed/owned by the caller.
+
   if (!supported_fn) {
-    TracePrintInternal(opts, "Argument supported_fn cannot be null");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return SQL_ERROR;
+    auto status_record = StatusRecord{SQLStates::k_HY024(),
+                                      "Argument supported_fn cannot be null"};
+    return status_record.CalculateReturnCode();
   }
+
   switch (function_id) {
     case SQL_API_ODBC3_ALL_FUNCTIONS: {
-      Status status = PopulateSupportedODBC3Functions(opts, supported_fn);
-      if (!status.ok()) {
-        TracePrintInternal(opts,
-                           "Internal Error: PopulateSupportedODBCFunctions() "
-                           "failed with status: " +
-                               status.message());
-        // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-        // SQLDiagRec and/or SQLDiagField.
-        return SQL_ERROR;
+      StatusRecord status_record =
+          PopulateSupportedODBC3Functions(supported_fn);
+      if (!status_record.ok()) {
+        return status_record.CalculateReturnCode();
       }
       return rc;
     }
     case SQL_API_ALL_FUNCTIONS: {
-      Status status = PopulateSupportedODBC2Functions(opts, supported_fn);
-      if (!status.ok()) {
-        TracePrintInternal(opts,
-                           "Internal Error: PopulateSupportedODBCFunctions() "
-                           "failed with status: " +
-                               status.message());
-        // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-        // SQLDiagRec and/or SQLDiagField.
-        return SQL_ERROR;
+      StatusRecord status_record =
+          PopulateSupportedODBC2Functions(supported_fn);
+      if (!status_record.ok()) {
+        return status_record.CalculateReturnCode();
       }
       return rc;
     }
@@ -146,28 +137,16 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   }
   if (IsFunctionIdOdbc3(function_id)) {
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-    Status status = PopulateSupportedODBC3Functions(opts, odbc3_fns);
-    if (!status.ok()) {
-      TracePrintInternal(opts,
-                         "Internal Error: PopulateSupportedODBCFunctions() "
-                         "failed with status: " +
-                             status.message());
-      // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-      // SQLDiagRec and/or SQLDiagField.
-      return SQL_ERROR;
+    StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
+    if (!status_record.ok()) {
+      return status_record.CalculateReturnCode();
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
   } else if (IsFunctionIdOdbc2(function_id)) {
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
-    Status status = PopulateSupportedODBC2Functions(opts, odbc2_fns);
-    if (!status.ok()) {
-      TracePrintInternal(opts,
-                         "Internal Error: PopulateSupportedODBCFunctions() "
-                         "failed with status: " +
-                             status.message());
-      // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-      // SQLDiagRec and/or SQLDiagField.
-      return SQL_ERROR;
+    StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
+    if (!status_record.ok()) {
+      return status_record.CalculateReturnCode();
     }
     *supported_fn = odbc2_fns[function_id];
   }

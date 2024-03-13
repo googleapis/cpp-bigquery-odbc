@@ -13,18 +13,19 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-std::shared_ptr<TraceOptions> test_fn_opts_console =
-    TraceOptions::CreateTraceOptionsConsole(true, 0).value();
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
 TEST(PopulateSupportedODBC3Functions, AllODBC3SupportedFunctions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-  Status status =
-      PopulateSupportedODBC3Functions(*test_fn_opts_console, odbc3_fns);
-  EXPECT_TRUE(status.ok());
+  StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
+  EXPECT_TRUE(status_record.ok());
 
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLALLOCHANDLE));
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLGETDESCFIELD));
@@ -87,9 +88,8 @@ TEST(PopulateSupportedODBC3Functions, AllODBC3SupportedFunctions) {
 
 TEST(PopulateSupportedODBC3Functions, AllUnSupportedODBC3Functions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-  Status status =
-      PopulateSupportedODBC3Functions(*test_fn_opts_console, odbc3_fns);
-  EXPECT_TRUE(status.ok());
+  StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
+  EXPECT_TRUE(status_record.ok());
 
   EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLBULKOPERATIONS));
   EXPECT_EQ(SQL_FALSE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLSETPOS));
@@ -97,9 +97,8 @@ TEST(PopulateSupportedODBC3Functions, AllUnSupportedODBC3Functions) {
 
 TEST(PopulateSupportedODBC2Functions, AllUnSupportedODBC2Functions) {
   SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
-  Status status =
-      PopulateSupportedODBC2Functions(*test_fn_opts_console, odbc2_fns);
-  EXPECT_TRUE(status.ok());
+  StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
+  EXPECT_TRUE(status_record.ok());
 
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLERROR]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLPARAMOPTIONS]);
@@ -120,19 +119,17 @@ TEST(PopulateSupportedODBC2Functions, AllUnSupportedODBC2Functions) {
 }
 
 TEST(PopulateSupportedODBC3Functions, SupportedFunctionPointerNull) {
-  Status status =
-      PopulateSupportedODBC3Functions(*test_fn_opts_console, nullptr);
+  StatusRecord status_record = PopulateSupportedODBC3Functions(nullptr);
 
-  EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
-  EXPECT_EQ(status.message(), "Argument supportedFunction cannot be null");
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
+  EXPECT_EQ(status_record.message, "Argument supportedFunction cannot be null");
 }
 
 TEST(PopulateSupportedODBC2Functions, SupportedFunctionPointerNull) {
-  Status status =
-      PopulateSupportedODBC2Functions(*test_fn_opts_console, nullptr);
+  StatusRecord status_record = PopulateSupportedODBC2Functions(nullptr);
 
-  EXPECT_EQ(status.code(), StatusCode::kInvalidArgument);
-  EXPECT_EQ(status.message(), "Argument supportedFunction cannot be null");
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
+  EXPECT_EQ(status_record.message, "Argument supportedFunction cannot be null");
 }
 
 TEST(CheckFuncs, CheckODBC2True) {

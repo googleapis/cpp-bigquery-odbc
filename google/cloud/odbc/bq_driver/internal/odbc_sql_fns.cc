@@ -23,6 +23,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+
 std::map<UWORD, int> odbc_2_fns = {{SQL_API_SQLERROR, FALSE},
                                    {SQL_API_SQLPARAMOPTIONS, FALSE},
                                    {SQL_API_SQLSETSCROLLOPTIONS, FALSE},
@@ -72,15 +76,11 @@ std::map<UWORD, int> odbc_3_fns = {
     {SQL_API_SQLMORERESULTS, TRUE},      {SQL_API_SQLPROCEDURES, TRUE},
     {SQL_API_SQLSETPOS, FALSE},          {SQL_API_SQLBULKOPERATIONS, FALSE}};
 
-Status PopulateSupportedODBC3Functions(TraceOptions& opts,
-                                       SQLUSMALLINT* supportedFunction) {
+odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
+    SQLUSMALLINT* supportedFunction) {
   if (!supportedFunction) {
-    TracePrintInternal(opts,
-                       "Internal error: supportedFunction pointer is null!");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return Status(StatusCode::kInvalidArgument,
-                  "Argument supportedFunction cannot be null");
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Argument supportedFunction cannot be null"};
   }
   // clear memory.
   memset(supportedFunction, '\0', SQL_API_ODBC3_ALL_FUNCTIONS_SIZE);
@@ -100,24 +100,20 @@ Status PopulateSupportedODBC3Functions(TraceOptions& opts,
       ENABLE_SQL_FUNCTION_BIT(supportedFunction, i);
     }
   }
-  return Status(StatusCode::kOk, "");
+  return StatusRecord::Ok();
 }
 
-Status PopulateSupportedODBC2Functions(TraceOptions& opts,
-                                       SQLUSMALLINT* supportedFunction) {
+odbc_internal::StatusRecord PopulateSupportedODBC2Functions(
+    SQLUSMALLINT* supportedFunction) {
   if (!supportedFunction) {
-    TracePrintInternal(opts,
-                       "Internal error: supportedFunction pointer is null!");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField.
-    return Status(StatusCode::kInvalidArgument,
-                  "Argument supportedFunction cannot be null");
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Argument supportedFunction cannot be null"};
   }
   // Populate ODBC 2 functions only.
   for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
     supportedFunction[i] = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
   }
-  return Status(StatusCode::kOk, "");
+  return StatusRecord::Ok();
 }
 
 int IsOdbcFunctionIdSupported(UWORD fid) {

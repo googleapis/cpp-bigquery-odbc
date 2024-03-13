@@ -15,8 +15,9 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FNS_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FNS_H
 
-#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
+#include <map>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -24,11 +25,11 @@ namespace google::cloud::odbc_bq_driver_internal {
 // not defined in driver manager.
 constexpr int kSqlApiAllFuncsSize = 100;
 
-Status PopulateSupportedODBC3Functions(TraceOptions& opts,
-                                       SQLUSMALLINT* supportedFunction);
+odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
+    SQLUSMALLINT* supportedFunction);
 
-Status PopulateSupportedODBC2Functions(TraceOptions& opts,
-                                       SQLUSMALLINT* supportedFunction);
+odbc_internal::StatusRecord PopulateSupportedODBC2Functions(
+    SQLUSMALLINT* supportedFunction);
 
 int IsOdbcFunctionIdSupported(UWORD fid);
 bool IsFunctionIdOdbc3(UWORD fid);
