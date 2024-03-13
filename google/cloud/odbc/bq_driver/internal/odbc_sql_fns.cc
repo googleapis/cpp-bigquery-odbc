@@ -25,7 +25,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
 
 std::map<UWORD, int> odbc_2_fns = {{SQL_API_SQLERROR, FALSE},
                                    {SQL_API_SQLPARAMOPTIONS, FALSE},
