@@ -20,10 +20,12 @@ bash --version
 
 declare -A AVAILABLE_DEPENDENCIES
 AVAILABLE_DEPENDENCIES[iODBC]=ci/dependencies/iODBC.sh
+AVAILABLE_DEPENDENCIES[unixODBC]=ci/dependencies/unixODBC.sh
 AVAILABLE_DEPENDENCIES[GCLOUD_SDK]=ci/dependencies/cloud-sdk.sh
 AVAILABLE_DEPENDENCIES[BAZEL]=ci/dependencies/bazel.sh
+AVAILABLE_DEPENDENCIES[DRIVER_MANAGER_SETUP]=ci/dependencies/driver-manager-setup.sh
 
-DEPENDENCIES=${DEPENDENCIES:-}
+#DEPENDENCIES="${DEPENDENCIES:-},unixODBC,DRIVER_MANAGER_SETUP"
 echo "DEPENDENCIES::${DEPENDENCIES}"
 
 IFS=',' read -ra dependencies_list <<<"$DEPENDENCIES"

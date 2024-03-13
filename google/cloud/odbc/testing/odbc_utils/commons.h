@@ -16,7 +16,6 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_COMMONS_H
 
 #include <gtest/gtest.h>
-#include <iodbcext.h>
 #include <locale.h>
 #include <map>
 #include <memory>

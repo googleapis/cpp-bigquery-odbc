@@ -14,18 +14,11 @@
 
 FROM ubuntu:22.04
 
-# ENV for unixODBC driver manager
-ENV GCS_BUCKET=bq-dev-tools-testing-drivers
-RUN echo 'GCS_BUCKET='${GCS_BUCKET}
-ARG odbc_secret
-ENV ODBC_CONN_KEYS=${odbc_secret}
-RUN echo 'ODBC_CONN_KEYS='${ODBC_CONN_KEYS}
-RUN echo 'ODBC_SECRET='${ODBC_SECRET}
-
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
+        autotools-dev \
         build-essential \
         clang \
         cmake \
@@ -37,6 +30,7 @@ RUN apt-get update && \
         libc++-dev \
         libc++abi-dev \
         libcurl4-openssl-dev \
+        libltdl-dev \
         libssl-dev \
         libtool \
         llvm \
@@ -44,6 +38,7 @@ RUN apt-get update && \
         make \
         ninja-build \
         patch \
+        perl \
         pkg-config \
         python3 \
         python3-dev \
@@ -218,16 +213,19 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install
 
+WORKDIR /var/tmp/m4
+RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
+  tar -zxf - --strip-components=1 && \
+  ./configure --enable-gui=no && \
+  make && \
+  make install -j "$(nproc)"
+
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
 RUN /var/tmp/ci/dependencies/cloud-sdk.sh
 ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
-
-#>>>>>>>>>>>>>>>>> ODBC Driver setup >>>>>>>>>>>>>>>
-
-RUN echo '**** ODBC Driver installation START ****'
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
 
@@ -238,51 +236,3 @@ RUN echo 'Verifying glibc version...'
 RUN dpkg -l libc6
 RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
     then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
-
-# iODBC Driver Manager
-RUN echo 'Installing iODBC Driver Manager...'
-WORKDIR /var/tmp/iODBC
-RUN curl -fsSL https://github.com/openlink/iODBC/releases/download/v3.52.16/libiodbc-3.52.16.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    autoreconf --install && \
-    ./configure && \
-    make install -j $(nproc)
-
-## END Installs pre-requisites for the ODBC Driver.
-
-# Check gcloud is installed.
-RUN echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-RUN if [ $(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip) -eq 0 ] ; \
-    then echo 'ODBC driver not found for download: exiting...' ; exit 1 ; fi
-
-
-# Configure connection credentials for the driver.
-RUN echo 'Configuring Connection Credentials...'
-RUN mkdir -p /opt/odbc-driver/connection
-WORKDIR /opt/odbc-driver
-RUN gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
-RUN echo 'Verifying Connection Keys File Size...'
-RUN if [ $(stat -c%s /opt/odbc-driver/connection/key.json) -lt 100 ] ; \
-    then echo 'Invalid connection keys: exiting...' ; exit 1 ; fi
-
-# Install the ODBC Driver
-RUN echo 'Installing ODBC Driver...'
-RUN gsutil -m cp gs://${GCS_BUCKET}/odbc/odbc-driver.zip .
-RUN unzip -qq odbc-driver.zip
-RUN echo 'Verifying Driver Install Directory...'
-RUN if [ $(ls /opt/odbc-driver/ | grep -c googlebigqueryodbc) -eq 0 ] ; \
-    then echo 'ODBC driver not installed: exiting...' ; exit 1 ; fi
-
-# Configure environment variables
-RUN echo 'Configuring Environment Variables For ODBC Driver...'
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib/
-ENV ODBCINI=/opt/odbc-driver/googlebigqueryodbc/odbc.ini
-ENV ODBCINSTINI=/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini
-ENV SIMBAGOOGLEBIGQUERYODBCINI=/opt/odbc-driver/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
-RUN echo 'Verifying Environment Variables...'
-RUN echo 'LD_LIBRARY_PATH='${LD_LIBRARY_PATH}
-RUN echo 'ODBCINI='${ODBCINI}
-RUN echo 'ODBCINSTINI='${ODBCINSTINI}
-RUN echo 'SIMBAGOOGLEBIGQUERYODBCINI='${SIMBAGOOGLEBIGQUERYODBCINI}
-
-RUN echo '**** ODBC Driver installation END****'
