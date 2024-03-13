@@ -14,12 +14,24 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+namespace {
+StatusRecord UnSupportedValue(std::string const& msg_prefix,
+                              std::string attribute_val) {
+  std::string msg = msg_prefix;
+  msg.append(attribute_val);
+  return StatusRecord{SQLStates::k_HY024(), msg};
+}
+
+}  // namespace
 
 EnvAttrConnectionPool::EnvAttrConnectionPool(
     EnvAttrConnectionPoolVal const& val) {
@@ -75,7 +87,6 @@ EnvAttrOdbcVersion::EnvAttrOdbcVersion(EnvAttrOdbcVersVal const& val) {
 
 StatusRecordOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
     void* value) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
   auto actual_value = reinterpret_cast<std::size_t>(value);
   switch (actual_value) {
     case SQL_CP_OFF: {
@@ -88,19 +99,15 @@ StatusRecordOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
       return EnvAttrConnectionPoolVal::kOnePerHenv;
     }
     default: {
-      std::string msg =
-          "Unsupported attribute value for EnvAttrConnectionPool: ";
-      msg.append(std::to_string(actual_value));
-      TracePrintInternal(opts, msg);
-      return StatusRecord::ConvertFrom(
-          Status(StatusCode::kInvalidArgument, msg));
+      return UnSupportedValue(
+          "Unsupported attribute value for EnvAttrConnectionPool:",
+          std::to_string(actual_value));
     }
   }
 }
 
 StatusRecordOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(
     void* value) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
   auto actual_value = reinterpret_cast<std::size_t>(value);
   switch (actual_value) {
     case SQL_CP_RELAXED_MATCH: {
@@ -110,18 +117,14 @@ StatusRecordOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(
       return EnvAttrCPMatchVal::kStrictMatch;
     }
     default: {
-      std::string msg =
-          "Unsupported attribute value for EnvAttrConnectionPoolMatch: ";
-      msg.append(std::to_string(actual_value));
-      TracePrintInternal(opts, msg);
-      return StatusRecord::ConvertFrom(
-          Status(StatusCode::kInvalidArgument, msg));
+      return UnSupportedValue(
+          "Unsupported attribute value for EnvAttrConnectionPoolMatch:",
+          std::to_string(actual_value));
     }
   }
 }
 
 StatusRecordOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
   auto actual_value = reinterpret_cast<std::size_t>(value);
   switch (actual_value) {
     case SQL_OV_ODBC2: {
@@ -131,27 +134,23 @@ StatusRecordOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
       return EnvAttrOdbcVersVal::kOdbc3;
     }
     default: {
-      std::string msg = "Unsupported attribute value for EnvAttrOdbcVersion: ";
-      msg.append(std::to_string(actual_value));
-      TracePrintInternal(opts, msg);
-      return StatusRecord::ConvertFrom(
-          Status(StatusCode::kInvalidArgument, msg));
+      return UnSupportedValue(
+          "Unsupported attribute value for EnvAttrOdbcVersion:",
+          std::to_string(actual_value));
     }
   }
 }
 
-Status EnvAttrOutputNTS::ParseVal(void* value) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
+StatusRecordOr<int> EnvAttrOutputNTS::ParseVal(void* value) {
   auto actual_value = reinterpret_cast<std::size_t>(value);
   switch (actual_value) {
     case SQL_TRUE: {
-      return Status(StatusCode::kOk, "");
+      return static_cast<int>(actual_value);
     }
     default: {
-      std::string msg = "Unsupported attribute value for EnvAttrOutputNTS: ";
-      msg.append(std::to_string(actual_value));
-      TracePrintInternal(opts, msg);
-      return Status(StatusCode::kInvalidArgument, msg);
+      return UnSupportedValue(
+          "Unsupported attribute value for EnvAttrOutputNTS:",
+          std::to_string(actual_value));
     }
   }
 }
@@ -162,8 +161,9 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
   switch (attribute) {
     case SQL_ATTR_CONNECTION_POOLING: {
       if (connection_pool_ == nullptr) {
-        auto status_record = StatusRecord::ConvertFrom(Status(
-            StatusCode::kInternal, "Internal error: null connection pool"));
+        auto status_record = StatusRecord{
+            SQLStates::k_HY001(), "Internal error: null connection pool"};
+        GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       auto* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
@@ -172,9 +172,10 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
     }
     case SQL_ATTR_CP_MATCH: {
       if (connection_pool_match_ == nullptr) {
-        auto status_record = StatusRecord::ConvertFrom(Status(
-            StatusCode::kInternal,
-            "Internal error: attribute value for cp match not initialized"));
+        auto status_record = StatusRecord{
+            SQLStates::k_HY001(),
+            "Internal error: attribute value for cp match not initialized"};
+        GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       auto* attrib_val = reinterpret_cast<SQLUINTEGER*>(value);
@@ -183,10 +184,11 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
     }
     case SQL_ATTR_ODBC_VERSION: {
       if (odbc_ver_ == nullptr) {
-        auto status_record = StatusRecord::ConvertFrom(
-            Status(StatusCode::kInternal,
-                   "Internal error: attribute value for odbc version not "
-                   "initialized"));
+        auto status_record =
+            StatusRecord{SQLStates::k_HY001(),
+                         "Internal error: attribute value for odbc version not "
+                         "initialized"};
+        GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       auto* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
@@ -195,9 +197,11 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
     }
     case SQL_ATTR_OUTPUT_NTS: {
       if (output_nts_ == nullptr) {
-        auto status_record = StatusRecord::ConvertFrom(Status(
-            StatusCode::kInternal,
-            "Internal error: attribute value for output nts not initialized"));
+        auto status_record =
+            StatusRecord{SQLStates::k_HY001(),
+                         "Internal error: attribute value for output nts not "
+                         "initialized"};
+        GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       auto* attrib_val = reinterpret_cast<SQLINTEGER*>(value);
@@ -205,11 +209,10 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
       break;
     }
     default: {
-      std::string msg =
-          "Unsupported environment attribute passed to GetAttribute: ";
-      msg.append(std::to_string(attribute));
-      auto status_record =
-          StatusRecord::ConvertFrom(Status(StatusCode::kInvalidArgument, msg));
+      auto status_record = UnSupportedValue(
+          "Unsupported environment attribute passed to GetAttribute: ",
+          std::to_string(attribute));
+      GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }
   }
@@ -223,6 +226,7 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_CONNECTION_POOLING: {
       auto conn_pool_val = EnvAttrConnectionPool::ParseVal(value);
       if (!conn_pool_val) {
+        GetDiagnostics().AddStatusRecord(conn_pool_val.GetStatusRecord());
         return conn_pool_val.GetCalculatedReturnCode();
       }
       connection_pool_ =
@@ -232,6 +236,7 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_CP_MATCH: {
       auto cp_match_val = EnvAttrConnectionPoolMatch::ParseVal(value);
       if (!cp_match_val) {
+        GetDiagnostics().AddStatusRecord(cp_match_val.GetStatusRecord());
         return cp_match_val.GetCalculatedReturnCode();
       }
       connection_pool_match_ =
@@ -241,6 +246,7 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_ODBC_VERSION: {
       auto odbc_vers_val = EnvAttrOdbcVersion::ParseVal(value);
       if (!odbc_vers_val) {
+        GetDiagnostics().AddStatusRecord(odbc_vers_val.GetStatusRecord());
         return odbc_vers_val.GetCalculatedReturnCode();
       }
       odbc_ver_ = std::make_shared<EnvAttrOdbcVersion>(*odbc_vers_val);
@@ -248,19 +254,18 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     }
     case SQL_ATTR_OUTPUT_NTS: {
       auto output_nts_val = EnvAttrOutputNTS::ParseVal(value);
-      if (!output_nts_val.ok()) {
-        auto status_record = StatusRecord::ConvertFrom(output_nts_val);
-        return status_record.CalculateReturnCode();
+      if (!output_nts_val) {
+        GetDiagnostics().AddStatusRecord(output_nts_val.GetStatusRecord());
+        return output_nts_val.GetCalculatedReturnCode();
       }
       output_nts_ = std::make_shared<EnvAttrOutputNTS>();
       break;
     }
     default: {
-      std::string msg =
-          "Unsupported environment attribute passed to SetAttribute: ";
-      msg.append(std::to_string(attribute));
-      auto status_record =
-          StatusRecord::ConvertFrom(Status(StatusCode::kInvalidArgument, msg));
+      auto status_record = UnSupportedValue(
+          "Unsupported environment attribute passed to SetAttribute: ",
+          std::to_string(attribute));
+      GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }
   }

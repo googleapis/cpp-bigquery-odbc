@@ -105,7 +105,8 @@ class EnvAttrOutputNTS {
   EnvAttrOutputNTS(EnvAttrOutputNTS&&) = default;
   EnvAttrOutputNTS& operator=(EnvAttrOutputNTS&&) = default;
 
-  static Status ParseVal(void* value);
+  static google::cloud::odbc_internal::StatusRecordOr<int> ParseVal(
+      void* value);
   [[nodiscard]] std::string Name() const { return name_; }
   [[nodiscard]] SQLUINTEGER Value() const { return val_; }
 
