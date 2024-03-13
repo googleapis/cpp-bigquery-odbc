@@ -1,0 +1,16 @@
+filename: ci/cloudbuild/cloudbuild.yaml
+github:
+  name: cpp-bigquery-odbc
+  owner: googleapis
+  pullRequest:
+    branch: ^main$
+    commentControl: COMMENTS_ENABLED_FOR_EXTERNAL_CONTRIBUTORS_ONLY
+name: demo-ubuntu-20-unixODBC-pr
+substitutions:
+  _BUILD_NAME: demo-install
+  _DEPENDENCIES: 'unixODBC'
+  _DISTRO: demo-ubuntu-20
+  _TRIGGER_TYPE: pr
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+tags:
+- pr

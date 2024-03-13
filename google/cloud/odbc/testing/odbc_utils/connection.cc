@@ -27,12 +27,8 @@ void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout) {
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CheckError(status, "SQLAllocHandle", conn);
 
-  // Set the application name
-  status = SQLSetConnectAttr(conn->hdbc, SQL_APPLICATION_NAME,
-                             (SQLPOINTER)("odbctest"), SQL_NTS);
-  CheckError(status, "SQLSetConnectAttr", conn);
-
-  status = SQLSetConnectAttr(conn->hdbc, SQL_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
+  status =
+      SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
   CheckError(status, "SQLSetConnectAttr", conn);
 
   status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,

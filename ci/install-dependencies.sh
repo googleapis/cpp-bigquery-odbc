@@ -19,9 +19,10 @@ set -euo pipefail
 bash --version
 
 declare -A AVAILABLE_DEPENDENCIES
-AVAILABLE_DEPENDENCIES[iODBC]=ci/dependencies/iODBC.sh
-AVAILABLE_DEPENDENCIES[GCLOUD_SDK]=ci/dependencies/cloud-sdk.sh
 AVAILABLE_DEPENDENCIES[BAZEL]=ci/dependencies/bazel.sh
+AVAILABLE_DEPENDENCIES[GCLOUD_SDK]=ci/dependencies/cloud-sdk.sh
+AVAILABLE_DEPENDENCIES[iODBC]=ci/dependencies/iODBC.sh
+AVAILABLE_DEPENDENCIES[unixODBC]=ci/dependencies/unixODBC.sh
 
 DEPENDENCIES=${DEPENDENCIES:-}
 echo "DEPENDENCIES::${DEPENDENCIES}"

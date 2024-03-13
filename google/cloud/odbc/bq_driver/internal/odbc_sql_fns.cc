@@ -26,54 +26,54 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 
-std::map<UWORD, int> odbc_2_fns = {{SQL_API_SQLERROR, FALSE},
-                                   {SQL_API_SQLPARAMOPTIONS, FALSE},
-                                   {SQL_API_SQLSETSCROLLOPTIONS, FALSE},
-                                   {SQL_API_SQLSETPARAM, FALSE},
-                                   {SQL_API_SQLALLOCCONNECT, FALSE},
-                                   {SQL_API_SQLALLOCENV, FALSE},
-                                   {SQL_API_SQLALLOCSTMT, FALSE},
-                                   {SQL_API_SQLFREECONNECT, FALSE},
-                                   {SQL_API_SQLFREEENV, FALSE},
-                                   {SQL_API_SQLFREESTMT, FALSE},
-                                   {SQL_API_SQLBINDPARAMETER, FALSE},
-                                   {SQL_API_SQLGETCONNECTOPTION, FALSE},
-                                   {SQL_API_SQLGETSTMTOPTION, FALSE},
-                                   {SQL_API_SQLSETCONNECTOPTION, FALSE},
-                                   {SQL_API_SQLSETSTMTOPTION, FALSE},
-                                   {SQL_API_SQLTRANSACT, FALSE}};
+std::map<UWORD, bool> odbc_2_fns = {{SQL_API_SQLERROR, false},
+                                    {SQL_API_SQLPARAMOPTIONS, false},
+                                    {SQL_API_SQLSETSCROLLOPTIONS, false},
+                                    {SQL_API_SQLSETPARAM, false},
+                                    {SQL_API_SQLALLOCCONNECT, false},
+                                    {SQL_API_SQLALLOCENV, false},
+                                    {SQL_API_SQLALLOCSTMT, false},
+                                    {SQL_API_SQLFREECONNECT, false},
+                                    {SQL_API_SQLFREEENV, false},
+                                    {SQL_API_SQLFREESTMT, false},
+                                    {SQL_API_SQLBINDPARAMETER, false},
+                                    {SQL_API_SQLGETCONNECTOPTION, false},
+                                    {SQL_API_SQLGETSTMTOPTION, false},
+                                    {SQL_API_SQLSETCONNECTOPTION, false},
+                                    {SQL_API_SQLSETSTMTOPTION, false},
+                                    {SQL_API_SQLTRANSACT, false}};
 
-std::map<UWORD, int> odbc_3_fns = {
-    {SQL_API_SQLALLOCHANDLE, TRUE},      {SQL_API_SQLGETDESCFIELD, TRUE},
-    {SQL_API_SQLSETCONNECTATTR, TRUE},   {SQL_API_SQLDRIVERS, TRUE},
-    {SQL_API_SQLBINDCOL, TRUE},          {SQL_API_SQLGETDESCREC, TRUE},
-    {SQL_API_SQLCANCEL, TRUE},           {SQL_API_SQLGETDIAGFIELD, TRUE},
-    {SQL_API_SQLCLOSECURSOR, TRUE},      {SQL_API_SQLGETDIAGREC, TRUE},
-    {SQL_API_SQLCOLATTRIBUTE, TRUE},     {SQL_API_SQLGETENVATTR, TRUE},
-    {SQL_API_SQLCONNECT, TRUE},          {SQL_API_SQLGETFUNCTIONS, TRUE},
-    {SQL_API_SQLCOPYDESC, TRUE},         {SQL_API_SQLGETINFO, TRUE},
-    {SQL_API_SQLDATASOURCES, TRUE},      {SQL_API_SQLGETSTMTATTR, TRUE},
-    {SQL_API_SQLDESCRIBECOL, TRUE},      {SQL_API_SQLGETTYPEINFO, TRUE},
-    {SQL_API_SQLDISCONNECT, TRUE},       {SQL_API_SQLNUMRESULTCOLS, TRUE},
-    {SQL_API_SQLPARAMDATA, TRUE},        {SQL_API_SQLENDTRAN, TRUE},
-    {SQL_API_SQLPREPARE, TRUE},          {SQL_API_SQLEXECDIRECT, TRUE},
-    {SQL_API_SQLPUTDATA, TRUE},          {SQL_API_SQLEXECUTE, TRUE},
-    {SQL_API_SQLROWCOUNT, TRUE},         {SQL_API_SQLFETCH, TRUE},
-    {SQL_API_SQLFETCHSCROLL, TRUE},      {SQL_API_SQLSETCURSORNAME, TRUE},
-    {SQL_API_SQLFREEHANDLE, TRUE},       {SQL_API_SQLSETDESCFIELD, TRUE},
-    {SQL_API_SQLSETDESCREC, TRUE},       {SQL_API_SQLGETCONNECTATTR, TRUE},
-    {SQL_API_SQLSETENVATTR, TRUE},       {SQL_API_SQLGETCURSORNAME, TRUE},
-    {SQL_API_SQLSETSTMTATTR, TRUE},      {SQL_API_SQLGETDATA, TRUE},
-    {SQL_API_SQLCOLUMNS, TRUE},          {SQL_API_SQLSTATISTICS, TRUE},
-    {SQL_API_SQLSPECIALCOLUMNS, TRUE},   {SQL_API_SQLTABLES, TRUE},
-    {SQL_API_SQLBINDPARAM, TRUE},        {SQL_API_SQLNATIVESQL, TRUE},
-    {SQL_API_SQLBROWSECONNECT, TRUE},    {SQL_API_SQLNUMPARAMS, TRUE},
-    {SQL_API_SQLPRIMARYKEYS, TRUE},      {SQL_API_SQLCOLUMNPRIVILEGES, TRUE},
-    {SQL_API_SQLPROCEDURECOLUMNS, TRUE}, {SQL_API_SQLDESCRIBEPARAM, TRUE},
-    {SQL_API_SQLPROCEDURES, TRUE},       {SQL_API_SQLDRIVERCONNECT, TRUE},
-    {SQL_API_SQLFOREIGNKEYS, TRUE},      {SQL_API_SQLTABLEPRIVILEGES, TRUE},
-    {SQL_API_SQLMORERESULTS, TRUE},      {SQL_API_SQLPROCEDURES, TRUE},
-    {SQL_API_SQLSETPOS, FALSE},          {SQL_API_SQLBULKOPERATIONS, FALSE}};
+std::map<UWORD, bool> odbc_3_fns = {
+    {SQL_API_SQLALLOCHANDLE, true},      {SQL_API_SQLGETDESCFIELD, true},
+    {SQL_API_SQLSETCONNECTATTR, true},   {SQL_API_SQLDRIVERS, true},
+    {SQL_API_SQLBINDCOL, true},          {SQL_API_SQLGETDESCREC, true},
+    {SQL_API_SQLCANCEL, true},           {SQL_API_SQLGETDIAGFIELD, true},
+    {SQL_API_SQLCLOSECURSOR, true},      {SQL_API_SQLGETDIAGREC, true},
+    {SQL_API_SQLCOLATTRIBUTE, true},     {SQL_API_SQLGETENVATTR, true},
+    {SQL_API_SQLCONNECT, true},          {SQL_API_SQLGETFUNCTIONS, true},
+    {SQL_API_SQLCOPYDESC, true},         {SQL_API_SQLGETINFO, true},
+    {SQL_API_SQLDATASOURCES, true},      {SQL_API_SQLGETSTMTATTR, true},
+    {SQL_API_SQLDESCRIBECOL, true},      {SQL_API_SQLGETTYPEINFO, true},
+    {SQL_API_SQLDISCONNECT, true},       {SQL_API_SQLNUMRESULTCOLS, true},
+    {SQL_API_SQLPARAMDATA, true},        {SQL_API_SQLENDTRAN, true},
+    {SQL_API_SQLPREPARE, true},          {SQL_API_SQLEXECDIRECT, true},
+    {SQL_API_SQLPUTDATA, true},          {SQL_API_SQLEXECUTE, true},
+    {SQL_API_SQLROWCOUNT, true},         {SQL_API_SQLFETCH, true},
+    {SQL_API_SQLFETCHSCROLL, true},      {SQL_API_SQLSETCURSORNAME, true},
+    {SQL_API_SQLFREEHANDLE, true},       {SQL_API_SQLSETDESCFIELD, true},
+    {SQL_API_SQLSETDESCREC, true},       {SQL_API_SQLGETCONNECTATTR, true},
+    {SQL_API_SQLSETENVATTR, true},       {SQL_API_SQLGETCURSORNAME, true},
+    {SQL_API_SQLSETSTMTATTR, true},      {SQL_API_SQLGETDATA, true},
+    {SQL_API_SQLCOLUMNS, true},          {SQL_API_SQLSTATISTICS, true},
+    {SQL_API_SQLSPECIALCOLUMNS, true},   {SQL_API_SQLTABLES, true},
+    {SQL_API_SQLBINDPARAM, true},        {SQL_API_SQLNATIVESQL, true},
+    {SQL_API_SQLBROWSECONNECT, true},    {SQL_API_SQLNUMPARAMS, true},
+    {SQL_API_SQLPRIMARYKEYS, true},      {SQL_API_SQLCOLUMNPRIVILEGES, true},
+    {SQL_API_SQLPROCEDURECOLUMNS, true}, {SQL_API_SQLDESCRIBEPARAM, true},
+    {SQL_API_SQLPROCEDURES, true},       {SQL_API_SQLDRIVERCONNECT, true},
+    {SQL_API_SQLFOREIGNKEYS, true},      {SQL_API_SQLTABLEPRIVILEGES, true},
+    {SQL_API_SQLMORERESULTS, true},      {SQL_API_SQLPROCEDURES, true},
+    {SQL_API_SQLSETPOS, false},          {SQL_API_SQLBULKOPERATIONS, false}};
 
 odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
     SQLUSMALLINT* supportedFunction) {
@@ -86,16 +86,16 @@ odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
 
   // Populate ODBC 2 functions first.
   for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
-    int val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
-    if (val == TRUE) {
+    bool val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
+    if (val) {
       ENABLE_SQL_FUNCTION_BIT(supportedFunction, i);
     }
   }
 
   // Populate ODBC 3 functions.
   for (int i = SQL_ODBC3_API_START; i <= SQL_ODBC3_API_LAST; i++) {
-    int val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
-    if (val == TRUE) {
+    bool val = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
+    if (val) {
       ENABLE_SQL_FUNCTION_BIT(supportedFunction, i);
     }
   }
@@ -110,12 +110,13 @@ odbc_internal::StatusRecord PopulateSupportedODBC2Functions(
   }
   // Populate ODBC 2 functions only.
   for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
-    supportedFunction[i] = IsOdbcFunctionIdSupported(static_cast<UWORD>(i));
+    supportedFunction[i] = static_cast<SQLUSMALLINT>(
+        IsOdbcFunctionIdSupported(static_cast<UWORD>(i)));
   }
   return StatusRecord::Ok();
 }
 
-int IsOdbcFunctionIdSupported(UWORD fid) {
+bool IsOdbcFunctionIdSupported(UWORD fid) {
   // First check odbc 3 functions.
   auto item_found = odbc_3_fns.find(fid);
   if (item_found != odbc_3_fns.end()) {
@@ -127,7 +128,7 @@ int IsOdbcFunctionIdSupported(UWORD fid) {
     return item_found->second;
   }
   // function id is neither odbc 3 or odbc 2.
-  return FALSE;
+  return false;
 }
 
 bool IsFunctionIdOdbc3(UWORD fid) {
