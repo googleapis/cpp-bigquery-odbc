@@ -46,11 +46,11 @@ TraceOptions& opts = *(*kTraceOptsConsole);
 // Internal helper functions.
 namespace {
 
-SQLRETURN InvalidType(char const* mesg, SQLUSMALLINT info_type) {
+StatusRecord InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   std::string message = mesg;
   message.append(std::to_string(info_type));
   TracePrintInternal(opts, message);
-  return SQL_ERROR;
+  return StatusRecord{SQLStates::k_HY000(), message};
 }
 
 SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
@@ -79,8 +79,10 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
       break;
     }
     default: {
-      return InvalidType(
+      auto status_record = InvalidType(
           "HandleConnectionInformationTypes - Invalid infoType: ", info_type);
+      handle->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
     }
   }
 
@@ -169,11 +171,15 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
     TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  if (!info_value_ptr) {
-    TracePrintInternal(opts, "Invalid InfoValuePtr");
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_ERROR;
+  ConnectionHandle* handle = *handle_result;
+
+  if (in_buffer_len < 0) {
+    std::string mesg = "Invalid Input BufferLength";
+    auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
+
   // Handle information types dependent on connection handle.
   if (info_type == SQL_DATA_SOURCE_NAME || info_type == SQL_DATABASE_NAME) {
     return HandleConnectionInformationTypes(connection_handle, info_type,
@@ -182,32 +188,35 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   }
   // Handle rest of the information types not dependent on the connection
   // handle.
-  if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
+  if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
   }
-  if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.ok()) {
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
   }
-  if (auto r = SupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
+  if (auto r = SupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.ok()) {
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  if (auto r = SupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
+  if (auto r = SupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.ok()) {
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  if (auto r = SupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
+  if (auto r = SupportedInfoType<SQLGetInfoBitmask>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-  if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.ok()) {
+  if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
 
-  return InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
+  auto status_record =
+      InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
+  handle->GetDiagnostics().AddStatusRecord(status_record);
+  return status_record.CalculateReturnCode();
 }
 
 // NOLINTBEGIN(misc-unused-parameters)

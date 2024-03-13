@@ -27,6 +27,8 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using ::google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
@@ -84,6 +86,11 @@ void FreeHandles() {
   if (handle_wrapped) {
     delete handle_wrapped;
   }
+}
+
+StatusRecord GetLastStatusRecord(ConnectionHandle& handle) {
+  auto status_records = handle.GetDiagnostics().GetStatusRecords();
+  return status_records[status_records.size() - 1];
 }
 
 }  // namespace
@@ -473,15 +480,19 @@ TEST(SQLGetInfoInternal, SQLGetInfoBitmaskIntUnSupported) {
   FreeHandles();
 }
 
-TEST(SQLGetInfoInternal, InfoValueNullPtr) {
-  SQLSMALLINT in_buffer_len = 0;
+TEST(SQLGetInfoInternal, InvalidInputBufferLength) {
+  SQLCHAR dest[256];
   SQLSMALLINT str_len_ptr;
   CreateConnectedHandle(HandleType::kConnHandle);
   ASSERT_TRUE(connection_handle != nullptr);
   ASSERT_TRUE(handle_wrapped != nullptr);
-  SQLRETURN rc = SQLGetInfoInternal(handle_wrapped, SQL_ALTER_DOMAIN, nullptr,
-                                    in_buffer_len, &str_len_ptr);
-  EXPECT_EQ(SQL_ERROR, rc);
+  ASSERT_EQ(SQL_ERROR, SQLGetInfoInternal(handle_wrapped, SQL_CATALOG_NAME,
+                                          reinterpret_cast<SQLPOINTER>(&dest),
+                                          -1, &str_len_ptr));
+  ASSERT_FALSE(connection_handle->GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(*connection_handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Invalid Input BufferLength");
   FreeHandles();
 }
 

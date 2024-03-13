@@ -17,32 +17,23 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kUnsupportedCharBufSize = 256;
 
 // Helper functions
 namespace {
-Status InvalidType(SQLUSMALLINT info_type) {
+StatusRecord InvalidType(SQLUSMALLINT info_type) {
   std::string msg = "Invalid infoType: ";
   msg.append(std::to_string(info_type));
-  TracePrintInternal(*(*kTraceOptsConsole), msg);
-  return Status(StatusCode::kInvalidArgument, msg);
-}
-
-SQLRETURN IntInfoValToResponse(SQLPOINTER info_val_ptr, SQLUINTEGER info_val,
-                               SQLSMALLINT* str_len_ptr) {
-  auto* uint_val = reinterpret_cast<SQLUINTEGER*>(info_val_ptr);
-  *uint_val = info_val;
-  if (str_len_ptr) {
-    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUINTEGER));
-  }
-  return SQL_SUCCESS;
+  return StatusRecord{SQLStates::k_HY024(), msg};
 }
 
 }  // namespace
 
-StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
+StatusRecordOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoSqlChar result;
   switch (info_type) {
@@ -129,7 +120,7 @@ StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
+StatusRecordOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoSqlChar result;
   switch (info_type) {
@@ -160,8 +151,8 @@ StatusOr<SQLGetInfoSqlChar> SQLGetInfoSqlChar::GetUnSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
-    SQLUSMALLINT info_type) {
+StatusRecordOr<SQLGetInfoSqlUSmallInt>
+SQLGetInfoSqlUSmallInt::GetSupportedInfoType(SQLUSMALLINT info_type) {
   SQLGetInfoSqlUSmallInt result;
 
   switch (info_type) {
@@ -237,8 +228,8 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
-    SQLUSMALLINT info_type) {
+StatusRecordOr<SQLGetInfoSqlUSmallInt>
+SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(SQLUSMALLINT info_type) {
   SQLGetInfoSqlUSmallInt result;
 
   switch (info_type) {
@@ -266,7 +257,7 @@ StatusOr<SQLGetInfoSqlUSmallInt> SQLGetInfoSqlUSmallInt::GetUnSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
+StatusRecordOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoSqlUInt result;
 
@@ -295,7 +286,7 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
+StatusRecordOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoSqlUInt result;
 
@@ -324,7 +315,7 @@ StatusOr<SQLGetInfoSqlUInt> SQLGetInfoSqlUInt::GetUnSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
+StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoBitmask result;
 
@@ -460,7 +451,7 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetSupportedInfoType(
   return result;
 }
 
-StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
+StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
     SQLUSMALLINT info_type) {
   SQLGetInfoBitmask result;
 
@@ -528,43 +519,28 @@ StatusOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
 SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT in_buffer_len,
                                                SQLSMALLINT* str_len_ptr) const {
-  char* src = reinterpret_cast<char*>(info_val);
-  char* dest = reinterpret_cast<char*>(info_val_ptr);
-  SQLSMALLINT src_len = strlen(src);
-
-  if (src_len == 0 || in_buffer_len == 0) {
-    *dest = '\0';
-  } else if (src_len < in_buffer_len) {
-    strncpy(dest, src, src_len);
-    dest[src_len] = '\0';
-  } else {
-    strncpy(dest, src, (in_buffer_len - 1));
-    dest[in_buffer_len - 1] = '\0';
-  }
-  if (str_len_ptr) {
-    *str_len_ptr = static_cast<SQLSMALLINT>(src_len);
-  }
-  return SQL_SUCCESS;
+  return StringValueToOutputBufferResponse(reinterpret_cast<char*>(info_val),
+                                           info_val_ptr, in_buffer_len,
+                                           str_len_ptr)
+      .CalculateReturnCode();
 }
 
 SQLRETURN SQLGetInfoSqlUInt::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT* str_len_ptr) const {
-  return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
+  return IntValueToOutputBufferResponse<SQLUINTEGER>(info_val, info_val_ptr,
+                                                     str_len_ptr);
 }
 
 SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
                                                SQLSMALLINT* str_len_ptr) const {
-  return IntInfoValToResponse(info_val_ptr, info_val, str_len_ptr);
+  return IntValueToOutputBufferResponse<SQLUINTEGER>(info_val, info_val_ptr,
+                                                     str_len_ptr);
 }
 
 SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(
     SQLPOINTER info_val_ptr, SQLSMALLINT* str_len_ptr) const {
-  auto* usmallint_val = reinterpret_cast<SQLUSMALLINT*>(info_val_ptr);
-  *usmallint_val = info_val;
-  if (str_len_ptr) {
-    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT));
-  }
-  return SQL_SUCCESS;
+  return IntValueToOutputBufferResponse<SQLUSMALLINT>(info_val, info_val_ptr,
+                                                      str_len_ptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
