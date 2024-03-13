@@ -21,9 +21,12 @@ test -n "${CI_DEPENDENCIES_IODBC_SH__:-}" || declare -i CI_DEPENDENCIES_IODBC_SH
 if ((CI_DEPENDENCIES_IODBC_SH__++ != 0)); then
   return 0
 fi # include guard
+CPP_BIGQUERY_ODBC_IODBC_CURR_DIR="$(pwd)"
+export CPP_BIGQUERY_ODBC_IODBC_CURR_DIR
 
 readonly CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR=/var/tmp/iODBC
 mkdir -p $CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR
+cd $CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR
 
 readonly CPP_BIGQUERY_ODBC_IODBC_VERSION="3.52.16"
 curl -fsSL https://github.com/openlink/iODBC/releases/download/v${CPP_BIGQUERY_ODBC_IODBC_VERSION}/libiodbc-${CPP_BIGQUERY_ODBC_IODBC_VERSION}.tar.gz |
@@ -32,4 +35,5 @@ curl -fsSL https://github.com/openlink/iODBC/releases/download/v${CPP_BIGQUERY_O
   ./configure &&
   make install -j "$(nproc)"
 
+cd "$CPP_BIGQUERY_ODBC_IODBC_CURR_DIR"
 rm -rf $CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR

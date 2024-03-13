@@ -20,6 +20,7 @@ bash --version
 
 declare -A AVAILABLE_DEPENDENCIES
 AVAILABLE_DEPENDENCIES[BAZEL]=ci/dependencies/bazel.sh
+AVAILABLE_DEPENDENCIES[DRIVER_MANAGER_SETUP]=ci/dependencies/driver-manager-setup.sh
 AVAILABLE_DEPENDENCIES[GCLOUD_SDK]=ci/dependencies/cloud-sdk.sh
 AVAILABLE_DEPENDENCIES[iODBC]=ci/dependencies/iODBC.sh
 AVAILABLE_DEPENDENCIES[unixODBC]=ci/dependencies/unixODBC.sh

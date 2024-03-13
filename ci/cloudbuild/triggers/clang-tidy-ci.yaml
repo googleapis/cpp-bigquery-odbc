@@ -7,6 +7,7 @@ github:
 name: clang-tidy-ci
 substitutions:
   _BUILD_NAME: clang-tidy
+  _DEPENDENCIES: 'iODBC'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

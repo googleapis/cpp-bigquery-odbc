@@ -21,15 +21,19 @@ test -n "${CI_DEPENDENCIES_UNIXODBC_SH__:-}" || declare -i CI_DEPENDENCIES_UNIXO
 if ((CI_DEPENDENCIES_UNIXODBC_SH__++ != 0)); then
   return 0
 fi # include guard
+CPP_BIGQUERY_ODBC_UNIXODBC_CURR_DIR="$(pwd)"
+export CPP_BIGQUERY_ODBC_UNIXODBC_CURR_DIR
 
 readonly CPP_BIGQUERY_ODBC_UNIXODBC_INSTALL_DIR=/var/tmp/unixODBC
 mkdir -p $CPP_BIGQUERY_ODBC_UNIXODBC_INSTALL_DIR
+cd $CPP_BIGQUERY_ODBC_UNIXODBC_INSTALL_DIR
 
 readonly CPP_BIGQUERY_ODBC_UNIXODBC_VERSION="2.3.12"
 curl -fsSL https://github.com/lurcher/unixODBC/releases/download/${CPP_BIGQUERY_ODBC_UNIXODBC_VERSION}/unixODBC-${CPP_BIGQUERY_ODBC_UNIXODBC_VERSION}.tar.gz |
   tar -zxf - --strip-components=1 &&
   # This is needed because 'BOOL' defined by unixODBC headers causes issues while building google-cloud-cpp
   find . -type f -exec sed -i -r 's/\bBOOL\b/USELESS_BOOL/g' {} + &&
+  autoreconf -f -i &&
   ./configure --enable-gui=no --enable-drivers=no &&
   make &&
   make install -j "$(nproc)"
@@ -37,4 +41,5 @@ curl -fsSL https://github.com/lurcher/unixODBC/releases/download/${CPP_BIGQUERY_
 # Copy the needed files to a default c++ include dir
 cp include/* /usr/include
 
+cd "$CPP_BIGQUERY_ODBC_UNIXODBC_CURR_DIR"
 rm -rf $CPP_BIGQUERY_ODBC_UNIXODBC_INSTALL_DIR
