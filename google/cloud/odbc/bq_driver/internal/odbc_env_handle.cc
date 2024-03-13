@@ -25,7 +25,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
 StatusRecord UnSupportedValue(std::string const& msg_prefix,
-                              std::string attribute_val) {
+                              std::string const& attribute_val) {
   std::string msg = msg_prefix;
   msg.append(attribute_val);
   return StatusRecord{SQLStates::k_HY024(), msg};
