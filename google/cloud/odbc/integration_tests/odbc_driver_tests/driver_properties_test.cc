@@ -27,7 +27,7 @@ bool const kIsBqDriver = false;
 using ::google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using ::google::cloud::odbc_bq_driver_internal::TypeInfoRow;
 
-void CheckDataTypes(std::shared_ptr<ConnectionHandle> conn,
+void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
                     SQLSMALLINT in_data_type = SQL_ALL_TYPES,
                     bool is_supported = true) {
   SQLRETURN status = SQLGetTypeInfo(conn->hstmt, in_data_type);
@@ -242,70 +242,70 @@ void CheckDataTypes(std::shared_ptr<ConnectionHandle> conn,
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(DriverPropertiesTest, SQLGetFunctions) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(GetAllFunctions(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, all_datatypes) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_ALL_TYPES);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_BIGINT) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_BIGINT, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_BIT) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_BIT, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_TYPE_DATE) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_TYPE_DATE, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_DOUBLE) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_DOUBLE, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_TYPE_TIME) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_TYPE_TIME, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_TYPE_TIMESTAMP) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_TYPE_TIMESTAMP, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_VARBINARY) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_VARBINARY, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_VARCHAR) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_VARCHAR, true);
   // CheckDataTypes(conn, SQL_C_SBIGINT);
@@ -313,49 +313,49 @@ TEST(SQLGetTypeInfoTest, Supported_SQL_VARCHAR) {
 }
 
 TEST(SQLGetTypeInfoTest, Supported_SQL_NUMERIC) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_NUMERIC, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_CHAR) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_CHAR, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_DECIMAL) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_DECIMAL, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_INTEGER) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_INTEGER, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_SMALLINT) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_SMALLINT, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_FLOAT) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_FLOAT, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetTypeInfoTest, Unsupported_SQL_REAL) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_REAL, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

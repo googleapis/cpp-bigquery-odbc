@@ -18,7 +18,7 @@
 namespace google::cloud::odbc_tests {
 
 // Tests direct execution of statements using SQLExecDirect
-SQLRETURN InsertDirectStatement(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name = kDatasetName + ".ODBC_INSERT_DIRECT_TEST";
   Table table(table_name);
@@ -41,7 +41,7 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ConnectionHandle> conn) {
 }
 
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
-SQLRETURN InsertStatement(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name = kDatasetName + ".ODBC_INSERT_PARAMS_TEST";
   char insert_stmt[kBufferLength];
@@ -80,7 +80,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ConnectionHandle> conn) {
   return status;
 }
 
-std::shared_ptr<Results> FetchResults(std::shared_ptr<ConnectionHandle> conn,
+std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
@@ -147,7 +147,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ConnectionHandle> conn,
   return std::make_shared<Results>(results);
 }
 
-std::shared_ptr<Results> ScrollResults(std::shared_ptr<ConnectionHandle> conn,
+std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                                        std::string query, int rs_size) {
   SQLRETURN status;
   int num_rows_fetched = 0;
@@ -224,8 +224,8 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ConnectionHandle> conn,
   ;
 }
 
-std::vector<std::shared_ptr<Column>> GetCols(
-    std::shared_ptr<ConnectionHandle> conn, std::string query) {
+std::vector<std::shared_ptr<Column>> GetCols(std::shared_ptr<ODBCHandles> conn,
+                                             std::string query) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
@@ -250,7 +250,7 @@ std::vector<std::shared_ptr<Column>> GetCols(
 }
 
 std::shared_ptr<Results> FetchResultsWithSqlGetData(
-    std::shared_ptr<ConnectionHandle> conn, std::string query) {
+    std::shared_ptr<ODBCHandles> conn, std::string query) {
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
@@ -300,8 +300,8 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
   ;
 }
 
-void InsertDataWithSqlPut(std::shared_ptr<ConnectionHandle> conn,
-                          std::string query, std::vector<std::string> data) {
+void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
+                          std::vector<std::string> data) {
   SQLRETURN status;
   SQLSMALLINT num_params;
   SQLSMALLINT data_type, decimal_digits, nullable;

@@ -29,18 +29,6 @@ std::string const kDsnCatalog = "bigquery-test";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
 
-TEST(ConnectionHandle, Connect) {
-  std::string credentials_file_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-  Authentication auth = {OauthMechanism::kServiceAccount,
-                         credentials_file_path};
-  auto* conn_handle = new ConnectionHandle();
-  StatusRecord status = conn_handle->Connect(auth);
-  EXPECT_EQ(status.ok(), true);
-  EXPECT_TRUE(conn_handle->IsConnected());
-  delete conn_handle;
-}
-
 TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string test_data_path =
       google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")

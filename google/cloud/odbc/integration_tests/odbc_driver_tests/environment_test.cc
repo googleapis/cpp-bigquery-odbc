@@ -21,7 +21,7 @@ namespace google::cloud::odbc_tests {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerDriver) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
   SQLUINTEGER get_val;
 
@@ -37,7 +37,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerDriver) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_Default) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_DEFAULT;
   SQLUINTEGER get_val;
 
@@ -53,7 +53,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_Default) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_CPOff) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_OFF;
   SQLUINTEGER get_val;
 
@@ -69,7 +69,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_CPOff) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerHenv) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_ONE_PER_HENV;
   SQLUINTEGER get_val;
 
@@ -85,7 +85,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerHenv) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_Default) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_MATCH_DEFAULT;
   SQLUINTEGER get_val;
 
@@ -100,7 +100,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_Default) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_StrictMatch) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_STRICT_MATCH;
   SQLUINTEGER get_val;
 
@@ -115,7 +115,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_StrictMatch) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_RELAXED_MATCH;
   SQLUINTEGER get_val;
 
@@ -130,7 +130,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_OV_ODBC2;
   SQLINTEGER get_val;
 
@@ -146,7 +146,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC3) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_OV_ODBC3;
   SQLINTEGER get_val;
 
@@ -162,7 +162,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC3) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_TRUE;
   SQLINTEGER get_val;
 
@@ -178,7 +178,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
 }
 
 TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER get_val1;
   SQLINTEGER get_val2;
 
@@ -204,7 +204,7 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
 // Error Cases
 
 TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val1 = -1;
   SQLUINTEGER set_val2 = 12345;
 
@@ -225,7 +225,7 @@ TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_TRUE;
   SQLINTEGER get_val;
 
@@ -238,7 +238,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_OFF;
   SQLUINTEGER get_val;
 

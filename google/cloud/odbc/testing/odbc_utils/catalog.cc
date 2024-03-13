@@ -19,8 +19,8 @@ namespace google::cloud::odbc_tests {
 
 Catalog::~Catalog() = default;
 
-std::shared_ptr<Results> Catalog::GetTables(
-    std::shared_ptr<ConnectionHandle> conn, std::string dataset) {
+std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
+                                            std::string dataset) {
   SQLRETURN status;
   int res_cols = 5;
   Catalog catalog_result[res_cols];

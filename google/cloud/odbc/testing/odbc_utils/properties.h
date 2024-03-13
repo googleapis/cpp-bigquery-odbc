@@ -20,7 +20,7 @@
 
 namespace google::cloud::odbc_tests {
 
-SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN GetAllFunctions(std::shared_ptr<ODBCHandles> conn);
 
 }  // namespace google::cloud::odbc_tests
 

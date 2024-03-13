@@ -39,7 +39,7 @@ std::map<std::string, Schema> kTables = {
 void ClearDataset(
     std::string kDatasetName,
     std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   std::vector<std::string> table_names;
   if (!table_names_ptr) {
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
@@ -60,7 +60,7 @@ void ClearDataset(
 }
 
 TEST(CatalogTest, SQLTables) {
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
 
   // Create tables
   for (auto it : kTables) {

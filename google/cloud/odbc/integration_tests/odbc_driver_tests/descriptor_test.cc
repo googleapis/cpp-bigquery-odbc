@@ -39,8 +39,8 @@ Schema kStdSchema = {
     {"Float2", SQL_FLOAT},
 };
 
-void SetGetDescRec(std::shared_ptr<ConnectionHandle> conn,
-                   std::string table_name, Schema schema) {
+void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
+                   Schema schema) {
   SQLSMALLINT desc_type;
   SQLHDESC ird_handle;  // Implementation row descriptor
   SQLHDESC ipd_handle;  // Implementation parameter descriptor
@@ -93,7 +93,7 @@ void SetGetDescRec(std::shared_ptr<ConnectionHandle> conn,
   }
 }
 
-void CopyDescRec(std::shared_ptr<ConnectionHandle> conn, std::string table_name,
+void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                  Schema schema) {
   SQLSMALLINT desc_type;
   SQLHDESC ird_handle;  // Implementation row descriptor
@@ -149,7 +149,7 @@ void CopyDescRec(std::shared_ptr<ConnectionHandle> conn, std::string table_name,
 
 TEST(DescriptorFieldsTest, SQLSetDescRec) {
   auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_REC_TEST";
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
@@ -168,7 +168,7 @@ TEST(DescriptorFieldsTest, SQLSetDescRec) {
 
 TEST(DescriptorFieldsTest, SQLCopyDesc) {
   auto const table_name = kDatasetName + ".ODBC_COPY_DESCRIPTOR_TEST";
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
@@ -187,7 +187,7 @@ TEST(DescriptorFieldsTest, SQLCopyDesc) {
 
 TEST(DescriptorFieldsTest, SQLSetDescField) {
   auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_FIELD_TEST";
-  auto conn = std::make_shared<ConnectionHandle>();
+  auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);

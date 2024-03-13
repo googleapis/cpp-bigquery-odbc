@@ -42,8 +42,7 @@ std::string getSchemaStr(Schema schema) {
   return schema_str;
 }
 
-void GetErrorDetails(std::string const api,
-                     std::shared_ptr<ConnectionHandle> conn) {
+void GetErrorDetails(std::string const api, std::shared_ptr<ODBCHandles> conn) {
   SQLCHAR buf[kBufferLength];
   SQLCHAR sqlstate[15];
   char error_str[kBufferLength];
@@ -104,7 +103,7 @@ void GetErrorDetails(std::string const api,
 }
 
 inline void CheckError(SQLRETURN status, std::string const api,
-                       std::shared_ptr<ConnectionHandle> conn) {
+                       std::shared_ptr<ODBCHandles> conn) {
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails(api, conn);
     throw std::runtime_error(api +
@@ -112,8 +111,7 @@ inline void CheckError(SQLRETURN status, std::string const api,
   }
 }
 
-void Table::Create(std::shared_ptr<ConnectionHandle> conn,
-                   std::string schema_str) {
+void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
             "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
@@ -122,21 +120,21 @@ void Table::Create(std::shared_ptr<ConnectionHandle> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
-void Table::Drop(std::shared_ptr<ConnectionHandle> conn) {
+void Table::Drop(std::shared_ptr<ODBCHandles> conn) {
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
 
-void ExecuteStatement(std::shared_ptr<ConnectionHandle> conn, char stmt[]) {
+void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[]) {
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
 
 // TODO(#11): Generic implementation of InsertIntoTable function from
 // testing/commons.*
-void Table::Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows) {
+void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -180,7 +178,7 @@ void Table::Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows) {
   CheckError(status, "SQLExecDirect", conn);
 }
 
-void DescribeCol(std::shared_ptr<ConnectionHandle> conn,
+void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
   SQLRETURN status = SQLDescribeCol(
       conn->hstmt, col_index, col_ptr->name, kBufferLength, &col_ptr->name_len,
@@ -189,8 +187,8 @@ void DescribeCol(std::shared_ptr<ConnectionHandle> conn,
   CheckError(status, "SQLDescribeCol", conn);
 }
 
-void BindCol(std::shared_ptr<ConnectionHandle> conn,
-             std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
+void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
+             SQLUSMALLINT col_index) {
   auto status =
       SQLBindCol(conn->hstmt, col_index, col_ptr->data_type, col_ptr->data,
                  col_ptr->data_size, &col_ptr->data_len);

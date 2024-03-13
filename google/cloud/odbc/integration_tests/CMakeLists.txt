@@ -53,21 +53,24 @@ function (odbc_define_tests)
         return()
     endif ()
 
-    # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
-    if (BQ_DRIVER_INTEGRATION_TESTS)
-        add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
-    endif ()
-
     enable_testing()
 
-    add_executable(
-        all_tests
+    set(odbc_driver_tests_src
         odbc_driver_tests/catalog_test.cc
         odbc_driver_tests/connection_test.cc
         odbc_driver_tests/descriptor_test.cc
         odbc_driver_tests/driver_properties_test.cc
         odbc_driver_tests/environment_test.cc
         odbc_driver_tests/statement_test.cc)
+
+    # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
+    if (BQ_DRIVER_INTEGRATION_TESTS)
+        set(odbc_driver_tests_src ${odbc_driver_tests_src}
+                                  odbc_driver_tests/internal/connection_test.cc)
+        add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+    endif ()
+
+    add_executable(all_tests ${odbc_driver_tests_src})
 
     target_link_libraries(all_tests google_cloud_odbc_testing_odbc_utils
                           GTest::gtest_main)

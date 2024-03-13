@@ -16,7 +16,7 @@
 
 namespace google::cloud::odbc_tests {
 
-void SetAttributes(std::shared_ptr<ConnectionHandle> conn, int timeout) {
+void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout) {
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
 
@@ -40,7 +40,7 @@ void SetAttributes(std::shared_ptr<ConnectionHandle> conn, int timeout) {
   CheckError(status, "SQLSetConnectAttr", conn);
 }
 
-SQLRETURN Connect(std::string conn_str, std::shared_ptr<ConnectionHandle> conn,
+SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
                   int timeout) {
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
@@ -65,7 +65,7 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ConnectionHandle> conn,
   return status;
 }
 
-SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ConnectionHandle> conn,
+SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
                      int timeout) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
@@ -88,7 +88,7 @@ SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ConnectionHandle> conn,
 }
 
 // Disconnect from the database
-SQLRETURN Disconnect(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   if (conn->hstmt) {
     // Not checking for error after SQLCloseCursor because it fails when no
@@ -113,7 +113,7 @@ SQLRETURN Disconnect(std::shared_ptr<ConnectionHandle> conn) {
 }
 
 // Gets Info about the driver and populates conn.metadata
-SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn) {
   SQLCHAR buf[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
@@ -150,7 +150,7 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn) {
 
 // TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
-SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn) {
   SQLUINTEGER buf;
   auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
                               (SQLPOINTER)&buf, SQL_IS_UINTEGER, NULL);
@@ -165,7 +165,7 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn) {
 
 // TODO(#10): Remove printf and support logging
 // Print the version and the name of the connected driver
-SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn) {
   SQLCHAR driver_info[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;

@@ -20,27 +20,27 @@
 
 namespace google::cloud::odbc_tests {
 
-SQLRETURN InsertStatement(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn);
 
-SQLRETURN InsertDirectStatement(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
 
 // Fetches results of a read query row-by-row and returns them as a map with the
 // column as keys
-std::shared_ptr<Results> FetchResults(std::shared_ptr<ConnectionHandle> conn,
+std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query);
 
 // Fetches results of a read query as a result set of size <rs_size>
 //  and returns them as a map with the column as keys
-std::shared_ptr<Results> ScrollResults(std::shared_ptr<ConnectionHandle> conn,
+std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                                        std::string query, int rs_size);
 
 // Fetches results of a read query using SQLFetch and SQLGetData
 // Returns the results as a map with the column as keys
 std::shared_ptr<Results> FetchResultsWithSqlGetData(
-    std::shared_ptr<ConnectionHandle> conn, std::string query);
+    std::shared_ptr<ODBCHandles> conn, std::string query);
 
-void InsertDataWithSqlPut(std::shared_ptr<ConnectionHandle> conn,
-                          std::string query, std::vector<std::string> data);
+void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
+                          std::vector<std::string> data);
 
 }  // namespace google::cloud::odbc_tests
 

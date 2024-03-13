@@ -32,21 +32,21 @@ std::string const kDefaultDataSource = GetDefaultDSN();
 
 auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
 
-// Connect using a <conn_str> and populate the ConnectionHandle
-SQLRETURN Connect(std::string conn_str, std::shared_ptr<ConnectionHandle> conn,
+// Connect using a <conn_str> and populate the ODBCHandles
+SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
                   int timeout = 30);
 
-// Connect using a datasource name directly and populate the ConnectionHandle
-SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ConnectionHandle> conn,
+// Connect using a datasource name directly and populate the ODBCHandles
+SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
                      int timeout = 30);
 
-SQLRETURN Disconnect(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn);
 
-SQLRETURN GetDriverInfo(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn);
 
-SQLRETURN GetEnvInfo(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn);
 
-SQLRETURN PrintDriverVerName(std::shared_ptr<ConnectionHandle> conn);
+SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn);
 
 }  // namespace google::cloud::odbc_tests
 

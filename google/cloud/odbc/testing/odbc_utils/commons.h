@@ -38,7 +38,7 @@ constexpr SQLSMALLINT kBufferLength = 1024;
 std::string const kDatasetName = "ODBC_TEST_DATASET";
 
 // Stores information about the driver fetched from SQLGetInfo within the
-// ConnectionHandle. This is populated in the ConnectionHandle after calling
+// ODBCHandles. This is populated in the ODBCHandles after calling
 // GetDriverInfo.
 struct Metadata {
   std::string dsn_name;
@@ -51,7 +51,7 @@ struct Metadata {
 
 // Stores the various ODBC handles required to create a connection and execute
 // statements.
-struct ConnectionHandle {
+struct ODBCHandles {
   HENV henv;
   HDBC hdbc;
   HSTMT hstmt;
@@ -147,11 +147,11 @@ class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
 
-  void Create(std::shared_ptr<ConnectionHandle> conn, std::string schema_str);
+  void Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str);
 
-  void Drop(std::shared_ptr<ConnectionHandle> conn);
+  void Drop(std::shared_ptr<ODBCHandles> conn);
 
-  void Insert(std::shared_ptr<ConnectionHandle> conn, StdRows rows);
+  void Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows);
 
  private:
   std::string table_name_;
@@ -164,18 +164,18 @@ std::string getSchemaStr(Schema schema);
 // If there was an error, gets description from SQLGetDiagRec and throws an
 // error
 inline void CheckError(SQLRETURN status, std::string const api,
-                       std::shared_ptr<ConnectionHandle> conn);
+                       std::shared_ptr<ODBCHandles> conn);
 
-void ExecuteStatement(std::shared_ptr<ConnectionHandle> conn, char stmt[]);
+void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[]);
 
 // Executes the SQLDescribeCol API to initialize the Column struct
-void DescribeCol(std::shared_ptr<ConnectionHandle> conn,
+void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index);
 
 // Executes the BindCol API to bind the Column struct data buffers to the
 // statement handle
-void BindCol(std::shared_ptr<ConnectionHandle> conn,
-             std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index);
+void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
+             SQLUSMALLINT col_index);
 
 }  // namespace google::cloud::odbc_tests
 

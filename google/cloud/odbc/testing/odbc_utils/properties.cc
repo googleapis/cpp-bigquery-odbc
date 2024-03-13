@@ -81,7 +81,7 @@ std::map<SQLUSMALLINT, std::string const> const kAllOdbc3Functions = {
     //{SQL_API_SQLSETSCROLLOPTIONS, "SQL_API_SQLSETSCROLLOPTIONS"}
 };
 
-SQLRETURN GetAllFunctions(std::shared_ptr<ConnectionHandle> conn) {
+SQLRETURN GetAllFunctions(std::shared_ptr<ODBCHandles> conn) {
   SQLUSMALLINT supported_functions[450];
   auto status = SQLGetFunctions(conn->hdbc, SQL_API_ODBC3_ALL_FUNCTIONS,
                                 supported_functions);
