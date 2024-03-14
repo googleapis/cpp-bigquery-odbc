@@ -30,7 +30,6 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::Section;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
