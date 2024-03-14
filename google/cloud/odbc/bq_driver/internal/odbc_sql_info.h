@@ -15,6 +15,7 @@
 #ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_INFO_H
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_INFO_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -162,51 +163,56 @@ odbc_internal::StatusRecordOr<ReturnType> UnSupportedInfoType(
   return ReturnType::GetUnSupportedInfoType(info_type);
 }
 
-struct SQLGetInfoSqlChar {
+struct SQLGetInfoVal {
+  SQLRETURN AddDiagnostics(ConnectionHandle* handle,
+                           odbc_internal::StatusRecord const& status_record);
+};
+
+struct SQLGetInfoSqlChar : SQLGetInfoVal {
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlChar> GetSupportedInfoType(
       SQLUSMALLINT info_type);
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlChar>
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
-  SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
+  SQLRETURN InfoValToResponse(ConnectionHandle* handle, SQLPOINTER info_val_ptr,
                               SQLSMALLINT in_buffer_len,
-                              SQLSMALLINT* str_len_ptr) const;
+                              SQLSMALLINT* str_len_ptr);
 
   SQLCHAR* info_val{nullptr};
 };
 
-struct SQLGetInfoBitmask {
+struct SQLGetInfoBitmask : SQLGetInfoVal {
   static odbc_internal::StatusRecordOr<SQLGetInfoBitmask> GetSupportedInfoType(
       SQLUSMALLINT info_type);
   static odbc_internal::StatusRecordOr<SQLGetInfoBitmask>
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr) const;
+                              SQLSMALLINT* str_len_ptr);
 
   SQLUINTEGER info_val;
 };
 
-struct SQLGetInfoSqlUInt {
+struct SQLGetInfoSqlUInt : SQLGetInfoVal {
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlUInt> GetSupportedInfoType(
       SQLUSMALLINT info_type);
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlUInt>
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr) const;
+                              SQLSMALLINT* str_len_ptr);
 
   SQLUINTEGER info_val;
 };
 
-struct SQLGetInfoSqlUSmallInt {
+struct SQLGetInfoSqlUSmallInt : SQLGetInfoVal {
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlUSmallInt>
   GetSupportedInfoType(SQLUSMALLINT info_type);
   static odbc_internal::StatusRecordOr<SQLGetInfoSqlUSmallInt>
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr) const;
+                              SQLSMALLINT* str_len_ptr);
 
   SQLUSMALLINT info_val;
 };

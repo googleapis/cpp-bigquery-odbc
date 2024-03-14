@@ -93,8 +93,8 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   strcpy(reinterpret_cast<char*>(info_val_char.info_val),
          info_type_value.c_str());
 
-  SQLRETURN rc = info_val_char.InfoValToResponse(info_value_ptr, in_buffer_len,
-                                                 str_len_ptr);
+  SQLRETURN rc = info_val_char.InfoValToResponse(handle, info_value_ptr,
+                                                 in_buffer_len, str_len_ptr);
   delete[] info_val_char.info_val;
   return rc;
 }
@@ -189,10 +189,12 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   // Handle rest of the information types not dependent on the connection
   // handle.
   if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
-    return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
+    return r->InfoValToResponse(handle, info_value_ptr, in_buffer_len,
+                                str_len_ptr);
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
-    return r->InfoValToResponse(info_value_ptr, in_buffer_len, str_len_ptr);
+    return r->InfoValToResponse(handle, info_value_ptr, in_buffer_len,
+                                str_len_ptr);
   }
   if (auto r = SupportedInfoType<SQLGetInfoSqlUInt>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);

@@ -385,9 +385,11 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_GT_SrcLen) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
+  ConnectionHandle handle;
 
-  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+  info_val_char.InfoValToResponse(&handle, reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
+  EXPECT_TRUE(handle.GetDiagnostics().GetStatusRecords().empty());
 
   std::string actual = reinterpret_cast<char*>(dest);
 
@@ -402,9 +404,11 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
+  ConnectionHandle handle;
 
-  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+  info_val_char.InfoValToResponse(&handle, reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
+  EXPECT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
 
   std::string actual = reinterpret_cast<char*>(dest);
 
@@ -420,8 +424,10 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
   SQLSMALLINT buffer_len = 5;
   SQLCHAR dest[5];
 
-  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+  ConnectionHandle handle;
+  info_val_char.InfoValToResponse(&handle, reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
+  EXPECT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
 
   std::string actual = reinterpret_cast<char*>(dest);
 
@@ -436,9 +442,11 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 0;
   SQLCHAR dest[15];
+  ConnectionHandle handle;
 
-  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+  info_val_char.InfoValToResponse(&handle, reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
+  EXPECT_TRUE(handle.GetDiagnostics().GetStatusRecords().empty());
 
   std::string actual = reinterpret_cast<char*>(dest);
 
@@ -452,9 +460,11 @@ TEST(InfoValToResponse, SQLGetInfoChar_SrcLenZero) {
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
+  ConnectionHandle handle;
 
-  info_val_char.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest),
+  info_val_char.InfoValToResponse(&handle, reinterpret_cast<SQLPOINTER>(&dest),
                                   buffer_len, &str_len);
+  EXPECT_TRUE(handle.GetDiagnostics().GetStatusRecords().empty());
 
   std::string actual = reinterpret_cast<char*>(dest);
 
@@ -479,6 +489,7 @@ TEST(InfoValToResponse, SQLGetInfoInt) {
   info_val_i.info_val = static_cast<SQLUINTEGER>(10);
   SQLSMALLINT str_len;
   SQLUINTEGER dest;
+  ConnectionHandle handle;
 
   info_val_i.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
 
@@ -491,7 +502,6 @@ TEST(InfoValToResponse, SQLGetInfoSmallInt) {
   info_val_si.info_val = static_cast<SQLUSMALLINT>(10);
   SQLSMALLINT str_len;
   SQLUSMALLINT dest;
-
   info_val_si.InfoValToResponse(reinterpret_cast<SQLPOINTER>(&dest), &str_len);
 
   EXPECT_EQ(info_val_si.info_val, dest);

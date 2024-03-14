@@ -516,31 +516,44 @@ StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
   return result;
 }
 
-SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(SQLPOINTER info_val_ptr,
+SQLRETURN SQLGetInfoVal::AddDiagnostics(ConnectionHandle* handle,
+                                        StatusRecord const& status_record) {
+  if (!handle) {
+    return SQL_INVALID_HANDLE;
+  }
+  handle->GetDiagnostics().AddStatusRecord(status_record);
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
+                                               SQLPOINTER info_val_ptr,
                                                SQLSMALLINT in_buffer_len,
-                                               SQLSMALLINT* str_len_ptr) const {
-  return StringValueToOutputBufferResponse(reinterpret_cast<char*>(info_val),
-                                           info_val_ptr, in_buffer_len,
-                                           str_len_ptr)
-      .CalculateReturnCode();
+                                               SQLSMALLINT* str_len_ptr) {
+  auto status_record = StringValueToOutputBufferResponse(
+      reinterpret_cast<char*>(info_val), info_val_ptr, in_buffer_len,
+      str_len_ptr);
+  if (!status_record.ok()) {
+    SQLRETURN rc = AddDiagnostics(handle, status_record);
+    if (rc != SQL_SUCCESS) {
+      return rc;
+    }
+  }
+  return status_record.CalculateReturnCode();
 }
 
 SQLRETURN SQLGetInfoSqlUInt::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) const {
-  return IntValueToOutputBufferResponse<SQLUINTEGER>(info_val, info_val_ptr,
-                                                     str_len_ptr);
+                                               SQLSMALLINT* str_len_ptr) {
+  return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 
 SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) const {
-  return IntValueToOutputBufferResponse<SQLUINTEGER>(info_val, info_val_ptr,
-                                                     str_len_ptr);
+                                               SQLSMALLINT* str_len_ptr) {
+  return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 
-SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(
-    SQLPOINTER info_val_ptr, SQLSMALLINT* str_len_ptr) const {
-  return IntValueToOutputBufferResponse<SQLUSMALLINT>(info_val, info_val_ptr,
-                                                      str_len_ptr);
+SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(SQLPOINTER info_val_ptr,
+                                                    SQLSMALLINT* str_len_ptr) {
+  return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
