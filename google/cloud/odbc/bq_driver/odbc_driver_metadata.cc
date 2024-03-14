@@ -109,9 +109,11 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     return handle_result.GetCalculatedReturnCode();
   }
 
+  ConnectionHandle* handle = *handle_result;
   if (!supported_fn) {
     auto status_record = StatusRecord{SQLStates::k_HY024(),
                                       "Argument supported_fn cannot be null"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
 
@@ -120,6 +122,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC3Functions(supported_fn);
       if (!status_record.ok()) {
+        handle->GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       return rc;
@@ -128,6 +131,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC2Functions(supported_fn);
       if (!status_record.ok()) {
+        handle->GetDiagnostics().AddStatusRecord(status_record);
         return status_record.CalculateReturnCode();
       }
       return rc;
@@ -139,6 +143,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
     StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
     if (!status_record.ok()) {
+      handle->GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
@@ -146,6 +151,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
     StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
     if (!status_record.ok()) {
+      handle->GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }
     *supported_fn = odbc2_fns[function_id];
