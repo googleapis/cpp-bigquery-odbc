@@ -164,8 +164,9 @@ odbc_internal::StatusRecordOr<ReturnType> UnSupportedInfoType(
 }
 
 struct SQLGetInfoVal {
-  SQLRETURN AddDiagnostics(ConnectionHandle* handle,
-                           odbc_internal::StatusRecord const& status_record);
+  static SQLRETURN AddDiagnostics(
+      ConnectionHandle* handle,
+      odbc_internal::StatusRecord const& status_record);
 };
 
 struct SQLGetInfoSqlChar : SQLGetInfoVal {
@@ -188,7 +189,7 @@ struct SQLGetInfoBitmask : SQLGetInfoVal {
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUINTEGER info_val;
 };
@@ -200,7 +201,7 @@ struct SQLGetInfoSqlUInt : SQLGetInfoVal {
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUINTEGER info_val;
 };
@@ -212,7 +213,7 @@ struct SQLGetInfoSqlUSmallInt : SQLGetInfoVal {
   GetUnSupportedInfoType(SQLUSMALLINT info_type);
 
   SQLRETURN InfoValToResponse(SQLPOINTER info_val_ptr,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLUSMALLINT info_val;
 };

@@ -542,17 +542,17 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
 }
 
 SQLRETURN SQLGetInfoSqlUInt::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 
 SQLRETURN SQLGetInfoBitmask::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 
-SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(SQLPOINTER info_val_ptr,
-                                                    SQLSMALLINT* str_len_ptr) {
+SQLRETURN SQLGetInfoSqlUSmallInt::InfoValToResponse(
+    SQLPOINTER info_val_ptr, SQLSMALLINT* str_len_ptr) const {
   return IntValueToOutputBufferResponse(info_val, info_val_ptr, str_len_ptr);
 }
 

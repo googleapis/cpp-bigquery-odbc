@@ -50,7 +50,7 @@ StatusRecord InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   std::string message = mesg;
   message.append(std::to_string(info_type));
   TracePrintInternal(opts, message);
-  return StatusRecord{SQLStates::k_HY000(), message};
+  return StatusRecord{SQLStates::k_HY096(), message};
 }
 
 SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
