@@ -177,7 +177,7 @@ struct SQLGetInfoSqlChar : SQLGetInfoVal {
 
   SQLRETURN InfoValToResponse(ConnectionHandle* handle, SQLPOINTER info_val_ptr,
                               SQLSMALLINT in_buffer_len,
-                              SQLSMALLINT* str_len_ptr);
+                              SQLSMALLINT* str_len_ptr) const;
 
   SQLCHAR* info_val{nullptr};
 };

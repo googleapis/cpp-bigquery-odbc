@@ -239,7 +239,7 @@ TEST(SQLGetInfo_Unsupported, SqlCharInvalid) {
   StatusRecordOr<SQLGetInfoSqlChar> actual_info =
       UnSupportedInfoType<SQLGetInfoSqlChar>(SUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -258,7 +258,7 @@ TEST(SQLGetInfo_Unsupported, SQLUSmallIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUSmallInt> actual_info =
       UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(SUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -277,7 +277,7 @@ TEST(SQLGetInfo_Unsupported, SQLUIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUInt> actual_info =
       UnSupportedInfoType<SQLGetInfoSqlUInt>(SUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -296,7 +296,7 @@ TEST(SQLGetInfo_Unsupported, BitmaskInvalid) {
   StatusRecordOr<SQLGetInfoBitmask> actual_info =
       UnSupportedInfoType<SQLGetInfoBitmask>(SUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -317,7 +317,7 @@ TEST(SQLGetInfo_Supported, SqlCharInvalid) {
   StatusRecordOr<SQLGetInfoSqlChar> actual_info =
       SupportedInfoType<SQLGetInfoSqlChar>(UNSUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -336,7 +336,7 @@ TEST(SQLGetInfo_Supported, SqlUSmallIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUSmallInt> actual_info =
       SupportedInfoType<SQLGetInfoSqlUSmallInt>(UNSUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -355,7 +355,7 @@ TEST(SQLGetInfo_Supported, SqlUIntegerInvalid) {
   StatusRecordOr<SQLGetInfoSqlUInt> actual_info =
       SupportedInfoType<SQLGetInfoSqlUInt>(UNSUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
@@ -374,7 +374,7 @@ TEST(SQLGetInfo_Supported, SqlBitmaskInvalid) {
   StatusRecordOr<SQLGetInfoBitmask> actual_info =
       SupportedInfoType<SQLGetInfoBitmask>(UNSUPPORTED_INFO_TYPE);
 
-  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY024(),
+  EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 

@@ -28,7 +28,7 @@ namespace {
 StatusRecord InvalidType(SQLUSMALLINT info_type) {
   std::string msg = "Invalid infoType: ";
   msg.append(std::to_string(info_type));
-  return StatusRecord{SQLStates::k_HY024(), msg};
+  return StatusRecord{SQLStates::k_HY096(), msg};
 }
 
 }  // namespace
@@ -528,7 +528,7 @@ SQLRETURN SQLGetInfoVal::AddDiagnostics(ConnectionHandle* handle,
 SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
                                                SQLPOINTER info_val_ptr,
                                                SQLSMALLINT in_buffer_len,
-                                               SQLSMALLINT* str_len_ptr) {
+                                               SQLSMALLINT* str_len_ptr) const {
   auto status_record = StringValueToOutputBufferResponse(
       reinterpret_cast<char*>(info_val), info_val_ptr, in_buffer_len,
       str_len_ptr);
