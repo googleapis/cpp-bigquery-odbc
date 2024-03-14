@@ -16,6 +16,7 @@
 #define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "utils.h"
 #include <algorithm>
 #include <cstdarg>
@@ -61,8 +62,8 @@ struct TraceOptions {
   //
   // Returns a singleton object for console tracing.
   //////////////////////////////////////////////////////////
-  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsConsole(
-      bool logging_enabled, int log_level);
+  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
+  CreateTraceOptionsConsole(bool logging_enabled, int log_level);
 
   //////////////////////////////////////////////////////////
   // Creates TraceOptions for emitting to a trace file
@@ -72,8 +73,8 @@ struct TraceOptions {
   //
   // Returns a singleton object for file tracing
   //////////////////////////////////////////////////////////
-  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsFile(
-      std::string const& file_path);
+  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
+  CreateTraceOptionsFile(std::string const& file_path);
 
   //////////////////////////////////////////////////////////
   // Creates TraceOptions based on the trace section in the
@@ -84,8 +85,8 @@ struct TraceOptions {
   //
   // Returns a singleton object for file tracing
   //////////////////////////////////////////////////////////
-  static StatusOr<std::shared_ptr<TraceOptions>> CreateTraceOptionsFile(
-      std::shared_ptr<Sections> const& config_sections);
+  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
+  CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections);
 
   // Shared members.
   bool logging_enabled;
@@ -240,9 +241,10 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
 
 // We want this to be created once on startup and shared by all APIs.
 // Replace the console call with the file version, for the final release.
-static StatusOr<std::shared_ptr<TraceOptions>> const kTraceOptsConsole =
-    TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
-                                            /*unused log_level*/ 0);
+static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOptsConsole =
+        TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
+                                                /*unused log_level*/ 0);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

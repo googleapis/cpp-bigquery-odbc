@@ -18,7 +18,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_testing_utils::StatusIs;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 // Common Test Values.
@@ -39,13 +42,13 @@ Sections const kConfigSections6{{"Driver", kDriverSection6}};
 Sections const kConfigSections7{{"Driver", kDriverSection7}};
 
 std::shared_ptr<TraceOptions> test_opts_console =
-    TraceOptions::CreateTraceOptionsConsole(true, 0).value();
+    *(TraceOptions::CreateTraceOptionsConsole(true, 0));
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_OK(test_opts_file);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
@@ -56,9 +59,9 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections2);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_OK(test_opts_file);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
@@ -67,9 +70,9 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent) {
   auto config_sections = std::make_shared<Sections>(kConfigSections3);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_OK(test_opts_file);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
@@ -78,9 +81,9 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent) {
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
   auto config_sections = std::make_shared<Sections>(kConfigSections4);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_OK(test_opts_file);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
@@ -91,9 +94,9 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
   auto config_sections = std::make_shared<Sections>(kConfigSections5);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_OK(test_opts_file);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
@@ -103,13 +106,13 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
 TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
   std::shared_ptr<Sections> config_sections = nullptr;
   auto opts = TraceOptions::CreateTraceOptionsFile(config_sections);
-  EXPECT_THAT(opts, StatusIs(StatusCode::kInvalidArgument,
-                             "Invalid ODBC Driver Config"));
+  EXPECT_THAT(
+      opts, StatusRecordIs(SQLStates::k_HY000(), "Invalid ODBC Driver Config"));
 }
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigEmptyLogLevel) {
   auto config_sections = std::make_shared<Sections>(kConfigSections6);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
@@ -119,7 +122,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigEmptyLogLevel) {
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigInvalidLogLevel) {
   auto config_sections = std::make_shared<Sections>(kConfigSections7);
-  StatusOr<std::shared_ptr<TraceOptions>> test_opts_file =
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);

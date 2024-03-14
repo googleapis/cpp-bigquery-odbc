@@ -23,6 +23,7 @@
 
 #endif  //_WIN32
 
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
 #include <fstream>
@@ -89,7 +90,7 @@ constexpr int kMaxValueNameLen = 4096;
  *
  * @example GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\ODBCTestsDSN")
  */
-StatusOr<std::shared_ptr<Section>> GetSectionWin(
+odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     std::string const& registry_key);
 
 /**
@@ -101,16 +102,17 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(
  *
  * @example ParseConfig("SOFTWARE\\ODBC\\ODBC.INI")
  */
-StatusOr<std::shared_ptr<Sections>> ParseConfig(
+odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     std::string const& registry_key);
 
 #else
 
-StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path);
+odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
+    std::string const& file_path);
 
 #endif  //_WIN32
 
-StatusOr<Section> ParseConnectionString(std::string& str);
+odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
 
 std::string GetPathToOdbcIni();
 

@@ -108,6 +108,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -116,6 +117,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     auto status_record = StatusRecord{SQLStates::k_HY024(),
                                       "Argument supported_fn cannot be null"};
     handle->GetDiagnostics().AddStatusRecord(status_record);
+    TracePrintInternal(opts, status_record.message);
     return status_record.CalculateReturnCode();
   }
 
@@ -125,6 +127,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
           PopulateSupportedODBC3Functions(supported_fn);
       if (!status_record.ok()) {
         handle->GetDiagnostics().AddStatusRecord(status_record);
+        TracePrintInternal(opts, status_record.message);
         return status_record.CalculateReturnCode();
       }
       return rc;
@@ -134,6 +137,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
           PopulateSupportedODBC2Functions(supported_fn);
       if (!status_record.ok()) {
         handle->GetDiagnostics().AddStatusRecord(status_record);
+        TracePrintInternal(opts, status_record.message);
         return status_record.CalculateReturnCode();
       }
       return rc;
@@ -146,6 +150,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
     if (!status_record.ok()) {
       handle->GetDiagnostics().AddStatusRecord(status_record);
+      TracePrintInternal(opts, status_record.message);
       return status_record.CalculateReturnCode();
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
@@ -154,6 +159,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
     if (!status_record.ok()) {
       handle->GetDiagnostics().AddStatusRecord(status_record);
+      TracePrintInternal(opts, status_record.message);
       return status_record.CalculateReturnCode();
     }
     *supported_fn = odbc2_fns[function_id];
@@ -177,6 +183,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
     std::string mesg = "Invalid Input BufferLength";
     auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
     handle->GetDiagnostics().AddStatusRecord(status_record);
+    TracePrintInternal(opts, status_record.message);
     return status_record.CalculateReturnCode();
   }
 

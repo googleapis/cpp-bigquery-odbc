@@ -73,19 +73,20 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_internal::StatusRecord;
 
 // Internal Helper Functions
 namespace {
-void RecordTraceStatus(std::string const& name, Status const& s) {
+void RecordTraceStatus(std::string const& name, StatusRecord const& s) {
   if (!s.ok()) {
-    std::cout << "Tracing is misconfigured: " << s.message() << std::endl;
+    std::cout << "Tracing is misconfigured: " << s.message << std::endl;
     std::cout << "ODBC API: " << name << " will not be traced." << std::endl;
   }
 }
 
 bool IsTracingEnabled(std::string const& name) {
-  if (!kTraceOptsConsole.ok()) {
-    RecordTraceStatus(name, kTraceOptsConsole.status());
+  if (!kTraceOptsConsole) {
+    RecordTraceStatus(name, kTraceOptsConsole.GetStatusRecord());
     return false;
   }
   return true;

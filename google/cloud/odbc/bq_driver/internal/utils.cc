@@ -17,6 +17,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+
 std::vector<std::string> Split(std::string const& s,
                                std::string const& delimiter, int limit) {
   int start_ind = 0;
@@ -55,7 +59,7 @@ std::string Join(std::vector<std::string> v, std::string const& separator,
 
 #ifdef _WIN32
 
-StatusOr<std::shared_ptr<Section>> GetSectionWin(
+StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     std::string const& registry_key) {
   Section section;
   HKEY key_handle;
@@ -94,7 +98,7 @@ StatusOr<std::shared_ptr<Section>> GetSectionWin(
   return std::make_shared<Section>(section);
 }
 
-StatusOr<std::shared_ptr<Sections>> ParseConfig(
+StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     std::string const& registry_key) {
   HKEY key_handle;
   LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0,
@@ -138,7 +142,8 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(
 
 #else
 
-StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
+StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
+    std::string const& file_path) {
   std::ifstream is(file_path);
   is.exceptions(std::ios::badbit);  // Minimal error handling
   Sections sections;
@@ -171,15 +176,16 @@ StatusOr<std::shared_ptr<Sections>> ParseConfig(std::string const& file_path) {
       }
     }
   } else {
-    return Status(StatusCode::kInvalidArgument,
-                  "Can't open file with path: " + file_path);
+    std::string msg = "Can't open file with path: ";
+    msg.append(file_path);
+    return StatusRecord{SQLStates::k_HY000(), msg};
   }
   return std::make_shared<Sections>(sections);
 }
 
 #endif  //_WIN32
 
-StatusOr<Section> ParseConnectionString(std::string& str) {
+StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   Section section;
   std::vector<std::string> splits = Split(str, ";");
   for (std::string& property : splits) {
@@ -189,7 +195,7 @@ StatusOr<Section> ParseConnectionString(std::string& str) {
     }
     std::vector<std::string> property_splits = Split(property, "=", 2);
     if (property_splits.size() < 2) {
-      return Status(StatusCode::kInvalidArgument, "Invalid Connection String");
+      return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
     }
     std::string field = property_splits[0];
     std::string value = Join(property_splits, "", 1);

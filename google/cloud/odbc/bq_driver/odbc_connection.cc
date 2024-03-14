@@ -30,6 +30,8 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::Section;
+using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
@@ -43,8 +45,8 @@ Authentication CreateAuth(Section& dsn_section) {
   try {
     auth_int = stoi(dsn_section["OAuthMechanism"]);
   } catch (std::exception const& ex) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
+    auto& opts = *(*kTraceOptsConsole);
+    TracePrintInternal(opts, ex.what());
     auth_int = 0;
   }
   auth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
@@ -54,21 +56,21 @@ Authentication CreateAuth(Section& dsn_section) {
   return auth;
 }
 
-void OverrideDsnSectionFromEnv(Section& dsn_section,
-                               std::string const& dsn_name) {
+StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
+                                       std::string const& dsn_name) {
   // TODO(#159): this has to handle windows too
   std::string odbcini_path =
       google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni();
   if (!odbcini_path.empty()) {
-    auto sections =
+    auto sections_status =
         google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
-    if (!sections.ok()) {
-      // The file path pointed by ODBCINI env is invalid
-      // TODO(#170): Add error tracing call here
-      return;
+    if (!sections_status) {
+      return sections_status.GetStatusRecord();
     }
-    dsn_section = (*sections.value())[dsn_name];
+    auto sections = *sections_status;
+    dsn_section = (*sections)[dsn_name];
   }
+  return StatusRecord::Ok();
 }
 
 //////////////////////
@@ -109,18 +111,18 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   handle_ref->GetDiagnostics().ClearDiagnostics();
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-  StatusOr<Section> connection_params_resp =
+  StatusRecordOr<Section> connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
-  if (!connection_params_resp.ok()) {
-    // The connection string is invalid
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_ERROR;
+  if (!connection_params_resp_status) {
+    handle_ref->GetDiagnostics().AddStatusRecord(
+        connection_params_resp_status.GetStatusRecord());
+    return connection_params_resp_status.GetCalculatedReturnCode();
   }
 
+  auto connection_params_resp = *connection_params_resp_status;
   Section dsn_section;
-  for (auto const& it : connection_params_resp.value()) {
+  for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
     dsn_section[property] = value;
@@ -128,7 +130,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
   // Any parameters defined in the env should
   //  override the DSN section properties.
-  std::string dsn_name = connection_params_resp.value()["DSN"];
+  std::string dsn_name = connection_params_resp["DSN"];
   if (!dsn_name.empty()) {
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
   }

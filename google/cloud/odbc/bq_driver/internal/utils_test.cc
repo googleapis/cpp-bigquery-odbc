@@ -20,7 +20,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_testing_utils::StatusIs;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 Section const kDsnSection{
@@ -98,7 +101,10 @@ TEST(Parsing, ParseConfig) {
   std::string test_data_path =
       google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
           .value_or("");
-  auto sections = ParseConfig(test_data_path + "/sample.ini");
+  auto sections_status = ParseConfig(test_data_path + "/sample.ini");
+  ASSERT_STATUS_RECORD_OK(sections_status);
+
+  auto sections = *sections_status;
 
   // Test if the uncommented sections are defined
   for (auto const& it_outer : kSampleIniSections) {
@@ -107,7 +113,7 @@ TEST(Parsing, ParseConfig) {
     for (auto& it_inner : sample_ini_section) {
       std::string property = it_inner.first;
       EXPECT_EQ(sample_ini_section[property],
-                (*(sections.value()))[section_name][property]);
+                (*(sections))[section_name][property]);
     }
   }
 
@@ -117,14 +123,15 @@ TEST(Parsing, ParseConfig) {
     Section commented_ini_section = it_outer.second;
     for (auto& it_inner : commented_ini_section) {
       std::string property = it_inner.first;
-      EXPECT_EQ((*(sections.value()))[section_name][property], "");
+      EXPECT_EQ((*(sections))[section_name][property], "");
     }
   }
 }
 
 TEST(Parsing, ParseConfig_IncorrectPath) {
   auto sections = ParseConfig("/invalid_file_name.ini");
-  EXPECT_EQ(sections.status().code(), StatusCode::kInvalidArgument);
+  EXPECT_THAT(sections, StatusRecordIs(SQLStates::k_HY000(),
+                                       HasSubstr("Can't open file")));
 }
 
 TEST(Parsing, ParseConnectionString) {
@@ -138,24 +145,26 @@ TEST(Parsing, ParseConnectionString) {
     conn_str.append(";");
   }
 
-  StatusOr<Section> section_resp = ParseConnectionString(conn_str);
-  ASSERT_STATUS_OK(section_resp);
+  StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
+  ASSERT_STATUS_RECORD_OK(section_resp_status);
+
+  auto section_resp = *section_resp_status;
 
   for (auto const& it : testing_section) {
     std::string field = it.first;
     std::string value = it.second;
     Trim(field);
     Trim(value);
-    EXPECT_EQ(section_resp.value()[field], value);
+    EXPECT_EQ(section_resp[field], value);
   }
 }
 
 TEST(Parsing, ParseConnectionString_InvalidString) {
   Section testing_section = kDsnSection;
   std::string conn_str = "a=3;b;";
-  StatusOr<Section> section_resp = ParseConnectionString(conn_str);
+  StatusRecordOr<Section> section_resp = ParseConnectionString(conn_str);
   EXPECT_THAT(section_resp,
-              StatusIs(StatusCode::kInvalidArgument, HasSubstr("Invalid")));
+              StatusRecordIs(SQLStates::k_HY000(), HasSubstr("Invalid")));
 }
 
 TEST(GetPathToOdbcIni, GetPath_EnvVar) {

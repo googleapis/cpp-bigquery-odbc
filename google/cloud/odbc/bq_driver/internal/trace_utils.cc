@@ -16,6 +16,10 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 
@@ -24,8 +28,8 @@ std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsConsole(
-    bool logging_enabled, int log_level) {
+StatusRecordOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
   std::lock_guard<std::mutex> lk(mu_);
   if (options_console_ == nullptr) {
     // Cannot use std::make_shared because constructor is protected.
@@ -38,18 +42,21 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsConsole(
   return options_console_;
 }
 
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
-    std::string const& file_path) {
+StatusRecordOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
   auto configs = ParseConfig(file_path);
-  if (!configs.ok()) return std::move(configs).status();
+  if (!configs) {
+    return configs.GetStatusRecord();
+  }
 
   return CreateTraceOptionsFile(*configs);
 }
 
-StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
+StatusRecordOr<std::shared_ptr<TraceOptions>>
+TraceOptions::CreateTraceOptionsFile(
     std::shared_ptr<Sections> const& config_sections) {
   if (!config_sections) {
-    return Status(StatusCode::kInvalidArgument, "Invalid ODBC Driver Config");
+    return StatusRecord{SQLStates::k_HY000(), "Invalid ODBC Driver Config"};
   }
 
   Section trace_sections;
@@ -89,8 +96,9 @@ StatusOr<std::shared_ptr<TraceOptions>> TraceOptions::CreateTraceOptionsFile(
                                      std::ofstream::out | std::ofstream::app);
     }
     if (!options_file_->trace_file.is_open()) {
-      return Status(StatusCode::kInternal,
-                    "Can't open  trace file: " + log_file);
+      std::string msg = "Cannot open log file: ";
+      msg.append(log_file);
+      return StatusRecord{SQLStates::k_HY000(), msg};
     }
   }
 
