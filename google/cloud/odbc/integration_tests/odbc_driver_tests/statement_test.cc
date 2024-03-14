@@ -106,6 +106,13 @@ TEST(StatementTest, SQLExecute) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecute_UsingDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(InsertStatementUsingDescriptor(conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLNumParams) {
   auto conn = std::make_shared<ODBCHandles>();
   auto const table_name = kDatasetName + ".ODBC_NUM_PARAMS_TEST";

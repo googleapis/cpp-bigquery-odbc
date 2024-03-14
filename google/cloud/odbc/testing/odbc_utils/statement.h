@@ -22,6 +22,8 @@ namespace google::cloud::odbc_tests {
 
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn);
 
+SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn);
+
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
 
 // Fetches results of a read query row-by-row and returns them as a map with the

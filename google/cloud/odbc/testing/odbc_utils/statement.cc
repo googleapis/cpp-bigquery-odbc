@@ -80,6 +80,84 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
   return status;
 }
 
+// Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
+SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn) {
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";
+  char insert_stmt[kBufferLength];
+  StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
+
+  Table table(table_name);
+
+  // Create Table
+  table.Create(conn, "(StringField STRING, IntegerField INTEGER)");
+
+  // Prepare statement with insert query string
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  // Allocate descriptor handle
+  SQLHDESC hdesc;
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &hdesc);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  // Set Descriptor handle to the first statement handle
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, hdesc,
+                          SQL_IS_POINTER);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Add param 1(string) to insert query string
+  constexpr char* str_field = "Test String 1";
+  SQLLEN len_string_field = strlen(str_field);
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                            SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
+                            len_string_field, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+
+  // Add param 2 to insert query string
+  int int_field = 42;
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
+                            SQL_INTEGER, 0, 0, &int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+
+  // Execute insertion
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // We inserted a row using first statement handle.
+  // Now we're going to do the same using a new statement handle,
+  // but without SQLBindParameter calls.
+
+  // Free existing statement handle
+  SQLCloseCursor(conn->hstmt);
+  status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+  CheckError(status, "SQLFreeHandle", conn);
+
+  // Allocate a new statement handle
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  // Prepare statement with same insert query string
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  // Set Descriptor handle to the second statement handle.
+  // It already has data from previous SQLBindParameter calls.
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, hdesc,
+                          SQL_IS_POINTER);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Execute insertion
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // Drop Table
+  table.Drop(conn);
+
+  return status;
+}
+
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query) {
   SQLRETURN status;
