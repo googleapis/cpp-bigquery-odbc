@@ -161,7 +161,7 @@ TEST(StatementTest, SQLDescribeCol) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void SQLFetch(bool use_bind_col) {
+void FetchDataTest(bool use_bind_col) {
   auto const table_name = kDatasetName + ".ODBC_CHECK_RESULTS_TEST_" +
                           (use_bind_col ? "true" : "false");
   Table table(table_name);
@@ -202,9 +202,9 @@ void SQLFetch(bool use_bind_col) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLFetch) { SQLFetch(true); }
+TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
 
-TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { SQLFetch(false); }
+TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
 
 TEST(StatementTest, SQLFetchScroll) {
   auto const table_name = kDatasetName + ".ODBC_SCROLL_RESULTS_TEST";

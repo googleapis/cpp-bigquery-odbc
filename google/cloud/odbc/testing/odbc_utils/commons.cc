@@ -197,44 +197,44 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
 
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
                      std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
-  SQLHDESC ipd_handle;  // Application row descriptor
+  SQLHDESC ard_handle;  // Application row descriptor
   auto status =
-      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &ipd_handle, 0, NULL);
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &ard_handle, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
 
   // Get the highest record
   SQLSMALLINT record_count;
-  status = SQLGetDescField(ipd_handle, 0, SQL_DESC_COUNT, &record_count,
+  status = SQLGetDescField(ard_handle, 0, SQL_DESC_COUNT, &record_count,
                            SQL_IS_SMALLINT, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
 
   // Update the highest record
   if (col_index > record_count) {
-    status = SQLSetDescField(ipd_handle, 0, SQL_DESC_COUNT,
+    status = SQLSetDescField(ard_handle, 0, SQL_DESC_COUNT,
                              (SQLPOINTER)col_index, SQL_IS_INTEGER);
     CheckError(status, "SQLGetStmtAttr(SQL_DESC_COUNT)", conn);
   }
 
   // Assign column attributes
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_TYPE,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_TYPE,
                            (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
   CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_CONCISE_TYPE,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_CONCISE_TYPE,
                            (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
   CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_LENGTH,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_LENGTH,
                            &col_ptr->data_size, SQL_IS_UINTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_OCTET_LENGTH,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH,
                            &col_ptr->data_size, SQL_IS_UINTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_DATA_PTR,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_DATA_PTR,
                            col_ptr->data, SQL_NTS);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_INDICATOR_PTR,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_INDICATOR_PTR,
                            &col_ptr->data_len, SQL_IS_INTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_INDICATOR_PTR)", conn);
-  status = SQLSetDescField(ipd_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
                            &col_ptr->data_len, SQL_IS_INTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
 }
