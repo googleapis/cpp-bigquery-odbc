@@ -121,7 +121,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     RegCloseKey(key_handle);
     std::string msg = "RegQueryInfoKey failed with error code: ";
     msg.append(registry_key);
-    return Status{SQLStates::k_HY000(), msg};
+    return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
   Sections sections;
@@ -133,10 +133,11 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     if (status == ERROR_SUCCESS) {
       auto get_sections_response_status =
           GetSectionWin(registry_key + "\\" + std::string(subkey_name));
-      if (!get_sections_response_status.ok()) {
-        auto get_sections_response = *get_sections_response_status;
-        sections[subkey_name] = *get_sections_response;
+      if (!get_sections_response_status) {
+        return get_sections_response_status;
       }
+      auto get_sections_response = *get_sections_response_status;
+      sections[subkey_name] = *get_sections_response;
     }
   }
   RegCloseKey(key_handle);
