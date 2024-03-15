@@ -98,11 +98,11 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn) {
   CheckError(status, "SQLPrepare", conn);
 
   // Allocate descriptor handle
-  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->hdesc);
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
   CheckError(status, "SQLAllocHandle", conn);
 
   // Set Descriptor handle to the first statement handle
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->hdesc,
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
@@ -150,7 +150,7 @@ SQLRETURN InsertStatementWithoutBindParameter(
 
   // Set Descriptor handle to the second statement handle.
   // It already has data from previous SQLBindParameter calls.
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->hdesc,
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 

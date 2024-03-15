@@ -55,7 +55,10 @@ struct ODBCHandles {
   HENV henv;
   HDBC hdbc;
   HSTMT hstmt;
-  SQLHDESC hdesc;
+  SQLHDESC ard;
+  SQLHDESC ird;
+  SQLHDESC apd;
+  SQLHDESC ipd;
   bool connected;
   SQLCHAR outdsn[4096];
   Metadata metadata;

@@ -42,15 +42,13 @@ Schema kStdSchema = {
 void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                    Schema schema) {
   SQLSMALLINT desc_type;
-  SQLHDESC ird_handle;  // Implementation row descriptor
-  SQLHDESC ipd_handle;  // Implementation parameter descriptor
   int num_cols = schema.size();
 
   auto status =
-      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &ird_handle, 0, NULL);
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
-  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &ipd_handle, 0,
-                          NULL);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
 
   status = SQLExecDirect(
@@ -61,7 +59,7 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 
   for (int i = 0; i < num_cols; i++) {
     // Reads multiple descriptor fields for a column
-    status = SQLGetDescRec(ird_handle, i + 1, desc.name, kBufferLength,
+    status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
                            &desc.string_len, &desc.type, &desc.sub_type,
                            &desc.length, &desc.precision, &desc.scale,
                            &desc.nullable);
@@ -73,12 +71,12 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(ToBqFieldType(desc.type), ToBqFieldType(schema[i].type));
 
     // Set the same values for another descriptor handle
-    status = SQLSetDescRec(ipd_handle, i + 1, desc.type, desc.sub_type,
+    status = SQLSetDescRec(conn->ipd, i + 1, desc.type, desc.sub_type,
                            desc.length, desc.precision, desc.scale, desc.name,
                            (SQLLEN*)&kBufferLength, NULL);
     CheckError(status, "SQLSetDescRec", conn);
     status = SQLGetDescRec(
-        ird_handle, i + 1, desc_copy.name, kBufferLength, &desc_copy.string_len,
+        conn->ird, i + 1, desc_copy.name, kBufferLength, &desc_copy.string_len,
         &desc_copy.type, &desc_copy.sub_type, &desc_copy.length,
         &desc_copy.precision, &desc_copy.scale, &desc_copy.nullable);
     CheckError(status, "SQLGetDescRec", conn);
@@ -96,15 +94,13 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                  Schema schema) {
   SQLSMALLINT desc_type;
-  SQLHDESC ird_handle;  // Implementation row descriptor
-  SQLHDESC ipd_handle;  // Implementation parameter descriptor
   int num_cols = schema.size();
 
   auto status =
-      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &ird_handle, 0, NULL);
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
-  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &ipd_handle, 0,
-                          NULL);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
 
   status = SQLExecDirect(
@@ -115,7 +111,7 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 
   for (int i = 0; i < num_cols; i++) {
     // Reads multiple descriptor fields for a column
-    status = SQLGetDescRec(ird_handle, i + 1, desc.name, kBufferLength,
+    status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
                            &desc.string_len, &desc.type, &desc.sub_type,
                            &desc.length, &desc.precision, &desc.scale,
                            &desc.nullable);
@@ -127,20 +123,20 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(ToBqFieldType(desc.type), ToBqFieldType(schema[i].type));
   }
 
-  status = SQLCopyDesc(ird_handle, ipd_handle);
+  status = SQLCopyDesc(conn->ird, conn->ipd);
   CheckError(status, "SQLCopyDesc", conn);
 
   // We use SQLGetDescField to read the descriptor fields one at a time,
   //  and check if they were copied correctly.
   for (int i = 0; i < num_cols; i++) {
     // Reads a single field from the column descriptor
-    status = SQLGetDescField(ipd_handle, i + 1, SQL_DESC_NAME, &desc_copy.name,
+    status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_NAME, &desc_copy.name,
                              kBufferLength, NULL);
     CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
     std::string col_name = (char*)desc_copy.name;
     EXPECT_EQ(col_name, schema[i].name);
 
-    status = SQLGetDescField(ipd_handle, i + 1, SQL_DESC_TYPE, &desc_copy.type,
+    status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
                              SQL_IS_SMALLINT, NULL);
     CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
     EXPECT_EQ(ToBqFieldType(desc_copy.type), ToBqFieldType(schema[i].type));
@@ -196,17 +192,17 @@ TEST(DescriptorFieldsTest, SQLSetDescField) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLHDESC ipd_handle;  // Implementation param descriptor
-  auto status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC,
-                               &ipd_handle, 0, NULL);
+  auto status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
-  status = SQLSetDescField(ipd_handle, 1, SQL_DESC_PARAMETER_TYPE,
+  status = SQLSetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
                            (SQLPOINTER)SQL_PARAM_INPUT, SQL_IS_INTEGER);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
 
   SQLSMALLINT type;
-  status = SQLGetDescField(ipd_handle, 1, SQL_DESC_PARAMETER_TYPE, &type,
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE, &type,
                            SQL_IS_SMALLINT, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
   EXPECT_EQ(type, SQL_PARAM_INPUT);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 

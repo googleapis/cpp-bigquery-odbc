@@ -42,64 +42,41 @@ std::string getSchemaStr(Schema schema) {
   return schema_str;
 }
 
-void GetErrorDetails(std::string const api, std::shared_ptr<ODBCHandles> conn) {
+void GetErrorDetails(std::string const& api, SQLHANDLE handle,
+                     SQLSMALLINT handleType) {
   SQLCHAR buf[kBufferLength];
   SQLCHAR sqlstate[15];
   char error_str[kBufferLength];
   SQLINTEGER native_error = 0;
   SQLRETURN status;
-  int rec_num;
+  int rec_num = 0;
 
-  // Get statement errors
-  rec_num = 0;
-  while (conn->hstmt && rec_num < 5) {
-    status = SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, ++rec_num, sqlstate,
+  while (handle && rec_num < 5) {
+    status = SQLGetDiagRec(handleType, handle, ++rec_num, sqlstate,
                            &native_error, buf, kBufferLength, NULL);
     if (status == SQL_NO_DATA) {
       continue;
     }
     if (!SQL_SUCCEEDED(status)) {
-      FAIL() << "SQLGetDiagRec(SQL_HANDLE_STMT) failed with status: " << status;
+      FAIL() << "SQLGetDiagRec(" << handleType
+             << ") failed with status: " << status;
       break;
     }
     sprintf(error_str, "ERROR:: %d: %s = %s (%ld) SQLSTATE=%s\n", rec_num,
             api.c_str(), buf, (long)native_error, sqlstate);
     FAIL() << error_str;
   }
+}
 
-  // Get connection errors
-  rec_num = 0;
-  while (conn->hdbc && rec_num < 5) {
-    status = SQLGetDiagRec(SQL_HANDLE_DBC, conn->hdbc, ++rec_num, sqlstate,
-                           &native_error, buf, kBufferLength, NULL);
-    if (status == SQL_NO_DATA) {
-      continue;
-    }
-    if (!SQL_SUCCEEDED(status)) {
-      FAIL() << "SQLGetDiagRec(SQL_HANDLE_DBC) failed with status: " << status;
-      break;
-    }
-    sprintf(error_str, "ERROR:: %d: %s = %s (%ld) SQLSTATE=%s\n", rec_num,
-            api.c_str(), buf, (long)native_error, sqlstate);
-    FAIL() << error_str;
-  }
-
-  // Get environment errors
-  rec_num = 0;
-  while (conn->henv && rec_num < 5) {
-    status = SQLGetDiagRec(SQL_HANDLE_ENV, conn->henv, ++rec_num, sqlstate,
-                           &native_error, buf, kBufferLength, NULL);
-    if (status == SQL_NO_DATA) {
-      continue;
-    }
-    if (!SQL_SUCCEEDED(status)) {
-      FAIL() << "SQLGetDiagRec(SQL_HANDLE_ENV) failed with status: " << status;
-      break;
-    }
-    sprintf(error_str, "ERROR:: %d: %s = %s (%ld) SQLSTATE=%s\n", rec_num,
-            api.c_str(), buf, (long)native_error, sqlstate);
-    FAIL() << error_str;
-  }
+void GetErrorDetails(std::string const& api,
+                     std::shared_ptr<ODBCHandles> conn) {
+  GetErrorDetails(api, conn->ard, SQL_HANDLE_DESC);
+  GetErrorDetails(api, conn->ird, SQL_HANDLE_DESC);
+  GetErrorDetails(api, conn->apd, SQL_HANDLE_DESC);
+  GetErrorDetails(api, conn->ipd, SQL_HANDLE_DESC);
+  GetErrorDetails(api, conn->hstmt, SQL_HANDLE_STMT);
+  GetErrorDetails(api, conn->hdbc, SQL_HANDLE_DBC);
+  GetErrorDetails(api, conn->henv, SQL_HANDLE_ENV);
 }
 
 inline void CheckError(SQLRETURN status, std::string const api,
