@@ -516,13 +516,11 @@ StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
   return result;
 }
 
-SQLRETURN SQLGetInfoVal::AddDiagnostics(ConnectionHandle* handle,
-                                        StatusRecord const& status_record) {
-  if (!handle) {
-    return SQL_INVALID_HANDLE;
+void SQLGetInfoVal::AddDiagnostics(ConnectionHandle* handle,
+                                   StatusRecord const& status_record) {
+  if (handle) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
   }
-  handle->GetDiagnostics().AddStatusRecord(status_record);
-  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
@@ -533,10 +531,7 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
       reinterpret_cast<char*>(info_val), info_val_ptr, in_buffer_len,
       str_len_ptr);
   if (!status_record.ok()) {
-    SQLRETURN rc = AddDiagnostics(handle, status_record);
-    if (rc != SQL_SUCCESS) {
-      return rc;
-    }
+    AddDiagnostics(handle, status_record);
   }
   return status_record.CalculateReturnCode();
 }

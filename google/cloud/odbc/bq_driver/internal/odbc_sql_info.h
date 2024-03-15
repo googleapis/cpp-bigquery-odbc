@@ -164,9 +164,8 @@ odbc_internal::StatusRecordOr<ReturnType> UnSupportedInfoType(
 }
 
 struct SQLGetInfoVal {
-  static SQLRETURN AddDiagnostics(
-      ConnectionHandle* handle,
-      odbc_internal::StatusRecord const& status_record);
+  static void AddDiagnostics(ConnectionHandle* handle,
+                             odbc_internal::StatusRecord const& status_record);
 };
 
 struct SQLGetInfoSqlChar : SQLGetInfoVal {
