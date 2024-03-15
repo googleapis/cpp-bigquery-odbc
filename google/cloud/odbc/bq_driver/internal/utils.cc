@@ -67,8 +67,9 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
                              KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInvalidArgument,
-                  "Can't open registry key with path: " + registry_key);
+    std::string msg = "Can't open registry key with path: ";
+    msg.append(registry_key);
+    return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
   DWORD num_values;
@@ -105,8 +106,8 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
                              KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInvalidArgument,
-                  "Can't open registry key with path: " + registry_key);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Can't open registry key with path: " + registry_key};
   }
 
   TCHAR subkey_name[kMaxKeyLength];
@@ -118,8 +119,9 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    return Status(StatusCode::kInternal,
-                  "RegQueryInfoKey failed with error code: " + status);
+    std::string msg = "RegQueryInfoKey failed with error code: ";
+    msg.append(registry_key);
+    return Status{SQLStates::k_HY000(), msg};
   }
 
   Sections sections;
@@ -129,10 +131,11 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     status = RegEnumKeyEx(key_handle, i, subkey_name, &name_len, NULL, NULL,
                           NULL, NULL);
     if (status == ERROR_SUCCESS) {
-      auto get_sections_response =
+      auto get_sections_response_status =
           GetSectionWin(registry_key + "\\" + std::string(subkey_name));
-      if (get_sections_response.status().code() == StatusCode::kOk) {
-        sections[subkey_name] = *get_sections_response.value();
+      if (!get_sections_response_status.ok()) {
+        auto get_sections_response = *get_sections_response_status;
+        sections[subkey_name] = *get_sections_response;
       }
     }
   }
