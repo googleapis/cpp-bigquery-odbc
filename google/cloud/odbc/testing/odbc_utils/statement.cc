@@ -131,7 +131,8 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn) {
 }
 
 // Tests insertion with params using SQLPrepare, desc handle and SQLExecute
-SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN InsertStatementWithoutBindParameter(
+    std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name =
       kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";

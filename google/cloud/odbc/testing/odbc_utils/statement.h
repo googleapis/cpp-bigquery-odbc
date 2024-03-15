@@ -23,7 +23,8 @@ namespace google::cloud::odbc_tests {
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn);
 
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn);
-SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn);
+SQLRETURN InsertStatementWithoutBindParameter(
+    std::shared_ptr<ODBCHandles> conn);
 
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
 
