@@ -27,7 +27,7 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
 // Fetches results of a read query row-by-row and returns them as a map with the
 // column as keys
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query);
+                                      std::string query, bool use_bind_col);
 
 // Fetches results of a read query as a result set of size <rs_size>
 //  and returns them as a map with the column as keys

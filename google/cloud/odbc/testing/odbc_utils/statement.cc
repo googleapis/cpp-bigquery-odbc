@@ -81,7 +81,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
 }
 
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query) {
+                                      std::string query, bool use_bind_col) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
@@ -113,7 +113,11 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     SQLCHAR col_data[col_ptr->data_size + 1];
     col_ptr->data = col_data;
 
-    BindCol(conn, col_ptr, i + 1);
+    if (use_bind_col) {
+      BindCol(conn, col_ptr, i + 1);
+    } else {
+      BindColManually(conn, col_ptr, i + 1);
+    }
   }
 
   status = SQLExecute(conn->hstmt);

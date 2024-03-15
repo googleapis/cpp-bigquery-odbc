@@ -177,6 +177,11 @@ void DescribeCol(std::shared_ptr<ODBCHandles> conn,
 void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
              SQLUSMALLINT col_index);
 
+// The logic (internal implementation) of SQLBindCol
+// Works only with String type (also with null strings)
+void BindColManually(std::shared_ptr<ODBCHandles> conn,
+                     std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index);
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_COMMONS_H
