@@ -109,7 +109,23 @@ TEST(StatementTest, SQLExecute) {
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(InsertStatementUsingDescriptor(conn), SQL_SUCCESS);
+  EXPECT_EQ(InsertStatementWithBindParameter(conn), SQL_SUCCESS);
+
+  // We inserted a row using first statement handle.
+  // Now we're going to do the same using a new statement handle,
+  // but without SQLBindParameter calls.
+  // We reuse desc handle instead.
+
+  // Free existing statement handle (within same connection)
+  SQLCloseCursor(conn->hstmt);
+  auto status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+  CheckError(status, "SQLFreeHandle", conn);
+
+  // Allocate a new statement handle (within same connection)
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  EXPECT_EQ(InsertStatementWithoutBindParameter(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

@@ -81,7 +81,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
 }
 
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
-SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name =
       kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";
@@ -98,12 +98,11 @@ SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn) {
   CheckError(status, "SQLPrepare", conn);
 
   // Allocate descriptor handle
-  SQLHDESC hdesc;
-  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &hdesc);
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->hdesc);
   CheckError(status, "SQLAllocHandle", conn);
 
   // Set Descriptor handle to the first statement handle
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, hdesc,
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->hdesc,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
@@ -125,18 +124,24 @@ SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn) {
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
 
-  // We inserted a row using first statement handle.
-  // Now we're going to do the same using a new statement handle,
-  // but without SQLBindParameter calls.
+  // Drop Table
+  table.Drop(conn);
 
-  // Free existing statement handle
-  SQLCloseCursor(conn->hstmt);
-  status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
-  CheckError(status, "SQLFreeHandle", conn);
+  return status;
+}
 
-  // Allocate a new statement handle
-  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
-  CheckError(status, "SQLAllocHandle", conn);
+// Tests insertion with params using SQLPrepare, desc handle and SQLExecute
+SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn) {
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";
+  char insert_stmt[kBufferLength];
+  StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
+
+  Table table(table_name);
+
+  // Create Table
+  table.Create(conn, "(StringField STRING, IntegerField INTEGER)");
 
   // Prepare statement with same insert query string
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
@@ -144,7 +149,7 @@ SQLRETURN InsertStatementUsingDescriptor(std::shared_ptr<ODBCHandles> conn) {
 
   // Set Descriptor handle to the second statement handle.
   // It already has data from previous SQLBindParameter calls.
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, hdesc,
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->hdesc,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
