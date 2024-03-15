@@ -134,7 +134,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
       auto get_sections_response_status =
           GetSectionWin(registry_key + "\\" + std::string(subkey_name));
       if (!get_sections_response_status) {
-        return get_sections_response_status;
+        return get_sections_response_status.GetStatusRecord();
       }
       auto get_sections_response = *get_sections_response_status;
       sections[subkey_name] = *get_sections_response;
