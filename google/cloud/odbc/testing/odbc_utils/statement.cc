@@ -84,7 +84,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name =
-      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";
+      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1";
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
@@ -135,7 +135,7 @@ SQLRETURN InsertStatementWithoutBindParameter(
     std::shared_ptr<ODBCHandles> conn) {
   SQLRETURN status;
   auto const table_name =
-      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST";
+      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2";
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
