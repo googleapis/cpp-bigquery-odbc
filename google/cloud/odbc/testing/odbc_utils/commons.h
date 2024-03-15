@@ -55,10 +55,10 @@ struct ODBCHandles {
   HENV henv;
   HDBC hdbc;
   HSTMT hstmt;
-  SQLHDESC ard;
-  SQLHDESC ird;
-  SQLHDESC apd;
-  SQLHDESC ipd;
+  SQLHDESC ard; // Application row descriptor
+  SQLHDESC ird; // Implementation row descriptor
+  SQLHDESC apd; // Application parameter descriptor
+  SQLHDESC ipd; // Implementation parameter descriptor
   bool connected;
   SQLCHAR outdsn[4096];
   Metadata metadata;
