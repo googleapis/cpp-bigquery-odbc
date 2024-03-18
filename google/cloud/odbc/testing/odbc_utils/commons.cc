@@ -43,22 +43,33 @@ std::string getSchemaStr(Schema schema) {
 }
 
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
-                     SQLSMALLINT handleType) {
+                     SQLSMALLINT handle_type) {
+  if (handle == nullptr) {
+    return;
+  }
   SQLCHAR buf[kBufferLength];
   SQLCHAR sqlstate[15];
   char error_str[kBufferLength];
   SQLINTEGER native_error = 0;
   SQLRETURN status;
   int rec_num = 0;
+  int num_recs = 0;
 
-  while (handle && rec_num < 5) {
-    status = SQLGetDiagRec(handleType, handle, ++rec_num, sqlstate,
+  status =
+      SQLGetDiagField(handle_type, handle, 0, SQL_DIAG_NUMBER, &num_recs, 0, 0);
+  if (!SQL_SUCCEEDED(status)) {
+    FAIL() << "SQLGetDiagField(" << handle_type
+           << ") failed with status: " << status;
+    return;
+  }
+  while (handle && num_recs--) {
+    status = SQLGetDiagRec(handle_type, handle, ++rec_num, sqlstate,
                            &native_error, buf, kBufferLength, NULL);
     if (status == SQL_NO_DATA) {
       continue;
     }
     if (!SQL_SUCCEEDED(status)) {
-      FAIL() << "SQLGetDiagRec(" << handleType
+      FAIL() << "SQLGetDiagRec(" << handle_type
              << ") failed with status: " << status;
       break;
     }
