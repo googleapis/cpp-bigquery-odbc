@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H
-#define GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H
 
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/status_or.h"
@@ -27,4 +27,4 @@ StatusOr<std::string> InsertJob(
 
 }  // namespace google::cloud::odbc_testing_client_library_utils
 
-#endif  // GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_COMMON_FUNCTIONS_H

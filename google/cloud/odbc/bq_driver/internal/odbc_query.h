@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -47,4 +47,4 @@ class Query {
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H

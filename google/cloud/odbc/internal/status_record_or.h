@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H
-#define GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H
 
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -308,4 +308,4 @@ class StatusRecordOr final {
 
 }  // namespace google::cloud::odbc_internal
 
-#endif  // GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_STATUS_RECORD_OR_H

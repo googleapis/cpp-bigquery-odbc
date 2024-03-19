@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
-#define GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
@@ -36,4 +36,4 @@ class Catalog {
 
 }  // namespace google::cloud::odbc_tests
 
-#endif  // GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H
-#define GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
@@ -39,4 +39,4 @@ ReadRows(::google::cloud::bigquery_storage_v1::BigQueryReadClient&
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_STORAGE_H

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H
-#define GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
@@ -45,4 +45,4 @@ FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_PROJECTS_H

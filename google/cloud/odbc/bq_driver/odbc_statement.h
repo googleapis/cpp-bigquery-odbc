@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
 
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 
@@ -35,4 +35,4 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H

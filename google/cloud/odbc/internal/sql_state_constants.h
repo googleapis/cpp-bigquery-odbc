@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H
-#define GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <string>
@@ -90,4 +90,4 @@ struct SQLStates {
 
 }  // namespace google::cloud::odbc_internal
 
-#endif  // GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_SQL_STATE_CONSTANTS_H

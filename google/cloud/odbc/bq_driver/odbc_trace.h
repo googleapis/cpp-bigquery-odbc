@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <map>
@@ -639,4 +639,4 @@ void TraceFunctionExit_SQLBulkOperations(SQLRETURN ret_code,
 
 }  // namespace google::cloud::odbc_bq_driver
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H

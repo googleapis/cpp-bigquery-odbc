@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H
-#define GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H
 
 #include "google/cloud/internal/getenv.h"
 #include <stdexcept>
@@ -24,4 +24,4 @@ std::string GetRequiredEnvVar(std::string const& var);
 
 }  // namespace google::cloud::odbc_testing_utils
 
-#endif  // GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_UTILS_ENV_VARS_H

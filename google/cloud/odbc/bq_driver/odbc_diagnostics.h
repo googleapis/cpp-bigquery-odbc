@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H
 
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
@@ -42,4 +42,4 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
 
 }  // namespace google::cloud::odbc_bq_driver
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DIAGNOSTICS_H

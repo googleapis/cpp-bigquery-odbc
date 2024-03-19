@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H
 
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
@@ -78,4 +78,4 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT statementHandle,
 
 }  // namespace google::cloud::odbc_bq_driver
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

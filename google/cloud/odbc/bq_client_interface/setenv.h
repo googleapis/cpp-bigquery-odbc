@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H
-#define GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H
 
 #include "google/cloud/version.h"
 #include "absl/types/optional.h"
@@ -60,4 +60,4 @@ void UnsetEnv(char const* variable);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_SETENV_H

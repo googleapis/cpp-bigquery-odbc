@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
-#define GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
@@ -80,4 +80,4 @@ struct StatusRecord {
 
 }  // namespace google::cloud::odbc_internal
 
-#endif  // GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_DIAGNOSTIC_RECORDS_H

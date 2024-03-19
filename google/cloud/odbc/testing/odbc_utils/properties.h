@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H
-#define GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
@@ -24,4 +24,4 @@ SQLRETURN GetAllFunctions(std::shared_ptr<ODBCHandles> conn);
 
 }  // namespace google::cloud::odbc_tests
 
-#endif  // GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_PROPERTIES_H

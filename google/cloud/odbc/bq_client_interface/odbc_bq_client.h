@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H
-#define GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H
 
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
@@ -239,4 +239,4 @@ class ODBCBQClient {
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_BQ_CLIENT_H

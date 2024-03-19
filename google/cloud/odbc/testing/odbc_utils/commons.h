@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
-#define GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 
 #include <gtest/gtest.h>
 #include <locale.h>
@@ -187,4 +187,4 @@ void BindColManually(std::shared_ptr<ODBCHandles> conn,
 
 }  // namespace google::cloud::odbc_tests
 
-#endif  // GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
