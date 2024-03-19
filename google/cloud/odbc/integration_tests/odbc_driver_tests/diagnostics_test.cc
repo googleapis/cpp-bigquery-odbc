@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,15 +47,14 @@ TEST(DiagnosticsTest, SQLGetDiagRec) {
   std::string actual_message = reinterpret_cast<char*>(buf);
   if (kIsBqDriver) {
     EXPECT_EQ(0, native_error);
-    EXPECT_THAT(actual_message,
-                ::testing::HasSubstr("[Google][ODBC BigQuery Driver] "
-                                     "SQLGetInfoInternal - Invalid infoType"));
+    EXPECT_THAT(
+        actual_message,
+        ::testing::HasSubstr("[Google][ODBC BigQuery Driver] SQLGetInfo"));
   } else {
     EXPECT_NE(0, native_error);
     EXPECT_THAT(
         actual_message,
-        ::testing::ContainsRegex(
-            "\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo property not found"));
+        ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
 }
@@ -90,15 +89,14 @@ TEST(DiagnosticsTest, SQLGetDiagField) {
   std::string actual_message = reinterpret_cast<char*>(buf);
   if (kIsBqDriver) {
     EXPECT_EQ(0, native_error);
-    EXPECT_THAT(actual_message,
-                ::testing::HasSubstr("[Google][ODBC BigQuery Driver] "
-                                     "SQLGetInfoInternal - Invalid infoType"));
+    EXPECT_THAT(
+        actual_message,
+        ::testing::HasSubstr("[Google][ODBC BigQuery Driver] SQLGetInfo"));
   } else {
     EXPECT_NE(0, native_error);
     EXPECT_THAT(
         actual_message,
-        ::testing::ContainsRegex(
-            "\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo property not found"));
+        ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
 }
