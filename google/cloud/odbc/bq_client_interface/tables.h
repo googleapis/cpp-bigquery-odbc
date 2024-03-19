@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_TABLES_H
-#define GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_TABLES_H
+#ifndef GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_TABLES_H
+#define GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_TABLES_H
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
@@ -47,4 +47,4 @@ ListAllTables(
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
-#endif  // GOOGLE_CLOUD_ODBC_BQ_DRIVER_CLIENT_INTERFACE_BQ_TABLES_H
+#endif  // GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_TABLES_H

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
+#ifndef GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
+#define GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
 
 #include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
@@ -46,4 +46,4 @@ StatusOr<Options> CreateNoAccessAccountAuthentication();
 
 }  // namespace google::cloud::odbc_testing_client_library_utils
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
+#endif  // GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H

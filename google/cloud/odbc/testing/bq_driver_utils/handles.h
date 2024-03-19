@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
+#ifndef GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
+#define GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
@@ -25,4 +25,4 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
 
 }  // namespace google::cloud::odbc_testing_bq_driver_utils
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
+#endif  // GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H

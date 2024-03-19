@@ -89,6 +89,12 @@ time {
   typos
 }
 
+printf "%-50s" "Running check-include-guards:" >&2
+time {
+  git_files -z -- '*.h' |
+    xargs -r -P "$(nproc)" -n 50 -0 awk -f "ci/check-include-guards.gawk"
+}
+
 # Applies whitespace fixes in text files, unless they request no edits. The
 # `[D]` character class makes this file not contain the target text itself.
 printf "%-50s" "Running whitespace fixes:" >&2
