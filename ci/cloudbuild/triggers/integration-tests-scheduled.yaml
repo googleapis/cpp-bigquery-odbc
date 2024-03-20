@@ -7,7 +7,7 @@ sourceToBuild:
 substitutions:
   _BUILD_NAME: integration-tests
   _DISTRO: ubuntu-22.04-install
-  _DEPENDENCIES: 'BAZEL'
+  _DEPENDENCIES: 'BAZEL,iODBC'
   _TRIGGER_TYPE: scheduled
 tags:
 - scheduled
