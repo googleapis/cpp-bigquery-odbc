@@ -225,6 +225,38 @@ TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
 
 TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
 
+TEST(StatementTest, SQLFetch_with_SQLExecDirect) {
+  auto const table_name = kDatasetName + ".ODBC_FETCH_WITH_EXECDIRECT_TEST_";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Insert(conn, kSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *FetchDirect(conn, query, 1);
+
+  VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLFetchScroll) {
   auto const table_name = kDatasetName + ".ODBC_SCROLL_RESULTS_TEST";
   Table table(table_name);

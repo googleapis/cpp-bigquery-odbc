@@ -164,6 +164,66 @@ SQLRETURN InsertStatementWithoutBindParameter(
   return status;
 }
 
+std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
+                                     std::string query, int num_cols) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  Results results;
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1);
+
+    std::string col_name = (char*)col_ptr->name;
+
+    // Initializing results
+    std::vector<std::string> cols_data;
+    results[col_name] = cols_data;
+
+    SqlToCdataTypes(col_ptr);
+
+    // Allocating space for column data
+    SQLCHAR col_data[col_ptr->data_size + 1];
+    col_ptr->data = col_data;
+
+    BindCol(conn, col_ptr, i + 1);
+  }
+
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+
+    for (int i_c = 0; i_c < num_cols; i_c++) {
+      auto col_name = (char*)cols[i_c]->name;
+      auto data = cols[i_c]->data;
+      auto data_len = cols[i_c]->data_len;
+
+      if (data_len == -1) {
+        results[col_name].emplace_back(std::string());
+        continue;
+      }
+      std::string val = (char*)data;
+      results[col_name].push_back(val);
+    }
+  }
+
+  return std::make_shared<Results>(results);
+}
+
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query, bool use_bind_col) {
   SQLRETURN status;
@@ -309,7 +369,6 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
   return std::make_shared<Results>(results);
-  ;
 }
 
 std::vector<std::shared_ptr<Column>> GetCols(std::shared_ptr<ODBCHandles> conn,

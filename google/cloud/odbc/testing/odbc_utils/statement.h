@@ -33,6 +33,10 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query, bool use_bind_col);
 
+// Uses SQLExecDirect to execute a read query and fetch results
+std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
+                                     std::string query, int num_cols);
+
 // Fetches results of a read query as a result set of size <rs_size>
 //  and returns them as a map with the column as keys
 std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
