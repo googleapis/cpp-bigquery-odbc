@@ -22,17 +22,21 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
-bool IsAttributeValueValid(std::vector<SQLPOINTER> possible_values,
+bool IsAttributeValueValid(std::vector<SQLPOINTER>& possible_values,
                            SQLPOINTER value) {
   if (possible_values.empty()) {
     return true;
   }
-  for (auto val : possible_values) {
-    auto expected_val = reinterpret_cast<std::size_t>(val);
-    auto actual_val = reinterpret_cast<std::size_t>(value);
-    if (expected_val == actual_val) {
-      return true;
-    }
+  if (std::any_of(possible_values.begin(), possible_values.end(),
+                  [value](SQLPOINTER val) {
+                    auto expected_val = reinterpret_cast<std::size_t>(val);
+                    auto actual_val = reinterpret_cast<std::size_t>(value);
+                    if (expected_val == actual_val) {
+                      return true;
+                    }
+                    return false;
+                  })) {
+    return true;
   }
   return false;
 }
@@ -67,12 +71,6 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
 
   auth_ = auth;
   is_connected_ = true;
-  return StatusRecord::Ok();
-}
-
-StatusRecord ConnectionHandle::GetAttribute(SQLINTEGER attribute,
-                                            SQLPOINTER value,
-                                            SQLINTEGER length) {
   return StatusRecord::Ok();
 }
 
@@ -118,13 +116,11 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute value.");
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
-      // Store attribute.
-      attribute_values_.insert({attribute, value});
       break;
     }
     case ConnectionValueType::kSqlChr: {
-      auto* pVal = reinterpret_cast<SQLCHAR*>(value);
-      if (!pVal) {
+      auto* p_val = reinterpret_cast<SQLCHAR*>(value);
+      if (!p_val) {
         err_msg.append("Invalid attribute value.");
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
@@ -132,15 +128,6 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
-      // auto* src = reinterpret_cast<char*>(pVal);
-      // int len = (length > 0) ? length : strlen(src);
-      // // Memory needs to be allocated here otherwise this will result in i
-      // // pointer being out of scope.
-      // SQLCHAR* store_val = new SQLCHAR[len + 1];
-      // strcpy(reinterpret_cast<char*>(store_val), src);
-      // // Store attribute.
-      // attribute_values_.insert({attribute, (SQLPOINTER)store_val});
-      attribute_values_.insert({attribute, (SQLPOINTER)value});
       break;
     }
     default: {
@@ -148,6 +135,8 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       return StatusRecord{SQLStates::k_HY024(), err_msg};
     }
   }
+  // Store attribute.
+  attribute_values_.insert({attribute, value});
 
   return StatusRecord::Ok();
 }
