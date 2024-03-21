@@ -15,7 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_attr.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-
+// NOLINTBEGIN
 ConnectionAttr::ConnectionAttr() {
   supported_connection_attributes_ = {
       {SQL_ATTR_ACCESS_MODE,
@@ -110,6 +110,7 @@ ConnectionAttr::ConnectionAttr() {
          (SQLPOINTER)SQL_TXN_REPEATABLE_READ,
          (SQLPOINTER)SQL_TXN_SERIALIZABLE}}}};
 }
+// NOLINTEND
 
 bool ConnectionAttr::IsAttributeSupported(SQLINTEGER attribute) {
   return (supported_connection_attributes_.find(attribute) !=

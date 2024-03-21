@@ -27,18 +27,12 @@ bool IsAttributeValueValid(std::vector<SQLPOINTER>& possible_values,
   if (possible_values.empty()) {
     return true;
   }
-  if (std::any_of(possible_values.begin(), possible_values.end(),
-                  [value](SQLPOINTER val) {
-                    auto expected_val = reinterpret_cast<std::size_t>(val);
-                    auto actual_val = reinterpret_cast<std::size_t>(value);
-                    if (expected_val == actual_val) {
-                      return true;
-                    }
-                    return false;
-                  })) {
-    return true;
-  }
-  return false;
+  return std::any_of(possible_values.begin(), possible_values.end(),
+                     [value](SQLPOINTER val) {
+                       auto expected_val = reinterpret_cast<std::size_t>(val);
+                       auto actual_val = reinterpret_cast<std::size_t>(value);
+                       return (expected_val == actual_val);
+                     });
 }
 
 }  // namespace
