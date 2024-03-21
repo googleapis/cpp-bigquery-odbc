@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H
-#define CPP_BIGQUERY_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <map>
@@ -22,15 +22,15 @@
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
-enum ConnectionValidation { Before, After, Either, Invalid };
-enum SupportedAttribute { Get, Set, Both };
+enum ConnectionValidation { kBefore, kAfter, kEither, kInvalid };
+enum SupportedAttribute { kGet, kSet, kBoth };
 enum ConnectionValueType {
-  SQL_U_INT,
-  SQL_U_LEN,
-  SQL_CHR,
-  SQL_INT,
-  SQL_INT_BITMASK,
-  SQL_Invalid
+  kSqlUInt,
+  kSqlULen,
+  kSqlChr,
+  kSqlInt,
+  kSqlIntBitmask,
+  kSqlInvalid
 };
 
 class ConnectionAttr {
@@ -58,4 +58,4 @@ class ConnectionAttr {
       supported_connection_attribute_values;
 };
 }  // namespace google::cloud::odbc_bq_driver_internal
-#endif  // CPP_BIGQUERY_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H

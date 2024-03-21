@@ -133,71 +133,71 @@ TEST(ConnectionAttributeTest, GetAttributeConnectionBehavior) {
   ConnectionAttr conn_attr;
 
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_ACCESS_MODE),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_ASYNC_ENABLE),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_AUTOCOMMIT),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_CURRENT_CATALOG),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(
       conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_CONNECTION_TIMEOUT),
-      ConnectionValidation::Either);
+      ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_LOGIN_TIMEOUT),
-            ConnectionValidation::Before);
+            ConnectionValidation::kBefore);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_METADATA_ID),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_TXN_ISOLATION),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_PACKET_SIZE),
-            ConnectionValidation::Before);
+            ConnectionValidation::kBefore);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_TRANSLATE_OPTION),
-            ConnectionValidation::After);
+            ConnectionValidation::kAfter);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_TRANSLATE_LIB),
-            ConnectionValidation::After);
+            ConnectionValidation::kAfter);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_CONNECTION_DEAD),
-            ConnectionValidation::After);
+            ConnectionValidation::kAfter);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_AUTO_IPD),
-            ConnectionValidation::Either);
+            ConnectionValidation::kEither);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_TRACE),
-            ConnectionValidation::Before);
+            ConnectionValidation::kBefore);
   EXPECT_EQ(conn_attr.GetAttributeConnectionBehavior(SQL_ATTR_TRACEFILE),
-            ConnectionValidation::Before);
+            ConnectionValidation::kBefore);
 }
 
 TEST(ConnectionAttributeTest, GetAttributeValueType) {
   ConnectionAttr conn_attr;
 
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_ACCESS_MODE),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_ASYNC_ENABLE),
-            ConnectionValueType::SQL_U_LEN);
+            ConnectionValueType::kSqlULen);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_AUTOCOMMIT),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_CURRENT_CATALOG),
-            ConnectionValueType::SQL_CHR);
+            ConnectionValueType::kSqlChr);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_CONNECTION_TIMEOUT),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_LOGIN_TIMEOUT),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_METADATA_ID),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_TXN_ISOLATION),
-            ConnectionValueType::SQL_INT_BITMASK);
+            ConnectionValueType::kSqlIntBitmask);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_PACKET_SIZE),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_TRANSLATE_OPTION),
-            ConnectionValueType::SQL_INT);
+            ConnectionValueType::kSqlInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_TRANSLATE_LIB),
-            ConnectionValueType::SQL_CHR);
+            ConnectionValueType::kSqlChr);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_CONNECTION_DEAD),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_AUTO_IPD),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_TRACE),
-            ConnectionValueType::SQL_U_INT);
+            ConnectionValueType::kSqlUInt);
   EXPECT_EQ(conn_attr.GetAttributeValueType(SQL_ATTR_TRACEFILE),
-            ConnectionValueType::SQL_CHR);
+            ConnectionValueType::kSqlChr);
 }
 
 TEST(ConnectionAttributeTest, GetAttributeDefaultValue) {

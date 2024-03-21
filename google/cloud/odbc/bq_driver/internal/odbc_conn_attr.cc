@@ -19,92 +19,92 @@ namespace google::cloud::odbc_bq_driver_internal {
 ConnectionAttr::ConnectionAttr() {
   supported_connection_attributes = {
       {SQL_ATTR_ACCESS_MODE,
-       {"SQL_ATTR_ACCESS_MODE", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_MODE_READ_WRITE}},
+       {"SQL_ATTR_ACCESS_MODE", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_MODE_READ_WRITE}},
       {SQL_ATTR_ASYNC_ENABLE,
-       {"SQL_ATTR_ASYNC_ENABLE", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF}},
+       {"SQL_ATTR_ASYNC_ENABLE", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF}},
       {SQL_ATTR_AUTOCOMMIT,
-       {"SQL_ATTR_AUTOCOMMIT", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_AUTOCOMMIT_OFF}},
+       {"SQL_ATTR_AUTOCOMMIT", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_AUTOCOMMIT_OFF}},
       {SQL_ATTR_CURRENT_CATALOG,
-       {"SQL_ATTR_CURRENT_CATALOG", ConnectionValidation::Either,
-        SupportedAttribute::Both, nullptr}},
+       {"SQL_ATTR_CURRENT_CATALOG", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, nullptr}},
       {SQL_ATTR_CONNECTION_TIMEOUT,
-       {"SQL_ATTR_CONNECTION_TIMEOUT", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)0}},
+       {"SQL_ATTR_CONNECTION_TIMEOUT", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)0}},
       {SQL_ATTR_LOGIN_TIMEOUT,
-       {"SQL_ATTR_LOGIN_TIMEOUT", ConnectionValidation::Before,
-        SupportedAttribute::Both, (SQLPOINTER)0}},
+       {"SQL_ATTR_LOGIN_TIMEOUT", ConnectionValidation::kBefore,
+        SupportedAttribute::kBoth, (SQLPOINTER)0}},
       {SQL_ATTR_METADATA_ID,
-       {"SQL_ATTR_METADATA_ID", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_FALSE}},
+       {"SQL_ATTR_METADATA_ID", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_FALSE}},
       {SQL_ATTR_TXN_ISOLATION,
-       {"SQL_ATTR_TXN_ISOLATION", ConnectionValidation::Either,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_TXN_SERIALIZABLE}},
+       {"SQL_ATTR_TXN_ISOLATION", ConnectionValidation::kEither,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_TXN_SERIALIZABLE}},
       {SQL_ATTR_PACKET_SIZE,
-       {"SQL_ATTR_PACKET_SIZE", ConnectionValidation::Before,
-        SupportedAttribute::Both, (SQLPOINTER)1024}},
+       {"SQL_ATTR_PACKET_SIZE", ConnectionValidation::kBefore,
+        SupportedAttribute::kBoth, (SQLPOINTER)1024}},
       {SQL_ATTR_TRANSLATE_OPTION,
-       {"SQL_ATTR_TRANSLATE_OPTION", ConnectionValidation::After,
-        SupportedAttribute::Get, (SQLPOINTER)0}},
+       {"SQL_ATTR_TRANSLATE_OPTION", ConnectionValidation::kAfter,
+        SupportedAttribute::kGet, (SQLPOINTER)0}},
       {SQL_ATTR_TRANSLATE_LIB,
-       {"SQL_ATTR_TRANSLATE_LIB", ConnectionValidation::After,
-        SupportedAttribute::Get, nullptr}},
+       {"SQL_ATTR_TRANSLATE_LIB", ConnectionValidation::kAfter,
+        SupportedAttribute::kGet, nullptr}},
       {SQL_ATTR_CONNECTION_DEAD,
-       {"SQL_ATTR_CONNECTION_DEAD", ConnectionValidation::After,
-        SupportedAttribute::Get, (SQLPOINTER)SQL_CD_FALSE}},
+       {"SQL_ATTR_CONNECTION_DEAD", ConnectionValidation::kAfter,
+        SupportedAttribute::kGet, (SQLPOINTER)SQL_CD_FALSE}},
       {SQL_ATTR_AUTO_IPD,
-       {"SQL_ATTR_AUTO_IPD", ConnectionValidation::Either,
-        SupportedAttribute::Get, (SQLPOINTER)SQL_TRUE}},
+       {"SQL_ATTR_AUTO_IPD", ConnectionValidation::kEither,
+        SupportedAttribute::kGet, (SQLPOINTER)SQL_TRUE}},
       {SQL_ATTR_TRACE,
-       {"SQL_ATTR_TRACE", ConnectionValidation::Before,
-        SupportedAttribute::Both, (SQLPOINTER)SQL_OPT_TRACE_OFF}},
+       {"SQL_ATTR_TRACE", ConnectionValidation::kBefore,
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_OPT_TRACE_OFF}},
       {SQL_ATTR_TRACEFILE,
-       {"SQL_ATTR_TRACEFILE", ConnectionValidation::Before,
-        SupportedAttribute::Both, nullptr}}};
+       {"SQL_ATTR_TRACEFILE", ConnectionValidation::kBefore,
+        SupportedAttribute::kBoth, nullptr}}};
   supported_connection_attribute_values = {
       {SQL_ATTR_ACCESS_MODE,
        {"SQL_ATTR_ACCESS_MODE",
-        ConnectionValueType::SQL_U_INT,
+        ConnectionValueType::kSqlUInt,
         {(SQLPOINTER)SQL_MODE_READ_ONLY, (SQLPOINTER)SQL_MODE_READ_WRITE}}},
       {SQL_ATTR_ASYNC_ENABLE,
        {"SQL_ATTR_ASYNC_ENABLE",
-        ConnectionValueType::SQL_U_LEN,
+        ConnectionValueType::kSqlULen,
         {(SQLPOINTER)SQL_ASYNC_ENABLE_OFF, (SQLPOINTER)SQL_ASYNC_ENABLE_ON}}},
       {SQL_ATTR_AUTOCOMMIT,
        {"SQL_ATTR_AUTOCOMMIT",
-        ConnectionValueType::SQL_U_INT,
+        ConnectionValueType::kSqlUInt,
         {(SQLPOINTER)SQL_AUTOCOMMIT_OFF, (SQLPOINTER)SQL_AUTOCOMMIT_ON}}},
       {SQL_ATTR_METADATA_ID,
        {"SQL_ATTR_METADATA_ID",
-        ConnectionValueType::SQL_U_INT,
+        ConnectionValueType::kSqlUInt,
         {(SQLPOINTER)SQL_TRUE, (SQLPOINTER)SQL_FALSE}}},
       {SQL_ATTR_CURRENT_CATALOG,
-       {"SQL_ATTR_CURRENT_CATALOG", ConnectionValueType::SQL_CHR, {}}},
+       {"SQL_ATTR_CURRENT_CATALOG", ConnectionValueType::kSqlChr, {}}},
       {SQL_ATTR_CONNECTION_TIMEOUT,
-       {"SQL_ATTR_CONNECTION_TIMEOUT", ConnectionValueType::SQL_U_INT, {}}},
+       {"SQL_ATTR_CONNECTION_TIMEOUT", ConnectionValueType::kSqlUInt, {}}},
       {SQL_ATTR_LOGIN_TIMEOUT,
-       {"SQL_ATTR_LOGIN_TIMEOUT", ConnectionValueType::SQL_U_INT, {}}},
+       {"SQL_ATTR_LOGIN_TIMEOUT", ConnectionValueType::kSqlUInt, {}}},
       {SQL_ATTR_PACKET_SIZE,
-       {"SQL_ATTR_PACKET_SIZE", ConnectionValueType::SQL_U_INT, {}}},
+       {"SQL_ATTR_PACKET_SIZE", ConnectionValueType::kSqlUInt, {}}},
       {SQL_ATTR_TRACEFILE,
-       {"SQL_ATTR_TRACEFILE", ConnectionValueType::SQL_CHR, {}}},
+       {"SQL_ATTR_TRACEFILE", ConnectionValueType::kSqlChr, {}}},
       {SQL_ATTR_TRACE,
        {"SQL_ATTR_TRACE",
-        ConnectionValueType::SQL_U_INT,
+        ConnectionValueType::kSqlUInt,
         {(SQLPOINTER)SQL_OPT_TRACE_ON, (SQLPOINTER)SQL_OPT_TRACE_OFF}}},
       {SQL_ATTR_TRANSLATE_OPTION,
-       {"SQL_ATTR_TRANSLATE_OPTION", ConnectionValueType::SQL_INT, {}}},
+       {"SQL_ATTR_TRANSLATE_OPTION", ConnectionValueType::kSqlInt, {}}},
       {SQL_ATTR_TRANSLATE_LIB,
-       {"SQL_ATTR_TRANSLATE_LIB", ConnectionValueType::SQL_CHR, {}}},
+       {"SQL_ATTR_TRANSLATE_LIB", ConnectionValueType::kSqlChr, {}}},
       {SQL_ATTR_CONNECTION_DEAD,
-       {"SQL_ATTR_CONNECTION_DEAD", ConnectionValueType::SQL_U_INT, {}}},
+       {"SQL_ATTR_CONNECTION_DEAD", ConnectionValueType::kSqlUInt, {}}},
       {SQL_ATTR_AUTO_IPD,
-       {"SQL_ATTR_AUTO_IPD", ConnectionValueType::SQL_U_INT, {}}},
+       {"SQL_ATTR_AUTO_IPD", ConnectionValueType::kSqlUInt, {}}},
       {SQL_ATTR_TXN_ISOLATION,
        {"SQL_ATTR_TXN_ISOLATION",
-        ConnectionValueType::SQL_INT_BITMASK,
+        ConnectionValueType::kSqlIntBitmask,
         {(SQLPOINTER)SQL_TXN_READ_UNCOMMITTED,
          (SQLPOINTER)SQL_TXN_READ_COMMITTED,
          (SQLPOINTER)SQL_TXN_REPEATABLE_READ,
@@ -122,8 +122,8 @@ bool ConnectionAttr::IsGetAttributeSupported(SQLINTEGER attribute) {
   }
   auto attr_items = supported_connection_attributes.find(attribute);
   SupportedAttribute supported = std::get<2>(attr_items->second);
-  return (supported == SupportedAttribute::Both ||
-          supported == SupportedAttribute::Get);
+  return (supported == SupportedAttribute::kBoth ||
+          supported == SupportedAttribute::kGet);
 }
 
 bool ConnectionAttr::IsSetAttributeSupported(SQLINTEGER attribute) {
@@ -132,8 +132,8 @@ bool ConnectionAttr::IsSetAttributeSupported(SQLINTEGER attribute) {
   }
   auto attr_items = supported_connection_attributes.find(attribute);
   SupportedAttribute supported = std::get<2>(attr_items->second);
-  return (supported == SupportedAttribute::Both ||
-          supported == SupportedAttribute::Set);
+  return (supported == SupportedAttribute::kBoth ||
+          supported == SupportedAttribute::kSet);
 }
 
 std::string ConnectionAttr::GetAttributeStringValue(SQLINTEGER attribute) {
@@ -147,7 +147,7 @@ std::string ConnectionAttr::GetAttributeStringValue(SQLINTEGER attribute) {
 ConnectionValidation ConnectionAttr::GetAttributeConnectionBehavior(
     SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
-    return ConnectionValidation::Invalid;
+    return ConnectionValidation::kInvalid;
   }
   auto attr_items = supported_connection_attributes.find(attribute);
   return std::get<1>(attr_items->second);
@@ -164,7 +164,7 @@ SQLPOINTER ConnectionAttr::GetAttributeDefaultValue(SQLINTEGER attribute) {
 ConnectionValueType ConnectionAttr::GetAttributeValueType(
     SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
-    return ConnectionValueType::SQL_Invalid;
+    return ConnectionValueType::kSqlInvalid;
   }
   auto attr_items = supported_connection_attribute_values.find(attribute);
   return std::get<1>(attr_items->second);

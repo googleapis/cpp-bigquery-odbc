@@ -90,29 +90,29 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
   }
   // 2) Check if attribute is valid with repsect to connection.
   switch (conn_attr.GetAttributeConnectionBehavior(attribute)) {
-    case ConnectionValidation::Before: {
+    case ConnectionValidation::kBefore: {
       if (IsConnected()) {
         err_msg.append("Attribute cannot be set after connection is made");
         return StatusRecord{SQLStates::k_HY000(), err_msg};
       }
     }
-    case ConnectionValidation::After: {
+    case ConnectionValidation::kAfter: {
       if (!IsConnected()) {
         err_msg.append("Connection not open");
         return StatusRecord{SQLStates::k_08003(), err_msg};
       }
     }
-    case ConnectionValidation::Invalid: {
+    case ConnectionValidation::kInvalid: {
       err_msg.append("Attribute not supported by the driver");
       return StatusRecord{SQLStates::k_HY092(), err_msg};
     }
   }
   // 3) Check validity with respect to attribute value.
   switch (conn_attr.GetAttributeValueType(attribute)) {
-    case ConnectionValueType::SQL_U_LEN:
-    case ConnectionValueType::SQL_U_INT:
-    case ConnectionValueType::SQL_INT:
-    case ConnectionValueType::SQL_INT_BITMASK: {
+    case ConnectionValueType::kSqlInt:
+    case ConnectionValueType::kSqlIntBitmask:
+    case ConnectionValueType::kSqlUInt:
+    case ConnectionValueType::kSqlULen: {
       auto possible_values = conn_attr.GetAttributePossibleValues(attribute);
       if (!IsAttributeValueValid(possible_values, value)) {
         err_msg.append("Invalid attribute value.");
@@ -122,7 +122,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       attribute_values.insert({attribute, value});
       break;
     }
-    case ConnectionValueType::SQL_CHR: {
+    case ConnectionValueType::kSqlChr: {
       auto* pVal = reinterpret_cast<SQLCHAR*>(value);
       if (!pVal) {
         err_msg.append("Invalid attribute value.");
