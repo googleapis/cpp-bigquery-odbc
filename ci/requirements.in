@@ -1,0 +1,8 @@
+setuptools
+wheel
+requests
+cmake_format==0.6.13
+black==24.3.0
+mdformat-gfm==0.3.5
+mdformat-frontmatter==0.4.1
+mdformat-footnote==0.1.1
