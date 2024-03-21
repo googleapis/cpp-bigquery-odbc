@@ -27,6 +27,8 @@ add_library(
     bq_driver/internal/data_translation.h
     bq_driver/internal/diagnostics.cc
     bq_driver/internal/diagnostics.h
+    bq_driver/internal/odbc_conn_attr.cc
+    bq_driver/internal/odbc_conn_attr.h
     bq_driver/internal/odbc_conn_handle.cc
     bq_driver/internal/odbc_conn_handle.h
     bq_driver/internal/odbc_env_handle.cc
@@ -126,6 +128,7 @@ function (bq_driver_define_unit_tests)
         google_cloud_odbc_bq_driver_unit_tests
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
+        bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_env_handle_test.cc
         bq_driver/internal/odbc_handle_test.cc

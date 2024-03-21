@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
@@ -92,6 +93,92 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_FALSE(conn_handle->IsConnected());
 
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLUInt) {
+  auto* conn_handle = new ConnectionHandle();
+
+  auto status_record = conn_handle->SetAttribute(
+      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+  EXPECT_TRUE(status_record.ok());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLChar) {
+  auto* conn_handle = new ConnectionHandle();
+
+  SQLCHAR buf[256] = "test";
+  auto status_record =
+      conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 256);
+  EXPECT_TRUE(status_record.ok());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLULen) {
+  auto* conn_handle = new ConnectionHandle();
+
+  auto status_record = conn_handle->SetAttribute(
+      SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+  EXPECT_TRUE(status_record.ok());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLIntBitmask) {
+  auto* conn_handle = new ConnectionHandle();
+
+  auto status_record = conn_handle->SetAttribute(
+      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_SERIALIZABLE, 0);
+  EXPECT_TRUE(status_record.ok());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_UnsupportedSetAttribute) {
+  auto* conn_handle = new ConnectionHandle();
+  auto status_record =
+      conn_handle->SetAttribute(SQL_ATTR_TRANSLATE_OPTION, (SQLPOINTER)1, 0);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_UnSupportedAttribute) {
+  auto* conn_handle = new ConnectionHandle();
+  auto status_record =
+      conn_handle->SetAttribute(SQL_ATTR_ODBC_CURSORS, (SQLPOINTER)1, 0);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_InvalidAttributeValue) {
+  auto* conn_handle = new ConnectionHandle();
+
+  auto status_record =
+      conn_handle->SetAttribute(SQL_ATTR_ACCESS_MODE, (SQLPOINTER)2, 0);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringLen) {
+  auto* conn_handle = new ConnectionHandle();
+
+  SQLCHAR catalog[256] = "test";
+  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                 (SQLPOINTER)catalog, -1);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringValue) {
+  auto* conn_handle = new ConnectionHandle();
+
+  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                 (SQLPOINTER) nullptr, 0);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
   delete conn_handle;
 }
 

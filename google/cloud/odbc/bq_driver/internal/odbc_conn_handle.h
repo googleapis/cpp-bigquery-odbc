@@ -16,10 +16,12 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_HANDLE_H
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -65,9 +67,11 @@ class ConnectionHandle : public Handle {
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
-  SQLRETURN GetAttribute(SQLINTEGER attribute, void* value, void* length);
+  odbc_internal::StatusRecord GetAttribute(SQLINTEGER attribute,
+                                           SQLPOINTER value, SQLINTEGER length);
 
-  SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
+  odbc_internal::StatusRecord SetAttribute(SQLINTEGER attribute,
+                                           SQLPOINTER value, SQLINTEGER length);
 
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
 
@@ -81,6 +85,7 @@ class ConnectionHandle : public Handle {
   Authentication auth_;
   // The ODBCBQClient we will use for APIs interacting with BigQuery
   std::shared_ptr<ODBCBQClient> client_;
+  std::map<SQLINTEGER, SQLPOINTER> attribute_values;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
