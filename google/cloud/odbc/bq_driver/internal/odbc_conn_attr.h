@@ -52,10 +52,10 @@ class ConnectionAttr {
  private:
   std::map<SQLINTEGER, std::tuple<std::string, ConnectionValidation,
                                   SupportedAttribute, SQLPOINTER>>
-      supported_connection_attributes;
+      supported_connection_attributes_;
   std::map<SQLINTEGER, std::tuple<std::string, ConnectionValueType,
                                   std::vector<SQLPOINTER>>>
-      supported_connection_attribute_values;
+      supported_connection_attribute_values_;
 };
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_CONN_ATTR_H

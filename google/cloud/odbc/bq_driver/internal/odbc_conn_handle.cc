@@ -119,7 +119,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
       // Store attribute.
-      attribute_values.insert({attribute, value});
+      attribute_values_.insert({attribute, value});
       break;
     }
     case ConnectionValueType::kSqlChr: {
@@ -132,14 +132,15 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
-      auto* src = reinterpret_cast<char*>(pVal);
-      int len = (length > 0) ? length : strlen(src);
-      // Memory needs to be allocated here otherwise this will result in i
-      // pointer being out of scope.
-      SQLCHAR* store_val = new SQLCHAR[len + 1];
-      strcpy(reinterpret_cast<char*>(store_val), src);
-      // Store attribute.
-      attribute_values.insert({attribute, (SQLPOINTER)store_val});
+      // auto* src = reinterpret_cast<char*>(pVal);
+      // int len = (length > 0) ? length : strlen(src);
+      // // Memory needs to be allocated here otherwise this will result in i
+      // // pointer being out of scope.
+      // SQLCHAR* store_val = new SQLCHAR[len + 1];
+      // strcpy(reinterpret_cast<char*>(store_val), src);
+      // // Store attribute.
+      // attribute_values_.insert({attribute, (SQLPOINTER)store_val});
+      attribute_values_.insert({attribute, (SQLPOINTER)value});
       break;
     }
     default: {

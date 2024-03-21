@@ -85,7 +85,7 @@ class ConnectionHandle : public Handle {
   Authentication auth_;
   // The ODBCBQClient we will use for APIs interacting with BigQuery
   std::shared_ptr<ODBCBQClient> client_;
-  std::map<SQLINTEGER, SQLPOINTER> attribute_values;
+  std::map<SQLINTEGER, SQLPOINTER> attribute_values_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

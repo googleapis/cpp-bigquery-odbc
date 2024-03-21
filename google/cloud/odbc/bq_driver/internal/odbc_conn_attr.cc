@@ -17,7 +17,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 ConnectionAttr::ConnectionAttr() {
-  supported_connection_attributes = {
+  supported_connection_attributes_ = {
       {SQL_ATTR_ACCESS_MODE,
        {"SQL_ATTR_ACCESS_MODE", ConnectionValidation::kEither,
         SupportedAttribute::kBoth, (SQLPOINTER)SQL_MODE_READ_WRITE}},
@@ -63,7 +63,7 @@ ConnectionAttr::ConnectionAttr() {
       {SQL_ATTR_TRACEFILE,
        {"SQL_ATTR_TRACEFILE", ConnectionValidation::kBefore,
         SupportedAttribute::kBoth, nullptr}}};
-  supported_connection_attribute_values = {
+  supported_connection_attribute_values_ = {
       {SQL_ATTR_ACCESS_MODE,
        {"SQL_ATTR_ACCESS_MODE",
         ConnectionValueType::kSqlUInt,
@@ -112,15 +112,15 @@ ConnectionAttr::ConnectionAttr() {
 }
 
 bool ConnectionAttr::IsAttributeSupported(SQLINTEGER attribute) {
-  return (supported_connection_attributes.find(attribute) !=
-          supported_connection_attributes.end());
+  return (supported_connection_attributes_.find(attribute) !=
+          supported_connection_attributes_.end());
 }
 
 bool ConnectionAttr::IsGetAttributeSupported(SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
     return false;
   }
-  auto attr_items = supported_connection_attributes.find(attribute);
+  auto attr_items = supported_connection_attributes_.find(attribute);
   SupportedAttribute supported = std::get<2>(attr_items->second);
   return (supported == SupportedAttribute::kBoth ||
           supported == SupportedAttribute::kGet);
@@ -130,7 +130,7 @@ bool ConnectionAttr::IsSetAttributeSupported(SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
     return false;
   }
-  auto attr_items = supported_connection_attributes.find(attribute);
+  auto attr_items = supported_connection_attributes_.find(attribute);
   SupportedAttribute supported = std::get<2>(attr_items->second);
   return (supported == SupportedAttribute::kBoth ||
           supported == SupportedAttribute::kSet);
@@ -140,7 +140,7 @@ std::string ConnectionAttr::GetAttributeStringValue(SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
     return "";
   }
-  auto attr_items = supported_connection_attributes.find(attribute);
+  auto attr_items = supported_connection_attributes_.find(attribute);
   return std::get<0>(attr_items->second);
 }
 
@@ -149,7 +149,7 @@ ConnectionValidation ConnectionAttr::GetAttributeConnectionBehavior(
   if (!IsAttributeSupported(attribute)) {
     return ConnectionValidation::kInvalid;
   }
-  auto attr_items = supported_connection_attributes.find(attribute);
+  auto attr_items = supported_connection_attributes_.find(attribute);
   return std::get<1>(attr_items->second);
 }
 
@@ -157,7 +157,7 @@ SQLPOINTER ConnectionAttr::GetAttributeDefaultValue(SQLINTEGER attribute) {
   if (!IsAttributeSupported(attribute)) {
     return nullptr;
   }
-  auto attr_items = supported_connection_attributes.find(attribute);
+  auto attr_items = supported_connection_attributes_.find(attribute);
   return std::get<3>(attr_items->second);
 }
 
@@ -166,7 +166,7 @@ ConnectionValueType ConnectionAttr::GetAttributeValueType(
   if (!IsAttributeSupported(attribute)) {
     return ConnectionValueType::kSqlInvalid;
   }
-  auto attr_items = supported_connection_attribute_values.find(attribute);
+  auto attr_items = supported_connection_attribute_values_.find(attribute);
   return std::get<1>(attr_items->second);
 }
 
@@ -175,7 +175,7 @@ std::vector<SQLPOINTER> ConnectionAttr::GetAttributePossibleValues(
   if (!IsAttributeSupported(attribute)) {
     return {};
   }
-  auto attr_items = supported_connection_attribute_values.find(attribute);
+  auto attr_items = supported_connection_attribute_values_.find(attribute);
   return std::get<2>(attr_items->second);
 }
 
