@@ -22,6 +22,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::Diagnostics;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
@@ -81,10 +82,17 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
       }
       return (*handle_ptr_status)->GetDiagnostics();
     }
+    case SQL_HANDLE_DESC: {
+      StatusRecordOr<DescriptorHandle*> handle_ptr_status =
+          CastToHandle<DescriptorHandle>(HandleType::kDescriptorHandle, handle);
+      if (!handle_ptr_status) {
+        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
+                                           SQL_INVALID_HANDLE);
+      }
+      return (*handle_ptr_status)->GetDiagnostics();
+    }
     default:
-      // TODO(308644787) - add Descriptor Handle once it's created
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Descriptor Handle is not implemented"};
+      return StatusRecord{SQLStates::k_HY000(), "handleType is not recognized"};
   }
 }
 

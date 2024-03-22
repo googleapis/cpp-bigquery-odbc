@@ -20,6 +20,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::SQLStates;
@@ -71,6 +72,19 @@ StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
   (*stmt_handle_ptr_status)->GetDiagnostics().ClearDiagnostics();
 
   return *stmt_handle_ptr_status;
+}
+
+StatusRecordOr<DescriptorHandle*> ValidateDescriptorHandle(
+    SQLHDESC desc_handle) {
+  auto desc_handle_ptr_status = CastToHandle<DescriptorHandle>(
+      HandleType::kDescriptorHandle, desc_handle);
+  if (!desc_handle_ptr_status) {
+    return StatusRecordOr<DescriptorHandle*>(
+        desc_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);
+  }
+  (*desc_handle_ptr_status)->GetDiagnostics().ClearDiagnostics();
+
+  return *desc_handle_ptr_status;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

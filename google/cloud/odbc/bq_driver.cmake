@@ -29,6 +29,8 @@ add_library(
     bq_driver/internal/diagnostics.h
     bq_driver/internal/odbc_conn_handle.cc
     bq_driver/internal/odbc_conn_handle.h
+    bq_driver/internal/odbc_desc_handle.cc
+    bq_driver/internal/odbc_desc_handle.h
     bq_driver/internal/odbc_env_handle.cc
     bq_driver/internal/odbc_env_handle.h
     bq_driver/internal/odbc_handle.cc

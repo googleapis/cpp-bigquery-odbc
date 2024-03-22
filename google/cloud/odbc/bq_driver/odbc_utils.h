@@ -15,10 +15,11 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_UTILS_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_statement_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
-#include "google/cloud/odbc/bq_driver/odbc_connection.h"
-#include "google/cloud/odbc/bq_driver/odbc_environment.h"
-#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -62,6 +63,10 @@ ValidateEnvironmentHandle(SQLHENV environment_handle);
 odbc_internal::StatusRecordOr<
     google::cloud::odbc_bq_driver_internal::StatementHandle*>
 ValidateStatementHandle(SQLHSTMT stmt_handle);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::odbc_bq_driver_internal::DescriptorHandle*>
+ValidateDescriptorHandle(SQLHDESC desc_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 
