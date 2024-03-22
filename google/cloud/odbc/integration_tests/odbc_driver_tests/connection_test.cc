@@ -424,7 +424,7 @@ TEST(DriverInfoTest, SQLGetInfo) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, SQLSetConnectAttr_String) {
+TEST(ConnectionTest, SQLSetConnectAttr_UpdateString) {
   SQLCHAR buf[256] = "test";
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
@@ -448,6 +448,43 @@ TEST(ConnectionTest, SQLSetConnectAttr_String) {
   std::string actual = reinterpret_cast<char*>(output);
   EXPECT_EQ(expected, actual);
   EXPECT_EQ(expected.size(), length);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+void setAttr(std::shared_ptr<ODBCHandles> conn) {
+  SQLCHAR buf[256] = "test";
+  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                  (SQLPOINTER)buf, SQL_NTS);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                             (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  EXPECT_EQ("test", actual);
+  EXPECT_EQ(4, length);
+}
+
+TEST(ConnectionTest, SQLSetConnectAttr_DeleteString) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  setAttr(conn);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                             (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  EXPECT_EQ("test", actual);
+  EXPECT_EQ(4, length);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
