@@ -479,7 +479,7 @@ TEST(ConnectionTest, SQLSetConnectAttr_DeleteString) {
   SQLCHAR output[256];
   SQLINTEGER length;
   auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
-                             (SQLPOINTER)output, 256, &length);
+                                  (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttr", conn);
 
   std::string actual = reinterpret_cast<char*>(output);
