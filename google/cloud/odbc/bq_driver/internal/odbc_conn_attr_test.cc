@@ -16,13 +16,6 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
-/*
-  std::string GetAttributeStringValue(SQLINTEGER attribute);
-  ConnectionSetAttribute GetAttributeConnectionBehavior(SQLINTEGER attribute);
-  ConnectionValueType GetAttributeValueType(SQLINTEGER attribute);
-  std::vector<SQLPOINTER> GetAttributePossibleValues(SQLINTEGER attribute);
-*/
-
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::testing::HasSubstr;

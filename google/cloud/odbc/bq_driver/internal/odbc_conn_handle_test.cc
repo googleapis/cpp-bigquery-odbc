@@ -110,7 +110,7 @@ TEST(ConnectionHandle, SetAttribute_Success_SQLChar) {
 
   SQLCHAR buf[256] = "test";
   auto status_record =
-      conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 256);
+      conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
   EXPECT_TRUE(status_record.ok());
   delete conn_handle;
 }
@@ -161,12 +161,23 @@ TEST(ConnectionHandle, SetAttribute_Fail_InvalidAttributeValue) {
   delete conn_handle;
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringLen) {
+TEST(ConnectionHandle, SetAttribute_Fail_NegativeStringLen) {
   auto* conn_handle = new ConnectionHandle();
 
   SQLCHAR catalog[256] = "test";
   auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
                                                  (SQLPOINTER)catalog, -1);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  delete conn_handle;
+}
+
+TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringLen) {
+  auto* conn_handle = new ConnectionHandle();
+
+  SQLCHAR catalog[256] = "test";
+  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                 (SQLPOINTER)catalog, 2);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
   delete conn_handle;
@@ -178,7 +189,7 @@ TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringValue) {
   auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
                                                  (SQLPOINTER) nullptr, 0);
   EXPECT_FALSE(status_record.ok());
-  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY009());
   delete conn_handle;
 }
 

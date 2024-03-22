@@ -50,9 +50,14 @@ class ConnectionAttr {
   SQLPOINTER GetAttributeDefaultValue(SQLINTEGER attribute);
 
  private:
+  // stores the attribute metadata related to connection behavior,
+  // supportability with regards to get and set and
+  // possible values for the attribute.
   std::map<SQLINTEGER, std::tuple<std::string, ConnectionValidation,
                                   SupportedAttribute, SQLPOINTER>>
       supported_connection_attributes_;
+  // stores the attribute metadata related to value type,
+  // and default values.
   std::map<SQLINTEGER, std::tuple<std::string, ConnectionValueType,
                                   std::vector<SQLPOINTER>>>
       supported_connection_attribute_values_;

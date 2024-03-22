@@ -115,10 +115,15 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
     case ConnectionValueType::kSqlChr: {
       auto* p_val = reinterpret_cast<SQLCHAR*>(value);
       if (!p_val) {
-        err_msg.append("Invalid attribute value.");
-        return StatusRecord{SQLStates::k_HY024(), err_msg};
+        err_msg.append("Invalid attribute value pointer.");
+        return StatusRecord{SQLStates::k_HY009(), err_msg};
       }
       if (length <= 0 && length != SQL_NTS) {
+        err_msg.append("Invalid attribute length.");
+        return StatusRecord{SQLStates::k_HY090(), err_msg};
+      }
+      SQLINTEGER p_val_len = strlen(reinterpret_cast<char*>(p_val));
+      if (length != p_val_len) {
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
