@@ -72,7 +72,7 @@ class ConnectionHandle : public Handle {
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
 
  protected:
-  bool is_connected_;
+  bool is_connected_ = false;
 
  private:
   Dsn dsn_;
