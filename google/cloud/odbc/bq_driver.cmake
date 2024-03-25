@@ -132,6 +132,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/diagnostics_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
+        bq_driver/internal/odbc_desc_handle_test.cc
         bq_driver/internal/odbc_env_handle_test.cc
         bq_driver/internal/odbc_handle_test.cc
         bq_driver/internal/odbc_sql_fns_test.cc

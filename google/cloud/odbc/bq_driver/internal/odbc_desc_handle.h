@@ -16,13 +16,58 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_HANDLE_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
-#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include "google/cloud/status_or.h"
-#include <memory>
+#include <map>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+struct HeaderRecord {
+  SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO;
+  SQLULEN array_size = 0;
+  SQLUSMALLINT* array_status_ptr = nullptr;
+  SQLLEN* bind_offset_ptr = nullptr;
+  SQLINTEGER bind_type = SQL_BIND_BY_COLUMN;
+  SQLSMALLINT count = 0;
+  SQLULEN* rows_processed_ptr = nullptr;
+};
+
+struct DescriptorRecord {
+  SQLINTEGER auto_unique_value = SQL_FALSE;
+  std::string base_column_name;
+  std::string base_table_name;
+  SQLINTEGER case_sensitive = SQL_TRUE;
+  std::string catalog_name;
+  SQLSMALLINT concise_type = SQL_C_DEFAULT;
+  SQLPOINTER data_ptr = nullptr;
+  SQLSMALLINT datetime_interval_code = 0;
+  SQLINTEGER datetime_interval_precision = 2;
+  SQLLEN display_size = 16384;
+  SQLSMALLINT fixed_prec_scale = SQL_FALSE;
+  SQLLEN* indicator_ptr = nullptr;
+  std::string label;
+  SQLULEN length = 16384;
+  std::string literal_prefix;
+  std::string literal_suffix;
+  std::string local_type_name;
+  std::string name;
+  SQLSMALLINT nullable = SQL_NULLABLE;
+  SQLINTEGER num_prec_radix = 0;
+  SQLLEN octet_length = 16384;
+  SQLLEN* octet_length_ptr = nullptr;
+  SQLSMALLINT parameter_type = SQL_PARAM_INPUT;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT rowver = SQL_FALSE;
+  SQLSMALLINT scale = 0;
+  std::string schema_name;
+  SQLSMALLINT searchable = SQL_PRED_SEARCHABLE;
+  std::string table_name;
+  SQLSMALLINT type = SQL_C_DEFAULT;
+  std::string type_name;
+  SQLSMALLINT unnamed = SQL_NAMED;
+  SQLSMALLINT sql_desc_unsigned = SQL_TRUE;
+  SQLSMALLINT updatable = SQL_ATTR_READONLY;
+};
 
 enum class DescriptorType { kApplication, kIRD, kIPD };
 
@@ -37,8 +82,24 @@ class DescriptorHandle : public Handle {
   DescriptorHandle(DescriptorHandle&&) = default;
   DescriptorHandle& operator=(DescriptorHandle&&) = default;
 
+  DescriptorType GetType() { return type_; }
+
+  HeaderRecord& GetHeaderRecord() { return header_record_; }
+
+  std::map<int, DescriptorRecord>& GetDescriptorRecords() {
+    return descriptor_records_;
+  }
+
+  void BindNewDescriptorRecord(SQLSMALLINT index,
+                               DescriptorRecord descriptor_record);
+
+  odbc_internal::StatusRecordOr<DescriptorRecord> UnbindDescriptorRecord(
+      int index);
+
  private:
   DescriptorType type_;
+  HeaderRecord header_record_;
+  std::map<int, DescriptorRecord> descriptor_records_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

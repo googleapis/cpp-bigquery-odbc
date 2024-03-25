@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,32 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
+#include <utility>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
+
+void DescriptorHandle::BindNewDescriptorRecord(
+    SQLSMALLINT index, DescriptorRecord descriptor_record) {
+  descriptor_records_[index] = std::move(descriptor_record);
+  header_record_.count = descriptor_records_.rbegin()->first;
+}
+
+StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
+    int index) {
+  if (descriptor_records_.count(index)) {
+    DescriptorRecord erased = descriptor_records_[index];
+    descriptor_records_.erase(index);
+    header_record_.count = descriptor_records_.rbegin()->first;
+    return erased;
+  }
+  return StatusRecord{SQLStates::k_HY000(),
+                      "Trying to unbind non-existent descriptor record"};
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
