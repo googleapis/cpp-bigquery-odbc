@@ -16,6 +16,11 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_HANDLE_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/status_or.h"
+#include <memory>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
