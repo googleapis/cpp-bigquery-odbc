@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include <utility>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
