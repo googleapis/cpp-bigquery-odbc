@@ -86,8 +86,14 @@ class DescriptorHandle : public Handle {
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
 
-  std::map<int, DescriptorRecord>& GetDescriptorRecords() {
-    return descriptor_records_;
+  bool HasDescriptorRecord(int index) {
+    return descriptor_records_.count(index) > 0;
+  }
+
+  // Should be called after HasDescriptorRecord function.
+  // Because we can't return StatusRecordOr of a reference.
+  DescriptorRecord& GetDescriptorRecord(int index) {
+    return descriptor_records_[index];
   }
 
   void BindNewDescriptorRecord(SQLSMALLINT index,

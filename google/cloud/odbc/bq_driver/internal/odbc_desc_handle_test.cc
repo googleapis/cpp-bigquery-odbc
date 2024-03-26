@@ -29,8 +29,10 @@ using ::testing::HasSubstr;
 TEST(BindNewDescriptorRecord, UpdateCount) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
-  handle.GetDescriptorRecords()[1] = descriptor_record;
-  handle.GetHeaderRecord().count = 1;
+
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+
+  EXPECT_EQ(1, handle.GetHeaderRecord().count);
 
   handle.BindNewDescriptorRecord(3, descriptor_record);
 
@@ -40,8 +42,10 @@ TEST(BindNewDescriptorRecord, UpdateCount) {
 TEST(BindNewDescriptorRecord, DoNotUpdateCount) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
-  handle.GetDescriptorRecords()[3] = descriptor_record;
-  handle.GetHeaderRecord().count = 3;
+
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
 
   handle.BindNewDescriptorRecord(1, descriptor_record);
 
@@ -51,9 +55,9 @@ TEST(BindNewDescriptorRecord, DoNotUpdateCount) {
 TEST(UnbindDescriptorRecord, CountIsOldMaxIndex) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
-  handle.GetDescriptorRecords()[1] = descriptor_record;
-  handle.GetDescriptorRecords()[3] = descriptor_record;
-  handle.GetHeaderRecord().count = 3;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
 
   StatusRecordOr<DescriptorRecord> status = handle.UnbindDescriptorRecord(1);
 
@@ -64,9 +68,9 @@ TEST(UnbindDescriptorRecord, CountIsOldMaxIndex) {
 TEST(UnbindDescriptorRecord, CountIsNewMaxIndex) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
-  handle.GetDescriptorRecords()[1] = descriptor_record;
-  handle.GetDescriptorRecords()[3] = descriptor_record;
-  handle.GetHeaderRecord().count = 3;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
 
   StatusRecordOr<DescriptorRecord> status = handle.UnbindDescriptorRecord(3);
 
