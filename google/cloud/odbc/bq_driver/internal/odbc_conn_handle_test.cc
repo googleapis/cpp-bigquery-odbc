@@ -193,6 +193,126 @@ TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringValue) {
   delete conn_handle;
 }
 
+TEST(ConnectionHandle, GetAttribute_Fail_UnsupportedGetAttribute) {
+  ConnectionHandle conn_handle;
+  SQLULEN val;
+  SQLINTEGER str_len;
+  auto status_record =
+      conn_handle.GetAttribute(SQL_ATTR_ODBC_CURSORS, &val, 0, &str_len);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
+}
+
+TEST(ConnectionHandle, GetAttribute_Fail_NullStrLenPtr) {
+  ConnectionHandle conn_handle;
+  SQLUINTEGER val;
+  auto status_record =
+      conn_handle.GetAttribute(SQL_ATTR_ACCESS_MODE, &val, 0, nullptr);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY001());
+}
+
+TEST(ConnectionHandle, GetAttribute_Fail_InvalidConnectionBehavior) {
+  ConnectionHandle conn_handle;
+  SQLUINTEGER val;
+  SQLINTEGER str_len;
+  auto status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CONNECTION_DEAD, &val, 0, &str_len);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08003());
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLUInteger) {
+  ConnectionHandle conn_handle;
+  SQLUINTEGER val;
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLUINTEGER);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_ACCESS_MODE, &val, 0, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(val, (SQLUINTEGER)SQL_MODE_READ_ONLY);
+  EXPECT_EQ(str_len, expected_len);
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLULEN) {
+  ConnectionHandle conn_handle;
+  SQLULEN val;
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLULEN);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE, &val, 0, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(val, (SQLUINTEGER)SQL_ASYNC_ENABLE_OFF);
+  EXPECT_EQ(str_len, expected_len);
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLIntBitmask) {
+  ConnectionHandle conn_handle;
+  SQLINTEGER val;
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLINTEGER);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_SERIALIZABLE, 0);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_TXN_ISOLATION, &val, 0, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(val, (SQLUINTEGER)SQL_TRANSACTION_SERIALIZABLE);
+  EXPECT_EQ(str_len, expected_len);
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
+  ConnectionHandle conn_handle;
+  SQLCHAR buf_in[256] = "test";
+  SQLCHAR buf_out[256];
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLINTEGER);
+  auto status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
+  EXPECT_EQ(actual_val, "test");
+  EXPECT_EQ(str_len, expected_len);
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferSmaller) {
+  ConnectionHandle conn_handle;
+  SQLCHAR buf_in[256] = "test";
+  SQLCHAR buf_out[256];
+  SQLINTEGER str_len;
+  auto status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 3, &str_len);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_01004());
+}
+
+TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
+  ConnectionHandle conn_handle;
+  SQLCHAR buf_in[256] = "test";
+  SQLCHAR buf_out[256];
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLINTEGER);
+  auto status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 4, &str_len);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_01004());
+}
+
 // TODO(171): Add tests which use refresh token
 
 }  // namespace google::cloud::odbc_bq_driver_internal

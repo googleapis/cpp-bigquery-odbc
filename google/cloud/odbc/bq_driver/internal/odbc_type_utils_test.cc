@@ -51,7 +51,7 @@ TEST(StringValueToOutputBufferResponse,
   EXPECT_EQ("String data, right truncated", status_record.message);
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("samp", actual);
-  EXPECT_EQ(11, str_len);
+  EXPECT_EQ(4, str_len);
 }
 
 TEST(StringValueToOutputBufferResponse,
@@ -69,7 +69,7 @@ TEST(StringValueToOutputBufferResponse,
   EXPECT_EQ("String data, right truncated", status_record.message);
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("samp", actual);
-  EXPECT_EQ(5, str_len);
+  EXPECT_EQ(4, str_len);
 }
 
 TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_Zero) {
@@ -84,7 +84,7 @@ TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_Zero) {
   ASSERT_TRUE(status_record.ok());
   std::string actual = reinterpret_cast<char*>(dest);
   EXPECT_EQ("", actual);
-  EXPECT_EQ(11, str_len);
+  EXPECT_EQ(0, str_len);
 }
 
 TEST(StringValueToOutputBufferResponse, Success_StcLenLen_Zero) {

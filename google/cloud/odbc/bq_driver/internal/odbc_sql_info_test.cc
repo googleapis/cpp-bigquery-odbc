@@ -413,7 +413,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
   std::string actual = reinterpret_cast<char*>(dest);
 
   EXPECT_EQ("samp", actual);
-  EXPECT_EQ(str_len, 11);
+  EXPECT_EQ(str_len, 4);
 }
 
 TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
@@ -432,7 +432,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
   std::string actual = reinterpret_cast<char*>(dest);
 
   EXPECT_EQ("samp", actual);
-  EXPECT_EQ(str_len, 5);
+  EXPECT_EQ(str_len, 4);
 }
 
 TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
@@ -451,7 +451,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
   std::string actual = reinterpret_cast<char*>(dest);
 
   EXPECT_EQ("", actual);
-  EXPECT_EQ(str_len, 11);
+  EXPECT_EQ(str_len, 0);
 }
 
 TEST(InfoValToResponse, SQLGetInfoChar_SrcLenZero) {

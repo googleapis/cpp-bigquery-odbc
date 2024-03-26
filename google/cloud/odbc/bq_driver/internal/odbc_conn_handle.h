@@ -68,7 +68,8 @@ class ConnectionHandle : public Handle {
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
   odbc_internal::StatusRecord GetAttribute(SQLINTEGER attribute,
-                                           SQLPOINTER value, SQLINTEGER length);
+                                           SQLPOINTER value, SQLINTEGER buf_len,
+                                           SQLINTEGER* str_len);
 
   odbc_internal::StatusRecord SetAttribute(SQLINTEGER attribute,
                                            SQLPOINTER value, SQLINTEGER length);

@@ -38,18 +38,29 @@ StatusRecord StringValueToOutputBufferResponse(char const* src,
   }
 
   char* dest = reinterpret_cast<char*>(buffer_ptr);
+  auto status_record = StatusRecord::Ok();
 
   if (src_len == 0 || buffer_len == 0) {
     *dest = '\0';
   } else if (src_len < buffer_len) {
+    std::cout << "JAYA-1" << std::endl;
     strncpy(dest, src, src_len);
     dest[src_len] = '\0';
   } else {
+    std::cout << "JAYA-2" << std::endl;
     strncpy(dest, src, (buffer_len - 1));
     dest[buffer_len - 1] = '\0';
-    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  return StatusRecord::Ok();
+  // Update the str_len_ptr to be that of the destination buffer
+  // as per the spec.
+  SQLSMALLINT dest_len = strlen(dest);
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(dest_len);
+  }
+
+  return status_record;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

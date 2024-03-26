@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -33,6 +34,29 @@ bool IsAttributeValueValid(std::vector<SQLPOINTER>& possible_values,
                        auto actual_val = reinterpret_cast<std::size_t>(value);
                        return (expected_val == actual_val);
                      });
+}
+
+StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
+                                ConnectionValidation const& connect_attrib) {
+  switch (connect_attrib) {
+    case ConnectionValidation::kBefore: {
+      if (isConnected) {
+        err_msg.append("Attribute cannot be set after connection is made");
+        return StatusRecord{SQLStates::k_HY000(), err_msg};
+      }
+    }
+    case ConnectionValidation::kAfter: {
+      if (!isConnected) {
+        err_msg.append("Connection not open");
+        return StatusRecord{SQLStates::k_08003(), err_msg};
+      }
+    }
+    case ConnectionValidation::kInvalid: {
+      err_msg.append("Attribute not supported by the driver");
+      return StatusRecord{SQLStates::k_HY092(), err_msg};
+    }
+  }
+  return StatusRecord::Ok();
 }
 
 }  // namespace
@@ -68,6 +92,101 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   return StatusRecord::Ok();
 }
 
+odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
+    SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER buf_len,
+    SQLINTEGER* str_len) {
+  ConnectionAttr conn_attr;
+  std::string err_msg = "Failed to get attribute [";
+  err_msg.append(conn_attr.GetAttributeStringValue(attribute)).append("]: ");
+  // 1) Check if GET attribute is supported.
+  if (!conn_attr.IsGetAttributeSupported(attribute)) {
+    err_msg.append("Attribute not supported by the driver");
+    return StatusRecord{SQLStates::k_HY092(), err_msg};
+  }
+  // 2) Ensure strigth length pointeris valid.
+  // The memory should be allocated by the caller.
+  if (!str_len) {
+    err_msg.append("Invalid string length pointer");
+    return StatusRecord{SQLStates::k_HY001(), err_msg};
+  }
+  // 3) Check if attribute is valid with respect to connection.
+  auto status_record =
+      ValidateConnection(IsConnected(), err_msg,
+                         conn_attr.GetAttributeConnectionBehavior(attribute));
+  if (!status_record.ok()) {
+    return status_record;
+  }
+  // 4) Get attribute value
+  auto attrib_val_found =
+      attribute_values_.find(attribute) != attribute_values_.end();
+  auto default_value = conn_attr.GetAttributeDefaultValue(attribute);
+  SQLRETURN rc;
+  SQLSMALLINT len;
+  switch (conn_attr.GetAttributeValueType(attribute)) {
+    case ConnectionValueType::kSqlInt:
+    case ConnectionValueType::kSqlIntBitmask: {
+      if (attrib_val_found) {
+        rc = IntValueToOutputBufferResponse<SQLINTEGER>(
+            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
+            &len);
+      } else if (default_value) {
+        rc = IntValueToOutputBufferResponse<SQLINTEGER>(
+            reinterpret_cast<size_t>(default_value), value, &len);
+      }
+      break;
+    }
+    case ConnectionValueType::kSqlUInt: {
+      if (attrib_val_found) {
+        rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
+            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
+            &len);
+      } else if (default_value) {
+        rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
+            reinterpret_cast<size_t>(default_value), value, &len);
+      }
+      break;
+    }
+    case ConnectionValueType::kSqlULen: {
+      if (attrib_val_found) {
+        rc = IntValueToOutputBufferResponse<SQLULEN>(
+            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
+            &len);
+      } else if (default_value) {
+        rc = IntValueToOutputBufferResponse<SQLULEN>(
+            reinterpret_cast<size_t>(default_value), value, &len);
+      }
+      break;
+    }
+    case ConnectionValueType::kSqlChr: {
+      char* src;
+      SQLSMALLINT len;
+      if (attrib_val_found) {
+        src = reinterpret_cast<char*>(attribute_values_[attribute]);
+      } else if (default_value) {
+        src = reinterpret_cast<char*>(default_value);
+      }
+      auto status_record =
+          StringValueToOutputBufferResponse(src, value, buf_len, &len);
+      if (status_record.ok()) {
+        *str_len = static_cast<SQLINTEGER>(len);
+      }
+      return status_record;
+    }
+    default: {
+      err_msg.append("Invalid attribute value type.");
+      return StatusRecord{SQLStates::k_HY024(), err_msg};
+    }
+  }
+
+  if (rc != SQL_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Unable to retrieve int attribute value"};
+  }
+
+  *str_len = static_cast<SQLINTEGER>(len);
+  return StatusRecord::Ok();
+}
+
 StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
                                             SQLPOINTER value,
                                             SQLINTEGER length) {
@@ -81,23 +200,11 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
     return StatusRecord{SQLStates::k_HY092(), err_msg};
   }
   // 2) Check if attribute is valid with repsect to connection.
-  switch (conn_attr.GetAttributeConnectionBehavior(attribute)) {
-    case ConnectionValidation::kBefore: {
-      if (IsConnected()) {
-        err_msg.append("Attribute cannot be set after connection is made");
-        return StatusRecord{SQLStates::k_HY000(), err_msg};
-      }
-    }
-    case ConnectionValidation::kAfter: {
-      if (!IsConnected()) {
-        err_msg.append("Connection not open");
-        return StatusRecord{SQLStates::k_08003(), err_msg};
-      }
-    }
-    case ConnectionValidation::kInvalid: {
-      err_msg.append("Attribute not supported by the driver");
-      return StatusRecord{SQLStates::k_HY092(), err_msg};
-    }
+  auto status_record =
+      ValidateConnection(IsConnected(), err_msg,
+                         conn_attr.GetAttributeConnectionBehavior(attribute));
+  if (!status_record.ok()) {
+    return status_record;
   }
   // 3) Check validity with respect to attribute value.
   switch (conn_attr.GetAttributeValueType(attribute)) {
