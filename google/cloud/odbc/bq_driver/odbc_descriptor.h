@@ -27,7 +27,15 @@
 // SQLCopyDescInternal
 ///////////////////////////////////////////////////////////
 
+#include "google/cloud/odbc/internal/odbc_includes.h"
+
 namespace google::cloud::odbc_bq_driver {
+
+SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
+                                  SQLSMALLINT rec_number,
+                                  SQLSMALLINT field_identifier,
+                                  SQLPOINTER desc_value,
+                                  SQLINTEGER desc_value_buffer_len);
 
 }  // namespace google::cloud::odbc_bq_driver
 

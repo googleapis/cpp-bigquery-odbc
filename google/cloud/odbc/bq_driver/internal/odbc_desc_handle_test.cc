@@ -78,6 +78,18 @@ TEST(UnbindDescriptorRecord, CountIsNewMaxIndex) {
   EXPECT_EQ(1, handle.GetHeaderRecord().count);
 }
 
+TEST(UnbindDescriptorRecord, CountIsZero) {
+  DescriptorHandle handle;
+  DescriptorRecord descriptor_record;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  EXPECT_EQ(1, handle.GetHeaderRecord().count);
+
+  StatusRecordOr<DescriptorRecord> status = handle.UnbindDescriptorRecord(1);
+
+  ASSERT_STATUS_RECORD_OK(status);
+  EXPECT_EQ(0, handle.GetHeaderRecord().count);
+}
+
 TEST(UnbindDescriptorRecord, Fails_WrongIndex) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
@@ -87,6 +99,51 @@ TEST(UnbindDescriptorRecord, Fails_WrongIndex) {
   EXPECT_THAT(status,
               StatusRecordIs(SQLStates::k_HY000(),
                              HasSubstr("non-existent descriptor record")));
+}
+
+TEST(SetName, SetName) {
+  DescriptorRecord descriptor_record;
+
+  descriptor_record.SetName("test", 4);
+
+  EXPECT_EQ("test", descriptor_record.name);
+  EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
+}
+
+TEST(SetName, SetName_SQL_NTS) {
+  DescriptorRecord descriptor_record;
+
+  descriptor_record.SetName("test", SQL_NTS);
+
+  EXPECT_EQ("test", descriptor_record.name);
+  EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
+}
+
+TEST(SetName, SetName_Truncated) {
+  DescriptorRecord descriptor_record;
+
+  descriptor_record.SetName("test", 2);
+
+  EXPECT_EQ("te", descriptor_record.name);
+  EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
+}
+
+TEST(SetName, SetName_EmptyString) {
+  DescriptorRecord descriptor_record;
+
+  descriptor_record.SetName("", 2);
+
+  EXPECT_EQ("", descriptor_record.name);
+  EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
+}
+
+TEST(SetName, SetName_ZeroLength) {
+  DescriptorRecord descriptor_record;
+
+  descriptor_record.SetName("test", 0);
+
+  EXPECT_EQ("", descriptor_record.name);
+  EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -41,11 +41,13 @@ struct SQLStates {
   static inline std::string k_01S02() { return "01S02"; };
   static inline std::string k_01S06() { return "01S06"; };
   static inline std::string k_01S07() { return "01S07"; };
+  static inline std::string k_07009() { return "07009"; };
   static inline std::string k_07S01() { return "07S01"; };
   static inline std::string k_08S01() { return "08S01"; };
   static inline std::string k_08003() { return "08003"; };
   static inline std::string k_21S01() { return "21S01"; };
   static inline std::string k_21S02() { return "21S02"; };
+  static inline std::string k_22001() { return "22001"; };
   static inline std::string k_25S01() { return "25S01"; };
   static inline std::string k_25S02() { return "25S02"; };
   static inline std::string k_25S03() { return "25S03"; };
@@ -62,6 +64,7 @@ struct SQLStates {
   static inline std::string k_HY009() { return "HY009"; };
   static inline std::string k_HY024() { return "HY024"; };
   static inline std::string k_HY090() { return "HY090"; };
+  static inline std::string k_HY091() { return "HY091"; };
   static inline std::string k_HY092() { return "HY092"; };
   static inline std::string k_HY095() { return "HY095"; };
   static inline std::string k_HY096() { return "HY096"; };

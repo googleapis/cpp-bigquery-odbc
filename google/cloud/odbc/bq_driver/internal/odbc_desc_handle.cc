@@ -33,11 +33,26 @@ StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
   if (descriptor_records_.count(index)) {
     DescriptorRecord erased = descriptor_records_[index];
     descriptor_records_.erase(index);
-    header_record_.count = descriptor_records_.rbegin()->first;
+    header_record_.count =
+        descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
     return erased;
   }
   return StatusRecord{SQLStates::k_HY000(),
                       "Trying to unbind non-existent descriptor record"};
+}
+
+void DescriptorRecord::SetName(std::string const& val, SQLINTEGER buffer_len) {
+  if (val.empty() || buffer_len == 0) {
+    name = "";
+    unnamed = SQL_UNNAMED;
+  } else {
+    if (buffer_len == SQL_NTS || buffer_len >= val.size()) {
+      name = val;
+    } else {
+      name = val.substr(0, buffer_len);
+    }
+    unnamed = SQL_NAMED;
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
