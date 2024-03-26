@@ -119,7 +119,7 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
   // 4) Get attribute value
   auto attrib_val_found =
       attribute_values_.find(attribute) != attribute_values_.end();
-  auto default_value = conn_attr.GetAttributeDefaultValue(attribute);
+  auto* default_value = conn_attr.GetAttributeDefaultValue(attribute);
   SQLRETURN rc;
   SQLSMALLINT len;
   switch (conn_attr.GetAttributeValueType(attribute)) {
