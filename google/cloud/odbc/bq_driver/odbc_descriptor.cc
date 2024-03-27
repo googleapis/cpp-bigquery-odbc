@@ -89,42 +89,33 @@ SQLRETURN SetNumPrecRadix(DescriptorHandle* handle,
                           DescriptorRecord& descriptor_record,
                           std::size_t desc_int_value) {
   auto value = static_cast<SQLINTEGER>(desc_int_value);
-  if (value != 0 && value != 2 && value != 10) {
-    StatusRecord status_record{SQLStates::k_HY092(),
-                               "Invalid attribute/option identifier"};
+  StatusRecord status_record = descriptor_record.SetNumPrecRadix(value);
+  if (!status_record.ok()) {
     handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
   }
-  descriptor_record.num_prec_radix = value;
-  return SQL_SUCCESS;
+  return status_record.CalculateReturnCode();
 }
 
 SQLRETURN SetParameterType(DescriptorHandle* handle,
                            DescriptorRecord& descriptor_record,
                            std::size_t desc_int_value) {
   auto value = static_cast<SQLSMALLINT>(desc_int_value);
-  if (value != SQL_PARAM_INPUT && value != SQL_PARAM_INPUT_OUTPUT &&
-      value != SQL_PARAM_OUTPUT) {
-    StatusRecord status_record{SQLStates::k_HY105(), "Invalid parameter type"};
+  StatusRecord status_record = descriptor_record.SetParameterType(value);
+  if (!status_record.ok()) {
     handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
   }
-  descriptor_record.parameter_type = value;
-  return SQL_SUCCESS;
+  return status_record.CalculateReturnCode();
 }
 
 SQLRETURN SetUnnamed(DescriptorHandle* handle,
                      DescriptorRecord& descriptor_record,
                      std::size_t desc_int_value) {
   auto value = static_cast<SQLSMALLINT>(desc_int_value);
-  if (value != SQL_UNNAMED) {
-    StatusRecord status_record{SQLStates::k_HY091(),
-                               "Invalid descriptor field identifier"};
+  StatusRecord status_record = descriptor_record.SetUnnamed(value);
+  if (!status_record.ok()) {
     handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
   }
-  descriptor_record.unnamed = value;
-  return SQL_SUCCESS;
+  return status_record.CalculateReturnCode();
 }
 
 SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,

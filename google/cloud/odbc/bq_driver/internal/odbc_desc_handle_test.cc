@@ -197,4 +197,101 @@ TEST(SetName, SetName_ZeroLength) {
   EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
 }
 
+TEST(SetNumPrecRadix, SetForNonNumericValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetNumPrecRadix(kNumPrecRadixForNonNumeric);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(kNumPrecRadixForNonNumeric, descriptor_record.num_prec_radix);
+}
+
+TEST(SetNumPrecRadix, SetForApproximateNumericValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetNumPrecRadix(kNumPrecRadixForApproximateNumeric);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(kNumPrecRadixForApproximateNumeric,
+            descriptor_record.num_prec_radix);
+}
+
+TEST(SetNumPrecRadix, SetForExactNumericValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetNumPrecRadix(kNumPrecRadixForExactNumeric);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(kNumPrecRadixForExactNumeric, descriptor_record.num_prec_radix);
+}
+
+TEST(SetNumPrecRadix, Fails_InvalidValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record = descriptor_record.SetNumPrecRadix(8);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
+}
+
+TEST(SetParameterType, Set_SQL_PARAM_INPUT) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetParameterType(SQL_PARAM_INPUT);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(SQL_PARAM_INPUT, descriptor_record.parameter_type);
+}
+
+TEST(SetParameterType, Set_SQL_PARAM_INPUT_OUTPUT) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetParameterType(SQL_PARAM_INPUT_OUTPUT);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(SQL_PARAM_INPUT_OUTPUT, descriptor_record.parameter_type);
+}
+
+TEST(SetParameterType, Set_SQL_PARAM_OUTPUT) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record =
+      descriptor_record.SetParameterType(SQL_PARAM_OUTPUT);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(SQL_PARAM_OUTPUT, descriptor_record.parameter_type);
+}
+
+TEST(SetParameterType, Fails_InvalidValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record = descriptor_record.SetParameterType(111);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_HY105(), status_record.sql_state);
+}
+
+TEST(SetUnnamed, Set_SQL_UNNAMED) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record = descriptor_record.SetUnnamed(SQL_UNNAMED);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
+}
+
+TEST(SetUnnamed, Fails_InvalidValue) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record = descriptor_record.SetUnnamed(111);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_HY091(), status_record.sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

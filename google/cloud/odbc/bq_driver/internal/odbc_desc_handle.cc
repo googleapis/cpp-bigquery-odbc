@@ -72,4 +72,31 @@ void DescriptorRecord::SetName(std::string const& val,
   }
 }
 
+StatusRecord DescriptorRecord::SetNumPrecRadix(SQLINTEGER value) {
+  if (value != kNumPrecRadixForNonNumeric &&
+      value != kNumPrecRadixForApproximateNumeric &&
+      value != kNumPrecRadixForExactNumeric) {
+    return {SQLStates::k_HY092(), "Invalid attribute/option identifier"};
+  }
+  num_prec_radix = value;
+  return StatusRecord::Ok();
+}
+
+StatusRecord DescriptorRecord::SetParameterType(SQLSMALLINT value) {
+  if (value != SQL_PARAM_INPUT && value != SQL_PARAM_INPUT_OUTPUT &&
+      value != SQL_PARAM_OUTPUT) {
+    return {SQLStates::k_HY105(), "Invalid parameter type"};
+  }
+  parameter_type = value;
+  return StatusRecord::Ok();
+}
+
+StatusRecord DescriptorRecord::SetUnnamed(SQLSMALLINT value) {
+  if (value != SQL_UNNAMED) {
+    return {SQLStates::k_HY091(), "Invalid descriptor field identifier"};
+  }
+  unnamed = value;
+  return StatusRecord::Ok();
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
