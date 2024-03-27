@@ -101,6 +101,57 @@ TEST(UnbindDescriptorRecord, Fails_WrongIndex) {
                              HasSubstr("non-existent descriptor record")));
 }
 
+TEST(UnbindAllDescriptorRecordsFrom, UnbindAll) {
+  DescriptorHandle handle;
+  DescriptorRecord descriptor_record;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+
+  StatusRecord status = handle.UnbindAllDescriptorRecordsFrom(0);
+
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(0, handle.GetHeaderRecord().count);
+}
+
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NewIndexIsTooBig) {
+  DescriptorHandle handle;
+  DescriptorRecord descriptor_record;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+
+  StatusRecord status = handle.UnbindAllDescriptorRecordsFrom(5);
+
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+}
+
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NoRecords) {
+  DescriptorHandle handle;
+  DescriptorRecord descriptor_record;
+  EXPECT_EQ(0, handle.GetHeaderRecord().count);
+
+  StatusRecord status = handle.UnbindAllDescriptorRecordsFrom(5);
+
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(0, handle.GetHeaderRecord().count);
+}
+
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NegativeIndex) {
+  DescriptorHandle handle;
+  DescriptorRecord descriptor_record;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+
+  StatusRecord status = handle.UnbindAllDescriptorRecordsFrom(-5);
+
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(SQLStates::k_07009(), status.sql_state);
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+}
+
 TEST(SetName, SetName) {
   DescriptorRecord descriptor_record;
 

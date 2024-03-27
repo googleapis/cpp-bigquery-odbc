@@ -41,6 +41,21 @@ StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
                       "Trying to unbind non-existent descriptor record"};
 }
 
+StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(int index) {
+  if (index < 0) {
+    return {SQLStates::k_07009(), "Invalid descriptor index"};
+  }
+  int old_val = header_record_.count;
+  for (int i = index + 1; i <= old_val; i++) {
+    if (descriptor_records_.count(i)) {
+      descriptor_records_.erase(i);
+    }
+  }
+  header_record_.count =
+      descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
+  return StatusRecord::Ok();
+}
+
 void DescriptorRecord::SetName(std::string const& val,
                                SQLINTEGER const buffer_len) {
   if (val.empty() || buffer_len == 0) {

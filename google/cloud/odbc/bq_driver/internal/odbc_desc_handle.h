@@ -104,6 +104,8 @@ class DescriptorHandle : public Handle {
   odbc_internal::StatusRecordOr<DescriptorRecord> UnbindDescriptorRecord(
       int index);
 
+  odbc_internal::StatusRecord UnbindAllDescriptorRecordsFrom(int index);
+
  private:
   DescriptorType type_;
   HeaderRecord header_record_;

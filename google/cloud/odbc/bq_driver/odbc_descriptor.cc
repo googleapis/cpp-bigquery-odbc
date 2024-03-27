@@ -51,34 +51,30 @@ static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
 
 SQLRETURN SetCount(DescriptorHandle* handle, std::size_t desc_int_value) {
   auto new_val = static_cast<SQLSMALLINT>(desc_int_value);
-  if (new_val < 0) {
-    handle->GetDiagnostics().AddStatusRecord(
-        StatusRecord{SQLStates::k_07009(), "Invalid descriptor index"});
-    return SQL_ERROR;
+  if (new_val >= handle->GetHeaderRecord().count) {
+    handle->GetHeaderRecord().count = new_val;
+    return SQL_SUCCESS;
   }
-  int old_val = handle->GetHeaderRecord().count;
-  // Unbind everything, which is greater than new SQL_DESC_COUNT
-  if (new_val < old_val) {
-    for (int i = new_val + 1; i <= old_val; i++) {
-      // Skipping positive/negative results for speed
-      handle->UnbindDescriptorRecord(i);
-    }
+  StatusRecord status_record = handle->UnbindAllDescriptorRecordsFrom(
+      static_cast<SQLSMALLINT>(desc_int_value));
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
   }
-  handle->GetHeaderRecord().count = new_val;
-  return SQL_SUCCESS;
+  return status_record.CalculateReturnCode();
 }
 
 SQLRETURN SetName(DescriptorHandle* handle, DescriptorRecord& descriptor_record,
                   SQLPOINTER desc_value, SQLINTEGER buffer_len) {
   if (buffer_len > SQL_MAX_IDENTIFIER_LEN) {
-    handle->GetDiagnostics().AddStatusRecord(
-        {SQLStates::k_22001(), "String data, right truncated"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_22001(),
+                               "String data, right truncated"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
   if (buffer_len < 0 && buffer_len != SQL_NTS) {
-    handle->GetDiagnostics().AddStatusRecord(
-        {SQLStates::k_HY090(), "Invalid buffer length"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_HY090(), "Invalid buffer length"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
   if (desc_value) {
     descriptor_record.SetName(reinterpret_cast<char*>(desc_value), buffer_len);
@@ -94,9 +90,10 @@ SQLRETURN SetNumPrecRadix(DescriptorHandle* handle,
                           std::size_t desc_int_value) {
   auto value = static_cast<SQLINTEGER>(desc_int_value);
   if (value != 0 && value != 2 && value != 10) {
-    handle->GetDiagnostics().AddStatusRecord(StatusRecord{
-        SQLStates::k_HY092(), "Invalid attribute/option identifier"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_HY092(),
+                               "Invalid attribute/option identifier"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
   descriptor_record.num_prec_radix = value;
   return SQL_SUCCESS;
@@ -108,9 +105,9 @@ SQLRETURN SetParameterType(DescriptorHandle* handle,
   auto value = static_cast<SQLSMALLINT>(desc_int_value);
   if (value != SQL_PARAM_INPUT && value != SQL_PARAM_INPUT_OUTPUT &&
       value != SQL_PARAM_OUTPUT) {
-    handle->GetDiagnostics().AddStatusRecord(
-        StatusRecord{SQLStates::k_HY105(), "Invalid parameter type"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_HY105(), "Invalid parameter type"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
   descriptor_record.parameter_type = value;
   return SQL_SUCCESS;
@@ -121,9 +118,10 @@ SQLRETURN SetUnnamed(DescriptorHandle* handle,
                      std::size_t desc_int_value) {
   auto value = static_cast<SQLSMALLINT>(desc_int_value);
   if (value != SQL_UNNAMED) {
-    handle->GetDiagnostics().AddStatusRecord(StatusRecord{
-        SQLStates::k_HY091(), "Invalid descriptor field identifier"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_HY091(),
+                               "Invalid descriptor field identifier"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
   descriptor_record.unnamed = value;
   return SQL_SUCCESS;
@@ -145,9 +143,10 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
 
   std::set<int> set = kAllowedFieldsToSet.at(handle->GetType());
   if (set.find(field_identifier) == set.end()) {
-    handle->GetDiagnostics().AddStatusRecord(
-        {SQLStates::k_HY091(), "Invalid descriptor field identifier"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_HY091(),
+                               "Invalid descriptor field identifier"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
 
   auto desc_int_value = reinterpret_cast<size_t>(desc_value);
@@ -176,9 +175,10 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   }
 
   if (rec_number < 0) {
-    handle->GetDiagnostics().AddStatusRecord(
-        StatusRecord{SQLStates::k_07009(), "Invalid descriptor index"});
-    return SQL_ERROR;
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
 
   if (!handle->HasDescriptorRecord(rec_number)) {
@@ -240,9 +240,10 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
       return SetUnnamed(handle, descriptor_record, desc_int_value);
   }
 
-  handle->GetDiagnostics().AddStatusRecord(StatusRecord{
-      SQLStates::k_HY091(), "Invalid descriptor field identifier"});
-  return SQL_ERROR;
+  StatusRecord status_record{SQLStates::k_HY091(),
+                             "Invalid descriptor field identifier"};
+  handle->GetDiagnostics().AddStatusRecord(status_record);
+  return status_record.CalculateReturnCode();
 }
 
 }  // namespace google::cloud::odbc_bq_driver
