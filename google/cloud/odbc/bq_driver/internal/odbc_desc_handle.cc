@@ -47,9 +47,7 @@ StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(int index) {
   }
   int old_val = header_record_.count;
   for (int i = index + 1; i <= old_val; i++) {
-    if (descriptor_records_.count(i)) {
-      descriptor_records_.erase(i);
-    }
+    descriptor_records_.erase(i);
   }
   header_record_.count =
       descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
