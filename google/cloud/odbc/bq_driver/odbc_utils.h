@@ -54,7 +54,7 @@ odbc_internal::StatusRecordOr<T*> CastToHandle(HandleType handle_type,
 
 odbc_internal::StatusRecordOr<
     google::cloud::odbc_bq_driver_internal::ConnectionHandle*>
-ValidateConnectionHandle(SQLHDBC connection_handle, bool isConnected = true);
+ValidateConnectionHandle(SQLHDBC connection_handle, bool is_connected = true);
 
 odbc_internal::StatusRecordOr<
     google::cloud::odbc_bq_driver_internal::EnvironmentHandle*>
