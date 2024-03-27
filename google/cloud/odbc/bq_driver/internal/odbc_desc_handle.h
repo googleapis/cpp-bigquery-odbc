@@ -33,7 +33,7 @@ struct HeaderRecord {
 };
 
 struct DescriptorRecord {
-  void SetName(std::string const& val, SQLINTEGER const buffer_len);
+  void SetName(std::string const& val, SQLINTEGER buffer_len);
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
   std::string base_column_name;
