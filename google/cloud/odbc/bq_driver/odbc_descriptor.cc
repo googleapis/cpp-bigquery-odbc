@@ -49,9 +49,8 @@ static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
       SQL_DESC_NUM_PREC_RADIX, SQL_DESC_OCTET_LENGTH, SQL_DESC_PARAMETER_TYPE,
       SQL_DESC_PRECISION, SQL_DESC_SCALE, SQL_DESC_TYPE, SQL_DESC_UNNAMED}}};
 
-SQLRETURN SetCount(DescriptorHandle* handle, SQLPOINTER desc_value) {
-  auto new_val =
-      static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+SQLRETURN SetCount(DescriptorHandle* handle, std::size_t desc_int_value) {
+  auto new_val = static_cast<SQLSMALLINT>(desc_int_value);
   if (new_val < 0) {
     handle->GetDiagnostics().AddStatusRecord(
         StatusRecord{SQLStates::k_07009(), "Invalid descriptor index"});
@@ -92,8 +91,8 @@ SQLRETURN SetName(DescriptorHandle* handle, DescriptorRecord& descriptor_record,
 
 SQLRETURN SetNumPrecRadix(DescriptorHandle* handle,
                           DescriptorRecord& descriptor_record,
-                          SQLPOINTER desc_value) {
-  auto value = static_cast<SQLINTEGER>(reinterpret_cast<SQLULEN>(desc_value));
+                          std::size_t desc_int_value) {
+  auto value = static_cast<SQLINTEGER>(desc_int_value);
   if (value != 0 && value != 2 && value != 10) {
     handle->GetDiagnostics().AddStatusRecord(StatusRecord{
         SQLStates::k_HY092(), "Invalid attribute/option identifier"});
@@ -105,8 +104,8 @@ SQLRETURN SetNumPrecRadix(DescriptorHandle* handle,
 
 SQLRETURN SetParameterType(DescriptorHandle* handle,
                            DescriptorRecord& descriptor_record,
-                           SQLPOINTER desc_value) {
-  auto value = static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+                           std::size_t desc_int_value) {
+  auto value = static_cast<SQLSMALLINT>(desc_int_value);
   if (value != SQL_PARAM_INPUT && value != SQL_PARAM_INPUT_OUTPUT &&
       value != SQL_PARAM_OUTPUT) {
     handle->GetDiagnostics().AddStatusRecord(
@@ -119,8 +118,8 @@ SQLRETURN SetParameterType(DescriptorHandle* handle,
 
 SQLRETURN SetUnnamed(DescriptorHandle* handle,
                      DescriptorRecord& descriptor_record,
-                     SQLPOINTER desc_value) {
-  auto value = static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+                     std::size_t desc_int_value) {
+  auto value = static_cast<SQLSMALLINT>(desc_int_value);
   if (value != SQL_UNNAMED) {
     handle->GetDiagnostics().AddStatusRecord(StatusRecord{
         SQLStates::k_HY091(), "Invalid descriptor field identifier"});
@@ -151,11 +150,13 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
     return SQL_ERROR;
   }
 
+  auto desc_int_value = reinterpret_cast<size_t>(desc_value);
+
   // HeaderRecord fields
   HeaderRecord& header_record = handle->GetHeaderRecord();
   switch (field_identifier) {
     case SQL_DESC_ARRAY_SIZE:
-      header_record.array_size = reinterpret_cast<SQLULEN>(desc_value);
+      header_record.array_size = static_cast<SQLULEN>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_ARRAY_STATUS_PTR:
       header_record.array_status_ptr =
@@ -165,11 +166,10 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
       header_record.bind_offset_ptr = reinterpret_cast<SQLLEN*>(desc_value);
       return SQL_SUCCESS;
     case SQL_DESC_BIND_TYPE:
-      header_record.bind_type =
-          static_cast<SQLINTEGER>(reinterpret_cast<SQLULEN>(desc_value));
+      header_record.bind_type = static_cast<SQLINTEGER>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_COUNT:
-      return SetCount(handle, desc_value);
+      return SetCount(handle, desc_int_value);
     case SQL_DESC_ROWS_PROCESSED_PTR:
       header_record.rows_processed_ptr = reinterpret_cast<SQLULEN*>(desc_value);
       return SQL_SUCCESS;
@@ -191,8 +191,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   switch (field_identifier) {
     case SQL_DESC_CONCISE_TYPE:
       // TODO(331355556) set SQL_DESC_TYPE and SQL_DESC_DATETIME_INTERVAL_CODE
-      descriptor_record.concise_type =
-          static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+      descriptor_record.concise_type = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_DATA_PTR:
       descriptor_record.data_ptr = desc_value;
@@ -200,49 +199,45 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
       return SQL_SUCCESS;
     case SQL_DESC_DATETIME_INTERVAL_CODE:
       // TODO(331355556) set SQL_DESC_TYPE and SQL_DESC_CONCISE_TYPE
-      descriptor_record.concise_type =
-          static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+      descriptor_record.concise_type = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_DATETIME_INTERVAL_PRECISION:
       descriptor_record.datetime_interval_precision =
-          static_cast<SQLINTEGER>(reinterpret_cast<SQLULEN>(desc_value));
+          static_cast<SQLINTEGER>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_INDICATOR_PTR:
       descriptor_record.indicator_ptr = reinterpret_cast<SQLLEN*>(desc_value);
       return SQL_SUCCESS;
     case SQL_DESC_LENGTH:
-      descriptor_record.length = reinterpret_cast<SQLULEN>(desc_value);
+      descriptor_record.length = static_cast<SQLULEN>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_NAME:
       return SetName(handle, descriptor_record, desc_value,
                      desc_value_buffer_len);
     case SQL_DESC_NUM_PREC_RADIX:
-      return SetNumPrecRadix(handle, descriptor_record, desc_value);
+      return SetNumPrecRadix(handle, descriptor_record, desc_int_value);
     case SQL_DESC_OCTET_LENGTH:
-      descriptor_record.octet_length = reinterpret_cast<SQLLEN>(desc_value);
+      descriptor_record.octet_length = static_cast<SQLLEN>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_OCTET_LENGTH_PTR:
       descriptor_record.octet_length_ptr =
           reinterpret_cast<SQLLEN*>(desc_value);
       return SQL_SUCCESS;
     case SQL_DESC_PARAMETER_TYPE:
-      return SetParameterType(handle, descriptor_record, desc_value);
+      return SetParameterType(handle, descriptor_record, desc_int_value);
     case SQL_DESC_PRECISION:
-      descriptor_record.precision =
-          static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+      descriptor_record.precision = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_SCALE:
-      descriptor_record.scale =
-          static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+      descriptor_record.scale = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_TYPE:
       // TODO(331355556) set SQL_DESC_DATETIME_INTERVAL_CODE and
       // SQL_DESC_CONCISE_TYPE
-      descriptor_record.type =
-          static_cast<SQLSMALLINT>(reinterpret_cast<SQLULEN>(desc_value));
+      descriptor_record.type = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_UNNAMED:
-      return SetUnnamed(handle, descriptor_record, desc_value);
+      return SetUnnamed(handle, descriptor_record, desc_int_value);
   }
 
   handle->GetDiagnostics().AddStatusRecord(StatusRecord{
