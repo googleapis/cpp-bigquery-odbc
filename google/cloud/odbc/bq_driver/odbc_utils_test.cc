@@ -51,6 +51,15 @@ TEST(ValidateConnectionHandle, Success) {
   ASSERT_STATUS_RECORD_OK(result);
 }
 
+TEST(ValidateConnectionHandle, SuccessNotConnected) {
+  OdbcUtilsConnectionHandleTest conn_handle;
+  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
+
+  auto result = ValidateConnectionHandle(&wrapped_handle, false);
+
+  ASSERT_STATUS_RECORD_OK(result);
+}
+
 TEST(ValidateConnectionHandle, InvalidNullPtr) {
   auto result = ValidateConnectionHandle(nullptr);
 

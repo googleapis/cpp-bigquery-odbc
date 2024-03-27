@@ -28,7 +28,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
-    SQLHDBC connection_handle) {
+    SQLHDBC connection_handle, bool is_connected) {
   auto conn_handle_ptr_status = CastToHandle<ConnectionHandle>(
       HandleType::kConnHandle, connection_handle);
   if (!conn_handle_ptr_status) {
@@ -39,7 +39,7 @@ StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
   auto* conn_handle_ptr = *conn_handle_ptr_status;
   conn_handle_ptr->GetDiagnostics().ClearDiagnostics();
 
-  if (!conn_handle_ptr->IsConnected()) {
+  if (is_connected && !conn_handle_ptr->IsConnected()) {
     StatusRecord status_record{
         SQLStates::k_08003(), "Connection handle not connected to data source"};
     conn_handle_ptr->GetDiagnostics().AddStatusRecord(status_record);

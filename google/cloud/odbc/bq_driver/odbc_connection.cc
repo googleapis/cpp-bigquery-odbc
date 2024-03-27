@@ -30,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::Section;
+using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -147,6 +148,49 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     return SQL_ERROR;
   }
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
+                                    SQLINTEGER attribute, SQLPOINTER value,
+                                    SQLINTEGER buf_len, SQLINTEGER* str_len) {
+  TraceOptions& opts = *(*kTraceOptsConsole);
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(connection_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  auto* conn_handle = *handle_result;
+  auto status_record =
+      conn_handle->GetAttribute(attribute, value, buf_len, str_len);
+  if (!status_record.ok()) {
+    conn_handle->GetDiagnostics().AddStatusRecord(status_record);
+    TracePrintInternal(opts, status_record.message);
+  }
+
+  return status_record.CalculateReturnCode();
+}
+
+SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
+                                    SQLINTEGER attribute, SQLPOINTER value,
+                                    SQLINTEGER str_len) {
+  TraceOptions& opts = *(*kTraceOptsConsole);
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(connection_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  auto* conn_handle = *handle_result;
+  auto status_record = conn_handle->SetAttribute(attribute, value, str_len);
+  if (!status_record.ok()) {
+    conn_handle->GetDiagnostics().AddStatusRecord(status_record);
+    TracePrintInternal(opts, status_record.message);
+  }
+
+  return status_record.CalculateReturnCode();
 }
 
 }  // namespace google::cloud::odbc_bq_driver
