@@ -272,7 +272,6 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   SQLCHAR buf_in[256] = "test";
   SQLCHAR buf_out[256];
   SQLINTEGER str_len;
-  auto expected_len = sizeof(SQLINTEGER);
   auto status_record =
       conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
   EXPECT_TRUE(status_record.ok());
@@ -281,7 +280,30 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   EXPECT_TRUE(status_record.ok());
   std::string actual_val(reinterpret_cast<char*>(buf_out));
   EXPECT_EQ(actual_val, "test");
-  EXPECT_EQ(str_len, expected_len);
+  EXPECT_EQ(str_len, 4);
+
+  // This is same as doing a set attribute as shown below.
+  buf_in[0] = 'a';
+
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  std::string actual_val2(reinterpret_cast<char*>(buf_out));
+  // This value is correct as buf_in has been changed to "aest";
+  EXPECT_EQ(actual_val2, "aest");
+  EXPECT_EQ(str_len, 4);
+
+  // With set attribute
+  buf_in[0] = 'a';
+  status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  std::string actual_val3(reinterpret_cast<char*>(buf_out));
+  EXPECT_EQ(actual_val3, "aest");
+  EXPECT_EQ(str_len, 4);
 }
 
 TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferSmaller) {
@@ -295,7 +317,9 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferSmaller) {
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 3, &str_len);
   EXPECT_FALSE(status_record.ok());
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
   EXPECT_EQ(status_record.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(actual_val, "te");
 }
 
 TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
@@ -303,14 +327,15 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
   SQLCHAR buf_in[256] = "test";
   SQLCHAR buf_out[256];
   SQLINTEGER str_len;
-  auto expected_len = sizeof(SQLINTEGER);
   auto status_record =
       conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 4, &str_len);
   EXPECT_FALSE(status_record.ok());
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
   EXPECT_EQ(status_record.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(actual_val, "tes");
 }
 
 // TODO(171): Add tests which use refresh token

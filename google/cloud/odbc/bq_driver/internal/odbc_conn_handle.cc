@@ -117,53 +117,34 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
     return status_record;
   }
   // 4) Get attribute value
-  auto attrib_val_found =
+  bool attrib_val_found =
       attribute_values_.find(attribute) != attribute_values_.end();
-  auto* default_value = conn_attr.GetAttributeDefaultValue(attribute);
+  SQLPOINTER default_value = conn_attr.GetAttributeDefaultValue(attribute);
+  SQLPOINTER attr_val =
+      (attrib_val_found ? attribute_values_[attribute] : default_value);
   SQLRETURN rc;
   SQLSMALLINT len;
   switch (conn_attr.GetAttributeValueType(attribute)) {
     case ConnectionValueType::kSqlInt:
     case ConnectionValueType::kSqlIntBitmask: {
-      if (attrib_val_found) {
-        rc = IntValueToOutputBufferResponse<SQLINTEGER>(
-            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
-            &len);
-      } else if (default_value) {
-        rc = IntValueToOutputBufferResponse<SQLINTEGER>(
-            reinterpret_cast<size_t>(default_value), value, &len);
-      }
+      rc = IntValueToOutputBufferResponse<SQLINTEGER>(
+          reinterpret_cast<size_t>(attr_val), value, &len);
       break;
     }
     case ConnectionValueType::kSqlUInt: {
-      if (attrib_val_found) {
-        rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
-            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
-            &len);
-      } else if (default_value) {
-        rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
-            reinterpret_cast<size_t>(default_value), value, &len);
-      }
+      rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
+          reinterpret_cast<size_t>(attr_val), value, &len);
       break;
     }
     case ConnectionValueType::kSqlULen: {
-      if (attrib_val_found) {
-        rc = IntValueToOutputBufferResponse<SQLULEN>(
-            reinterpret_cast<size_t>(attribute_values_[attribute]), value,
-            &len);
-      } else if (default_value) {
-        rc = IntValueToOutputBufferResponse<SQLULEN>(
-            reinterpret_cast<size_t>(default_value), value, &len);
-      }
+      rc = IntValueToOutputBufferResponse<SQLULEN>(
+          reinterpret_cast<size_t>(attr_val), value, &len);
       break;
     }
     case ConnectionValueType::kSqlChr: {
       char* src;
-      SQLSMALLINT len;
-      if (attrib_val_found) {
-        src = reinterpret_cast<char*>(attribute_values_[attribute]);
-      } else if (default_value) {
-        src = reinterpret_cast<char*>(default_value);
+      if (attr_val != nullptr) {
+        src = reinterpret_cast<char*>(attr_val);
       }
       auto status_record =
           StringValueToOutputBufferResponse(src, value, buf_len, &len);

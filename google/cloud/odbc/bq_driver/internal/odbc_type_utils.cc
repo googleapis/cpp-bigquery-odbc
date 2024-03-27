@@ -43,11 +43,9 @@ StatusRecord StringValueToOutputBufferResponse(char const* src,
   if (src_len == 0 || buffer_len == 0) {
     *dest = '\0';
   } else if (src_len < buffer_len) {
-    std::cout << "JAYA-1" << std::endl;
     strncpy(dest, src, src_len);
     dest[src_len] = '\0';
   } else {
-    std::cout << "JAYA-2" << std::endl;
     strncpy(dest, src, (buffer_len - 1));
     dest[buffer_len - 1] = '\0';
     status_record =
