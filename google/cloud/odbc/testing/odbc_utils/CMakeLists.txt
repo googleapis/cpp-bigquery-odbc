@@ -40,7 +40,8 @@ add_library(
 target_include_directories(google_cloud_odbc_testing_odbc_utils
                            PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(google_cloud_odbc_testing_odbc_utils GTest::gtest)
+target_link_libraries(google_cloud_odbc_testing_odbc_utils
+                      google_cloud_cpp_common GTest::gtest)
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
 # target

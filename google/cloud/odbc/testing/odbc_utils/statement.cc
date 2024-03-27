@@ -13,9 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "statement.h"
+#include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include <chrono>
 
 namespace google::cloud::odbc_tests {
+
+using ::google::cloud::internal::ExponentialBackoffPolicy;
+using ms = std::chrono::milliseconds;
 
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn) {
@@ -165,16 +169,28 @@ SQLRETURN InsertStatementWithoutBindParameter(
 }
 
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
-                                     std::string query, int num_cols) {
+                                     std::string query, int num_cols,
+                                     bool is_async) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  if (is_async) {
+    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                            (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+    CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+
+    ExponentialBackoffPolicy backoff(ms(10), ms(100), 2);
+    status = PollODBC(SQLExecDirect, backoff, conn->hstmt, (SQLCHAR*)read_stmt,
+                      strlen(read_stmt));
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  }
   CheckError(status, "SQLExecDirect", conn);
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
+
   for (int i = 0; i < num_cols; i++) {
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
@@ -198,7 +214,12 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
   // Read all the rows using SQLFetch
   while (1) {
-    status = SQLFetch(conn->hstmt);
+    if (is_async) {
+      ExponentialBackoffPolicy backoff(ms(10), ms(100), 2.0);
+      status = PollODBC(SQLFetch, backoff, conn->hstmt);
+    } else {
+      status = SQLFetch(conn->hstmt);
+    }
     if (status == SQL_NO_DATA) {
       break;
     }

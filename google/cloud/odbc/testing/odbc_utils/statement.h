@@ -35,7 +35,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
 // Uses SQLExecDirect to execute a read query and fetch results
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
-                                     std::string query, int num_cols);
+                                     std::string query, int num_cols,
+                                     bool is_async = false);
 
 // Fetches results of a read query as a result set of size <rs_size>
 //  and returns them as a map with the column as keys

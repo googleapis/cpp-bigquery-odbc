@@ -16,6 +16,8 @@
 
 namespace google::cloud::odbc_tests {
 
+using ::google::cloud::internal::ExponentialBackoffPolicy;
+
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
       "0123456789"

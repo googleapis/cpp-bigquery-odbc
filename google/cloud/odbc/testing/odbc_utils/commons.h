@@ -15,7 +15,10 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 
+// We need sorting functions
+#include "google/cloud/internal/backoff_policy.h"
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <locale.h>
 #include <map>
 #include <memory>
@@ -25,11 +28,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-// We need sorting functions
-#include <algorithm>
+#include <thread>
 
 namespace google::cloud::odbc_tests {
 
+using ::google::cloud::internal::ExponentialBackoffPolicy;
 using Results = std::map<std::string, std::vector<std::string>>;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
@@ -163,6 +166,22 @@ class Table {
 std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
+
+// If SQL_ASYNC_ENABLE_ON, this function can be used to run a ODBC API till the
+// status is not SQL_STILL_EXECUTING
+template <typename Func, typename... Args>
+SQLRETURN PollODBC(Func odbc_api, ExponentialBackoffPolicy& backoff,
+                   Args&&... args) {
+  SQLRETURN status;
+  while (1) {
+    status = odbc_api(std::forward<Args>(args)...);
+    if (status == SQL_STILL_EXECUTING) {
+      std::this_thread::sleep_for(backoff.OnCompletion());
+      continue;
+    }
+    return status;
+  }
+}
 
 // If there was an error, gets description from SQLGetDiagRec and throws an
 // error
