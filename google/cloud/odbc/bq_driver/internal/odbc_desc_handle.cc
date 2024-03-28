@@ -22,12 +22,6 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-struct Interval {
-  SQLSMALLINT concise_sql_type;
-  SQLSMALLINT concise_c_type;
-  SQLSMALLINT datetime_interval_code;
-};
-
 static std::vector<Interval> const kDatetimeTypes = {
     {SQL_TYPE_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
     {SQL_TYPE_TIME, SQL_C_TYPE_TIME, SQL_CODE_TIME},
@@ -137,12 +131,40 @@ SQLSMALLINT GetPrecisionForIntervalCode(SQLSMALLINT datetime_interval_code) {
           datetime_interval_code == SQL_CODE_DAY_TO_SECOND ||
           datetime_interval_code == SQL_CODE_HOUR_TO_SECOND ||
           datetime_interval_code == SQL_CODE_MINUTE_TO_SECOND)
-             ? 6
-             : 0;
+             ? kDefaultIntervalSecondsPrecision
+             : kDefaultIntervalPrecision;
 }
 
 SQLSMALLINT GetPrecisionForDatetimeCode(SQLSMALLINT datetime_interval_code) {
-  return (datetime_interval_code == SQL_CODE_TIMESTAMP) ? 6 : 0;
+  return (datetime_interval_code == SQL_CODE_TIMESTAMP)
+             ? kDefaultIntervalSecondsPrecision
+             : kDefaultIntervalPrecision;
+}
+
+void DescriptorRecord::SetIntervalType(Interval const& entry,
+                                       DescriptorType desc_type) {
+  type = SQL_INTERVAL;
+  concise_type = (desc_type == DescriptorType::kApplication)
+                     ? entry.concise_c_type
+                     : entry.concise_sql_type;
+  datetime_interval_precision = 2;
+  datetime_interval_code = entry.datetime_interval_code;
+  precision = GetPrecisionForIntervalCode(datetime_interval_code);
+  scale = precision;
+  length = 2;
+}
+
+void DescriptorRecord::SetDatetimeType(Interval const& entry,
+                                       DescriptorType desc_type) {
+  type = SQL_DATETIME;
+  concise_type = (desc_type == DescriptorType::kApplication)
+                     ? entry.concise_c_type
+                     : entry.concise_sql_type;
+  datetime_interval_precision = 0;
+  datetime_interval_code = entry.datetime_interval_code;
+  precision = GetPrecisionForDatetimeCode(datetime_interval_code);
+  scale = precision;
+  length = 0;
 }
 
 StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
@@ -190,70 +212,45 @@ StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
 
 StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
                                        DescriptorType desc_type) {
-  // Interval data type
   if (value == SQL_INTERVAL) {
     for (auto const& entry : kIntervalTypes) {
       if (datetime_interval_code == entry.datetime_interval_code) {
-        type = value;
-        concise_type = (desc_type == DescriptorType::kApplication)
-                           ? entry.concise_c_type
-                           : entry.concise_sql_type;
-        datetime_interval_precision = 2;
-        precision = GetPrecisionForIntervalCode(datetime_interval_code);
-        scale = precision;
-        length = 2;
+        SetIntervalType(entry, desc_type);
         return StatusRecord::Ok();
       }
     }
     return StatusRecord{SQLStates::k_HY021(),
                         "Interval code invalid or not supported"};
   }
-  // Datetime data type
   if (value == SQL_DATETIME) {
     for (auto const& entry : kDatetimeTypes) {
       if (datetime_interval_code == entry.datetime_interval_code) {
-        type = value;
-        concise_type = (desc_type == DescriptorType::kApplication)
-                           ? entry.concise_c_type
-                           : entry.concise_sql_type;
-        datetime_interval_precision = 0;
-        precision = GetPrecisionForDatetimeCode(datetime_interval_code);
-        scale = precision;
-        length = 0;
+        SetDatetimeType(entry, desc_type);
         return StatusRecord::Ok();
       }
     }
     return StatusRecord{SQLStates::k_HY021(),
                         "Datetime interval code invalid or not supported"};
   }
-  // Other data types
   return SetOtherType(value, "Illegal descriptor type");
 }
 
 StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
-  // Interval data type
   for (auto const& entry : kIntervalTypes) {
     if (entry.concise_sql_type == value || entry.concise_c_type == value) {
-      type = SQL_INTERVAL;
-      concise_type = value;
-      datetime_interval_precision = 2;
-      datetime_interval_code = entry.datetime_interval_code;
-      precision = GetPrecisionForIntervalCode(datetime_interval_code);
-      scale = precision;
-      length = 2;
+      DescriptorType desc_type = entry.concise_sql_type == value
+                                     ? DescriptorType::kApplication
+                                     : DescriptorType::kIPD;
+      SetIntervalType(entry, desc_type);
       return StatusRecord::Ok();
     }
   }
-  // Datetime data type
   for (auto const& entry : kDatetimeTypes) {
     if (entry.concise_sql_type == value || entry.concise_c_type == value) {
-      type = SQL_DATETIME;
-      concise_type = value;
-      datetime_interval_precision = 0;
-      datetime_interval_code = entry.datetime_interval_code;
-      precision = GetPrecisionForDatetimeCode(datetime_interval_code);
-      scale = precision;
-      length = 0;
+      DescriptorType desc_type = entry.concise_sql_type == value
+                                     ? DescriptorType::kApplication
+                                     : DescriptorType::kIPD;
+      SetDatetimeType(entry, desc_type);
       return StatusRecord::Ok();
     }
   }
@@ -268,7 +265,6 @@ StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
     length = 0;
     return StatusRecord::Ok();
   }
-  // Other data types
   return SetOtherType(value, "Illegal descriptor concise type");
 }
 

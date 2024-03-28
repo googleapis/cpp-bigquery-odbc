@@ -25,6 +25,14 @@ namespace google::cloud::odbc_bq_driver_internal {
 inline constexpr SQLINTEGER kNumPrecRadixForNonNumeric = 0;
 inline constexpr SQLINTEGER kNumPrecRadixForApproximateNumeric = 2;
 inline constexpr SQLINTEGER kNumPrecRadixForExactNumeric = 10;
+inline constexpr SQLSMALLINT kDefaultIntervalPrecision = 0;
+inline constexpr SQLSMALLINT kDefaultIntervalSecondsPrecision = 6;
+
+struct Interval {
+  SQLSMALLINT concise_sql_type;
+  SQLSMALLINT concise_c_type;
+  SQLSMALLINT datetime_interval_code;
+};
 
 enum class DescriptorType { kApplication, kIRD, kIPD };
 
@@ -83,6 +91,8 @@ struct DescriptorRecord {
   SQLSMALLINT updatable = SQL_ATTR_READONLY;
 
  private:
+  void SetIntervalType(Interval const& entry, DescriptorType desc_type);
+  void SetDatetimeType(Interval const& entry, DescriptorType desc_type);
   odbc_internal::StatusRecord SetOtherType(SQLSMALLINT value,
                                            std::string const& error_message);
 };
