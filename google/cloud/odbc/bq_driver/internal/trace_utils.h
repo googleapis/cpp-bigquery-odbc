@@ -15,9 +15,9 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H
 
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include "utils.h"
 #include <algorithm>
 #include <cstdarg>
 #include <cstdint>
@@ -27,6 +27,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
