@@ -50,12 +50,14 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
@@ -64,12 +66,14 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
@@ -463,14 +467,22 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttr");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLSetConnectAttr(connectionHandle, attribute, value,
+                                         valueStringLen, *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLSetConnectAttr and
   // SQLSetConnectAttrW in odbc_connection.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLSetConnectAttrInternal(
+      connectionHandle, attribute, value, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetConnectAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
@@ -508,14 +520,23 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER valueBufferLen,
                                     SQLINTEGER* valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttr");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLGetConnectAttr(connectionHandle, attribute, value,
+                                         valueBufferLen, valueStringLen,
+                                         *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetConnectAttr and
   // SQLGetConnectAttrW in odbc_connection.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
+      connectionHandle, attribute, value, valueBufferLen, valueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetConnectAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;

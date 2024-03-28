@@ -282,18 +282,17 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   EXPECT_EQ(actual_val, "test");
   EXPECT_EQ(str_len, 4);
 
-  // This is same as doing a set attribute as shown below.
+  // Parity with Simba Driver:
+  // Modifying the input values should have no effect on the attribute stored.
   buf_in[0] = 'a';
 
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
   EXPECT_TRUE(status_record.ok());
   std::string actual_val2(reinterpret_cast<char*>(buf_out));
-  // This value is correct as buf_in has been changed to "aest";
-  EXPECT_EQ(actual_val2, "aest");
+  EXPECT_EQ(actual_val2, "test");
   EXPECT_EQ(str_len, 4);
 
-  // With set attribute
   buf_in[0] = 'a';
   status_record =
       conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
@@ -302,7 +301,7 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
   EXPECT_TRUE(status_record.ok());
   std::string actual_val3(reinterpret_cast<char*>(buf_out));
-  EXPECT_EQ(actual_val3, "aest");
+  EXPECT_EQ(actual_val3, "test");
   EXPECT_EQ(str_len, 4);
 }
 

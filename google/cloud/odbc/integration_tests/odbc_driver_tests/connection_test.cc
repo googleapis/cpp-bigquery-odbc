@@ -452,7 +452,7 @@ TEST(ConnectionTest, SQLSetConnectAttr_UpdateString) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void setAttr(std::shared_ptr<ODBCHandles> conn) {
+void SetAttr(std::shared_ptr<ODBCHandles> conn) {
   SQLCHAR buf[256] = "test";
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
 
@@ -474,7 +474,7 @@ void setAttr(std::shared_ptr<ODBCHandles> conn) {
 TEST(ConnectionTest, SQLSetConnectAttr_DeleteString) {
   auto conn = std::make_shared<ODBCHandles>();
 
-  setAttr(conn);
+  SetAttr(conn);
 
   SQLCHAR output[256];
   SQLINTEGER length;
@@ -614,6 +614,112 @@ TEST(BQDriverTest, SQLGetFunctions_ODBC2_AllUnSupported) {
   AssertUnSupportedFnsODBC2(odbc2_fns);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+void SetAttr(std::shared_ptr<ODBCHandles> conn) {
+  SQLCHAR buf[256] = "test";
+  // TODO(b/331779515): SQLConnect is not implemented yet for Google Driver
+  // hence cannot use ConnectDsn.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                  (SQLPOINTER)buf, SQL_NTS);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                             (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  EXPECT_EQ("test", actual);
+  EXPECT_EQ(4, length);
+}
+
+TEST(ConnectionTest, SQLSetConnectAttr_UpdateString) {
+  SQLCHAR buf[256] = "test";
+  auto conn = std::make_shared<ODBCHandles>();
+  // TODO(b/331779515): SQLConnect is not implemented yet for Google Driver
+  // hence cannot use ConnectDsn.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // As per the spec if valuePtr is a character string data, string length
+  // should either the length of the string or SQL_NTS
+  // Simba is not following the spec and accepts incorrect lengths,
+  // Google driver will follow the spec and accept correct lengths.
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                  (SQLPOINTER)buf, 4);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  std::string expected = "test";
+
+  buf[0] = '0';
+  std::string buffer = reinterpret_cast<char*>(buf);
+  EXPECT_EQ("0est", buffer);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                             (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  // Parity with Simba Driver - Original value is retained even though
+  // input buf has been modified by the caller.
+  EXPECT_EQ(expected, actual);
+  EXPECT_EQ(expected.size(), length);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLSetConnectAttr_DeleteString) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  SetAttr(conn);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                  (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  EXPECT_EQ("test", actual);
+  EXPECT_EQ(4, length);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLSetConnectAttr_Integer) {
+  SQLULEN buf = SQL_ASYNC_ENABLE_ON;
+  auto conn = std::make_shared<ODBCHandles>();
+  // TODO(b/331779515): SQLConnect is not implemented yet for Google Driver
+  // hence cannot use ConnectDsn.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status =
+      SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)buf, 4);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  auto* buf_ptr = &buf;
+  *buf_ptr = 222;
+  EXPECT_EQ(222, buf);
+
+  SQLULEN output = 0;
+  SQLINTEGER len;
+  // Spec doesn't say anything about len being null so its upto the driver to
+  // implement. Google Driver does not accept nullptr for len.
+  status =
+      SQLGetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE, &output, 256, &len);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  // Parity with simba driver - Original value is retained even
+  // though input buf has been modified by the caller.
+  EXPECT_EQ(SQL_ASYNC_ENABLE_ON, output);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // Negative test cases for SQLGetFunctions
 
 TEST(SQLGetFunctionsInternal, SQLGetFunctions_ODBC2_NullConnectionHandle) {

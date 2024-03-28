@@ -44,12 +44,14 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
         err_msg.append("Attribute cannot be set after connection is made");
         return StatusRecord{SQLStates::k_HY000(), err_msg};
       }
+      break;
     }
     case ConnectionValidation::kAfter: {
       if (!isConnected) {
         err_msg.append("Connection not open");
         return StatusRecord{SQLStates::k_08003(), err_msg};
       }
+      break;
     }
     case ConnectionValidation::kInvalid: {
       err_msg.append("Attribute not supported by the driver");
@@ -143,8 +145,13 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
     }
     case ConnectionValueType::kSqlChr: {
       char* src;
-      if (attr_val != nullptr) {
-        src = reinterpret_cast<char*>(attr_val);
+      bool attrib_str_val_found =
+          attribute_str_values_.find(attribute) != attribute_str_values_.end();
+
+      if (attrib_str_val_found) {
+        src = const_cast<char*>(attribute_str_values_[attribute].c_str());
+      } else if (default_value != nullptr) {
+        src = reinterpret_cast<char*>(default_value);
       }
       auto status_record =
           StringValueToOutputBufferResponse(src, value, buf_len, &len);
@@ -198,6 +205,8 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute value.");
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
+      // Store non char attributes.
+      attribute_values_.insert({attribute, value});
       break;
     }
     case ConnectionValueType::kSqlChr: {
@@ -210,11 +219,14 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
-      SQLINTEGER p_val_len = strlen(reinterpret_cast<char*>(p_val));
-      if (length != p_val_len) {
+      std::string val(reinterpret_cast<char*>(p_val));
+      SQLINTEGER p_val_len = val.length();
+      if (length != p_val_len && length != SQL_NTS) {
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
+      // Store char attributes.
+      attribute_str_values_.insert({attribute, val});
       break;
     }
     default: {
@@ -222,8 +234,6 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       return StatusRecord{SQLStates::k_HY024(), err_msg};
     }
   }
-  // Store attribute.
-  attribute_values_.insert({attribute, value});
 
   return StatusRecord::Ok();
 }
