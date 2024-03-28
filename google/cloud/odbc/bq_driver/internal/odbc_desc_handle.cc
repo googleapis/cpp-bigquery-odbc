@@ -22,6 +22,41 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
+struct Interval {
+  SQLSMALLINT concise_sql_type;
+  SQLSMALLINT concise_c_type;
+  SQLSMALLINT datetime_interval_code;
+};
+
+static std::vector<Interval> const kDatetimeTypes = {
+    {SQL_TYPE_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
+    {SQL_TYPE_TIME, SQL_C_TYPE_TIME, SQL_CODE_TIME},
+    {SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
+};
+
+static std::vector<Interval> const kIntervalTypes = {
+    {SQL_INTERVAL_MONTH, SQL_C_INTERVAL_MONTH, SQL_CODE_MONTH},
+    {SQL_INTERVAL_YEAR, SQL_C_INTERVAL_YEAR, SQL_CODE_YEAR},
+    {SQL_INTERVAL_YEAR_TO_MONTH, SQL_C_INTERVAL_YEAR_TO_MONTH,
+     SQL_CODE_YEAR_TO_MONTH},
+    {SQL_INTERVAL_DAY, SQL_C_INTERVAL_DAY, SQL_CODE_DAY},
+    {SQL_INTERVAL_HOUR, SQL_C_INTERVAL_HOUR, SQL_CODE_HOUR},
+    {SQL_INTERVAL_MINUTE, SQL_C_INTERVAL_MINUTE, SQL_CODE_MINUTE},
+    {SQL_INTERVAL_SECOND, SQL_C_INTERVAL_SECOND, SQL_CODE_SECOND},
+    {SQL_INTERVAL_DAY_TO_HOUR, SQL_C_INTERVAL_DAY_TO_HOUR,
+     SQL_CODE_DAY_TO_HOUR},
+    {SQL_INTERVAL_DAY_TO_MINUTE, SQL_C_INTERVAL_DAY_TO_MINUTE,
+     SQL_CODE_DAY_TO_MINUTE},
+    {SQL_INTERVAL_DAY_TO_SECOND, SQL_C_INTERVAL_DAY_TO_SECOND,
+     SQL_CODE_DAY_TO_SECOND},
+    {SQL_INTERVAL_HOUR_TO_MINUTE, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+     SQL_CODE_HOUR_TO_MINUTE},
+    {SQL_INTERVAL_HOUR_TO_SECOND, SQL_C_INTERVAL_HOUR_TO_SECOND,
+     SQL_CODE_HOUR_TO_SECOND},
+    {SQL_INTERVAL_MINUTE_TO_SECOND, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+     SQL_CODE_MINUTE_TO_SECOND},
+};
+
 void DescriptorHandle::BindNewDescriptorRecord(
     SQLSMALLINT index, DescriptorRecord descriptor_record) {
   descriptor_records_[index] = std::move(descriptor_record);
@@ -95,6 +130,146 @@ StatusRecord DescriptorRecord::SetUnnamed(SQLSMALLINT value) {
   }
   unnamed = value;
   return StatusRecord::Ok();
+}
+
+SQLSMALLINT GetPrecisionForIntervalCode(SQLSMALLINT datetime_interval_code) {
+  return (datetime_interval_code == SQL_CODE_SECOND ||
+          datetime_interval_code == SQL_CODE_DAY_TO_SECOND ||
+          datetime_interval_code == SQL_CODE_HOUR_TO_SECOND ||
+          datetime_interval_code == SQL_CODE_MINUTE_TO_SECOND)
+             ? 6
+             : 0;
+}
+
+SQLSMALLINT GetPrecisionForDatetimeCode(SQLSMALLINT datetime_interval_code) {
+  return (datetime_interval_code == SQL_CODE_TIMESTAMP) ? 6 : 0;
+}
+
+StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
+                                            std::string const& error_message) {
+  if (value == SQL_CHAR || value == SQL_C_CHAR || value == SQL_BINARY) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 1;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_NUMERIC || value == SQL_C_NUMERIC) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 38;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_REAL || value == SQL_C_FLOAT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 24;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_DOUBLE) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 53;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_SMALLINT || value == SQL_INTEGER ||
+             value == SQL_BIT || value == SQL_TINYINT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 0;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_GUID) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 16;
+    datetime_interval_code = scale = 0;
+  } else if (value == SQL_TIMESTAMP) {
+    type = SQL_DATETIME;
+    concise_type = value;
+    datetime_interval_precision = 0;
+    datetime_interval_code = 3;
+    scale = 6;
+    precision = 6;
+    length = 0;
+  } else {
+    // Not supported: SQL_DECIMAL, SQL_VARCHAR, SQL_FLOAT, SQL_BIGINT,
+    // SQL_VARBINARY, SQL_LONGVARCHAR, SQL_VARBINARY
+    return StatusRecord{SQLStates::k_HY021(), error_message};
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
+                                       DescriptorType desc_type) {
+  // Interval data type
+  if (value == SQL_INTERVAL) {
+    for (auto const& entry : kIntervalTypes) {
+      if (datetime_interval_code == entry.datetime_interval_code) {
+        type = value;
+        concise_type = (desc_type == DescriptorType::kApplication)
+                           ? entry.concise_c_type
+                           : entry.concise_sql_type;
+        datetime_interval_precision = 2;
+        precision = GetPrecisionForIntervalCode(datetime_interval_code);
+        scale = precision;
+        length = 2;
+        return StatusRecord::Ok();
+      }
+    }
+    return StatusRecord{SQLStates::k_HY021(),
+                        "Interval code invalid or not supported"};
+  }
+  // Datetime data type
+  if (value == SQL_DATETIME) {
+    for (auto const& entry : kDatetimeTypes) {
+      if (datetime_interval_code == entry.datetime_interval_code) {
+        type = value;
+        concise_type = (desc_type == DescriptorType::kApplication)
+                           ? entry.concise_c_type
+                           : entry.concise_sql_type;
+        datetime_interval_precision = 0;
+        precision = GetPrecisionForDatetimeCode(datetime_interval_code);
+        scale = precision;
+        length = 0;
+        return StatusRecord::Ok();
+      }
+    }
+    return StatusRecord{SQLStates::k_HY021(),
+                        "Datetime interval code invalid or not supported"};
+  }
+  // Other data types
+  return SetOtherType(value, "Illegal descriptor type");
+}
+
+StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
+  // Interval data type
+  for (auto const& entry : kIntervalTypes) {
+    if (entry.concise_sql_type == value || entry.concise_c_type == value) {
+      type = SQL_INTERVAL;
+      concise_type = value;
+      datetime_interval_precision = 2;
+      datetime_interval_code = entry.datetime_interval_code;
+      precision = GetPrecisionForIntervalCode(datetime_interval_code);
+      scale = precision;
+      length = 2;
+      return StatusRecord::Ok();
+    }
+  }
+  // Datetime data type
+  for (auto const& entry : kDatetimeTypes) {
+    if (entry.concise_sql_type == value || entry.concise_c_type == value) {
+      type = SQL_DATETIME;
+      concise_type = value;
+      datetime_interval_precision = 0;
+      datetime_interval_code = entry.datetime_interval_code;
+      precision = GetPrecisionForDatetimeCode(datetime_interval_code);
+      scale = precision;
+      length = 0;
+      return StatusRecord::Ok();
+    }
+  }
+
+  if (value == SQL_DATE || value == SQL_TIME) {
+    type = SQL_DATETIME;
+    concise_type = value;
+    datetime_interval_precision = 0;
+    datetime_interval_code = value == SQL_DATE ? SQL_CODE_DATE : SQL_CODE_TIME;
+    precision = 0;
+    scale = 0;
+    length = 0;
+    return StatusRecord::Ok();
+  }
+  // Other data types
+  return SetOtherType(value, "Illegal descriptor concise type");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -26,6 +26,8 @@ inline constexpr SQLINTEGER kNumPrecRadixForNonNumeric = 0;
 inline constexpr SQLINTEGER kNumPrecRadixForApproximateNumeric = 2;
 inline constexpr SQLINTEGER kNumPrecRadixForExactNumeric = 10;
 
+enum class DescriptorType { kApplication, kIRD, kIPD };
+
 struct HeaderRecord {
   SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO;
   SQLULEN array_size = 0;
@@ -41,6 +43,9 @@ struct DescriptorRecord {
   odbc_internal::StatusRecord SetNumPrecRadix(SQLINTEGER value);
   odbc_internal::StatusRecord SetParameterType(SQLSMALLINT value);
   odbc_internal::StatusRecord SetUnnamed(SQLSMALLINT value);
+  odbc_internal::StatusRecord SetType(SQLSMALLINT value,
+                                      DescriptorType desc_type);
+  odbc_internal::StatusRecord SetConciseType(SQLSMALLINT value);
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
   std::string base_column_name;
@@ -76,9 +81,11 @@ struct DescriptorRecord {
   SQLSMALLINT unnamed = SQL_NAMED;
   SQLSMALLINT sql_desc_unsigned = SQL_TRUE;
   SQLSMALLINT updatable = SQL_ATTR_READONLY;
-};
 
-enum class DescriptorType { kApplication, kIRD, kIPD };
+ private:
+  odbc_internal::StatusRecord SetOtherType(SQLSMALLINT value,
+                                           std::string const& error_message);
+};
 
 class DescriptorHandle : public Handle {
  public:

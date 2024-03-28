@@ -118,6 +118,27 @@ SQLRETURN SetUnnamed(DescriptorHandle* handle,
   return status_record.CalculateReturnCode();
 }
 
+SQLRETURN SetType(DescriptorHandle* handle, DescriptorRecord& descriptor_record,
+                  std::size_t desc_int_value) {
+  StatusRecord status_record = descriptor_record.SetType(
+      static_cast<SQLSMALLINT>(desc_int_value), handle->GetType());
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+  return status_record.CalculateReturnCode();
+}
+
+SQLRETURN SetConciseType(DescriptorHandle* handle,
+                         DescriptorRecord& descriptor_record,
+                         std::size_t desc_int_value) {
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      static_cast<SQLSMALLINT>(desc_int_value));
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+  return status_record.CalculateReturnCode();
+}
+
 SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT field_identifier,
@@ -181,16 +202,14 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   DescriptorRecord& descriptor_record = handle->GetDescriptorRecord(rec_number);
   switch (field_identifier) {
     case SQL_DESC_CONCISE_TYPE:
-      // TODO(331355556) set SQL_DESC_TYPE and SQL_DESC_DATETIME_INTERVAL_CODE
-      descriptor_record.concise_type = static_cast<SQLSMALLINT>(desc_int_value);
-      return SQL_SUCCESS;
+      return SetConciseType(handle, descriptor_record, desc_int_value);
     case SQL_DESC_DATA_PTR:
       descriptor_record.data_ptr = desc_value;
       // TODO(331356705) run consistency check
       return SQL_SUCCESS;
     case SQL_DESC_DATETIME_INTERVAL_CODE:
-      // TODO(331355556) set SQL_DESC_TYPE and SQL_DESC_CONCISE_TYPE
-      descriptor_record.concise_type = static_cast<SQLSMALLINT>(desc_int_value);
+      descriptor_record.datetime_interval_code =
+          static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_DATETIME_INTERVAL_PRECISION:
       descriptor_record.datetime_interval_precision =
@@ -223,10 +242,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
       descriptor_record.scale = static_cast<SQLSMALLINT>(desc_int_value);
       return SQL_SUCCESS;
     case SQL_DESC_TYPE:
-      // TODO(331355556) set SQL_DESC_DATETIME_INTERVAL_CODE and
-      // SQL_DESC_CONCISE_TYPE
-      descriptor_record.type = static_cast<SQLSMALLINT>(desc_int_value);
-      return SQL_SUCCESS;
+      return SetType(handle, descriptor_record, desc_int_value);
     case SQL_DESC_UNNAMED:
       return SetUnnamed(handle, descriptor_record, desc_int_value);
   }

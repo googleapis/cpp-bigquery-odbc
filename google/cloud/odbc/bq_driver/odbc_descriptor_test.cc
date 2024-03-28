@@ -337,4 +337,56 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_UNNAMED_WrongValue) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
+TEST(SQLSetDescFieldInternal, Set_SQL_DESC_TYPE) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  int val = SQL_INTEGER;
+
+  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
+                                        (SQLPOINTER)val, 0);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_TRUE(handle.HasDescriptorRecord(1));
+  EXPECT_EQ(val, handle.GetDescriptorRecord(1).type);
+}
+
+TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_TYPE_WrongValue) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  int val = SQL_FLOAT;
+
+  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
+                                        (SQLPOINTER)val, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY021(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLSetDescFieldInternal, Set_SQL_DESC_CONCISE_TYPE) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  int val = SQL_INTEGER;
+
+  auto status = SQLSetDescFieldInternal(
+      &wrapped_handle, 1, SQL_DESC_CONCISE_TYPE, (SQLPOINTER)val, 0);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_TRUE(handle.HasDescriptorRecord(1));
+  EXPECT_EQ(val, handle.GetDescriptorRecord(1).type);
+}
+
+TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_CONCISE_TYPE_WrongValue) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  int val = SQL_FLOAT;
+
+  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
+                                        (SQLPOINTER)val, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY021(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
