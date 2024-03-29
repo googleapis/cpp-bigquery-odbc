@@ -67,10 +67,7 @@ SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
   SQLSMALLINT out_len;
   SQLRETURN status;
 
-  std::cout << "JAYA-1 dsn=" << dsn << std::endl;
-
   SetAttributes(conn, timeout);
-  std::cout << "JAYA-2" << std::endl;
 
   status =
       SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
@@ -78,14 +75,11 @@ SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLConnect", conn);
   conn->connected = true;
 
-  std::cout << "JAYA-3" << std::endl;
   PrintDriverVerName(conn);
-  std::cout << "JAYA-4" << std::endl;
 
   // Allocate statement handle
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
   CheckError(status, "SQLAllocHandle", conn);
-  std::cout << "JAYA-5" << std::endl;
   return status;
 }
 
