@@ -1122,4 +1122,203 @@ TEST(SetConciseType, FailsToSet_SQL_FLOAT_NotValidValue) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
+TEST(ConsistencyCheck, Succeed_Default) {
+  DescriptorRecord descriptor_record;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_Interval) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_INTERVAL;
+  descriptor_record.concise_type = SQL_INTERVAL_MONTH;
+  descriptor_record.datetime_interval_code = SQL_CODE_MONTH;
+  descriptor_record.precision = 0;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_Interval_WrongCode) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_INTERVAL;
+  descriptor_record.concise_type = SQL_INTERVAL_MONTH;
+  descriptor_record.datetime_interval_code = SQL_CODE_YEAR;
+  descriptor_record.precision = 0;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_Interval_WrongPrecision) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_INTERVAL;
+  descriptor_record.concise_type = SQL_INTERVAL_MONTH;
+  descriptor_record.datetime_interval_code = SQL_CODE_MONTH;
+  descriptor_record.precision = 6;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_Datetime) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_TYPE_DATE;
+  descriptor_record.datetime_interval_code = SQL_CODE_DATE;
+  descriptor_record.precision = 0;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_Datetime_WrongCode) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_TYPE_DATE;
+  descriptor_record.datetime_interval_code = SQL_CODE_TIME;
+  descriptor_record.precision = 0;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_Datetime_WrongPrecision) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_TYPE_DATE;
+  descriptor_record.datetime_interval_code = SQL_CODE_DATE;
+  descriptor_record.precision = 6;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_SQL_DATE) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_DATE;
+  descriptor_record.datetime_interval_code = SQL_CODE_DATE;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_SQL_TIME) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_TIME;
+  descriptor_record.datetime_interval_code = SQL_CODE_TIME;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_SQL_TIMESTAMP) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_DATETIME;
+  descriptor_record.concise_type = SQL_TIMESTAMP;
+  descriptor_record.datetime_interval_code = SQL_CODE_TIMESTAMP;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_NUMERIC) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_NUMERIC;
+  descriptor_record.concise_type = SQL_NUMERIC;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_CHAR) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_CHAR;
+  descriptor_record.concise_type = SQL_CHAR;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_TRUE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_OtherTypes_DifferentTypes) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = SQL_CHAR;
+  descriptor_record.concise_type = SQL_NUMERIC;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(ConsistencyCheck, Fails_InvalidType) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = 11111;
+  descriptor_record.concise_type = 11111;
+
+  StatusRecord status_record = descriptor_record.ConsistencyCheck();
+
+  ASSERT_FALSE(status_record.ok());
+}
+
+TEST(SetDataPointer, SetPointer_ApplicationDescriptor) {
+  DescriptorRecord descriptor_record;
+  char buf[8];
+
+  StatusRecord status_record =
+      descriptor_record.SetDataPointer(&buf, DescriptorType::kApplication);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(buf, descriptor_record.data_ptr);
+}
+
+TEST(SetDataPointer, DoNotSetPointer_IPD) {
+  DescriptorRecord descriptor_record;
+  char buf[8];
+
+  StatusRecord status_record =
+      descriptor_record.SetDataPointer(&buf, DescriptorType::kIPD);
+
+  ASSERT_TRUE(status_record.ok());
+  EXPECT_EQ(nullptr, descriptor_record.data_ptr);
+}
+
+TEST(SetDataPointer, Fails_ConsistencyCheck_IPD) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = 11111;
+  char buf[8];
+
+  StatusRecord status_record =
+      descriptor_record.SetDataPointer(&buf, DescriptorType::kIPD);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(nullptr, descriptor_record.data_ptr);
+}
+
+TEST(SetDataPointer, Fails_ConsistencyCheck_ApplicationDescriptor) {
+  DescriptorRecord descriptor_record;
+  descriptor_record.type = 11111;
+  char buf[8];
+
+  StatusRecord status_record =
+      descriptor_record.SetDataPointer(&buf, DescriptorType::kApplication);
+
+  ASSERT_FALSE(status_record.ok());
+  EXPECT_EQ(nullptr, descriptor_record.data_ptr);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

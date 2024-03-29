@@ -54,6 +54,9 @@ struct DescriptorRecord {
   odbc_internal::StatusRecord SetType(SQLSMALLINT value,
                                       DescriptorType desc_type);
   odbc_internal::StatusRecord SetConciseType(SQLSMALLINT value);
+  odbc_internal::StatusRecord SetDataPointer(SQLPOINTER data_ptr,
+                                             DescriptorType desc_type);
+  [[nodiscard]] odbc_internal::StatusRecord ConsistencyCheck() const;
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
   std::string base_column_name;

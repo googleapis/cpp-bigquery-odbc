@@ -389,4 +389,17 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_CONCISE_TYPE_WrongValue) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
+TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  int* val;
+
+  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_DATA_PTR,
+                                        val, SQL_IS_POINTER);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_TRUE(handle.HasDescriptorRecord(1));
+  EXPECT_EQ(val, handle.GetDescriptorRecord(1).data_ptr);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

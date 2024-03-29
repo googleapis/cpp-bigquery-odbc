@@ -44,7 +44,7 @@ static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
      {SQL_DESC_ARRAY_STATUS_PTR, SQL_DESC_ROWS_PROCESSED_PTR}},
     {DescriptorType::kIPD,
      {SQL_DESC_ARRAY_STATUS_PTR, SQL_DESC_COUNT, SQL_DESC_ROWS_PROCESSED_PTR,
-      SQL_DESC_CONCISE_TYPE, SQL_DESC_DATETIME_INTERVAL_CODE,
+      SQL_DESC_CONCISE_TYPE, SQL_DESC_DATA_PTR, SQL_DESC_DATETIME_INTERVAL_CODE,
       SQL_DESC_DATETIME_INTERVAL_PRECISION, SQL_DESC_LENGTH, SQL_DESC_NAME,
       SQL_DESC_NUM_PREC_RADIX, SQL_DESC_OCTET_LENGTH, SQL_DESC_PARAMETER_TYPE,
       SQL_DESC_PRECISION, SQL_DESC_SCALE, SQL_DESC_TYPE, SQL_DESC_UNNAMED}}};
@@ -139,6 +139,17 @@ SQLRETURN SetConciseType(DescriptorHandle* handle,
   return status_record.CalculateReturnCode();
 }
 
+SQLRETURN SetDataPointer(DescriptorHandle* handle,
+                         DescriptorRecord& descriptor_record,
+                         SQLPOINTER data_ptr) {
+  StatusRecord status_record =
+      descriptor_record.SetDataPointer(data_ptr, handle->GetType());
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+  return status_record.CalculateReturnCode();
+}
+
 SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT field_identifier,
@@ -204,9 +215,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
     case SQL_DESC_CONCISE_TYPE:
       return SetConciseType(handle, descriptor_record, desc_int_value);
     case SQL_DESC_DATA_PTR:
-      descriptor_record.data_ptr = desc_value;
-      // TODO(331356705) run consistency check
-      return SQL_SUCCESS;
+      return SetDataPointer(handle, descriptor_record, desc_value);
     case SQL_DESC_DATETIME_INTERVAL_CODE:
       descriptor_record.datetime_interval_code =
           static_cast<SQLSMALLINT>(desc_int_value);
