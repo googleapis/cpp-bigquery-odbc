@@ -37,6 +37,38 @@ TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
 }
 
 TEST(StringValueToOutputBufferResponse,
+     Success_DestBufferLen_GT_SrcLen_Output_SQLINTEGER_Explicit) {
+  std::string expected = "sample-test";
+  SQLINTEGER str_len;
+  SQLINTEGER buffer_len = 15;
+  SQLCHAR dest[15];
+
+  StatusRecord status_record = StringValueToOutputBufferResponse<SQLINTEGER>(
+      expected.c_str(), dest, buffer_len, &str_len);
+
+  ASSERT_TRUE(status_record.ok());
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ("sample-test", actual);
+  EXPECT_EQ(11, str_len);
+}
+
+TEST(StringValueToOutputBufferResponse,
+     Success_DestBufferLen_GT_SrcLen_Output_SQLINTEGER_Implicit) {
+  std::string expected = "sample-test";
+  SQLINTEGER str_len;
+  SQLINTEGER buffer_len = 15;
+  SQLCHAR dest[15];
+
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      expected.c_str(), dest, buffer_len, &str_len);
+
+  ASSERT_TRUE(status_record.ok());
+  std::string actual = reinterpret_cast<char*>(dest);
+  EXPECT_EQ("sample-test", actual);
+  EXPECT_EQ(11, str_len);
+}
+
+TEST(StringValueToOutputBufferResponse,
      SuccessWithInfo_DestBufferLen_LT_SrcLen) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
@@ -154,9 +186,36 @@ TEST(IntValueToOutputBufferResponse, Success_SQLLEN) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
+TEST(IntValueToOutputBufferResponse, Success_SQLLEN_Output_SQLINTEGER) {
+  int expected = 42;
+  SQLINTEGER str_len;
+  SQLLEN dest[15];
+
+  SQLRETURN return_code = IntValueToOutputBufferResponse<SQLLEN, SQLINTEGER>(
+      expected, dest, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(42, *dest);
+  EXPECT_EQ(sizeof(SQLLEN), str_len);
+}
+
 TEST(IntValueToOutputBufferResponse, Success_Implicit_SQLLEN) {
   SQLLEN expected = 42;
   SQLSMALLINT str_len;
+  SQLLEN dest[15];
+
+  SQLRETURN return_code =
+      IntValueToOutputBufferResponse(expected, dest, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(42, *dest);
+  EXPECT_EQ(sizeof(SQLLEN), str_len);
+}
+
+TEST(IntValueToOutputBufferResponse,
+     Success_Implicit_SQLLEN_Output_SQLINTEGER) {
+  SQLLEN expected = 42;
+  SQLINTEGER str_len;
   SQLLEN dest[15];
 
   SQLRETURN return_code =

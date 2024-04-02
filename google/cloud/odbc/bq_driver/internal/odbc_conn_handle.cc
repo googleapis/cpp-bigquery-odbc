@@ -125,22 +125,21 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
   SQLPOINTER attr_val =
       (attrib_val_found ? attribute_values_[attribute] : default_value);
   SQLRETURN rc;
-  SQLSMALLINT len;
   switch (conn_attr.GetAttributeValueType(attribute)) {
     case ConnectionValueType::kSqlInt:
     case ConnectionValueType::kSqlIntBitmask: {
       rc = IntValueToOutputBufferResponse<SQLINTEGER>(
-          reinterpret_cast<size_t>(attr_val), value, &len);
+          reinterpret_cast<size_t>(attr_val), value, str_len);
       break;
     }
     case ConnectionValueType::kSqlUInt: {
       rc = IntValueToOutputBufferResponse<SQLUINTEGER>(
-          reinterpret_cast<size_t>(attr_val), value, &len);
+          reinterpret_cast<size_t>(attr_val), value, str_len);
       break;
     }
     case ConnectionValueType::kSqlULen: {
       rc = IntValueToOutputBufferResponse<SQLULEN>(
-          reinterpret_cast<size_t>(attr_val), value, &len);
+          reinterpret_cast<size_t>(attr_val), value, str_len);
       break;
     }
     case ConnectionValueType::kSqlChr: {
@@ -153,12 +152,7 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
       } else if (default_value != nullptr) {
         src = reinterpret_cast<char*>(default_value);
       }
-      auto status_record =
-          StringValueToOutputBufferResponse(src, value, buf_len, &len);
-      if (status_record.ok()) {
-        *str_len = static_cast<SQLINTEGER>(len);
-      }
-      return status_record;
+      return StringValueToOutputBufferResponse(src, value, buf_len, str_len);
     }
     default: {
       err_msg.append("Invalid attribute value type.");
@@ -171,7 +165,6 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
                         "Unable to retrieve int attribute value"};
   }
 
-  *str_len = static_cast<SQLINTEGER>(len);
   return StatusRecord::Ok();
 }
 

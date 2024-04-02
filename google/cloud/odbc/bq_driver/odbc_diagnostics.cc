@@ -238,7 +238,7 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   auto status_record = diagnostic_status->GetStatusRecords()[rec_number - 1];
 
   // Writing down SqlState (always 5 characters + terminating NULL)
-  StatusRecord sqlstate_result = StringValueToOutputBufferResponse(
+  StatusRecord sqlstate_result = StringValueToOutputBufferResponse<SQLINTEGER>(
       status_record.sql_state.c_str(), sql_state, 6, nullptr);
   if (!sqlstate_result.ok()) {
     TracePrintInternal(*(*kTraceOptsConsole), sqlstate_result.message);
@@ -253,8 +253,8 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
     return message_result.CalculateReturnCode();
   }
   // Writing down NativeErrorCode
-  return IntValueToOutputBufferResponse(status_record.native_error_code,
-                                        native_error, nullptr);
+  return IntValueToOutputBufferResponse<SQLINTEGER, SQLINTEGER>(
+      status_record.native_error_code, native_error, nullptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
