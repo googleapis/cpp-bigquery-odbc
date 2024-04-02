@@ -273,44 +273,44 @@ StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
   return SetOtherType(value, "Illegal descriptor concise type");
 }
 
+bool DescriptorRecord::IsTypeValid(SQLSMALLINT const valid_type,
+                                   SQLSMALLINT const valid_concise_type,
+                                   SQLSMALLINT const valid_code) const {
+  return type == valid_type && concise_type == valid_concise_type &&
+         datetime_interval_code == valid_code;
+}
+
+bool DescriptorRecord::IsTypeValid(SQLSMALLINT const valid_type,
+                                   Interval const& interval) const {
+  return IsTypeValid(valid_type, interval.concise_sql_type,
+                     interval.datetime_interval_code) ||
+         IsTypeValid(valid_type, interval.concise_c_type,
+                     interval.datetime_interval_code);
+}
+
 StatusRecord DescriptorRecord::ConsistencyCheck() const {
   if (type == SQL_C_DEFAULT && concise_type == SQL_C_DEFAULT) {
     return StatusRecord::Ok();
   }
   for (auto const& entry : kIntervalTypes) {
-    if (entry.concise_sql_type == concise_type ||
-        entry.concise_c_type == concise_type) {
-      if (type != SQL_INTERVAL ||
-          datetime_interval_code != entry.datetime_interval_code ||
-          precision != GetPrecisionForIntervalCode(datetime_interval_code)) {
-        return StatusRecord{SQLStates::k_HY021(),
-                            "Inconsistent descriptor information"};
-      }
+    if (IsTypeValid(SQL_INTERVAL, entry) &&
+        precision == GetPrecisionForIntervalCode(datetime_interval_code)) {
       return StatusRecord::Ok();
     }
   }
   for (auto const& entry : kDatetimeTypes) {
-    if (entry.concise_sql_type == concise_type ||
-        entry.concise_c_type == concise_type) {
-      if (type != SQL_DATETIME ||
-          datetime_interval_code != entry.datetime_interval_code ||
-          precision != GetPrecisionForDatetimeCode(datetime_interval_code)) {
-        return StatusRecord{SQLStates::k_HY021(),
-                            "Inconsistent descriptor information"};
-      }
+    if (IsTypeValid(SQL_DATETIME, entry) &&
+        precision == GetPrecisionForDatetimeCode(datetime_interval_code)) {
       return StatusRecord::Ok();
     }
   }
-  if (concise_type == SQL_DATE && type == SQL_DATETIME &&
-      datetime_interval_code == SQL_CODE_DATE) {
+  if (IsTypeValid(SQL_DATETIME, SQL_DATE, SQL_CODE_DATE)) {
     return StatusRecord::Ok();
   }
-  if (concise_type == SQL_TIME && type == SQL_DATETIME &&
-      datetime_interval_code == SQL_CODE_TIME) {
+  if (IsTypeValid(SQL_DATETIME, SQL_TIME, SQL_CODE_TIME)) {
     return StatusRecord::Ok();
   }
-  if (concise_type == SQL_TIMESTAMP && type == SQL_DATETIME &&
-      datetime_interval_code == SQL_CODE_TIMESTAMP) {
+  if (IsTypeValid(SQL_DATETIME, SQL_TIMESTAMP, SQL_CODE_TIMESTAMP)) {
     return StatusRecord::Ok();
   }
 
@@ -324,7 +324,7 @@ StatusRecord DescriptorRecord::ConsistencyCheck() const {
 }
 
 StatusRecord DescriptorRecord::SetDataPointer(SQLPOINTER ptr,
-                                              DescriptorType desc_type) {
+                                              DescriptorType const desc_type) {
   StatusRecord status_record = ConsistencyCheck();
   if (!status_record.ok()) {
     return status_record;

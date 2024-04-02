@@ -55,7 +55,7 @@ struct DescriptorRecord {
                                       DescriptorType desc_type);
   odbc_internal::StatusRecord SetConciseType(SQLSMALLINT value);
   odbc_internal::StatusRecord SetDataPointer(SQLPOINTER data_ptr,
-                                             DescriptorType desc_type);
+                                             DescriptorType const desc_type);
   [[nodiscard]] odbc_internal::StatusRecord ConsistencyCheck() const;
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
@@ -98,6 +98,11 @@ struct DescriptorRecord {
   void SetDatetimeType(Interval const& entry, DescriptorType desc_type);
   odbc_internal::StatusRecord SetOtherType(SQLSMALLINT value,
                                            std::string const& error_message);
+  [[nodiscard]] bool IsTypeValid(SQLSMALLINT valid_type,
+                                 SQLSMALLINT valid_concise_type,
+                                 SQLSMALLINT valid_code) const;
+  [[nodiscard]] bool IsTypeValid(SQLSMALLINT valid_type,
+                                 Interval const& interval) const;
 };
 
 class DescriptorHandle : public Handle {
