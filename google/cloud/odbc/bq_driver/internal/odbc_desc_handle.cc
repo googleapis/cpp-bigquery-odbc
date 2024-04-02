@@ -273,14 +273,14 @@ StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
   return SetOtherType(value, "Illegal descriptor concise type");
 }
 
-bool DescriptorRecord::IsTypeValid(SQLSMALLINT const valid_type,
-                                   SQLSMALLINT const valid_concise_type,
-                                   SQLSMALLINT const valid_code) const {
+bool DescriptorRecord::IsTypeValid(SQLSMALLINT valid_type,
+                                   SQLSMALLINT valid_concise_type,
+                                   SQLSMALLINT valid_code) const {
   return type == valid_type && concise_type == valid_concise_type &&
          datetime_interval_code == valid_code;
 }
 
-bool DescriptorRecord::IsTypeValid(SQLSMALLINT const valid_type,
+bool DescriptorRecord::IsTypeValid(SQLSMALLINT valid_type,
                                    Interval const& interval) const {
   return IsTypeValid(valid_type, interval.concise_sql_type,
                      interval.datetime_interval_code) ||
@@ -324,7 +324,7 @@ StatusRecord DescriptorRecord::ConsistencyCheck() const {
 }
 
 StatusRecord DescriptorRecord::SetDataPointer(SQLPOINTER ptr,
-                                              DescriptorType const desc_type) {
+                                              DescriptorType const& desc_type) {
   StatusRecord status_record = ConsistencyCheck();
   if (!status_record.ok()) {
     return status_record;
