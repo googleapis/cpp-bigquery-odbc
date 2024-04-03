@@ -13,36 +13,61 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
-  if (!in_handle) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
-  }
-  // Validate the handle
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-
   switch (handle_type) {
-    case SQL_HANDLE_ENV:
-      return FreeHandle<EnvironmentHandle>(HandleType::kEnvHandle,
-                                           in_handle_wrapped);
-    case SQL_HANDLE_DBC:
-      return FreeHandle<ConnectionHandle>(HandleType::kConnHandle,
-                                          in_handle_wrapped);
-    case SQL_HANDLE_STMT:
-      return FreeHandle<StatementHandle>(HandleType::kStatementHandle,
-                                         in_handle_wrapped);
+    case SQL_HANDLE_ENV: {
+      StatusRecordOr<EnvironmentHandle*> handle_result =
+          ValidateEnvironmentHandle(in_handle);
+      if (!handle_result) {
+        TracePrintInternal(*(*kTraceOptsConsole),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+      }
+      delete *handle_result;
+      break;
+    }
+    case SQL_HANDLE_DBC: {
+      StatusRecordOr<ConnectionHandle*> handle_result =
+          ValidateConnectionHandle(in_handle, false);
+      if (!handle_result) {
+        TracePrintInternal(*(*kTraceOptsConsole),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+      }
+      delete *handle_result;
+      break;
+    }
+    case SQL_HANDLE_STMT: {
+      StatusRecordOr<StatementHandle*> handle_result =
+          ValidateStatementHandle(in_handle);
+      if (!handle_result) {
+        TracePrintInternal(*(*kTraceOptsConsole),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+      }
+      delete *handle_result;
+      break;
+    }
+    default:
+      return SQL_INVALID_HANDLE;
   }
-  // TODO(#158): SQLGetDiagRec should handle this
-  return SQL_INVALID_HANDLE;
+  // Deleting 'void *' is an undefined behavior, so we need to cast it first
+  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
+  delete in_handle_wrapped;
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

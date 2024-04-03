@@ -45,25 +45,6 @@ struct HandleWrapped {
   SQLHANDLE handle_ref;  // reference to the internal handle we created
 };
 
-template <typename T>
-inline SQLRETURN FreeHandle(HandleType handle_type,
-                            HandleWrapped* handle_wrapped) {
-  if (!handle_wrapped) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_ERROR;
-  }
-  if (handle_type != handle_wrapped->handle_type) {
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): Add logging here
-    return SQL_INVALID_HANDLE;
-  }
-  T* internal_handle_ptr = reinterpret_cast<T*>(handle_wrapped->handle_ref);
-  delete internal_handle_ptr;
-  delete handle_wrapped;
-  return SQL_SUCCESS;
-}
-
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
