@@ -253,15 +253,14 @@ TEST(AddressToPointer, SetPointer_Null) {
 }
 
 TEST(AddressToPointer, SetPointer_Null_WasNotNull) {
-  SQLSMALLINT out_buf[] = {1, 2, 3};
+  SQLSMALLINT value = 5;
+  SQLSMALLINT* out_buf = &value;
   SQLINTEGER str_len = 0;
 
   SQLRETURN return_code = AddressToPointer(nullptr, &out_buf, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
-  EXPECT_EQ(0, out_buf[0]);
-  EXPECT_EQ(0, out_buf[1]);
-  EXPECT_EQ(0, out_buf[2]);
+  EXPECT_EQ(nullptr, out_buf);
   EXPECT_EQ(sizeof(std::size_t), str_len);
 }
 

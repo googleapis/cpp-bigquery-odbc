@@ -604,7 +604,7 @@ TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
   handle.BindNewDescriptorRecord(3, descriptor_record);
-  SQLINTEGER out_buf = 0;
+  SQLULEN out_buf = 0;
   SQLSMALLINT rec_number = 1;
 
   auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
