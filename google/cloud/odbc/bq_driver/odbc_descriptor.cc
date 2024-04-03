@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -26,6 +27,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -48,6 +50,24 @@ static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
       SQL_DESC_DATETIME_INTERVAL_PRECISION, SQL_DESC_LENGTH, SQL_DESC_NAME,
       SQL_DESC_NUM_PREC_RADIX, SQL_DESC_OCTET_LENGTH, SQL_DESC_PARAMETER_TYPE,
       SQL_DESC_PRECISION, SQL_DESC_SCALE, SQL_DESC_TYPE, SQL_DESC_UNNAMED}}};
+
+SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle,
+                             SQLHANDLE* out_desc_handle) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(in_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  //TODO(308645203) Associate Descriptor Handle with a Connection Handle
+
+  auto* desc_handle = new DescriptorHandle();
+  auto* wrapped_handle =
+      new HandleWrapped(HandleType::kStatementHandle, desc_handle);
+  *out_desc_handle = wrapped_handle;
+  return SQL_SUCCESS;
+}
 
 SQLRETURN SetCount(DescriptorHandle* handle, std::size_t desc_int_value) {
   auto new_val = static_cast<SQLSMALLINT>(desc_int_value);

@@ -19,6 +19,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_diagnostics.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
@@ -161,7 +162,16 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       // Call to Acquire mutex for descriptor handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-      // Call to Allocate descriptor handle in odbc_descriptor.h.
+      if (is_tracing_enabled)
+        TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                          *(*kTraceOptsConsole));
+
+      rc = google::cloud::odbc_bq_driver::SQLAllocDescHandle(inputHandle,
+                                                             outputHandle);
+
+      // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+      if (is_tracing_enabled)
+        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       // Call to Release mutex for descriptor handle in odbc_lock.h.
