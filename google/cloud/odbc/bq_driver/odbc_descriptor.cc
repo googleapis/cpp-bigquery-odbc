@@ -133,8 +133,8 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   }
   // TODO(b/308645203) Associate Descriptor Handle with a Connection Handle
 
-  auto* desc_handle = new DescriptorHandle();
-  desc_handle->GetHeaderRecord().alloc_type = SQL_DESC_ALLOC_USER;
+  auto* desc_handle =
+      new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kDescriptorHandle, desc_handle);
   *out_desc_handle = wrapped_handle;
@@ -386,8 +386,8 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   HeaderRecord& header_record = handle->GetHeaderRecord();
   switch (field_identifier) {
     case SQL_DESC_ALLOC_TYPE:
-      return IntValueToOutputBufferResponse(header_record.alloc_type, out_value,
-                                            value_string_len);
+      return IntValueToOutputBufferResponse(header_record.GetAllocType(),
+                                            out_value, value_string_len);
     case SQL_DESC_ARRAY_SIZE:
       return IntValueToOutputBufferResponse(header_record.array_size, out_value,
                                             value_string_len);

@@ -37,13 +37,19 @@ struct Interval {
 enum class DescriptorType { kApplication, kIRD, kIPD };
 
 struct HeaderRecord {
-  SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO;
+  explicit HeaderRecord(SQLSMALLINT alloc_type) : alloc_type_(alloc_type){};
+
+  [[nodiscard]] SQLSMALLINT GetAllocType() const { return alloc_type_; }
+
   SQLULEN array_size = 0;
   SQLUSMALLINT* array_status_ptr = nullptr;
   SQLLEN* bind_offset_ptr = nullptr;
   SQLINTEGER bind_type = SQL_BIND_BY_COLUMN;
   SQLSMALLINT count = 0;
   SQLULEN* rows_processed_ptr = nullptr;
+
+ private:
+  SQLSMALLINT alloc_type_ = SQL_DESC_ALLOC_AUTO;
 };
 
 struct DescriptorRecord {
@@ -107,8 +113,9 @@ struct DescriptorRecord {
 
 class DescriptorHandle : public Handle {
  public:
-  explicit DescriptorHandle(DescriptorType type = DescriptorType::kApplication)
-      : type_(type){};
+  explicit DescriptorHandle(DescriptorType type = DescriptorType::kApplication,
+                            SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO)
+      : type_(type), header_record_(alloc_type){};
   ~DescriptorHandle() = default;
 
   DescriptorHandle(DescriptorHandle const&) = default;
