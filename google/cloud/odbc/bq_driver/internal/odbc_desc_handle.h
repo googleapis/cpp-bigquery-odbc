@@ -71,14 +71,14 @@ struct DescriptorRecord {
   SQLSMALLINT fixed_prec_scale = SQL_FALSE;
   SQLLEN* indicator_ptr = nullptr;
   std::string label;
-  SQLULEN length = 16384;
+  SQLULEN length = 0;
   std::string literal_prefix;
   std::string literal_suffix;
   std::string local_type_name;
   std::string name;
   SQLSMALLINT nullable = SQL_NULLABLE;
   SQLINTEGER num_prec_radix = 0;
-  SQLLEN octet_length = 16384;
+  SQLLEN octet_length = 0;
   SQLLEN* octet_length_ptr = nullptr;
   SQLSMALLINT parameter_type = SQL_PARAM_INPUT;
   SQLSMALLINT precision = 0;

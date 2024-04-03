@@ -39,6 +39,13 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLPOINTER desc_value,
                                   SQLINTEGER desc_value_buffer_len);
 
+SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
+                                  SQLSMALLINT rec_number,
+                                  SQLSMALLINT field_identifier,
+                                  SQLPOINTER out_value,
+                                  SQLINTEGER value_buffer_len,
+                                  SQLINTEGER* value_string_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DESCRIPTOR_H

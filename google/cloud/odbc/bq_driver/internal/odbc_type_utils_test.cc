@@ -226,4 +226,66 @@ TEST(IntValueToOutputBufferResponse,
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
+TEST(AddressToPointer, SetPointer) {
+  SQLSMALLINT ptr[] = {1, 2, 3};
+  SQLSMALLINT* out_buf = nullptr;
+  SQLINTEGER str_len = 0;
+
+  SQLRETURN return_code = AddressToPointer(ptr, &out_buf, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(ptr, out_buf);
+  EXPECT_EQ(1, out_buf[0]);
+  EXPECT_EQ(2, out_buf[1]);
+  EXPECT_EQ(3, out_buf[2]);
+  EXPECT_EQ(sizeof(std::size_t), str_len);
+}
+
+TEST(AddressToPointer, SetPointer_Null) {
+  SQLSMALLINT* out_buf = nullptr;
+  SQLINTEGER str_len = 0;
+
+  SQLRETURN return_code = AddressToPointer(nullptr, &out_buf, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(nullptr, out_buf);
+  EXPECT_EQ(sizeof(std::size_t), str_len);
+}
+
+TEST(AddressToPointer, SetPointer_Null_WasNotNull) {
+  SQLSMALLINT out_buf[] = {1, 2, 3};
+  SQLINTEGER str_len = 0;
+
+  SQLRETURN return_code = AddressToPointer(nullptr, &out_buf, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(0, out_buf[0]);
+  EXPECT_EQ(0, out_buf[1]);
+  EXPECT_EQ(0, out_buf[2]);
+  EXPECT_EQ(sizeof(std::size_t), str_len);
+}
+
+TEST(AddressToPointer, DoNotSetPointerToNull) {
+  SQLSMALLINT ptr[] = {1, 2, 3};
+  SQLINTEGER str_len = 0;
+
+  SQLRETURN return_code = AddressToPointer(ptr, nullptr, &str_len);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(sizeof(std::size_t), str_len);
+}
+
+TEST(AddressToPointer, SetPointer_NullStrLen) {
+  SQLSMALLINT ptr[] = {1, 2, 3};
+  SQLSMALLINT* out_buf = nullptr;
+
+  SQLRETURN return_code = AddressToPointer(ptr, &out_buf, nullptr);
+
+  ASSERT_EQ(SQL_SUCCESS, return_code);
+  EXPECT_EQ(ptr, out_buf);
+  EXPECT_EQ(1, out_buf[0]);
+  EXPECT_EQ(2, out_buf[1]);
+  EXPECT_EQ(3, out_buf[2]);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

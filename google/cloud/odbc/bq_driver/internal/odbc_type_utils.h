@@ -76,6 +76,9 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
   return SQL_SUCCESS;
 }
 
+SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
+                           SQLINTEGER* str_len_ptr);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TYPE_UTILS_H

@@ -16,4 +16,17 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// During program execution out_buf is never NULL
+SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
+                           SQLINTEGER* str_len_ptr) {
+  if (out_buf) {
+    auto* buf = static_cast<std::size_t*>(out_buf);
+    *buf = reinterpret_cast<std::size_t>(ptr);
+  }
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLINTEGER>(sizeof(std::size_t));
+  }
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

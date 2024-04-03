@@ -15,25 +15,30 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <algorithm>
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::AddressToPointer;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
+using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
+static std::map<DescriptorType, std::vector<int>> const kAllowedFieldsToSet = {
     {DescriptorType::kApplication,
      {SQL_DESC_ARRAY_SIZE, SQL_DESC_ARRAY_STATUS_PTR, SQL_DESC_BIND_OFFSET_PTR,
       SQL_DESC_BIND_TYPE, SQL_DESC_COUNT, SQL_DESC_CONCISE_TYPE,
@@ -50,6 +55,73 @@ static std::map<DescriptorType, std::set<int>> const kAllowedFieldsToSet = {
       SQL_DESC_DATETIME_INTERVAL_PRECISION, SQL_DESC_LENGTH, SQL_DESC_NAME,
       SQL_DESC_NUM_PREC_RADIX, SQL_DESC_OCTET_LENGTH, SQL_DESC_PARAMETER_TYPE,
       SQL_DESC_PRECISION, SQL_DESC_SCALE, SQL_DESC_TYPE, SQL_DESC_UNNAMED}}};
+
+static std::map<DescriptorType, std::vector<int>> const kAllowedFieldsToGet = {
+    {DescriptorType::kApplication,
+     {SQL_DESC_ALLOC_TYPE, SQL_DESC_ARRAY_SIZE, SQL_DESC_ARRAY_STATUS_PTR,
+      SQL_DESC_BIND_OFFSET_PTR, SQL_DESC_BIND_TYPE, SQL_DESC_COUNT,
+      SQL_DESC_CONCISE_TYPE, SQL_DESC_DATA_PTR, SQL_DESC_DATETIME_INTERVAL_CODE,
+      SQL_DESC_DATETIME_INTERVAL_PRECISION, SQL_DESC_INDICATOR_PTR,
+      SQL_DESC_LENGTH, SQL_DESC_NUM_PREC_RADIX, SQL_DESC_OCTET_LENGTH,
+      SQL_DESC_OCTET_LENGTH_PTR, SQL_DESC_PRECISION, SQL_DESC_SCALE,
+      SQL_DESC_TYPE}},
+    {DescriptorType::kIRD,
+     {SQL_DESC_ALLOC_TYPE,
+      SQL_DESC_ARRAY_STATUS_PTR,
+      SQL_DESC_COUNT,
+      SQL_DESC_ROWS_PROCESSED_PTR,
+      SQL_DESC_AUTO_UNIQUE_VALUE,
+      SQL_DESC_BASE_COLUMN_NAME,
+      SQL_DESC_BASE_TABLE_NAME,
+      SQL_DESC_CASE_SENSITIVE,
+      SQL_DESC_CATALOG_NAME,
+      SQL_DESC_CONCISE_TYPE,
+      SQL_DESC_DATETIME_INTERVAL_CODE,
+      SQL_DESC_DATETIME_INTERVAL_PRECISION,
+      SQL_DESC_DISPLAY_SIZE,
+      SQL_DESC_FIXED_PREC_SCALE,
+      SQL_DESC_LABEL,
+      SQL_DESC_LENGTH,
+      SQL_DESC_LITERAL_PREFIX,
+      SQL_DESC_LITERAL_SUFFIX,
+      SQL_DESC_LOCAL_TYPE_NAME,
+      SQL_DESC_NAME,
+      SQL_DESC_NULLABLE,
+      SQL_DESC_NUM_PREC_RADIX,
+      SQL_DESC_OCTET_LENGTH,
+      SQL_DESC_PRECISION,
+      SQL_DESC_SCALE,
+      SQL_DESC_SCHEMA_NAME,
+      SQL_DESC_SEARCHABLE,
+      SQL_DESC_TABLE_NAME,
+      SQL_DESC_TYPE,
+      SQL_DESC_TYPE_NAME,
+      SQL_DESC_UNNAMED,
+      SQL_DESC_UNSIGNED,
+      SQL_DESC_UPDATABLE}},
+    {DescriptorType::kIPD,
+     {SQL_DESC_ALLOC_TYPE,
+      SQL_DESC_ARRAY_STATUS_PTR,
+      SQL_DESC_COUNT,
+      SQL_DESC_ROWS_PROCESSED_PTR,
+      SQL_DESC_CASE_SENSITIVE,
+      SQL_DESC_CONCISE_TYPE,
+      SQL_DESC_DATETIME_INTERVAL_CODE,
+      SQL_DESC_DATETIME_INTERVAL_PRECISION,
+      SQL_DESC_FIXED_PREC_SCALE,
+      SQL_DESC_LENGTH,
+      SQL_DESC_LOCAL_TYPE_NAME,
+      SQL_DESC_NAME,
+      SQL_DESC_NULLABLE,
+      SQL_DESC_NUM_PREC_RADIX,
+      SQL_DESC_OCTET_LENGTH,
+      SQL_DESC_PARAMETER_TYPE,
+      SQL_DESC_PRECISION,
+      SQL_DESC_SCALE,
+      SQL_DESC_TYPE,
+      SQL_DESC_TYPE_NAME,
+      SQL_DESC_UNNAMED,
+      SQL_DESC_UNSIGNED}}};
 
 SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
@@ -184,8 +256,8 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   }
   DescriptorHandle* handle = *handle_result;
 
-  std::set<int> set = kAllowedFieldsToSet.at(handle->GetType());
-  if (set.find(field_identifier) == set.end()) {
+  std::vector<int> vec = kAllowedFieldsToSet.at(handle->GetType());
+  if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
     handle->GetDiagnostics().AddStatusRecord(status_record);
@@ -280,6 +352,221 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                              "Invalid descriptor field identifier"};
   handle->GetDiagnostics().AddStatusRecord(status_record);
   return status_record.CalculateReturnCode();
+}
+
+SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
+                                  SQLSMALLINT rec_number,
+                                  SQLSMALLINT field_identifier,
+                                  SQLPOINTER out_value,
+                                  SQLINTEGER value_buffer_len,
+                                  SQLINTEGER* value_string_len) {
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* handle = *handle_result;
+
+  std::vector<int> vec = kAllowedFieldsToGet.at(handle->GetType());
+  if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
+    StatusRecord status_record{SQLStates::k_HY091(),
+                               "Invalid descriptor field identifier"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (handle->GetType() == DescriptorType::kIPD) {
+    // TODO(332469364) Check if statement handle is in 'prepared' or 'executed'
+    // state (HY007)
+  }
+
+  // HeaderRecord fields
+  HeaderRecord& header_record = handle->GetHeaderRecord();
+  switch (field_identifier) {
+    case SQL_DESC_ALLOC_TYPE:
+      return IntValueToOutputBufferResponse(header_record.alloc_type, out_value,
+                                            value_string_len);
+    case SQL_DESC_ARRAY_SIZE:
+      return IntValueToOutputBufferResponse(header_record.array_size, out_value,
+                                            value_string_len);
+    case SQL_DESC_ARRAY_STATUS_PTR: {
+      return AddressToPointer(header_record.array_status_ptr, out_value,
+                              value_string_len);
+    }
+    case SQL_DESC_BIND_OFFSET_PTR:
+      return AddressToPointer(header_record.bind_offset_ptr, out_value,
+                              value_string_len);
+    case SQL_DESC_BIND_TYPE:
+      return IntValueToOutputBufferResponse(header_record.bind_type, out_value,
+                                            value_string_len);
+    case SQL_DESC_COUNT:
+      return IntValueToOutputBufferResponse(header_record.count, out_value,
+                                            value_string_len);
+    case SQL_DESC_ROWS_PROCESSED_PTR:
+      return AddressToPointer(header_record.rows_processed_ptr, out_value,
+                              value_string_len);
+  }
+
+  if (rec_number < 0) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  if (rec_number > header_record.count) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return SQL_NO_DATA;
+  }
+
+  // DescriptorRecord fields
+  DescriptorRecord default_descriptor_record;
+  // Use default values if RecNumber is less than SQL_DESC_COUNT and there is no
+  // row for that RecNumber
+  DescriptorRecord& descriptor_record =
+      (handle->HasDescriptorRecord(rec_number))
+          ? handle->GetDescriptorRecord(rec_number)
+          : default_descriptor_record;
+  StatusRecord result = StatusRecord::Ok();
+  switch (field_identifier) {
+    case SQL_DESC_AUTO_UNIQUE_VALUE:
+      return IntValueToOutputBufferResponse(descriptor_record.auto_unique_value,
+                                            out_value, value_string_len);
+    case SQL_DESC_BASE_COLUMN_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.base_column_name.c_str(), out_value,
+          value_buffer_len, value_string_len);
+      break;
+    case SQL_DESC_BASE_TABLE_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.base_table_name.c_str(), out_value,
+          value_buffer_len, value_string_len);
+      break;
+    case SQL_DESC_CASE_SENSITIVE:
+      return IntValueToOutputBufferResponse(descriptor_record.case_sensitive,
+                                            out_value, value_string_len);
+    case SQL_DESC_CATALOG_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.catalog_name.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_CONCISE_TYPE:
+      return IntValueToOutputBufferResponse(descriptor_record.concise_type,
+                                            out_value, value_string_len);
+    case SQL_DESC_DATA_PTR:
+      return AddressToPointer(descriptor_record.data_ptr, out_value,
+                              value_string_len);
+    case SQL_DESC_DATETIME_INTERVAL_CODE:
+      return IntValueToOutputBufferResponse(
+          descriptor_record.datetime_interval_code, out_value,
+          value_string_len);
+    case SQL_DESC_DATETIME_INTERVAL_PRECISION:
+      return IntValueToOutputBufferResponse(
+          descriptor_record.datetime_interval_precision, out_value,
+          value_string_len);
+    case SQL_DESC_DISPLAY_SIZE:
+      return IntValueToOutputBufferResponse(descriptor_record.display_size,
+                                            out_value, value_string_len);
+    case SQL_DESC_FIXED_PREC_SCALE:
+      return IntValueToOutputBufferResponse(descriptor_record.fixed_prec_scale,
+                                            out_value, value_string_len);
+    case SQL_DESC_INDICATOR_PTR:
+      return AddressToPointer(descriptor_record.indicator_ptr, out_value,
+                              value_string_len);
+    case SQL_DESC_LABEL:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.label.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_LENGTH:
+      return IntValueToOutputBufferResponse(descriptor_record.length, out_value,
+                                            value_string_len);
+    case SQL_DESC_LITERAL_PREFIX:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.literal_prefix.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_LITERAL_SUFFIX:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.literal_suffix.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_LOCAL_TYPE_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.local_type_name.c_str(), out_value,
+          value_buffer_len, value_string_len);
+      break;
+    case SQL_DESC_NAME:
+      result = StringValueToOutputBufferResponse(descriptor_record.name.c_str(),
+                                                 out_value, value_buffer_len,
+                                                 value_string_len);
+      break;
+    case SQL_DESC_NULLABLE:
+      return IntValueToOutputBufferResponse(descriptor_record.nullable,
+                                            out_value, value_string_len);
+    case SQL_DESC_NUM_PREC_RADIX:
+      return IntValueToOutputBufferResponse(descriptor_record.num_prec_radix,
+                                            out_value, value_string_len);
+    case SQL_DESC_OCTET_LENGTH:
+      return IntValueToOutputBufferResponse(descriptor_record.octet_length,
+                                            out_value, value_string_len);
+    case SQL_DESC_OCTET_LENGTH_PTR:
+      return AddressToPointer(descriptor_record.octet_length_ptr, out_value,
+                              value_string_len);
+    case SQL_DESC_PARAMETER_TYPE:
+      return IntValueToOutputBufferResponse(descriptor_record.parameter_type,
+                                            out_value, value_string_len);
+    case SQL_DESC_PRECISION:
+      return IntValueToOutputBufferResponse(descriptor_record.precision,
+                                            out_value, value_string_len);
+    case SQL_DESC_ROWVER:
+      return IntValueToOutputBufferResponse(descriptor_record.rowver, out_value,
+                                            value_string_len);
+    case SQL_DESC_SCALE:
+      return IntValueToOutputBufferResponse(descriptor_record.scale, out_value,
+                                            value_string_len);
+    case SQL_DESC_SCHEMA_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.schema_name.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_SEARCHABLE:
+      return IntValueToOutputBufferResponse(descriptor_record.searchable,
+                                            out_value, value_string_len);
+    case SQL_DESC_TABLE_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.table_name.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_TYPE:
+      return IntValueToOutputBufferResponse(descriptor_record.type, out_value,
+                                            value_string_len);
+    case SQL_DESC_TYPE_NAME:
+      result = StringValueToOutputBufferResponse(
+          descriptor_record.type_name.c_str(), out_value, value_buffer_len,
+          value_string_len);
+      break;
+    case SQL_DESC_UNNAMED:
+      return IntValueToOutputBufferResponse(descriptor_record.unnamed,
+                                            out_value, value_string_len);
+    case SQL_DESC_UNSIGNED:
+      return IntValueToOutputBufferResponse(descriptor_record.sql_desc_unsigned,
+                                            out_value, value_string_len);
+    case SQL_DESC_UPDATABLE:
+      return IntValueToOutputBufferResponse(descriptor_record.updatable,
+                                            out_value, value_string_len);
+    default:
+      result = StatusRecord{SQLStates::k_HY091(),
+                            "Invalid descriptor field identifier"};
+  }
+
+  if (!result.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(result);
+  }
+  return result.CalculateReturnCode();
 }
 
 }  // namespace google::cloud::odbc_bq_driver
