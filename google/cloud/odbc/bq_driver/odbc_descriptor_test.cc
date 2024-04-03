@@ -454,9 +454,8 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
-  DescriptorHandle handle;
+  DescriptorHandle handle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
   HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
-  handle.GetHeaderRecord().alloc_type = SQL_DESC_ALLOC_USER;
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
