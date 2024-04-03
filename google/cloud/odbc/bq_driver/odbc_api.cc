@@ -52,6 +52,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetEnvAttr;
@@ -59,6 +60,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
@@ -68,6 +70,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetEnvAttr;
@@ -75,6 +78,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
@@ -727,13 +731,21 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
                                   SQLINTEGER outDescValueBufferLen,
                                   SQLINTEGER* outDescValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetDescField");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLGetDescField(
+        descriptorHandle, recNumber, fieldId, outDescValue,
+        outDescValueBufferLen, outDescValueStringLen, *(*kTraceOptsConsole));
 
-  // Call to common internal function for SQLGetDescField and SQLGetDescFieldW
-  // in odbc_descriptor.h.
+  rc = google::cloud::odbc_bq_driver::SQLGetDescFieldInternal(
+      descriptorHandle, recNumber, fieldId, outDescValue, outDescValueBufferLen,
+      outDescValueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDescField(rc, *(*kTraceOptsConsole));
 
   return rc;
 }
@@ -816,13 +828,21 @@ SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
                                   SQLPOINTER descValue,
                                   SQLINTEGER descValueBufferLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLSetDescField");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLSetDescField(
+        descriptorHandle, recNumber, fieldIdentifier, descValue,
+        descValueBufferLen, *(*kTraceOptsConsole));
 
-  // Call to common internal function for SQLSetDescField and SQLSetDescFieldW
-  // in odbc_descriptor.h.
+  rc = google::cloud::odbc_bq_driver::SQLSetDescFieldInternal(
+      descriptorHandle, recNumber, fieldIdentifier, descValue,
+      descValueBufferLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetDescField(rc, *(*kTraceOptsConsole));
 
   return rc;
 }

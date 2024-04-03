@@ -136,7 +136,7 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   auto* desc_handle = new DescriptorHandle();
   desc_handle->GetHeaderRecord().alloc_type = SQL_DESC_ALLOC_USER;
   auto* wrapped_handle =
-      new HandleWrapped(HandleType::kStatementHandle, desc_handle);
+      new HandleWrapped(HandleType::kDescriptorHandle, desc_handle);
   *out_desc_handle = wrapped_handle;
   return SQL_SUCCESS;
 }

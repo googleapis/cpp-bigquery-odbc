@@ -14,11 +14,11 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 
+namespace google::cloud::odbc_tests {
+
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
-
-namespace google::cloud::odbc_tests {
 
 // Defines the idiomatic ODBC descriptors
 // These fields can populated by a call to SQLGetDescRec
@@ -210,7 +210,143 @@ TEST(DescriptorFieldsTest, SQLSetDescField) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Getting fields
+  SQLSMALLINT alloc_type;
+  status =
+      SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ALLOC_TYPE)", conn);
+  EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescField, Field_SQL_DESC_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescField(conn->ard, 1, SQL_DESC_TYPE, (SQLPOINTER)SQL_INTEGER,
+                           NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+
+  // Getting fields
+  SQLSMALLINT concise_type;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
+                           0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  EXPECT_EQ(SQL_INTEGER, concise_type);
+  SQLSMALLINT type;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+  EXPECT_EQ(SQL_INTEGER, type);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescField, Field_SQL_DESC_CONCISE_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
+                           (SQLPOINTER)SQL_INTERVAL_MONTH, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+
+  // Getting fields
+  SQLSMALLINT concise_type;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
+                           0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  EXPECT_EQ(SQL_INTERVAL_MONTH, concise_type);
+  SQLSMALLINT type;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+  EXPECT_EQ(SQL_INTERVAL, type);
+  SQLSMALLINT datetime_code;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
+                           &datetime_code, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
+  EXPECT_EQ(SQL_CODE_MONTH, datetime_code);
+  SQLINTEGER datetime_precision;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+                           &datetime_precision, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
+             conn);
+  EXPECT_EQ(2, datetime_precision);
+  SQLSMALLINT precision;
+  status =
+      SQLGetDescField(conn->ard, 1, SQL_DESC_PRECISION, &precision, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(0, precision);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescField, Field_SQL_DESC_ARRAY_STATUS_PTR) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  SQLUSMALLINT array_status_ptr[3];
+  status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           array_status_ptr, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+
+  // Getting fields
+  SQLUSMALLINT* new_array_status_ptr = nullptr;
+  status = SQLGetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           &new_array_status_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+  EXPECT_EQ(array_status_ptr, new_array_status_ptr);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescField, DefaultField_SQL_DESC_LENGTH) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_LENGTH, (SQLPOINTER)3, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
+
+  // Getting fields
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ard, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(3, count);
+  SQLULEN length = 0;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(0, length);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
