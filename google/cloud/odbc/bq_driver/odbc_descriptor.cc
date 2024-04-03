@@ -59,7 +59,7 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  // TODO(308645203) Associate Descriptor Handle with a Connection Handle
+  // TODO(b/308645203) Associate Descriptor Handle with a Connection Handle
 
   auto* desc_handle = new DescriptorHandle();
   auto* wrapped_handle =
