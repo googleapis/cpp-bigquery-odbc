@@ -238,7 +238,7 @@ TEST(AddressToPointer, SetPointer) {
   EXPECT_EQ(1, out_buf[0]);
   EXPECT_EQ(2, out_buf[1]);
   EXPECT_EQ(3, out_buf[2]);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(AddressToPointer, SetPointer_Null) {
@@ -249,7 +249,7 @@ TEST(AddressToPointer, SetPointer_Null) {
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(nullptr, out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(AddressToPointer, SetPointer_Null_WasNotNull) {
@@ -261,7 +261,7 @@ TEST(AddressToPointer, SetPointer_Null_WasNotNull) {
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(nullptr, out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(AddressToPointer, DoNotSetPointerToNull) {
@@ -271,7 +271,7 @@ TEST(AddressToPointer, DoNotSetPointerToNull) {
   SQLRETURN return_code = AddressToPointer(ptr, nullptr, &str_len);
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(AddressToPointer, SetPointer_NullStrLen) {

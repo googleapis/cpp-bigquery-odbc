@@ -499,7 +499,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_STATUS_PTR) {
   EXPECT_EQ(1, out_buf[0]);
   EXPECT_EQ(2, out_buf[1]);
   EXPECT_EQ(3, out_buf[2]);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
@@ -518,7 +518,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
   EXPECT_EQ(1, out_buf[0]);
   EXPECT_EQ(2, out_buf[1]);
   EXPECT_EQ(3, out_buf[2]);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_TYPE) {
@@ -567,7 +567,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
   EXPECT_EQ(1, out_buf[0]);
   EXPECT_EQ(2, out_buf[1]);
   EXPECT_EQ(3, out_buf[2]);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Fails_RecNumberNegative) {
@@ -746,7 +746,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&val, out_buf);
   EXPECT_EQ(5, *reinterpret_cast<SQLINTEGER*>(out_buf));
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
@@ -842,7 +842,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(5, *out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
@@ -860,7 +860,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
@@ -1047,7 +1047,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(5, *out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
@@ -1065,7 +1065,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, out_buf);
-  EXPECT_EQ(sizeof(std::size_t), str_len);
+  EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
