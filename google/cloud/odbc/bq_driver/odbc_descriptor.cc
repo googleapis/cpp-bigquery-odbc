@@ -62,6 +62,7 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   // TODO(b/308645203) Associate Descriptor Handle with a Connection Handle
 
   auto* desc_handle = new DescriptorHandle();
+  desc_handle->GetHeaderRecord().alloc_type = SQL_DESC_ALLOC_USER;
   auto* wrapped_handle =
       new HandleWrapped(HandleType::kStatementHandle, desc_handle);
   *out_desc_handle = wrapped_handle;
