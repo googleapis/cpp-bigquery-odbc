@@ -31,8 +31,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle,
-                             SQLHANDLE* out_desc_handle);
+SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle);
 
 SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
