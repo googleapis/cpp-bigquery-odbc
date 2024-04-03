@@ -21,6 +21,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -58,6 +59,22 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      // TODO(308647690) free the four automatically allocated descriptors
+      // associated with that handle
+      delete *handle_result;
+      break;
+    }
+    case SQL_HANDLE_DESC: {
+      StatusRecordOr<DescriptorHandle*> handle_result =
+          ValidateDescriptorHandle(in_handle);
+      if (!handle_result) {
+        TracePrintInternal(*(*kTraceOptsConsole),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+      }
+      // TODO(308647690) all statements that the freed handle had been
+      // associated with should be reverted to their respective automatically
+      // allocated descriptor handles
       delete *handle_result;
       break;
     }
