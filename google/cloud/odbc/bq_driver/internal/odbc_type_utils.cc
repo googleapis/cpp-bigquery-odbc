@@ -20,7 +20,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLINTEGER* str_len_ptr) {
   if (out_buf) {
-    *((SQLPOINTER*)out_buf) = ptr;
+    *(static_cast<SQLPOINTER*>(out_buf)) = ptr;
   }
   if (str_len_ptr) {
     *str_len_ptr = static_cast<SQLINTEGER>(sizeof(SQLPOINTER));
