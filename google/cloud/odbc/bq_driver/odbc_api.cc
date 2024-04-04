@@ -199,6 +199,17 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldriverconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLDriverConnectA(
+    SQLHDBC connectionHandle, SQLHWND windowHandle, SQLCHAR* inConnectionString,
+    SQLSMALLINT inConnectionStringLen, SQLCHAR* outConnectionString,
+    SQLSMALLINT outConnectionStringBufferLen,
+    SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
+  return SQLDriverConnect(connectionHandle, windowHandle, inConnectionString,
+                          inConnectionStringLen, outConnectionString,
+                          outConnectionStringBufferLen, outConnectionStringLen,
+                          driverCompletion);
+}
+
 SQLRETURN SQL_API SQLDriverConnect(
     SQLHDBC connectionHandle, SQLHWND windowHandle, SQLCHAR* inConnectionString,
     SQLSMALLINT inConnectionStringLen, SQLCHAR* outConnectionString,
@@ -261,6 +272,17 @@ SQLRETURN SQL_API SQLDriverConnectW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbrowseconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLBrowseConnectA(SQLHDBC connectionHandle,
+                                    SQLCHAR* inConnectionString,
+                                    SQLSMALLINT inConnectionStringLen,
+                                    SQLCHAR* outConnectionString,
+                                    SQLSMALLINT outConnectionStringBufferLen,
+                                    SQLSMALLINT* outConnectionStringLen) {
+  return SQLBrowseConnect(connectionHandle, inConnectionString,
+                          inConnectionStringLen, outConnectionString,
+                          outConnectionStringBufferLen, outConnectionStringLen);
+}
+
 SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
                                    SQLCHAR* inConnectionString,
                                    SQLSMALLINT inConnectionStringLen,
@@ -311,6 +333,14 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlconnect-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLConnectA(SQLHDBC connectionHandle, SQLCHAR* serverName,
+                              SQLSMALLINT serverNameLen, SQLCHAR* userName,
+                              SQLSMALLINT userNameLen, SQLCHAR* authString,
+                              SQLSMALLINT authStringLen) {
+  return SQLConnect(connectionHandle, serverName, serverNameLen, userName,
+                    userNameLen, authString, authStringLen);
+}
+
 SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
                              SQLSMALLINT serverNameLen, SQLCHAR* userName,
                              SQLSMALLINT userNameLen, SQLCHAR* authString,
@@ -365,6 +395,14 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetinfo-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetInfoA(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
+                              SQLPOINTER infoValue,
+                              SQLSMALLINT infoValueBufferLen,
+                              SQLSMALLINT* infoValueStringLen) {
+  return SQLGetInfo(connectionHandle, infoType, infoValue, infoValueBufferLen,
+                    infoValueStringLen);
+}
+
 SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
                              SQLPOINTER infoValue,
                              SQLSMALLINT infoValueBufferLen,
@@ -451,6 +489,11 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgettypeinfo-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetTypeInfoA(SQLHSTMT statementHandle,
+                                  SQLSMALLINT dataType) {
+  return SQLGetTypeInfo(statementHandle, dataType);
+}
+
 SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
                                  SQLSMALLINT dataType) {
   SQLRETURN rc = SQL_SUCCESS;
@@ -462,7 +505,7 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
     TraceFunctionEntry_SQLGetTypeInfo(statementHandle, dataType,
                                       *(*kTraceOptsConsole));
 
-  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // Call to internal common function for SQLGetTypeInfo and SQLGetTypeInfoW
   // in odbc_driver_metadata.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetTypeInfoInternal(statementHandle,
                                                                dataType);
@@ -475,12 +518,38 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
   return rc;
 }
 
+////////////////////////////////////////
+// Unicode version of SQLGetTypeInfo.
+////////////////////////////////////////
+SQLRETURN SQL_API SQLGetTypeInfoW(SQLHSTMT statementHandle,
+                                  SQLSMALLINT dataType) {
+  SQLRETURN rc = SQL_SUCCESS;
+
+  // Call to Acquire mutex for connection handle in odbc_lock.h.
+  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
+
+  // Call to internal common function for SQLGetTypeInfo and SQLGetTypeInfoW
+  // in odbc_driver_metadata.h.
+  // Handle Unicode conversion of  output parameters.
+
+  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  // Call to Release mutex for connection handle in odbc_lock.h.
+
+  return rc;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // Sets connection attributes.
 //
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLSetConnectAttrA(SQLHDBC connectionHandle,
+                                     SQLINTEGER attribute, SQLPOINTER value,
+                                     SQLINTEGER valueStringLen) {
+  return SQLSetConnectAttr(connectionHandle, attribute, value, valueStringLen);
+}
+
 SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER valueStringLen) {
@@ -533,6 +602,14 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetconnectattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetConnectAttrA(SQLHDBC connectionHandle,
+                                     SQLINTEGER attribute, SQLPOINTER value,
+                                     SQLINTEGER valueBufferLen,
+                                     SQLINTEGER* valueStringLen) {
+  return SQLGetConnectAttr(connectionHandle, attribute, value, valueBufferLen,
+                           valueStringLen);
+}
+
 SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER valueBufferLen,
@@ -588,6 +665,12 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLSetStmtAttrA(SQLHSTMT statementHandle,
+                                  SQLINTEGER attribute, SQLPOINTER value,
+                                  SQLINTEGER valueStringLen) {
+  return SQLSetStmtAttr(statementHandle, attribute, value, valueStringLen);
+}
+
 SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
                                  SQLPOINTER value, SQLINTEGER valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
@@ -627,6 +710,14 @@ SQLRETURN SQL_API SQLSetStmtAttrW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetstmtattr-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetStmtAttrA(SQLHSTMT statementHandle,
+                                  SQLINTEGER attribute, SQLPOINTER value,
+                                  SQLINTEGER valueBufferLen,
+                                  SQLINTEGER* valueStringLen) {
+  return SQLGetStmtAttr(statementHandle, attribute, value, valueBufferLen,
+                        valueStringLen);
+}
+
 SQLRETURN SQL_API SQLGetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
                                  SQLPOINTER value, SQLINTEGER valueBufferLen,
                                  SQLINTEGER* valueStringLen) {
@@ -729,6 +820,15 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdescfield-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetDescFieldA(SQLHDESC descriptorHandle,
+                                   SQLSMALLINT recNumber, SQLSMALLINT fieldId,
+                                   SQLPOINTER outDescValue,
+                                   SQLINTEGER outDescValueBufferLen,
+                                   SQLINTEGER* outDescValueStringLen) {
+  return SQLGetDescField(descriptorHandle, recNumber, fieldId, outDescValue,
+                         outDescValueBufferLen, outDescValueStringLen);
+}
+
 SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
                                   SQLSMALLINT recNumber, SQLSMALLINT fieldId,
                                   SQLPOINTER outDescValue,
@@ -782,6 +882,16 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdescrec-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetDescRecA(
+    SQLHDESC descriptorHandle, SQLSMALLINT recNumber, SQLCHAR* name,
+    SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
+    SQLSMALLINT* descType, SQLSMALLINT* descSubType, SQLLEN* descOctetLen,
+    SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
+  return SQLGetDescRec(descriptorHandle, recNumber, name, nameBufferLen,
+                       nameStringLen, descType, descSubType, descOctetLen,
+                       descPrecision, descScale, nullable);
+}
+
 SQLRETURN SQL_API SQLGetDescRec(
     SQLHDESC descriptorHandle, SQLSMALLINT recNumber, SQLCHAR* name,
     SQLSMALLINT nameBufferLen, SQLSMALLINT* nameStringLen,
@@ -837,6 +947,15 @@ SQLRETURN SQL_API SQLGetDescRecW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetdescfield-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLSetDescFieldA(SQLHDESC descriptorHandle,
+                                   SQLSMALLINT recNumber,
+                                   SQLSMALLINT fieldIdentifier,
+                                   SQLPOINTER descValue,
+                                   SQLINTEGER descValueBufferLen) {
+  return SQLSetDescField(descriptorHandle, recNumber, fieldIdentifier,
+                         descValue, descValueBufferLen);
+}
+
 SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
                                   SQLSMALLINT recNumber,
                                   SQLSMALLINT fieldIdentifier,
@@ -943,6 +1062,11 @@ SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprepare-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLPrepareA(SQLHSTMT statementHandle, SQLCHAR* statementText,
+                              SQLINTEGER statementTextLen) {
+  return SQLPrepare(statementHandle, statementText, statementTextLen);
+}
+
 SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
                              SQLINTEGER statementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
@@ -1003,6 +1127,14 @@ SQLRETURN SQL_API SQLBindParameter(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetcursorname-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetCursorNameA(SQLHSTMT statementHandle,
+                                    SQLCHAR* cursorName,
+                                    SQLSMALLINT cursorNameBufferLen,
+                                    SQLSMALLINT* cursorNameStringLen) {
+  return SQLGetCursorName(statementHandle, cursorName, cursorNameBufferLen,
+                          cursorNameStringLen);
+}
+
 SQLRETURN SQL_API SQLGetCursorName(SQLHSTMT statementHandle,
                                    SQLCHAR* cursorName,
                                    SQLSMALLINT cursorNameBufferLen,
@@ -1045,6 +1177,12 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetcursorname-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLSetCursorNameA(SQLHSTMT statementHandle,
+                                    SQLCHAR* cursorName,
+                                    SQLSMALLINT cursorNameLen) {
+  return SQLSetCursorName(statementHandle, cursorName, cursorNameLen);
+}
+
 SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
                                    SQLCHAR* cursorName,
                                    SQLSMALLINT cursorNameLen) {
@@ -1107,6 +1245,12 @@ SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlexecdirect-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLExecDirectA(SQLHSTMT statementHandle,
+                                 SQLCHAR* statementText,
+                                 SQLINTEGER statementTextLen) {
+  return SQLExecDirect(statementHandle, statementText, statementTextLen);
+}
+
 SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
                                 SQLCHAR* statementText,
                                 SQLINTEGER statementTextLen) {
@@ -1148,6 +1292,17 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnativesql-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLNativeSqlA(SQLHDBC connectionHandle,
+                                SQLCHAR* inStatementText,
+                                SQLINTEGER inStatementTextLen,
+                                SQLCHAR* outStatementText,
+                                SQLINTEGER outStatementTextBufferLen,
+                                SQLINTEGER* outStatementTextLen) {
+  return SQLNativeSql(connectionHandle, inStatementText, inStatementTextLen,
+                      outStatementText, outStatementTextBufferLen,
+                      outStatementTextLen);
+}
+
 SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
                                SQLCHAR* inStatementText,
                                SQLINTEGER inStatementTextLen,
@@ -1373,6 +1528,18 @@ SQLRETURN SQL_API SQLExtendedFetch(SQLHSTMT statementHandletmt,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLColAttributeA(SQLHSTMT statementHandle,
+                                   SQLUSMALLINT columnNumber,
+                                   SQLUSMALLINT fieldIdentifier,
+                                   SQLPOINTER characterAttribute,
+                                   SQLSMALLINT characterAttributeBufferLen,
+                                   SQLSMALLINT* characterAttributeStringLen,
+                                   SQLLEN* numericAttribute) {
+  return SQLColAttribute(statementHandle, columnNumber, fieldIdentifier,
+                         characterAttribute, characterAttributeBufferLen,
+                         characterAttributeStringLen, numericAttribute);
+}
+
 SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLUSMALLINT columnNumber,
                                   SQLUSMALLINT fieldIdentifier,
@@ -1422,6 +1589,18 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattributes-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLColAttributesA(SQLHSTMT statementHandle,
+                                    SQLUSMALLINT columnNumber,
+                                    SQLUSMALLINT fieldIdentifier,
+                                    SQLPOINTER characterAttribute,
+                                    SQLSMALLINT characterAttributeBufferLen,
+                                    SQLSMALLINT* characterAttributeStringLen,
+                                    SQLLEN* numericAttribute) {
+  return SQLColAttributes(statementHandle, columnNumber, fieldIdentifier,
+                          characterAttribute, characterAttributeBufferLen,
+                          characterAttributeStringLen, numericAttribute);
+}
+
 SQLRETURN SQL_API SQLColAttributes(SQLHSTMT statementHandle,
                                    SQLUSMALLINT columnNumber,
                                    SQLUSMALLINT fieldIdentifier,
@@ -1470,6 +1649,16 @@ SQLRETURN SQL_API SQLColAttributesW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldescribecol-function
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLDescribeColA(
+    SQLHSTMT statementHandle, SQLUSMALLINT columnNumber, SQLCHAR* columnName,
+    SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLe,
+    SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
+    SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
+  return SQLDescribeCol(statementHandle, columnNumber, columnName,
+                        columnNameBufferLen, columnNameLe, columnSQLdataType,
+                        columnSize, decimalDigits, columnNullable);
+}
+
 SQLRETURN SQL_API SQLDescribeCol(
     SQLHSTMT statementHandle, SQLUSMALLINT columnNumber, SQLCHAR* columnName,
     SQLSMALLINT columnNameBufferLen, SQLSMALLINT* columnNameLe,
@@ -1611,6 +1800,16 @@ SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdiagfield-function.
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetDiagFieldA(SQLSMALLINT handleType, SQLHANDLE handle,
+                                   SQLSMALLINT recNumber,
+                                   SQLSMALLINT diagIdentifier,
+                                   SQLPOINTER diagInfo,
+                                   SQLSMALLINT diagInfoBufferLen,
+                                   SQLSMALLINT* diagInfoStringLen) {
+  return SQLGetDiagField(handleType, handle, recNumber, diagIdentifier,
+                         diagInfo, diagInfoBufferLen, diagInfoStringLen);
+}
+
 SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
                                   SQLSMALLINT recNumber,
                                   SQLSMALLINT diagIdentifier,
@@ -1673,6 +1872,15 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdiagrec-function.
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLGetDiagRecA(SQLSMALLINT handleType, SQLHANDLE handle,
+                                 SQLSMALLINT recNumber, SQLCHAR* sqlState,
+                                 SQLINTEGER* nativeError, SQLCHAR* messageText,
+                                 SQLSMALLINT messageTextBufferLen,
+                                 SQLSMALLINT* messageTextLen) {
+  return SQLGetDiagRec(handleType, handle, recNumber, sqlState, nativeError,
+                       messageText, messageTextBufferLen, messageTextLen);
+}
+
 SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
                                 SQLSMALLINT recNumber, SQLCHAR* sqlState,
                                 SQLINTEGER* nativeError, SQLCHAR* messageText,
@@ -1732,6 +1940,16 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLColumnsA(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                              SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                              SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                              SQLSMALLINT tableNameLen, SQLCHAR* columnName,
+                              SQLSMALLINT columnNameLen) {
+  return SQLColumns(statementHandle, catalogName, catalogNameLen, schemaName,
+                    schemaNameLen, tableName, tableNameLen, columnName,
+                    columnNameLen);
+}
+
 SQLRETURN SQL_API SQLColumns(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                              SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
                              SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
@@ -1777,6 +1995,16 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqltables-function.
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLTablesA(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                             SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
+                             SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                             SQLSMALLINT tableNameLen, SQLCHAR* tableType,
+                             SQLSMALLINT tableTypeLen) {
+  return SQLTables(statementHandle, catalogName, catalogNameLen, schemaName,
+                   schemaNameLen, tableName, tableNameLen, tableType,
+                   tableTypeLen);
+}
+
 SQLRETURN SQL_API SQLTables(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                             SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
                             SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
@@ -1821,6 +2049,16 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprimarykeys-function.
 ////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLPrimaryKeysA(SQLHSTMT statementHandle,
+                                  SQLCHAR* catalogName,
+                                  SQLSMALLINT catalogNameLen,
+                                  SQLCHAR* schemaName,
+                                  SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+                                  SQLSMALLINT tableNameLen) {
+  return SQLPrimaryKeys(statementHandle, catalogName, catalogNameLen,
+                        schemaName, schemaNameLen, tableName, tableNameLen);
+}
+
 SQLRETURN SQL_API SQLPrimaryKeys(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                  SQLSMALLINT catalogNameLen,
                                  SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
@@ -1864,6 +2102,15 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprocedurecolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLProcedureColumnsA(
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* procName,
+    SQLSMALLINT procNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
+  return SQLProcedureColumns(statementHandle, catalogName, catalogNameLen,
+                             schemaName, schemaNameLen, procName, procNameLen,
+                             columnName, columnNameLen);
+}
+
 SQLRETURN SQL_API SQLProcedureColumns(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* procName,
@@ -1906,6 +2153,14 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprocedures-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLProceduresA(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                                 SQLSMALLINT catalogNameLen,
+                                 SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
+                                 SQLCHAR* procName, SQLSMALLINT procNameLen) {
+  return SQLProcedures(statementHandle, catalogName, catalogNameLen, schemaName,
+                       schemaNameLen, procName, procNameLen);
+}
+
 SQLRETURN SQL_API SQLProcedures(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                 SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
                                 SQLSMALLINT schemaNameLen, SQLCHAR* procName,
@@ -1953,6 +2208,16 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlspecialcolumns-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLSpecialColumnsA(
+    SQLHSTMT statementHandle, SQLUSMALLINT identifierType, SQLCHAR* catalogName,
+    SQLSMALLINT catalogNameLen, SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
+    SQLCHAR* tableName, SQLSMALLINT tableNameLen, SQLUSMALLINT minRowIdScope,
+    SQLUSMALLINT colNullable) {
+  return SQLSpecialColumns(statementHandle, identifierType, catalogName,
+                           catalogNameLen, schemaName, schemaNameLen, tableName,
+                           tableNameLen, minRowIdScope, colNullable);
+}
+
 SQLRETURN SQL_API SQLSpecialColumns(
     SQLHSTMT statementHandle, SQLUSMALLINT identifierType, SQLCHAR* catalogName,
     SQLSMALLINT catalogNameLen, SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
@@ -1999,6 +2264,17 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlstatistics-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLStatisticsA(SQLHSTMT statementHandle, SQLCHAR* catalogName,
+                                 SQLSMALLINT catalogNameLen,
+                                 SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
+                                 SQLCHAR* tableName, SQLSMALLINT tableNameLen,
+                                 SQLUSMALLINT indexType,
+                                 SQLUSMALLINT reserved) {
+  return SQLStatistics(statementHandle, catalogName, catalogNameLen, schemaName,
+                       schemaNameLen, tableName, tableNameLen, indexType,
+                       reserved);
+}
+
 SQLRETURN SQL_API SQLStatistics(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                 SQLSMALLINT catalogNameLen, SQLCHAR* schemaName,
                                 SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
@@ -2044,6 +2320,14 @@ SQLRETURN SQL_API SQLStatisticsW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqltableprivileges-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLTablePrivilegesA(
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+    SQLSMALLINT tableNameLen) {
+  return SQLTablePrivileges(statementHandle, catalogName, catalogNameLen,
+                            schemaName, schemaNameLen, tableName, tableNameLen);
+}
+
 SQLRETURN SQL_API SQLTablePrivileges(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
@@ -2092,6 +2376,21 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API
+SQLForeignKeysA(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
+                SQLSMALLINT pkCatalogNameLen, SQLCHAR* pkSchemaName,
+                SQLSMALLINT pkSchemaNameLen, SQLCHAR* pkTableName,
+                SQLSMALLINT pkTableNameLen, SQLCHAR* fkCatalogName,
+                SQLSMALLINT fkCatalogNameLen, SQLCHAR* fkSchemaName,
+                SQLSMALLINT fkSchemaNameLen, SQLCHAR* fkTableName,
+                SQLSMALLINT fkTableNameLen) {
+  return SQLForeignKeys(statementHandle, pkCatalogName, pkCatalogNameLen,
+                        pkSchemaName, pkSchemaNameLen, pkTableName,
+                        pkTableNameLen, fkCatalogName, fkCatalogNameLen,
+                        fkSchemaName, fkSchemaNameLen, fkTableName,
+                        fkTableNameLen);
+}
+
 SQLRETURN SQL_API
 SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
                SQLSMALLINT pkCatalogNameLen, SQLCHAR* pkSchemaName,
@@ -2142,6 +2441,15 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumnprivileges-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
+SQLRETURN SQL_API SQLColumnPrivilegesA(
+    SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
+    SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
+    SQLSMALLINT tableNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
+  return SQLColumnPrivileges(statementHandle, catalogName, catalogNameLen,
+                             schemaName, schemaNameLen, tableName, tableNameLen,
+                             columnName, columnNameLen);
+}
+
 SQLRETURN SQL_API SQLColumnPrivileges(
     SQLHSTMT statementHandle, SQLCHAR* catalogName, SQLSMALLINT catalogNameLen,
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* tableName,
