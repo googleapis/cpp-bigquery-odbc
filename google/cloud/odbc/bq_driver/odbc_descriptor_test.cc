@@ -1266,4 +1266,298 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
+TEST(SQLSetDescRecInternal, Fails_InvalidHandle) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kConnHandle, &handle);
+  int data = 10;
+  SQLLEN string_length_ptr = 0;
+  SQLLEN indicator[3];
+
+  auto status = SQLSetDescRecInternal(&wrapped_handle, 0, 0, 0, 0, 0, 0, &data,
+                                      &string_length_ptr, indicator);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLSetDescRecInternal, Fails_RecNumberNegative) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  SQLSMALLINT rec_number = -5;
+  int data = 10;
+  SQLPOINTER data_ptr = &data;
+  SQLLEN string_length_ptr = 0;
+  SQLLEN indicator[3];
+
+  auto status =
+      SQLSetDescRecInternal(&wrapped_handle, rec_number, 0, 0, 0, 0, 0,
+                            data_ptr, &string_length_ptr, indicator);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_07009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLSetDescRecInternal, Success) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  SQLSMALLINT type = SQL_DATETIME;
+  SQLSMALLINT sub_type = SQL_CODE_DATE;
+  SQLLEN length = 3;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  int data = 10;
+  SQLLEN string_length = 0;
+  SQLLEN indicator[3];
+
+  auto status =
+      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
+                            precision, scale, &data, &string_length, indicator);
+  EXPECT_EQ(SQL_SUCCESS, status);
+
+  DescriptorRecord desc = handle.GetDescriptorRecord(1);
+  EXPECT_EQ(type, desc.type);
+  EXPECT_EQ(sub_type, desc.datetime_interval_code);
+  EXPECT_EQ(length, desc.octet_length);
+  EXPECT_EQ(precision, desc.precision);
+  EXPECT_EQ(scale, desc.scale);
+  EXPECT_EQ(&data, desc.data_ptr);
+  EXPECT_EQ(&string_length, desc.octet_length_ptr);
+  EXPECT_EQ(indicator, desc.indicator_ptr);
+}
+
+TEST(SQLSetDescRecInternal, DoNothing_ConcistencyCheckFails) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  DescriptorRecord descriptor_record;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+  SQLSMALLINT type = 555;
+  SQLSMALLINT sub_type = 555;
+  SQLLEN length = 3;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  int data = 10;
+  SQLLEN string_length = 0;
+  SQLLEN indicator[3];
+
+  auto status =
+      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
+                            precision, scale, &data, &string_length, indicator);
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY021(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  DescriptorRecord desc = handle.GetDescriptorRecord(1);
+  EXPECT_EQ(descriptor_record.type, desc.type);
+  EXPECT_EQ(descriptor_record.datetime_interval_code,
+            desc.datetime_interval_code);
+  EXPECT_EQ(descriptor_record.length, desc.octet_length);
+  EXPECT_EQ(descriptor_record.precision, desc.precision);
+  EXPECT_EQ(descriptor_record.scale, desc.scale);
+  EXPECT_EQ(descriptor_record.data_ptr, desc.data_ptr);
+  EXPECT_EQ(descriptor_record.octet_length_ptr, desc.octet_length_ptr);
+  EXPECT_EQ(descriptor_record.indicator_ptr, desc.indicator_ptr);
+}
+
+TEST(SQLSetDescRecInternal, DoNotChangeExistingField) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  DescriptorRecord descriptor_record;
+  descriptor_record.name = "test";
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+
+  SQLSMALLINT type = SQL_DATETIME;
+  SQLSMALLINT sub_type = SQL_CODE_DATE;
+  SQLLEN length = 3;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  int data = 10;
+  SQLLEN string_length = 0;
+  SQLLEN indicator[3];
+
+  auto status =
+      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
+                            precision, scale, &data, &string_length, indicator);
+  EXPECT_EQ(SQL_SUCCESS, status);
+
+  DescriptorRecord desc = handle.GetDescriptorRecord(1);
+  EXPECT_EQ("test", desc.name);
+}
+
+TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kConnHandle, &handle);
+  SQLCHAR name[10];
+  SQLSMALLINT buffer_length = 10;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(&wrapped_handle, 1, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  SQLSMALLINT rec_number = -5;
+  SQLCHAR name[10];
+  SQLSMALLINT buffer_length = 10;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(
+      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
+      &sub_type, &length, &precision, &scale, &nullable);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_07009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetDescRecInternal, Succeed_NoData_BigRecNumber) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  SQLSMALLINT rec_number = 5;
+  SQLCHAR name[10];
+  SQLSMALLINT buffer_length = 10;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(
+      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
+      &sub_type, &length, &precision, &scale, &nullable);
+
+  EXPECT_EQ(SQL_NO_DATA, status);
+  EXPECT_EQ(SQLStates::k_07009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetDescRecInternal, Success) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  DescriptorRecord descriptor_record;
+  descriptor_record.name = "test";
+  descriptor_record.type = SQL_INTEGER;
+  descriptor_record.datetime_interval_code = 11;
+  descriptor_record.octet_length = 12;
+  descriptor_record.precision = 13;
+  descriptor_record.scale = 14;
+  descriptor_record.nullable = SQL_NO_NULLS;
+  SQLSMALLINT rec_number = 1;
+  handle.BindNewDescriptorRecord(rec_number, descriptor_record);
+
+  SQLCHAR name[10];
+  SQLSMALLINT buffer_length = 10;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(
+      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
+      &sub_type, &length, &precision, &scale, &nullable);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(descriptor_record.name, std::string(reinterpret_cast<char*>(name)));
+  EXPECT_EQ(descriptor_record.name.size(), string_length);
+  EXPECT_EQ(descriptor_record.type, type);
+  EXPECT_EQ(descriptor_record.datetime_interval_code, sub_type);
+  EXPECT_EQ(descriptor_record.octet_length, length);
+  EXPECT_EQ(descriptor_record.precision, precision);
+  EXPECT_EQ(descriptor_record.scale, scale);
+  EXPECT_EQ(descriptor_record.nullable, nullable);
+}
+
+TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  DescriptorRecord descriptor_record;
+  descriptor_record.length = 42;
+  handle.BindNewDescriptorRecord(3, descriptor_record);
+
+  SQLCHAR name[10];
+  SQLSMALLINT buffer_length = 10;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(&wrapped_handle, 1, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  DescriptorRecord default_descriptor_record;
+  EXPECT_EQ(default_descriptor_record.name,
+            std::string(reinterpret_cast<char*>(name)));
+  EXPECT_EQ(default_descriptor_record.name.size(), string_length);
+  EXPECT_EQ(default_descriptor_record.type, type);
+  EXPECT_EQ(default_descriptor_record.datetime_interval_code, sub_type);
+  EXPECT_EQ(default_descriptor_record.octet_length, length);
+  EXPECT_EQ(default_descriptor_record.precision, precision);
+  EXPECT_EQ(default_descriptor_record.scale, scale);
+  EXPECT_EQ(descriptor_record.nullable, nullable);
+}
+
+TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
+  DescriptorHandle handle;
+  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
+  DescriptorRecord descriptor_record;
+  descriptor_record.name = "test";
+  descriptor_record.type = SQL_INTEGER;
+  descriptor_record.datetime_interval_code = 11;
+  descriptor_record.octet_length = 12;
+  descriptor_record.precision = 13;
+  descriptor_record.scale = 14;
+  descriptor_record.nullable = SQL_NO_NULLS;
+  SQLSMALLINT rec_number = 1;
+  handle.BindNewDescriptorRecord(rec_number, descriptor_record);
+
+  SQLCHAR name[3];
+  SQLSMALLINT buffer_length = 3;
+  SQLSMALLINT string_length = 0;
+  SQLSMALLINT type = 0;
+  SQLSMALLINT sub_type = 0;
+  SQLLEN length = 0;
+  SQLSMALLINT precision = 0;
+  SQLSMALLINT scale = 0;
+  SQLSMALLINT nullable = 0;
+
+  auto status = SQLGetDescRecInternal(
+      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
+      &sub_type, &length, &precision, &scale, &nullable);
+
+  ASSERT_EQ(SQL_SUCCESS_WITH_INFO, status);
+  EXPECT_EQ("te", std::string(reinterpret_cast<char*>(name)));
+  EXPECT_EQ(2, string_length);
+  EXPECT_EQ(descriptor_record.type, type);
+  EXPECT_EQ(descriptor_record.datetime_interval_code, sub_type);
+  EXPECT_EQ(descriptor_record.octet_length, length);
+  EXPECT_EQ(descriptor_record.precision, precision);
+  EXPECT_EQ(descriptor_record.scale, scale);
+  EXPECT_EQ(descriptor_record.nullable, nullable);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

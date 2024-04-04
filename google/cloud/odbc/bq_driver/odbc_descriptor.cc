@@ -569,4 +569,113 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   return result.CalculateReturnCode();
 }
 
+SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
+                                SQLSMALLINT rec_number, SQLSMALLINT type,
+                                SQLSMALLINT sub_type, SQLLEN length,
+                                SQLSMALLINT precision, SQLSMALLINT scale,
+                                SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
+                                SQLLEN* indicator_ptr) {
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* handle = *handle_result;
+
+  if (rec_number < 0) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (!handle->HasDescriptorRecord(rec_number)) {
+    DescriptorRecord new_descriptor_record;
+    handle->BindNewDescriptorRecord(rec_number, new_descriptor_record);
+  }
+  DescriptorRecord& descriptor_record = handle->GetDescriptorRecord(rec_number);
+
+  DescriptorRecord temp_desc = descriptor_record;
+  temp_desc.datetime_interval_code = sub_type;
+  StatusRecord status_record = temp_desc.SetType(type, handle->GetType());
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  temp_desc.octet_length = length;
+  temp_desc.precision = precision;
+  temp_desc.scale = scale;
+  temp_desc.data_ptr = data_ptr;
+  temp_desc.octet_length_ptr = string_length_ptr;
+  temp_desc.indicator_ptr = indicator_ptr;
+
+  status_record = temp_desc.ConsistencyCheck();
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  descriptor_record = temp_desc;
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetDescRecInternal(
+    SQLHDESC descriptor_handle, SQLSMALLINT rec_number, SQLCHAR* name,
+    SQLSMALLINT buffer_length, SQLSMALLINT* string_length_ptr,
+    SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
+    SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
+    SQLSMALLINT* nullable_ptr) {
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* handle = *handle_result;
+
+  if (rec_number < 0) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  if (rec_number > handle->GetHeaderRecord().count) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return SQL_NO_DATA;
+  }
+
+  DescriptorRecord default_descriptor_record;
+  // Use default values if RecNumber is less than SQL_DESC_COUNT and there is no
+  // row for that RecNumber
+  DescriptorRecord& descriptor_record =
+      (handle->HasDescriptorRecord(rec_number))
+          ? handle->GetDescriptorRecord(rec_number)
+          : default_descriptor_record;
+
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.type, type_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.datetime_interval_code, sub_type_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.octet_length, length_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.precision, precision_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.scale, scale_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.nullable, nullable_ptr, nullptr);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      descriptor_record.name.c_str(), name, buffer_length, string_length_ptr);
+  if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  return status_record.CalculateReturnCode();
+}
+
 }  // namespace google::cloud::odbc_bq_driver
