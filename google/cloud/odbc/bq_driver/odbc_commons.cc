@@ -59,7 +59,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      // TODO(b/308647690) free the four automatically allocated descriptors
+      // TODO(b/332812254) free the four automatically allocated descriptors
       // associated with that handle
       delete *handle_result;
       break;
@@ -72,7 +72,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      // TODO(b/308647690) all statements that the freed handle had been
+      // TODO(b/332812714) all statements that the freed handle had been
       // associated with should be reverted to their respective automatically
       // allocated descriptor handles
       delete *handle_result;
