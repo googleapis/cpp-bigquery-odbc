@@ -34,11 +34,11 @@ auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
 
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
-                  int timeout = 30,bool use_ansi = false);
+                  int timeout = 30, bool use_ansi = false);
 
 // Connect using a datasource name directly and populate the ODBCHandles
 SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
-                     int timeout = 30,bool use_ansi = false);
+                     int timeout = 30, bool use_ansi = false);
 
 SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn);
 
