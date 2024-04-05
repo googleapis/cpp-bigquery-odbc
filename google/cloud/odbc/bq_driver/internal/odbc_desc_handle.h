@@ -41,7 +41,7 @@ struct HeaderRecord {
 
   [[nodiscard]] SQLSMALLINT GetAllocType() const { return alloc_type_; }
 
-  void CopyHeaderRecordsFrom(const HeaderRecord& header_record);
+  void CopyHeaderRecordsFrom(HeaderRecord const& header_record);
 
   SQLULEN array_size = 0;
   SQLUSMALLINT* array_status_ptr = nullptr;
