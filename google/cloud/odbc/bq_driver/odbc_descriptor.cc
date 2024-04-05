@@ -680,4 +680,45 @@ SQLRETURN SQLGetDescRecInternal(
   return status_record.CalculateReturnCode();
 }
 
+SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
+                              SQLHDESC target_desc_handle) {
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(source_desc_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* src_handle = *handle_result;
+  handle_result = ValidateDescriptorHandle(target_desc_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOptsConsole),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* target_handle = *handle_result;
+
+  if (target_handle->GetType() == DescriptorType::kIRD) {
+    StatusRecord status_record{
+        SQLStates::k_HY016(), "Cannot modify an implementation row descriptor"};
+    target_handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  if (src_handle->GetType() == DescriptorType::kIRD) {
+    // TODO(332469364) Check if statement handle is in 'prepared' or 'executed'
+    // state (HY007)
+  }
+
+  target_handle->GetHeaderRecord().CopyHeaderRecordsFrom(
+      src_handle->GetHeaderRecord());
+
+  StatusRecord status_record =
+      target_handle->SetDescriptorRecords(src_handle->GetDescriptorRecords());
+  if (!status_record.ok()) {
+    target_handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  return status_record.CalculateReturnCode();
+}
+
 }  // namespace google::cloud::odbc_bq_driver

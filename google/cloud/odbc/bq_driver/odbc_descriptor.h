@@ -60,6 +60,9 @@ SQLRETURN SQLGetDescRecInternal(
     SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
     SQLSMALLINT* nullable_ptr);
 
+SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
+                              SQLHDESC target_desc_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DESCRIPTOR_H

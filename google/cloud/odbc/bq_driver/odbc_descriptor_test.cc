@@ -1560,4 +1560,128 @@ TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
   EXPECT_EQ(descriptor_record.nullable, nullable);
 }
 
+TEST(SQLCopyDescInternal, CopyDescriptor) {
+  DescriptorHandle src_handle(DescriptorType::kApplication,
+                              SQL_DESC_ALLOC_USER);
+  src_handle.GetHeaderRecord().bind_type = 5;
+  SQLLEN bind_offset = 3;
+  src_handle.GetHeaderRecord().bind_offset_ptr = &bind_offset;
+  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
+  DescriptorRecord descriptor_record;
+  descriptor_record.octet_length = 6;
+  descriptor_record.type = SQL_INTEGER;
+  descriptor_record.concise_type = SQL_INTEGER;
+  descriptor_record.precision = 1;
+  src_handle.BindNewDescriptorRecord(3, descriptor_record);
+
+  DescriptorHandle target_handle(DescriptorType::kApplication,
+                                 SQL_DESC_ALLOC_AUTO);
+  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
+                                      &target_handle);
+
+  auto status =
+      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
+            target_handle.GetHeaderRecord().GetAllocType());
+  EXPECT_EQ(src_handle.GetHeaderRecord().bind_type,
+            target_handle.GetHeaderRecord().bind_type);
+  EXPECT_EQ(src_handle.GetHeaderRecord().bind_offset_ptr,
+            target_handle.GetHeaderRecord().bind_offset_ptr);
+  DescriptorRecord target_descriptor_record =
+      target_handle.GetDescriptorRecord(3);
+  EXPECT_EQ(descriptor_record.octet_length,
+            target_descriptor_record.octet_length);
+  EXPECT_EQ(descriptor_record.type, target_descriptor_record.type);
+  EXPECT_EQ(descriptor_record.concise_type,
+            target_descriptor_record.concise_type);
+  EXPECT_EQ(descriptor_record.precision, target_descriptor_record.precision);
+}
+
+TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
+  DescriptorHandle src_handle(DescriptorType::kApplication,
+                              SQL_DESC_ALLOC_USER);
+  HandleWrapped src_wrapped_handle(HandleType::kConnHandle, &src_handle);
+  DescriptorHandle target_handle(DescriptorType::kApplication,
+                                 SQL_DESC_ALLOC_AUTO);
+  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
+                                      &target_handle);
+
+  auto status =
+      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
+  DescriptorHandle src_handle(DescriptorType::kApplication,
+                              SQL_DESC_ALLOC_USER);
+  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
+  DescriptorHandle target_handle(DescriptorType::kApplication,
+                                 SQL_DESC_ALLOC_AUTO);
+  HandleWrapped target_wrapped_handle(HandleType::kConnHandle, &target_handle);
+
+  auto status =
+      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
+  DescriptorHandle src_handle(DescriptorType::kApplication,
+                              SQL_DESC_ALLOC_USER);
+  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
+  DescriptorHandle target_handle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
+  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
+                                      &target_handle);
+
+  auto status =
+      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY016(),
+            target_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLCopyDescInternal, Fails_InconsistentDescriptor) {
+  DescriptorHandle src_handle(DescriptorType::kApplication,
+                              SQL_DESC_ALLOC_USER);
+  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
+  DescriptorRecord descriptor_record_1;
+  descriptor_record_1.type = SQL_INTEGER;
+  descriptor_record_1.concise_type = SQL_CHAR;
+  src_handle.BindNewDescriptorRecord(1, descriptor_record_1);
+  DescriptorRecord descriptor_record_3;
+  descriptor_record_3.type = SQL_INTEGER;
+  descriptor_record_3.concise_type = SQL_CHAR;
+  int data = 0;
+  descriptor_record_3.data_ptr = &data;
+  src_handle.BindNewDescriptorRecord(3, descriptor_record_3);
+  DescriptorRecord descriptor_record_5;
+  src_handle.BindNewDescriptorRecord(5, descriptor_record_5);
+
+  DescriptorHandle target_handle(DescriptorType::kApplication,
+                                 SQL_DESC_ALLOC_AUTO);
+  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
+                                      &target_handle);
+
+  auto status =
+      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  DescriptorRecord target_descriptor_record_1 =
+      target_handle.GetDescriptorRecord(1);
+  EXPECT_EQ(descriptor_record_1.type, target_descriptor_record_1.type);
+  EXPECT_EQ(descriptor_record_1.concise_type,
+            target_descriptor_record_1.concise_type);
+  DescriptorRecord target_descriptor_record =
+      target_handle.GetDescriptorRecord(3);
+  EXPECT_EQ(descriptor_record_3.type, target_descriptor_record.type);
+  EXPECT_EQ(descriptor_record_3.concise_type,
+            target_descriptor_record.concise_type);
+  EXPECT_EQ(nullptr, target_descriptor_record.data_ptr);
+  EXPECT_FALSE(target_handle.HasDescriptorRecord(5));
+}
+
 }  // namespace google::cloud::odbc_bq_driver

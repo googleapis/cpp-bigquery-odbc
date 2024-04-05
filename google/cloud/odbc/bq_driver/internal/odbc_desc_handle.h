@@ -41,6 +41,8 @@ struct HeaderRecord {
 
   [[nodiscard]] SQLSMALLINT GetAllocType() const { return alloc_type_; }
 
+  void CopyHeaderRecordsFrom(HeaderRecord header_record);
+
   SQLULEN array_size = 0;
   SQLUSMALLINT* array_status_ptr = nullptr;
   SQLLEN* bind_offset_ptr = nullptr;
@@ -141,14 +143,21 @@ class DescriptorHandle : public Handle {
                                DescriptorRecord descriptor_record);
 
   odbc_internal::StatusRecordOr<DescriptorRecord> UnbindDescriptorRecord(
-      int index);
+      SQLSMALLINT index);
 
-  odbc_internal::StatusRecord UnbindAllDescriptorRecordsFrom(int index);
+  odbc_internal::StatusRecord UnbindAllDescriptorRecordsFrom(SQLSMALLINT index);
+
+  std::map<SQLSMALLINT, DescriptorRecord> GetDescriptorRecords() {
+    return descriptor_records_;
+  }
+
+  odbc_internal::StatusRecord SetDescriptorRecords(
+      std::map<SQLSMALLINT, DescriptorRecord> const& descriptor_records);
 
  private:
   DescriptorType type_;
   HeaderRecord header_record_;
-  std::map<int, DescriptorRecord> descriptor_records_;
+  std::map<SQLSMALLINT, DescriptorRecord> descriptor_records_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -26,6 +26,30 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
+TEST(CopyHeaderRecordsFrom, CopyHeader) {
+  HeaderRecord src(SQL_DESC_ALLOC_AUTO);
+  src.array_size = 3;
+  SQLUSMALLINT array_status[3];
+  src.array_status_ptr = array_status;
+  SQLLEN bind_offset = 5;
+  src.bind_offset_ptr = &bind_offset;
+  src.bind_type = 11;
+  src.count = 10;
+  SQLULEN rows_processed = 5;
+  src.rows_processed_ptr = &rows_processed;
+  HeaderRecord target(SQL_DESC_ALLOC_USER);
+
+  target.CopyHeaderRecordsFrom(src);
+
+  EXPECT_NE(src.GetAllocType(), target.GetAllocType());
+  EXPECT_NE(src.count, target.count);
+  EXPECT_EQ(src.array_size, target.array_size);
+  EXPECT_EQ(src.array_status_ptr, target.array_status_ptr);
+  EXPECT_EQ(src.bind_offset_ptr, target.bind_offset_ptr);
+  EXPECT_EQ(src.bind_type, target.bind_type);
+  EXPECT_EQ(src.rows_processed_ptr, target.rows_processed_ptr);
+}
+
 TEST(BindNewDescriptorRecord, UpdateCount) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
@@ -150,6 +174,63 @@ TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NegativeIndex) {
   ASSERT_FALSE(status.ok());
   EXPECT_EQ(SQLStates::k_07009(), status.sql_state);
   EXPECT_EQ(3, handle.GetHeaderRecord().count);
+}
+
+TEST(SetDescriptorRecords, SetRecords) {
+  DescriptorHandle handle;
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  DescriptorRecord record_1;
+  record_1.type = SQL_INTEGER;
+  records[1] = record_1;
+  DescriptorRecord record_3;
+  record_3.type = SQL_CHAR;
+  records[3] = record_3;
+
+  handle.SetDescriptorRecords(records);
+
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+  EXPECT_EQ(record_1.type, handle.GetDescriptorRecord(1).type);
+  EXPECT_FALSE(handle.HasDescriptorRecord(2));
+  EXPECT_EQ(record_3.type, handle.GetDescriptorRecord(3).type);
+}
+
+TEST(SetDescriptorRecords, ClearRecords) {
+  DescriptorHandle handle;
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  DescriptorRecord record_1;
+  record_1.type = SQL_INTEGER;
+  handle.BindNewDescriptorRecord(1, record_1);
+
+  handle.SetDescriptorRecords(records);
+
+  EXPECT_EQ(0, handle.GetHeaderRecord().count);
+  EXPECT_FALSE(handle.HasDescriptorRecord(1));
+}
+
+TEST(SetDescriptorRecords, FailInconsistentData) {
+  DescriptorHandle handle;
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  DescriptorRecord record_1;
+  record_1.type = SQL_INTEGER;
+  records[1] = record_1;
+  DescriptorRecord record_3;
+  record_3.type = SQL_CHAR;
+  int data = 10;
+  record_3.data_ptr = &data;
+  records[3] = record_3;
+  DescriptorRecord record_5;
+  record_5.type = SQL_INTEGER;
+  records[5] = record_5;
+
+  handle.SetDescriptorRecords(records);
+
+  EXPECT_EQ(3, handle.GetHeaderRecord().count);
+  EXPECT_EQ(record_1.type, handle.GetDescriptorRecord(1).type);
+  EXPECT_FALSE(handle.HasDescriptorRecord(2));
+  EXPECT_EQ(record_3.type, handle.GetDescriptorRecord(3).type);
+  EXPECT_EQ(nullptr, handle.GetDescriptorRecord(3).data_ptr);
+  EXPECT_FALSE(handle.HasDescriptorRecord(4));
+  EXPECT_FALSE(handle.HasDescriptorRecord(5));
 }
 
 TEST(SetName, SetName) {

@@ -56,6 +56,14 @@ static std::vector<int> const kOtherSupportedTypes = {
     SQL_REAL, SQL_C_FLOAT, SQL_DOUBLE, SQL_SMALLINT, SQL_INTEGER,
     SQL_BIT,  SQL_TINYINT, SQL_GUID};
 
+void HeaderRecord::CopyHeaderRecordsFrom(HeaderRecord header_record) {
+  array_size = header_record.array_size;
+  array_status_ptr = header_record.array_status_ptr;
+  bind_offset_ptr = header_record.bind_offset_ptr;
+  bind_type = header_record.bind_type;
+  rows_processed_ptr = header_record.rows_processed_ptr;
+}
+
 void DescriptorHandle::BindNewDescriptorRecord(
     SQLSMALLINT index, DescriptorRecord descriptor_record) {
   descriptor_records_[index] = std::move(descriptor_record);
@@ -63,7 +71,7 @@ void DescriptorHandle::BindNewDescriptorRecord(
 }
 
 StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
-    int index) {
+    SQLSMALLINT index) {
   if (descriptor_records_.count(index)) {
     DescriptorRecord erased = descriptor_records_[index];
     descriptor_records_.erase(index);
@@ -75,16 +83,34 @@ StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
                       "Trying to unbind non-existent descriptor record"};
 }
 
-StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(int index) {
+StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(
+    SQLSMALLINT index) {
   if (index < 0) {
     return {SQLStates::k_07009(), "Invalid descriptor index"};
   }
-  int old_val = header_record_.count;
-  for (int i = index + 1; i <= old_val; i++) {
+  SQLSMALLINT old_val = header_record_.count;
+  for (SQLSMALLINT i = index + 1; i <= old_val; i++) {
     descriptor_records_.erase(i);
   }
   header_record_.count =
       descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
+  return StatusRecord::Ok();
+}
+
+StatusRecord DescriptorHandle::SetDescriptorRecords(
+    std::map<SQLSMALLINT, DescriptorRecord> const& descriptor_records) {
+  descriptor_records_.clear();
+  header_record_.count = 0;
+  for (auto const& [rec_number, record] : descriptor_records) {
+    BindNewDescriptorRecord(rec_number, record);
+    if (record.data_ptr) {
+      StatusRecord status = record.ConsistencyCheck();
+      if (!status.ok()) {
+        descriptor_records_[rec_number].data_ptr = nullptr;
+        return status;
+      }
+    }
+  }
   return StatusRecord::Ok();
 }
 

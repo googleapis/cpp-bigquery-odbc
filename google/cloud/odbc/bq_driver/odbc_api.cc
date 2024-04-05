@@ -48,6 +48,7 @@ using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
@@ -68,6 +69,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
@@ -927,10 +929,20 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
 SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
                               SQLHDESC targetDescHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLCopyDesc");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
-  // Call to internal function for SQLCopyDesc in odbc_descriptor.h.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLCopyDesc(sourceDescHandle, targetDescHandle,
+                                   *(*kTraceOptsConsole));
+
+  rc = google::cloud::odbc_bq_driver::SQLCopyDescInternal(sourceDescHandle,
+                                                          targetDescHandle);
+
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLCopyDesc(rc, *(*kTraceOptsConsole));
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 

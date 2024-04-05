@@ -536,4 +536,186 @@ TEST(SQLSetDescRec, DoNothing_InvalidType) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLCopyDesc, CopyDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) APD", conn);
+
+  // Populate descriptor with some fields to check after copying
+  SQLULEN length = 3;
+  status =
+      SQLSetDescField(conn->ard, 1, SQL_DESC_LENGTH, (SQLPOINTER)length, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
+  SQLSMALLINT type = SQL_INTEGER;
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_TYPE, (SQLPOINTER)type, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
+  SQLUSMALLINT array_status[4];
+  status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           (SQLPOINTER)array_status, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+
+  // Copy descriptor
+  status = SQLCopyDesc(conn->ard, conn->apd);
+  CheckError(status, "SQLCopyDesc", conn);
+
+  // Check previously set fields
+  SQLULEN length_new = 0;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_LENGTH, &length_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(length, length_new);
+  SQLSMALLINT type_new = 0;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_TYPE, &type_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+  EXPECT_EQ(type, type_new);
+  SQLSMALLINT concise_type_new = 0;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_CONCISE_TYPE,
+                           &concise_type_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(type, concise_type_new);
+  SQLUSMALLINT* array_status_new = nullptr;
+  status = SQLGetDescField(conn->apd, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           &array_status_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+  EXPECT_EQ(array_status, array_status_new);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->apd);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) APD", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLCopyDesc, Success_DeleteExistingRecords) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) APD", conn);
+
+  // Populate descriptor with some fields to check after copying
+  // Populate ARD
+  SQLULEN length = 3;
+  status =
+      SQLSetDescField(conn->ard, 1, SQL_DESC_LENGTH, (SQLPOINTER)length, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
+  // Populate APD and then check that it was removed (as recNumber 3 is absent
+  // in ARD)
+  SQLSMALLINT type = SQL_INTEGER;
+  status = SQLSetDescField(conn->apd, 3, SQL_DESC_TYPE, (SQLPOINTER)type, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
+
+  // Copy descriptor
+  status = SQLCopyDesc(conn->ard, conn->apd);
+  CheckError(status, "SQLCopyDesc", conn);
+
+  // Check previously set fields
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->apd, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(1, count);
+  SQLULEN length_new = 0;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_LENGTH, &length_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(length, length_new);
+  SQLSMALLINT type_new = 0;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_TYPE, &type_new, 0, NULL);
+  EXPECT_EQ(SQL_NO_DATA, status);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->apd);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) APD", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLCopyDesc, FailConcistencyCheck) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC) APD", conn);
+
+  // Populate descriptor with some fields to check after copying
+  // Populate ARD
+  SQLUSMALLINT array_status[4];
+  status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           (SQLPOINTER)array_status, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+  SQLULEN length = 3;
+  status =
+      SQLSetDescField(conn->ard, 1, SQL_DESC_LENGTH, (SQLPOINTER)length, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
+  // Populate ARD (RecNumber 3) with inconsistent data
+  SQLSMALLINT concise_type = SQL_TYPE_DATE;
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_CONCISE_TYPE,
+                           (SQLPOINTER)concise_type, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  int data = 0;
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_DATA_PTR, &data, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_DATA_PTR)", conn);
+  SQLSMALLINT datetime_code = SQL_CODE_DAY_TO_SECOND;
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_DATETIME_INTERVAL_CODE,
+                           (SQLPOINTER)datetime_code, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
+
+  // Populate ARD (RecNumber 4) with inconsistent data
+  status = SQLSetDescField(conn->ard, 4, SQL_DESC_CONCISE_TYPE,
+                           (SQLPOINTER)concise_type, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  status = SQLSetDescField(conn->ard, 4, SQL_DESC_DATA_PTR, &data, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_DATA_PTR)", conn);
+  status = SQLSetDescField(conn->ard, 4, SQL_DESC_DATETIME_INTERVAL_CODE,
+                           (SQLPOINTER)datetime_code, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
+
+  // Copy descriptor
+  status = SQLCopyDesc(conn->ard, conn->apd);
+  ASSERT_EQ(SQL_ERROR, status);
+
+  // Check previously set fields
+  // The 4th RecNumber wasn't set as there was an error during copying RecNumber
+  // 3
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->apd, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(3, count);
+  // Check RecNumber 0 and 1
+  SQLUSMALLINT* array_status_new = nullptr;
+  status = SQLGetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                           &array_status_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+  EXPECT_EQ(array_status, array_status_new);
+  SQLULEN length_new = 0;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_LENGTH, &length_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(length, length_new);
+  // Check RecNumber 3
+  SQLSMALLINT concise_type_new = 0;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_CONCISE_TYPE,
+                           &concise_type_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(concise_type, concise_type_new);
+  SQLSMALLINT datetime_code_new = 0;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_DATETIME_INTERVAL_CODE,
+                           &datetime_code_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
+  EXPECT_EQ(datetime_code, datetime_code_new);
+  // SQL_DATA_PTR was set to null as RecNumber 3 is inconsistent
+  SQLPOINTER data_new = nullptr;
+  status = SQLGetDescField(conn->apd, 3, SQL_DESC_DATA_PTR, &data_new, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATA_PTR)", conn);
+  EXPECT_EQ(nullptr, data_new);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) ARD", conn);
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->apd);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC) APD", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
