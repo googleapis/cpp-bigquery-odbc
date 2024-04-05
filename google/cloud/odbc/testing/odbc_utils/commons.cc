@@ -203,7 +203,7 @@ void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows,
 
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
-                 bool use_ansi = false) {
+                 bool use_ansi) {
   SQLRETURN status;
   if (use_ansi) {
     status = SQLDescribeColA(conn->hstmt, col_index, col_ptr->name,
@@ -232,7 +232,7 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
 
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
                      std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
-                     bool use_ansi = false) {
+                     bool use_ansi) {
   SQLHDESC ard_handle;  // Application row descriptor
   SQLRETURN status;
   if (use_ansi) {
