@@ -52,7 +52,7 @@ StatusOr<Options> CreateServiceAccountAuthentication() {
       google::cloud::MakeServiceAccountCredentials(contents));
 }
 
-// Deprecated. This secret was deleted.
+// TODO(b/333011414) Enable tests which use this function it or remove it
 StatusOr<Options> CreateServiceAccountAuthWithClientIdAuthentication() {
   std::string path_to_file_with_credentials =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY").value_or("");
