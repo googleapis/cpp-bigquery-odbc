@@ -196,8 +196,8 @@ void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
 
 // Executes the SQLDescribeCol API to initialize the Column struct
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
-                 std::shared_ptr<Column> col_ptr,
-                 SQLUSMALLINT col_index bool use_ansi = false);
+                 std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
+                 bool use_ansi = false);
 
 // Executes the BindCol API to bind the Column struct data buffers to the
 // statement handle
@@ -207,8 +207,8 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
 // The logic (internal implementation) of SQLBindCol
 // Works only with String type (also with null strings)
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
-                     std::shared_ptr<Column> col_ptr,
-                     SQLUSMALLINT col_index bool use_ansi = false);
+                     std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
+                     bool use_ansi = false);
 
 }  // namespace google::cloud::odbc_tests
 
