@@ -416,8 +416,9 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
     return status_record.CalculateReturnCode();
   }
   if (rec_number > header_record.count) {
-    StatusRecord status_record{SQLStates::k_07009(),
-                               "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    StatusRecord status_record{
+        SQLStates::k_07009(),
+        "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return SQL_NO_DATA;
   }
@@ -643,8 +644,9 @@ SQLRETURN SQLGetDescRecInternal(
     return status_record.CalculateReturnCode();
   }
   if (rec_number > handle->GetHeaderRecord().count) {
-    StatusRecord status_record{SQLStates::k_07009(),
-                               "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    StatusRecord status_record{
+        SQLStates::k_07009(),
+        "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return SQL_NO_DATA;
   }
