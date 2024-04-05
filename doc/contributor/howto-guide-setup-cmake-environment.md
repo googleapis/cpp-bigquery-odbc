@@ -14,6 +14,7 @@ the top-level directory of the project, as in:
 ```shell
 cd $HOME
 git clone git@github.com:googleapis/cpp-bigquery-odbc.git
+export CPP_BIGQUERY_ODBC_REPO_PATH=$HOME/cpp-bigquery-odbc
 ```
 
 ## Download and bootstrap `vcpkg`
@@ -48,7 +49,7 @@ install `google-cloud-cpp` itself.
 Install all dependencies using [vcpkg.json](../../vcpkg.json):
 
 ```shell
-cd $HOME/cpp-bigquery-odbc
+cd $CPP_BIGQUERY_ODBC_REPO_PATH
 vcpkg install
 ```
 
@@ -79,21 +80,32 @@ and compile all the dependencies (Abseil, gRPC, Protobuf, etc). Note that vcpkg
 caches binary artifacts (in `$HOME/.cache/vcpkg`) so a second build would be
 much faster.
 
-## Building the Client interface library
+## Building the BQ Driver
 
 ```shell
-cd $HOME/cpp-bigquery-odbc
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_INTEGRATION_TESTING=ON
+cd $CPP_BIGQUERY_ODBC_REPO_PATH
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_UNIT_TESTING=ON -DODBC_INTEGRATION_TESTING=OFF -DBQ_DRIVER_INTEGRATION_TESTS=OFF -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 cmake  --build build -j $(nproc)
 ```
 
-After this the client library would be at the path `build/google/cloud/odbc/`
+After this the build libraries would be at the path `build/google/cloud/odbc/`
 
-## Running the tests
+## Running the unit tests
 
 The steps above just build the library target, which is not so useful for
-verifying that your setup is correct. You may want to build and run an
-example/test.
+verifying that your setup is correct. You may want to build and run an unit
+tests.
+
+```shell
+cd $CPP_BIGQUERY_ODBC_REPO_PATH
+export CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH=$CPP_BIGQUERY_ODBC_REPO_PATH/google/cloud/odbc/bq_driver/internal/test_data/
+cd build && ctest
+```
+
+## Running the integration  tests
+
+If you have a GCP project with BigQuery API enabled, you should be able to run
+the integration tests
 
 Assuming you have already setup a DSN using a driver manager following the steps
 in the
@@ -101,11 +113,12 @@ in the
 you can run the driver integration tests like this:
 
 ```shell
-cd $HOME/cpp-bigquery-odbc
-cmake -B build -S . -DODBC_INTEGRATION_TESTING=ON
+cd $CPP_BIGQUERY_ODBC_REPO_PATH
+export CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT=<GCP Project ID>
+export ODBCINI=<path to your odbc.ini>
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_UNIT_TESTING=OFF -DODBC_INTEGRATION_TESTING=ON -DBQ_DRIVER_INTEGRATION_TESTS=OFF -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 cmake  --build build -j $(nproc)
-cd build
-ctest
+cd build && ctest
 ```
 
 You can also run the client library integration tests one by one. Here is an
