@@ -56,7 +56,7 @@ static std::vector<int> const kOtherSupportedTypes = {
     SQL_REAL, SQL_C_FLOAT, SQL_DOUBLE, SQL_SMALLINT, SQL_INTEGER,
     SQL_BIT,  SQL_TINYINT, SQL_GUID};
 
-void HeaderRecord::CopyHeaderRecordsFrom(HeaderRecord header_record) {
+void HeaderRecord::CopyHeaderRecordsFrom(const HeaderRecord& header_record) {
   array_size = header_record.array_size;
   array_status_ptr = header_record.array_status_ptr;
   bind_offset_ptr = header_record.bind_offset_ptr;

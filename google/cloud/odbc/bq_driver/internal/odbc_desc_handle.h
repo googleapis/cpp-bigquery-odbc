@@ -41,7 +41,7 @@ struct HeaderRecord {
 
   [[nodiscard]] SQLSMALLINT GetAllocType() const { return alloc_type_; }
 
-  void CopyHeaderRecordsFrom(HeaderRecord header_record);
+  void CopyHeaderRecordsFrom(const HeaderRecord& header_record);
 
   SQLULEN array_size = 0;
   SQLUSMALLINT* array_status_ptr = nullptr;
@@ -147,7 +147,7 @@ class DescriptorHandle : public Handle {
 
   odbc_internal::StatusRecord UnbindAllDescriptorRecordsFrom(SQLSMALLINT index);
 
-  std::map<SQLSMALLINT, DescriptorRecord> GetDescriptorRecords() {
+  inline std::map<SQLSMALLINT, DescriptorRecord> GetDescriptorRecords() {
     return descriptor_records_;
   }
 
