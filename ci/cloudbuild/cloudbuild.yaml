@@ -57,8 +57,6 @@ availableSecrets:
   secretManager:
   - versionName: 'projects/${PROJECT_ID}/secrets/CODECOV_TOKEN/versions/latest'
     env: 'CODECOV_TOKEN'
-  - versionName: projects/$PROJECT_ID/secrets/odbc-keys/versions/latest
-    env: 'ODBC_SECRET'
 
 logsBucket: 'gs://${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_BUILD_NAME}'
 
@@ -74,7 +72,6 @@ steps:
     '--push-retry=3',
     '--image-fs-extract-retry=3',
   ]
-  secretEnv: [ 'ODBC_SECRET' ]
   # Pull the docker image. The step running 'ci/cloud/build.sh' would do this
   # automatically, and also fill the log with about 2-3 pages of noise.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
