@@ -45,7 +45,7 @@ std::string getSchemaStr(Schema schema) {
 }
 
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
-                     SQLSMALLINT handle_type) {
+                     SQLSMALLINT handle_type, bool use_ansi = false) {
   if (handle == nullptr) {
     return;
   }
@@ -65,8 +65,13 @@ void GetErrorDetails(std::string const& api, SQLHANDLE handle,
     return;
   }
   while (handle && num_recs--) {
-    status = SQLGetDiagRec(handle_type, handle, ++rec_num, sqlstate,
-                           &native_error, buf, kBufferLength, NULL);
+    if (use_ansi) {
+      status = SQLGetDiagRecA(handle_type, handle, ++rec_num, sqlstate,
+                              &native_error, buf, kBufferLength, NULL);
+    } else {
+      status = SQLGetDiagRec(handle_type, handle, ++rec_num, sqlstate,
+                             &native_error, buf, kBufferLength, NULL);
+    }
     if (status == SQL_NO_DATA) {
       continue;
     }
@@ -81,50 +86,73 @@ void GetErrorDetails(std::string const& api, SQLHANDLE handle,
   }
 }
 
-void GetErrorDetails(std::string const& api,
-                     std::shared_ptr<ODBCHandles> conn) {
-  GetErrorDetails(api, conn->ard, SQL_HANDLE_DESC);
-  GetErrorDetails(api, conn->ird, SQL_HANDLE_DESC);
-  GetErrorDetails(api, conn->apd, SQL_HANDLE_DESC);
+void GetErrorDetails(std::string const& api, std::shared_ptr<ODBCHandles> conn,
+                     bool use_ansi = false) {
+  GetErrorDetails(api, conn->ard, SQL_HANDLE_DESC, use_ansi);
+  GetErrorDetails(api, conn->ird, SQL_HANDLE_DESC, use_ansi);
+  GetErrorDetails(api, conn->apd, SQL_HANDLE_DESC, use_ansi);
   GetErrorDetails(api, conn->ipd, SQL_HANDLE_DESC);
-  GetErrorDetails(api, conn->hstmt, SQL_HANDLE_STMT);
-  GetErrorDetails(api, conn->hdbc, SQL_HANDLE_DBC);
-  GetErrorDetails(api, conn->henv, SQL_HANDLE_ENV);
+  GetErrorDetails(api, conn->hstmt, SQL_HANDLE_STMT, use_ansi);
+  GetErrorDetails(api, conn->hdbc, SQL_HANDLE_DBC, use_ansi);
+  GetErrorDetails(api, conn->henv, SQL_HANDLE_ENV, use_ansi);
 }
 
 inline void CheckError(SQLRETURN status, std::string const api,
-                       std::shared_ptr<ODBCHandles> conn) {
+                       std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   if (!SQL_SUCCEEDED(status)) {
-    GetErrorDetails(api, conn);
+    if (use_ansi) {
+      std::string ansi_api = "ANSI-";
+      ansi_api.append(api);
+      GetErrorDetails(ansi_api, conn, use_ansi);
+    } else {
+      GetErrorDetails(api, conn, use_ansi);
+    }
     throw std::runtime_error(api +
                              " failed with status: " + std::to_string(status));
   }
 }
 
-void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str) {
+void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
+                   bool use_ansi) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
             "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
-  SQLRETURN status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
-void Table::Drop(std::shared_ptr<ODBCHandles> conn) {
+void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
-  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
-void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[]) {
-  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
+                      bool use_ansi) {
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
 // TODO(#11): Generic implementation of InsertIntoTable function from
 // testing/commons.*
-void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows) {
+void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows,
+                   bool use_ansi) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -163,18 +191,34 @@ void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows) {
     insert_stmt.append(row_str);
   }
 
-  auto status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  SQLRETURN status;
+  if (use_ansi) {
+    status =
+        SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
-                 std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
-  SQLRETURN status = SQLDescribeCol(
-      conn->hstmt, col_index, col_ptr->name, kBufferLength, &col_ptr->name_len,
-      &col_ptr->data_type, &col_ptr->data_size, &col_ptr->decimal_digits,
-      &col_ptr->nullable);
-  CheckError(status, "SQLDescribeCol", conn);
+                 std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
+                 bool use_ansi = false) {
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLDescribeColA(conn->hstmt, col_index, col_ptr->name,
+                             kBufferLength, &col_ptr->name_len,
+                             &col_ptr->data_type, &col_ptr->data_size,
+                             &col_ptr->decimal_digits, &col_ptr->nullable);
+
+  } else {
+    status = SQLDescribeCol(conn->hstmt, col_index, col_ptr->name,
+                            kBufferLength, &col_ptr->name_len,
+                            &col_ptr->data_type, &col_ptr->data_size,
+                            &col_ptr->decimal_digits, &col_ptr->nullable);
+  }
+
+  CheckError(status, "SQLDescribeCol", conn, use_ansi);
 }
 
 void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
@@ -182,51 +226,106 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
   auto status =
       SQLBindCol(conn->hstmt, col_index, col_ptr->data_type, col_ptr->data,
                  col_ptr->data_size, &col_ptr->data_len);
+
   CheckError(status, "SQLBindCol", conn);
 }
 
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
-                     std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index) {
+                     std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
+                     bool use_ansi = false) {
   SQLHDESC ard_handle;  // Application row descriptor
-  auto status =
-      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &ard_handle, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &ard_handle, 0,
+                             NULL);
+
+  } else {
+    status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &ard_handle, 0,
+                            NULL);
+  }
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn, use_ansi);
 
   // Get the highest record
   SQLSMALLINT record_count;
-  status = SQLGetDescField(ard_handle, 0, SQL_DESC_COUNT, &record_count,
-                           SQL_IS_SMALLINT, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  if (use_ansi) {
+    status = SQLGetDescFieldA(ard_handle, 0, SQL_DESC_COUNT, &record_count,
+                              SQL_IS_SMALLINT, NULL);
+
+  } else {
+    status = SQLGetDescField(ard_handle, 0, SQL_DESC_COUNT, &record_count,
+                             SQL_IS_SMALLINT, NULL);
+  }
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn, use_ansi);
 
   // Update the highest record
   if (col_index > record_count) {
-    status = SQLSetDescField(ard_handle, 0, SQL_DESC_COUNT,
-                             (SQLPOINTER)col_index, SQL_IS_INTEGER);
-    CheckError(status, "SQLGetStmtAttr(SQL_DESC_COUNT)", conn);
+    if (use_ansi) {
+      status = SQLSetDescFieldA(ard_handle, 0, SQL_DESC_COUNT,
+                                (SQLPOINTER)col_index, SQL_IS_INTEGER);
+
+    } else {
+      status = SQLSetDescField(ard_handle, 0, SQL_DESC_COUNT,
+                               (SQLPOINTER)col_index, SQL_IS_INTEGER);
+    }
+    CheckError(status, "SQLGetStmtAttr(SQL_DESC_COUNT)", conn, use_ansi);
   }
 
   // Assign column attributes
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_TYPE,
-                           (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
-  CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_CONCISE_TYPE,
-                           (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_LENGTH,
-                           &col_ptr->data_size, SQL_IS_UINTEGER);
-  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH,
-                           &col_ptr->data_size, SQL_IS_UINTEGER);
-  CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_DATA_PTR,
-                           col_ptr->data, SQL_NTS);
-  CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_INDICATOR_PTR,
-                           &col_ptr->data_len, SQL_IS_INTEGER);
-  CheckError(status, "SQLSetDescField(SQL_DESC_INDICATOR_PTR)", conn);
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
-                           &col_ptr->data_len, SQL_IS_INTEGER);
-  CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
+  if (use_ansi) {
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_TYPE,
+                              (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
+    CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn, use_ansi);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_CONCISE_TYPE,
+                              (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
+    CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn,
+               use_ansi);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_LENGTH,
+                              &col_ptr->data_size, SQL_IS_UINTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn, use_ansi);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_OCTET_LENGTH,
+                              &col_ptr->data_size, SQL_IS_UINTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn,
+               use_ansi);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_DATA_PTR,
+                              col_ptr->data, SQL_NTS);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_INDICATOR_PTR,
+                              &col_ptr->data_len, SQL_IS_INTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_INDICATOR_PTR)", conn,
+               use_ansi);
+    status = SQLSetDescFieldA(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
+                              &col_ptr->data_len, SQL_IS_INTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn,
+               use_ansi);
+
+  } else {
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_TYPE,
+                             (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
+    CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn, use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_CONCISE_TYPE,
+                             (SQLPOINTER)col_ptr->data_type, SQL_IS_SMALLINT);
+    CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn,
+               use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_LENGTH,
+                             &col_ptr->data_size, SQL_IS_UINTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn, use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH,
+                             &col_ptr->data_size, SQL_IS_UINTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn,
+               use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_DATA_PTR,
+                             col_ptr->data, SQL_NTS);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn,
+               use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_INDICATOR_PTR,
+                             &col_ptr->data_len, SQL_IS_INTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_INDICATOR_PTR)", conn,
+               use_ansi);
+    status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
+                             &col_ptr->data_len, SQL_IS_INTEGER);
+    CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn,
+               use_ansi);
+  }
 }
 
 }  // namespace google::cloud::odbc_tests

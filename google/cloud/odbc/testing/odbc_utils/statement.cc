@@ -22,7 +22,8 @@ using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ms = std::chrono::milliseconds;
 
 // Tests direct execution of statements using SQLExecDirect
-SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
+                                bool use_ansi) {
   SQLRETURN status;
   auto const table_name = kDatasetName + ".ODBC_INSERT_DIRECT_TEST";
   Table table(table_name);
@@ -33,19 +34,19 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn) {
           string_field.c_str());
 
   // Create Table
-  table.Create(conn, "(string_field STRING)");
+  table.Create(conn, "(string_field STRING)", use_ansi);
 
   // Execute insertion
-  ExecuteStatement(conn, insert_stmt);
+  ExecuteStatement(conn, insert_stmt, use_ansi);
 
   // Drop Table
-  table.Drop(conn);
+  table.Drop(conn, use_ansi);
 
   return status;
 }
 
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
-SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   SQLRETURN status;
   auto const table_name = kDatasetName + ".ODBC_INSERT_PARAMS_TEST";
   char insert_stmt[kBufferLength];
@@ -54,11 +55,16 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
   Table table(table_name);
 
   // Create Table
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER)");
+  table.Create(conn, "(StringField STRING, IntegerField INTEGER)"), use_ansi;
 
   // Prepare statement with insert query string
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLPrepare", conn, use_ansi);
 
   // Add param 1(string) to insert query string
   constexpr char* str_field = "Test String 1";
@@ -79,7 +85,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn) {
   CheckError(status, "SQLExecute", conn);
 
   // Drop Table
-  table.Drop(conn);
+  table.Drop(conn, use_ansi);
 
   return status;
 }

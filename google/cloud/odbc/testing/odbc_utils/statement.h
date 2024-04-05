@@ -20,13 +20,16 @@
 
 namespace google::cloud::odbc_tests {
 
-SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn);
+SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
+                          bool use_ansi = false);
 
-SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn);
-SQLRETURN InsertStatementWithoutBindParameter(
-    std::shared_ptr<ODBCHandles> conn);
+SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
+                                           bool use_ansi = false);
+SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
+                                              bool use_ansi = false);
 
-SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn);
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
+                                bool use_ansi = false);
 
 // Fetches results of a read query row-by-row and returns them as a map with the
 // column as keys

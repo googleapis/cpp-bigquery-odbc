@@ -31,7 +31,8 @@ class Catalog {
 
   // Uses the SQLTables API to fetch tables in a dataset.
   static std::shared_ptr<Results> GetTables(std::shared_ptr<ODBCHandles> conn,
-                                            std::string dataset = "");
+                                            std::string dataset = "",
+                                            bool use_ansi = false);
 };
 
 }  // namespace google::cloud::odbc_tests

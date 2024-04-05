@@ -16,7 +16,8 @@
 
 namespace google::cloud::odbc_tests {
 
-void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout) {
+void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
+                   bool use_ansi = false) {
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
 
@@ -27,33 +28,50 @@ void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout) {
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CheckError(status, "SQLAllocHandle", conn);
 
-  status =
-      SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
-  CheckError(status, "SQLSetConnectAttr", conn);
+  if (use_ansi) {
+    status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
+                                (SQLPOINTER)10, 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
 
-  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
-                             (SQLPOINTER)timeout, 0);
-  CheckError(status, "SQLSetConnectAttr", conn);
+    status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
+                                (SQLPOINTER)timeout, 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+  } else {
+    status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
+                               (SQLPOINTER)10, 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+
+    status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
+                               (SQLPOINTER)timeout, 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+  }
 }
 
 SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
-                  int timeout) {
+                  int timeout, bool use_ansi) {
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
 
-  SetAttributes(conn, timeout);
+  SetAttributes(conn, timeout, use_ansi);
 
   StrToChar((char*)data_source, conn_str);
 
-  status = SQLDriverConnect(conn->hdbc, 0, (SQLCHAR*)data_source, SQL_NTS,
-                            (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn),
-                            &buflen, SQL_DRIVER_COMPLETE);
-  CheckError(status, "SQLDriverConnect", conn);
+  if (use_ansi) {
+    status = SQLDriverConnectA(conn->hdbc, 0, (SQLCHAR*)data_source, SQL_NTS,
+                               (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn),
+                               &buflen, SQL_DRIVER_COMPLETE);
+  } else {
+    status = SQLDriverConnect(conn->hdbc, 0, (SQLCHAR*)data_source, SQL_NTS,
+                              (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn),
+                              &buflen, SQL_DRIVER_COMPLETE);
+  }
+  CheckError(status, "SQLDriverConnect", conn, use_ansi);
+
   conn->connected = true;
 
-  PrintDriverVerName(conn);
+  PrintDriverVerName(conn, use_ansi);
 
   // Allocate statement handle
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
@@ -62,20 +80,26 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
 }
 
 SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
-                     int timeout) {
+                     int timeout, bool use_ansi) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
   SQLRETURN status;
 
-  SetAttributes(conn, timeout);
+  SetAttributes(conn, timeout, use_ansi);
+  if (use_ansi) {
+    status =
+        SQLConnectA(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+                    (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn), NULL, 0);
+  } else {
+    status =
+        SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+                   (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn), NULL, 0);
+  }
 
-  status =
-      SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
-                 (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn), NULL, 0);
-  CheckError(status, "SQLConnect", conn);
+  CheckError(status, "SQLConnect", conn, use_ansi);
   conn->connected = true;
 
-  PrintDriverVerName(conn);
+  PrintDriverVerName(conn, use_ansi);
 
   // Allocate statement handle
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
@@ -109,7 +133,7 @@ SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn) {
 }
 
 // Gets Info about the driver and populates conn.metadata
-SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   SQLCHAR buf[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
@@ -129,8 +153,12 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn) {
     auto info_type = std::get<0>(elem);
     auto info_name = std::get<1>(elem);
     auto metadata_field_ptr = std::get<2>(elem);
-    status = SQLGetInfo(conn->hdbc, info_type, buf, sizeof(buf), &out_len);
-    CheckError(status, "SqlGetInfo(" + info_name + ")", conn);
+    if (use_ansi) {
+      status = SQLGetInfoA(conn->hdbc, info_type, buf, sizeof(buf), &out_len);
+    } else {
+      status = SQLGetInfo(conn->hdbc, info_type, buf, sizeof(buf), &out_len);
+    }
+    CheckError(status, "SqlGetInfo(" + info_name + ")", conn, use_ansi);
     if (SQL_SUCCEEDED(status)) {
       if (status == SQL_SUCCESS_WITH_INFO) {
         std::runtime_error("Buffer size is not enough for " + info_name +
@@ -161,17 +189,29 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn) {
 
 // TODO(#10): Remove printf and support logging
 // Print the version and the name of the connected driver
-SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   SQLCHAR driver_info[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
-  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, driver_info,
-                      NumSqlChar(driver_info), &out_len);
-  CheckError(status, "SQLGetInfo", conn);
+  if (use_ansi) {
+    status = SQLGetInfoA(conn->hdbc, SQL_DRIVER_VER, driver_info,
+                         NumSqlChar(driver_info), &out_len);
+  } else {
+    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, driver_info,
+                        NumSqlChar(driver_info), &out_len);
+  }
+  CheckError(status, "SQLGetInfo", conn, use_ansi);
+
   printf("Driver: %s", driver_info);
-  status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, driver_info,
-                      NumSqlChar(driver_info), &out_len);
-  CheckError(status, "SQLGetInfo", conn);
+  if (use_ansi) {
+    status = SQLGetInfoA(conn->hdbc, SQL_DRIVER_NAME, driver_info,
+                         NumSqlChar(driver_info), &out_len);
+
+  } else {
+    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, driver_info,
+                        NumSqlChar(driver_info), &out_len);
+  }
+  CheckError(status, "SQLGetInfo", conn, use_ansi);
   printf(" (%s) \n\n", driver_info);
   return status;
 }

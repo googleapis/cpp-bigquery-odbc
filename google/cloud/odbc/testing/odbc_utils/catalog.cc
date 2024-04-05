@@ -20,7 +20,8 @@ namespace google::cloud::odbc_tests {
 Catalog::~Catalog() = default;
 
 std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
-                                            std::string dataset) {
+                                            std::string dataset,
+                                            bool use_ansi) {
   SQLRETURN status;
   int res_cols = 5;
   Catalog catalog_result[res_cols];
@@ -41,13 +42,24 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
   auto project_id = conn->metadata.project_id + "%";
 
   if (dataset.length()) {
-    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                       (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
+    if (use_ansi) {
+      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                          (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
+    } else {
+      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                         (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
+    }
   } else {
-    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS, NULL,
-                       0, NULL, 0, NULL, 0);
+    if (use_ansi) {
+      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                          NULL, 0, NULL, 0, NULL, 0);
+
+    } else {
+      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                         NULL, 0, NULL, 0, NULL, 0);
+    }
   }
-  CheckError(status, "SQLTables", conn);
+  CheckError(status, "SQLTables", conn, use_ansi);
 
   int i = 0, count = 0;
   while (1) {
