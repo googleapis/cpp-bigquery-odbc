@@ -117,14 +117,9 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLAllocHandle", conn);
 
   // Set Descriptor handle to the first statement handle
-  if (use_ansi) {
-    status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
-                             SQL_IS_POINTER);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
-                            SQL_IS_POINTER);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
+                          SQL_IS_POINTER);
+  CheckError(status, "SQLSetStmtAttr", conn);
 
   // Add param 1(string) to insert query string
   constexpr char* str_field = "Test String 1";
@@ -174,14 +169,9 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
 
   // Set Descriptor handle to the second statement handle.
   // It already has data from previous SQLBindParameter calls.
-  if (use_ansi) {
-    status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
-                             SQL_IS_POINTER);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
-                            SQL_IS_POINTER);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
+                          SQL_IS_POINTER);
+  CheckError(status, "SQLSetStmtAttr", conn);
 
   // Execute insertion
   status = SQLExecute(conn->hstmt);
