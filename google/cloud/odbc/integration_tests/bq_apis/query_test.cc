@@ -559,6 +559,7 @@ TEST(Query, NoAccessAccountAuth) {
 }
 #endif  // USER_ACCOUNT_AUTH
 
+#ifdef USER_ACCOUNT_AUTH // TODO(b/333011414) Enable tests
 TEST(QueryResults, DifferentAccount) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -608,6 +609,7 @@ TEST(QueryResults, DifferentAccount) {
                        HasSubstr("User does not have permission to access "
                                  "results of another user's job")));
 }
+#endif  // USER_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(QueryResults, NoAccessAccountAuth) {

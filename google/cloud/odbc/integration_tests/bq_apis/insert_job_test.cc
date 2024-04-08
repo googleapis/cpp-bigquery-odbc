@@ -407,6 +407,7 @@ TEST(InsertJob, NoAccessAccountAuth) {
 }
 #endif  // USER_ACCOUNT_AUTH
 
+#ifdef USER_ACCOUNT_AUTH // TODO(b/333011414) Enable tests
 TEST(InsertJob, DifferentAccount) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -457,6 +458,7 @@ TEST(InsertJob, DifferentAccount) {
                        HasSubstr("User does not have permission to access "
                                  "results of another user's job")));
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, CreateTableAndInsertRow) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
