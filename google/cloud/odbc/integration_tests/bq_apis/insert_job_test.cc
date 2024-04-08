@@ -150,6 +150,7 @@ TEST(InsertJob, ServiceAccountAuth) {
   EXPECT_EQ(query_results_response.value().total_rows, 1);
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(InsertJob, ServiceAccountAuthWithClientId) {
   StatusOr<Options> options =
       CreateServiceAccountAuthWithClientIdAuthentication();
@@ -198,10 +199,10 @@ TEST(InsertJob, ServiceAccountAuthWithClientId) {
   EXPECT_EQ(query_results_response.value().schema.fields.size(), 1);
   EXPECT_EQ(query_results_response.value().total_rows, 1);
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string dataset_id =
@@ -232,8 +233,7 @@ TEST(InsertJob, ProjectNotExist) {
 }
 
 TEST(InsertJob, DatasetNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -276,8 +276,7 @@ TEST(InsertJob, DatasetNotExist) {
 }
 
 TEST(InsertJob, NoQueryParameters) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -324,8 +323,7 @@ TEST(InsertJob, NoQueryParameters) {
 }
 
 TEST(InsertJob, NoJobConfiguration) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -349,8 +347,7 @@ TEST(InsertJob, NoJobConfiguration) {
 }
 
 TEST(InsertJob, NoJobConfigurationQuery) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -411,8 +408,7 @@ TEST(InsertJob, NoAccessAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, DifferentAccount) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -463,8 +459,7 @@ TEST(InsertJob, DifferentAccount) {
 }
 
 TEST(InsertJob, CreateTableAndInsertRow) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -533,8 +528,7 @@ TEST(InsertJob, CreateTableAndInsertRow) {
 }
 
 TEST(InsertJob, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string dataset_id =

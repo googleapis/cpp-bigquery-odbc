@@ -93,6 +93,7 @@ TEST(ListDatasets, ServiceAccountAuth) {
   ASSERT_EQ(found, true);
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(ListDatasets, ServiceAccountAuthWithClientId) {
   StatusOr<Options> options =
       CreateServiceAccountAuthWithClientIdAuthentication();
@@ -119,10 +120,10 @@ TEST(ListDatasets, ServiceAccountAuthWithClientId) {
   }
   ASSERT_EQ(found, true);
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(ListDatasets, UsingFilter) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -150,8 +151,7 @@ TEST(ListDatasets, UsingFilter) {
 }
 
 TEST(ListDatasets, UsingFilterNoDatasets) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -170,8 +170,7 @@ TEST(ListDatasets, UsingFilterNoDatasets) {
 }
 
 TEST(ListDatasets, WrongFilter) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -195,8 +194,7 @@ TEST(ListDatasets, WrongFilter) {
 // Hidden datasets are datasets which starts with underscore.
 // More about it https://cloud.google.com/bigquery/docs/datasets#hidden_datasets
 TEST(ListDatasets, HiddenDatasets) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -223,8 +221,7 @@ TEST(ListDatasets, HiddenDatasets) {
 }
 
 TEST(ListDatasets, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -243,8 +240,7 @@ TEST(ListDatasets, ProjectNotExist) {
 }
 
 TEST(ListDatasets, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));

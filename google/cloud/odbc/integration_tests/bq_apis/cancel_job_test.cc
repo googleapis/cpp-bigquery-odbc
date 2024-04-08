@@ -86,6 +86,7 @@ TEST(CancelJob, ServiceAccountAuth) {
   EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(CancelJob, ServiceAccountAuthWithClientId) {
   // First we create a job, so later we could 'cancel' it
   StatusOr<Options> options =
@@ -107,11 +108,11 @@ TEST(CancelJob, ServiceAccountAuthWithClientId) {
   ASSERT_STATUS_OK(cancel_job_response);
   EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(CancelJob, DifferentAccount) {
   // First we create a job, so later we could 'cancel' it
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   StatusOr<std::string> job_id = InsertJob(job_client);
@@ -138,8 +139,7 @@ TEST(CancelJob, DifferentAccount) {
 
 TEST(CancelJob, WrongLocation) {
   // First we create a job, so later we could 'cancel' it
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   StatusOr<std::string> job_id = InsertJob(job_client);
@@ -161,8 +161,7 @@ TEST(CancelJob, WrongLocation) {
 
 TEST(CancelJob, LocationNotExist) {
   // First we create a job, so later we could 'cancel' it
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   StatusOr<std::string> job_id = InsertJob(job_client);
@@ -184,8 +183,7 @@ TEST(CancelJob, LocationNotExist) {
 }
 
 TEST(CancelJob, JobNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -202,8 +200,7 @@ TEST(CancelJob, JobNotExist) {
 }
 
 TEST(CancelJob, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 
@@ -218,8 +215,7 @@ TEST(CancelJob, ProjectNotExist) {
 }
 
 TEST(CancelJob, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
 

@@ -141,6 +141,7 @@ TEST(Query, ServiceAccountAuth) {
             query_response.value().total_rows);
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(Query, ServiceAccountAuthWithClientId) {
   StatusOr<Options> options =
       CreateServiceAccountAuthWithClientIdAuthentication();
@@ -187,10 +188,10 @@ TEST(Query, ServiceAccountAuthWithClientId) {
   EXPECT_EQ(query_results_response.value().total_rows,
             query_response.value().total_rows);
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(Query, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string dataset_id =
@@ -217,8 +218,7 @@ TEST(Query, ProjectNotExist) {
 }
 
 TEST(Query, DatasetNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -244,8 +244,7 @@ TEST(Query, DatasetNotExist) {
 }
 
 TEST(Query, TableNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -270,8 +269,7 @@ TEST(Query, TableNotExist) {
 }
 
 TEST(Query, ColumnNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -299,8 +297,7 @@ TEST(Query, ColumnNotExist) {
 }
 
 TEST(Query, SelectZeroRows) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -331,8 +328,7 @@ TEST(Query, SelectZeroRows) {
 }
 
 TEST(Query, PageTokens) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -385,8 +381,7 @@ TEST(Query, PageTokens) {
 }
 
 TEST(QueryResukts, JobNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -405,8 +400,7 @@ TEST(QueryResukts, JobNotExist) {
 }
 
 TEST(QueryResults, LocationNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -446,8 +440,7 @@ TEST(QueryResults, LocationNotExist) {
 }
 
 TEST(QueryResults, WrongLocation) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -486,8 +479,7 @@ TEST(QueryResults, WrongLocation) {
 }
 
 TEST(Query, WithQueryParameters) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -568,8 +560,7 @@ TEST(Query, NoAccessAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(QueryResults, DifferentAccount) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -620,8 +611,7 @@ TEST(QueryResults, DifferentAccount) {
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(QueryResults, NoAccessAccountAuth) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -673,8 +663,7 @@ TEST(QueryResults, NoAccessAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(Query, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string dataset_id =
@@ -703,8 +692,7 @@ TEST(Query, ProjectIdIsEmpty) {
 }
 
 TEST(QueryResults, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
@@ -749,8 +737,7 @@ TEST(QueryResults, ProjectIdIsEmpty) {
 }
 
 TEST(Query, QueryResultsPagination) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =

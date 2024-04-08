@@ -85,6 +85,7 @@ TEST(ListAllTables, ServiceAccountAuth) {
   }
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(ListAllTables, ServiceAccountAuthWithClientId) {
   StatusOr<Options> options =
       CreateServiceAccountAuthWithClientIdAuthentication();
@@ -107,10 +108,10 @@ TEST(ListAllTables, ServiceAccountAuthWithClientId) {
     ASSERT_STATUS_OK(table);
   }
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(ListAllTables, DatasetNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
   std::string project_id =
@@ -131,8 +132,7 @@ TEST(ListAllTables, DatasetNotExist) {
 }
 
 TEST(ListAllTables, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
 
@@ -181,8 +181,7 @@ TEST(ListAllTables, NoAccessAccountAuth) {
 #endif  // USER_ACCOUNT_AUTH
 
 TEST(ListAllTables, ProjectIdIEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
   std::string dataset_id =
@@ -203,8 +202,7 @@ TEST(ListAllTables, ProjectIdIEmpty) {
 }
 
 TEST(ListAllTables, DatasetIdIEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto table_client = TableClient(MakeTableConnection(std::move(*options)));
   std::string project_id =

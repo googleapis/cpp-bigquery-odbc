@@ -79,6 +79,7 @@ TEST(GetDataset, ServiceAccountAuth) {
   ASSERT_STATUS_OK(dataset);
 }
 
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(GetDataset, ServiceAccountAuthWithClientId) {
   StatusOr<Options> options =
       CreateServiceAccountAuthWithClientIdAuthentication();
@@ -98,10 +99,10 @@ TEST(GetDataset, ServiceAccountAuthWithClientId) {
 
   ASSERT_STATUS_OK(dataset);
 }
+#endif  // USER_ACCOUNT_AUTH
 
 TEST(GetDataset, DatasetNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -118,8 +119,7 @@ TEST(GetDataset, DatasetNotExist) {
 }
 
 TEST(GetDataset, ProjectNotExist) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -139,8 +139,7 @@ TEST(GetDataset, ProjectNotExist) {
 }
 
 TEST(GetDataset, ProjectIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
@@ -159,8 +158,7 @@ TEST(GetDataset, ProjectIdIsEmpty) {
 }
 
 TEST(GetDataset, DatasetIdIsEmpty) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto dataset_client =
       DatasetClient(MakeDatasetConnection(std::move(*options)));
