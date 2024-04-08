@@ -228,6 +228,15 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
       break;
     }
 
+    SQLULEN out = 0;
+    status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, &out, 0, NULL);
+    if (status != SQL_SUCCESS) {
+      std::cout << "Not supported: SQL_ATTR_ROW_NUMBER\n";
+    } else {
+      std::cout << "Default value for SQL_ATTR_ROW_NUMBER: " << out << "\n";
+    }
+    CheckError(status, "SQL_ATTR_ROW_NUMBER", conn);
+
     for (int i_c = 0; i_c < num_cols; i_c++) {
       auto col_name = (char*)cols[i_c]->name;
       auto data = cols[i_c]->data;

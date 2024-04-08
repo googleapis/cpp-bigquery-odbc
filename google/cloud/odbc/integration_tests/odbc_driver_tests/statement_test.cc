@@ -390,6 +390,295 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLSetStmtAttribute, SetAllAttributes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_ON, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ASYNC_ENABLE\n";
+  }
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ASYNC_ENABLE\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CONCURRENCY, (SQLPOINTER)SQL_CONCUR_READ_ONLY, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CONCURRENCY - SQL_CONCUR_READ_ONLY\n";
+  }
+      CheckError(status, "SQL_ATTR_CONCURRENCY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CONCURRENCY, (SQLPOINTER)SQL_CONCUR_LOCK, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CONCURRENCY - SQL_CONCUR_LOCK\n";
+  }
+      CheckError(status, "SQL_ATTR_CONCURRENCY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CONCURRENCY, (SQLPOINTER)SQL_CONCUR_ROWVER, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CONCURRENCY - SQL_CONCUR_ROWVER\n";
+  }
+      CheckError(status, "SQL_ATTR_CONCURRENCY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CONCURRENCY, (SQLPOINTER)SQL_CONCUR_VALUES, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CONCURRENCY - SQL_CONCUR_VALUES\n";
+  }
+      CheckError(status, "SQL_ATTR_CONCURRENCY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SCROLLABLE, (SQLPOINTER)SQL_NONSCROLLABLE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SCROLLABLE - SQL_NONSCROLLABLE\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_SCROLLABLE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SCROLLABLE, (SQLPOINTER)SQL_SCROLLABLE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SCROLLABLE - SQL_SCROLLABLE\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_SCROLLABLE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SENSITIVITY, (SQLPOINTER)SQL_UNSPECIFIED, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SENSITIVITY - SQL_UNSPECIFIED\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_SENSITIVITY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SENSITIVITY, (SQLPOINTER)SQL_INSENSITIVE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SENSITIVITY - SQL_INSENSITIVE\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_SENSITIVITY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SENSITIVITY, (SQLPOINTER)SQL_SENSITIVE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SENSITIVITY - SQL_SENSITIVE\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_SENSITIVITY", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_TYPE, (SQLPOINTER)SQL_CURSOR_FORWARD_ONLY, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_TYPE - SQL_CURSOR_FORWARD_ONLY\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_TYPE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_TYPE, (SQLPOINTER)SQL_CURSOR_STATIC, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_TYPE - SQL_CURSOR_STATIC\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_TYPE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_TYPE, (SQLPOINTER)SQL_CURSOR_KEYSET_DRIVEN, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_TYPE - SQL_CURSOR_KEYSET_DRIVEN\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_TYPE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_TYPE, (SQLPOINTER)SQL_CURSOR_DYNAMIC, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_TYPE - SQL_CURSOR_DYNAMIC\n";
+  }
+      CheckError(status, "SQL_ATTR_CURSOR_TYPE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ENABLE_AUTO_IPD, (SQLPOINTER)SQL_FALSE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ENABLE_AUTO_IPD\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ENABLE_AUTO_IPD, (SQLPOINTER)SQL_TRUE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ENABLE_AUTO_IPD\n";
+  }
+  SQLULEN bookmark = 10;
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_FETCH_BOOKMARK_PTR, &bookmark, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_FETCH_BOOKMARK_PTR\n";
+  }
+      CheckError(status, "SQL_ATTR_FETCH_BOOKMARK_PTR", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_KEYSET_SIZE, (SQLPOINTER)10, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_KEYSET_SIZE\n";
+  }
+      CheckError(status, "SQL_ATTR_KEYSET_SIZE", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_LENGTH, (SQLPOINTER)10, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_MAX_LENGTH\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)10, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_MAX_ROWS\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_TRUE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_METADATA_ID\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_METADATA_ID\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_NOSCAN, (SQLPOINTER)SQL_NOSCAN_OFF, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_NOSCAN\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_NOSCAN, (SQLPOINTER)SQL_NOSCAN_ON, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_NOSCAN\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)10, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_QUERY_TIMEOUT\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_RETRIEVE_DATA, (SQLPOINTER)SQL_RD_ON, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_RETRIEVE_DATA\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_RETRIEVE_DATA, (SQLPOINTER)SQL_RD_OFF, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_RETRIEVE_DATA\n";
+  }
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_SIMULATE_CURSOR, (SQLPOINTER)SQL_SC_NON_UNIQUE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_SIMULATE_CURSOR - SQL_SC_NON_UNIQUE\n";
+  }
+      CheckError(status, "SQL_ATTR_SIMULATE_CURSOR", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_SIMULATE_CURSOR, (SQLPOINTER)SQL_SC_TRY_UNIQUE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_SIMULATE_CURSOR - SQL_SC_TRY_UNIQUE\n";
+  }
+      CheckError(status, "SQL_ATTR_SIMULATE_CURSOR", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_SIMULATE_CURSOR, (SQLPOINTER)SQL_SC_UNIQUE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_SIMULATE_CURSOR - SQL_SC_UNIQUE\n";
+  }
+      CheckError(status, "SQL_ATTR_SIMULATE_CURSOR", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_USE_BOOKMARKS, (SQLPOINTER)SQL_UB_OFF, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_USE_BOOKMARKS - SQL_UB_OFF\n";
+  }
+      CheckError(status, "SQL_ATTR_USE_BOOKMARKS", conn);
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_USE_BOOKMARKS, (SQLPOINTER)SQL_UB_VARIABLE, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_USE_BOOKMARKS - SQL_UB_VARIABLE\n";
+  }
+      CheckError(status, "SQL_ATTR_USE_BOOKMARKS", conn);
+
+
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetStmtAttribute, GetAllAttributes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  SQLULEN out = 0;
+
+  out = 0;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ASYNC_ENABLE\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_ASYNC_ENABLE: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, 29, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ASYNC_STMT_EVENT\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_ASYNC_STMT_EVENT: " << out << "\n";
+  }
+      CheckError(status, "SQL_ATTR_ASYNC_STMT_EVENT", conn);
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_CONCURRENCY, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CONCURRENCY\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_CONCURRENCY: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SCROLLABLE, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SCROLLABLE\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_CURSOR_SCROLLABLE: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_SENSITIVITY, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_SENSITIVITY\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_CURSOR_SENSITIVITY: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_CURSOR_TYPE, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_CURSOR_TYPE\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_CURSOR_TYPE: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ENABLE_AUTO_IPD, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_ENABLE_AUTO_IPD\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_ENABLE_AUTO_IPD: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_FETCH_BOOKMARK_PTR, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_FETCH_BOOKMARK_PTR\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_FETCH_BOOKMARK_PTR: " << out << "\n";
+  }
+      CheckError(status, "SQL_ATTR_FETCH_BOOKMARK_PTR", conn);
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_KEYSET_SIZE, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_KEYSET_SIZE\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_KEYSET_SIZE: " << out << "\n";
+  }
+      CheckError(status, "SQL_ATTR_KEYSET_SIZE", conn);
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_MAX_LENGTH, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_MAX_LENGTH\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_MAX_LENGTH: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_MAX_ROWS\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_MAX_ROWS: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_METADATA_ID\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_METADATA_ID: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_NOSCAN, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_NOSCAN\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_NOSCAN: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_QUERY_TIMEOUT\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_QUERY_TIMEOUT: " << out << "\n";
+  }
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_RETRIEVE_DATA, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_RETRIEVE_DATA\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_RETRIEVE_DATA: " << out << "\n";
+  }
+//status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, &out, 0, NULL);
+//  if (status != SQL_SUCCESS) {
+//    std::cout << "Not supported: SQL_ATTR_ROW_NUMBER\n";
+//  } else {
+//    std::cout << "Default value for SQL_ATTR_ROW_NUMBER: " << out << "\n";
+//  }
+//      CheckError(status, "SQL_ATTR_ROW_NUMBER", conn);
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_SIMULATE_CURSOR, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_SIMULATE_CURSOR\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_SIMULATE_CURSOR: " << out << "\n";
+  }
+      CheckError(status, "SQL_ATTR_SIMULATE_CURSOR", conn);
+status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_USE_BOOKMARKS, &out, 0, NULL);
+  if (status != SQL_SUCCESS) {
+    std::cout << "Not supported: SQL_ATTR_USE_BOOKMARKS\n";
+  } else {
+    std::cout << "Default value for SQL_ATTR_USE_BOOKMARKS: " << out << "\n";
+  }
+
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
