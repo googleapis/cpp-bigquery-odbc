@@ -407,7 +407,7 @@ TEST(InsertJob, NoAccessAccountAuth) {
 }
 #endif  // USER_ACCOUNT_AUTH
 
-#ifdef USER_ACCOUNT_AUTH // TODO(b/333011414) Enable tests
+#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
 TEST(InsertJob, DifferentAccount) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
