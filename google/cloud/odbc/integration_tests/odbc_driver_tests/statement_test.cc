@@ -390,6 +390,108 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set Connection Attr and then retrieve Statement attr
+  SQLULEN metadata_id_dbc = SQL_TRUE;
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_METADATA_ID,
+                             (SQLPOINTER)metadata_id_dbc, 0);
+  CheckError(status, "SQLSetConnectAttr", conn);
+  SQLULEN metadata_id_stmt;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
+                          0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt);
+
+  // Set Statement Attr and then retrieve it from both Statement and Connection
+  // attrs
+  SQLULEN metadata_id_stmt_set = SQL_FALSE;
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)metadata_id_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+  SQLULEN metadata_id_stmt_get = 0;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          &metadata_id_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+  metadata_id_dbc = 0;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_METADATA_ID, &metadata_id_dbc,
+                             0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  EXPECT_EQ(metadata_id_stmt_set, metadata_id_stmt_get);
+  EXPECT_NE(metadata_id_dbc, metadata_id_stmt_set);
+
+  // Create a new statement handle and check this attribute there
+  HSTMT new_hstmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &new_hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLULEN metadata_id_stmt_new = 0;
+  status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_METADATA_ID,
+                          &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_STMT, new_hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set Connection Attr and then retrieve Statement attr
+  SQLULEN async_enable_dbc = SQL_TRUE;
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                             (SQLPOINTER)async_enable_dbc, 0);
+  CheckError(status, "SQLSetConnectAttr", conn);
+  SQLULEN async_enable_stmt;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &async_enable_stmt, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(async_enable_dbc, async_enable_stmt);
+
+  // Set Statement Attr and then retrieve it from both Statement and Connection
+  // attrs
+  SQLULEN async_enable_stmt_set = SQL_FALSE;
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          (SQLPOINTER)async_enable_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+  SQLULEN async_enable_stmt_get = 0;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &async_enable_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+  async_enable_dbc = 0;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                             &async_enable_dbc, 0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  EXPECT_EQ(async_enable_stmt_set, async_enable_stmt_get);
+  EXPECT_NE(async_enable_dbc, async_enable_stmt_set);
+
+  // Create a new statement handle and check this attribute there
+  HSTMT new_hstmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &new_hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLULEN metadata_id_stmt_new = 0;
+  status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(async_enable_dbc, metadata_id_stmt_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_STMT, new_hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
