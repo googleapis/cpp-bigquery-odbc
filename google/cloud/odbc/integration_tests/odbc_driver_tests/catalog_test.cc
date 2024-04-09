@@ -91,6 +91,39 @@ TEST(CatalogTest, SQLTables) {
                std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
+TEST(CatalogTest, SQLTablesA) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Create tables
+  for (auto it : kTables) {
+    std::string table_name = it.first;
+    std::string table_name_full = kDatasetName + "." + table_name;
+    // Create Table
+    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
+    Table(table_name_full).Create(conn, getSchemaStr(it.second), true);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+
+  // Verify if the tables returned by SQLTables are the same as the ones created
+  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
+
+  EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
+
+  auto table_names =
+      (*Catalog::GetTables(conn, kDatasetName, true))[kDatasetName];
+  std::vector<std::string> test_table_names;
+  for (auto it : kTables) {
+    EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first),
+              table_names.end());
+    test_table_names.push_back(it.first);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ClearDataset(kDatasetName,
+               std::make_shared<std::vector<std::string>>(test_table_names));
+}
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
