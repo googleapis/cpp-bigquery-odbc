@@ -91,7 +91,7 @@ void GetErrorDetails(std::string const& api, std::shared_ptr<ODBCHandles> conn,
   GetErrorDetails(api, conn->ard, SQL_HANDLE_DESC, use_ansi);
   GetErrorDetails(api, conn->ird, SQL_HANDLE_DESC, use_ansi);
   GetErrorDetails(api, conn->apd, SQL_HANDLE_DESC, use_ansi);
-  GetErrorDetails(api, conn->ipd, SQL_HANDLE_DESC);
+  GetErrorDetails(api, conn->ipd, SQL_HANDLE_DESC, use_ansi);
   GetErrorDetails(api, conn->hstmt, SQL_HANDLE_STMT, use_ansi);
   GetErrorDetails(api, conn->hdbc, SQL_HANDLE_DBC, use_ansi);
   GetErrorDetails(api, conn->henv, SQL_HANDLE_ENV, use_ansi);
