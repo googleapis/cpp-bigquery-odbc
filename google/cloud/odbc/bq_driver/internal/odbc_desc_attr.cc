@@ -15,12 +15,12 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
-using google::cloud::odbc_internal::StatusRecordOr;
 
 static std::vector<Interval> const kDatetimeTypes = {
     {SQL_TYPE_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
