@@ -28,6 +28,7 @@ class DescriptorHandle : public Handle {
   explicit DescriptorHandle(DescriptorType type = DescriptorType::kApplication,
                             SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO)
       : type_(type), header_record_(alloc_type){};
+
   ~DescriptorHandle() = default;
 
   DescriptorHandle(DescriptorHandle const&) = default;

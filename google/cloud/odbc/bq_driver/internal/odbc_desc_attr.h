@@ -32,7 +32,7 @@ struct Interval {
   SQLSMALLINT datetime_interval_code;
 };
 
-enum class DescriptorType { kApplication, kIRD, kIPD };
+enum class DescriptorType { kApplication, kIRD, kIPD, kARD, kAPD };
 
 struct HeaderRecord {
   explicit HeaderRecord(SQLSMALLINT alloc_type) : alloc_type_(alloc_type){};
