@@ -100,15 +100,14 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
-  auto conn_handle_ptr_status =
-      CastToHandle<ConnectionHandle>(HandleType::kConnHandle, conn_handle);
-  if (!conn_handle_ptr_status) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle, false);
+  if (!handle_result) {
     TracePrintInternal(*(*kTraceOptsConsole),
-                       conn_handle_ptr_status.GetStatusRecord().message);
-    return SQL_INVALID_HANDLE;
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
   }
-  auto* handle_ref = *conn_handle_ptr_status;
-  handle_ref->GetDiagnostics().ClearDiagnostics();
+  auto* handle_ref = *handle_result;
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
   StatusRecordOr<Section> connection_params_resp_status =
