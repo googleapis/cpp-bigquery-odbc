@@ -317,6 +317,7 @@ TEST(StatementTest, SQLDescribeCol) {
 
 void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   auto const table_name = kDatasetName + ".ODBC_CHECK_RESULTS_TEST_" +
+                          (use_ansi ? "ANSI_" : "NON_ANSI") +
                           (use_bind_col ? "true" : "false");
   Table table(table_name);
 

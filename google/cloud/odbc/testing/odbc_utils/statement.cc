@@ -191,15 +191,11 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
   StrToChar(read_stmt, query);
 
   if (is_async) {
-    if (use_ansi) {
-      status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                               (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
-    } else {
-      status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                              (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
-    }
+    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                            (SQLPOINTER)SQL_ASYNC_ENABLE_ON,
+                            0);  // Ansi version not supported by UniXODBC.
 
-    CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn, use_ansi);
+    CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
 
     ExponentialBackoffPolicy backoff(ms(10), ms(100), 2);
     if (use_ansi) {
@@ -360,32 +356,20 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
   int num_rows_fetched = 0;
 
-  if (use_ansi) {
-    status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
-                             SQL_BIND_BY_COLUMN, 0);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
-                            SQL_BIND_BY_COLUMN, 0);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
+                     0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr", conn);
 
-  if (use_ansi) {
-    status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                             (SQLPOINTER)rs_size, 0);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                            (SQLPOINTER)rs_size, 0);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
+                     0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr", conn);
 
-  if (use_ansi) {
-    status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                             (SQLPOINTER)&num_rows_fetched, 0);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                            (SQLPOINTER)&num_rows_fetched, 0);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
+                          (SQLPOINTER)&num_rows_fetched,
+                          0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr", conn);
 
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
