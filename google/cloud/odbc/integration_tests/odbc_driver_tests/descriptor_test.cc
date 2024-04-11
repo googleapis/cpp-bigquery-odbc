@@ -320,9 +320,10 @@ TEST(DescriptorFieldsTest, SQLSetDescField_ANSI) {
   auto status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
-  status = SQLSetDescFieldA(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
-                            (SQLPOINTER)SQL_PARAM_INPUT, SQL_IS_INTEGER);
-  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn, true);
+  status = SQLSetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
+                           (SQLPOINTER)SQL_PARAM_INPUT,
+                           SQL_IS_INTEGER);  // No ANSI Version for UnixODBC
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
 
   SQLSMALLINT type;
   status = SQLGetDescFieldA(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE, &type,
@@ -407,9 +408,9 @@ TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_TYPE) {
   CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
 
   // Setting Field
-  status = SQLSetDescFieldA(conn->ard, 1, SQL_DESC_TYPE,
-                            (SQLPOINTER)SQL_INTEGER, NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+  status = SQLSetDescField(conn->ard, 1, SQL_DESC_TYPE, (SQLPOINTER)SQL_INTEGER,
+                           NULL);  // No ANSI Version for UnixODBC
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
 
   // Getting fields
   SQLSMALLINT concise_type;
@@ -477,9 +478,10 @@ TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_CONCISE_TYPE) {
   CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
 
   // Setting Field
-  status = SQLSetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
-                            (SQLPOINTER)SQL_INTERVAL_MONTH, NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+  status = SQLSetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
+                           (SQLPOINTER)SQL_INTERVAL_MONTH,
+                           NULL);  // No ANSI Version for UnixODBC
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
 
   // Getting fields
   SQLSMALLINT concise_type;
@@ -546,9 +548,10 @@ TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_ARRAY_STATUS_PTR) {
 
   // Setting Field
   SQLUSMALLINT array_status_ptr[3];
-  status = SQLSetDescFieldA(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
-                            array_status_ptr, NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+  status =
+      SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR, array_status_ptr,
+                      NULL);  // No ANSI Version for UnixODBC.
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
 
   // Getting fields
   SQLUSMALLINT* new_array_status_ptr = nullptr;
@@ -594,8 +597,9 @@ TEST(SQLSetDescFieldAnsi, DefaultField_SQL_DESC_LENGTH) {
   CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
 
   // Setting Field
-  status = SQLSetDescFieldA(conn->ard, 3, SQL_DESC_LENGTH, (SQLPOINTER)3, NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn, true);
+  status = SQLSetDescField(conn->ard, 3, SQL_DESC_LENGTH, (SQLPOINTER)3,
+                           NULL);  // No ANSI Version for UnixODBC.
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
 
   // Getting fields
   SQLSMALLINT count = 0;
