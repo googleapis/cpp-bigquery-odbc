@@ -30,13 +30,17 @@ StdRows const kSampleData{
 
 // Checks if the column description returned by DescribeCol matches the schema
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
-                     Schema schema) {
+                     Schema schema, bool use_ansi = false) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, "SELECT * FROM " + table_name);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  }
+  CheckError(status, "SQLPrepare", conn, use_ansi);
 
   // Check if the number of columns returned is correct
   SQLSMALLINT num_cols;
@@ -50,7 +54,7 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, i + 1);
+    DescribeCol(conn, col_ptr, i + 1, use_ansi);
 
     // Verify returned column descriptions with the table schema
     EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
@@ -92,33 +96,35 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
   }
 }
 
-void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async) {
+void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
+                             bool use_ansi = false) {
   std::string const table_name = kDatasetName + "." + in_table_name;
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.Create(conn,
+               "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+               use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Insert(conn, kSampleData);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.Insert(conn, kSampleData, use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
-  auto results = *FetchDirect(conn, query, 1, is_async);
+  auto results = *FetchDirect(conn, query, 1, is_async, use_ansi);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.Drop(conn, use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -127,12 +133,28 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Sleep for 5 secs to avoid rate limit errors from BQ
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(InsertDirectStatement(conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLExecute) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertStatement(conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Sleep for 5 secs to avoid rate limit errors from BQ
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(InsertStatement(conn, true), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -157,12 +179,36 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
 
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Sleep for 5 secs to avoid rate limit errors from BQ
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(InsertStatementWithBindParameter(conn, true), SQL_SUCCESS);
+
+  // We inserted a row using first statement handle.
+  // Now we're going to do the same using a new statement handle,
+  // but without SQLBindParameter calls.
+  // We reuse desc handle instead.
+
+  // Free existing statement handle (within same connection)
+  SQLCloseCursor(conn->hstmt);
+  status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+  CheckError(status, "SQLFreeHandle", conn);
+
+  // Allocate a new statement handle (within same connection)
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  EXPECT_EQ(InsertStatementWithoutBindParameter(conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLNumParams) {
   auto conn = std::make_shared<ODBCHandles>();
-  auto const table_name = kDatasetName + ".ODBC_NUM_PARAMS_TEST";
-  auto const insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+  auto table_name = kDatasetName + ".ODBC_NUM_PARAMS_TEST";
+  auto insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
   Table table(table_name);
 
   // Create Table
@@ -182,6 +228,33 @@ TEST(StatementTest, SQLNumParams) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  auto const table_name_ansi = kDatasetName + ".ODBC_NUM_PARAMS_TEST_ANSI";
+  auto const insert_stmt_ansi =
+      "INSERT INTO " + table_name_ansi + " VALUES (?, ?, ?)";
+  Table table_ansi(table_name_ansi);
+
+  // Create Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+      true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  status =
+      SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt_ansi.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn, true);
+  status = SQLNumParams(conn->hstmt, &num_params);
+  CheckError(status, "SQLNumParams", conn);
+  EXPECT_EQ(num_params, 3);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -212,23 +285,59 @@ TEST(StatementTest, SQLDescribeCol) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  auto const table_name_ansi =
+      kDatasetName + ".ODBC_COLUMN_DESCRIPTION_TEST_ANSI";
+  Table table_ansi(table_name_ansi);
+
+  // Create Table
+  conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+      true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Insert(conn, kSampleData, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CheckColumnData(conn, table_name_ansi, schema, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Drop(conn, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void FetchDataTest(bool use_bind_col) {
+void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   auto const table_name = kDatasetName + ".ODBC_CHECK_RESULTS_TEST_" +
                           (use_bind_col ? "true" : "false");
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  if (use_ansi) {
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+    table.Create(
+        conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+        true);
+  } else {
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(
+        conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Insert(conn, kSampleData);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.Insert(conn, kSampleData, use_ansi);
   SQLLEN rows_count = 0;
   auto status = SQLRowCount(conn->hstmt, &rows_count);
   CheckError(status, "SQLRowCount", conn);
@@ -236,7 +345,7 @@ void FetchDataTest(bool use_bind_col) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
   auto results = *FetchResults(conn, query, use_bind_col);
@@ -246,23 +355,34 @@ void FetchDataTest(bool use_bind_col) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.Drop(conn, use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
+TEST(StatementTest, SQLFetch_Ansi) { FetchDataTest(true, true); }
 
 TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
+TEST(StatementTest, SQLFetch_WithoutSQLBindCol_Ansi) {
+  FetchDataTest(false, true);
+}
 
 TEST(StatementTest, SQLFetch_with_SQLExecDirect) {
   ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST", false);
+}
+TEST(StatementTest, SQLFetch_with_SQLExecDirect_Ansi) {
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST", false, true);
 }
 
 TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync) {
   ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST", true);
 }
+TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST", true, true);
+}
 
+// No ANSI version.
 TEST(StatementTest, SQLFetchScroll) {
   auto const table_name = kDatasetName + ".ODBC_SCROLL_RESULTS_TEST";
   Table table(table_name);
@@ -324,6 +444,40 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  auto const table_name_ansi = kDatasetName + ".ODBC_GET_DATA_TEST_ANSI";
+  Table table_ansi(table_name_ansi);
+
+  // Create Table
+  conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+      true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Insert(conn, kSampleData, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  query = "SELECT StringField FROM " + table_name_ansi;
+  results = *FetchResultsWithSqlGetData(conn, query);
+
+  VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table_ansi.Drop(conn, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 // This test is temporarily disabled till we are able to debug this with help
@@ -375,7 +529,6 @@ TEST(StatementTest, DISABLED_SQLPutData) {
 TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
   SQLCHAR cursor_name[kBufferLength] = "INSERT_CURSOR",
           cursor_name_ret[kBufferLength];
 
@@ -386,6 +539,24 @@ TEST(StatementTest, SQLSetCursorName) {
   CheckError(status, "SQLGetCursorName", conn);
 
   EXPECT_STREQ((char*)cursor_name_ret, (char*)cursor_name);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ////////////////
+  /// USE ANSI
+  ////////////////
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLCHAR cursor_name_ansi[kBufferLength] = "INSERT_CURSOR_ANSI",
+          cursor_name_ret_ansi[kBufferLength];
+
+  status = SQLSetCursorNameA(conn->hstmt, cursor_name_ansi, kBufferLength);
+  CheckError(status, "SQLSetCursorName", conn, true);
+
+  status =
+      SQLGetCursorNameA(conn->hstmt, cursor_name_ret_ansi, kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorName", conn, true);
+
+  EXPECT_STREQ((char*)cursor_name_ret_ansi, (char*)cursor_name_ansi);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -441,6 +612,57 @@ TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_METADATA_ID) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set Connection Attr and then retrieve Statement attr
+  SQLULEN metadata_id_dbc = SQL_TRUE;
+  status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_METADATA_ID,
+                              (SQLPOINTER)metadata_id_dbc, 0);
+  CheckError(status, "SQLSetConnectAttr", conn, true);
+  SQLULEN metadata_id_stmt;
+  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
+                           0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt);
+
+  // Set Statement Attr and then retrieve it from both Statement and Connection
+  // attrs
+  SQLULEN metadata_id_stmt_set = SQL_FALSE;
+  status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID,
+                           (SQLPOINTER)metadata_id_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn, true);
+  SQLULEN metadata_id_stmt_get = 0;
+  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID,
+                           &metadata_id_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
+  metadata_id_dbc = 0;
+  status = SQLGetConnectAttrA(conn->hdbc, SQL_ATTR_METADATA_ID,
+                              &metadata_id_dbc, 0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn, true);
+
+  EXPECT_EQ(metadata_id_stmt_set, metadata_id_stmt_get);
+  EXPECT_NE(metadata_id_dbc, metadata_id_stmt_set);
+
+  // Create a new statement handle and check this attribute there
+  HSTMT new_hstmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &new_hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLULEN metadata_id_stmt_new = 0;
+  status = SQLGetStmtAttrA(new_hstmt, SQL_ATTR_METADATA_ID,
+                           &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_STMT, new_hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -485,6 +707,57 @@ TEST(StatementTest, SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
   status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_ASYNC_ENABLE,
                           &metadata_id_stmt_new, 0, NULL);
   CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(async_enable_dbc, metadata_id_stmt_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_STMT, new_hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set Connection Attr and then retrieve Statement attr
+  SQLULEN async_enable_dbc = SQL_TRUE;
+  status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                              (SQLPOINTER)async_enable_dbc, 0);
+  CheckError(status, "SQLSetConnectAttr", conn, true);
+  SQLULEN async_enable_stmt;
+  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                           &async_enable_stmt, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
+
+  EXPECT_EQ(async_enable_dbc, async_enable_stmt);
+
+  // Set Statement Attr and then retrieve it from both Statement and Connection
+  // attrs
+  SQLULEN async_enable_stmt_set = SQL_FALSE;
+  status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                           (SQLPOINTER)async_enable_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn, true);
+  SQLULEN async_enable_stmt_get = 0;
+  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                           &async_enable_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
+  async_enable_dbc = 0;
+  status = SQLGetConnectAttrA(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
+                              &async_enable_dbc, 0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn, true);
+
+  EXPECT_EQ(async_enable_stmt_set, async_enable_stmt_get);
+  EXPECT_NE(async_enable_dbc, async_enable_stmt_set);
+
+  // Create a new statement handle and check this attribute there
+  HSTMT new_hstmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &new_hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLULEN metadata_id_stmt_new = 0;
+  status = SQLGetStmtAttrA(new_hstmt, SQL_ATTR_ASYNC_ENABLE,
+                           &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn, true);
 
   EXPECT_EQ(async_enable_dbc, metadata_id_stmt_new);
 
