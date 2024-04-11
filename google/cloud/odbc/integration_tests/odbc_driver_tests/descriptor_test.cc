@@ -43,7 +43,7 @@ Schema kStdSchema = {
 };
 
 void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
-                   Schema schema) {
+                   Schema schema, bool use_ansi = false) {
   SQLSMALLINT desc_type;
   int num_cols = schema.size();
 
@@ -54,19 +54,35 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
 
-  status = SQLExecDirect(
-      conn->hstmt, (SQLCHAR*)("SELECT * FROM " + table_name).c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt,
+                            (SQLCHAR*)("SELECT * FROM " + table_name).c_str(),
+                            SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt,
+                           (SQLCHAR*)("SELECT * FROM " + table_name).c_str(),
+                           SQL_NTS);
+  }
+
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 
   Descriptor desc, desc_copy;
 
   for (int i = 0; i < num_cols; i++) {
     // Reads multiple descriptor fields for a column
-    status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
-                           &desc.string_len, &desc.type, &desc.sub_type,
-                           &desc.length, &desc.precision, &desc.scale,
-                           &desc.nullable);
-    CheckError(status, "SQLGetDescRec", conn);
+    if (use_ansi) {
+      status = SQLGetDescRecA(conn->ird, i + 1, desc.name, kBufferLength,
+                              &desc.string_len, &desc.type, &desc.sub_type,
+                              &desc.length, &desc.precision, &desc.scale,
+                              &desc.nullable);
+    } else {
+      status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
+                             &desc.string_len, &desc.type, &desc.sub_type,
+                             &desc.length, &desc.precision, &desc.scale,
+                             &desc.nullable);
+    }
+
+    CheckError(status, "SQLGetDescRec", conn, use_ansi);
     std::string col_name = (char*)desc.name;
     EXPECT_EQ(col_name, schema[i].name);
     // We are checking if the bigquery data type corresponding to the returned
@@ -76,13 +92,25 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     // Set the same values for another descriptor handle
     status = SQLSetDescRec(conn->ipd, i + 1, desc.type, desc.sub_type,
                            desc.length, desc.precision, desc.scale, desc.name,
-                           (SQLLEN*)&kBufferLength, NULL);
+                           (SQLLEN*)&kBufferLength, NULL);  // No ANSI version.
+
     CheckError(status, "SQLSetDescRec", conn);
-    status = SQLGetDescRec(
-        conn->ird, i + 1, desc_copy.name, kBufferLength, &desc_copy.string_len,
-        &desc_copy.type, &desc_copy.sub_type, &desc_copy.length,
-        &desc_copy.precision, &desc_copy.scale, &desc_copy.nullable);
-    CheckError(status, "SQLGetDescRec", conn);
+    if (use_ansi) {
+      status = SQLGetDescRecA(conn->ird, i + 1, desc_copy.name, kBufferLength,
+                              &desc_copy.string_len, &desc_copy.type,
+                              &desc_copy.sub_type, &desc_copy.length,
+                              &desc_copy.precision, &desc_copy.scale,
+                              &desc_copy.nullable);
+    } else {
+      status = SQLGetDescRec(conn->ird, i + 1, desc_copy.name, kBufferLength,
+                             &desc_copy.string_len, &desc_copy.type,
+                             &desc_copy.sub_type, &desc_copy.length,
+                             &desc_copy.precision, &desc_copy.scale,
+                             &desc_copy.nullable);
+    }
+
+    CheckError(status, "SQLGetDescRec", conn, use_ansi);
+
     // Check if the values were set correctly by SQLSetDescRec
     EXPECT_EQ(desc_copy.string_len, desc.string_len);
     EXPECT_EQ(desc_copy.type, desc.type);
@@ -95,7 +123,7 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 }
 
 void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
-                 Schema schema) {
+                 Schema schema, bool use_ansi = false) {
   SQLSMALLINT desc_type;
   int num_cols = schema.size();
 
@@ -106,19 +134,34 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
 
-  status = SQLExecDirect(
-      conn->hstmt, (SQLCHAR*)("SELECT * FROM " + table_name).c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt,
+                            (SQLCHAR*)("SELECT * FROM " + table_name).c_str(),
+                            SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt,
+                           (SQLCHAR*)("SELECT * FROM " + table_name).c_str(),
+                           SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 
   Descriptor desc, desc_copy;
 
   for (int i = 0; i < num_cols; i++) {
     // Reads multiple descriptor fields for a column
-    status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
-                           &desc.string_len, &desc.type, &desc.sub_type,
-                           &desc.length, &desc.precision, &desc.scale,
-                           &desc.nullable);
-    CheckError(status, "SQLGetDescRec", conn);
+    if (use_ansi) {
+      status = SQLGetDescRecA(conn->ird, i + 1, desc.name, kBufferLength,
+                              &desc.string_len, &desc.type, &desc.sub_type,
+                              &desc.length, &desc.precision, &desc.scale,
+                              &desc.nullable);
+    } else {
+      status = SQLGetDescRec(conn->ird, i + 1, desc.name, kBufferLength,
+                             &desc.string_len, &desc.type, &desc.sub_type,
+                             &desc.length, &desc.precision, &desc.scale,
+                             &desc.nullable);
+    }
+
+    CheckError(status, "SQLGetDescRec", conn, use_ansi);
     std::string col_name = (char*)desc.name;
     EXPECT_EQ(col_name, schema[i].name);
     // We are checking if the bigquery data type corresponding to the returned
@@ -126,22 +169,33 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(ToBqFieldType(desc.type), ToBqFieldType(schema[i].type));
   }
 
-  status = SQLCopyDesc(conn->ird, conn->ipd);
+  status = SQLCopyDesc(conn->ird, conn->ipd);  // No ANSI version.
   CheckError(status, "SQLCopyDesc", conn);
 
   // We use SQLGetDescField to read the descriptor fields one at a time,
   //  and check if they were copied correctly.
   for (int i = 0; i < num_cols; i++) {
     // Reads a single field from the column descriptor
-    status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_NAME, &desc_copy.name,
-                             kBufferLength, NULL);
-    CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+    if (use_ansi) {
+      status = SQLGetDescFieldA(conn->ipd, i + 1, SQL_DESC_NAME,
+                                &desc_copy.name, kBufferLength, NULL);
+    } else {
+      status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_NAME, &desc_copy.name,
+                               kBufferLength, NULL);
+    }
+    CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn, use_ansi);
     std::string col_name = (char*)desc_copy.name;
     EXPECT_EQ(col_name, schema[i].name);
 
-    status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
-                             SQL_IS_SMALLINT, NULL);
-    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+    if (use_ansi) {
+      status = SQLGetDescFieldA(conn->ipd, i + 1, SQL_DESC_TYPE,
+                                &desc_copy.type, SQL_IS_SMALLINT, NULL);
+    } else {
+      status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
+                               SQL_IS_SMALLINT, NULL);
+    }
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
+               __USE_DYNAMIC_STACK_SIZE);
     EXPECT_EQ(ToBqFieldType(desc_copy.type), ToBqFieldType(schema[i].type));
   }
 }
@@ -165,6 +219,25 @@ TEST(DescriptorFieldsTest, SQLSetDescRec) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DescriptorFieldsTest, SQLSetDescRec_ANSI) {
+  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_REC_TEST_ANSI";
+  auto conn = std::make_shared<ODBCHandles>();
+  Table table(table_name);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
+
+  table.Create(conn, getSchemaStr(kStdSchema), true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SetGetDescRec(conn, table_name, kStdSchema, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(DescriptorFieldsTest, SQLCopyDesc) {
   auto const table_name = kDatasetName + ".ODBC_COPY_DESCRIPTOR_TEST";
   auto conn = std::make_shared<ODBCHandles>();
@@ -181,6 +254,25 @@ TEST(DescriptorFieldsTest, SQLCopyDesc) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DescriptorFieldsTest, SQLCopyDesc_ANSI) {
+  auto const table_name = kDatasetName + ".ODBC_COPY_DESCRIPTOR_TEST_ANSI";
+  auto conn = std::make_shared<ODBCHandles>();
+  Table table(table_name);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn);
+
+  table.Create(conn, getSchemaStr(kStdSchema), true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CopyDescRec(conn, table_name, kStdSchema, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -213,6 +305,36 @@ TEST(DescriptorFieldsTest, SQLSetDescField) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(DescriptorFieldsTest, SQLSetDescField_ANSI) {
+  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_FIELD_TEST_ANSI";
+  auto conn = std::make_shared<ODBCHandles>();
+  Table table(table_name);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
+
+  table.Create(conn, getSchemaStr(kStdSchema), true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+  status = SQLSetDescFieldA(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
+                            (SQLPOINTER)SQL_PARAM_INPUT, SQL_IS_INTEGER);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn, true);
+
+  SQLSMALLINT type;
+  status = SQLGetDescFieldA(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE, &type,
+                            SQL_IS_SMALLINT, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn, true);
+  EXPECT_EQ(type, SQL_PARAM_INPUT);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
@@ -226,6 +348,24 @@ TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
   status =
       SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_ALLOC_TYPE)", conn);
+  EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetDescFieldANSI, Field_SQL_DESC_ALLOC_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Getting fields
+  SQLSMALLINT alloc_type;
+  status =
+      SQLGetDescFieldA(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ALLOC_TYPE)", conn, true);
   EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
 
   status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
@@ -253,6 +393,33 @@ TEST(SQLSetDescField, Field_SQL_DESC_TYPE) {
   SQLSMALLINT type;
   status = SQLGetDescField(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+  EXPECT_EQ(SQL_INTEGER, type);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescFieldA(conn->ard, 1, SQL_DESC_TYPE,
+                            (SQLPOINTER)SQL_INTEGER, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+
+  // Getting fields
+  SQLSMALLINT concise_type;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
+                            0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn, true);
+  EXPECT_EQ(SQL_INTEGER, concise_type);
+  SQLSMALLINT type;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, true);
   EXPECT_EQ(SQL_INTEGER, type);
 
   status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
@@ -303,6 +470,50 @@ TEST(SQLSetDescField, Field_SQL_DESC_CONCISE_TYPE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_CONCISE_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
+                            (SQLPOINTER)SQL_INTERVAL_MONTH, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+
+  // Getting fields
+  SQLSMALLINT concise_type;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
+                            0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn), true;
+  EXPECT_EQ(SQL_INTERVAL_MONTH, concise_type);
+  SQLSMALLINT type;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, true);
+  EXPECT_EQ(SQL_INTERVAL, type);
+  SQLSMALLINT datetime_code;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
+                            &datetime_code, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn,
+             true);
+  EXPECT_EQ(SQL_CODE_MONTH, datetime_code);
+  SQLINTEGER datetime_precision;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+                            &datetime_precision, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
+             conn, true);
+  EXPECT_EQ(2, datetime_precision);
+  SQLSMALLINT precision;
+  status =
+      SQLGetDescFieldA(conn->ard, 1, SQL_DESC_PRECISION, &precision, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn, true);
+  EXPECT_EQ(0, precision);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLSetDescField, Field_SQL_DESC_ARRAY_STATUS_PTR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -320,6 +531,30 @@ TEST(SQLSetDescField, Field_SQL_DESC_ARRAY_STATUS_PTR) {
   status = SQLGetDescField(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
                            &new_array_status_ptr, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn);
+  EXPECT_EQ(array_status_ptr, new_array_status_ptr);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_ARRAY_STATUS_PTR) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  SQLUSMALLINT array_status_ptr[3];
+  status = SQLSetDescFieldA(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                            array_status_ptr, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn, true);
+
+  // Getting fields
+  SQLUSMALLINT* new_array_status_ptr = nullptr;
+  status = SQLGetDescFieldA(conn->ard, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                            &new_array_status_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_STATUS_PTR)", conn, true);
   EXPECT_EQ(array_status_ptr, new_array_status_ptr);
 
   status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
@@ -351,6 +586,35 @@ TEST(SQLSetDescField, DefaultField_SQL_DESC_LENGTH) {
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(SQLSetDescFieldAnsi, DefaultField_SQL_DESC_LENGTH) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Setting Field
+  status = SQLSetDescFieldA(conn->ard, 3, SQL_DESC_LENGTH, (SQLPOINTER)3, NULL);
+  CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn, true);
+
+  // Getting fields
+  SQLSMALLINT count = 0;
+  status = SQLGetDescFieldA(conn->ard, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn, true);
+  EXPECT_EQ(3, count);
+  SQLULEN length = 0;
+  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn, true);
+  EXPECT_EQ(0, length);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+//////////////////////////////////////
+// No ANSI versions for SQLSetDescRec.
+/////////////////////////////////////
 
 TEST(SQLSetDescRec, Success_SQL_DATETIME) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -535,6 +799,10 @@ TEST(SQLSetDescRec, DoNothing_InvalidType) {
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+//////////////////////////////////////
+// No ANSI APIs for SQLCopyDesc.
+/////////////////////////////////////
 
 TEST(SQLCopyDesc, CopyDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
