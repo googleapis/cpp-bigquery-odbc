@@ -369,17 +369,19 @@ TEST(StatementTest, SQLFetch_WithoutSQLBindCol_Ansi) {
 }
 
 TEST(StatementTest, SQLFetch_with_SQLExecDirect) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST", false);
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST_1", false);
 }
 TEST(StatementTest, SQLFetch_with_SQLExecDirect_Ansi) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST", false, true);
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST_2", false,
+                          true);
 }
 
 TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST", true);
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_3", true);
 }
 TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST", true, true);
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_4", true,
+                          true);
 }
 
 // No ANSI version.
@@ -623,22 +625,22 @@ TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_METADATA_ID) {
                               (SQLPOINTER)metadata_id_dbc, 0);
   CheckError(status, "SQLSetConnectAttr", conn, true);
   SQLULEN metadata_id_stmt;
-  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
-                           0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
+                          0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
 
   EXPECT_EQ(metadata_id_dbc, metadata_id_stmt);
 
   // Set Statement Attr and then retrieve it from both Statement and Connection
   // attrs
   SQLULEN metadata_id_stmt_set = SQL_FALSE;
-  status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID,
-                           (SQLPOINTER)metadata_id_stmt_set, 0);
-  CheckError(status, "SQLSetStmtAttr", conn, true);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)metadata_id_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
   SQLULEN metadata_id_stmt_get = 0;
-  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_METADATA_ID,
-                           &metadata_id_stmt_get, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          &metadata_id_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
   metadata_id_dbc = 0;
   status = SQLGetConnectAttrA(conn->hdbc, SQL_ATTR_METADATA_ID,
                               &metadata_id_dbc, 0, NULL);
@@ -653,9 +655,9 @@ TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_METADATA_ID) {
   CheckError(status, "SQLAllocHandle", conn);
 
   SQLULEN metadata_id_stmt_new = 0;
-  status = SQLGetStmtAttrA(new_hstmt, SQL_ATTR_METADATA_ID,
-                           &metadata_id_stmt_new, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_METADATA_ID,
+                          &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
 
   EXPECT_EQ(metadata_id_dbc, metadata_id_stmt_new);
 
@@ -725,22 +727,22 @@ TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
                               (SQLPOINTER)async_enable_dbc, 0);
   CheckError(status, "SQLSetConnectAttr", conn, true);
   SQLULEN async_enable_stmt;
-  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                           &async_enable_stmt, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &async_enable_stmt, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
 
   EXPECT_EQ(async_enable_dbc, async_enable_stmt);
 
   // Set Statement Attr and then retrieve it from both Statement and Connection
   // attrs
   SQLULEN async_enable_stmt_set = SQL_FALSE;
-  status = SQLSetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                           (SQLPOINTER)async_enable_stmt_set, 0);
-  CheckError(status, "SQLSetStmtAttr", conn, true);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          (SQLPOINTER)async_enable_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
   SQLULEN async_enable_stmt_get = 0;
-  status = SQLGetStmtAttrA(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                           &async_enable_stmt_get, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &async_enable_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
   async_enable_dbc = 0;
   status = SQLGetConnectAttrA(conn->hdbc, SQL_ATTR_ASYNC_ENABLE,
                               &async_enable_dbc, 0, NULL);
@@ -755,9 +757,9 @@ TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
   CheckError(status, "SQLAllocHandle", conn);
 
   SQLULEN metadata_id_stmt_new = 0;
-  status = SQLGetStmtAttrA(new_hstmt, SQL_ATTR_ASYNC_ENABLE,
-                           &metadata_id_stmt_new, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr", conn, true);
+  status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
 
   EXPECT_EQ(async_enable_dbc, metadata_id_stmt_new);
 
