@@ -40,6 +40,14 @@ jobs:
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
     - name: Install bash >= 5.x and Ninja
       run: brew install bash ninja
+    - name: Download cmake formula(3.29.0) and installl
+      run: |
+        brew install wget
+        brew unlink cmake
+        wget https://raw.githubusercontent.com/Homebrew/homebrew-core/c93f8de910aaf6b4a1b9021caee32ece216787b4/Formula/c/cmake.rb
+        brew install cmake.rb
+    - name: cmake version
+      run: cmake --version
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       run: |
