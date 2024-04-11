@@ -28,6 +28,7 @@ static std::vector<Interval> const kDatetimeTypes = {
     {SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
 };
 
+
 static std::vector<Interval> const kIntervalTypes = {
     {SQL_INTERVAL_MONTH, SQL_C_INTERVAL_MONTH, SQL_CODE_MONTH},
     {SQL_INTERVAL_YEAR, SQL_C_INTERVAL_YEAR, SQL_CODE_YEAR},
