@@ -125,7 +125,7 @@ SQLSMALLINT GetPrecisionForDatetimeCode(SQLSMALLINT datetime_interval_code) {
 void DescriptorRecord::SetIntervalType(Interval const& entry,
                                        DescriptorType desc_type) {
   type = SQL_INTERVAL;
-  concise_type = (desc_type == DescriptorType::kApplication)
+  concise_type = (IsDescriptorTypeApplication(desc_type))
                      ? entry.concise_c_type
                      : entry.concise_sql_type;
   datetime_interval_precision = 2;
@@ -138,7 +138,7 @@ void DescriptorRecord::SetIntervalType(Interval const& entry,
 void DescriptorRecord::SetDatetimeType(Interval const& entry,
                                        DescriptorType desc_type) {
   type = SQL_DATETIME;
-  concise_type = (desc_type == DescriptorType::kApplication)
+  concise_type = (IsDescriptorTypeApplication(desc_type))
                      ? entry.concise_c_type
                      : entry.concise_sql_type;
   datetime_interval_precision = 0;

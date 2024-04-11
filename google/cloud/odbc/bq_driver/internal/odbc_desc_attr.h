@@ -34,6 +34,11 @@ struct Interval {
 
 enum class DescriptorType { kApplication, kIRD, kIPD, kARD, kAPD };
 
+inline bool IsDescriptorTypeApplication(DescriptorType desc_type) {
+  return desc_type == DescriptorType::kApplication ||
+         desc_type == DescriptorType::kARD || desc_type == DescriptorType::kAPD;
+}
+
 struct HeaderRecord {
   explicit HeaderRecord(SQLSMALLINT alloc_type) : alloc_type_(alloc_type){};
 
