@@ -101,7 +101,7 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   DescriptorHandle ard;
   DescriptorHandle apd;
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
-  ;
+
   DescriptorHandle ipd;
   StatementHandle handle({ard, apd, ird, ipd});
 
@@ -117,7 +117,7 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
   DescriptorHandle apd;
   DescriptorHandle ird;
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
-  ;
+
   StatementHandle handle({ard, apd, ird, ipd});
 
   StatusRecordOr<DescriptorHandle*> status =
@@ -226,6 +226,43 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
 
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_NE(nullptr, *status);
+}
+
+TEST(SetAttribute, Fails_InvalidAttribute) {
+  StatementHandle handle;
+
+  StatusRecord status_record = handle.SetAttribute(1111, 1111);
+
+  EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
+}
+
+TEST(SetAttribute, Fails_InvalidAttributeValue) {
+  StatementHandle handle;
+
+  StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, 1111);
+
+  EXPECT_EQ(SQLStates::k_HY024(), status_record.sql_state);
+}
+
+TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
+  StatementHandle handle;
+
+  StatusRecord status_record =
+      handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
+
+  EXPECT_TRUE(status_record.ok());
+
+  StatusRecordOr<SQLULEN> val = handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+
+  EXPECT_EQ(SQL_ASYNC_ENABLE_ON, *val);
+}
+
+TEST(GetAttribute, GetDefaultAttribute) {
+  StatementHandle handle;
+
+  StatusRecordOr<SQLULEN> val = handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+
+  EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -16,10 +16,29 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_STMT_ATTR_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <map>
 #include <memory>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+static std::map<int, SQLULEN> const kDefaultAttributes = {
+    {SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_OFF},
+    {SQL_ATTR_CONCURRENCY, SQL_CONCUR_READ_ONLY},
+    {SQL_ATTR_CURSOR_SCROLLABLE, SQL_NONSCROLLABLE},
+    {SQL_ATTR_CURSOR_SENSITIVITY, SQL_UNSPECIFIED},
+    {SQL_ATTR_CURSOR_TYPE, SQL_CURSOR_FORWARD_ONLY},
+    {SQL_ATTR_ENABLE_AUTO_IPD, SQL_TRUE},
+    {SQL_ATTR_MAX_LENGTH, 0},
+    {SQL_ATTR_MAX_ROWS, 0},
+    {SQL_ATTR_METADATA_ID, SQL_FALSE},
+    {SQL_ATTR_NOSCAN, SQL_NOSCAN_OFF},
+    {SQL_ATTR_QUERY_TIMEOUT, 0},
+    {SQL_ATTR_RETRIEVE_DATA, SQL_RD_ON},
+    {SQL_ATTR_ROW_NUMBER, 0},
+    {SQL_ATTR_USE_BOOKMARKS, SQL_UB_OFF},
+};
 
 struct Descriptors {
   Descriptors() = default;
@@ -38,22 +57,10 @@ struct Descriptors {
   std::unique_ptr<DescriptorHandle> ipd_;
 };
 
-struct StatementAttributes {
-  SQLULEN async_enable = SQL_ASYNC_ENABLE_OFF;
-  SQLULEN concurrency = SQL_CONCUR_READ_ONLY;
-  SQLULEN cursor_scrollable = SQL_NONSCROLLABLE;
-  SQLULEN cursor_sensitivity = SQL_UNSPECIFIED;
-  SQLULEN cursor_type = SQL_CURSOR_FORWARD_ONLY;
-  SQLULEN enable_auto_ipd = SQL_TRUE;
-  SQLULEN max_length = 0;
-  SQLULEN max_rows = 0;
-  SQLULEN metadata_id = SQL_FALSE;
-  SQLULEN noscan = SQL_NOSCAN_OFF;
-  SQLULEN query_timeout = 0;
-  SQLULEN retrieve_data = SQL_RD_ON;
-  SQLULEN row_number = 0;
-  SQLULEN use_bookmarks = SQL_UB_OFF;
-};
+bool IsStatementAttributeValid(int attribute);
+
+odbc_internal::StatusRecord ValidateStatementAttributeToSet(int attribute,
+                                                            SQLULEN value);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

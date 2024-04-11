@@ -92,4 +92,21 @@ StatusRecord StatementHandle::SetDescriptorHandle(
   return StatusRecord::Ok();
 }
 
+StatusRecord StatementHandle::SetAttribute(int attribute, SQLULEN value) {
+  StatusRecord status_record =
+      ValidateStatementAttributeToSet(attribute, value);
+  if (!status_record.ok()) {
+    return status_record;
+  }
+  attributes_[attribute] = value;
+  return StatusRecord::Ok();
+}
+
+StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
+  if (!IsStatementAttributeValid(attribute)) {
+    return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
+  }
+  return attributes_[attribute];
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

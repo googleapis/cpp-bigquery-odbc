@@ -30,7 +30,8 @@ class StatementHandle : public Handle {
  public:
   explicit StatementHandle() = default;
   explicit StatementHandle(Descriptors descriptors)
-      : descriptors_(std::move(descriptors)){};
+      : descriptors_(std::move(descriptors)), attributes_(kDefaultAttributes){};
+
   ~StatementHandle() = default;
 
   StatementHandle(StatementHandle const&) = default;
@@ -46,13 +47,14 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord SetDescriptorHandle(
       DescriptorType type, DescriptorHandle* descriptor_handle);
 
-  StatementAttributes& GetAttributes() { return attributes_; }
+  odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
+  odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
 
  private:
   std::map<int, DataBuffer> column_bindings_;
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;
-  StatementAttributes attributes_;
+  std::map<int, SQLULEN> attributes_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
