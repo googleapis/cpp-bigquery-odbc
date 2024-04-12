@@ -51,22 +51,21 @@ SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
   return SQL_SUCCESS;
 }
 
-StatusRecordOr<DescriptorHandle*> StatementHandle::GetDescriptorHandle(
+DescriptorHandle& StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {
   switch (type) {
+    // DescriptorType::kApplication should not be used as input argument
+    case DescriptorType::kApplication:
     case DescriptorType::kARD:
-      return descriptors_.ard_expl_ != nullptr ? descriptors_.ard_expl_
-                                               : descriptors_.ard_.get();
+      return descriptors_.ard_expl_ != nullptr ? *descriptors_.ard_expl_
+                                               : *descriptors_.ard_;
     case DescriptorType::kAPD:
-      return descriptors_.apd_expl_ != nullptr ? descriptors_.apd_expl_
-                                               : descriptors_.apd_.get();
+      return descriptors_.apd_expl_ != nullptr ? *descriptors_.apd_expl_
+                                               : *descriptors_.apd_;
     case DescriptorType::kIRD:
-      return descriptors_.ird_.get();
+      return *descriptors_.ird_;
     case DescriptorType::kIPD:
-      return descriptors_.ipd_.get();
-    default:
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Provided Descriptor Type is not supported"};
+      return *descriptors_.ipd_;
   }
 }
 

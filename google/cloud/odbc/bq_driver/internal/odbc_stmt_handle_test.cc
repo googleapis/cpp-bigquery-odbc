@@ -76,11 +76,10 @@ TEST(GetDescriptorHandle, GetARD_impl) {
   DescriptorHandle ipd;
   StatementHandle handle({ard, apd, ird, ipd});
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(DescriptorType::kARD, (*status)->GetType());
+  EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetAPD_impl) {
@@ -90,11 +89,10 @@ TEST(GetDescriptorHandle, GetAPD_impl) {
   DescriptorHandle ipd;
   StatementHandle handle({ard, apd, ird, ipd});
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(DescriptorType::kAPD, (*status)->GetType());
+  EXPECT_EQ(DescriptorType::kAPD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetIRD_impl) {
@@ -105,11 +103,10 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   DescriptorHandle ipd;
   StatementHandle handle({ard, apd, ird, ipd});
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(DescriptorType::kIRD, (*status)->GetType());
+  EXPECT_EQ(DescriptorType::kIRD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetIPD_impl) {
@@ -120,22 +117,10 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
 
   StatementHandle handle({ard, apd, ird, ipd});
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(DescriptorType::kIPD, (*status)->GetType());
-}
-
-TEST(GetDescriptorHandle, Fails_InvalidType) {
-  StatementHandle handle;
-
-  StatusRecordOr<DescriptorHandle*> status =
-      handle.GetDescriptorHandle(DescriptorType::kApplication);
-
-  EXPECT_THAT(status,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Descriptor Type is not supported")));
+  EXPECT_EQ(DescriptorType::kIPD, desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetARD) {
@@ -148,11 +133,10 @@ TEST(SetDescriptorHandle, SetAndGetARD) {
 
   EXPECT_TRUE(status_record.ok());
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(&desc, *status);
+  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetAPD) {
@@ -165,11 +149,10 @@ TEST(SetDescriptorHandle, SetAndGetAPD) {
 
   EXPECT_TRUE(status_record.ok());
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(&desc, *status);
+  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, Fails_InvalidAllocType) {
@@ -212,20 +195,23 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
 
   EXPECT_TRUE(status_record.ok());
 
-  StatusRecordOr<DescriptorHandle*> status =
+  DescriptorHandle& get_desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_EQ(&desc, *status);
+  EXPECT_EQ(desc.GetHeaderRecord().GetAllocType(),
+            get_desc_handle.GetHeaderRecord().GetAllocType());
 
   status_record = handle.SetDescriptorHandle(DescriptorType::kAPD, nullptr);
 
   EXPECT_TRUE(status_record.ok());
 
-  status = handle.GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorHandle& get_desc_handle_new =
+      handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  ASSERT_STATUS_RECORD_OK(status);
-  EXPECT_NE(nullptr, *status);
+  EXPECT_EQ(desc_impl.GetHeaderRecord().GetAllocType(),
+            get_desc_handle_new.GetHeaderRecord().GetAllocType());
+  EXPECT_NE(desc.GetHeaderRecord().GetAllocType(),
+            get_desc_handle_new.GetHeaderRecord().GetAllocType());
 }
 
 TEST(SetAttribute, Fails_InvalidAttribute) {
