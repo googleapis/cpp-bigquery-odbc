@@ -26,7 +26,7 @@ options:
     'PR_NUMBER=${_PR_NUMBER}',
     'TRIGGER_TYPE=${_TRIGGER_TYPE}',
     'CONSOLE_LOG_URL=https://console.cloud.google.com/cloud-build/builds;region=us-east1/${BUILD_ID};tab=detail?project=${PROJECT_ID}',
-    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
+    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
   ]
   volumes:
     - name: 'home'
@@ -58,7 +58,7 @@ availableSecrets:
   - versionName: 'projects/${PROJECT_ID}/secrets/CODECOV_TOKEN/versions/latest'
     env: 'CODECOV_TOKEN'
 
-logsBucket: 'gs://${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_BUILD_NAME}'
+logsBucket: 'gs://${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}'
 
 steps:
 # Builds the docker image that will be used by the main build step.
@@ -89,8 +89,8 @@ steps:
     - >
       /workspace/ci/cloudbuild/cache.sh restore
       --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${_DISTRO}-${_BUILD_NAME}/h
-      --fallback_key=main/${_DISTRO}-${_BUILD_NAME}/h
+      --key=${_TRIGGER_SOURCE}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/h
+      --fallback_key=main/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/h
 
   # Runs the specified build in the image that was created in the first step.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
@@ -98,12 +98,12 @@ steps:
   args: [ '--local', '--build', '${_BUILD_NAME}' ]
   secretEnv: ['CODECOV_TOKEN']
   env: [
-    'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${_DISTRO}-${_BUILD_NAME}',
+    'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}',
     'DEPENDENCIES=${_DEPENDENCIES}',
     'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
-    'SCCACHE_GCS_KEY_PREFIX=sccache/${_DISTRO}-${_BUILD_NAME}',
+    'SCCACHE_GCS_KEY_PREFIX=sccache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}',
     'SCCACHE_GCS_RW_MODE=READ_WRITE',
-    'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${_DISTRO}-${_BUILD_NAME},readwrite'
+    'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME},readwrite'
   ]
 
   # Caches some directories in the homedir, in the specified GCS bucket.
@@ -117,7 +117,7 @@ steps:
     - >
       /workspace/ci/cloudbuild/cache.sh save
       --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${_DISTRO}-${_BUILD_NAME}/h
+      --key=${_TRIGGER_SOURCE}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/h
       --path=.cache/bazelisk
       --path=.cache/ctcache
       --path=.cache/vcpkg
