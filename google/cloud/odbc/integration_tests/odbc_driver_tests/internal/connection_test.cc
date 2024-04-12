@@ -39,6 +39,7 @@ TEST(BQDriverTest_Internal, ConnectionHandle_Connect) {
   delete conn_handle;
 }
 
+
 }  // namespace google::cloud::odbc_tests_internal
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
