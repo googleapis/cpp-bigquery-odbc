@@ -48,4 +48,18 @@ TEST(ValidateStatementAttributeToSet, ReturnInvalid_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(SQLStates::k_HY024(), status_record.sql_state);
 }
 
+TEST(ValidateStatementAttributeToSet, ReturnValid_SQL_ATTR_MAX_LENGTH) {
+  StatusRecord status_record =
+      ValidateStatementAttributeToSet(SQL_ATTR_MAX_LENGTH, 1111);
+
+  EXPECT_TRUE(status_record.ok());
+}
+
+TEST(ValidateStatementAttributeToSet, ReturnInvalid_SQL_ATTR_ROW_NUMBER) {
+  StatusRecord status_record =
+      ValidateStatementAttributeToSet(SQL_ATTR_ROW_NUMBER, 1111);
+
+  EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

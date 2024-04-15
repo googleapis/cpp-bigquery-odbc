@@ -41,14 +41,20 @@ bool IsStatementAttributeValid(int attribute) {
   return kAttrPossibleValues.count(attribute) != 0;
 }
 
+bool IsStatementAttributeInvalidToSet(int attribute) {
+  return attribute == SQL_ATTR_ROW_NUMBER;
+}
+
 bool IsValueValidForStatementAttribute(int attribute, SQLULEN value) {
   std::vector<SQLULEN> possible_values = kAttrPossibleValues.at(attribute);
-  return std::find(possible_values.begin(), possible_values.end(), value) !=
-         possible_values.end();
+  return possible_values.empty() ||
+         (std::find(possible_values.begin(), possible_values.end(), value) !=
+          possible_values.end());
 }
 
 StatusRecord ValidateStatementAttributeToSet(int attribute, SQLULEN value) {
-  if (!IsStatementAttributeValid(attribute)) {
+  if (!IsStatementAttributeValid(attribute) ||
+      IsStatementAttributeInvalidToSet(attribute)) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   if (!IsValueValidForStatementAttribute(attribute, value)) {

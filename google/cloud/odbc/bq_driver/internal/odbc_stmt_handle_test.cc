@@ -243,6 +243,14 @@ TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, *val);
 }
 
+TEST(SetAttribute, SetAttribute_SQL_ATTR_ROW_NUMBER) {
+  StatementHandle handle;
+
+  StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ROW_NUMBER, 1111);
+
+  EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
+}
+
 TEST(GetAttribute, GetDefaultAttribute) {
   StatementHandle handle;
 

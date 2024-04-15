@@ -33,6 +33,10 @@ namespace google::cloud::odbc_bq_driver {
 
 SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle);
 
+SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
+                                 SQLINTEGER attribute, SQLPOINTER value,
+                                 SQLINTEGER value_string_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
