@@ -33,16 +33,16 @@ static std::map<int, std::vector<SQLULEN>> const kAttrPossibleValues = {
     {SQL_ATTR_NOSCAN, {SQL_NOSCAN_OFF, SQL_NOSCAN_ON}},
     {SQL_ATTR_QUERY_TIMEOUT, {}},
     {SQL_ATTR_RETRIEVE_DATA, {SQL_RD_ON, SQL_RD_OFF}},
-    {SQL_ATTR_ROW_NUMBER, {}},
     {SQL_ATTR_USE_BOOKMARKS, {SQL_UB_OFF}},
 };
 
-bool IsStatementAttributeValid(int attribute) {
-  return kAttrPossibleValues.count(attribute) != 0;
+bool IsStatementAttributeReadOnly(int attribute) {
+  return attribute == SQL_ATTR_ROW_NUMBER;
 }
 
-bool IsStatementAttributeInvalidToSet(int attribute) {
-  return attribute == SQL_ATTR_ROW_NUMBER;
+bool IsStatementAttributeValid(int attribute) {
+  return IsStatementAttributeReadOnly(attribute) ||
+         kAttrPossibleValues.count(attribute) != 0;
 }
 
 bool IsValueValidForStatementAttribute(int attribute, SQLULEN value) {
@@ -53,8 +53,8 @@ bool IsValueValidForStatementAttribute(int attribute, SQLULEN value) {
 }
 
 StatusRecord ValidateStatementAttributeToSet(int attribute, SQLULEN value) {
-  if (!IsStatementAttributeValid(attribute) ||
-      IsStatementAttributeInvalidToSet(attribute)) {
+  if (IsStatementAttributeReadOnly(attribute) ||
+      !IsStatementAttributeValid(attribute)) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   if (!IsValueValidForStatementAttribute(attribute, value)) {

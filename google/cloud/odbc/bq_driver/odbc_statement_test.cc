@@ -14,7 +14,6 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
-// #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
@@ -25,8 +24,6 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-// using google::cloud::odbc_testing_utils::StatusRecordIs;
-// using ::testing::StrEq;
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
