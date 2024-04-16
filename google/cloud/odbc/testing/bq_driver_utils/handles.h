@@ -30,6 +30,8 @@ odbc_bq_driver_internal::ConnectionHandle CreateConnectionHandle(
 
 odbc_bq_driver_internal::StatementHandle CreateStatementHandle();
 
+odbc_bq_driver_internal::DescriptorHandle CreateExplicitDescriptor();
+
 }  // namespace google::cloud::odbc_testing_bq_driver_utils
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H

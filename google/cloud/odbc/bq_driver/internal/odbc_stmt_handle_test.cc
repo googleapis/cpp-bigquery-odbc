@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -22,6 +23,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -126,7 +128,7 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
 TEST(SetDescriptorHandle, SetAndGetARD) {
   DescriptorHandle desc_impl;
   StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle desc = CreateExplicitDescriptor();
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kARD, &desc);
@@ -142,7 +144,7 @@ TEST(SetDescriptorHandle, SetAndGetARD) {
 TEST(SetDescriptorHandle, SetAndGetAPD) {
   DescriptorHandle desc_impl;
   StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle desc = CreateExplicitDescriptor();
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
@@ -167,7 +169,7 @@ TEST(SetDescriptorHandle, Fails_InvalidAllocType) {
 
 TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   StatementHandle handle;
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle desc = CreateExplicitDescriptor();
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kIRD, &desc);
@@ -177,7 +179,7 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
 
 TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
   StatementHandle handle;
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle desc = CreateExplicitDescriptor();
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kIPD, &desc);
@@ -188,7 +190,7 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
 TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
   DescriptorHandle desc_impl;
   StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle desc = CreateExplicitDescriptor();
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);

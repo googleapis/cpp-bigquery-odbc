@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
@@ -25,6 +26,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle) {
   EnvironmentHandle handle;
@@ -420,7 +422,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
-  DescriptorHandle handle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  DescriptorHandle handle = CreateExplicitDescriptor();
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
@@ -428,7 +430,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
                                         &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(SQL_DESC_ALLOC_USER, out_buf);
+  EXPECT_EQ(handle.GetHeaderRecord().GetAllocType(), out_buf);
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
@@ -1452,8 +1454,7 @@ TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
 }
 
 TEST(SQLCopyDescInternal, CopyDescriptor) {
-  DescriptorHandle src_handle(DescriptorType::kApplication,
-                              SQL_DESC_ALLOC_USER);
+  DescriptorHandle src_handle = CreateExplicitDescriptor();
   src_handle.GetHeaderRecord().bind_type = 5;
   SQLLEN bind_offset = 3;
   src_handle.GetHeaderRecord().bind_offset_ptr = &bind_offset;
@@ -1497,8 +1498,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
 }
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
-  DescriptorHandle src_handle(DescriptorType::kApplication,
-                              SQL_DESC_ALLOC_USER);
+  DescriptorHandle src_handle = CreateExplicitDescriptor();
   EnvironmentHandle target_handle;
 
   auto status = SQLCopyDescInternal(&src_handle, &target_handle);
@@ -1507,8 +1507,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
 }
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
-  DescriptorHandle src_handle(DescriptorType::kApplication,
-                              SQL_DESC_ALLOC_USER);
+  DescriptorHandle src_handle = CreateExplicitDescriptor();
   DescriptorHandle target_handle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
 
   auto status = SQLCopyDescInternal(&src_handle, &target_handle);
@@ -1519,8 +1518,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
 }
 
 TEST(SQLCopyDescInternal, Fails_InconsistentDescriptor) {
-  DescriptorHandle src_handle(DescriptorType::kApplication,
-                              SQL_DESC_ALLOC_USER);
+  DescriptorHandle src_handle = CreateExplicitDescriptor();
   DescriptorRecord descriptor_record_1;
   descriptor_record_1.type = SQL_INTEGER;
   descriptor_record_1.concise_type = SQL_CHAR;

@@ -70,4 +70,8 @@ StatementHandle CreateStatementHandle() {
   return StatementHandle(nullptr, {ard, apd, ird, ipd});
 }
 
+DescriptorHandle CreateExplicitDescriptor() {
+  return DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+}
+
 }  // namespace google::cloud::odbc_testing_bq_driver_utils
