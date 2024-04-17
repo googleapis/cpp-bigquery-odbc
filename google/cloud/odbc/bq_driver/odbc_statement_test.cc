@@ -65,7 +65,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC_Null) {
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
             handle.GetDescriptorHandle(DescriptorType::kARD)
-                ->GetHeaderRecord()
+                .GetHeaderRecord()
                 .GetAllocType());
   DeleteStatementHandle(handle);
 }
@@ -83,7 +83,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
             handle.GetDescriptorHandle(DescriptorType::kARD)
-                ->GetHeaderRecord()
+                .GetHeaderRecord()
                 .GetAllocType());
   DeleteStatementHandle(handle);
 }
@@ -98,7 +98,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC_Null) {
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
             handle.GetDescriptorHandle(DescriptorType::kAPD)
-                ->GetHeaderRecord()
+                .GetHeaderRecord()
                 .GetAllocType());
   DeleteStatementHandle(handle);
 }
@@ -116,7 +116,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
             handle.GetDescriptorHandle(DescriptorType::kAPD)
-                ->GetHeaderRecord()
+                .GetHeaderRecord()
                 .GetAllocType());
   DeleteStatementHandle(handle);
 }
@@ -131,7 +131,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .bind_offset_ptr);
   DeleteStatementHandle(handle);
 }
@@ -145,7 +145,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .bind_offset_ptr);
   DeleteStatementHandle(handle);
 }
@@ -160,7 +160,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                          ->GetHeaderRecord()
+                          .GetHeaderRecord()
                           .bind_type);
   DeleteStatementHandle(handle);
 }
@@ -175,7 +175,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -189,7 +189,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -204,7 +204,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -218,7 +218,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -233,7 +233,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .rows_processed_ptr);
   DeleteStatementHandle(handle);
 }
@@ -247,7 +247,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .rows_processed_ptr);
   DeleteStatementHandle(handle);
 }
@@ -262,7 +262,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                          ->GetHeaderRecord()
+                          .GetHeaderRecord()
                           .array_size);
   DeleteStatementHandle(handle);
 }
@@ -277,7 +277,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                          ->GetHeaderRecord()
+                          .GetHeaderRecord()
                           .array_size);
   DeleteStatementHandle(handle);
 }
@@ -292,7 +292,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .bind_offset_ptr);
   DeleteStatementHandle(handle);
 }
@@ -306,7 +306,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .bind_offset_ptr);
   DeleteStatementHandle(handle);
 }
@@ -321,7 +321,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                          ->GetHeaderRecord()
+                          .GetHeaderRecord()
                           .bind_type);
   DeleteStatementHandle(handle);
 }
@@ -336,7 +336,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -350,7 +350,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -365,7 +365,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -379,7 +379,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .array_status_ptr);
   DeleteStatementHandle(handle);
 }
@@ -394,7 +394,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                           ->GetHeaderRecord()
+                           .GetHeaderRecord()
                            .rows_processed_ptr);
   DeleteStatementHandle(handle);
 }
@@ -408,7 +408,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                         ->GetHeaderRecord()
+                         .GetHeaderRecord()
                          .rows_processed_ptr);
   DeleteStatementHandle(handle);
 }

@@ -53,7 +53,7 @@ SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
   return SQL_SUCCESS;
 }
 
-DescriptorHandle* StatementHandle::GetDescriptorHandle(
+DescriptorHandle& StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {
   HandleWrapped* wrapped = nullptr;
   switch (type) {
@@ -74,7 +74,7 @@ DescriptorHandle* StatementHandle::GetDescriptorHandle(
       wrapped = descriptors_.ipd_;
       break;
   }
-  return reinterpret_cast<DescriptorHandle*>(wrapped->handle_ref);
+  return *reinterpret_cast<DescriptorHandle*>(wrapped->handle_ref);
 }
 
 StatusRecord StatementHandle::SetDescriptorHandle(

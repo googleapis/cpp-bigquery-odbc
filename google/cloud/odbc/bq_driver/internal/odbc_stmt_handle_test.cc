@@ -80,10 +80,10 @@ TEST(GetDescriptorHandle, GetARD_impl) {
   HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
   StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  EXPECT_EQ(DescriptorType::kARD, desc_handle->GetType());
+  EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetAPD_impl) {
@@ -97,10 +97,10 @@ TEST(GetDescriptorHandle, GetAPD_impl) {
   HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
   StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  EXPECT_EQ(DescriptorType::kAPD, desc_handle->GetType());
+  EXPECT_EQ(DescriptorType::kAPD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetIRD_impl) {
@@ -114,10 +114,10 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
   StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  EXPECT_EQ(DescriptorType::kIRD, desc_handle->GetType());
+  EXPECT_EQ(DescriptorType::kIRD, desc_handle.GetType());
 }
 
 TEST(GetDescriptorHandle, GetIPD_impl) {
@@ -131,10 +131,10 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
   HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
   StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
 
-  EXPECT_EQ(DescriptorType::kIPD, desc_handle->GetType());
+  EXPECT_EQ(DescriptorType::kIPD, desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetARD) {
@@ -150,10 +150,10 @@ TEST(SetDescriptorHandle, SetAndGetARD) {
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  EXPECT_EQ(desc.GetType(), desc_handle->GetType());
+  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetAPD) {
@@ -169,10 +169,10 @@ TEST(SetDescriptorHandle, SetAndGetAPD) {
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle* desc_handle =
+  DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  EXPECT_EQ(desc.GetType(), desc_handle->GetType());
+  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
 TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
@@ -210,23 +210,23 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle* get_desc_handle =
+  DescriptorHandle& get_desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
   EXPECT_EQ(desc.GetHeaderRecord().GetAllocType(),
-            get_desc_handle->GetHeaderRecord().GetAllocType());
+            get_desc_handle.GetHeaderRecord().GetAllocType());
 
   status_record = handle.SetDescriptorHandle(DescriptorType::kAPD, nullptr);
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle* get_desc_handle_new =
+  DescriptorHandle& get_desc_handle_new =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
   EXPECT_EQ(desc_impl.GetHeaderRecord().GetAllocType(),
-            get_desc_handle_new->GetHeaderRecord().GetAllocType());
+            get_desc_handle_new.GetHeaderRecord().GetAllocType());
   EXPECT_NE(desc.GetHeaderRecord().GetAllocType(),
-            get_desc_handle_new->GetHeaderRecord().GetAllocType());
+            get_desc_handle_new.GetHeaderRecord().GetAllocType());
 }
 
 TEST(SetAttribute, Fails_InvalidAttribute) {

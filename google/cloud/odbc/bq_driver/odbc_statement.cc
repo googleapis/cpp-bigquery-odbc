@@ -123,68 +123,68 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   auto int_value = reinterpret_cast<size_t>(value);
   switch (attribute) {
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR: {
-      DescriptorHandle* apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
-      apd->GetHeaderRecord().bind_offset_ptr = reinterpret_cast<SQLLEN*>(value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      apd.GetHeaderRecord().bind_offset_ptr = reinterpret_cast<SQLLEN*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_PARAM_BIND_TYPE: {
-      DescriptorHandle* apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
-      apd->GetHeaderRecord().bind_type = static_cast<SQLINTEGER>(int_value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      apd.GetHeaderRecord().bind_type = static_cast<SQLINTEGER>(int_value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_PARAM_OPERATION_PTR: {
-      DescriptorHandle* apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
-      apd->GetHeaderRecord().array_status_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      apd.GetHeaderRecord().array_status_ptr =
           reinterpret_cast<SQLUSMALLINT*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_PARAM_STATUS_PTR: {
-      DescriptorHandle* ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
-      ipd->GetHeaderRecord().array_status_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+      apd.GetHeaderRecord().array_status_ptr =
           reinterpret_cast<SQLUSMALLINT*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_PARAMS_PROCESSED_PTR: {
-      DescriptorHandle* ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
-      ipd->GetHeaderRecord().rows_processed_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+      apd.GetHeaderRecord().rows_processed_ptr =
           reinterpret_cast<SQLULEN*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_PARAMSET_SIZE: {
-      DescriptorHandle* apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
-      apd->GetHeaderRecord().array_size = static_cast<SQLULEN>(int_value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      apd.GetHeaderRecord().array_size = static_cast<SQLULEN>(int_value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROW_ARRAY_SIZE: {
-      DescriptorHandle* ard = handle->GetDescriptorHandle(DescriptorType::kARD);
-      ard->GetHeaderRecord().array_size = static_cast<SQLULEN>(int_value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kARD);
+      apd.GetHeaderRecord().array_size = static_cast<SQLULEN>(int_value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROW_BIND_OFFSET_PTR: {
-      DescriptorHandle* ard = handle->GetDescriptorHandle(DescriptorType::kARD);
-      ard->GetHeaderRecord().bind_offset_ptr = reinterpret_cast<SQLLEN*>(value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kARD);
+      apd.GetHeaderRecord().bind_offset_ptr = reinterpret_cast<SQLLEN*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROW_BIND_TYPE: {
-      DescriptorHandle* ard = handle->GetDescriptorHandle(DescriptorType::kARD);
-      ard->GetHeaderRecord().bind_type = static_cast<SQLINTEGER>(int_value);
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kARD);
+      apd.GetHeaderRecord().bind_type = static_cast<SQLINTEGER>(int_value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROW_OPERATION_PTR: {
-      DescriptorHandle* ard = handle->GetDescriptorHandle(DescriptorType::kARD);
-      ard->GetHeaderRecord().array_status_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kARD);
+      apd.GetHeaderRecord().array_status_ptr =
           reinterpret_cast<SQLUSMALLINT*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROW_STATUS_PTR: {
-      DescriptorHandle* ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
-      ird->GetHeaderRecord().array_status_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kIRD);
+      apd.GetHeaderRecord().array_status_ptr =
           reinterpret_cast<SQLUSMALLINT*>(value);
       return SQL_SUCCESS;
     }
     case SQL_ATTR_ROWS_FETCHED_PTR: {
-      DescriptorHandle* ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
-      ird->GetHeaderRecord().rows_processed_ptr =
+      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kIRD);
+      apd.GetHeaderRecord().rows_processed_ptr =
           reinterpret_cast<SQLULEN*>(value);
       return SQL_SUCCESS;
     }
