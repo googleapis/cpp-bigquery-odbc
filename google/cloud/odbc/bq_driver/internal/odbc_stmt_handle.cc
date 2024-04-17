@@ -14,10 +14,12 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -51,38 +53,38 @@ SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
   return SQL_SUCCESS;
 }
 
-DescriptorHandle& StatementHandle::GetDescriptorHandle(
+DescriptorHandle* StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {
+  HandleWrapped* wrapped = nullptr;
   switch (type) {
     // DescriptorType::kApplication should not be used as input argument
     case DescriptorType::kApplication:
     case DescriptorType::kARD:
-      return descriptors_.ard_expl_ != nullptr ? *descriptors_.ard_expl_
-                                               : *descriptors_.ard_;
+      wrapped = descriptors_.ard_expl_ != nullptr ? descriptors_.ard_expl_
+                                                  : descriptors_.ard_;
+      break;
     case DescriptorType::kAPD:
-      return descriptors_.apd_expl_ != nullptr ? *descriptors_.apd_expl_
-                                               : *descriptors_.apd_;
+      wrapped = descriptors_.apd_expl_ != nullptr ? descriptors_.apd_expl_
+                                                  : descriptors_.apd_;
+      break;
     case DescriptorType::kIRD:
-      return *descriptors_.ird_;
+      wrapped = descriptors_.ird_;
+      break;
     case DescriptorType::kIPD:
-      return *descriptors_.ipd_;
+      wrapped = descriptors_.ipd_;
+      break;
   }
+  return reinterpret_cast<DescriptorHandle*>(wrapped->handle_ref);
 }
 
 StatusRecord StatementHandle::SetDescriptorHandle(
-    DescriptorType type, DescriptorHandle* descriptor_handle) {
-  if (descriptor_handle &&
-      descriptor_handle->GetHeaderRecord().GetAllocType() !=
-          SQL_DESC_ALLOC_USER) {
-    return StatusRecord{SQLStates::k_HY017(),
-                        "Invalid setting of implicitly allocated descriptor"};
-  }
+    DescriptorType type, HandleWrapped* desc_wrapper_ptr) {
   switch (type) {
     case DescriptorType::kARD:
-      descriptors_.ard_expl_ = descriptor_handle;
+      descriptors_.ard_expl_ = desc_wrapper_ptr;
       break;
     case DescriptorType::kAPD:
-      descriptors_.apd_expl_ = descriptor_handle;
+      descriptors_.apd_expl_ = desc_wrapper_ptr;
       break;
     default:
       return StatusRecord{SQLStates::k_HY017(),
@@ -106,6 +108,23 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   return attributes_[attribute];
+}
+
+void DeleteDescriptor(HandleWrapped* wrapper) {
+  if (wrapper) {
+    auto* desc = reinterpret_cast<DescriptorHandle*>(wrapper->handle_ref);
+    delete desc;
+    delete wrapper;
+  }
+}
+
+void StatementHandle::DeleteDescriptors() const {
+  DeleteDescriptor(descriptors_.ard_);
+  DeleteDescriptor(descriptors_.ard_expl_);
+  DeleteDescriptor(descriptors_.apd_);
+  DeleteDescriptor(descriptors_.apd_expl_);
+  DeleteDescriptor(descriptors_.ird_);
+  DeleteDescriptor(descriptors_.ipd_);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

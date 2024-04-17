@@ -13,8 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
@@ -24,6 +25,8 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bq_driver::SQLAllocConnHandle;
 using ::google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::odbc_bq_driver_internal::HandleType;
+using ::google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;

@@ -15,7 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
 
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to

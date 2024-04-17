@@ -26,6 +26,8 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
 
 odbc_bq_driver_internal::StatementHandle CreateStatementHandle();
 
+void DeleteStatementHandle(odbc_bq_driver_internal::StatementHandle handle);
+
 }  // namespace google::cloud::odbc_testing_bq_driver_utils
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H

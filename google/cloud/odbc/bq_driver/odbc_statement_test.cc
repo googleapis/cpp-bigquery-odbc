@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
@@ -21,9 +20,12 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::HandleType;
+using google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::DeleteStatementHandle;
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
@@ -36,6 +38,7 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY017(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
@@ -49,50 +52,73 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY017(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  DeleteStatementHandle(handle);
 }
 
-TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_APP_ROW_DESC_Invalid) {
+TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC_Null) {
   StatementHandle handle = CreateStatementHandle();
   HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
       SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_ROW_DESC, nullptr, 0);
 
-  EXPECT_EQ(SQL_ERROR, status);
-  EXPECT_EQ(SQLStates::k_HY024(),
-            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
+            handle.GetDescriptorHandle(DescriptorType::kARD)
+                ->GetHeaderRecord()
+                .GetAllocType());
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
   StatementHandle handle = CreateStatementHandle();
   HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  HandleWrapped desc_wrapped(HandleType::kDescriptorHandle, &desc);
+  auto* desc =
+      new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  auto* desc_wrapped = new HandleWrapped(HandleType::kDescriptorHandle, desc);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_ROW_DESC, &desc_wrapped, 0);
+      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_ROW_DESC, desc_wrapped, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
             handle.GetDescriptorHandle(DescriptorType::kARD)
-                .GetHeaderRecord()
+                ->GetHeaderRecord()
                 .GetAllocType());
+  DeleteStatementHandle(handle);
+}
+
+TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC_Null) {
+  StatementHandle handle = CreateStatementHandle();
+  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
+
+  auto status =
+      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_PARAM_DESC, nullptr, 0);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
+            handle.GetDescriptorHandle(DescriptorType::kAPD)
+                ->GetHeaderRecord()
+                .GetAllocType());
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
   HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  HandleWrapped desc_wrapped(HandleType::kDescriptorHandle, &desc);
+  auto* desc =
+      new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  auto* desc_wrapped = new HandleWrapped(HandleType::kDescriptorHandle, desc);
 
   auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_PARAM_DESC,
-                                       &desc_wrapped, 0);
+                                       desc_wrapped, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
             handle.GetDescriptorHandle(DescriptorType::kAPD)
-                .GetHeaderRecord()
+                ->GetHeaderRecord()
                 .GetAllocType());
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
@@ -105,8 +131,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .bind_offset_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
@@ -118,8 +145,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .bind_offset_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
@@ -132,8 +160,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                          .GetHeaderRecord()
+                          ->GetHeaderRecord()
                           .bind_type);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
@@ -146,8 +175,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
@@ -159,8 +189,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
@@ -173,8 +204,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
@@ -186,8 +218,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
@@ -200,8 +233,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .rows_processed_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
@@ -213,8 +247,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIPD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .rows_processed_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
@@ -227,8 +262,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
-                          .GetHeaderRecord()
+                          ->GetHeaderRecord()
                           .array_size);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
@@ -241,8 +277,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                          .GetHeaderRecord()
+                          ->GetHeaderRecord()
                           .array_size);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
@@ -255,8 +292,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .bind_offset_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
@@ -268,8 +306,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .bind_offset_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
@@ -282,8 +321,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                          .GetHeaderRecord()
+                          ->GetHeaderRecord()
                           .bind_type);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
@@ -296,8 +336,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kARD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
@@ -309,8 +350,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
@@ -323,8 +365,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
@@ -336,8 +379,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .array_status_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
@@ -350,8 +394,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                           .GetHeaderRecord()
+                           ->GetHeaderRecord()
                            .rows_processed_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
@@ -363,8 +408,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
-                         .GetHeaderRecord()
+                         ->GetHeaderRecord()
                          .rows_processed_ptr);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ASYNC_ENABLE) {
@@ -377,6 +423,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ASYNC_ENABLE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ASYNC_ENABLE_InvalidValue) {
@@ -390,6 +437,7 @@ TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ASYNC_ENABLE_InvalidValue) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY024(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CONCURRENCY) {
@@ -402,6 +450,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CONCURRENCY) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CONCURRENCY));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SCROLLABLE) {
@@ -414,6 +463,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SCROLLABLE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SCROLLABLE));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SENSITIVITY) {
@@ -426,6 +476,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SENSITIVITY) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SENSITIVITY));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_TYPE) {
@@ -438,6 +489,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_TYPE) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_TYPE));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ENABLE_AUTO_IPD) {
@@ -450,6 +502,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ENABLE_AUTO_IPD) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ENABLE_AUTO_IPD));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_LENGTH) {
@@ -462,6 +515,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_LENGTH) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_LENGTH));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_ROWS) {
@@ -474,6 +528,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_ROWS) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_ROWS));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_METADATA_ID) {
@@ -486,6 +541,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_METADATA_ID) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_METADATA_ID));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_NOSCAN) {
@@ -498,6 +554,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_NOSCAN) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_NOSCAN));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_QUERY_TIMEOUT) {
@@ -510,6 +567,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_QUERY_TIMEOUT) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_RETRIEVE_DATA) {
@@ -522,6 +580,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_RETRIEVE_DATA) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_RETRIEVE_DATA));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_USE_BOOKMARKS) {
@@ -534,6 +593,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_USE_BOOKMARKS) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS));
+  DeleteStatementHandle(handle);
 }
 
 TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER) {
@@ -547,6 +607,7 @@ TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  DeleteStatementHandle(handle);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

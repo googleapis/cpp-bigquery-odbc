@@ -13,7 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
-// #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
@@ -26,6 +27,8 @@ using google::cloud::odbc_bq_driver::SQLAllocStmtHandle;
 using google::cloud::odbc_bq_driver::SQLFreeHandleInternal;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::HandleType;
+using google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
@@ -49,11 +52,19 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
 }
 
 StatementHandle CreateStatementHandle() {
-  DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
-  DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
-  DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
-  DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
-  return StatementHandle({ard, apd, ird, ipd});
+  auto* ard = new DescriptorHandle(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
+  auto* ard_wrapper = new HandleWrapped(HandleType::kDescriptorHandle, ard);
+  auto* apd = new DescriptorHandle(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
+  auto* apd_wrapper = new HandleWrapped(HandleType::kDescriptorHandle, apd);
+  auto* ird = new DescriptorHandle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
+  auto* ird_wrapper = new HandleWrapped(HandleType::kDescriptorHandle, ird);
+  auto* ipd = new DescriptorHandle(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
+  auto* ipd_wrapper = new HandleWrapped(HandleType::kDescriptorHandle, ipd);
+  return StatementHandle({ard_wrapper, apd_wrapper, ird_wrapper, ipd_wrapper});
+}
+
+void DeleteStatementHandle(StatementHandle handle) {
+  handle.DeleteDescriptors();
 }
 
 }  // namespace google::cloud::odbc_testing_bq_driver_utils

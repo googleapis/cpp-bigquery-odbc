@@ -13,14 +13,16 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using ::google::cloud::odbc_bq_driver_internal::HandleType;
+using ::google::cloud::odbc_bq_driver_internal::HandleWrapped;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_internal::StatusRecordOr;

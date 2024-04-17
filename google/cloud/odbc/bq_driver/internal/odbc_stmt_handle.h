@@ -42,10 +42,11 @@ class StatementHandle : public Handle {
   SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
                        SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
 
-  [[nodiscard]] DescriptorHandle& GetDescriptorHandle(
+  [[nodiscard]] DescriptorHandle* GetDescriptorHandle(
       DescriptorType type) const;
   odbc_internal::StatusRecord SetDescriptorHandle(
-      DescriptorType type, DescriptorHandle* descriptor_handle);
+      DescriptorType type, HandleWrapped* desc_wrapper_ptr);
+  void DeleteDescriptors() const;
 
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);

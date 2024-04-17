@@ -71,106 +71,117 @@ TEST(StatementHandle, BindColumn_NullResLen) {
 
 TEST(GetDescriptorHandle, GetARD_impl) {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
+  HandleWrapped ard_wrap(HandleType::kDescriptorHandle, &ard);
   DescriptorHandle apd;
+  HandleWrapped apd_wrap(HandleType::kDescriptorHandle, &apd);
   DescriptorHandle ird;
+  HandleWrapped ird_wrap(HandleType::kDescriptorHandle, &ird);
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
+  StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
+  EXPECT_EQ(DescriptorType::kARD, desc_handle->GetType());
 }
 
 TEST(GetDescriptorHandle, GetAPD_impl) {
   DescriptorHandle ard;
+  HandleWrapped ard_wrap(HandleType::kDescriptorHandle, &ard);
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
+  HandleWrapped apd_wrap(HandleType::kDescriptorHandle, &apd);
   DescriptorHandle ird;
+  HandleWrapped ird_wrap(HandleType::kDescriptorHandle, &ird);
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
+  StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  EXPECT_EQ(DescriptorType::kAPD, desc_handle.GetType());
+  EXPECT_EQ(DescriptorType::kAPD, desc_handle->GetType());
 }
 
 TEST(GetDescriptorHandle, GetIRD_impl) {
   DescriptorHandle ard;
+  HandleWrapped ard_wrap(HandleType::kDescriptorHandle, &ard);
   DescriptorHandle apd;
+  HandleWrapped apd_wrap(HandleType::kDescriptorHandle, &apd);
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
-
+  HandleWrapped ird_wrap(HandleType::kDescriptorHandle, &ird);
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
+  StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  EXPECT_EQ(DescriptorType::kIRD, desc_handle.GetType());
+  EXPECT_EQ(DescriptorType::kIRD, desc_handle->GetType());
 }
 
 TEST(GetDescriptorHandle, GetIPD_impl) {
   DescriptorHandle ard;
+  HandleWrapped ard_wrap(HandleType::kDescriptorHandle, &ard);
   DescriptorHandle apd;
+  HandleWrapped apd_wrap(HandleType::kDescriptorHandle, &apd);
   DescriptorHandle ird;
+  HandleWrapped ird_wrap(HandleType::kDescriptorHandle, &ird);
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
+  HandleWrapped ipd_wrap(HandleType::kDescriptorHandle, &ipd);
+  StatementHandle handle({&ard_wrap, &apd_wrap, &ird_wrap, &ipd_wrap});
 
-  StatementHandle handle({ard, apd, ird, ipd});
-
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
 
-  EXPECT_EQ(DescriptorType::kIPD, desc_handle.GetType());
+  EXPECT_EQ(DescriptorType::kIPD, desc_handle->GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetARD) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  HandleWrapped desc_impl_wrap(HandleType::kDescriptorHandle, &desc_impl);
+  StatementHandle handle(
+      {&desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  HandleWrapped desc_wrap(HandleType::kDescriptorHandle, &desc);
 
   StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kARD, &desc);
+      handle.SetDescriptorHandle(DescriptorType::kARD, &desc_wrap);
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
+  EXPECT_EQ(desc.GetType(), desc_handle->GetType());
 }
 
 TEST(SetDescriptorHandle, SetAndGetAPD) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  HandleWrapped desc_impl_wrap(HandleType::kDescriptorHandle, &desc_impl);
+  StatementHandle handle(
+      {&desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  HandleWrapped desc_wrap(HandleType::kDescriptorHandle, &desc);
 
   StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
+      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc_wrap);
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle& desc_handle =
+  DescriptorHandle* desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
-  EXPECT_EQ(desc.GetType(), desc_handle.GetType());
-}
-
-TEST(SetDescriptorHandle, Fails_InvalidAllocType) {
-  StatementHandle handle;
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_AUTO);
-
-  StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
-
-  EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
+  EXPECT_EQ(desc.GetType(), desc_handle->GetType());
 }
 
 TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   StatementHandle handle;
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  HandleWrapped desc_wrap(HandleType::kDescriptorHandle, &desc);
 
   StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kIRD, &desc);
+      handle.SetDescriptorHandle(DescriptorType::kIRD, &desc_wrap);
 
   EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
 }
@@ -178,40 +189,44 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
 TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
   StatementHandle handle;
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  HandleWrapped desc_wrap(HandleType::kDescriptorHandle, &desc);
 
   StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kIPD, &desc);
+      handle.SetDescriptorHandle(DescriptorType::kIPD, &desc_wrap);
 
   EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
 }
 
 TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  HandleWrapped desc_impl_wrap(HandleType::kDescriptorHandle, &desc_impl);
+  StatementHandle handle(
+      {&desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap, &desc_impl_wrap});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  HandleWrapped desc_wrap(HandleType::kDescriptorHandle, &desc);
 
   StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
+      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc_wrap);
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle& get_desc_handle =
+  DescriptorHandle* get_desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
   EXPECT_EQ(desc.GetHeaderRecord().GetAllocType(),
-            get_desc_handle.GetHeaderRecord().GetAllocType());
+            get_desc_handle->GetHeaderRecord().GetAllocType());
 
   status_record = handle.SetDescriptorHandle(DescriptorType::kAPD, nullptr);
 
   EXPECT_TRUE(status_record.ok());
 
-  DescriptorHandle& get_desc_handle_new =
+  DescriptorHandle* get_desc_handle_new =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
 
   EXPECT_EQ(desc_impl.GetHeaderRecord().GetAllocType(),
-            get_desc_handle_new.GetHeaderRecord().GetAllocType());
+            get_desc_handle_new->GetHeaderRecord().GetAllocType());
   EXPECT_NE(desc.GetHeaderRecord().GetAllocType(),
-            get_desc_handle_new.GetHeaderRecord().GetAllocType());
+            get_desc_handle_new->GetHeaderRecord().GetAllocType());
 }
 
 TEST(SetAttribute, Fails_InvalidAttribute) {

@@ -16,6 +16,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_STMT_ATTR_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <map>
@@ -42,19 +43,16 @@ static std::map<int, SQLULEN> const kDefaultAttributes = {
 
 struct Descriptors {
   Descriptors() = default;
-  Descriptors(DescriptorHandle const& ard, DescriptorHandle const& apd,
-              DescriptorHandle const& ird, DescriptorHandle const& ipd)
-      : ard_(std::make_unique<DescriptorHandle>(ard)),
-        apd_(std::make_unique<DescriptorHandle>(apd)),
-        ird_(std::make_unique<DescriptorHandle>(ird)),
-        ipd_(std::make_unique<DescriptorHandle>(ipd)){};
+  Descriptors(HandleWrapped* ard, HandleWrapped* apd, HandleWrapped* ird,
+              HandleWrapped* ipd)
+      : ard_(ard), apd_(apd), ird_(ird), ipd_(ipd){};
 
-  std::unique_ptr<DescriptorHandle> ard_;
-  DescriptorHandle* ard_expl_ = nullptr;
-  std::unique_ptr<DescriptorHandle> apd_;
-  DescriptorHandle* apd_expl_ = nullptr;
-  std::unique_ptr<DescriptorHandle> ird_;
-  std::unique_ptr<DescriptorHandle> ipd_;
+  HandleWrapped* ard_ = nullptr;
+  HandleWrapped* ard_expl_ = nullptr;
+  HandleWrapped* apd_ = nullptr;
+  HandleWrapped* apd_expl_ = nullptr;
+  HandleWrapped* ird_ = nullptr;
+  HandleWrapped* ipd_ = nullptr;
 };
 
 bool IsStatementAttributeValid(int attribute);
