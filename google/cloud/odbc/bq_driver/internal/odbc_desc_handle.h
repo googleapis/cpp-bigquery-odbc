@@ -25,6 +25,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 class DescriptorHandle : public Handle {
  public:
+  HandleType kType = HandleType::kDescHandle;
+
   explicit DescriptorHandle(DescriptorType type = DescriptorType::kApplication,
                             SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO)
       : type_(type), header_record_(alloc_type){};
@@ -64,8 +66,6 @@ class DescriptorHandle : public Handle {
 
   odbc_internal::StatusRecord SetDescriptorRecords(
       std::map<SQLSMALLINT, DescriptorRecord> const& descriptor_records);
-
-  HandleType const kType = HandleType::kDescHandle;
 
  private:
   DescriptorType type_;

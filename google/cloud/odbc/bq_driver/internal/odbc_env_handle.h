@@ -117,6 +117,8 @@ class EnvAttrOutputNTS {
 
 class EnvironmentHandle : public Handle {
  public:
+  HandleType kType = HandleType::kEnvHandle;
+
   explicit EnvironmentHandle();
   ~EnvironmentHandle() override = default;
 
@@ -128,8 +130,6 @@ class EnvironmentHandle : public Handle {
   SQLRETURN GetAttribute(SQLINTEGER attribute, void* value, void* length);
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
-
-  HandleType const kType = HandleType::kEnvHandle;
 
  private:
   std::shared_ptr<EnvAttrConnectionPool> connection_pool_;

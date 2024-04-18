@@ -28,6 +28,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 class StatementHandle : public Handle {
  public:
+  HandleType kType = HandleType::kStmtHandle;
+
   explicit StatementHandle() = default;
   explicit StatementHandle(Descriptors descriptors)
       : descriptors_(std::move(descriptors)), attributes_(kDefaultAttributes){};
@@ -49,8 +51,6 @@ class StatementHandle : public Handle {
 
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
-
-  HandleType const kType = HandleType::kStmtHandle;
 
  private:
   std::map<int, DataBuffer> column_bindings_;

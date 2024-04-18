@@ -51,6 +51,8 @@ struct Dsn {
 
 class ConnectionHandle : public Handle {
  public:
+  HandleType kType = HandleType::kConnHandle;
+
   explicit ConnectionHandle() = default;
   ~ConnectionHandle() override = default;
 
@@ -75,8 +77,6 @@ class ConnectionHandle : public Handle {
                                            SQLPOINTER value, SQLINTEGER length);
 
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
-
-  HandleType const kType = HandleType::kConnHandle;
 
  protected:
   bool is_connected_ = false;
