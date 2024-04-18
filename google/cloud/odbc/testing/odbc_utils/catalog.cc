@@ -80,4 +80,108 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
+std::map<int, std::string> Catalog::GetPrimaryKeys(
+    std::shared_ptr<ODBCHandles> conn, std::string dataset, std::string table,
+    bool use_ansi) {
+  SQLRETURN status;
+  int res_cols = 6;
+  int col_idx = 0;
+  Catalog catalog_result[res_cols];
+  std::map<int, std::string> results;
+
+  // Make sure we treat the catalog arguments as OA (ordinary arguments).
+  // See here for more info on catalog function arguments:
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Col1: catalog name , Col2: schema name, Col3: table name,
+  // Col4: column name, Col5: key sequence , Col6: primary key name
+  SQLSMALLINT val;
+  while (col_idx < res_cols) {
+    if (col_idx == 4) {
+      // data type is SMALLINT.
+      catalog_result[col_idx].target_type = SQL_C_SHORT;
+      catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
+      catalog_result[col_idx].target_value = (SQLPOINTER)&val;
+    } else {
+      // data type is Char.
+      catalog_result[col_idx].target_type = SQL_C_CHAR;
+      catalog_result[col_idx].buffer_length = kBufferLength;
+      catalog_result[col_idx].target_value =
+          malloc(sizeof(unsigned char) * catalog_result[col_idx].buffer_length);
+    }
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+                        catalog_result[col_idx].target_type,
+                        catalog_result[col_idx].target_value,
+                        catalog_result[col_idx].buffer_length,
+                        &(catalog_result[col_idx].str_len));
+    CheckError(status, "SQLBindCol", conn);
+    col_idx++;
+  }
+
+  if (dataset.length()) {
+    if (use_ansi) {
+      status = SQLPrimaryKeysA(
+          conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
+          (SQLSMALLINT)kCatalogName.length(), (SQLCHAR*)dataset.c_str(),
+          (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+          (SQLSMALLINT)table.length());
+    } else {
+      status = SQLPrimaryKeys(
+          conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
+          (SQLSMALLINT)kCatalogName.length(), (SQLCHAR*)dataset.c_str(),
+          (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+          (SQLSMALLINT)table.length());
+    }
+  } else {
+    if (use_ansi) {
+      status =
+          SQLPrimaryKeysA(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
+                          (SQLSMALLINT)kCatalogName.length(), NULL, 0,
+                          (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
+    } else {
+      status =
+          SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
+                         (SQLSMALLINT)kCatalogName.length(), NULL, 0,
+                         (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
+    }
+  }
+  CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
+
+  // Uncomment the while loop below once SQLPrimaryKeys and SQLFetch are
+  // implemented for Google Driver.
+  /*
+    while (1) {
+      status = SQLFetch(conn->hstmt);
+      if (status == SQL_NO_DATA) {
+        break;
+      }
+      if (!SQL_SUCCEEDED(status)) {
+        CheckError(status, "SQLFetch", conn);
+        break;
+      }
+      // Col1: catalog, Col2: schema, Col3: table name,
+      // Col4: column name, Col5: key sequence , Col6: primary key,
+      std::string table_cat = (char*)catalog_result[1].target_value;
+      std::string table_schema = (char*)catalog_result[2].target_value;
+      std::string table_name = (char*)catalog_result[3].target_value;
+      std::string col_name = (char*)catalog_result[4].target_value;
+      SQLSMALLINT* key_seq =
+          reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
+      std::string pk_name = (char*)catalog_result[6].target_value;
+
+      if (!table_cat.empty()) results.insert({1, table_cat});
+      if (!table_schema.empty()) results.insert({2, table_schema});
+      if (!table_name.empty()) results.insert({3, table_name});
+      if (!col_name.empty()) results.insert({4, col_name});
+      if (key_seq && *key_seq >= 0) results.insert({5,
+    std::to_string(*key_seq)}); if (!pk_name.empty()) results.insert({6,
+    pk_name});
+    }
+  */
+  return results;
+}
+
 }  // namespace google::cloud::odbc_tests
