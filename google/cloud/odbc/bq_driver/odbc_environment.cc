@@ -23,9 +23,12 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
+SQLRETURN
+SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
   auto* env_handle = new EnvironmentHandle();
   *out_env_handle = env_handle;
   return SQL_SUCCESS;
@@ -52,7 +55,7 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
 
 SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
-                                        SQLINTEGER /*value_buffer_len*/,
+                                        SQLINTEGER value_buffer_len,
                                         SQLINTEGER* val_str_len) {
   TraceOptions& opts = *(*kTraceOptsConsole);
 
@@ -65,16 +68,15 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
     return env_handle_status.GetCalculatedReturnCode();
   }
 
-  if (value == nullptr) {
-    TracePrintInternal(
-        opts,
-        "Output attribute value argument for SQLGetEnvAttr cannot be null");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
-  }
-
   EnvironmentHandle* env_handle = *env_handle_status;
+
+  if (value == nullptr) {
+    TracePrintInternal(opts, "Null attribute value");
+    auto status_record =
+        StatusRecord{SQLStates::k_HY092(), "Null attribute value"};
+    env_handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
 
   return env_handle->GetAttribute(attribute, value, &val_str_len);
 }
