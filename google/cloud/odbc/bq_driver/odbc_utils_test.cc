@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -23,6 +23,7 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
@@ -44,18 +45,16 @@ class OdbcUtilsConnectionHandleTest : public ConnectionHandle {
 TEST(ValidateConnectionHandle, Success) {
   OdbcUtilsConnectionHandleTest conn_handle;
   conn_handle.SetConnected();
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
 
-  auto result = ValidateConnectionHandle(&wrapped_handle);
+  auto result = ValidateConnectionHandle(&conn_handle);
 
   ASSERT_STATUS_RECORD_OK(result);
 }
 
 TEST(ValidateConnectionHandle, SuccessNotConnected) {
   OdbcUtilsConnectionHandleTest conn_handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
 
-  auto result = ValidateConnectionHandle(&wrapped_handle, false);
+  auto result = ValidateConnectionHandle(&conn_handle, false);
 
   ASSERT_STATUS_RECORD_OK(result);
 }
@@ -69,9 +68,8 @@ TEST(ValidateConnectionHandle, InvalidNullPtr) {
 
 TEST(ValidateConnectionHandle, InvalidHandleType) {
   EnvironmentHandle env_handle;
-  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &env_handle);
 
-  auto result = ValidateConnectionHandle(&wrapped_handle);
+  auto result = ValidateConnectionHandle(&env_handle);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
@@ -79,14 +77,22 @@ TEST(ValidateConnectionHandle, InvalidHandleType) {
 
 TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
   OdbcUtilsConnectionHandleTest conn_handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
 
-  auto result = ValidateConnectionHandle(&wrapped_handle);
+  auto result = ValidateConnectionHandle(&conn_handle);
 
   EXPECT_THAT(
       result,
       StatusRecordIs(SQLStates::k_08003(),
                      StrEq("Connection handle not connected to data source")));
+}
+
+TEST(ValidateConnectionHandle, InvalidObject) {
+  int some_value = 0;
+
+  auto result = ValidateConnectionHandle(&some_value);
+
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
 }
 
 ///////////////////////////////////////
@@ -95,9 +101,8 @@ TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
 
 TEST(ValidateEnvironmentHandle, Success) {
   EnvironmentHandle env_handle;
-  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &env_handle);
 
-  auto result = ValidateEnvironmentHandle(&wrapped_handle);
+  auto result = ValidateEnvironmentHandle(&env_handle);
 
   ASSERT_STATUS_RECORD_OK(result);
 }
@@ -111,9 +116,17 @@ TEST(ValidateEnvironmentHandle, InvalidNullPtr) {
 
 TEST(ValidateEnvironmentHandle, InvalidHandleType) {
   ConnectionHandle conn_handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
 
-  auto result = ValidateEnvironmentHandle(&wrapped_handle);
+  auto result = ValidateEnvironmentHandle(&conn_handle);
+
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
+}
+
+TEST(ValidateEnvironmentHandle, InvalidObject) {
+  int some_value = 1;
+
+  auto result = ValidateConnectionHandle(&some_value);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
@@ -125,9 +138,8 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
 
 TEST(ValidateStatementHandle, Success) {
   StatementHandle stmt_handle;
-  HandleWrapped wrapped_handle(HandleType::kStatementHandle, &stmt_handle);
 
-  auto result = ValidateStatementHandle(&wrapped_handle);
+  auto result = ValidateStatementHandle(&stmt_handle);
 
   ASSERT_STATUS_RECORD_OK(result);
 }
@@ -141,9 +153,17 @@ TEST(ValidateStatementHandle, InvalidNullPtr) {
 
 TEST(ValidateStatementHandle, InvalidHandleType) {
   ConnectionHandle conn_handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &conn_handle);
 
-  auto result = ValidateStatementHandle(&wrapped_handle);
+  auto result = ValidateStatementHandle(&conn_handle);
+
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
+}
+
+TEST(ValidateStatementHandle, InvalidObject) {
+  int some_value = 2;
+
+  auto result = ValidateConnectionHandle(&some_value);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
@@ -155,9 +175,8 @@ TEST(ValidateStatementHandle, InvalidHandleType) {
 
 TEST(ValidateDescriptorHandle, Success) {
   DescriptorHandle desc_handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &desc_handle);
 
-  auto result = ValidateDescriptorHandle(&wrapped_handle);
+  auto result = ValidateDescriptorHandle(&desc_handle);
 
   ASSERT_STATUS_RECORD_OK(result);
 }
@@ -171,9 +190,17 @@ TEST(ValidateDescriptorHandle, InvalidNullPtr) {
 
 TEST(ValidateDescriptorHandle, InvalidHandleType) {
   StatementHandle stmt_handle;
-  HandleWrapped wrapped_handle(HandleType::kStatementHandle, &stmt_handle);
 
-  auto result = ValidateDescriptorHandle(&wrapped_handle);
+  auto result = ValidateDescriptorHandle(&stmt_handle);
+
+  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
+                                     StrEq("Invalid handle type")));
+}
+
+TEST(ValidateDescriptorHandle, InvalidObject) {
+  int some_value = 3;
+
+  auto result = ValidateConnectionHandle(&some_value);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));

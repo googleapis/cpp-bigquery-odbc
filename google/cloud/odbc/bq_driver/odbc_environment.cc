@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -27,8 +27,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
   auto* env_handle = new EnvironmentHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, env_handle);
-  *out_env_handle = wrapped_handle;
+  *out_env_handle = env_handle;
   return SQL_SUCCESS;
 }
 

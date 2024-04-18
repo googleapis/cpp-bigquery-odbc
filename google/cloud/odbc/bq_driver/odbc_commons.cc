@@ -81,9 +81,6 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
     default:
       return SQL_INVALID_HANDLE;
   }
-  // Deleting 'void *' is an undefined behavior, so we need to cast it first
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  delete in_handle_wrapped;
   return SQL_SUCCESS;
 }
 

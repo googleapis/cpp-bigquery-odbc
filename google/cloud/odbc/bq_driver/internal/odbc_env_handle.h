@@ -125,6 +125,8 @@ class EnvironmentHandle : public Handle {
   EnvironmentHandle(EnvironmentHandle&&) = default;
   EnvironmentHandle& operator=(EnvironmentHandle&&) = default;
 
+  HandleType GetHandleType() override { return HandleType::kEnvHandle; }
+
   SQLRETURN GetAttribute(SQLINTEGER attribute, void* value, void* length);
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);

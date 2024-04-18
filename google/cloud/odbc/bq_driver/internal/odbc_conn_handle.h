@@ -59,6 +59,8 @@ class ConnectionHandle : public Handle {
   ConnectionHandle(ConnectionHandle&&) = default;
   ConnectionHandle& operator=(ConnectionHandle&&) = default;
 
+  HandleType GetHandleType() override { return HandleType::kConnHandle; }
+
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);

@@ -15,9 +15,6 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -28,22 +25,6 @@ namespace google::cloud::odbc_bq_driver {
 //
 // SQLFreeHandleInternal
 /////////////////////////////////////////////////////////////
-
-enum class HandleType {
-  kConnHandle,
-  kEnvHandle,
-  kStatementHandle,
-  kDescriptorHandle
-};
-
-struct HandleWrapped {
-  explicit HandleWrapped(HandleType handle_type, SQLHANDLE handle_ref)
-      : handle_type(handle_type), handle_ref(handle_ref){};
-  ~HandleWrapped() = default;
-
-  HandleType handle_type;
-  SQLHANDLE handle_ref;  // reference to the internal handle we created
-};
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle);
 

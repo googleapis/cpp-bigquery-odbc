@@ -27,11 +27,10 @@ using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLPOINTER output;
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_IMP_PARAM_DESC, &output, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_IMP_PARAM_DESC, &output, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY017(),
@@ -40,11 +39,10 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLPOINTER output;
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_IMP_ROW_DESC, &output, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_IMP_ROW_DESC, &output, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY017(),
@@ -53,10 +51,9 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_APP_ROW_DESC_Invalid) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_ROW_DESC, nullptr, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_APP_ROW_DESC, nullptr, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY024(),
@@ -65,12 +62,10 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_APP_ROW_DESC_Invalid) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  HandleWrapped desc_wrapped(HandleType::kDescriptorHandle, &desc);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_ROW_DESC, &desc_wrapped, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_APP_ROW_DESC, &desc, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
@@ -81,12 +76,10 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  HandleWrapped desc_wrapped(HandleType::kDescriptorHandle, &desc);
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_APP_PARAM_DESC,
-                                       &desc_wrapped, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_APP_PARAM_DESC, &desc, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_USER,
@@ -97,10 +90,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLLEN expected = 0;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_BIND_OFFSET_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_OFFSET_PTR,
                                        &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -111,9 +103,8 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_BIND_OFFSET_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_OFFSET_PTR,
                                        nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -124,10 +115,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLINTEGER expected = 10;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_BIND_TYPE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_TYPE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -138,10 +128,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLUSMALLINT expected = 0;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_OPERATION_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_OPERATION_PTR,
                                        &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -152,10 +141,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_OPERATION_PTR,
-                                       nullptr, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_OPERATION_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -165,11 +153,10 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLUSMALLINT expected = 0;
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_STATUS_PTR, &expected, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_STATUS_PTR, &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIPD)
@@ -179,10 +166,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAM_STATUS_PTR, nullptr, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_STATUS_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIPD)
@@ -192,10 +178,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 0;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAMS_PROCESSED_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMS_PROCESSED_PTR,
                                        &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -206,9 +191,8 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAMS_PROCESSED_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMS_PROCESSED_PTR,
                                        nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -219,10 +203,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 10;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_PARAMSET_SIZE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMSET_SIZE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -233,10 +216,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 10;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_ARRAY_SIZE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_ARRAY_SIZE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -247,10 +229,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLLEN expected = 0;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_BIND_OFFSET_PTR,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_OFFSET_PTR,
                                        &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -261,10 +242,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_BIND_OFFSET_PTR,
-                                       nullptr, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_OFFSET_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -274,10 +254,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLINTEGER expected = 10;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_BIND_TYPE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_TYPE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -288,11 +267,10 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLUSMALLINT expected = 0;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_OPERATION_PTR,
-                                       &expected, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_OPERATION_PTR, &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -302,10 +280,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_OPERATION_PTR, nullptr, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_OPERATION_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -315,11 +292,10 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLUSMALLINT expected = 0;
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_STATUS_PTR, &expected, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_STATUS_PTR, &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
@@ -329,10 +305,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_STATUS_PTR, nullptr, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_STATUS_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
@@ -342,11 +317,10 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 0;
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROWS_FETCHED_PTR, &expected, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROWS_FETCHED_PTR, &expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&expected, handle.GetDescriptorHandle(DescriptorType::kIRD)
@@ -356,10 +330,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
 
 TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
 
   auto status =
-      SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROWS_FETCHED_PTR, nullptr, 0);
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROWS_FETCHED_PTR, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, handle.GetDescriptorHandle(DescriptorType::kIRD)
@@ -369,10 +342,9 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ASYNC_ENABLE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_ASYNC_ENABLE_ON;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ASYNC_ENABLE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -381,10 +353,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ASYNC_ENABLE) {
 
 TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ASYNC_ENABLE_InvalidValue) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ASYNC_ENABLE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -394,10 +365,9 @@ TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ASYNC_ENABLE_InvalidValue) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CONCURRENCY) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_CONCURRENCY,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -406,10 +376,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CONCURRENCY) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SCROLLABLE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_NONSCROLLABLE;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_CURSOR_SCROLLABLE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SCROLLABLE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -418,10 +387,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SCROLLABLE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SENSITIVITY) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_INSENSITIVE;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_CURSOR_SENSITIVITY,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SENSITIVITY,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -430,10 +398,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SENSITIVITY) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_TYPE) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_CURSOR_FORWARD_ONLY;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_CURSOR_TYPE,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_TYPE,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -442,10 +409,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_TYPE) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ENABLE_AUTO_IPD) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_FALSE;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ENABLE_AUTO_IPD,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ENABLE_AUTO_IPD,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -454,10 +420,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ENABLE_AUTO_IPD) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_LENGTH) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_MAX_LENGTH,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_LENGTH,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -466,10 +431,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_LENGTH) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_ROWS) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_MAX_ROWS,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_ROWS,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -478,10 +442,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_ROWS) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_METADATA_ID) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_FALSE;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_METADATA_ID,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_METADATA_ID,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -490,11 +453,10 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_METADATA_ID) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_NOSCAN) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_NOSCAN_ON;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_NOSCAN,
-                                       (SQLPOINTER)expected, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN, (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_NOSCAN));
@@ -502,10 +464,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_NOSCAN) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_QUERY_TIMEOUT) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_QUERY_TIMEOUT,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_QUERY_TIMEOUT,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -514,10 +475,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_QUERY_TIMEOUT) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_RETRIEVE_DATA) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_RD_OFF;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_RETRIEVE_DATA,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_RETRIEVE_DATA,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -526,10 +486,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_RETRIEVE_DATA) {
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_USE_BOOKMARKS) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = SQL_UB_OFF;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_USE_BOOKMARKS,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -538,10 +497,9 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_USE_BOOKMARKS) {
 
 TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER) {
   StatementHandle handle = CreateStatementHandle();
-  HandleWrapped wrapped(HandleType::kStatementHandle, &handle);
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&wrapped, SQL_ATTR_ROW_NUMBER,
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER,
                                        (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);

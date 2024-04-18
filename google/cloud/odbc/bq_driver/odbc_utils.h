@@ -18,8 +18,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -34,22 +34,19 @@
 namespace google::cloud::odbc_bq_driver {
 
 template <typename T>
-odbc_internal::StatusRecordOr<T*> CastToHandle(HandleType handle_type,
-                                               SQLHANDLE input_handle) {
+odbc_internal::StatusRecordOr<T*> CastToHandle(
+    odbc_bq_driver_internal::HandleType handle_type, SQLHANDLE input_handle) {
   if (input_handle == nullptr) {
     return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                        "Handle is null pointer"};
   }
-  auto* handle_wrapped = reinterpret_cast<HandleWrapped*>(input_handle);
-  if (handle_type != handle_wrapped->handle_type) {
+  auto* handle =
+      reinterpret_cast<odbc_bq_driver_internal::Handle*>(input_handle);
+  if (!handle->is_handle || handle_type != handle->GetHandleType()) {
     return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                        "Invalid handle type"};
   }
-  if (handle_wrapped->handle_ref == nullptr) {
-    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
-                                       "Null internal handle reference"};
-  }
-  return reinterpret_cast<T*>(handle_wrapped->handle_ref);
+  return reinterpret_cast<T*>(input_handle);
 }
 
 odbc_internal::StatusRecordOr<

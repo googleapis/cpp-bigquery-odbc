@@ -14,7 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
@@ -22,14 +22,14 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle) {
-  odbc_bq_driver_internal::EnvironmentHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  EnvironmentHandle handle;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_ARRAY_SIZE,
+  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
                                         (SQLPOINTER)10, 0);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
@@ -38,10 +38,9 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle) {
 TEST(SQLSetDescFieldInternal,
      Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 0, SQL_DESC_ROWS_PROCESSED_PTR, (SQLPOINTER)10, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
+                                        (SQLPOINTER)10, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
@@ -50,9 +49,8 @@ TEST(SQLSetDescFieldInternal,
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
+  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE,
                                         (SQLPOINTER)10, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -62,9 +60,8 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
+  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE,
                                         (SQLPOINTER)10, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -74,10 +71,9 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
-                                        nullptr, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(0, handle.GetHeaderRecord().bind_type);
@@ -85,10 +81,9 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_ARRAY_SIZE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   u_long arr_size = 18446744073709551615UL;  // long long max
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_ARRAY_SIZE,
+  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
                                         (SQLPOINTER)arr_size, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -97,11 +92,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_ARRAY_SIZE) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int count = 3;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_COUNT,
-                                        (SQLPOINTER)count, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(count, handle.GetHeaderRecord().count);
@@ -109,11 +103,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_COUNT_Negative) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int count = -3;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_COUNT,
-                                        (SQLPOINTER)count, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -122,14 +115,13 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_COUNT_Negative) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT_AndUnbindRecords) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);
   handle.BindNewDescriptorRecord(3, descriptor_record);
   SQLSMALLINT count = 0;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_COUNT,
-                                        (SQLPOINTER)count, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(count, handle.GetHeaderRecord().count);
@@ -139,11 +131,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT_AndUnbindRecords) {
 
 TEST(SQLSetDescFieldInternal, Fails_RecNumberNegative) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT rec_number = -5;
 
   auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_CONCISE_TYPE, (SQLPOINTER)3, 0);
+      &handle, rec_number, SQL_DESC_CONCISE_TYPE, (SQLPOINTER)3, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -152,11 +143,10 @@ TEST(SQLSetDescFieldInternal, Fails_RecNumberNegative) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, 4);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 4);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -166,11 +156,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Truncated) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, 2);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 2);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("te", handle.GetDescriptorRecord(1).name);
@@ -179,11 +168,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Truncated) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_ZeroLength) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -193,10 +181,8 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_ZeroLength) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_NullPointer) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
 
-  auto status =
-      SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME, nullptr, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, nullptr, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -206,12 +192,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_NullPointer) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_TooBigLength) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status =
-      SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
-                              (SQLPOINTER)buf, SQL_MAX_IDENTIFIER_LEN + 10);
+  auto status = SQLSetDescFieldInternal(
+      &handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, SQL_MAX_IDENTIFIER_LEN + 10);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_22001(),
@@ -220,11 +204,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_TooBigLength) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_NegativeLength) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, -5);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, -5);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
@@ -233,10 +216,9 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_NegativeLength) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Length_SQL_NTS) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
                                         (SQLPOINTER)buf, SQL_NTS);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -247,10 +229,9 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Length_SQL_NTS) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_EmptyBuffer) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLCHAR buf[256] = "";
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_NAME,
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
                                         (SQLPOINTER)buf, SQL_NTS);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -261,11 +242,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_EmptyBuffer) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NUM_PREC_RADIX) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int radix = 0;
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 1, SQL_DESC_NUM_PREC_RADIX, (SQLPOINTER)radix, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NUM_PREC_RADIX,
+                                        (SQLPOINTER)radix, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -274,11 +254,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NUM_PREC_RADIX) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NUM_PREC_RADIX_WrongValue) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int radix = 1;
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 1, SQL_DESC_NUM_PREC_RADIX, (SQLPOINTER)radix, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NUM_PREC_RADIX,
+                                        (SQLPOINTER)radix, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
@@ -287,11 +266,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NUM_PREC_RADIX_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_PARAMETER_TYPE) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int type = SQL_PARAM_OUTPUT;
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 1, SQL_DESC_PARAMETER_TYPE, (SQLPOINTER)type, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE,
+                                        (SQLPOINTER)type, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -300,11 +278,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_PARAMETER_TYPE) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_PARAMETER_TYPE_WrongValue) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int type = 222;
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 1, SQL_DESC_PARAMETER_TYPE, (SQLPOINTER)type, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE,
+                                        (SQLPOINTER)type, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY105(),
@@ -313,11 +290,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_PARAMETER_TYPE_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_UNNAMED) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_UNNAMED;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_UNNAMED,
-                                        (SQLPOINTER)val, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -326,11 +302,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_UNNAMED) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_UNNAMED_WrongValue) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_NAMED;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_UNNAMED,
-                                        (SQLPOINTER)val, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
@@ -339,11 +314,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_UNNAMED_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_TYPE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_INTEGER;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
-                                        (SQLPOINTER)val, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -352,11 +326,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_TYPE) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_TYPE_WrongValue) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_FLOAT;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
-                                        (SQLPOINTER)val, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY021(),
@@ -365,11 +338,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_TYPE_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_CONCISE_TYPE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_INTEGER;
 
-  auto status = SQLSetDescFieldInternal(
-      &wrapped_handle, 1, SQL_DESC_CONCISE_TYPE, (SQLPOINTER)val, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_CONCISE_TYPE,
+                                        (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -378,11 +350,10 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_CONCISE_TYPE) {
 
 TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_CONCISE_TYPE_WrongValue) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = SQL_FLOAT;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_TYPE,
-                                        (SQLPOINTER)val, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY021(),
@@ -391,11 +362,10 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_CONCISE_TYPE_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   int val = 0;
 
-  auto status = SQLSetDescFieldInternal(&wrapped_handle, 1, SQL_DESC_DATA_PTR,
-                                        &val, SQL_IS_POINTER);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_DATA_PTR, &val,
+                                        SQL_IS_POINTER);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -403,12 +373,11 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
 }
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
-  odbc_bq_driver_internal::EnvironmentHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kEnvHandle, &handle);
+  EnvironmentHandle handle;
   SQLPOINTER buff;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_ARRAY_SIZE,
-                                        buff, 0, nullptr);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE, buff,
+                                        0, nullptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
@@ -416,11 +385,10 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
 TEST(SQLGetDescFieldInternal,
      Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLPOINTER buff;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, 0, SQL_DESC_ROWS_PROCESSED_PTR, buff, 0, nullptr);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
+                                        buff, 0, nullptr);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
@@ -429,11 +397,10 @@ TEST(SQLGetDescFieldInternal,
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLPOINTER buff;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
-                                        buff, 0, nullptr);
+  auto status =
+      SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
@@ -442,11 +409,10 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLPOINTER buff;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
-                                        buff, 0, nullptr);
+  auto status =
+      SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
@@ -455,11 +421,10 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
   DescriptorHandle handle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_ALLOC_TYPE,
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ALLOC_TYPE,
                                         &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -469,12 +434,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_SIZE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   handle.GetHeaderRecord().array_size = 15;
   SQLULEN out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_ARRAY_SIZE,
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
                                         &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -484,14 +448,13 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_SIZE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_STATUS_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLUSMALLINT array_status_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().array_status_ptr = array_status_ptr;
   SQLUSMALLINT* out_buf;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, 0, SQL_DESC_ARRAY_STATUS_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_STATUS_PTR,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(array_status_ptr, out_buf);
@@ -503,14 +466,13 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_STATUS_PTR) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLLEN bind_offset_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().bind_offset_ptr = bind_offset_ptr;
   SQLLEN* out_buf;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, 0, SQL_DESC_BIND_OFFSET_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_OFFSET_PTR,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(bind_offset_ptr, out_buf);
@@ -522,12 +484,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_TYPE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   handle.GetHeaderRecord().bind_type = 42;
   SQLINTEGER out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_BIND_TYPE,
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE,
                                         &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
@@ -537,13 +498,12 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_TYPE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_COUNT) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   handle.GetHeaderRecord().count = 42;
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, 0, SQL_DESC_COUNT,
-                                        &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, &out_buf, 0,
+                                        &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -552,14 +512,13 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_COUNT) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLULEN rows_processed_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().rows_processed_ptr = rows_processed_ptr;
   SQLULEN* out_buf;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, 0, SQL_DESC_ROWS_PROCESSED_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(rows_processed_ptr, out_buf);
@@ -571,12 +530,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
 
 TEST(SQLGetDescFieldInternal, Fails_RecNumberNegative) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLINTEGER* out_buf;
   SQLSMALLINT rec_number = -5;
 
   auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_CONCISE_TYPE, &out_buf, 0, nullptr);
+      &handle, rec_number, SQL_DESC_CONCISE_TYPE, &out_buf, 0, nullptr);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -585,12 +543,11 @@ TEST(SQLGetDescFieldInternal, Fails_RecNumberNegative) {
 
 TEST(SQLGetDescFieldInternal, Succeed_NoData_BigRecNumber) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLINTEGER* out_buf;
   SQLSMALLINT rec_number = 5;
 
   auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_CONCISE_TYPE, &out_buf, 0, nullptr);
+      &handle, rec_number, SQL_DESC_CONCISE_TYPE, &out_buf, 0, nullptr);
 
   EXPECT_EQ(SQL_NO_DATA, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -599,15 +556,14 @@ TEST(SQLGetDescFieldInternal, Succeed_NoData_BigRecNumber) {
 
 TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
   handle.BindNewDescriptorRecord(3, descriptor_record);
   SQLULEN out_buf = 0;
   SQLSMALLINT rec_number = 1;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_LENGTH, &out_buf, 0, nullptr);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_LENGTH,
+                                        &out_buf, 0, nullptr);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   DescriptorRecord default_descriptor_record;
@@ -616,7 +572,6 @@ TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.auto_unique_value = 42;
   SQLSMALLINT rec_number = 1;
@@ -624,9 +579,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
   SQLINTEGER out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_AUTO_UNIQUE_VALUE, &out_buf, 0,
-                                        &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_AUTO_UNIQUE_VALUE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -635,7 +589,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.base_column_name = "column";
   SQLSMALLINT rec_number = 1;
@@ -643,9 +596,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
   SQLCHAR* out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_BASE_COLUMN_NAME, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_BASE_COLUMN_NAME, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("column", std::string(reinterpret_cast<char*>(out_buf)));
@@ -654,7 +606,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.base_table_name = "table";
   SQLSMALLINT rec_number = 1;
@@ -662,9 +613,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
   SQLCHAR* out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_BASE_TABLE_NAME, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_BASE_TABLE_NAME, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("table", std::string(reinterpret_cast<char*>(out_buf)));
@@ -673,7 +623,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.case_sensitive = 42;
   SQLSMALLINT rec_number = 1;
@@ -681,9 +630,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
   SQLINTEGER out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_CASE_SENSITIVE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_CASE_SENSITIVE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -692,7 +640,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.catalog_name = "catalog";
   SQLSMALLINT rec_number = 1;
@@ -700,9 +647,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
   SQLCHAR* out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_CATALOG_NAME, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_CATALOG_NAME, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("catalog", std::string(reinterpret_cast<char*>(out_buf)));
@@ -711,7 +657,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CONCISE_TYPE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.concise_type = 42;
   SQLSMALLINT rec_number = 1;
@@ -719,9 +664,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CONCISE_TYPE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_CONCISE_TYPE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_CONCISE_TYPE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -730,7 +674,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CONCISE_TYPE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLINTEGER val = 5;
   DescriptorRecord descriptor_record;
   descriptor_record.data_ptr = &val;
@@ -739,8 +682,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
   SQLPOINTER out_buf;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_DATA_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_DATA_PTR,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(&val, out_buf);
@@ -750,7 +693,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = 42;
   SQLSMALLINT rec_number = 1;
@@ -758,7 +700,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
+  auto status = SQLGetDescFieldInternal(&handle, rec_number,
                                         SQL_DESC_DATETIME_INTERVAL_CODE,
                                         &out_buf, 0, &str_len);
 
@@ -769,7 +711,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_precision = 42;
   SQLSMALLINT rec_number = 1;
@@ -777,7 +718,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
   SQLINTEGER out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
+  auto status = SQLGetDescFieldInternal(&handle, rec_number,
                                         SQL_DESC_DATETIME_INTERVAL_PRECISION,
                                         &out_buf, 0, &str_len);
 
@@ -788,7 +729,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.display_size = 42;
   SQLSMALLINT rec_number = 1;
@@ -796,9 +736,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
   SQLLEN out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_DISPLAY_SIZE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_DISPLAY_SIZE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -807,7 +746,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.fixed_prec_scale = 42;
   SQLSMALLINT rec_number = 1;
@@ -815,9 +753,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_FIXED_PREC_SCALE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_FIXED_PREC_SCALE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -826,7 +763,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLLEN val = 5;
   DescriptorRecord descriptor_record;
   descriptor_record.indicator_ptr = &val;
@@ -835,9 +771,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
   SQLLEN* out_buf = nullptr;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_INDICATOR_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_INDICATOR_PTR, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(5, *out_buf);
@@ -846,16 +781,14 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   SQLSMALLINT rec_number = 1;
   handle.BindNewDescriptorRecord(rec_number, descriptor_record);
   SQLLEN* out_buf = nullptr;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_INDICATOR_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_INDICATOR_PTR, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, out_buf);
@@ -864,7 +797,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.label = "label";
   SQLSMALLINT rec_number = 1;
@@ -872,8 +804,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
   SQLCHAR out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_LABEL, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_LABEL,
+                                        out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("label", std::string(reinterpret_cast<char*>(out_buf)));
@@ -882,7 +814,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
   SQLSMALLINT rec_number = 1;
@@ -890,8 +821,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
   SQLULEN out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_LENGTH, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_LENGTH,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -900,7 +831,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.literal_prefix = "prefix";
   SQLSMALLINT rec_number = 1;
@@ -908,9 +838,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
   SQLCHAR out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_LITERAL_PREFIX, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_LITERAL_PREFIX, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("prefix", std::string(reinterpret_cast<char*>(out_buf)));
@@ -919,7 +848,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.literal_suffix = "sufix";
   SQLSMALLINT rec_number = 1;
@@ -927,9 +855,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
   SQLCHAR out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_LITERAL_SUFFIX, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_LITERAL_SUFFIX, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("sufix", std::string(reinterpret_cast<char*>(out_buf)));
@@ -938,7 +865,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.local_type_name = "local name";
   SQLSMALLINT rec_number = 1;
@@ -946,9 +872,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
   SQLCHAR out_buf[11];
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_LOCAL_TYPE_NAME, out_buf, 11, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_LOCAL_TYPE_NAME, out_buf, 11, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("local name", std::string(reinterpret_cast<char*>(out_buf)));
@@ -957,7 +882,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "name";
   SQLSMALLINT rec_number = 1;
@@ -965,8 +889,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
   SQLCHAR out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_NAME, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_NAME,
+                                        out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("name", std::string(reinterpret_cast<char*>(out_buf)));
@@ -975,7 +899,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.nullable = 42;
   SQLSMALLINT rec_number = 1;
@@ -983,8 +906,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_NULLABLE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_NULLABLE,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -993,7 +916,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.num_prec_radix = 42;
   SQLSMALLINT rec_number = 1;
@@ -1001,9 +923,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
   SQLINTEGER out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_NUM_PREC_RADIX, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_NUM_PREC_RADIX, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1012,7 +933,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.octet_length = 42;
   SQLSMALLINT rec_number = 1;
@@ -1020,9 +940,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH) {
   SQLLEN out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_OCTET_LENGTH, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_OCTET_LENGTH, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1031,7 +950,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLLEN val = 5;
   DescriptorRecord descriptor_record;
   descriptor_record.octet_length_ptr = &val;
@@ -1040,9 +958,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
   SQLLEN* out_buf = nullptr;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_OCTET_LENGTH_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_OCTET_LENGTH_PTR, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(5, *out_buf);
@@ -1051,16 +968,14 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   SQLSMALLINT rec_number = 1;
   handle.BindNewDescriptorRecord(rec_number, descriptor_record);
   SQLLEN* out_buf = nullptr;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_OCTET_LENGTH_PTR, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_OCTET_LENGTH_PTR, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(nullptr, out_buf);
@@ -1069,7 +984,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.parameter_type = 42;
   SQLSMALLINT rec_number = 1;
@@ -1077,9 +991,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status =
-      SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                              SQL_DESC_PARAMETER_TYPE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(
+      &handle, rec_number, SQL_DESC_PARAMETER_TYPE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1088,7 +1001,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PRECISION) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.precision = 42;
   SQLSMALLINT rec_number = 1;
@@ -1096,8 +1008,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PRECISION) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_PRECISION, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_PRECISION,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1106,7 +1018,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PRECISION) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.scale = 42;
   SQLSMALLINT rec_number = 1;
@@ -1114,8 +1025,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_SCALE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_SCALE,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1124,7 +1035,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.schema_name = "schema name";
   SQLSMALLINT rec_number = 1;
@@ -1133,7 +1043,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
   SQLINTEGER str_len = 0;
 
   auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_SCHEMA_NAME, out_buf, 12, &str_len);
+      &handle, rec_number, SQL_DESC_SCHEMA_NAME, out_buf, 12, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("schema name", std::string(reinterpret_cast<char*>(out_buf)));
@@ -1142,7 +1052,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.searchable = 42;
   SQLSMALLINT rec_number = 1;
@@ -1151,7 +1060,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
   SQLINTEGER str_len = 0;
 
   auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_SEARCHABLE, &out_buf, 0, &str_len);
+      &handle, rec_number, SQL_DESC_SEARCHABLE, &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1160,7 +1069,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.table_name = "table name";
   SQLSMALLINT rec_number = 1;
@@ -1169,7 +1077,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
   SQLINTEGER str_len = 0;
 
   auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_TABLE_NAME, out_buf, 11, &str_len);
+      &handle, rec_number, SQL_DESC_TABLE_NAME, out_buf, 11, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("table name", std::string(reinterpret_cast<char*>(out_buf)));
@@ -1178,7 +1086,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.type = 42;
   SQLSMALLINT rec_number = 1;
@@ -1186,8 +1093,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(&wrapped_handle, rec_number,
-                                        SQL_DESC_TYPE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_TYPE,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1196,7 +1103,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.type_name = "type name";
   SQLSMALLINT rec_number = 1;
@@ -1204,8 +1110,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
   SQLCHAR out_buf[10];
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_TYPE_NAME, out_buf, 10, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_TYPE_NAME,
+                                        out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("type name", std::string(reinterpret_cast<char*>(out_buf)));
@@ -1214,7 +1120,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.unnamed = 42;
   SQLSMALLINT rec_number = 1;
@@ -1222,8 +1127,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_UNNAMED, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_UNNAMED,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1232,7 +1137,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.sql_desc_unsigned = 42;
   SQLSMALLINT rec_number = 1;
@@ -1240,8 +1144,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_UNSIGNED, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_UNSIGNED,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1250,7 +1154,6 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.updatable = 42;
   SQLSMALLINT rec_number = 1;
@@ -1258,8 +1161,8 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
 
-  auto status = SQLGetDescFieldInternal(
-      &wrapped_handle, rec_number, SQL_DESC_UPDATABLE, &out_buf, 0, &str_len);
+  auto status = SQLGetDescFieldInternal(&handle, rec_number, SQL_DESC_UPDATABLE,
+                                        &out_buf, 0, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(42, out_buf);
@@ -1267,29 +1170,26 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
 }
 
 TEST(SQLSetDescRecInternal, Fails_InvalidHandle) {
-  DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &handle);
+  EnvironmentHandle handle;
   int data = 10;
   SQLLEN string_length_ptr = 0;
   SQLLEN indicator[3];
 
-  auto status = SQLSetDescRecInternal(&wrapped_handle, 0, 0, 0, 0, 0, 0, &data,
+  auto status = SQLSetDescRecInternal(&handle, 0, 0, 0, 0, 0, 0, &data,
                                       &string_length_ptr, indicator);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
 TEST(SQLSetDescRecInternal, Fails_RecNumberNegative) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT rec_number = -5;
   int data = 10;
   SQLPOINTER data_ptr = &data;
   SQLLEN string_length_ptr = 0;
   SQLLEN indicator[3];
 
-  auto status =
-      SQLSetDescRecInternal(&wrapped_handle, rec_number, 0, 0, 0, 0, 0,
-                            data_ptr, &string_length_ptr, indicator);
+  auto status = SQLSetDescRecInternal(&handle, rec_number, 0, 0, 0, 0, 0,
+                                      data_ptr, &string_length_ptr, indicator);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -1298,7 +1198,6 @@ TEST(SQLSetDescRecInternal, Fails_RecNumberNegative) {
 
 TEST(SQLSetDescRecInternal, Success) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT type = SQL_DATETIME;
   SQLSMALLINT sub_type = SQL_CODE_DATE;
   SQLLEN length = 3;
@@ -1309,8 +1208,8 @@ TEST(SQLSetDescRecInternal, Success) {
   SQLLEN indicator[3];
 
   auto status =
-      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
-                            precision, scale, &data, &string_length, indicator);
+      SQLSetDescRecInternal(&handle, 1, type, sub_type, length, precision,
+                            scale, &data, &string_length, indicator);
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorRecord desc = handle.GetDescriptorRecord(1);
@@ -1326,7 +1225,6 @@ TEST(SQLSetDescRecInternal, Success) {
 
 TEST(SQLSetDescRecInternal, DoNothing_ConcistencyCheckFails) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);
   SQLSMALLINT type = 555;
@@ -1339,8 +1237,8 @@ TEST(SQLSetDescRecInternal, DoNothing_ConcistencyCheckFails) {
   SQLLEN indicator[3];
 
   auto status =
-      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
-                            precision, scale, &data, &string_length, indicator);
+      SQLSetDescRecInternal(&handle, 1, type, sub_type, length, precision,
+                            scale, &data, &string_length, indicator);
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY021(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
@@ -1359,7 +1257,6 @@ TEST(SQLSetDescRecInternal, DoNothing_ConcistencyCheckFails) {
 
 TEST(SQLSetDescRecInternal, DoNotChangeExistingField) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "test";
   handle.BindNewDescriptorRecord(1, descriptor_record);
@@ -1374,8 +1271,8 @@ TEST(SQLSetDescRecInternal, DoNotChangeExistingField) {
   SQLLEN indicator[3];
 
   auto status =
-      SQLSetDescRecInternal(&wrapped_handle, 1, type, sub_type, length,
-                            precision, scale, &data, &string_length, indicator);
+      SQLSetDescRecInternal(&handle, 1, type, sub_type, length, precision,
+                            scale, &data, &string_length, indicator);
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorRecord desc = handle.GetDescriptorRecord(1);
@@ -1383,8 +1280,7 @@ TEST(SQLSetDescRecInternal, DoNotChangeExistingField) {
 }
 
 TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
-  DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kConnHandle, &handle);
+  EnvironmentHandle handle;
   SQLCHAR name[10];
   SQLSMALLINT buffer_length = 10;
   SQLSMALLINT string_length = 0;
@@ -1395,7 +1291,7 @@ TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(&wrapped_handle, 1, name, buffer_length,
+  auto status = SQLGetDescRecInternal(&handle, 1, name, buffer_length,
                                       &string_length, &type, &sub_type, &length,
                                       &precision, &scale, &nullable);
 
@@ -1404,7 +1300,6 @@ TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
 
 TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT rec_number = -5;
   SQLCHAR name[10];
   SQLSMALLINT buffer_length = 10;
@@ -1416,9 +1311,9 @@ TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(
-      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
-      &sub_type, &length, &precision, &scale, &nullable);
+  auto status = SQLGetDescRecInternal(&handle, rec_number, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -1427,7 +1322,6 @@ TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
 
 TEST(SQLGetDescRecInternal, Succeed_NoData_BigRecNumber) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   SQLSMALLINT rec_number = 5;
   SQLCHAR name[10];
   SQLSMALLINT buffer_length = 10;
@@ -1439,9 +1333,9 @@ TEST(SQLGetDescRecInternal, Succeed_NoData_BigRecNumber) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(
-      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
-      &sub_type, &length, &precision, &scale, &nullable);
+  auto status = SQLGetDescRecInternal(&handle, rec_number, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
 
   EXPECT_EQ(SQL_NO_DATA, status);
   EXPECT_EQ(SQLStates::k_07009(),
@@ -1450,7 +1344,6 @@ TEST(SQLGetDescRecInternal, Succeed_NoData_BigRecNumber) {
 
 TEST(SQLGetDescRecInternal, Success) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "test";
   descriptor_record.type = SQL_INTEGER;
@@ -1472,9 +1365,9 @@ TEST(SQLGetDescRecInternal, Success) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(
-      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
-      &sub_type, &length, &precision, &scale, &nullable);
+  auto status = SQLGetDescRecInternal(&handle, rec_number, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
 
   ASSERT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(descriptor_record.name, std::string(reinterpret_cast<char*>(name)));
@@ -1489,7 +1382,6 @@ TEST(SQLGetDescRecInternal, Success) {
 
 TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
   handle.BindNewDescriptorRecord(3, descriptor_record);
@@ -1504,7 +1396,7 @@ TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(&wrapped_handle, 1, name, buffer_length,
+  auto status = SQLGetDescRecInternal(&handle, 1, name, buffer_length,
                                       &string_length, &type, &sub_type, &length,
                                       &precision, &scale, &nullable);
 
@@ -1523,7 +1415,6 @@ TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
 
 TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
   DescriptorHandle handle;
-  HandleWrapped wrapped_handle(HandleType::kDescriptorHandle, &handle);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "test";
   descriptor_record.type = SQL_INTEGER;
@@ -1545,9 +1436,9 @@ TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
   SQLSMALLINT scale = 0;
   SQLSMALLINT nullable = 0;
 
-  auto status = SQLGetDescRecInternal(
-      &wrapped_handle, rec_number, name, buffer_length, &string_length, &type,
-      &sub_type, &length, &precision, &scale, &nullable);
+  auto status = SQLGetDescRecInternal(&handle, rec_number, name, buffer_length,
+                                      &string_length, &type, &sub_type, &length,
+                                      &precision, &scale, &nullable);
 
   ASSERT_EQ(SQL_SUCCESS_WITH_INFO, status);
   EXPECT_EQ("te", std::string(reinterpret_cast<char*>(name)));
@@ -1566,7 +1457,6 @@ TEST(SQLCopyDescInternal, CopyDescriptor) {
   src_handle.GetHeaderRecord().bind_type = 5;
   SQLLEN bind_offset = 3;
   src_handle.GetHeaderRecord().bind_offset_ptr = &bind_offset;
-  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
   DescriptorRecord descriptor_record;
   descriptor_record.octet_length = 6;
   descriptor_record.type = SQL_INTEGER;
@@ -1576,11 +1466,8 @@ TEST(SQLCopyDescInternal, CopyDescriptor) {
 
   DescriptorHandle target_handle(DescriptorType::kApplication,
                                  SQL_DESC_ALLOC_AUTO);
-  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
-                                      &target_handle);
 
-  auto status =
-      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+  auto status = SQLCopyDescInternal(&src_handle, &target_handle);
 
   ASSERT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
@@ -1600,16 +1487,11 @@ TEST(SQLCopyDescInternal, CopyDescriptor) {
 }
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
-  DescriptorHandle src_handle(DescriptorType::kApplication,
-                              SQL_DESC_ALLOC_USER);
-  HandleWrapped src_wrapped_handle(HandleType::kConnHandle, &src_handle);
+  EnvironmentHandle src_handle;
   DescriptorHandle target_handle(DescriptorType::kApplication,
                                  SQL_DESC_ALLOC_AUTO);
-  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
-                                      &target_handle);
 
-  auto status =
-      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+  auto status = SQLCopyDescInternal(&src_handle, &target_handle);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
@@ -1617,13 +1499,9 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
   DescriptorHandle src_handle(DescriptorType::kApplication,
                               SQL_DESC_ALLOC_USER);
-  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
-  DescriptorHandle target_handle(DescriptorType::kApplication,
-                                 SQL_DESC_ALLOC_AUTO);
-  HandleWrapped target_wrapped_handle(HandleType::kConnHandle, &target_handle);
+  EnvironmentHandle target_handle;
 
-  auto status =
-      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+  auto status = SQLCopyDescInternal(&src_handle, &target_handle);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
@@ -1631,13 +1509,9 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
   DescriptorHandle src_handle(DescriptorType::kApplication,
                               SQL_DESC_ALLOC_USER);
-  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
   DescriptorHandle target_handle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
-  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
-                                      &target_handle);
 
-  auto status =
-      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+  auto status = SQLCopyDescInternal(&src_handle, &target_handle);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY016(),
@@ -1647,7 +1521,6 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
 TEST(SQLCopyDescInternal, Fails_InconsistentDescriptor) {
   DescriptorHandle src_handle(DescriptorType::kApplication,
                               SQL_DESC_ALLOC_USER);
-  HandleWrapped src_wrapped_handle(HandleType::kDescriptorHandle, &src_handle);
   DescriptorRecord descriptor_record_1;
   descriptor_record_1.type = SQL_INTEGER;
   descriptor_record_1.concise_type = SQL_CHAR;
@@ -1663,11 +1536,8 @@ TEST(SQLCopyDescInternal, Fails_InconsistentDescriptor) {
 
   DescriptorHandle target_handle(DescriptorType::kApplication,
                                  SQL_DESC_ALLOC_AUTO);
-  HandleWrapped target_wrapped_handle(HandleType::kDescriptorHandle,
-                                      &target_handle);
 
-  auto status =
-      SQLCopyDescInternal(&src_wrapped_handle, &target_wrapped_handle);
+  auto status = SQLCopyDescInternal(&src_handle, &target_handle);
 
   ASSERT_EQ(SQL_ERROR, status);
   DescriptorRecord target_descriptor_record_1 =

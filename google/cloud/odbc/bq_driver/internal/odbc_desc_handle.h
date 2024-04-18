@@ -36,6 +36,8 @@ class DescriptorHandle : public Handle {
   DescriptorHandle(DescriptorHandle&&) = default;
   DescriptorHandle& operator=(DescriptorHandle&&) = default;
 
+  HandleType GetHandleType() override { return HandleType::kDescriptorHandle; }
+
   DescriptorType GetType() { return type_; }
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }

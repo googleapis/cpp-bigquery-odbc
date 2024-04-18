@@ -37,74 +37,70 @@ TEST(SQLFreeHandleInternal, InvalidType) {
 
 TEST(SQLFreeHandleInternal, ConnectionHandle_Basic) {
   auto* conn_handle = new ConnectionHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kConnHandle, conn_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle);
+
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
 TEST(SQLFreeHandleInternal, ConnectionHandle_IncorrectHandleType) {
   auto* conn_handle = new ConnectionHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kConnHandle, conn_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, conn_handle);
+
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
   delete conn_handle;
-  delete wrapped_handle;
 }
 
 TEST(SQLFreeHandleInternal, EnvironmentHandle_Basic) {
   auto* env_handle = new EnvironmentHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, env_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle);
+
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
 TEST(SQLFreeHandleInternal, EnvironmentHandle_IncorrectHandleType) {
   auto* env_handle = new EnvironmentHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, env_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, env_handle);
+
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
   delete env_handle;
-  delete wrapped_handle;
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
   auto* stmt_handle = new StatementHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kStatementHandle, stmt_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
+
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
   auto* stmt_handle = new StatementHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, stmt_handle);
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, wrapped_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, stmt_handle);
+
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
   delete stmt_handle;
-  delete wrapped_handle;
 }
 
 TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
   auto* desc_handle = new DescriptorHandle();
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kDescriptorHandle, desc_handle);
 
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, wrapped_handle);
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
 
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
 TEST(SQLFreeHandleInternal, DescriptorHandle_IncorrectHandleType) {
   auto* desc_handle = new DescriptorHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, desc_handle);
 
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, wrapped_handle);
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, desc_handle);
 
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
   delete desc_handle;
-  delete wrapped_handle;
 }
 
 }  // namespace google::cloud::odbc_bq_driver
