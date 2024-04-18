@@ -61,6 +61,7 @@ cc_library(
     name = driver_utils_test.replace("/", "_").replace(".cc", ""),
     srcs = [driver_utils_test],
     tags = ["unit-tests"],
+    shard_count = 8,
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",

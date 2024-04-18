@@ -18,6 +18,8 @@
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
+#include <thread>
+#include <chrono>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -29,7 +31,7 @@ using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
-
+using namespace std::chrono_literals;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
@@ -61,6 +63,7 @@ void CreateConnHandle(HandleType const& type, bool connected, bool setup_dsn) {
     dsn_section["Catalog"] = kDsnCatalog;
     connection_handle->SetUp(dsn_section, kDsnName);
   }
+  std::this_thread::sleep_for(2000ms);
   handle_wrapped = new HandleWrapped(type, connection_handle);
 }
 
@@ -86,6 +89,7 @@ void FreeHandles() {
   if (handle_wrapped) {
     delete handle_wrapped;
   }
+  std::this_thread::sleep_for(2000ms);
 }
 
 StatusRecord GetLastStatusRecord(ConnectionHandle& handle) {
