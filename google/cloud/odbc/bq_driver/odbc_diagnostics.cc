@@ -62,8 +62,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
   }
   switch (handleType) {
     case SQL_HANDLE_ENV: {
-      auto* handle_ptr =
-          reinterpret_cast<odbc_bq_driver_internal::EnvironmentHandle*>(handle);
+      auto* handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
       if (handle_ptr->kType != HandleType::kEnvHandle) {
         return StatusRecordOr<Diagnostics>(
             StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
@@ -72,8 +71,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
       return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_DBC: {
-      auto* handle_ptr =
-          reinterpret_cast<odbc_bq_driver_internal::ConnectionHandle*>(handle);
+      auto* handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
       if (handle_ptr->kType != HandleType::kConnHandle) {
         return StatusRecordOr<Diagnostics>(
             StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
@@ -82,8 +80,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
       return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_STMT: {
-      auto* handle_ptr =
-          reinterpret_cast<odbc_bq_driver_internal::StatementHandle*>(handle);
+      auto* handle_ptr = reinterpret_cast<StatementHandle*>(handle);
       if (handle_ptr->kType != HandleType::kStmtHandle) {
         return StatusRecordOr<Diagnostics>(
             StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
@@ -92,8 +89,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
       return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_DESC: {
-      auto* handle_ptr =
-          reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(handle);
+      auto* handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
       if (handle_ptr->kType != HandleType::kDescHandle) {
         return StatusRecordOr<Diagnostics>(
             StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},

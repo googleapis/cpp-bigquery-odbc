@@ -33,6 +33,8 @@ static StatusRecord const kNullPointerStatusRecord =
 static StatusRecord const kInvalidTypeStatusRecord =
     StatusRecord{SQLStates::k_HY000(), "Invalid handle type"};
 
+#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+                             apply_to = function)
 StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
     SQLHDBC connection_handle, bool check_if_connected) {
   if (connection_handle == nullptr) {
@@ -40,8 +42,7 @@ StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
                                              SQL_INVALID_HANDLE);
   }
   auto* conn_handle_ptr =
-      reinterpret_cast<odbc_bq_driver_internal::ConnectionHandle*>(
-          connection_handle);
+      reinterpret_cast<ConnectionHandle*>(connection_handle);
   if (conn_handle_ptr->kType != HandleType::kConnHandle) {
     return StatusRecordOr<ConnectionHandle*>(kInvalidTypeStatusRecord,
                                              SQL_INVALID_HANDLE);
@@ -58,7 +59,10 @@ StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
 
   return conn_handle_ptr;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+                             apply_to = function)
 StatusRecordOr<EnvironmentHandle*> ValidateEnvironmentHandle(
     SQLHENV environment_handle) {
   if (environment_handle == nullptr) {
@@ -66,8 +70,7 @@ StatusRecordOr<EnvironmentHandle*> ValidateEnvironmentHandle(
                                               SQL_INVALID_HANDLE);
   }
   auto* env_handle_ptr =
-      reinterpret_cast<odbc_bq_driver_internal::EnvironmentHandle*>(
-          environment_handle);
+      reinterpret_cast<EnvironmentHandle*>(environment_handle);
   if (env_handle_ptr->kType != HandleType::kEnvHandle) {
     return StatusRecordOr<EnvironmentHandle*>(kInvalidTypeStatusRecord,
                                               SQL_INVALID_HANDLE);
@@ -76,14 +79,16 @@ StatusRecordOr<EnvironmentHandle*> ValidateEnvironmentHandle(
 
   return env_handle_ptr;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+                             apply_to = function)
 StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
   if (stmt_handle == nullptr) {
     return StatusRecordOr<StatementHandle*>(kNullPointerStatusRecord,
                                             SQL_INVALID_HANDLE);
   }
-  auto* stmt_handle_ptr =
-      reinterpret_cast<odbc_bq_driver_internal::StatementHandle*>(stmt_handle);
+  auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(stmt_handle);
   if (stmt_handle_ptr->kType != HandleType::kStmtHandle) {
     return StatusRecordOr<StatementHandle*>(kInvalidTypeStatusRecord,
                                             SQL_INVALID_HANDLE);
@@ -92,15 +97,17 @@ StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
 
   return stmt_handle_ptr;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+                             apply_to = function)
 StatusRecordOr<DescriptorHandle*> ValidateDescriptorHandle(
     SQLHDESC desc_handle) {
   if (desc_handle == nullptr) {
     return StatusRecordOr<DescriptorHandle*>(kNullPointerStatusRecord,
                                              SQL_INVALID_HANDLE);
   }
-  auto* desc_handle_ptr =
-      reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(desc_handle);
+  auto* desc_handle_ptr = reinterpret_cast<DescriptorHandle*>(desc_handle);
   if (desc_handle_ptr->kType != HandleType::kDescHandle) {
     return StatusRecordOr<DescriptorHandle*>(kInvalidTypeStatusRecord,
                                              SQL_INVALID_HANDLE);
@@ -109,5 +116,6 @@ StatusRecordOr<DescriptorHandle*> ValidateDescriptorHandle(
 
   return desc_handle_ptr;
 }
+#pragma clang attribute pop
 
 }  // namespace google::cloud::odbc_bq_driver
