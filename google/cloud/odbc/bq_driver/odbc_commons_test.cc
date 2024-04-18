@@ -78,12 +78,12 @@ TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
-  auto* stmt_handle = new StatementHandle();
+  auto* env_handle = new EnvironmentHandle();
 
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, stmt_handle);
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, env_handle);
 
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
-  delete stmt_handle;
+  delete env_handle;
 }
 
 TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
@@ -95,12 +95,12 @@ TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
 }
 
 TEST(SQLFreeHandleInternal, DescriptorHandle_IncorrectHandleType) {
-  auto* desc_handle = new DescriptorHandle();
+  auto* env_handle = new EnvironmentHandle();
 
-  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, desc_handle);
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, env_handle);
 
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
-  delete desc_handle;
+  delete env_handle;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

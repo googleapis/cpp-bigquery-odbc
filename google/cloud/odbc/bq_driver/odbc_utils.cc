@@ -65,7 +65,7 @@ StatusRecordOr<EnvironmentHandle*> ValidateEnvironmentHandle(
 
 StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
   auto stmt_handle_ptr_status =
-      CastToHandle<StatementHandle>(HandleType::kStatementHandle, stmt_handle);
+      CastToHandle<StatementHandle>(HandleType::kStmtHandle, stmt_handle);
   if (!stmt_handle_ptr_status) {
     return StatusRecordOr<StatementHandle*>(
         stmt_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);
@@ -77,8 +77,8 @@ StatusRecordOr<StatementHandle*> ValidateStatementHandle(SQLHSTMT stmt_handle) {
 
 StatusRecordOr<DescriptorHandle*> ValidateDescriptorHandle(
     SQLHDESC desc_handle) {
-  auto desc_handle_ptr_status = CastToHandle<DescriptorHandle>(
-      HandleType::kDescriptorHandle, desc_handle);
+  auto desc_handle_ptr_status =
+      CastToHandle<DescriptorHandle>(HandleType::kDescHandle, desc_handle);
   if (!desc_handle_ptr_status) {
     return StatusRecordOr<DescriptorHandle*>(
         desc_handle_ptr_status.GetStatusRecord(), SQL_INVALID_HANDLE);

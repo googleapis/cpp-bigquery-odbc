@@ -76,7 +76,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
     }
     case SQL_HANDLE_STMT: {
       StatusRecordOr<StatementHandle*> handle_ptr_status =
-          CastToHandle<StatementHandle>(HandleType::kStatementHandle, handle);
+          CastToHandle<StatementHandle>(HandleType::kStmtHandle, handle);
       if (!handle_ptr_status) {
         return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
                                            SQL_INVALID_HANDLE);
@@ -85,7 +85,7 @@ StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
     }
     case SQL_HANDLE_DESC: {
       StatusRecordOr<DescriptorHandle*> handle_ptr_status =
-          CastToHandle<DescriptorHandle>(HandleType::kDescriptorHandle, handle);
+          CastToHandle<DescriptorHandle>(HandleType::kDescHandle, handle);
       if (!handle_ptr_status) {
         return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
                                            SQL_INVALID_HANDLE);

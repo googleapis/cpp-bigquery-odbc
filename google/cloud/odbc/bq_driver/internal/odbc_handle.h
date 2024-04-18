@@ -19,13 +19,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-enum class HandleType {
-  kUnspecified,
-  kConnHandle,
-  kEnvHandle,
-  kStatementHandle,
-  kDescriptorHandle
-};
+enum class HandleType { kConnHandle, kEnvHandle, kStmtHandle, kDescHandle };
 
 class Handle {
  public:
@@ -37,7 +31,7 @@ class Handle {
   Handle(Handle&&) = default;
   Handle& operator=(Handle&&) = default;
 
-  virtual HandleType GetHandleType() { return HandleType::kUnspecified; }
+  virtual HandleType GetHandleType() = 0;
 
   Diagnostics& GetDiagnostics() { return diagnostics_; }
 

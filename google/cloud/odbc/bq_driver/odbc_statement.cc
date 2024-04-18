@@ -55,7 +55,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
     return status_record.CalculateReturnCode();
   }
   StatusRecordOr<DescriptorHandle*> desc_handle =
-      CastToHandle<DescriptorHandle>(HandleType::kDescriptorHandle, value);
+      CastToHandle<DescriptorHandle>(HandleType::kDescHandle, value);
   if (!desc_handle) {
     StatusRecord status_record{
         SQLStates::k_HY024(),

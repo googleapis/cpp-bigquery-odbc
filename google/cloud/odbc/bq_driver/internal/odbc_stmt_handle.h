@@ -39,7 +39,7 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
-  HandleType GetHandleType() override { return HandleType::kStatementHandle; }
+  HandleType GetHandleType() override { return HandleType::kStmtHandle; }
 
   SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
                        SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
