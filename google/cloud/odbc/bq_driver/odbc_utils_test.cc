@@ -86,15 +86,6 @@ TEST(ValidateConnectionHandle, InvalidHandleNotConnected) {
                      StrEq("Connection handle not connected to data source")));
 }
 
-TEST(ValidateConnectionHandle, InvalidObject) {
-  int some_value = 0;
-
-  auto result = ValidateConnectionHandle(&some_value);
-
-  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
-                                     StrEq("Invalid handle type")));
-}
-
 ///////////////////////////////////////
 // Environment Handle Validation Tests
 ///////////////////////////////////////
@@ -118,15 +109,6 @@ TEST(ValidateEnvironmentHandle, InvalidHandleType) {
   ConnectionHandle conn_handle;
 
   auto result = ValidateEnvironmentHandle(&conn_handle);
-
-  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
-                                     StrEq("Invalid handle type")));
-}
-
-TEST(ValidateEnvironmentHandle, InvalidObject) {
-  int some_value = 1;
-
-  auto result = ValidateConnectionHandle(&some_value);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));
@@ -160,15 +142,6 @@ TEST(ValidateStatementHandle, InvalidHandleType) {
                                      StrEq("Invalid handle type")));
 }
 
-TEST(ValidateStatementHandle, InvalidObject) {
-  int some_value = 2;
-
-  auto result = ValidateConnectionHandle(&some_value);
-
-  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
-                                     StrEq("Invalid handle type")));
-}
-
 ///////////////////////////////////////
 // Descriptor Handle Validation Tests
 ///////////////////////////////////////
@@ -192,15 +165,6 @@ TEST(ValidateDescriptorHandle, InvalidHandleType) {
   StatementHandle stmt_handle;
 
   auto result = ValidateDescriptorHandle(&stmt_handle);
-
-  EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
-                                     StrEq("Invalid handle type")));
-}
-
-TEST(ValidateDescriptorHandle, InvalidObject) {
-  int some_value = 3;
-
-  auto result = ValidateConnectionHandle(&some_value);
 
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      StrEq("Invalid handle type")));

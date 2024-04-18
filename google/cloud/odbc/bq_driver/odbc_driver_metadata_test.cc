@@ -262,8 +262,8 @@ TEST(SQLGetFunctionsInternal, Odbc2InvalidConnectionHandleType) {
 
 TEST(SQLGetFunctionsInternal, Odbc3InvalidConnectionHandleType) {
   EnvironmentHandle handle;
-  SQLRETURN rc = SQLGetFunctionsInternal(&handle,
-                                         SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
+  SQLRETURN rc =
+      SQLGetFunctionsInternal(&handle, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr);
   EXPECT_EQ(SQL_INVALID_HANDLE, rc);
 }
 
