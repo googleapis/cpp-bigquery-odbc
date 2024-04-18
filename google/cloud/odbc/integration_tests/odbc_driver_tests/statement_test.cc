@@ -133,8 +133,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////
@@ -148,8 +146,6 @@ TEST(StatementTest, SQLExecute) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////
@@ -179,8 +175,6 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
 
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////

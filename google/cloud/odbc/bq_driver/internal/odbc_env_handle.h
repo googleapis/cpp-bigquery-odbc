@@ -118,7 +118,7 @@ class EnvAttrOutputNTS {
 class EnvironmentHandle : public Handle {
  public:
   explicit EnvironmentHandle();
-  ~EnvironmentHandle() = default;
+  ~EnvironmentHandle() override = default;
 
   EnvironmentHandle(EnvironmentHandle const&) = default;
   EnvironmentHandle& operator=(EnvironmentHandle const&) = default;

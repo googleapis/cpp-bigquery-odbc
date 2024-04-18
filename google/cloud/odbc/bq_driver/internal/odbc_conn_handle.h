@@ -52,7 +52,7 @@ struct Dsn {
 class ConnectionHandle : public Handle {
  public:
   explicit ConnectionHandle() = default;
-  ~ConnectionHandle() = default;
+  ~ConnectionHandle() override = default;
 
   ConnectionHandle(ConnectionHandle const&) = default;
   ConnectionHandle& operator=(ConnectionHandle const&) = default;

@@ -29,7 +29,7 @@ class DescriptorHandle : public Handle {
                             SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO)
       : type_(type), header_record_(alloc_type){};
 
-  ~DescriptorHandle() = default;
+  ~DescriptorHandle() override = default;
 
   DescriptorHandle(DescriptorHandle const&) = default;
   DescriptorHandle& operator=(DescriptorHandle const&) = default;

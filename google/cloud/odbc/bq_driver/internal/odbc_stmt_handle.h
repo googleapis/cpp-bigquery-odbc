@@ -32,7 +32,7 @@ class StatementHandle : public Handle {
   explicit StatementHandle(Descriptors descriptors)
       : descriptors_(std::move(descriptors)), attributes_(kDefaultAttributes){};
 
-  ~StatementHandle() = default;
+  ~StatementHandle() override = default;
 
   StatementHandle(StatementHandle const&) = default;
   StatementHandle& operator=(StatementHandle const&) = default;

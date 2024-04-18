@@ -25,7 +25,8 @@ using ms = std::chrono::milliseconds;
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName + ".ODBC_INSERT_DIRECT_TEST";
+  auto const table_name = kDatasetName + ".ODBC_INSERT_DIRECT_TEST_ANSI_" +
+                          (use_ansi ? "true" : "false");
   Table table(table_name);
 
   std::string const string_field = "Test String 1";
@@ -48,7 +49,8 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName + ".ODBC_INSERT_PARAMS_TEST";
+  auto const table_name = kDatasetName + ".ODBC_INSERT_PARAMS_TEST_ANSI_" +
+                          (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
@@ -94,8 +96,9 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                                            bool use_ansi) {
   SQLRETURN status;
-  auto const table_name =
-      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1";
+  auto const table_name = kDatasetName +
+                          ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
+                          (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
@@ -149,8 +152,9 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
 SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
                                               bool use_ansi) {
   SQLRETURN status;
-  auto const table_name =
-      kDatasetName + ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2";
+  auto const table_name = kDatasetName +
+                          ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
+                          (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
