@@ -53,6 +53,8 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
   return env_handle->SetAttribute(attribute, value, &val_str_len);
 }
 
+// TODO(b/335697314): Send the value_buffer_len parameter and
+// to the internal GetAttribute method so it can be validated.
 SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER /*value_buffer_len*/,
