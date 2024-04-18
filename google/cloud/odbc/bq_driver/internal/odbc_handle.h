@@ -31,12 +31,7 @@ class Handle {
   Handle(Handle&&) = default;
   Handle& operator=(Handle&&) = default;
 
-  virtual HandleType GetHandleType() = 0;
-
   Diagnostics& GetDiagnostics() { return diagnostics_; }
-
-  // It should be used only for Validate...Handle functions
-  bool is_handle = true;
 
  private:
   Diagnostics diagnostics_;

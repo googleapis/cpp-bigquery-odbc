@@ -49,15 +49,13 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_APP_ROW_DESC_Invalid) {
+TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_APP_ROW_DESC) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
       SQLSetStmtAttrInternal(&handle, SQL_ATTR_APP_ROW_DESC, nullptr, 0);
 
-  EXPECT_EQ(SQL_ERROR, status);
-  EXPECT_EQ(SQLStates::k_HY024(),
-            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ(SQL_SUCCESS, status);
 }
 
 TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {

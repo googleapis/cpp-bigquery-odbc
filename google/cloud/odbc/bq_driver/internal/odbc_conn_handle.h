@@ -59,8 +59,6 @@ class ConnectionHandle : public Handle {
   ConnectionHandle(ConnectionHandle&&) = default;
   ConnectionHandle& operator=(ConnectionHandle&&) = default;
 
-  HandleType GetHandleType() override { return HandleType::kConnHandle; }
-
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
@@ -77,6 +75,8 @@ class ConnectionHandle : public Handle {
                                            SQLPOINTER value, SQLINTEGER length);
 
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
+
+  HandleType const kType = HandleType::kConnHandle;
 
  protected:
   bool is_connected_ = false;

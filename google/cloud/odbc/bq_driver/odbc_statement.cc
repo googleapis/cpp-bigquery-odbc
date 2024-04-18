@@ -54,9 +54,10 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
-  StatusRecordOr<DescriptorHandle*> desc_handle =
-      CastToHandle<DescriptorHandle>(HandleType::kDescHandle, value);
-  if (!desc_handle) {
+  auto* desc_handle =
+      reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(value);
+  // nullptr is a valid value here
+  if (desc_handle && desc_handle->kType != HandleType::kDescHandle) {
     StatusRecord status_record{
         SQLStates::k_HY024(),
         "Invalid attribute value (invalid descriptor handle)"};
@@ -67,10 +68,10 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
   StatusRecord status = StatusRecord::Ok();
   switch (attribute) {
     case SQL_ATTR_APP_ROW_DESC:
-      status = handle->SetDescriptorHandle(DescriptorType::kARD, *desc_handle);
+      status = handle->SetDescriptorHandle(DescriptorType::kARD, desc_handle);
       break;
     case SQL_ATTR_APP_PARAM_DESC:
-      status = handle->SetDescriptorHandle(DescriptorType::kAPD, *desc_handle);
+      status = handle->SetDescriptorHandle(DescriptorType::kAPD, desc_handle);
       break;
   }
   if (!status.ok()) {

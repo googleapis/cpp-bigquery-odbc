@@ -39,8 +39,6 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
-  HandleType GetHandleType() override { return HandleType::kStmtHandle; }
-
   SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
                        SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
 
@@ -51,6 +49,8 @@ class StatementHandle : public Handle {
 
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
+
+  HandleType const kType = HandleType::kStmtHandle;
 
  private:
   std::map<int, DataBuffer> column_bindings_;

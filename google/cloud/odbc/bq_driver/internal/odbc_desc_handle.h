@@ -36,8 +36,6 @@ class DescriptorHandle : public Handle {
   DescriptorHandle(DescriptorHandle&&) = default;
   DescriptorHandle& operator=(DescriptorHandle&&) = default;
 
-  HandleType GetHandleType() override { return HandleType::kDescHandle; }
-
   DescriptorType GetType() { return type_; }
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
@@ -66,6 +64,8 @@ class DescriptorHandle : public Handle {
 
   odbc_internal::StatusRecord SetDescriptorRecords(
       std::map<SQLSMALLINT, DescriptorRecord> const& descriptor_records);
+
+  HandleType const kType = HandleType::kDescHandle;
 
  private:
   DescriptorType type_;

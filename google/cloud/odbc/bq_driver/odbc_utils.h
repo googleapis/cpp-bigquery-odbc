@@ -33,22 +33,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-template <typename T>
-odbc_internal::StatusRecordOr<T*> CastToHandle(
-    odbc_bq_driver_internal::HandleType handle_type, SQLHANDLE input_handle) {
-  if (input_handle == nullptr) {
-    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
-                                       "Handle is null pointer"};
-  }
-  auto* handle =
-      reinterpret_cast<odbc_bq_driver_internal::Handle*>(input_handle);
-  if (!handle->is_handle || handle_type != handle->GetHandleType()) {
-    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
-                                       "Invalid handle type"};
-  }
-  return reinterpret_cast<T*>(input_handle);
-}
-
 odbc_internal::StatusRecordOr<
     google::cloud::odbc_bq_driver_internal::ConnectionHandle*>
 ValidateConnectionHandle(SQLHDBC connection_handle,

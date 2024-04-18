@@ -55,42 +55,51 @@ static std::vector<std::string> const kOdbcSubclasses = {
 
 StatusRecordOr<Diagnostics> GetDiagnostics(SQLSMALLINT handleType,
                                            SQLHANDLE handle) {
+  if (handle == nullptr) {
+    return StatusRecordOr<Diagnostics>(
+        StatusRecord{SQLStates::k_HY000(), "Handle is null pointer"},
+        SQL_INVALID_HANDLE);
+  }
   switch (handleType) {
     case SQL_HANDLE_ENV: {
-      StatusRecordOr<EnvironmentHandle*> handle_ptr_status =
-          CastToHandle<EnvironmentHandle>(HandleType::kEnvHandle, handle);
-      if (!handle_ptr_status) {
-        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
-                                           SQL_INVALID_HANDLE);
+      auto* handle_ptr =
+          reinterpret_cast<odbc_bq_driver_internal::EnvironmentHandle*>(handle);
+      if (handle_ptr->kType != HandleType::kEnvHandle) {
+        return StatusRecordOr<Diagnostics>(
+            StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
+            SQL_INVALID_HANDLE);
       }
-      return (*handle_ptr_status)->GetDiagnostics();
+      return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_DBC: {
-      StatusRecordOr<ConnectionHandle*> handle_ptr_status =
-          CastToHandle<ConnectionHandle>(HandleType::kConnHandle, handle);
-      if (!handle_ptr_status) {
-        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
-                                           SQL_INVALID_HANDLE);
+      auto* handle_ptr =
+          reinterpret_cast<odbc_bq_driver_internal::ConnectionHandle*>(handle);
+      if (handle_ptr->kType != HandleType::kConnHandle) {
+        return StatusRecordOr<Diagnostics>(
+            StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
+            SQL_INVALID_HANDLE);
       }
-      return (*handle_ptr_status)->GetDiagnostics();
+      return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_STMT: {
-      StatusRecordOr<StatementHandle*> handle_ptr_status =
-          CastToHandle<StatementHandle>(HandleType::kStmtHandle, handle);
-      if (!handle_ptr_status) {
-        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
-                                           SQL_INVALID_HANDLE);
+      auto* handle_ptr =
+          reinterpret_cast<odbc_bq_driver_internal::StatementHandle*>(handle);
+      if (handle_ptr->kType != HandleType::kStmtHandle) {
+        return StatusRecordOr<Diagnostics>(
+            StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
+            SQL_INVALID_HANDLE);
       }
-      return (*handle_ptr_status)->GetDiagnostics();
+      return handle_ptr->GetDiagnostics();
     }
     case SQL_HANDLE_DESC: {
-      StatusRecordOr<DescriptorHandle*> handle_ptr_status =
-          CastToHandle<DescriptorHandle>(HandleType::kDescHandle, handle);
-      if (!handle_ptr_status) {
-        return StatusRecordOr<Diagnostics>(handle_ptr_status.GetStatusRecord(),
-                                           SQL_INVALID_HANDLE);
+      auto* handle_ptr =
+          reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(handle);
+      if (handle_ptr->kType != HandleType::kDescHandle) {
+        return StatusRecordOr<Diagnostics>(
+            StatusRecord{SQLStates::k_HY000(), "Invalid handle type"},
+            SQL_INVALID_HANDLE);
       }
-      return (*handle_ptr_status)->GetDiagnostics();
+      return handle_ptr->GetDiagnostics();
     }
     default:
       return StatusRecord{SQLStates::k_HY000(), "handleType is not recognized"};
