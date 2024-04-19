@@ -70,11 +70,14 @@ TEST(SQLFreeHandleInternal, EnvironmentHandle_IncorrectHandleType) {
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
-  auto* stmt_handle = new StatementHandle();
+  ConnectionHandle conn_handle;
+  auto* stmt_handle = new StatementHandle(&conn_handle);
+  conn_handle.GetStatementHandles().insert(stmt_handle);
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
 
   EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_TRUE(conn_handle.GetStatementHandles().empty());
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {

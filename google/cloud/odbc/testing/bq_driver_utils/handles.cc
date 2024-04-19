@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
-// #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
@@ -24,6 +23,7 @@ using google::cloud::odbc_bq_driver::SQLAllocConnHandle;
 using google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
 using google::cloud::odbc_bq_driver::SQLAllocStmtHandle;
 using google::cloud::odbc_bq_driver::SQLFreeHandleInternal;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -48,12 +48,26 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
   // return SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
+class FakeConnectionHandle : public ConnectionHandle {
+ public:
+  explicit FakeConnectionHandle() = default;
+  void SetConnected() { is_connected_ = true; }
+};
+
+ConnectionHandle CreateConnectionHandle(bool is_connected = true) {
+  FakeConnectionHandle conn_handle;
+  if (is_connected) {
+    conn_handle.SetConnected();
+  }
+  return conn_handle;
+}
+
 StatementHandle CreateStatementHandle() {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
-  return StatementHandle({ard, apd, ird, ipd});
+  return StatementHandle(nullptr, {ard, apd, ird, ipd});
 }
 
 }  // namespace google::cloud::odbc_testing_bq_driver_utils

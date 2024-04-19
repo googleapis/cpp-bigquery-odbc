@@ -63,12 +63,13 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
+  ConnectionHandle* conn_handle = *handle_result;
 
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
-  auto* stmt_handle = new StatementHandle({ard, apd, ird, ipd});
+  auto* stmt_handle = new StatementHandle(conn_handle, {ard, apd, ird, ipd});
 
   StatusRecord status_record =
       SetConnectionAttributes(*handle_result, stmt_handle);
@@ -76,6 +77,7 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
     (*handle_result)->GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
+  conn_handle->GetStatementHandles().insert(stmt_handle);
 
   *out_conn_handle = stmt_handle;
   return SQL_SUCCESS;

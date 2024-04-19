@@ -185,9 +185,22 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
   if (!status_record.ok()) {
     conn_handle->GetDiagnostics().AddStatusRecord(status_record);
     TracePrintInternal(opts, status_record.message);
+    return status_record.CalculateReturnCode();
   }
 
-  return status_record.CalculateReturnCode();
+  // Additionally set these attributes to all associated statement handles
+  if (attribute == SQL_ATTR_METADATA_ID || attribute == SQL_ATTR_ASYNC_ENABLE) {
+    for (auto* const stmt_handle : conn_handle->GetStatementHandles()) {
+      status_record = stmt_handle->SetAttribute(
+          attribute, reinterpret_cast<SQLULEN>(value));
+      if (!status_record.ok()) {
+        conn_handle->GetDiagnostics().AddStatusRecord(status_record);
+        return status_record.CalculateReturnCode();
+      }
+    }
+  }
+
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

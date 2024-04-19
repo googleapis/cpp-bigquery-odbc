@@ -74,7 +74,7 @@ TEST(GetDescriptorHandle, GetARD_impl) {
   DescriptorHandle apd;
   DescriptorHandle ird;
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
@@ -87,7 +87,7 @@ TEST(GetDescriptorHandle, GetAPD_impl) {
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird;
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
@@ -101,7 +101,7 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
 
   DescriptorHandle ipd;
-  StatementHandle handle({ard, apd, ird, ipd});
+  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIRD);
@@ -115,7 +115,7 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
   DescriptorHandle ird;
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
 
-  StatementHandle handle({ard, apd, ird, ipd});
+  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
@@ -125,7 +125,7 @@ TEST(GetDescriptorHandle, GetIPD_impl) {
 
 TEST(SetDescriptorHandle, SetAndGetARD) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
 
   StatusRecord status_record =
@@ -141,7 +141,7 @@ TEST(SetDescriptorHandle, SetAndGetARD) {
 
 TEST(SetDescriptorHandle, SetAndGetAPD) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
 
   StatusRecord status_record =
@@ -187,7 +187,7 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
 
 TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
   DescriptorHandle desc_impl;
-  StatementHandle handle({desc_impl, desc_impl, desc_impl, desc_impl});
+  StatementHandle handle(nullptr, {desc_impl, desc_impl, desc_impl, desc_impl});
   DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
 
   StatusRecord status_record =

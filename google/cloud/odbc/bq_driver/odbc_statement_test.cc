@@ -13,17 +13,34 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+
+TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLPOINTER output;
+
+  auto status = SQLAllocStmtHandle(&conn_handle, &output);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  auto* stmt_handle = reinterpret_cast<StatementHandle*>(output);
+  std::set<StatementHandle*>& stmt_handles = conn_handle.GetStatementHandles();
+  EXPECT_FALSE(stmt_handles.empty());
+  EXPECT_TRUE(stmt_handles.find(stmt_handle) != stmt_handles.end());
+  delete stmt_handle;
+}
 
 TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
   StatementHandle handle = CreateStatementHandle();
