@@ -17,6 +17,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
+#include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
 

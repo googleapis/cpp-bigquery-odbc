@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "catalog.h"
+#include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -89,6 +90,12 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
   Catalog catalog_result[res_cols];
   std::map<int, std::string> results;
 
+  absl::optional<std::string> project_id_opt =
+      ::google::cloud::internal::GetEnv(
+          "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto catalog_name =
+      (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
+
   // Make sure we treat the catalog arguments as OA (ordinary arguments).
   // See here for more info on catalog function arguments:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
@@ -124,63 +131,62 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
   if (dataset.length()) {
     if (use_ansi) {
       status = SQLPrimaryKeysA(
-          conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
-          (SQLSMALLINT)kCatalogName.length(), (SQLCHAR*)dataset.c_str(),
+          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
           (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
           (SQLSMALLINT)table.length());
     } else {
       status = SQLPrimaryKeys(
-          conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
-          (SQLSMALLINT)kCatalogName.length(), (SQLCHAR*)dataset.c_str(),
+          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
           (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
           (SQLSMALLINT)table.length());
     }
   } else {
     if (use_ansi) {
       status =
-          SQLPrimaryKeysA(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
-                          (SQLSMALLINT)kCatalogName.length(), NULL, 0,
+          SQLPrimaryKeysA(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+                          (SQLSMALLINT)catalog_name.length(), NULL, 0,
                           (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
     } else {
       status =
-          SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(),
-                         (SQLSMALLINT)kCatalogName.length(), NULL, 0,
+          SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+                         (SQLSMALLINT)catalog_name.length(), NULL, 0,
                          (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
     }
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
-  // Uncomment the while loop below once SQLPrimaryKeys and SQLFetch are
-  // implemented for Google Driver.
-  /*
-    while (1) {
-      status = SQLFetch(conn->hstmt);
-      if (status == SQL_NO_DATA) {
-        break;
-      }
-      if (!SQL_SUCCEEDED(status)) {
-        CheckError(status, "SQLFetch", conn);
-        break;
-      }
-      // Col1: catalog, Col2: schema, Col3: table name,
-      // Col4: column name, Col5: key sequence , Col6: primary key,
-      std::string table_cat = (char*)catalog_result[1].target_value;
-      std::string table_schema = (char*)catalog_result[2].target_value;
-      std::string table_name = (char*)catalog_result[3].target_value;
-      std::string col_name = (char*)catalog_result[4].target_value;
-      SQLSMALLINT* key_seq =
-          reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
-      std::string pk_name = (char*)catalog_result[6].target_value;
-
-      if (!table_cat.empty()) results.insert({1, table_cat});
-      if (!table_schema.empty()) results.insert({2, table_schema});
-      if (!table_name.empty()) results.insert({3, table_name});
-      if (!col_name.empty()) results.insert({4, col_name});
-      if (key_seq && *key_seq >= 0) results.insert({5,
-    std::to_string(*key_seq)}); if (!pk_name.empty()) results.insert({6,
-    pk_name});
+// Remove the flag once SQLPrimaryKeys and SQLFetch are
+// implemented for Google Driver.
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
     }
-  */
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+    // Col1: catalog, Col2: schema, Col3: table name,
+    // Col4: column name, Col5: key sequence , Col6: primary key,
+    std::string table_cat = (char*)catalog_result[1].target_value;
+    std::string table_schema = (char*)catalog_result[2].target_value;
+    std::string table_name = (char*)catalog_result[3].target_value;
+    std::string col_name = (char*)catalog_result[4].target_value;
+    SQLSMALLINT* key_seq =
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
+    std::string pk_name = (char*)catalog_result[6].target_value;
+
+    if (!table_cat.empty()) results.insert({1, table_cat});
+    if (!table_schema.empty()) results.insert({2, table_schema});
+    if (!table_name.empty()) results.insert({3, table_name});
+    if (!col_name.empty()) results.insert({4, col_name});
+    if (key_seq && *key_seq >= 0) results.insert({5, std::to_string(*key_seq)});
+    if (!pk_name.empty()) results.insert({6, pk_name});
+  }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
   return results;
 }
 
