@@ -21,6 +21,17 @@ namespace google::cloud::odbc_tests {
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ms = std::chrono::milliseconds;
 
+SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
+                      SQLPOINTER value, SQLINTEGER value_buffer_len,
+                      SQLINTEGER* value_string_len, bool use_ansi) {
+  if (use_ansi) {
+    return SQLGetStmtAttrA(stmt_handle, attribute, value, value_buffer_len,
+                           value_string_len);
+  }
+  return SQLGetStmtAttr(stmt_handle, attribute, value, value_buffer_len,
+                        value_string_len);
+}
+
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {

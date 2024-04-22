@@ -105,20 +105,14 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
     err_msg.append("Attribute not supported by the driver");
     return StatusRecord{SQLStates::k_HY092(), err_msg};
   }
-  // 2) Ensure strigth length pointeris valid.
-  // The memory should be allocated by the caller.
-  if (!str_len) {
-    err_msg.append("Invalid string length pointer");
-    return StatusRecord{SQLStates::k_HY001(), err_msg};
-  }
-  // 3) Check if attribute is valid with respect to connection.
+  // 2) Check if attribute is valid with respect to connection.
   auto status_record =
       ValidateConnection(IsConnected(), err_msg,
                          conn_attr.GetAttributeConnectionBehavior(attribute));
   if (!status_record.ok()) {
     return status_record;
   }
-  // 4) Get attribute value
+  // 3) Get attribute value
   bool attrib_val_found =
       attribute_values_.find(attribute) != attribute_values_.end();
   SQLPOINTER default_value = conn_attr.GetAttributeDefaultValue(attribute);

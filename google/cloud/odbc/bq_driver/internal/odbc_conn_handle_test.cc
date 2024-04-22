@@ -203,15 +203,6 @@ TEST(ConnectionHandle, GetAttribute_Fail_UnsupportedGetAttribute) {
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
 }
 
-TEST(ConnectionHandle, GetAttribute_Fail_NullStrLenPtr) {
-  ConnectionHandle conn_handle;
-  SQLUINTEGER val;
-  auto status_record =
-      conn_handle.GetAttribute(SQL_ATTR_ACCESS_MODE, &val, 0, nullptr);
-  EXPECT_FALSE(status_record.ok());
-  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY001());
-}
-
 TEST(ConnectionHandle, GetAttribute_Fail_InvalidConnectionBehavior) {
   ConnectionHandle conn_handle;
   SQLUINTEGER val;

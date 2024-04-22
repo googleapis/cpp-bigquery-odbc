@@ -37,16 +37,14 @@ using google::cloud::odbc_internal::StatusRecordOr;
 StatusRecord SetConnectionAttributes(ConnectionHandle* conn_handle,
                                      StatementHandle* stmt_handle) {
   SQLULEN metadata_id = 0;
-  // GetAttribute requires last argument to not be null
-  SQLINTEGER str_len;
-  StatusRecord status = conn_handle->GetAttribute(SQL_ATTR_METADATA_ID,
-                                                  &metadata_id, 0, &str_len);
+  StatusRecord status =
+      conn_handle->GetAttribute(SQL_ATTR_METADATA_ID, &metadata_id, 0, nullptr);
   if (!status.ok()) {
     return status;
   }
   SQLULEN async_enable = 0;
   status = conn_handle->GetAttribute(SQL_ATTR_ASYNC_ENABLE, &async_enable, 0,
-                                     &str_len);
+                                     nullptr);
   if (!status.ok()) {
     return status;
   }

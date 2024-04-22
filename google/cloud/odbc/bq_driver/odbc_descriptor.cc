@@ -123,6 +123,13 @@ static std::map<DescriptorType, std::vector<int>> const kAllowedFieldsToGet = {
       SQL_DESC_UNNAMED,
       SQL_DESC_UNSIGNED}}};
 
+DescriptorType Convert(DescriptorType type) {
+  if (type == DescriptorType::kIRD || type == DescriptorType::kIPD) {
+    return type;
+  }
+  return DescriptorType::kApplication;
+}
+
 SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
@@ -243,7 +250,7 @@ SQLRETURN SetDataPointer(DescriptorHandle* handle,
 SQLRETURN SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
                        SQLSMALLINT field_identifier, SQLPOINTER desc_value,
                        SQLINTEGER desc_value_buffer_len) {
-  std::vector<int> vec = kAllowedFieldsToSet.at(handle->GetType());
+  std::vector<int> vec = kAllowedFieldsToSet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
@@ -361,7 +368,7 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
                        SQLSMALLINT field_identifier, SQLPOINTER out_value,
                        SQLINTEGER value_buffer_len,
                        SQLINTEGER* value_string_len) {
-  std::vector<int> vec = kAllowedFieldsToGet.at(handle->GetType());
+  std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
