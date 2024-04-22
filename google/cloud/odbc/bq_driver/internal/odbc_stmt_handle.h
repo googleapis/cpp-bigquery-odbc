@@ -59,14 +59,14 @@ class StatementHandle : public Handle {
 
   HandleType kType = HandleType::kStmtHandle;
 
-  ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
+  inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
  private:
   std::map<int, DataBuffer> column_bindings_;
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
-  ConnectionHandle* conn_handle_ = nullptr;
+  ConnectionHandle* conn_handle_{nullptr};
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

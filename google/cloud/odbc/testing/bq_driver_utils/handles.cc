@@ -48,14 +48,14 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
   // return SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-class FakeConnectionHandle : public ConnectionHandle {
+class MockConnectionHandle : public ConnectionHandle {
  public:
-  explicit FakeConnectionHandle() = default;
+  explicit MockConnectionHandle() = default;
   void SetConnected() { is_connected_ = true; }
 };
 
 ConnectionHandle CreateConnectionHandle(bool is_connected = true) {
-  FakeConnectionHandle conn_handle;
+  MockConnectionHandle conn_handle;
   if (is_connected) {
     conn_handle.SetConnected();
   }

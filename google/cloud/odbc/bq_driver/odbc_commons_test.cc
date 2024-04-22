@@ -72,7 +72,7 @@ TEST(SQLFreeHandleInternal, EnvironmentHandle_IncorrectHandleType) {
 TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
   ConnectionHandle conn_handle;
   auto* stmt_handle = new StatementHandle(&conn_handle);
-  conn_handle.GetStatementHandles().insert(stmt_handle);
+  conn_handle.GetStatementHandles().emplace(stmt_handle);
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
 
