@@ -145,7 +145,6 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
     // TODO(b/334845645) Check if cursor was not open
   }
 
-  // Descriptors
   if (attribute == SQL_ATTR_APP_ROW_DESC ||
       attribute == SQL_ATTR_APP_PARAM_DESC ||
       attribute == SQL_ATTR_IMP_ROW_DESC ||
@@ -153,7 +152,6 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
     return SetDescriptorHandle(handle, attribute, value);
   }
 
-  // Descriptor attributes
   auto int_value = reinterpret_cast<size_t>(value);
   switch (attribute) {
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR: {
@@ -224,7 +222,6 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
     }
   }
 
-  // Statement attributes
   StatusRecord status_record =
       handle->SetAttribute(attribute, reinterpret_cast<SQLULEN>(value));
   if (!status_record.ok()) {
@@ -246,7 +243,6 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
   }
   auto* handle = *handle_result;
 
-  // Descriptors
   switch (attribute) {
     case SQL_ATTR_APP_ROW_DESC: {
       DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
@@ -266,7 +262,6 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
     }
   }
 
-  // Descriptor attributes
   switch (attribute) {
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR: {
       DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
@@ -330,7 +325,6 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
     }
   }
 
-  // Statement attributes
   StatusRecordOr<SQLULEN> status = handle->GetAttribute(attribute);
   if (!status) {
     handle->GetDiagnostics().AddStatusRecord(status.GetStatusRecord());
