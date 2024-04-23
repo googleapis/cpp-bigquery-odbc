@@ -18,8 +18,66 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include <cstring>
+#include <map>
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+struct Interval {
+  SQLSMALLINT concise_sql_type;
+  SQLSMALLINT concise_c_type;
+  SQLSMALLINT datetime_interval_code;
+};
+
+static std::vector<Interval> const kDatetimeTypes = {
+    {SQL_TYPE_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
+    {SQL_TYPE_TIME, SQL_C_TYPE_TIME, SQL_CODE_TIME},
+    {SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
+};
+
+static std::vector<Interval> const kIntervalTypes = {
+    {SQL_INTERVAL_MONTH, SQL_C_INTERVAL_MONTH, SQL_CODE_MONTH},
+    {SQL_INTERVAL_YEAR, SQL_C_INTERVAL_YEAR, SQL_CODE_YEAR},
+    {SQL_INTERVAL_YEAR_TO_MONTH, SQL_C_INTERVAL_YEAR_TO_MONTH,
+     SQL_CODE_YEAR_TO_MONTH},
+    {SQL_INTERVAL_DAY, SQL_C_INTERVAL_DAY, SQL_CODE_DAY},
+    {SQL_INTERVAL_HOUR, SQL_C_INTERVAL_HOUR, SQL_CODE_HOUR},
+    {SQL_INTERVAL_MINUTE, SQL_C_INTERVAL_MINUTE, SQL_CODE_MINUTE},
+    {SQL_INTERVAL_SECOND, SQL_C_INTERVAL_SECOND, SQL_CODE_SECOND},
+    {SQL_INTERVAL_DAY_TO_HOUR, SQL_C_INTERVAL_DAY_TO_HOUR,
+     SQL_CODE_DAY_TO_HOUR},
+    {SQL_INTERVAL_DAY_TO_MINUTE, SQL_C_INTERVAL_DAY_TO_MINUTE,
+     SQL_CODE_DAY_TO_MINUTE},
+    {SQL_INTERVAL_DAY_TO_SECOND, SQL_C_INTERVAL_DAY_TO_SECOND,
+     SQL_CODE_DAY_TO_SECOND},
+    {SQL_INTERVAL_HOUR_TO_MINUTE, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+     SQL_CODE_HOUR_TO_MINUTE},
+    {SQL_INTERVAL_HOUR_TO_SECOND, SQL_C_INTERVAL_HOUR_TO_SECOND,
+     SQL_CODE_HOUR_TO_SECOND},
+    {SQL_INTERVAL_MINUTE_TO_SECOND, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+     SQL_CODE_MINUTE_TO_SECOND},
+};
+
+static std::vector<int> const kOtherSQLSupportedTypes = {
+    SQL_CHAR,     SQL_VARCHAR,      SQL_LONGVARCHAR,   SQL_WCHAR,
+    SQL_WVARCHAR, SQL_WLONGVARCHAR, SQL_DECIMAL,       SQL_NUMERIC,
+    SQL_SMALLINT, SQL_INTEGER,      SQL_REAL,          SQL_FLOAT,
+    SQL_DOUBLE,   SQL_BIT,          SQL_TINYINT,       SQL_BIGINT,
+    SQL_BINARY,   SQL_VARBINARY,    SQL_LONGVARBINARY, SQL_GUID};
+
+static std::vector<int> const kOtherCSupportedTypes = {
+    SQL_C_CHAR,    SQL_C_WCHAR,    SQL_C_SSHORT,      SQL_C_USHORT,
+    SQL_C_SLONG,   SQL_C_ULONG,    SQL_C_FLOAT,       SQL_C_DOUBLE,
+    SQL_C_BIT,     SQL_C_STINYINT, SQL_C_UTINYINT,    SQL_C_SBIGINT,
+    SQL_C_UBIGINT, SQL_C_BINARY,   SQL_C_VARBOOKMARK, SQL_C_NUMERIC,
+    SQL_C_GUID};
+
+// NOLINTBEGIN(performance-no-int-to-ptr)
+template <typename T>
+inline SQLPOINTER ToSqlPointer(T x) {
+  return reinterpret_cast<SQLPOINTER>(x);
+}
+// NOLINTEND(performance-no-int-to-ptr)
 
 // U usually can be SQLINTEGER and SQLSMALLINT
 template <typename U>

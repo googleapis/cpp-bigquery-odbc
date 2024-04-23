@@ -15,6 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_ATTR_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_ATTR_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -25,12 +26,6 @@ inline constexpr SQLINTEGER kNumPrecRadixForApproximateNumeric = 2;
 inline constexpr SQLINTEGER kNumPrecRadixForExactNumeric = 10;
 inline constexpr SQLSMALLINT kDefaultIntervalPrecision = 0;
 inline constexpr SQLSMALLINT kDefaultIntervalSecondsPrecision = 6;
-
-struct Interval {
-  SQLSMALLINT concise_sql_type;
-  SQLSMALLINT concise_c_type;
-  SQLSMALLINT datetime_interval_code;
-};
 
 enum class DescriptorType { kApplication, kIRD, kIPD, kARD, kAPD };
 

@@ -22,35 +22,6 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
-                                      SQLSMALLINT data_type, SQLPOINTER buf,
-                                      SQLLEN buf_len, const SQLLEN* res_len) {
-  if (!buf) {
-    StatusRecord status_record = {SQLStates::k_HY001(),
-                                  "TargetValuePtr should not be null"};
-    GetDiagnostics().AddStatusRecord(status_record);
-    return SQL_ERROR;
-  }
-
-  if (buf_len < 0) {
-    StatusRecord status_record = {SQLStates::k_HY090(),
-                                  "BufferLength should not be less than zero"};
-    GetDiagnostics().AddStatusRecord(status_record);
-    return SQL_ERROR;
-  }
-
-  if (!res_len) {
-    StatusRecord status_record = {SQLStates::k_HY000(),
-                                  "TargetValueStrLen should not be null"};
-    GetDiagnostics().AddStatusRecord(status_record);
-    return SQL_ERROR;
-  }
-
-  DataBuffer data_buffer = {data_type, buf, buf_len, res_len};
-  column_bindings_[col_idx] = data_buffer;
-  return SQL_SUCCESS;
-}
-
 DescriptorHandle& StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {
   switch (type) {

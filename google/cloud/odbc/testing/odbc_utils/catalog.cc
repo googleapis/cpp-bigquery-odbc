@@ -109,7 +109,7 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
   while (col_idx < res_cols) {
     if (col_idx == 4) {
       // data type is SMALLINT.
-      catalog_result[col_idx].target_type = SQL_C_SHORT;
+      catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
       catalog_result[col_idx].target_value = (SQLPOINTER)&val;
     } else {

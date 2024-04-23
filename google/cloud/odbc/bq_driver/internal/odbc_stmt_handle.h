@@ -47,11 +47,9 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
-  SQLRETURN BindColumn(SQLUSMALLINT col_idx, SQLSMALLINT data_type,
-                       SQLPOINTER buf, SQLLEN buf_len, const SQLLEN* res_len);
-
   [[nodiscard]] DescriptorHandle& GetDescriptorHandle(
       DescriptorType type) const;
+
   odbc_internal::StatusRecord SetDescriptorHandle(
       DescriptorType type, DescriptorHandle* descriptor_handle);
 
@@ -63,7 +61,6 @@ class StatementHandle : public Handle {
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
  private:
-  std::map<int, DataBuffer> column_bindings_;
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;

@@ -29,12 +29,13 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle);
 
-SQLRETURN SetDescField(
+google::cloud::odbc_internal::StatusRecord SetDescField(
     google::cloud::odbc_bq_driver_internal::DescriptorHandle* descriptor_handle,
     SQLSMALLINT rec_number, SQLSMALLINT field_identifier, SQLPOINTER desc_value,
     SQLINTEGER desc_value_buffer_len);
