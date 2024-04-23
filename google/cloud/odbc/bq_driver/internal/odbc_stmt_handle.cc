@@ -69,6 +69,20 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
   }
 }
 
+void DissociateDescriptorHandle(DescriptorHandle* descriptor_handle,
+                                DescriptorType type, StatementHandle* handle) {
+  if (descriptor_handle) {
+    descriptor_handle->GetAssociatedStatementHandles().erase({handle, type});
+  }
+}
+
+void AssociateDescriptorHandle(DescriptorHandle* descriptor_handle,
+                               DescriptorType type, StatementHandle* handle) {
+  if (descriptor_handle) {
+    descriptor_handle->GetAssociatedStatementHandles().emplace(handle, type);
+  }
+}
+
 StatusRecord StatementHandle::SetDescriptorHandle(
     DescriptorType type, DescriptorHandle* descriptor_handle) {
   if (descriptor_handle &&
@@ -79,15 +93,18 @@ StatusRecord StatementHandle::SetDescriptorHandle(
   }
   switch (type) {
     case DescriptorType::kARD:
+      DissociateDescriptorHandle(descriptors_.ard_expl_, type, this);
       descriptors_.ard_expl_ = descriptor_handle;
       break;
     case DescriptorType::kAPD:
+      DissociateDescriptorHandle(descriptors_.apd_expl_, type, this);
       descriptors_.apd_expl_ = descriptor_handle;
       break;
     default:
       return StatusRecord{SQLStates::k_HY017(),
                           "Invalid try to set implementation descriptor"};
   }
+  AssociateDescriptorHandle(descriptor_handle, type, this);
   return StatusRecord::Ok();
 }
 

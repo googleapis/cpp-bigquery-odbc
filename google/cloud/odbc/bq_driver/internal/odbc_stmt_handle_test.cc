@@ -196,6 +196,9 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
       handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
 
   EXPECT_TRUE(status_record.ok());
+  auto pair = *desc.GetAssociatedStatementHandles().begin();
+  EXPECT_EQ(&handle, pair.first);
+  EXPECT_EQ(DescriptorType::kAPD, pair.second);
 
   DescriptorHandle& get_desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kAPD);
@@ -206,6 +209,7 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
   status_record = handle.SetDescriptorHandle(DescriptorType::kAPD, nullptr);
 
   EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(0, desc.GetAssociatedStatementHandles().size());
 
   DescriptorHandle& get_desc_handle_new =
       handle.GetDescriptorHandle(DescriptorType::kAPD);

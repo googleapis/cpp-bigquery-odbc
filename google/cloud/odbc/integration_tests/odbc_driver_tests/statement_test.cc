@@ -566,6 +566,33 @@ TEST(StatementTest, SQLSetCursorName) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Create explicit descriptor and set it to a statement handle
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Free explicit descriptor
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, conn->apd), SQL_SUCCESS);
+
+  // Check if statement handle reverted to use implicit descriptor
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr", conn);
+  SQLSMALLINT alloc_type = 0;
+  status =
+      SQLGetDescField(conn->apd, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

@@ -18,14 +18,17 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 struct NativeDataTypesStruct {
   bool flag;
@@ -115,6 +118,21 @@ TEST(SQLFreeHandleInternal, DescriptorHandle_IncorrectHandleType) {
 
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
   delete env_handle;
+}
+
+TEST(SQLFreeHandleInternal, DissociateDescriptorHandle) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  auto* desc_handle =
+      new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  stmt_handle.SetDescriptorHandle(DescriptorType::kAPD, desc_handle);
+
+  SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
+
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO,
+            stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
+                .GetHeaderRecord()
+                .GetAllocType());
 }
 
 TEST(DSValue, Basic_String) {
