@@ -801,6 +801,8 @@ TEST_P(StatementParameterizedTest, SetAndGetStatementDescriptorAttributes) {
   CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
 
   EXPECT_EQ(arr_size, arr_size_desc_handle);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST_P(StatementParameterizedTest, SetAndGetDescriptorAttributes) {
@@ -826,6 +828,8 @@ TEST_P(StatementParameterizedTest, SetAndGetDescriptorAttributes) {
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
 
   EXPECT_EQ(arr_size_desc_handle, arr_size_stmt_handle);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST_P(StatementParameterizedTest,
@@ -843,6 +847,8 @@ TEST_P(StatementParameterizedTest,
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_NOSCAN)", conn);
 
   EXPECT_EQ(SQL_NOSCAN_ON, no_scan);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST_P(StatementParameterizedTest,
@@ -861,6 +867,8 @@ TEST_P(StatementParameterizedTest,
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
 
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, async);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST_P(StatementParameterizedTest,
@@ -880,6 +888,8 @@ TEST_P(StatementParameterizedTest,
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_MAX_LENGTH)", conn);
 
   EXPECT_EQ(expected, actual);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, FailsToSet_SQL_ATTR_ROW_NUMBER) {
@@ -889,6 +899,8 @@ TEST(StatementTest, FailsToSet_SQL_ATTR_ROW_NUMBER) {
 
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, (SQLPOINTER)5, 0);
   EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
@@ -968,6 +980,9 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
 
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
   EXPECT_EQ(arr_size_implicit, arr_size_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
