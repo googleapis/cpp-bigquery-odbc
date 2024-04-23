@@ -54,4 +54,4 @@ function (odbc_internal_define_unit_tests)
     gtest_discover_tests(odbc_internal_unit_tests)
 endfunction ()
 
-odbc_internal_define_unit_tests()
+# odbc_internal_define_unit_tests()

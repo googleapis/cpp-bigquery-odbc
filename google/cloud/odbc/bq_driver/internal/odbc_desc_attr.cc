@@ -193,26 +193,38 @@ StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
 
 StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
                                        DescriptorType desc_type) {
+  std::cout << "CP 11.1:: " << value << std::endl;
+  std::cout << "CP 11.11:: " << datetime_interval_code << std::endl;
   if (value == SQL_INTERVAL) {
+    std::cout << "CP 11.29:: " << std::endl;
     for (auto const& entry : kIntervalTypes) {
       if (datetime_interval_code == entry.datetime_interval_code) {
         SetIntervalType(entry, desc_type);
+        std::cout << "CP 11.30:: " << entry.datetime_interval_code << ": "
+                  << datetime_interval_code << std::endl;
         return StatusRecord::Ok();
       }
+      std::cout << "CP 11.2:: " << std::endl;
     }
+    std::cout << "CP 11.3:: " << std::endl;
     return StatusRecord{SQLStates::k_HY021(),
                         "Interval code invalid or not supported"};
   }
   if (value == SQL_DATETIME) {
     for (auto const& entry : kDatetimeTypes) {
+      std::cout << "CP 11.4:: " << std::endl;
       if (datetime_interval_code == entry.datetime_interval_code) {
+        std::cout << "CP 11.5:: " << std::endl;
         SetDatetimeType(entry, desc_type);
         return StatusRecord::Ok();
       }
+      std::cout << "CP 11.6:: " << std::endl;
     }
+    std::cout << "CP 11.7:: " << std::endl;
     return StatusRecord{SQLStates::k_HY021(),
                         "Datetime interval code invalid or not supported"};
   }
+  std::cout << "CP 11.8:: " << std::endl;
   return SetOtherType(value, "Illegal descriptor type");
 }
 

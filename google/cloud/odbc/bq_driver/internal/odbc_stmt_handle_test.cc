@@ -80,7 +80,6 @@ TEST(GetDescriptorHandle, GetARD_impl) {
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
-
   EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
 }
 
@@ -138,7 +137,11 @@ TEST(SetDescriptorHandle, SetAndGetARD) {
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
+  std::cout << "CP 3:: " << std::endl;
+
   EXPECT_EQ(desc.GetType(), desc_handle.GetType());
+
+  std::cout << "CP 4:: " << std::endl;
 }
 
 TEST(SetDescriptorHandle, SetAndGetAPD) {

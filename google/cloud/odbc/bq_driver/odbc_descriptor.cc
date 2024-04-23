@@ -147,6 +147,8 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
 }
 
 SQLRETURN SetCount(DescriptorHandle* handle, std::size_t desc_int_value) {
+  std::cout << "CP 10.1:: " << desc_int_value << std::endl;
+  std::cout << "CP 10.1:: " << handle->GetHeaderRecord().count << std::endl;
   auto new_val = static_cast<SQLSMALLINT>(desc_int_value);
   if (new_val >= handle->GetHeaderRecord().count) {
     handle->GetHeaderRecord().count = new_val;

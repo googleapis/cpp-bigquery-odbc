@@ -46,10 +46,33 @@ SQLRETURN StatementHandle::BindColumn(SQLUSMALLINT col_idx,
     return SQL_ERROR;
   }
 
-  DataBuffer data_buffer = {data_type, buf, buf_len, res_len};
-  column_bindings_[col_idx] = data_buffer;
   return SQL_SUCCESS;
 }
+
+/*
+std::shared_ptr<DescriptorHandle> StatementHandle::GetDescriptorHandleRaw(
+    DescriptorType type) const {
+  switch (type) {
+    // DescriptorType::kApplication should not be used as input argument
+    case DescriptorType::kApplication:
+    case DescriptorType::kARD:
+      return descriptors_.ard_expl_ != nullptr ? descriptors_.ard_expl_
+                                               : descriptors_.ard_;
+    case DescriptorType::kAPD:
+      return descriptors_.apd_expl_ != nullptr ? descriptors_.apd_expl_
+                                               : descriptors_.apd_;
+    case DescriptorType::kIRD:
+      return descriptors_.ird_;
+    case DescriptorType::kIPD:
+      return descriptors_.ipd_;
+  }
+}
+*/
+
+// DescriptorHandle& StatementHandle::GetDescriptorHandle1(
+//     DescriptorType type) const {
+//   return *GetDescriptorHandleRaw(type);
+// }
 
 DescriptorHandle& StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {

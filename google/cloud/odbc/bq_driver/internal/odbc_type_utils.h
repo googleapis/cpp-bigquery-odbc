@@ -18,8 +18,48 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include <cstring>
+#include <map>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+inline bool IsDateCType(SQLSMALLINT c_type) {
+  return (c_type == SQL_C_TYPE_DATE) || (c_type == SQL_C_TYPE_TIME) ||
+         (c_type == SQL_C_TYPE_TIMESTAMP);
+}
+
+inline bool IsIntervalCType(SQLSMALLINT c_type) {
+  return (c_type == SQL_C_INTERVAL_MONTH) || (c_type == SQL_C_INTERVAL_YEAR) ||
+         (c_type == SQL_C_INTERVAL_YEAR_TO_MONTH) ||
+         (c_type == SQL_C_INTERVAL_DAY) || (c_type == SQL_C_INTERVAL_HOUR) ||
+         (c_type == SQL_C_INTERVAL_MINUTE) ||
+         (c_type == SQL_C_INTERVAL_SECOND) ||
+         (c_type == SQL_C_INTERVAL_DAY_TO_HOUR) ||
+         (c_type == SQL_C_INTERVAL_DAY_TO_MINUTE) ||
+         (c_type == SQL_C_INTERVAL_DAY_TO_SECOND) ||
+         (c_type == SQL_C_INTERVAL_HOUR_TO_MINUTE) ||
+         (c_type == SQL_C_INTERVAL_HOUR_TO_SECOND) ||
+         (c_type == SQL_C_INTERVAL_MINUTE_TO_SECOND);
+}
+
+// Mapping the concise C types to the DATETIME INTERVAL CODE according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/data-type-identifiers-and-descriptors?view=sql-server-ver16
+inline std::map<SQLSMALLINT, SQLSMALLINT> const kToDateTimeIntervalCode = {
+    {SQL_C_TYPE_DATE, SQL_CODE_DATE},
+    {SQL_C_TYPE_TIME, SQL_CODE_TIME},
+    {SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
+    {SQL_C_INTERVAL_MONTH, SQL_CODE_MONTH},
+    {SQL_C_INTERVAL_YEAR, SQL_CODE_YEAR},
+    {SQL_C_INTERVAL_YEAR_TO_MONTH, SQL_CODE_YEAR_TO_MONTH},
+    {SQL_C_INTERVAL_DAY, SQL_CODE_DAY},
+    {SQL_C_INTERVAL_HOUR, SQL_CODE_HOUR},
+    {SQL_C_INTERVAL_MINUTE, SQL_CODE_MINUTE},
+    {SQL_C_INTERVAL_SECOND, SQL_CODE_SECOND},
+    {SQL_C_INTERVAL_DAY_TO_HOUR, SQL_CODE_DAY_TO_HOUR},
+    {SQL_C_INTERVAL_DAY_TO_MINUTE, SQL_CODE_DAY_TO_MINUTE},
+    {SQL_C_INTERVAL_DAY_TO_SECOND, SQL_CODE_DAY_TO_SECOND},
+    {SQL_C_INTERVAL_HOUR_TO_MINUTE, SQL_CODE_HOUR_TO_MINUTE},
+    {SQL_C_INTERVAL_HOUR_TO_SECOND, SQL_CODE_HOUR_TO_SECOND},
+    {SQL_C_INTERVAL_MINUTE_TO_SECOND, SQL_CODE_MINUTE_TO_SECOND}};
 
 // U usually can be SQLINTEGER and SQLSMALLINT
 template <typename U>

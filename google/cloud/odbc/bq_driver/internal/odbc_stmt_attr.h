@@ -49,6 +49,14 @@ struct Descriptors {
         ird_(std::make_unique<DescriptorHandle>(ird)),
         ipd_(std::make_unique<DescriptorHandle>(ipd)){};
 
+  /*
+  std::shared_ptr<DescriptorHandle> ard_;
+  std::shared_ptr<DescriptorHandle> ard_expl_;
+  std::shared_ptr<DescriptorHandle> apd_;
+  std::shared_ptr<DescriptorHandle> apd_expl_;
+  std::shared_ptr<DescriptorHandle> ird_;
+  std::shared_ptr<DescriptorHandle> ipd_;
+  */
   std::unique_ptr<DescriptorHandle> ard_;
   DescriptorHandle* ard_expl_ = nullptr;
   std::unique_ptr<DescriptorHandle> apd_;
