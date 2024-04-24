@@ -243,6 +243,10 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
   }
   auto* handle = *handle_result;
 
+  if (attribute == SQL_ATTR_ROW_NUMBER) {
+    // TODO(b/336713277) Check if cursor was open
+  }
+
   switch (attribute) {
     case SQL_ATTR_APP_ROW_DESC: {
       DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
