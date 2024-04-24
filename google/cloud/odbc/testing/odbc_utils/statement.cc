@@ -73,7 +73,6 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   // Prepare statement with insert query string
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
-
   } else {
     status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
   }
@@ -288,6 +287,92 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
+std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
+                                            std::string query, int num_cols) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  int rs_size = 3;
+
+  StdOdbcRow row_set[rs_size];
+  SQLUSMALLINT row_status[rs_size];
+  SQLUINTEGER num_rows_fetched = 0;
+
+  // Attributes for row-wise binding
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
+                          (SQLPOINTER)sizeof(StdOdbcRow), 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                          (SQLPOINTER)rs_size, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_STATUS_PTR,
+                          (SQLPOINTER)row_status, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_STATUS_PTR)", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
+                          (SQLPOINTER)&num_rows_fetched, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  Results results;
+
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1, false);
+
+    std::string col_name = (char*)col_ptr->name;
+
+    // Initializing results
+    std::vector<std::string> cols_data;
+    results[col_name] = cols_data;
+
+    SqlToCdataTypes(col_ptr);
+    if (i == 0) {
+      col_ptr->data = &row_set[0].str_field;
+      col_ptr->data_size = sizeof(row_set[0].str_field);
+      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_str);
+    } else if (i == 1) {
+      col_ptr->data = &row_set[0].int_field;
+      col_ptr->data_size = sizeof(row_set[0].int_field);
+      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_int);
+    } else if (i == 2) {
+      col_ptr->data = &row_set[0].float_field;
+      col_ptr->data_size = sizeof(row_set[0].float_field);
+      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_float);
+    }
+
+    BindCol(conn, col_ptr, i + 1);
+  }
+
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+    for (int i_r = 0; i_r < num_rows_fetched; i_r++) {
+      // TODO(b/338370441): Irrespective of num_cols, here we are returning only
+      // one column to the results
+      std::string col_name = (char*)cols[0]->name;
+      if (row_set[i_r].len_status_ind_str < 0) {
+        results[col_name].emplace_back(std::string());
+        continue;
+      }
+      results[col_name].push_back((char*)row_set[i_r].str_field);
+    }
+  }
+
+  return std::make_shared<Results>(results);
+}
+
 std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query, bool use_bind_col,
                                       bool use_ansi) {
@@ -350,8 +435,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
       auto col_name = (char*)cols[i_c]->name;
-      auto data = cols[i_c]->data;
-      auto data_len = cols[i_c]->data_len;
+      SQLPOINTER data = cols[i_c]->data;
+      SQLLEN data_len = cols[i_c]->data_len;
 
       if (data_len == -1) {
         results[col_name].emplace_back(std::string());
@@ -374,17 +459,17 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   status =
       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
                      0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr", conn);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
 
   status =
       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
                      0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr", conn);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
 
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
                           (SQLPOINTER)&num_rows_fetched,
                           0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr", conn);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);

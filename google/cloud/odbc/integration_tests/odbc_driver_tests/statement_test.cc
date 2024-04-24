@@ -564,6 +564,37 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, FetchDirectRowWise) {
+  std::string const table_name = kDatasetName + "." + "ROW_WISE_FETCH";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
+  table.Create(conn,
+               "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+               false);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
+  table.Insert(conn, kSampleData, false);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  auto const query = "SELECT StringField, IntegerField FROM " + table_name;
+  auto results = *FetchDirectRowWise(conn, query, 1);
+  VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
+  table.Drop(conn, false);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {

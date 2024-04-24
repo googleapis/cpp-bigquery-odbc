@@ -237,9 +237,12 @@ void DescribeCol(std::shared_ptr<ODBCHandles> conn,
 
 void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
              SQLUSMALLINT col_index) {
+  if (col_ptr->data_len_ptr == nullptr) {
+    col_ptr->data_len_ptr = &col_ptr->data_len;
+  }
   auto status =
       SQLBindCol(conn->hstmt, col_index, col_ptr->data_type, col_ptr->data,
-                 col_ptr->data_size, &col_ptr->data_len);
+                 col_ptr->data_size, col_ptr->data_len_ptr);
 
   CheckError(status, "SQLBindCol", conn);
 }
@@ -295,11 +298,14 @@ void BindColManually(std::shared_ptr<ODBCHandles> conn,
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_DATA_PTR,
                            col_ptr->data, SQL_NTS);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH)", conn);
+  if (col_ptr->data_len_ptr == nullptr) {
+    col_ptr->data_len_ptr = &col_ptr->data_len;
+  }
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_INDICATOR_PTR,
-                           &col_ptr->data_len, SQL_IS_INTEGER);
+                           col_ptr->data_len_ptr, SQL_IS_INTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_INDICATOR_PTR)", conn);
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
-                           &col_ptr->data_len, SQL_IS_INTEGER);
+                           col_ptr->data_len_ptr, SQL_IS_INTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
 }
 

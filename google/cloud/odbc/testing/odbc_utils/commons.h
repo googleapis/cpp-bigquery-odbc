@@ -71,10 +71,15 @@ struct Column {
   SQLCHAR name[kBufferLength];  // Column name
   SQLSMALLINT name_len;
   SQLSMALLINT data_type;
-  SQLCHAR* data;        // Returned column data
+  SQLPOINTER data;      // Returned column data
   SQLCHAR* result_set;  // Returned column data for a result set
   SQLULEN data_size;    // max size of column data
-  SQLLEN data_len;      // size of data returned
+  // We need to allocate space for data_len_ptr in case the caller doesn't
+  // explicitly set that.
+  SQLLEN data_len;  // size of data returned
+  // Optionally, if the caller sets data_len_ptr, 'BindCol' will use bind this
+  // buffer, otherwise it binds the address of 'data_len'
+  SQLLEN* data_len_ptr;  // pointer to the buffer of for size of data returned
   std::shared_ptr<SQLLEN[]> row_data_len;  // row-wise size of returned data
                                            // while fetching result sets
   SQLSMALLINT decimal_digits;
@@ -95,6 +100,15 @@ struct StdRow {
 };
 
 using StdRows = std::vector<StdRow>;
+
+struct StdOdbcRow {
+  SQLCHAR str_field[3 * kBufferLength];
+  SQLLEN len_status_ind_str;
+  SQLINTEGER int_field;
+  SQLINTEGER len_status_ind_int;
+  SQLDOUBLE float_field;
+  SQLINTEGER len_status_ind_float;
+};
 
 inline bool str_comparison(std::string a, std::string b) { return a < b; }
 
