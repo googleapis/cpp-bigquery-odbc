@@ -16,8 +16,26 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <cstring>
+#include <string>
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver {
+
+using DSValue = std::vector<char>;
+
+using DSRow = std::vector<DSValue>;
+
+using ResultSet = std::vector<DSRow>;
+
+inline void StringToDSValue(std::string& str, DSValue& value) {
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
+}
+
+inline void DSValueToString(DSValue& value, std::string& str) {
+  str.assign(value.begin(), value.end());
+}
 
 ////////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
