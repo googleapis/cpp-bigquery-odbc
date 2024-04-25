@@ -31,6 +31,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
@@ -246,6 +247,10 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsConsole =
         TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
+
+static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOptsFile = 
+        TraceOptions::CreateTraceOptionsFile(/*file_path*/ GetPathToOdbcIni());
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
