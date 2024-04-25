@@ -92,6 +92,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsFile;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOpts;
 using google::cloud::odbc_internal::StatusRecord;
 
 // Internal Helper Functions
@@ -231,7 +233,7 @@ SQLRETURN SQL_API SQLDriverConnect(
         connectionHandle, windowHandle, inConnectionString,
         inConnectionStringLen, outConnectionString,
         outConnectionStringBufferLen, outConnectionStringLen, driverCompletion,
-        *(*kTraceOptsConsole));
+        *(*kTraceOpts));
 
   // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
   // in odbc_connection.h.
@@ -242,7 +244,7 @@ SQLRETURN SQL_API SQLDriverConnect(
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOptsConsole));
+    TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOpts));
 
   // Call to Release mutex for connection handle in odbc_lock.h.
 
