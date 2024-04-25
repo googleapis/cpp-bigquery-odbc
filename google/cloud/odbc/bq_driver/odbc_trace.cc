@@ -52,7 +52,7 @@ void TraceFunctionEntry_SQLAllocHandle(SQLSMALLINT handle_type,
                           ToCStr(FormatSqlHandleType(handle_type)),
                           ToCStr(FormatSqlHandle(input_handle)),
                           ToCStr(FormatSqlHandle(output_handle)));
-    }
+     }
   }
 }
 

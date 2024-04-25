@@ -88,6 +88,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOptsFile;
 using google::cloud::odbc_internal::StatusRecord;
 
 // Internal Helper Functions
@@ -106,6 +107,8 @@ bool IsTracingEnabled(std::string const& name) {
   }
   return true;
 }
+
+
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -115,16 +118,21 @@ bool IsTracingEnabled(std::string const& name) {
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlallochandle-function
 ////////////////////////////////////////////////////////////////////////////////////////
+
+
 SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
                                  SQLHANDLE* outputHandle) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLAllocHandle");
-
+  
   switch (handleType) {
     case SQL_HANDLE_ENV: {
       // Call to Acquire mutex for environment handle in odbc_lock.h.
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
+        TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                          *(*kTraceOptsFile));
+      else
         TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                           *(*kTraceOptsConsole));
 
@@ -132,6 +140,8 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
+        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsFile));
+      else
         TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
       // Call to Release mutex for environment handle in odbc_lock.h.
       break;
@@ -141,6 +151,9 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
         TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                          *(*kTraceOptsFile));
+      else
+        TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                           *(*kTraceOptsConsole));
 
       rc = google::cloud::odbc_bq_driver::SQLAllocConnHandle(inputHandle,
@@ -148,7 +161,9 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
-        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
+        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsFile));
+      else 
+       TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
       // Call to Release mutex for connection handle in odbc_lock.h.
       break;
     }
@@ -157,6 +172,9 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
       // Call to Trace function entry in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
         TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                          *(*kTraceOptsFile));
+      else
+        TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                           *(*kTraceOptsConsole));
 
       rc = google::cloud::odbc_bq_driver::SQLAllocStmtHandle(inputHandle,
@@ -164,6 +182,8 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
+        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsFile));
+      else
         TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
       // Call to Release mutex for connection handle in odbc_lock.h.
       break;
@@ -174,6 +194,9 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 
       if (is_tracing_enabled)
         TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
+                                          *(*kTraceOptsFile));
+      else
+        TraceFunctionEntry_SQLAllocHandle(handleType, inputHandle, outputHandle,
                                           *(*kTraceOptsConsole));
 
       rc = google::cloud::odbc_bq_driver::SQLAllocDescHandle(inputHandle,
@@ -181,6 +204,8 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
       if (is_tracing_enabled)
+        TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsFile));
+      else
         TraceFunctionExit_SQLAllocHandle(rc, *(*kTraceOptsConsole));
 
       // Call to Trace function exit in odbc_trace.h if tracing is enabled.
@@ -227,6 +252,12 @@ SQLRETURN SQL_API SQLDriverConnect(
         connectionHandle, windowHandle, inConnectionString,
         inConnectionStringLen, outConnectionString,
         outConnectionStringBufferLen, outConnectionStringLen, driverCompletion,
+        *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLDriverConnect(
+        connectionHandle, windowHandle, inConnectionString,
+        inConnectionStringLen, outConnectionString,
+        outConnectionStringBufferLen, outConnectionStringLen, driverCompletion,
         *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
@@ -238,8 +269,9 @@ SQLRETURN SQL_API SQLDriverConnect(
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOptsConsole));
-
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
@@ -355,14 +387,22 @@ SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLConnect(connectionHandle, serverName, serverNameLen,
                                   userName, userNameLen, authString,
+                                  authStringLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLConnect(connectionHandle, serverName, serverNameLen,
+                                  userName, userNameLen, authString,
                                   authStringLen, *(*kTraceOptsConsole));
+
 
   // Call to internal common function for SQLConnect and SQLConnectW
   // in odbc_connection.h.
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLConnect(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLConnect(rc, *(*kTraceOptsConsole));
+    
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
@@ -417,7 +457,12 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetInfo(connectionHandle, infoType, infoValue,
                                   infoValueBufferLen, infoValueStringLen,
+                                  *(*kTraceOptsFile));
+  else
+   TraceFunctionEntry_SQLGetInfo(connectionHandle, infoType, infoValue,
+                                  infoValueBufferLen, infoValueStringLen,
                                   *(*kTraceOptsConsole));
+
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
   // in odbc_driver_metadata.h.
@@ -427,7 +472,9 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLGetInfo(rc, *(*kTraceOptsConsole));
+    TraceFunctionExit_SQLGetInfo(rc, *(*kTraceOptsFile));
+  else
+     TraceFunctionExit_SQLGetInfo(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
@@ -471,6 +518,9 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetFunctions(
+        connectionHandle, functionId, supportedFunction, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetFunctions(
         connectionHandle, functionId, supportedFunction, *(*kTraceOptsConsole));
 
   // Call to internal function for SQLGetFunctions in odbc_driver_metadata.h.
@@ -479,6 +529,8 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
@@ -505,6 +557,9 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetTypeInfo(statementHandle, dataType,
+                                      *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetTypeInfo(statementHandle, dataType,
                                       *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetTypeInfo and SQLGetTypeInfoW
@@ -514,7 +569,9 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLGetTypeInfo(rc, *(*kTraceOptsConsole));
+    TraceFunctionExit_SQLGetTypeInfo(rc, *(*kTraceOptsFile));
+  else
+     TraceFunctionExit_SQLGetTypeInfo(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
@@ -562,6 +619,9 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSetConnectAttr(connectionHandle, attribute, value,
+                                         valueStringLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLSetConnectAttr(connectionHandle, attribute, value,
                                          valueStringLen, *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLSetConnectAttr and
@@ -571,7 +631,9 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLSetConnectAttr(rc, *(*kTraceOptsConsole));
+    TraceFunctionExit_SQLSetConnectAttr(rc, *(*kTraceOptsFile));
+  else
+     TraceFunctionExit_SQLSetConnectAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
@@ -624,6 +686,10 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetConnectAttr(connectionHandle, attribute, value,
                                          valueBufferLen, valueStringLen,
+                                         *(*kTraceOptsFile));
+  else 
+    TraceFunctionEntry_SQLGetConnectAttr(connectionHandle, attribute, value,
+                                         valueBufferLen, valueStringLen,
                                          *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetConnectAttr and
@@ -633,6 +699,8 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetConnectAttr(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetConnectAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
@@ -770,7 +838,11 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSetEnvAttr(environmentHandle, attribute, value,
+                                     valueStringLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLSetEnvAttr(environmentHandle, attribute, value,
                                      valueStringLen, *(*kTraceOptsConsole));
+
 
   // Call to internal function for SQLSetEnvAttr in odbc_environment.h.
   rc = ::google::cloud::odbc_bq_driver::SQLSetEnvAttrInternal(
@@ -778,7 +850,10 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetEnvAttr(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLSetEnvAttr(rc, *(*kTraceOptsConsole));
+
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
   return rc;
@@ -801,7 +876,12 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetEnvAttr(environmentHandle, attribute, value,
                                      valueBufferLen, valueStringLen,
+                                     *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetEnvAttr(environmentHandle, attribute, value,
+                                     valueBufferLen, valueStringLen,
                                      *(*kTraceOptsConsole));
+
 
   // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetEnvAttrInternal(
@@ -809,6 +889,8 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetEnvAttr(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetEnvAttr(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
 
@@ -843,7 +925,12 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetDescField(
         descriptorHandle, recNumber, fieldId, outDescValue,
+        outDescValueBufferLen, outDescValueStringLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetDescField(
+        descriptorHandle, recNumber, fieldId, outDescValue,
         outDescValueBufferLen, outDescValueStringLen, *(*kTraceOptsConsole));
+
 
   rc = google::cloud::odbc_bq_driver::SQLGetDescFieldInternal(
       descriptorHandle, recNumber, fieldId, outDescValue, outDescValueBufferLen,
@@ -851,7 +938,10 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDescField(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetDescField(rc, *(*kTraceOptsConsole));
+
 
   return rc;
 }
@@ -907,7 +997,13 @@ SQLRETURN SQL_API SQLGetDescRec(
     TraceFunctionEntry_SQLGetDescRec(
         descriptorHandle, recNumber, name, nameBufferLen, nameStringLen,
         descType, descSubType, descOctetLen, descPrecision, descScale, nullable,
+        *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetDescRec(
+        descriptorHandle, recNumber, name, nameBufferLen, nameStringLen,
+        descType, descSubType, descOctetLen, descPrecision, descScale, nullable,
         *(*kTraceOptsConsole));
+
 
   rc = google::cloud::odbc_bq_driver::SQLGetDescRecInternal(
       descriptorHandle, recNumber, name, nameBufferLen, nameStringLen, descType,
@@ -915,8 +1011,9 @@ SQLRETURN SQL_API SQLGetDescRec(
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDescRec(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetDescRec(rc, *(*kTraceOptsConsole));
-
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
   return rc;
@@ -970,6 +1067,10 @@ SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSetDescField(
         descriptorHandle, recNumber, fieldIdentifier, descValue,
+        descValueBufferLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLSetDescField(
+        descriptorHandle, recNumber, fieldIdentifier, descValue,
         descValueBufferLen, *(*kTraceOptsConsole));
 
   rc = google::cloud::odbc_bq_driver::SQLSetDescFieldInternal(
@@ -978,6 +1079,8 @@ SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetDescField(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLSetDescField(rc, *(*kTraceOptsConsole));
 
   return rc;
@@ -1026,6 +1129,11 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
     TraceFunctionEntry_SQLSetDescRec(descriptorHandle, recNumber, descType,
                                      descSubType, descOctetLen, descPrecision,
                                      descScale, descData, descOctetLenPtr,
+                                     descIndicator, *(*kTraceOptsFile));
+  else
+   TraceFunctionEntry_SQLSetDescRec(descriptorHandle, recNumber, descType,
+                                     descSubType, descOctetLen, descPrecision,
+                                     descScale, descData, descOctetLenPtr,
                                      descIndicator, *(*kTraceOptsConsole));
 
   rc = google::cloud::odbc_bq_driver::SQLSetDescRecInternal(
@@ -1034,6 +1142,8 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetDescRec(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLSetDescRec(rc, *(*kTraceOptsConsole));
 
   return rc;
@@ -1054,13 +1164,19 @@ SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
 
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLCopyDesc(sourceDescHandle, targetDescHandle,
+                                   *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLCopyDesc(sourceDescHandle, targetDescHandle,
                                    *(*kTraceOptsConsole));
+
 
   rc = google::cloud::odbc_bq_driver::SQLCopyDescInternal(sourceDescHandle,
                                                           targetDescHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLCopyDesc(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLCopyDesc(rc, *(*kTraceOptsConsole));
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
@@ -1496,6 +1612,8 @@ SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionEntry_SQLFetch(statementHandle, *(*kTraceOptsFile));
+  else
     TraceFunctionEntry_SQLFetch(statementHandle, *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
@@ -1503,7 +1621,10 @@ SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   rc = ::google::cloud::odbc_bq_driver::SQLFetchInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-  if (is_tracing_enabled) TraceFunctionExit_SQLFetch(rc, *(*kTraceOptsConsole));
+  if (is_tracing_enabled) 
+  TraceFunctionExit_SQLFetch(rc, *(*kTraceOptsFile));
+  else
+  TraceFunctionExit_SQLFetch(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
@@ -1728,6 +1849,10 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLBindCol(statementHandle, columnNumber, targetCType,
                                   targetValuePtr, targetValueBufferLen,
+                                  targetValueStrLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLBindCol(statementHandle, columnNumber, targetCType,
+                                  targetValuePtr, targetValueBufferLen,
                                   targetValueStrLen, *(*kTraceOptsConsole));
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
@@ -1738,7 +1863,9 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLBindCol(rc, *(*kTraceOptsConsole));
+    TraceFunctionExit_SQLBindCol(rc, *(*kTraceOptsFile));
+  else
+   TraceFunctionExit_SQLBindCol(rc, *(*kTraceOptsConsole));
   // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
@@ -1836,6 +1963,10 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetDiagField(
         handleType, handle, recNumber, diagIdentifier, diagInfo,
+        diagInfoBufferLen, diagInfoStringLen, *(*kTraceOptsFile));
+  else
+    TraceFunctionEntry_SQLGetDiagField(
+        handleType, handle, recNumber, diagIdentifier, diagInfo,
         diagInfoBufferLen, diagInfoStringLen, *(*kTraceOptsConsole));
 
   // Call to common internal function for SQLGetDiagField and SQLGetDiagFieldW
@@ -1846,8 +1977,9 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDiagField(rc, *(*kTraceOptsFile));
+  else
     TraceFunctionExit_SQLGetDiagField(rc, *(*kTraceOptsConsole));
-
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
 
   return rc;
@@ -1906,6 +2038,10 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetDiagRec(
         handleType, handle, recNumber, sqlState, nativeError, messageText,
+        messageTextBufferLen, messageTextLen, *(*kTraceOptsFile));
+  else
+  TraceFunctionEntry_SQLGetDiagRec(
+        handleType, handle, recNumber, sqlState, nativeError, messageText,
         messageTextBufferLen, messageTextLen, *(*kTraceOptsConsole));
 
   // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
@@ -1916,6 +2052,8 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLGetDiagRec(rc, *(*kTraceOptsFile));
+  else 
     TraceFunctionExit_SQLGetDiagRec(rc, *(*kTraceOptsConsole));
 
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
@@ -2616,13 +2754,17 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
   if (is_tracing_enabled)
-    TraceFunctionEntry_SQLFreeHandle(handleType, handle, *(*kTraceOptsConsole));
+    TraceFunctionEntry_SQLFreeHandle(handleType, handle, *(*kTraceOptsFile));
+  else 
+  TraceFunctionEntry_SQLFreeHandle(handleType, handle, *(*kTraceOptsConsole));
 
   // Call to internal function for SQLFreeHandle in odbc_commons.h
   rc = google::cloud::odbc_bq_driver::SQLFreeHandleInternal(handleType, handle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
+    TraceFunctionExit_SQLFreeHandle(rc, *(*kTraceOptsFile));
+  else 
     TraceFunctionExit_SQLFreeHandle(rc, *(*kTraceOptsConsole));
   // Call to Release mutex in odbc_lock.h, as applicable for the handle type
   // passed in.
