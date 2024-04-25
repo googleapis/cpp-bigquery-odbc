@@ -89,6 +89,15 @@ struct TraceOptions {
   static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
   CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections);
 
+  //////////////////////////////////////////////////////////
+  // Get TraceOptions based on the trace section in the
+  // ODBC config file.
+  //
+  // Returns a singleton object for file tracing 
+  //////////////////////////////////////////////////////////
+  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> GetTraceOption();
+
+
   // Shared members.
   bool logging_enabled;
   int log_level{0};
@@ -246,6 +255,12 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsConsole =
         TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
+
+static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(GetPathToOdbcIni());
+
+static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOpts = TraceOptions::GetTraceOption();
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
