@@ -260,7 +260,7 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(GetPathToOdbcIni());
 
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOpts = TraceOptions::GetTraceOption();
+    kTraceOption = TraceOptions::GetTraceOption();
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
