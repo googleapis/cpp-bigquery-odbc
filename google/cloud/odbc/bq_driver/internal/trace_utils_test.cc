@@ -64,7 +64,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
   ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
@@ -75,7 +75,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent) {
   ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
@@ -99,7 +99,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
   ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(1, (*test_opts_file)->log_level);
 }
 
@@ -116,7 +116,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigEmptyLogLevel) {
       TraceOptions::CreateTraceOptionsFile(config_sections);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
@@ -126,7 +126,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigInvalidLogLevel) {
       TraceOptions::CreateTraceOptionsFile(config_sections);
 
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 

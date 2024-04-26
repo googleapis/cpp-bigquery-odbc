@@ -25,7 +25,7 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
@@ -40,7 +40,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-TraceOptions& opts = *(*kTraceOptsConsole);
+TraceOptions& opts = *(*kTraceOption);
 
 // Internal helper functions.
 namespace {
