@@ -33,8 +33,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption,
-                       handle_result.GetStatusRecord().message);
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle* handle = *handle_result;
