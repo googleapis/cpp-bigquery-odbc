@@ -188,7 +188,7 @@ TEST(GetPathToOdbcIni, GetPath_HomeVar) {
 TEST(GetPathToOdbcIni, GetEmptyPath) {
   auto home = ::google::cloud::internal::GetEnv("HOME");
   google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
-  
+    
   std::string actual = GetPathToOdbcIni();
 
   EXPECT_EQ(actual, "");
