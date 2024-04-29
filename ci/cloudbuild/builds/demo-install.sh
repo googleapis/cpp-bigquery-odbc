@@ -24,7 +24,7 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 cmake_config_testing_details=(
-  -DODBC_INTEGRATION_TESTING=OFF
+  -DODBC_INTEGRATION_TESTING=ON
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
   -DODBC_UNIT_TESTING=ON
