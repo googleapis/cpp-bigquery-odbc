@@ -89,12 +89,12 @@ struct TraceOptions {
   static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
   CreateTraceOptionsFile(std::shared_ptr<Sections> const& config_sections);
 
-  //////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////
   // Get TraceOptions based on the trace section in the
   // ODBC config file.
   //
   // Returns a singleton object for file tracing
-  //////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////
   static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
   GetTraceOption();
 
