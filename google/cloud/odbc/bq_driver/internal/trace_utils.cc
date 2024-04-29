@@ -30,10 +30,10 @@ std::mutex TraceOptions::mu_;
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::GetTraceOption() {
-  if (options_file_!=nullptr) {
+  if (options_file_ != nullptr) {
     return options_file_;
   }
-  else if(options_console_!=nullptr){
+  else if(options_console_ != nullptr){
     return options_console_;
   }
 }
