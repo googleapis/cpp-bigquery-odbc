@@ -338,6 +338,70 @@ TEST(DescriptorFieldsTest, SQLSetDescField_ANSI) {
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+TEST(SQLGetDescField, Field_SQL_DESC_PARAMETER_TYPE_apd) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0, NULL);
+      CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+
+      status = SQLSetDescField(conn->apd, 1, SQL_DESC_PARAMETER_TYPE,
+                               (SQLPOINTER)SQL_PARAM_INPUT_OUTPUT_STREAM,
+                               SQL_IS_INTEGER);
+      CheckError(status, "SQLSetDescField(SQL_DESC_PARAMETER_TYPE 1)", conn);
+
+
+  SQLSMALLINT param_type;
+  status =
+      SQLGetDescField(conn->apd, 0, SQL_DESC_PARAMETER_TYPE, &param_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  std::cout << "Param type:  " << param_type << "\n";
+
+      status = SQLSetDescField(conn->apd, 1, SQL_DESC_PARAMETER_TYPE,
+                               (SQLPOINTER)SQL_PARAM_OUTPUT_STREAM,
+                               SQL_IS_INTEGER);
+      CheckError(status, "SQLSetDescField(SQL_DESC_PARAMETER_TYPE 2)", conn);
+
+      param_type;
+      status =
+          SQLGetDescField(conn->apd, 0, SQL_DESC_PARAMETER_TYPE, &param_type, 0, NULL);
+      CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+      std::cout << "Param type:  " << param_type << "\n";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetDescField, Field_SQL_DESC_PARAMETER_TYPE_ipd) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+      CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+
+      status = SQLSetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
+                               (SQLPOINTER)SQL_PARAM_INPUT_OUTPUT_STREAM,
+                               SQL_IS_INTEGER);
+      CheckError(status, "SQLSetDescField(SQL_DESC_PARAMETER_TYPE 1)", conn);
+
+
+  SQLSMALLINT param_type;
+  status =
+      SQLGetDescField(conn->ipd, 0, SQL_DESC_PARAMETER_TYPE, &param_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  std::cout << "Param type:  " << param_type << "\n";
+
+      status = SQLSetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
+                               (SQLPOINTER)SQL_PARAM_OUTPUT_STREAM,
+                               SQL_IS_INTEGER);
+      CheckError(status, "SQLSetDescField(SQL_DESC_PARAMETER_TYPE 2)", conn);
+
+      param_type;
+      status =
+          SQLGetDescField(conn->ipd, 0, SQL_DESC_PARAMETER_TYPE, &param_type, 0, NULL);
+      CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+      std::cout << "Param type:  " << param_type << "\n";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
