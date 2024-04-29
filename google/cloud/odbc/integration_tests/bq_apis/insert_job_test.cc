@@ -229,7 +229,7 @@ TEST(InsertJob, ProjectNotExist) {
   EXPECT_THAT(job_response,
               StatusIs(StatusCode::kInvalidArgument,
                        HasSubstr("Error in non-idempotent operation: ProjectId "
-                                 "and DatasetId must be non-empty")));
+                                 "must be non-empty")));
 }
 
 TEST(InsertJob, DatasetNotExist) {
