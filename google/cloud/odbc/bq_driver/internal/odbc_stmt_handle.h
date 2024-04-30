@@ -17,6 +17,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_query.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_attr.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -67,6 +68,7 @@ class StatementHandle : public Handle {
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
+  ResultSet result_set;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
