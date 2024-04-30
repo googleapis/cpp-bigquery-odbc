@@ -15,6 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <cstring>
 #include <string>
@@ -22,37 +23,16 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using DSValue = std::vector<char>;
-
-using DSRow = std::vector<DSValue>;
-
-// Rows in the ResultSet
-using ResultSetRows = std::vector<DSRow>;
-
-// Data Types as supported by the BQ DataSource.
-enum BQDataType { kString, kInt64 };
-
-// Contains the column data types, as represented by the data source,
-// for each column in a ResultSet row.
-struct ColumnSchema {
-  int col_index;
-  BQDataType col_type;
-};
-
-using RowSchema = std::vector<ColumnSchema>;
-
-// ResultSet structure representing the data from the BQ DataSource.
-struct ResultSet {
-  RowSchema row_schema;
-  ResultSetRows rows;
-};
-
-inline void StringToDSValue(std::string& str, DSValue& value) {
+inline void StringToDSValue(
+    std::string& str,
+    ::google::cloud::odbc_bq_driver_internal::DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());
 }
 
-inline void DSValueToString(DSValue& value, std::string& str) {
+inline void DSValueToString(
+    ::google::cloud::odbc_bq_driver_internal::DSValue& value,
+    std::string& str) {
   str.assign(value.begin(), value.end());
 }
 
