@@ -48,7 +48,6 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections1);
   StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
       TraceOptions::CreateTraceOptionsFile(config_sections);
-
   ASSERT_STATUS_RECORD_OK(test_opts_file);
 
   EXPECT_TRUE((*test_opts_file)->logging_enabled);
