@@ -15,11 +15,32 @@
 #include "google/cloud/odbc/testing/odbc_utils/catalog.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 
+namespace google::cloud::odbc_tests {
+
+static std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
+static std::string const kCatalogDatasetTableWithPK =
+    "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
+static std::string const kCatalogDatasetTableWithoutPK =
+    "ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK";
+static std::string const kCatalogDatasetTableWithPKFull =
+    kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
+static std::string const kCatalogDatasetTableWithoutPKFull =
+    kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
+
+static std::string const kTableWithPKSchema =
+    "CREATE IF NOT EXISTS TABLE " + kCatalogDatasetTableWithPKFull +
+    " "
+    "(StringField STRING, IntField INT64, FloatField FLOAT64) "
+    "PRIMARY KEY (StringField, IntField) NOT ENFORCED";
+
+static std::string const kTableWithOutPKSchema =
+    "CREATE IF NOT EXISTS TABLE " + kCatalogDatasetTableWithoutPKFull +
+    " "
+    "ODBC_TEST_DATASET_CATALOG_FNS.ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK "
+    "(StringField STRING, IntField INT64, FloatField FLOAT64)";
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
-
-namespace google::cloud::odbc_tests {
 
 std::map<std::string, Schema> kTables = {
     {"ODBC_SQLTables1_TEST_1", {{"Str1", SQL_VARCHAR}}},
@@ -87,7 +108,8 @@ TEST(CatalogTest, SQLTables) {
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   }
 
-  // Verify if the tables returned by SQLTables are the same as the ones created
+  // Verify if the tables returned by SQLTables are the same as the ones
+  // created
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
 
   EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
@@ -119,7 +141,8 @@ TEST(CatalogTest, SQLTablesA) {
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   }
 
-  // Verify if the tables returned by SQLTables are the same as the ones created
+  // Verify if the tables returned by SQLTables are the same as the ones
+  // created
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
 
   EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
@@ -139,6 +162,74 @@ TEST(CatalogTest, SQLTablesA) {
                std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
-}  // namespace google::cloud::odbc_tests
+#else
+
+// SQLPrimaryKeys is not implemented by Simba
+TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table if not exists.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
+                                              kCatalogDatasetTableWithPK);
+  // Uncomment the statement below once the function is implemented.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (primary_keys.empty()) {
+    std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table if not exists.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithOutPKSchema);
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
+                                              kCatalogDatasetTableWithoutPK);
+  EXPECT_TRUE(primary_keys.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table if not exists.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema, true);
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
+                                              kCatalogDatasetTableWithPK, true);
+  // Uncomment the statement below once the function is implemented.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (primary_keys.empty()) {
+    std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table if not exists.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithOutPKSchema, true);
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto primary_keys = Catalog::GetPrimaryKeys(
+      conn, kCatalogFnsDataset, kCatalogDatasetTableWithoutPK, true);
+  EXPECT_TRUE(primary_keys.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+}  // namespace google::cloud::odbc_tests

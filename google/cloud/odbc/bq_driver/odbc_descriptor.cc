@@ -123,6 +123,13 @@ static std::map<DescriptorType, std::vector<int>> const kAllowedFieldsToGet = {
       SQL_DESC_UNNAMED,
       SQL_DESC_UNSIGNED}}};
 
+DescriptorType Convert(DescriptorType type) {
+  if (type == DescriptorType::kIRD || type == DescriptorType::kIPD) {
+    return type;
+  }
+  return DescriptorType::kApplication;
+}
+
 SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
@@ -135,9 +142,7 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
 
   auto* desc_handle =
       new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
-  auto* wrapped_handle =
-      new HandleWrapped(HandleType::kDescriptorHandle, desc_handle);
-  *out_desc_handle = wrapped_handle;
+  *out_desc_handle = desc_handle;
   return SQL_SUCCESS;
 }
 
@@ -242,21 +247,10 @@ SQLRETURN SetDataPointer(DescriptorHandle* handle,
   return status_record.CalculateReturnCode();
 }
 
-SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
-                                  SQLSMALLINT rec_number,
-                                  SQLSMALLINT field_identifier,
-                                  SQLPOINTER desc_value,
-                                  SQLINTEGER desc_value_buffer_len) {
-  StatusRecordOr<DescriptorHandle*> handle_result =
-      ValidateDescriptorHandle(descriptor_handle);
-  if (!handle_result) {
-    TracePrintInternal(*(*kTraceEnabledOption),
-                       handle_result.GetStatusRecord().message);
-    return handle_result.GetCalculatedReturnCode();
-  }
-  DescriptorHandle* handle = *handle_result;
-
-  std::vector<int> vec = kAllowedFieldsToSet.at(handle->GetType());
+SQLRETURN SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
+                       SQLSMALLINT field_identifier, SQLPOINTER desc_value,
+                       SQLINTEGER desc_value_buffer_len) {
+  std::vector<int> vec = kAllowedFieldsToSet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
@@ -354,12 +348,11 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   return status_record.CalculateReturnCode();
 }
 
-SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
+SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT field_identifier,
-                                  SQLPOINTER out_value,
-                                  SQLINTEGER value_buffer_len,
-                                  SQLINTEGER* value_string_len) {
+                                  SQLPOINTER desc_value,
+                                  SQLINTEGER desc_value_buffer_len) {
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -367,9 +360,15 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  DescriptorHandle* handle = *handle_result;
+  return SetDescField(*handle_result, rec_number, field_identifier, desc_value,
+                      desc_value_buffer_len);
+}
 
-  std::vector<int> vec = kAllowedFieldsToGet.at(handle->GetType());
+SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
+                       SQLSMALLINT field_identifier, SQLPOINTER out_value,
+                       SQLINTEGER value_buffer_len,
+                       SQLINTEGER* value_string_len) {
+  std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
@@ -570,12 +569,12 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   return result.CalculateReturnCode();
 }
 
-SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
-                                SQLSMALLINT rec_number, SQLSMALLINT type,
-                                SQLSMALLINT sub_type, SQLLEN length,
-                                SQLSMALLINT precision, SQLSMALLINT scale,
-                                SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
-                                SQLLEN* indicator_ptr) {
+SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
+                                  SQLSMALLINT rec_number,
+                                  SQLSMALLINT field_identifier,
+                                  SQLPOINTER out_value,
+                                  SQLINTEGER value_buffer_len,
+                                  SQLINTEGER* value_string_len) {
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -583,8 +582,16 @@ SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  DescriptorHandle* handle = *handle_result;
 
+  return GetDescField(*handle_result, rec_number, field_identifier, out_value,
+                      value_buffer_len, value_string_len);
+}
+
+SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
+                     SQLSMALLINT type, SQLSMALLINT sub_type, SQLLEN length,
+                     SQLSMALLINT precision, SQLSMALLINT scale,
+                     SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
+                     SQLLEN* indicator_ptr) {
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index"};
@@ -622,12 +629,12 @@ SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
   return SQL_SUCCESS;
 }
 
-SQLRETURN SQLGetDescRecInternal(
-    SQLHDESC descriptor_handle, SQLSMALLINT rec_number, SQLCHAR* name,
-    SQLSMALLINT buffer_length, SQLSMALLINT* string_length_ptr,
-    SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
-    SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
-    SQLSMALLINT* nullable_ptr) {
+SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
+                                SQLSMALLINT rec_number, SQLSMALLINT type,
+                                SQLSMALLINT sub_type, SQLLEN length,
+                                SQLSMALLINT precision, SQLSMALLINT scale,
+                                SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
+                                SQLLEN* indicator_ptr) {
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -635,8 +642,17 @@ SQLRETURN SQLGetDescRecInternal(
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  DescriptorHandle* handle = *handle_result;
+  return SetDescRec(*handle_result, rec_number, type, sub_type, length,
+                    precision, scale, data_ptr, string_length_ptr,
+                    indicator_ptr);
+}
 
+SQLRETURN GetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
+                     SQLCHAR* name, SQLSMALLINT buffer_length,
+                     SQLSMALLINT* string_length_ptr, SQLSMALLINT* type_ptr,
+                     SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
+                     SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
+                     SQLSMALLINT* nullable_ptr) {
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index (negative)"};
@@ -678,6 +694,24 @@ SQLRETURN SQLGetDescRecInternal(
   }
 
   return status_record.CalculateReturnCode();
+}
+
+SQLRETURN SQLGetDescRecInternal(
+    SQLHDESC descriptor_handle, SQLSMALLINT rec_number, SQLCHAR* name,
+    SQLSMALLINT buffer_length, SQLSMALLINT* string_length_ptr,
+    SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
+    SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
+    SQLSMALLINT* nullable_ptr) {
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceEnabledOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  return GetDescRec(*handle_result, rec_number, name, buffer_length,
+                    string_length_ptr, type_ptr, sub_type_ptr, length_ptr,
+                    precision_ptr, scale_ptr, nullable_ptr);
 }
 
 SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,

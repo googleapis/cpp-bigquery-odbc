@@ -20,6 +20,7 @@ google_cloud_odbc_testing_odbc_utils_hdrs = [
     "catalog.h",
     "commons.h",
     "connection.h",
+    "descriptor.h",
     "properties.h",
     "statement.h",
 ]
@@ -28,6 +29,7 @@ google_cloud_odbc_testing_odbc_utils_srcs = [
     "catalog.cc",
     "commons.cc",
     "connection.cc",
+    "descriptor.cc",
     "properties.cc",
     "statement.cc",
 ]

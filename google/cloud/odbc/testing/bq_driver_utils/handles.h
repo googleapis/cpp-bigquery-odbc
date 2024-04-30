@@ -15,6 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_BQ_DRIVER_UTILS_HANDLES_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
@@ -24,7 +25,12 @@ SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref);
 
 SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
 
+odbc_bq_driver_internal::ConnectionHandle CreateConnectionHandle(
+    bool is_connected);
+
 odbc_bq_driver_internal::StatementHandle CreateStatementHandle();
+
+odbc_bq_driver_internal::DescriptorHandle CreateExplicitDescriptor();
 
 }  // namespace google::cloud::odbc_testing_bq_driver_utils
 

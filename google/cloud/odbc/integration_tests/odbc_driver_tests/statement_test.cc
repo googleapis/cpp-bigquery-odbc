@@ -14,8 +14,14 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
+
+class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
+
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
+                         testing::Values(false, true));
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
@@ -133,8 +139,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////
@@ -148,8 +152,6 @@ TEST(StatementTest, SQLExecute) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////
@@ -179,8 +181,6 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
 
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Sleep for 5 secs to avoid rate limit errors from BQ
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   ////////////////
   /// USE ANSI
   ////////////////
@@ -564,6 +564,35 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Create explicit descriptor and set it to a statement handle
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Free explicit descriptor
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, conn->apd), SQL_SUCCESS);
+
+  // Check if statement handle reverted to use implicit descriptor
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr", conn);
+  SQLSMALLINT alloc_type = 0;
+  status =
+      SQLGetDescField(conn->apd, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -768,6 +797,219 @@ TEST(StatementTest, ANSI_SetAndGet_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+TEST_P(StatementParameterizedTest, SetAndGetStatementDescriptorAttributes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set attribute using statement handle
+  SQLULEN arr_size = 5;
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                          (SQLPOINTER)arr_size, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+  // Get attribute using statement handle
+  SQLULEN arr_size_stmt_handle = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                       &arr_size_stmt_handle, 0, NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(arr_size, arr_size_stmt_handle);
+
+  // Get descriptor using statement handle
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+
+  // Get attribute using descriptor handle
+  SQLULEN arr_size_desc_handle = 0;
+  status = GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE,
+                        &arr_size_desc_handle, 0, NULL, GetParam());
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(arr_size, arr_size_desc_handle);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementParameterizedTest, SetAndGetDescriptorAttributes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Get descriptor using statement handle
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_PARAM_DESC)", conn);
+
+  // Set attribute using descriptor handle
+  SQLULEN arr_size_desc_handle = 5;
+  status = SQLSetDescField(conn->apd, 0, SQL_DESC_ARRAY_SIZE,
+                           (SQLPOINTER)arr_size_desc_handle, 0);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  // Get attribute using statement handle
+  SQLULEN arr_size_stmt_handle = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_PARAMSET_SIZE,
+                       &arr_size_stmt_handle, 0, NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(arr_size_desc_handle, arr_size_stmt_handle);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementParameterizedTest,
+       SetAndGetStatementAttributes_SQL_ATTR_NOSCAN) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_NOSCAN,
+                          (SQLPOINTER)SQL_NOSCAN_ON, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_NOSCAN)", conn);
+  SQLULEN no_scan = 0;
+  status =
+      GetStmtAttr(conn->hstmt, SQL_ATTR_NOSCAN, &no_scan, 0, NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_NOSCAN)", conn);
+
+  EXPECT_EQ(SQL_NOSCAN_ON, no_scan);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementParameterizedTest,
+       SetAndGetStatementAttributes_SQL_ATTR_ASYNC_ENABLE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+
+  SQLULEN async = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE, &async, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+
+  EXPECT_EQ(SQL_ASYNC_ENABLE_ON, async);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementParameterizedTest,
+       SetAndGetStatementAttributes_SQL_ATTR_MAX_LENGTH) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  SQLULEN expected = 5;
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_LENGTH, (SQLPOINTER)expected, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_MAX_LENGTH)", conn);
+
+  SQLULEN actual = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_MAX_LENGTH, &actual, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_MAX_LENGTH)", conn);
+
+  EXPECT_EQ(expected, actual);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, FailsToSet_SQL_ATTR_ROW_NUMBER) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, (SQLPOINTER)5, 0);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Get descriptor using statement handle and check it's implicit
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  SQLSMALLINT alloc_type = 0;
+  status = GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+                        GetParam());
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+
+  // Set descriptor field to check it after
+  SQLULEN arr_size_implicit = 45;
+  status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE,
+                           (SQLPOINTER)arr_size_implicit, 0);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  // Create an explicit descriptor handle
+  HSTMT desc_expl = nullptr;
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &desc_expl);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  // Set explicit descriptor as statement attribute
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, desc_expl, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+
+  // Check explicit descriptor is set
+  HSTMT desc_expl_new = nullptr;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &desc_expl_new, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  alloc_type = 0;
+  status = GetDescField(desc_expl_new, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0,
+                        NULL, GetParam());
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
+  EXPECT_EQ(desc_expl, desc_expl_new);
+
+  // Set a header field of explicit descriptor
+  SQLULEN arr_size_explicit = 5;
+  status = SQLSetDescField(desc_expl, 0, SQL_DESC_ARRAY_SIZE,
+                           (SQLPOINTER)arr_size_explicit, 0);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  // Get attribute of an explicit descriptor using statement handle
+  SQLULEN arr_size_stmt_handle = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                       &arr_size_stmt_handle, 0, NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(arr_size_explicit, arr_size_stmt_handle);
+
+  // Dissociate explicit descriptor from a statement handle
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, NULL, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+
+  // Get descriptor using statement handle and check it's implicit again
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  alloc_type = 0;
+  status = GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+                        GetParam());
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  SQLULEN arr_size_new = 0;
+  status = GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0,
+                        NULL, GetParam());
+  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+  EXPECT_EQ(arr_size_implicit, arr_size_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests

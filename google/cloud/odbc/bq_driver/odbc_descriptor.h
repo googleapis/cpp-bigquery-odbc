@@ -27,17 +27,28 @@
 // SQLCopyDescInternal
 ///////////////////////////////////////////////////////////
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle);
 
+SQLRETURN SetDescField(
+    google::cloud::odbc_bq_driver_internal::DescriptorHandle* descriptor_handle,
+    SQLSMALLINT rec_number, SQLSMALLINT field_identifier, SQLPOINTER desc_value,
+    SQLINTEGER desc_value_buffer_len);
+
 SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT field_identifier,
                                   SQLPOINTER desc_value,
                                   SQLINTEGER desc_value_buffer_len);
+
+SQLRETURN GetDescField(
+    google::cloud::odbc_bq_driver_internal::DescriptorHandle* handle,
+    SQLSMALLINT rec_number, SQLSMALLINT field_identifier, SQLPOINTER out_value,
+    SQLINTEGER value_buffer_len, SQLINTEGER* value_string_len);
 
 SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
@@ -46,12 +57,25 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLINTEGER value_buffer_len,
                                   SQLINTEGER* value_string_len);
 
+SQLRETURN SetDescRec(
+    google::cloud::odbc_bq_driver_internal::DescriptorHandle* handle,
+    SQLSMALLINT rec_number, SQLSMALLINT type, SQLSMALLINT sub_type,
+    SQLLEN length, SQLSMALLINT precision, SQLSMALLINT scale,
+    SQLPOINTER data_ptr, SQLLEN* string_length_ptr, SQLLEN* indicator_ptr);
+
 SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
                                 SQLSMALLINT rec_number, SQLSMALLINT type,
                                 SQLSMALLINT sub_type, SQLLEN length,
                                 SQLSMALLINT precision, SQLSMALLINT scale,
                                 SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
                                 SQLLEN* indicator_ptr);
+
+SQLRETURN GetDescRec(
+    google::cloud::odbc_bq_driver_internal::DescriptorHandle* descriptor_handle,
+    SQLSMALLINT rec_number, SQLCHAR* name, SQLSMALLINT buffer_length,
+    SQLSMALLINT* string_length_ptr, SQLSMALLINT* type_ptr,
+    SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr, SQLSMALLINT* precision_ptr,
+    SQLSMALLINT* scale_ptr, SQLSMALLINT* nullable_ptr);
 
 SQLRETURN SQLGetDescRecInternal(
     SQLHDESC descriptor_handle, SQLSMALLINT rec_number, SQLCHAR* name,

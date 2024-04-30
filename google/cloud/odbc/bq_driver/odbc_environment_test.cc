@@ -13,13 +13,27 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
+
+using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using ::google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
+
+using google::cloud::odbc_testing_utils::StatusIs;
+using ::testing::HasSubstr;
+
+StatusRecord GetLastStatusRecord(EnvironmentHandle& handle) {
+  auto status_records = handle.GetDiagnostics().GetStatusRecords();
+  return status_records[status_records.size() - 1];
+}
 
 TEST(SetEnvAttr, Success) {
   SQLHENV env_handle;
@@ -55,13 +69,22 @@ TEST(GetEnvAttr, Success) {
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
-TEST(GetEnvAttr, NullValue) {
+TEST(GetEnvAttr, NullAttributeValue) {
   SQLHENV env_handle;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  StatusRecordOr<EnvironmentHandle*> env_handle_status =
+      ValidateEnvironmentHandle(env_handle);
+  ASSERT_STATUS_RECORD_OK(env_handle_status);
+
   EXPECT_EQ(SQL_ERROR,
             SQLGetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
                                   nullptr, 0, nullptr));
+
+  StatusRecord status_record = GetLastStatusRecord(*(*env_handle_status));
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
+  EXPECT_EQ(status_record.message, "Null attribute value");
+
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 

@@ -20,6 +20,10 @@
 
 namespace google::cloud::odbc_tests {
 
+SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
+                      SQLPOINTER value, SQLINTEGER value_buffer_len,
+                      SQLINTEGER* value_string_len, bool use_ansi);
+
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
                           bool use_ansi = false);
 

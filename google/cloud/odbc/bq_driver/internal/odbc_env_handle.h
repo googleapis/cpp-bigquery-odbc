@@ -129,6 +129,8 @@ class EnvironmentHandle : public Handle {
 
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
+  HandleType kType = HandleType::kEnvHandle;
+
  private:
   std::shared_ptr<EnvAttrConnectionPool> connection_pool_;
   std::shared_ptr<EnvAttrConnectionPoolMatch> connection_pool_match_;

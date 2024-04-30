@@ -169,6 +169,9 @@ std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
 
+void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
+                       std::string create_table_schema, bool use_ansi = false);
+
 // If SQL_ASYNC_ENABLE_ON, this function can be used to run a ODBC API till the
 // status is not SQL_STILL_EXECUTING
 template <typename Func, typename... Args>

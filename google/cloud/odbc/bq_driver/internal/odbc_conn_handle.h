@@ -49,6 +49,8 @@ struct Dsn {
   bool is_bq_legacy_sql;
 };
 
+class StatementHandle;
+
 class ConnectionHandle : public Handle {
  public:
   explicit ConnectionHandle() = default;
@@ -76,6 +78,10 @@ class ConnectionHandle : public Handle {
 
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
 
+  HandleType kType = HandleType::kConnHandle;
+
+  std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
+
  protected:
   bool is_connected_ = false;
 
@@ -90,6 +96,8 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, SQLPOINTER> attribute_values_;
   // stores string attribute values.
   std::map<SQLINTEGER, std::string> attribute_str_values_;
+  // storage of all statement handles associated with this connection handle
+  std::set<StatementHandle*> stmt_handles_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

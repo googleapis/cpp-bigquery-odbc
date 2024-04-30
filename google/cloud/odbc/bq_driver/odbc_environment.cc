@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -23,12 +23,14 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
+SQLRETURN
+SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
   auto* env_handle = new EnvironmentHandle();
-  auto* wrapped_handle = new HandleWrapped(HandleType::kEnvHandle, env_handle);
-  *out_env_handle = wrapped_handle;
+  *out_env_handle = env_handle;
   return SQL_SUCCESS;
 }
 
@@ -51,6 +53,10 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
   return env_handle->SetAttribute(attribute, value, &val_str_len);
 }
 
+// value_buffer_len is not used since there is no character environment
+// attribute or the driver currently does not support any environment
+// attribute with character data. Per spec, this parameter can be ignored for
+// non character attribute value.
 SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER /*value_buffer_len*/,
@@ -66,16 +72,15 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
     return env_handle_status.GetCalculatedReturnCode();
   }
 
-  if (value == nullptr) {
-    TracePrintInternal(
-        opts,
-        "Output attribute value argument for SQLGetEnvAttr cannot be null");
-    // TODO(b/308656768,b/308656826): Record error or diagnostic info for
-    // SQLDiagRec and/or SQLDiagField and return correct SQLSTATE.
-    return SQL_ERROR;
-  }
-
   EnvironmentHandle* env_handle = *env_handle_status;
+
+  if (value == nullptr) {
+    TracePrintInternal(opts, "Null attribute value");
+    auto status_record =
+        StatusRecord{SQLStates::k_HY092(), "Null attribute value"};
+    env_handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
 
   return env_handle->GetAttribute(attribute, value, &val_str_len);
 }

@@ -15,7 +15,6 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_ENVIRONMENT_H
 
-#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 ///////////////////////////////////////////////////////////

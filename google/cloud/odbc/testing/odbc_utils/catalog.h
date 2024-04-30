@@ -17,8 +17,11 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CATALOG_H
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
+#include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
+
+std::string const kCatalogName = "bigquery-devtools-drivers";
 
 class Catalog {
  public:
@@ -33,6 +36,11 @@ class Catalog {
   static std::shared_ptr<Results> GetTables(std::shared_ptr<ODBCHandles> conn,
                                             std::string dataset = "",
                                             bool use_ansi = false);
+
+  // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
+  static std::map<int, std::string> GetPrimaryKeys(
+      std::shared_ptr<ODBCHandles> conn, std::string dataset = "",
+      std::string table = "", bool use_ansi = false);
 };
 
 }  // namespace google::cloud::odbc_tests

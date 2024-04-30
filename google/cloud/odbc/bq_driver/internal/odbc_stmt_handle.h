@@ -26,11 +26,18 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+class ConnectionHandle;
+
 class StatementHandle : public Handle {
  public:
-  explicit StatementHandle() = default;
-  explicit StatementHandle(Descriptors descriptors)
-      : descriptors_(std::move(descriptors)), attributes_(kDefaultAttributes){};
+  // This constructor is used only for tests
+  explicit StatementHandle(ConnectionHandle* conn_handle = nullptr)
+      : conn_handle_(conn_handle){};
+  explicit StatementHandle(ConnectionHandle* conn_handle,
+                           Descriptors descriptors)
+      : conn_handle_(conn_handle),
+        descriptors_(std::move(descriptors)),
+        attributes_(kDefaultAttributes){};
 
   ~StatementHandle() = default;
 
@@ -50,11 +57,16 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
 
+  HandleType kType = HandleType::kStmtHandle;
+
+  inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
+
  private:
   std::map<int, DataBuffer> column_bindings_;
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
+  ConnectionHandle* conn_handle_{nullptr};
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

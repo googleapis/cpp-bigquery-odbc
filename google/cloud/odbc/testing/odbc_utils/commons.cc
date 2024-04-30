@@ -138,6 +138,20 @@ void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
+void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
+                       std::string create_table_schema, bool use_ansi) {
+  char create_table_stmt[kBufferLength];
+  StrToChar(create_table_stmt, create_table_schema);
+
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
+}
+
 void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
                       bool use_ansi) {
   SQLRETURN status;

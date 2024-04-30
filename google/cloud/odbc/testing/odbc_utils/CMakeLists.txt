@@ -32,6 +32,8 @@ add_library(
     commons.h
     connection.cc
     connection.h
+    descriptor.cc
+    descriptor.h
     properties.cc
     properties.h
     statement.cc

@@ -22,7 +22,9 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -37,6 +39,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }
@@ -48,6 +51,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }
@@ -59,8 +63,11 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      // TODO(b/332812254) free the four automatically allocated descriptors
-      // associated with that handle
+      StatementHandle* stmt_handle = *handle_result;
+      // Dissociate itself from a connection handle
+      stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
+          stmt_handle);
+      (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }
@@ -72,18 +79,20 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      // TODO(b/332812714) all statements that the freed handle had been
-      // associated with should be reverted to their respective automatically
-      // allocated descriptor handles
+      // Dissociate this handle from all statement handles it was associated
+      // with
+      std::set<std::pair<StatementHandle*, DescriptorType>> pairs =
+          (*handle_result)->GetAssociatedStatementHandles();
+      for (auto const& [stmt_handle, type] : pairs) {
+        stmt_handle->SetDescriptorHandle(type, nullptr);
+      }
+      (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }
     default:
       return SQL_INVALID_HANDLE;
   }
-  // Deleting 'void *' is an undefined behavior, so we need to cast it first
-  auto* in_handle_wrapped = reinterpret_cast<HandleWrapped*>(in_handle);
-  delete in_handle_wrapped;
   return SQL_SUCCESS;
 }
 

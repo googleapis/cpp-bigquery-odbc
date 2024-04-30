@@ -20,8 +20,11 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <map>
+#include <set>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+class StatementHandle;
 
 class DescriptorHandle : public Handle {
  public:
@@ -65,10 +68,19 @@ class DescriptorHandle : public Handle {
   odbc_internal::StatusRecord SetDescriptorRecords(
       std::map<SQLSMALLINT, DescriptorRecord> const& descriptor_records);
 
+  HandleType kType = HandleType::kDescHandle;
+
+  inline std::set<std::pair<StatementHandle*, DescriptorType>>&
+  GetAssociatedStatementHandles() {
+    return associated_stmt_handles_;
+  };
+
  private:
   DescriptorType type_;
   HeaderRecord header_record_;
   std::map<SQLSMALLINT, DescriptorRecord> descriptor_records_;
+  std::set<std::pair<StatementHandle*, DescriptorType>>
+      associated_stmt_handles_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

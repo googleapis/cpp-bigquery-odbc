@@ -35,8 +35,6 @@
 ///////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/odbc_connection.h"
-#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver {
