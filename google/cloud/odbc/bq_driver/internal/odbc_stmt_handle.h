@@ -68,7 +68,7 @@ class StatementHandle : public Handle {
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
-  ResultSet result_set;
+  ResultSet result_set_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
