@@ -32,7 +32,7 @@ StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::GetEnabledTraceOption() {
   if (options_file_ != nullptr) {
     return options_file_;
-  } 
+  }
   if (options_console_ != nullptr) {
     return options_console_;
   }

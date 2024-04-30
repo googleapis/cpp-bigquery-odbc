@@ -247,7 +247,7 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i);
 // Replace the console call with the file version, for the final release.
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsConsole =
-        TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ false,
+        TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
 
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
