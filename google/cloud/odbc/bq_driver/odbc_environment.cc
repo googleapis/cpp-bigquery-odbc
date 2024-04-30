@@ -21,7 +21,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_internal::StatusRecordOr;
 
@@ -35,13 +35,13 @@ SQLRETURN SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
 SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER val_str_len) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
+  TraceOptions& opts = *(*kTraceEnabledOption);
 
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
   if (!env_handle_status) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(**kTraceEnabledOption,
                        env_handle_status.GetStatusRecord().message);
     return env_handle_status.GetCalculatedReturnCode();
   }
@@ -55,13 +55,13 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER /*value_buffer_len*/,
                                         SQLINTEGER* val_str_len) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
+  TraceOptions& opts = *(*kTraceEnabledOption);
 
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
   if (!env_handle_status) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(**kTraceEnabledOption,
                        env_handle_status.GetStatusRecord().message);
     return env_handle_status.GetCalculatedReturnCode();
   }

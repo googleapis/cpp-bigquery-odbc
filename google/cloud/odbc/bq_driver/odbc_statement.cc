@@ -23,7 +23,7 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -33,7 +33,7 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceEnabledOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -86,7 +86,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceEnabledOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }

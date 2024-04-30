@@ -29,6 +29,16 @@ std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
+TraceOptions::GetEnabledTraceOption() {
+  if (options_file_ != nullptr) {
+    return options_file_;
+  } 
+  if (options_console_ != nullptr) {
+    return options_console_;
+  }
+}
+
+StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
   std::lock_guard<std::mutex> lk(mu_);
   if (options_console_ == nullptr) {

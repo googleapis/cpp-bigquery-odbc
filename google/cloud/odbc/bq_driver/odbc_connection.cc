@@ -28,7 +28,7 @@ using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
@@ -45,7 +45,7 @@ Authentication CreateAuth(Section& dsn_section) {
   try {
     auth_int = stoi(dsn_section["OAuthMechanism"]);
   } catch (std::exception const& ex) {
-    auto& opts = *(*kTraceOptsConsole);
+    auto& opts = *(*kTraceEnabledOption);
     TracePrintInternal(opts, ex.what());
     auth_int = 0;
   }
@@ -81,7 +81,7 @@ SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<EnvironmentHandle*> handle_result =
       ValidateEnvironmentHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceEnabledOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -103,7 +103,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceEnabledOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -152,7 +152,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER buf_len, SQLINTEGER* str_len) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
+  TraceOptions& opts = *(*kTraceEnabledOption);
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
@@ -174,7 +174,7 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER str_len) {
-  TraceOptions& opts = *(*kTraceOptsConsole);
+  TraceOptions& opts = *(*kTraceEnabledOption);
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {

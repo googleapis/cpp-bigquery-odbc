@@ -20,7 +20,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using ::google::cloud::odbc_bq_driver_internal::kTraceEnabledOption;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -33,7 +33,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOptsConsole,
+    TracePrintInternal(**kTraceEnabledOption,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
