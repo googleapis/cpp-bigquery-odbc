@@ -28,15 +28,14 @@ static std::string const kCatalogDatasetTableWithoutPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
 
 static std::string const kTableWithPKSchema =
-    "CREATE IF NOT EXISTS TABLE " + kCatalogDatasetTableWithPKFull +
+    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
     " "
     "(StringField STRING, IntField INT64, FloatField FLOAT64) "
     "PRIMARY KEY (StringField, IntField) NOT ENFORCED";
 
 static std::string const kTableWithOutPKSchema =
-    "CREATE IF NOT EXISTS TABLE " + kCatalogDatasetTableWithoutPKFull +
+    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithoutPKFull +
     " "
-    "ODBC_TEST_DATASET_CATALOG_FNS.ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK "
     "(StringField STRING, IntField INT64, FloatField FLOAT64)";
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
@@ -71,30 +70,6 @@ std::map<std::string, Schema> kTablesAnsi = {
       {"Float3", SQL_FLOAT},
       {"Date3", SQL_DATETIME}}}};
 
-// Drops all tables in a dataset
-void ClearDataset(
-    std::string kDatasetName,
-    std::shared_ptr<std::vector<std::string>> table_names_ptr = nullptr) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::vector<std::string> table_names;
-  if (!table_names_ptr) {
-    EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
-    EXPECT_EQ(GetDriverInfo(conn), SQL_SUCCESS);
-    table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  } else {
-    table_names = *table_names_ptr;
-  }
-
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
-  for (auto table_name : table_names) {
-    std::string table_name_full = kDatasetName + "." + table_name;
-    Table(table_name_full).Drop(conn);
-  }
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(CatalogTest, SQLTables) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -123,9 +98,6 @@ TEST(CatalogTest, SQLTables) {
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  ClearDataset(kDatasetName,
-               std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
 TEST(CatalogTest, SQLTablesA) {
@@ -157,9 +129,6 @@ TEST(CatalogTest, SQLTablesA) {
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  ClearDataset(kDatasetName,
-               std::make_shared<std::vector<std::string>>(test_table_names));
 }
 
 #else
