@@ -26,7 +26,26 @@ using DSValue = std::vector<char>;
 
 using DSRow = std::vector<DSValue>;
 
-using ResultSet = std::vector<DSRow>;
+// Rows in the ResultSet
+using ResultSetRows = std::vector<DSRow>;
+
+// Data Types as supported by the BQ DataSource.
+enum BQDataType { kString, kInt64 };
+
+// Contains the column data types, as represented by the data source,
+// for each column in a ResultSet row.
+struct ColumnSchema {
+  int col_index;
+  BQDataType col_type;
+};
+
+using RowSchema = std::vector<ColumnSchema>;
+
+// ResultSet structure representing the data from the BQ DataSource.
+struct ResultSet {
+  RowSchema row_schema;
+  ResultSetRows rows;
+};
 
 inline void StringToDSValue(std::string& str, DSValue& value) {
   value.resize(str.size());
