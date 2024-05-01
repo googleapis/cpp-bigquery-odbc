@@ -23,19 +23,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-inline void StringToDSValue(
-    std::string& str,
-    ::google::cloud::odbc_bq_driver_internal::DSValue& value) {
-  value.resize(str.size());
-  std::copy(str.begin(), str.end(), value.begin());
-}
-
-inline void DSValueToString(
-    ::google::cloud::odbc_bq_driver_internal::DSValue& value,
-    std::string& str) {
-  str.assign(value.begin(), value.end());
-}
-
 ////////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // common ODBC APIs which can be called from other internal APIs:

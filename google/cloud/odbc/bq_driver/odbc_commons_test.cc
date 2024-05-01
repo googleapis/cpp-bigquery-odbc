@@ -27,8 +27,10 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSValue;
+using google::cloud::odbc_bq_driver_internal::DSValueToString;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StringToDSValue;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 struct NativeDataTypesStruct {

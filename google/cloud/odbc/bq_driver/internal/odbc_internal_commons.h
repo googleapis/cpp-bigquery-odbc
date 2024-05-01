@@ -51,6 +51,19 @@ struct ResultSet {
   ResultSetRows rows;
 };
 
+inline void StringToDSValue(
+    std::string& str,
+    ::google::cloud::odbc_bq_driver_internal::DSValue& value) {
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
+}
+
+inline void DSValueToString(
+    ::google::cloud::odbc_bq_driver_internal::DSValue& value,
+    std::string& str) {
+  str.assign(value.begin(), value.end());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H
