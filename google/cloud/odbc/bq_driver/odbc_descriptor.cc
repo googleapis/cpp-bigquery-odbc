@@ -32,7 +32,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -134,7 +134,7 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -356,7 +356,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -578,7 +578,7 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -638,7 +638,7 @@ SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -705,7 +705,7 @@ SQLRETURN SQLGetDescRecInternal(
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -719,14 +719,14 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(source_desc_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
   DescriptorHandle* src_handle = *handle_result;
   handle_result = ValidateDescriptorHandle(target_desc_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOptsConsole),
+    TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }

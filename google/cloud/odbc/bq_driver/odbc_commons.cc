@@ -25,7 +25,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::HandleType;
-using google::cloud::odbc_bq_driver_internal::kTraceOptsConsole;
+using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
@@ -35,7 +35,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       StatusRecordOr<EnvironmentHandle*> handle_result =
           ValidateEnvironmentHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOptsConsole),
+        TracePrintInternal(*(*kTraceOption),
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
@@ -47,7 +47,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOptsConsole),
+        TracePrintInternal(*(*kTraceOption),
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
@@ -59,7 +59,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       StatusRecordOr<StatementHandle*> handle_result =
           ValidateStatementHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOptsConsole),
+        TracePrintInternal(*(*kTraceOption),
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
@@ -75,7 +75,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       StatusRecordOr<DescriptorHandle*> handle_result =
           ValidateDescriptorHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOptsConsole),
+        TracePrintInternal(*(*kTraceOption),
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }

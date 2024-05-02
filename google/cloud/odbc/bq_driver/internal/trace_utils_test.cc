@@ -130,6 +130,45 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigInvalidLogLevel) {
   EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
+TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFileAbsent) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections5);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_option =
+      TraceOptions::GetTraceOption();
+
+  std::string fmt1 = FormatSqlSmallInt(1);
+  std::string fmt2 = FormatSqlUSmallInt(2);
+  std::string fmt3 = FormatSqlInteger(3);
+  std::string fmt4 = FormatSqlUInteger(4);
+
+  EXPECT_FALSE((*test_option)->trace_file.is_open());
+  EXPECT_EQ(
+      "TestBasicODBCTypes\t\tSQLSMALLINT, 1\n\t\tSQLUSMALLINT, "
+      "2\n\t\tSQLINTEGER, 3\n\t\tSQLUINTEGER, 4\n",
+      CollectAndPrintArgs("TestBasicODBCTypes", *(*test_option), 4,
+                          fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
+                          fmt4.c_str()));
+}
+
+TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections1);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_option =
+      TraceOptions::GetTraceOption();
+
+  EXPECT_TRUE((*test_option)->logging_enabled);
+  EXPECT_TRUE((*test_option)->trace_file.is_open());
+  EXPECT_EQ(1, (*test_option)->log_level);
+
+  (*test_option)->trace_file.close();
+}
+
 TEST(TraceLoggingConsole, BasicODBCTypes) {
   std::string fmt1 = FormatSqlSmallInt(1);
   std::string fmt2 = FormatSqlUSmallInt(2);
