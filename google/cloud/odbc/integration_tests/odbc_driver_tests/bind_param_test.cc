@@ -21,31 +21,11 @@ namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
-inline constexpr int kPrecisionUnchanged = 111;
-inline constexpr int kScaleUnchanged = 112;
-inline constexpr int kDatetimePrecisionUnchanged = 113;
-inline constexpr int kDatetimeCodeUnchanged = SQL_CODE_MINUTE_TO_SECOND;
-
 class BindParameterParameterizedTest : public ::testing::TestWithParam<bool> {};
 
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI,
                          BindParameterParameterizedTest,
                          testing::Values(false, true));
-
-void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
-  ASSERT_EQ(SQL_SUCCESS,
-            SQLSetDescField(desc, param_number, SQL_DESC_PRECISION,
-                            (SQLPOINTER)kPrecisionUnchanged, NULL));
-  ASSERT_EQ(SQL_SUCCESS, SQLSetDescField(desc, param_number, SQL_DESC_SCALE,
-                                         (SQLPOINTER)kScaleUnchanged, NULL));
-  ASSERT_EQ(
-      SQL_SUCCESS,
-      SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                      (SQLPOINTER)kDatetimePrecisionUnchanged, NULL));
-  ASSERT_EQ(SQL_SUCCESS,
-            SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                            (SQLPOINTER)SQL_CODE_MINUTE_TO_SECOND, NULL));
-}
 
 TEST_P(BindParameterParameterizedTest, Bind_SQL_NUMERIC) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -77,107 +57,86 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_NUMERIC) {
 
   // Check in_out_type behavior
   SQLSMALLINT desc_in_out_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PARAMETER_TYPE,
-                        &desc_in_out_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PARAMETER_TYPE,
+               &desc_in_out_type, 0, NULL, GetParam());
   EXPECT_EQ(in_out_type, desc_in_out_type);
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_NUMERIC, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_NUMERIC, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(38, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(38, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_NUMERIC, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_NUMERIC, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(38, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(col_size, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(decimal_digits, desc_scale);
 
   // Check param_val behavior
   SQLPOINTER desc_data_ptr = nullptr;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_DATA_PTR,
-                        &desc_data_ptr, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATA_PTR, &desc_data_ptr, 0,
+               NULL, GetParam());
   EXPECT_EQ(&param_val, desc_data_ptr);
 
   // Check buff_len behavior
   SQLLEN desc_octet_length = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH,
-                        &desc_octet_length, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH,
+               &desc_octet_length, 0, NULL, GetParam());
   EXPECT_EQ(buff_len, desc_octet_length);
 
   // Check str_len behavior
   SQLPOINTER desc_octet_length_ptr = nullptr;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH_PTR,
-                        &desc_octet_length_ptr, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH_PTR,
+               &desc_octet_length_ptr, 0, NULL, GetParam());
   EXPECT_EQ(&str_len, desc_octet_length_ptr);
   SQLPOINTER desc_indicator_ptr = nullptr;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_INDICATOR_PTR,
-                        &desc_indicator_ptr, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_INDICATOR_PTR,
+               &desc_indicator_ptr, 0, NULL, GetParam());
   EXPECT_EQ(&str_len, desc_indicator_ptr);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -215,74 +174,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_TYPE_DATE) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_TYPE_DATE, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_DATE, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   // Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_TYPE_DATE, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_DATE, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -320,74 +263,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_TYPE_TIMESTAMP) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_TYPE_TIMESTAMP, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_TIMESTAMP, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(6, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(6, desc_scale);
 
   // Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_TYPE_TIMESTAMP, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_TIMESTAMP, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(decimal_digits, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(decimal_digits, desc_scale);  // ???????????????????????????????
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -425,74 +352,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_MONTH) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_INTERVAL, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_INTERVAL_MONTH, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_MONTH, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(2, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   // Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_INTERVAL, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_INTERVAL_MONTH, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_MONTH, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(2, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -530,74 +441,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_HOUR_TO_SECOND) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_INTERVAL, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_INTERVAL_HOUR_TO_SECOND, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_HOUR_TO_SECOND, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(2, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(6, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(6, desc_scale);
 
   // Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_INTERVAL, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_INTERVAL_HOUR_TO_SECOND, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_HOUR_TO_SECOND, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(2, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(decimal_digits, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(decimal_digits, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -633,74 +528,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_DECIMAL) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_C_DOUBLE, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_DOUBLE, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(53, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(53, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DECIMAL, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_DECIMAL, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(53, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(col_size, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(decimal_digits, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -736,74 +615,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_CHAR) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_C_CHAR, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_CHAR, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(1, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(1, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_CHAR, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CHAR, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(1, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(col_size, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(kScaleUnchanged, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -839,74 +702,58 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_TIMESTAMP) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_TYPE_DATE, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_DATE, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_DATETIME, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_TYPE_TIMESTAMP, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(SQL_CODE_TIMESTAMP, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(decimal_digits, desc_precision);
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(decimal_digits, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -942,75 +789,59 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_REAL) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_C_FLOAT, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_FLOAT, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(24, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(24, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_REAL, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_REAL, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(24, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(24, desc_precision);  //                         ?????????????????
                                   //                         should be col_size
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(kScaleUnchanged, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1046,75 +877,59 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_INTEGER) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_C_SSHORT, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_SSHORT, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(0, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_INTEGER, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_INTEGER, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
-  EXPECT_EQ(kDatetimePrecisionUnchanged,
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
+  EXPECT_EQ(kLength,
             desc_precision);  //     ????????? Why is not kPrecisionUnchanged
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(kScaleUnchanged, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1150,76 +965,60 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_GUID) {
 
   // Check value_type behavior
   SQLSMALLINT desc_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_C_BINARY, desc_type);
   SQLSMALLINT desc_concise_type = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_C_BINARY, desc_concise_type);
   SQLSMALLINT desc_datetime_code = 0;
-  status =
-      GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   SQLSMALLINT desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(1, desc_datetime_precision);
   SQLSMALLINT desc_precision = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(1, desc_precision);
   SQLSMALLINT desc_scale = 0;
-  status = GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(0, desc_scale);
 
   //   Check param_type behavior
   desc_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_TYPE, &desc_type, 0, NULL,
+               GetParam());
   EXPECT_EQ(SQL_GUID, desc_type);
   desc_concise_type = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
-                        &desc_concise_type, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_CONCISE_TYPE,
+               &desc_concise_type, 0, NULL, GetParam());
   EXPECT_EQ(SQL_GUID, desc_concise_type);
   desc_datetime_code = 0;
-  status =
-      GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                   &desc_datetime_code, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &desc_datetime_code, 0, NULL, GetParam());
   EXPECT_EQ(0, desc_datetime_code);
   desc_datetime_precision = 0;
-  status = GetDescField(conn->apd, param_number,
-                        SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                        &desc_datetime_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->apd, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &desc_datetime_precision, 0, NULL, GetParam());
   EXPECT_EQ(1, desc_datetime_precision);
 
   // Check col_size behavior
   desc_precision = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION,
-                        &desc_precision, 0, NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
+               NULL, GetParam());
   EXPECT_EQ(
       36,
       desc_precision);  //                                       ?????????????
 
   // Check decimal_digits behavior
   desc_scale = 0;
-  status = GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0,
-                        NULL, GetParam());
-  CheckError(status, "GetDescField", conn);
+  GetDescField(conn->ipd, param_number, SQL_DESC_SCALE, &desc_scale, 0, NULL,
+               GetParam());
   EXPECT_EQ(kScaleUnchanged, desc_scale);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

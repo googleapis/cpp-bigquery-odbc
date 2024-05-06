@@ -45,7 +45,7 @@ std::string getSchemaStr(Schema schema) {
 }
 
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
-                     SQLSMALLINT handle_type, bool use_ansi = false) {
+                     SQLSMALLINT handle_type, bool use_ansi) {
   if (handle == nullptr) {
     return;
   }

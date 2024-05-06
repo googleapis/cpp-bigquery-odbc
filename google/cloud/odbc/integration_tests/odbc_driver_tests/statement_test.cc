@@ -616,8 +616,8 @@ TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
                        NULL, GetParam());
   CheckError(status, "SQLGetStmtAttr", conn);
   SQLSMALLINT alloc_type = 0;
-  status =
-      SQLGetDescField(conn->apd, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  GetDescField(conn->apd, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
 
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
 
@@ -854,9 +854,8 @@ TEST_P(StatementParameterizedTest, SetAndGetStatementDescriptorAttributes) {
 
   // Get attribute using descriptor handle
   SQLULEN arr_size_desc_handle = 0;
-  status = GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE,
-                        &arr_size_desc_handle, 0, NULL, GetParam());
-  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_desc_handle, 0,
+               NULL, GetParam());
 
   EXPECT_EQ(arr_size, arr_size_desc_handle);
 
@@ -971,9 +970,8 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
                        GetParam());
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
   SQLSMALLINT alloc_type = 0;
-  status = GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
-                        GetParam());
-  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
 
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
 
@@ -998,9 +996,8 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
                        NULL, GetParam());
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
   alloc_type = 0;
-  status = GetDescField(desc_expl_new, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0,
-                        NULL, GetParam());
-  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  GetDescField(desc_expl_new, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
 
   EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
   EXPECT_EQ(desc_expl, desc_expl_new);
@@ -1028,13 +1025,11 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
                        GetParam());
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
   alloc_type = 0;
-  status = GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
-                        GetParam());
-  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
   SQLULEN arr_size_new = 0;
-  status = GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0,
-                        NULL, GetParam());
-  CheckError(status, "SQLGetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0, NULL,
+               GetParam());
 
   EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
   EXPECT_EQ(arr_size_implicit, arr_size_new);

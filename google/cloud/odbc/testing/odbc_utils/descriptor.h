@@ -19,11 +19,19 @@
 
 namespace google::cloud::odbc_tests {
 
-SQLRETURN GetDescField(SQLHDESC descriptor_handle, SQLSMALLINT rec_number,
-                       SQLSMALLINT field_identifier, SQLPOINTER out_value,
-                       SQLINTEGER value_buffer_len,
-                       SQLINTEGER* value_string_len, bool use_ansi);
+inline constexpr int kPrecisionUnchanged = 111;
+inline constexpr int kScaleUnchanged = 112;
+inline constexpr int kDatetimePrecisionUnchanged = 113;
+inline constexpr int kLength = 114;
+inline constexpr int kDatetimeCodeUnchanged = SQL_CODE_MINUTE_TO_SECOND;
 
-}
+void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number);
+
+void GetDescField(SQLHDESC descriptor_handle, SQLSMALLINT rec_number,
+                  SQLSMALLINT field_identifier, SQLPOINTER out_value,
+                  SQLINTEGER value_buffer_len, SQLINTEGER* value_string_len,
+                  bool use_ansi);
+
+}  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_DESCRIPTOR_H

@@ -208,6 +208,9 @@ inline void CheckError(SQLRETURN status, std::string const api,
                        std::shared_ptr<ODBCHandles> conn,
                        bool use_ansi = false);
 
+void GetErrorDetails(std::string const& api, SQLHANDLE handle,
+                     SQLSMALLINT handle_type, bool use_ansi = false);
+
 void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
                       bool use_ansi = false);
 
