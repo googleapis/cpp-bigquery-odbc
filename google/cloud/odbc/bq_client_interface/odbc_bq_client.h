@@ -171,6 +171,13 @@ class ODBCBQClient {
             query_request,
         ::google::cloud::Options const& options);
 
+  odbc_internal::StatusRecordOr<
+      ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+  PostQuery(
+      ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+          query_request,
+      ::google::cloud::Options const& options);
+
   // Gets all the query results of a previously run query job.
   odbc_internal::StatusRecordOr<
       ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>

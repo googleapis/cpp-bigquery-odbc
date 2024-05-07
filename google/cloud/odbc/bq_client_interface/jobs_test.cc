@@ -591,6 +591,131 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsFull) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
+TEST(PostQuery, PostQuerySuccess) {
+  Options options;
+  std::string project_id = "project_id";
+  QueryRequest query_request;
+  query_request.set_query("SELECT *");
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  PostQueryResults expected;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).WillOnce([&](PostQueryRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_FALSE(request.json_filter_keys().empty());
+    return make_status_or(expected);
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<PostQueryResults> actual =
+      PostQuery(job_client, post_query_request, options);
+
+  ASSERT_STATUS_RECORD_OK(actual);
+}
+
+TEST(PostQuery, PostQuerySuccess_EmptyInputParams) {
+  Options options;
+  std::string project_id;
+  QueryRequest query_request;
+  PostQueryResults expected;
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).WillOnce([&](PostQueryRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_FALSE(request.json_filter_keys().empty());
+    return make_status_or(expected);
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<PostQueryResults> actual =
+      PostQuery(job_client, post_query_request, options);
+
+  ASSERT_STATUS_RECORD_OK(actual);
+}
+
+TEST(PostQuery, PostQueryFailure_UnauthenticatedRequest) {
+  Options options;
+  std::string project_id = "project_id";
+  QueryRequest query_request;
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).WillOnce([&](PostQueryRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_FALSE(request.json_filter_keys().empty());
+    return Status(StatusCode::kUnauthenticated, "denied");
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<PostQueryResults> actual =
+      PostQuery(job_client, post_query_request, options);
+
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+}
+
+TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsEmpty) {
+  Options options;
+  std::string project_id = "project_id";
+  QueryRequest query_request;
+  PostQueryResults expected;
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).WillOnce([&](PostQueryRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_THAT(request.json_filter_keys(), Contains("defaultDataset"));
+    EXPECT_THAT(request.json_filter_keys(), Contains("maximumBytesBilled"));
+    return make_status_or(expected);
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<PostQueryResults> actual =
+      PostQuery(job_client, post_query_request, options);
+
+  ASSERT_STATUS_RECORD_OK(actual);
+}
+
+TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsFull) {
+  Options options;
+  std::string project_id = "project_id";
+  QueryRequest query_request;
+  query_request.set_maximum_bytes_billed(1);
+  query_request.set_default_dataset(
+      {.dataset_id = "dataset_id", .project_id = "project_id"});
+
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+
+  PostQueryResults expected;
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).WillOnce([&](PostQueryRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_THAT(request.json_filter_keys(),
+                Contains("defaultDataset").Times(0));
+    EXPECT_THAT(request.json_filter_keys(),
+                Contains("maximumBytesBilled").Times(0));
+    return make_status_or(expected);
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<PostQueryResults> actual =
+      PostQuery(job_client, post_query_request, options);
+
+  ASSERT_STATUS_RECORD_OK(actual);
+}
+
 TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
   Options options;
   std::string project_id = "project_id";

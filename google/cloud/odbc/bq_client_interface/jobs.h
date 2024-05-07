@@ -98,6 +98,13 @@ Query(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
           query_request,
       ::google::cloud::Options const& options);
 
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+PostQuery(::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
+          ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+              post_query_request,
+          ::google::cloud::Options const& options);
+
 // Gets all the query results of a previously run query job.
 odbc_internal::StatusRecordOr<
     ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>

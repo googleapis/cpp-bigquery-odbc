@@ -183,6 +183,15 @@ ODBCBQClient::Query(
       job_client_, project_id, query_request, options);
 }
 
+StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+ODBCBQClient::PostQuery(
+    ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+        post_query_request,
+    ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::PostQuery(
+      job_client_, post_query_request, options);
+}
+
 StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
 ODBCBQClient::GetAllQueryResults(std::string const& project_id,
                                  std::string const& job_id,

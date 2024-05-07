@@ -186,6 +186,13 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
       job_client.Query(post_query_request, options));
 }
 
+StatusRecordOr<PostQueryResults> PostQuery(
+    JobClient& job_client, PostQueryRequest const& post_query_request,
+    Options const& options) {
+  return Query(job_client, post_query_request.project_id(),
+               post_query_request.query_request(), options);
+}
+
 StatusRecordOr<GetQueryResults> GetAllQueryResults(
     JobClient& job_client, std::string const& project_id,
     std::string const& job_id, std::string const& location,
