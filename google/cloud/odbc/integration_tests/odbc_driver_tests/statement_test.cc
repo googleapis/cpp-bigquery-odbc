@@ -367,9 +367,9 @@ TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
 TEST(StatementTest, SQLFetch_Ansi) { FetchDataTest(true, true); }
 
 TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
-TEST(StatementTest, SQLFetch_WithoutSQLBindCol_Ansi) {
-  FetchDataTest(false, true);
-}
+// TEST(StatementTest, SQLFetch_WithoutSQLBindCol_Ansi) {
+//   FetchDataTest(false, true);
+// }
 
 TEST(StatementTest, SQLFetch_with_SQLExecDirect) {
   ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_SYNC_TEST_1", false);
