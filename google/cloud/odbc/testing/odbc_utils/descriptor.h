@@ -22,7 +22,7 @@ namespace google::cloud::odbc_tests {
 inline constexpr int kPrecisionUnchanged = 111;
 inline constexpr int kScaleUnchanged = 112;
 inline constexpr int kDatetimePrecisionUnchanged = 113;
-inline constexpr int kLength = 114;
+inline constexpr int kLengthUnchanged = 114;
 inline constexpr int kDatetimeCodeUnchanged = SQL_CODE_MINUTE_TO_SECOND;
 
 void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number);

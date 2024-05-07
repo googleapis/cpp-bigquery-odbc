@@ -923,7 +923,7 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_INTEGER) {
   desc_precision = 0;
   GetDescField(conn->ipd, param_number, SQL_DESC_PRECISION, &desc_precision, 0,
                NULL, GetParam());
-  EXPECT_EQ(kLength,
+  EXPECT_EQ(kLengthUnchanged,
             desc_precision);  //     ????????? Why is not kPrecisionUnchanged
 
   // Check decimal_digits behavior
