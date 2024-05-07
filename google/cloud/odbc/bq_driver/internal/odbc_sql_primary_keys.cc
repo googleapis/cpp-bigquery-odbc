@@ -56,10 +56,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
   // stored as strings because of how the server returns them. The row schema
   // indicates how they should converted back for the application buffers in
   // SQLFetch.
-  for (int i = 0; i < rows.size(); i++) {
-    Struct struct_val = rows[i];
+
+  for (auto struct_val : rows) {
     DSRow rs_row;
-    for (auto field_entry : struct_val.fields) {
+    for (auto const& field_entry : struct_val.fields) {
       Value bq_val = field_entry.second;
       std::string data = absl::get<std::string>(bq_val.value_kind);
       if (!data.empty()) {
@@ -78,7 +78,8 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
-  } else if (type == "INTEGER") {
+  }
+  if (type == "INTEGER") {
     return BQDataType::kInt64;
   }
   std::string err_msg = "Invalid Data Type: ";
@@ -87,9 +88,9 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
 }
 
 StatusRecordOr<DSPrimaryKeysResults> FetchPrimaryKeysFromDataSource(
-    std::string const& catalog_name, int catalogNameLen,
-    std::string const& schemaName, int schemaNameLen,
-    std::string const& tableName, int tableNameLen) {
+    std::string const& /*catalog_name*/, int /*catalogNameLen*/,
+    std::string const& /*schemaName*/, int /*schemaNameLen*/,
+    std::string const& /*tableName*/, int /*tableNameLen*/) {
   // Not Yet Implemented.
   return StatusRecord::Ok();
 }
