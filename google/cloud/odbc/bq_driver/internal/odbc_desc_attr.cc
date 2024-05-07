@@ -51,10 +51,19 @@ static std::vector<Interval> const kIntervalTypes = {
      SQL_CODE_MINUTE_TO_SECOND},
 };
 
-static std::vector<int> const kOtherSupportedTypes = {
-    SQL_CHAR, SQL_C_CHAR,  SQL_BINARY, SQL_NUMERIC,  SQL_C_NUMERIC,
-    SQL_REAL, SQL_C_FLOAT, SQL_DOUBLE, SQL_SMALLINT, SQL_INTEGER,
-    SQL_BIT,  SQL_TINYINT, SQL_GUID};
+static std::vector<int> const kOtherSQLSupportedTypes = {
+    SQL_CHAR,     SQL_VARCHAR,      SQL_LONGVARCHAR,   SQL_WCHAR,
+    SQL_WVARCHAR, SQL_WLONGVARCHAR, SQL_DECIMAL,       SQL_NUMERIC,
+    SQL_SMALLINT, SQL_INTEGER,      SQL_REAL,          SQL_FLOAT,
+    SQL_DOUBLE,   SQL_BIT,          SQL_TINYINT,       SQL_BIGINT,
+    SQL_BINARY,   SQL_VARBINARY,    SQL_LONGVARBINARY, SQL_GUID};
+
+static std::vector<int> const kOtherCSupportedTypes = {
+    SQL_C_CHAR,    SQL_C_WCHAR,    SQL_C_SSHORT,      SQL_C_USHORT,
+    SQL_C_SLONG,   SQL_C_ULONG,    SQL_C_FLOAT,       SQL_C_DOUBLE,
+    SQL_C_BIT,     SQL_C_STINYINT, SQL_C_UTINYINT,    SQL_C_SBIGINT,
+    SQL_C_UBIGINT, SQL_C_BINARY,   SQL_C_VARBOOKMARK, SQL_C_NUMERIC,
+    SQL_C_GUID};
 
 void HeaderRecord::CopyHeaderRecordsFrom(HeaderRecord const& header_record) {
   array_size = header_record.array_size;
@@ -122,6 +131,46 @@ SQLSMALLINT GetPrecisionForDatetimeCode(SQLSMALLINT datetime_interval_code) {
              : kDefaultIntervalPrecision;
 }
 
+SQLSMALLINT GetLengthForDatetimeCode(SQLSMALLINT datetime_interval_code) {
+  switch (datetime_interval_code) {
+    case SQL_CODE_DATE:
+      return 10;
+    case SQL_CODE_TIME:
+      return 8;
+    case SQL_CODE_TIMESTAMP:
+      return 26;
+    default:
+      return 0;
+  }
+}
+
+SQLSMALLINT GetLengthForIntervalCode(SQLSMALLINT datetime_interval_code) {
+  switch (datetime_interval_code) {
+    case SQL_CODE_MONTH:
+    case SQL_CODE_YEAR:
+    case SQL_CODE_DAY:
+    case SQL_CODE_HOUR:
+    case SQL_CODE_MINUTE:
+      return 2;
+    case SQL_CODE_YEAR_TO_MONTH:
+    case SQL_CODE_DAY_TO_HOUR:
+    case SQL_CODE_HOUR_TO_MINUTE:
+      return 5;
+    case SQL_CODE_DAY_TO_MINUTE:
+      return 8;
+    case SQL_CODE_SECOND:
+      return 9;
+    case SQL_CODE_DAY_TO_SECOND:
+      return 18;
+    case SQL_CODE_HOUR_TO_SECOND:
+      return 15;
+    case SQL_CODE_MINUTE_TO_SECOND:
+      return 12;
+    default:
+      return 2;
+  }
+}
+
 void DescriptorRecord::SetIntervalType(Interval const& entry,
                                        DescriptorType desc_type) {
   type = SQL_INTERVAL;
@@ -132,7 +181,11 @@ void DescriptorRecord::SetIntervalType(Interval const& entry,
   datetime_interval_code = entry.datetime_interval_code;
   precision = GetPrecisionForIntervalCode(datetime_interval_code);
   scale = precision;
-  length = 2;
+  if (IsDescriptorTypeApplication(desc_type)) {
+    length = 2;
+  } else {
+    length = GetLengthForIntervalCode(entry.datetime_interval_code);
+  }
 }
 
 void DescriptorRecord::SetDatetimeType(Interval const& entry,
@@ -141,58 +194,203 @@ void DescriptorRecord::SetDatetimeType(Interval const& entry,
   concise_type = (IsDescriptorTypeApplication(desc_type))
                      ? entry.concise_c_type
                      : entry.concise_sql_type;
-  datetime_interval_precision = 0;
   datetime_interval_code = entry.datetime_interval_code;
-  precision = GetPrecisionForDatetimeCode(datetime_interval_code);
+  precision = GetPrecisionForDatetimeCode(entry.datetime_interval_code);
   scale = precision;
-  length = 0;
-}
-
-StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
-                                            std::string const& error_message) {
-  if (value == SQL_CHAR || value == SQL_C_CHAR || value == SQL_BINARY) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 1;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_NUMERIC || value == SQL_C_NUMERIC) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 38;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_REAL || value == SQL_C_FLOAT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 24;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_DOUBLE) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 53;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_SMALLINT || value == SQL_INTEGER ||
-             value == SQL_BIT || value == SQL_TINYINT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 0;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_GUID) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 16;
-    datetime_interval_code = scale = 0;
-  } else if (value == SQL_TIMESTAMP) {
-    type = SQL_DATETIME;
-    concise_type = value;
+  if (IsDescriptorTypeApplication(desc_type)) {
     datetime_interval_precision = 0;
-    datetime_interval_code = SQL_CODE_TIMESTAMP;
-    scale = 6;
-    precision = 6;
     length = 0;
   } else {
-    // Not supported: SQL_DECIMAL, SQL_VARCHAR, SQL_FLOAT, SQL_BIGINT,
-    // SQL_VARBINARY, SQL_LONGVARCHAR, SQL_VARBINARY
+    datetime_interval_precision = length;
+    length = GetLengthForDatetimeCode(entry.datetime_interval_code);
+  }
+}
+
+StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
+                                             std::string const& error_message) {
+  if (value == SQL_C_CHAR || value == SQL_C_BINARY ||
+      value == SQL_C_VARBOOKMARK) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 1;
+  } else if (value == SQL_C_NUMERIC) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 38;
+  } else if (value == SQL_C_FLOAT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 24;
+  } else if (value == SQL_C_DOUBLE) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 53;
+  } else if (value == SQL_C_BIT || value == SQL_C_WCHAR ||
+             value == SQL_C_SSHORT || value == SQL_C_USHORT ||
+             value == SQL_C_SLONG || value == SQL_C_ULONG ||
+             value == SQL_C_STINYINT || value == SQL_C_UTINYINT ||
+             value == SQL_C_SBIGINT || value == SQL_C_UBIGINT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 0;
+  } else if (value == SQL_C_GUID) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 16;
+  } else {
     return StatusRecord{SQLStates::k_HY021(), error_message};
   }
+  datetime_interval_code = scale = 0;
   return StatusRecord::Ok();
 }
 
+StatusRecord DescriptorRecord::SetOtherSQLType(
+    SQLSMALLINT const value, std::string const& error_message) {
+  if (value == SQL_CHAR || value == SQL_VARCHAR || value == SQL_BINARY ||
+      value == SQL_VARBINARY || value == SQL_LONGVARBINARY) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 1;
+  } else if (value == SQL_LONGVARCHAR || value == SQL_WCHAR ||
+             value == SQL_WVARCHAR || value == SQL_WLONGVARCHAR) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+  } else if (value == SQL_NUMERIC || value == SQL_DECIMAL) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 38;
+    scale = 0;
+  } else if (value == SQL_SMALLINT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+    length = 5;
+  } else if (value == SQL_INTEGER) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+    length = 10;
+  } else if (value == SQL_REAL) {
+    type = concise_type = value;
+    datetime_interval_precision = 14;
+    precision = 24;
+    length = 7;
+  } else if (value == SQL_FLOAT || value == SQL_DOUBLE) {
+    type = concise_type = value;
+    datetime_interval_precision = 24;
+    precision = 53;
+    length = 15;
+  } else if (value == SQL_BIT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+    length = 1;
+  } else if (value == SQL_TINYINT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+    length = 3;
+  } else if (value == SQL_BIGINT) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length;
+    length = 19;
+  } else if (value == SQL_GUID) {
+    type = concise_type = value;
+    datetime_interval_precision = precision = length = 36;
+  } else {
+    return StatusRecord{SQLStates::k_HY021(), error_message};
+  }
+  datetime_interval_code = 0;
+  return StatusRecord::Ok();
+}
+
+//// Do not touch 'scale' for IPD
+// StatusRecord DescriptorRecord::SetOtherType(SQLSMALLINT const value,
+//                                             std::string const& error_message)
+//                                             {
+//   if (value == SQL_CHAR || value == SQL_C_CHAR || value == SQL_VARCHAR ||
+//       value == SQL_BINARY || value == SQL_C_BINARY || value ==
+//       SQL_C_VARBOOKMARK || value == SQL_VARBINARY || value ==
+//       SQL_LONGVARBINARY) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 1;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_NUMERIC || value == SQL_C_NUMERIC || value ==
+//   SQL_DECIMAL) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 38;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_C_FLOAT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 24;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_DOUBLE || value == SQL_C_DOUBLE) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 53;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_C_BIT ||
+//              value == SQL_C_WCHAR || value == SQL_C_SSHORT || value ==
+//              SQL_C_USHORT || value == SQL_C_SLONG || value == SQL_C_ULONG ||
+//              value == SQL_C_STINYINT || value == SQL_C_UTINYINT || value ==
+//              SQL_C_SBIGINT || value == SQL_C_UBIGINT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 0;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_C_GUID) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 16;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_GUID) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length = 36;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_LONGVARCHAR || value == SQL_WCHAR || value ==
+//   SQL_WVARCHAR ||
+//              value == SQL_WLONGVARCHAR) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_SMALLINT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     length = 5;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_INTEGER) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     length = 10;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_REAL) {
+//     type = concise_type = value;
+//     datetime_interval_precision = 14;
+//     precision = 24;
+//     length = 7;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_FLOAT || value == SQL_DOUBLE) {
+//     type = concise_type = value;
+//     datetime_interval_precision = 24;
+//     precision = 53;
+//     length = 15;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_BIT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     length = 1;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_TINYINT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     length = 3;
+//     datetime_interval_code = scale = 0;
+//   } else if (value == SQL_BIGINT) {
+//     type = concise_type = value;
+//     datetime_interval_precision = precision = length;
+//     length = 19;
+//     datetime_interval_code = scale = 0;
+////  } else if (value == SQL_TIMESTAMP) {
+////    type = SQL_DATETIME;
+////    concise_type = value;
+////    datetime_interval_precision = 0;
+////    datetime_interval_code = SQL_CODE_TIMESTAMP;
+////    scale = 6;
+////    precision = 6;
+////    length = 0;
+//  } else {
+//    return StatusRecord{SQLStates::k_HY021(), error_message};
+//  }
+//  return StatusRecord::Ok();
+//}
+
 StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
-                                       DescriptorType desc_type) {
+                                       DescriptorType const& desc_type) {
   if (value == SQL_INTERVAL) {
     for (auto const& entry : kIntervalTypes) {
       if (datetime_interval_code == entry.datetime_interval_code) {
@@ -213,40 +411,30 @@ StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
     return StatusRecord{SQLStates::k_HY021(),
                         "Datetime interval code invalid or not supported"};
   }
-  return SetOtherType(value, "Illegal descriptor type");
+  if (IsDescriptorTypeApplication(desc_type)) {
+    return SetOtherCType(value, "Illegal descriptor type");
+  }
+  return SetOtherSQLType(value, "Illegal descriptor type");
 }
 
-StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value) {
+StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value,
+                                              DescriptorType const& desc_type) {
   for (auto const& entry : kIntervalTypes) {
     if (entry.concise_sql_type == value || entry.concise_c_type == value) {
-      DescriptorType desc_type = entry.concise_sql_type == value
-                                     ? DescriptorType::kApplication
-                                     : DescriptorType::kIPD;
       SetIntervalType(entry, desc_type);
       return StatusRecord::Ok();
     }
   }
   for (auto const& entry : kDatetimeTypes) {
     if (entry.concise_sql_type == value || entry.concise_c_type == value) {
-      DescriptorType desc_type = entry.concise_sql_type == value
-                                     ? DescriptorType::kApplication
-                                     : DescriptorType::kIPD;
       SetDatetimeType(entry, desc_type);
       return StatusRecord::Ok();
     }
   }
-
-  if (value == SQL_DATE || value == SQL_TIME) {
-    type = SQL_DATETIME;
-    concise_type = value;
-    datetime_interval_precision = 0;
-    datetime_interval_code = value == SQL_DATE ? SQL_CODE_DATE : SQL_CODE_TIME;
-    precision = 0;
-    scale = 0;
-    length = 0;
-    return StatusRecord::Ok();
+  if (IsDescriptorTypeApplication(desc_type)) {
+    return SetOtherCType(value, "Illegal descriptor concise type");
   }
-  return SetOtherType(value, "Illegal descriptor concise type");
+  return SetOtherSQLType(value, "Illegal descriptor concise type");
 }
 
 bool DescriptorRecord::IsTypeValid(SQLSMALLINT valid_type,
@@ -290,8 +478,13 @@ StatusRecord DescriptorRecord::ConsistencyCheck() const {
     return StatusRecord::Ok();
   }
 
-  if (std::find(kOtherSupportedTypes.begin(), kOtherSupportedTypes.end(),
-                type) != kOtherSupportedTypes.end() &&
+  if (std::find(kOtherSQLSupportedTypes.begin(), kOtherSQLSupportedTypes.end(),
+                type) != kOtherSQLSupportedTypes.end() &&
+      type == concise_type) {
+    return StatusRecord::Ok();
+  }
+  if (std::find(kOtherCSupportedTypes.begin(), kOtherCSupportedTypes.end(),
+                type) != kOtherCSupportedTypes.end() &&
       type == concise_type) {
     return StatusRecord::Ok();
   }

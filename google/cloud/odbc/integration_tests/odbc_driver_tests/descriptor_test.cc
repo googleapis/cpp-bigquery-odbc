@@ -374,148 +374,6 @@ TEST(SQLGetDescFieldANSI, Field_SQL_DESC_ALLOC_TYPE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLSetDescField, Field_SQL_DESC_TYPE) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
-  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
-
-  // Setting Field
-  status = SQLSetDescField(conn->ard, 1, SQL_DESC_TYPE, (SQLPOINTER)SQL_INTEGER,
-                           NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-
-  // Getting fields
-  SQLSMALLINT concise_type;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
-                           0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
-  EXPECT_EQ(SQL_INTEGER, concise_type);
-  SQLSMALLINT type;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
-  EXPECT_EQ(SQL_INTEGER, type);
-
-  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
-  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_TYPE) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
-  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
-
-  // Setting Field
-  status = SQLSetDescField(conn->ard, 1, SQL_DESC_TYPE, (SQLPOINTER)SQL_INTEGER,
-                           NULL);  // No ANSI Version for UnixODBC
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-
-  // Getting fields
-  SQLSMALLINT concise_type;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
-                            0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn, true);
-  EXPECT_EQ(SQL_INTEGER, concise_type);
-  SQLSMALLINT type;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, true);
-  EXPECT_EQ(SQL_INTEGER, type);
-
-  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
-  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLSetDescField, Field_SQL_DESC_CONCISE_TYPE) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
-  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
-
-  // Setting Field
-  status = SQLSetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
-                           (SQLPOINTER)SQL_INTERVAL_MONTH, NULL);
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-
-  // Getting fields
-  SQLSMALLINT concise_type;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
-                           0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
-  EXPECT_EQ(SQL_INTERVAL_MONTH, concise_type);
-  SQLSMALLINT type;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
-  EXPECT_EQ(SQL_INTERVAL, type);
-  SQLSMALLINT datetime_code;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
-                           &datetime_code, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
-  EXPECT_EQ(SQL_CODE_MONTH, datetime_code);
-  SQLINTEGER datetime_precision;
-  status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                           &datetime_precision, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
-             conn);
-  EXPECT_EQ(2, datetime_precision);
-  SQLSMALLINT precision;
-  status =
-      SQLGetDescField(conn->ard, 1, SQL_DESC_PRECISION, &precision, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(0, precision);
-
-  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
-  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_CONCISE_TYPE) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
-  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
-
-  // Setting Field
-  status = SQLSetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE,
-                           (SQLPOINTER)SQL_INTERVAL_MONTH,
-                           NULL);  // No ANSI Version for UnixODBC
-  CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-
-  // Getting fields
-  SQLSMALLINT concise_type;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
-                            0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn), true;
-  EXPECT_EQ(SQL_INTERVAL_MONTH, concise_type);
-  SQLSMALLINT type;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_TYPE, &type, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, true);
-  EXPECT_EQ(SQL_INTERVAL, type);
-  SQLSMALLINT datetime_code;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
-                            &datetime_code, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn,
-             true);
-  EXPECT_EQ(SQL_CODE_MONTH, datetime_code);
-  SQLINTEGER datetime_precision;
-  status = SQLGetDescFieldA(conn->ard, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                            &datetime_precision, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
-             conn, true);
-  EXPECT_EQ(2, datetime_precision);
-  SQLSMALLINT precision;
-  status =
-      SQLGetDescFieldA(conn->ard, 1, SQL_DESC_PRECISION, &precision, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn, true);
-  EXPECT_EQ(0, precision);
-
-  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
-  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLSetDescField, Field_SQL_DESC_ARRAY_STATUS_PTR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -688,7 +546,7 @@ TEST(SQLSetDescRec, Success_SQL_DATETIME) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLSetDescRec, Success_SQL_INTEGER) {
+TEST(SQLSetDescRec, Success_SQL_C_NUMERIC) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
@@ -696,7 +554,7 @@ TEST(SQLSetDescRec, Success_SQL_INTEGER) {
 
   // Getting fields
   Descriptor desc_to_set;
-  desc_to_set.type = SQL_INTEGER;
+  desc_to_set.type = SQL_C_NUMERIC;
   desc_to_set.sub_type = 0;
   desc_to_set.precision = 10;
   desc_to_set.scale = 5;
@@ -732,7 +590,7 @@ TEST(SQLSetDescRec, Success_SQL_INTEGER) {
   status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
                            0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
-  EXPECT_EQ(SQL_INTEGER, concise_type);
+  EXPECT_EQ(SQL_C_NUMERIC, concise_type);
 
   SQLPOINTER* data_ptr = nullptr;
   status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATA_PTR, &data_ptr, 0, NULL);
@@ -821,7 +679,7 @@ TEST(SQLCopyDesc, CopyDescriptor) {
   status =
       SQLSetDescField(conn->ard, 1, SQL_DESC_LENGTH, (SQLPOINTER)length, NULL);
   CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
-  SQLSMALLINT type = SQL_INTEGER;
+  SQLSMALLINT type = SQL_C_NUMERIC;
   status = SQLSetDescField(conn->ard, 3, SQL_DESC_TYPE, (SQLPOINTER)type, NULL);
   CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
   SQLUSMALLINT array_status[4];
@@ -876,7 +734,7 @@ TEST(SQLCopyDesc, Success_DeleteExistingRecords) {
   CheckError(status, "SQLSetDescField(SQL_DESC_LENGTH)", conn);
   // Populate APD and then check that it was removed (as recNumber 3 is absent
   // in ARD)
-  SQLSMALLINT type = SQL_INTEGER;
+  SQLSMALLINT type = SQL_C_NUMERIC;
   status = SQLSetDescField(conn->apd, 3, SQL_DESC_TYPE, (SQLPOINTER)type, NULL);
   CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
 

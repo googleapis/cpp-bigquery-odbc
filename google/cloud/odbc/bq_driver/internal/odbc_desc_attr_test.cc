@@ -203,11 +203,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MONTH) {
   descriptor_record.datetime_interval_code = SQL_CODE_MONTH;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MONTH, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MONTH, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -219,11 +219,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR) {
   descriptor_record.datetime_interval_code = SQL_CODE_YEAR;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_YEAR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_YEAR, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -235,11 +235,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR_TO_MONTH) {
   descriptor_record.datetime_interval_code = SQL_CODE_YEAR_TO_MONTH;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_YEAR_TO_MONTH, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_YEAR_TO_MONTH, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -251,11 +251,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY) {
   descriptor_record.datetime_interval_code = SQL_CODE_DAY;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -267,11 +267,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR) {
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -283,11 +283,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE) {
   descriptor_record.datetime_interval_code = SQL_CODE_MINUTE;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -299,11 +299,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_SECOND) {
   descriptor_record.datetime_interval_code = SQL_CODE_SECOND;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
@@ -315,11 +315,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_HOUR) {
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_HOUR;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_HOUR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_HOUR, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -331,11 +331,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_MINUTE) {
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_MINUTE;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -347,11 +347,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_SECOND) {
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_SECOND;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
@@ -363,11 +363,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_MINUTE) {
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR_TO_MINUTE;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR_TO_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR_TO_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -379,11 +379,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_SECOND) {
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR_TO_SECOND;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
@@ -395,11 +395,11 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE_TO_SECOND) {
   descriptor_record.datetime_interval_code = SQL_CODE_MINUTE_TO_SECOND;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_INTERVAL, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MINUTE_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MINUTE_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
@@ -410,7 +410,7 @@ TEST(SetType, FailsToSet_SQL_DATETIME_NoIntervalCodeSet) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kApplication);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
@@ -421,11 +421,11 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_DATE) {
   descriptor_record.datetime_interval_code = SQL_CODE_DATE;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_DATE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_DATE, descriptor_record.concise_type);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -437,11 +437,11 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIME) {
   descriptor_record.datetime_interval_code = SQL_CODE_TIME;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_TIME, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_TIME, descriptor_record.concise_type);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
@@ -453,26 +453,26 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIMESTAMP) {
   descriptor_record.datetime_interval_code = SQL_CODE_TIMESTAMP;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_DATETIME, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_TIMESTAMP, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_TIMESTAMP, descriptor_record.concise_type);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_CHAR) {
+TEST(SetType, Set_SQL_C_CHAR) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_CHAR, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_CHAR, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_CHAR, descriptor_record.type);
-  EXPECT_EQ(SQL_CHAR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_CHAR, descriptor_record.type);
+  EXPECT_EQ(SQL_C_CHAR, descriptor_record.concise_type);
   EXPECT_EQ(1, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(1, descriptor_record.precision);
   EXPECT_EQ(1, descriptor_record.length);
@@ -480,15 +480,15 @@ TEST(SetType, Set_SQL_CHAR) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_NUMERIC) {
+TEST(SetType, Set_SQL_C_NUMERIC) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_NUMERIC, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_NUMERIC, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_NUMERIC, descriptor_record.type);
-  EXPECT_EQ(SQL_NUMERIC, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.type);
+  EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.concise_type);
   EXPECT_EQ(38, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(38, descriptor_record.precision);
   EXPECT_EQ(38, descriptor_record.length);
@@ -496,15 +496,15 @@ TEST(SetType, Set_SQL_NUMERIC) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_REAL) {
+TEST(SetType, Set_SQL_C_FLOAT) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_REAL, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_FLOAT, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_REAL, descriptor_record.type);
-  EXPECT_EQ(SQL_REAL, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_FLOAT, descriptor_record.type);
+  EXPECT_EQ(SQL_C_FLOAT, descriptor_record.concise_type);
   EXPECT_EQ(24, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(24, descriptor_record.precision);
   EXPECT_EQ(24, descriptor_record.length);
@@ -512,15 +512,15 @@ TEST(SetType, Set_SQL_REAL) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_DOUBLE) {
+TEST(SetType, Set_SQL_C_DOUBLE) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_DOUBLE, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_DOUBLE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DOUBLE, descriptor_record.type);
-  EXPECT_EQ(SQL_DOUBLE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.type);
+  EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.concise_type);
   EXPECT_EQ(53, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(53, descriptor_record.precision);
   EXPECT_EQ(53, descriptor_record.length);
@@ -528,15 +528,15 @@ TEST(SetType, Set_SQL_DOUBLE) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_INTEGER) {
+TEST(SetType, Set_SQL_C_BIT) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_INTEGER, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_BIT, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_INTEGER, descriptor_record.type);
-  EXPECT_EQ(SQL_INTEGER, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_BIT, descriptor_record.type);
+  EXPECT_EQ(SQL_C_BIT, descriptor_record.concise_type);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.length);
@@ -544,52 +544,20 @@ TEST(SetType, Set_SQL_INTEGER) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_BIT) {
+TEST(SetType, Set_SQL_C_GUID) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
-      descriptor_record.SetType(SQL_BIT, DescriptorType::kIPD);
+      descriptor_record.SetType(SQL_C_GUID, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_BIT, descriptor_record.type);
-  EXPECT_EQ(SQL_BIT, descriptor_record.concise_type);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(0, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.length);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(0, descriptor_record.scale);
-}
-
-TEST(SetType, Set_SQL_GUID) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record =
-      descriptor_record.SetType(SQL_GUID, DescriptorType::kIPD);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_GUID, descriptor_record.type);
-  EXPECT_EQ(SQL_GUID, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_GUID, descriptor_record.type);
+  EXPECT_EQ(SQL_C_GUID, descriptor_record.concise_type);
   EXPECT_EQ(16, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(16, descriptor_record.precision);
   EXPECT_EQ(16, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
   EXPECT_EQ(0, descriptor_record.scale);
-}
-
-TEST(SetType, Set_SQL_TIMESTAMP) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record =
-      descriptor_record.SetType(SQL_TIMESTAMP, DescriptorType::kIPD);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TIMESTAMP, descriptor_record.concise_type);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(6, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.length);
-  EXPECT_EQ(3, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(6, descriptor_record.scale);
 }
 
 TEST(SetType, FailsToSet_SQL_FLOAT_NotValidValue) {
@@ -602,15 +570,15 @@ TEST(SetType, FailsToSet_SQL_FLOAT_NotValidValue) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_MONTH) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_MONTH) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_MONTH);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_MONTH, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MONTH, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MONTH, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_MONTH, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -618,15 +586,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_MONTH) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_YEAR) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_YEAR);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_YEAR, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_YEAR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_YEAR, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_YEAR, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -634,15 +602,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_YEAR) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_YEAR_TO_MONTH) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR_TO_MONTH) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_YEAR_TO_MONTH);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_YEAR_TO_MONTH, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_YEAR_TO_MONTH, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_YEAR_TO_MONTH, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_YEAR_TO_MONTH, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -650,15 +618,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_YEAR_TO_MONTH) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_DAY) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_DAY);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_DAY, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_DAY, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -666,15 +634,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_DAY) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_HOUR) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_HOUR);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_HOUR, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_HOUR, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -682,15 +650,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_HOUR) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_MINUTE) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_MINUTE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_MINUTE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_MINUTE, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -698,15 +666,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_MINUTE) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_SECOND) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_SECOND) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_SECOND);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_SECOND, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_SECOND, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
@@ -714,15 +682,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_SECOND) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_HOUR) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_HOUR) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_DAY_TO_HOUR);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_DAY_TO_HOUR, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_HOUR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_HOUR, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_DAY_TO_HOUR, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -730,15 +698,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_HOUR) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_MINUTE) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_MINUTE) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_DAY_TO_MINUTE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_DAY_TO_MINUTE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_DAY_TO_MINUTE, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -746,15 +714,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_SECOND) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_SECOND) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_DAY_TO_SECOND);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_DAY_TO_SECOND, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_DAY_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_DAY_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_DAY_TO_SECOND, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
@@ -762,15 +730,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_DAY_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_HOUR_TO_MINUTE) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_MINUTE) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_HOUR_TO_MINUTE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_HOUR_TO_MINUTE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR_TO_MINUTE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR_TO_MINUTE, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_HOUR_TO_MINUTE, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -778,15 +746,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_HOUR_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_HOUR_TO_SECOND) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_SECOND) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_HOUR_TO_SECOND);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_HOUR_TO_SECOND, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_HOUR_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_HOUR_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_HOUR_TO_SECOND, descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
@@ -794,15 +762,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_HOUR_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_INTERVAL_MINUTE_TO_SECOND) {
+TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_INTERVAL_MINUTE_TO_SECOND);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_INTERVAL_MINUTE_TO_SECOND, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_INTERVAL, descriptor_record.type);
-  EXPECT_EQ(SQL_INTERVAL_MINUTE_TO_SECOND, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_INTERVAL_MINUTE_TO_SECOND, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_MINUTE_TO_SECOND,
             descriptor_record.datetime_interval_code);
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
@@ -811,14 +779,15 @@ TEST(SetConciseType, Set_SQL_INTERVAL_MINUTE_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_TYPE_DATE) {
+TEST(SetConciseType, Set_SQL_C_TYPE_DATE) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_TYPE_DATE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_TYPE_DATE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_DATE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_DATE, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_DATE, descriptor_record.datetime_interval_code);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -826,14 +795,15 @@ TEST(SetConciseType, Set_SQL_TYPE_DATE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_TYPE_TIME) {
+TEST(SetConciseType, Set_SQL_C_TYPE_TIME) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_TYPE_TIME);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_TYPE_TIME, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_TIME, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_TIME, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_TIME, descriptor_record.datetime_interval_code);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
@@ -841,15 +811,15 @@ TEST(SetConciseType, Set_SQL_TYPE_TIME) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_TYPE_TIMESTAMP) {
+TEST(SetConciseType, Set_SQL_C_TYPE_TIMESTAMP) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record =
-      descriptor_record.SetConciseType(SQL_TYPE_TIMESTAMP);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_TYPE_TIMESTAMP, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TYPE_TIMESTAMP, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_TYPE_TIMESTAMP, descriptor_record.concise_type);
   EXPECT_EQ(SQL_CODE_TIMESTAMP, descriptor_record.datetime_interval_code);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
@@ -857,44 +827,15 @@ TEST(SetConciseType, Set_SQL_TYPE_TIMESTAMP) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_DATE) {
+TEST(SetConciseType, Set_C_SQL_CHAR) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_DATE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_CHAR, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_DATE, descriptor_record.concise_type);
-  EXPECT_EQ(SQL_CODE_DATE, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(0, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(0, descriptor_record.length);
-}
-
-TEST(SetConciseType, Set_SQL_TIME) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_TIME);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TIME, descriptor_record.concise_type);
-  EXPECT_EQ(SQL_CODE_TIME, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(0, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(0, descriptor_record.length);
-}
-
-TEST(SetConciseType, Set_SQL_CHAR) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_CHAR);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_CHAR, descriptor_record.type);
-  EXPECT_EQ(SQL_CHAR, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_CHAR, descriptor_record.type);
+  EXPECT_EQ(SQL_C_CHAR, descriptor_record.concise_type);
   EXPECT_EQ(1, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(1, descriptor_record.precision);
   EXPECT_EQ(1, descriptor_record.length);
@@ -902,14 +843,15 @@ TEST(SetConciseType, Set_SQL_CHAR) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_NUMERIC) {
+TEST(SetConciseType, Set_SQL_C_NUMERIC) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_NUMERIC);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_NUMERIC, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_NUMERIC, descriptor_record.type);
-  EXPECT_EQ(SQL_NUMERIC, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.type);
+  EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.concise_type);
   EXPECT_EQ(38, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(38, descriptor_record.precision);
   EXPECT_EQ(38, descriptor_record.length);
@@ -917,14 +859,15 @@ TEST(SetConciseType, Set_SQL_NUMERIC) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_REAL) {
+TEST(SetConciseType, Set_SQL_C_FLOAT) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_REAL);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_FLOAT, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_REAL, descriptor_record.type);
-  EXPECT_EQ(SQL_REAL, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_FLOAT, descriptor_record.type);
+  EXPECT_EQ(SQL_C_FLOAT, descriptor_record.concise_type);
   EXPECT_EQ(24, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(24, descriptor_record.precision);
   EXPECT_EQ(24, descriptor_record.length);
@@ -932,14 +875,15 @@ TEST(SetConciseType, Set_SQL_REAL) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_DOUBLE) {
+TEST(SetConciseType, Set_SQL_C_DOUBLE) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_DOUBLE);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_DOUBLE, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DOUBLE, descriptor_record.type);
-  EXPECT_EQ(SQL_DOUBLE, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.type);
+  EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.concise_type);
   EXPECT_EQ(53, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(53, descriptor_record.precision);
   EXPECT_EQ(53, descriptor_record.length);
@@ -947,14 +891,15 @@ TEST(SetConciseType, Set_SQL_DOUBLE) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_INTEGER) {
+TEST(SetConciseType, Set_SQL_C_BIT) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_INTEGER);
+  StatusRecord status_record =
+      descriptor_record.SetConciseType(SQL_C_BIT, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_INTEGER, descriptor_record.type);
-  EXPECT_EQ(SQL_INTEGER, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_BIT, descriptor_record.type);
+  EXPECT_EQ(SQL_C_BIT, descriptor_record.concise_type);
   EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.length);
@@ -962,29 +907,15 @@ TEST(SetConciseType, Set_SQL_INTEGER) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_BIT) {
+TEST(SetConciseType, Set_SQL_C_GUID) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_BIT);
+  StatusRecord status_record = descriptor_record.SetConciseType(
+      SQL_C_GUID, DescriptorType::kApplication);
 
   ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_BIT, descriptor_record.type);
-  EXPECT_EQ(SQL_BIT, descriptor_record.concise_type);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(0, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.length);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(0, descriptor_record.scale);
-}
-
-TEST(SetConciseType, Set_SQL_GUID) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_GUID);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_GUID, descriptor_record.type);
-  EXPECT_EQ(SQL_GUID, descriptor_record.concise_type);
+  EXPECT_EQ(SQL_C_GUID, descriptor_record.type);
+  EXPECT_EQ(SQL_C_GUID, descriptor_record.concise_type);
   EXPECT_EQ(16, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(16, descriptor_record.precision);
   EXPECT_EQ(16, descriptor_record.length);
@@ -992,25 +923,11 @@ TEST(SetConciseType, Set_SQL_GUID) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_TIMESTAMP) {
+TEST(SetConciseType, FailsToSet_NotValidValue) {
   DescriptorRecord descriptor_record;
 
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_TIMESTAMP);
-
-  ASSERT_TRUE(status_record.ok());
-  EXPECT_EQ(SQL_DATETIME, descriptor_record.type);
-  EXPECT_EQ(SQL_TIMESTAMP, descriptor_record.concise_type);
-  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
-  EXPECT_EQ(6, descriptor_record.precision);
-  EXPECT_EQ(0, descriptor_record.length);
-  EXPECT_EQ(3, descriptor_record.datetime_interval_code);
-  EXPECT_EQ(6, descriptor_record.scale);
-}
-
-TEST(SetConciseType, FailsToSet_SQL_FLOAT_NotValidValue) {
-  DescriptorRecord descriptor_record;
-
-  StatusRecord status_record = descriptor_record.SetConciseType(SQL_FLOAT);
+  StatusRecord status_record =
+      descriptor_record.SetConciseType(115, DescriptorType::kApplication);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);

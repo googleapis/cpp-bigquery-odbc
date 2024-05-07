@@ -316,7 +316,7 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_UNNAMED_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_TYPE) {
   DescriptorHandle handle;
-  int val = SQL_INTEGER;
+  int val = SQL_C_NUMERIC;
 
   auto status =
       SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
@@ -340,7 +340,7 @@ TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_TYPE_WrongValue) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_CONCISE_TYPE) {
   DescriptorHandle handle;
-  int val = SQL_INTEGER;
+  int val = SQL_C_NUMERIC;
 
   auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_CONCISE_TYPE,
                                         (SQLPOINTER)val, 0);

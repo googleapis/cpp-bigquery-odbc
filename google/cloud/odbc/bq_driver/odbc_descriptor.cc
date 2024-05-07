@@ -229,7 +229,7 @@ SQLRETURN SetConciseType(DescriptorHandle* handle,
                          DescriptorRecord& descriptor_record,
                          std::size_t desc_int_value) {
   StatusRecord status_record = descriptor_record.SetConciseType(
-      static_cast<SQLSMALLINT>(desc_int_value));
+      static_cast<SQLSMALLINT>(desc_int_value), handle->GetType());
   if (!status_record.ok()) {
     handle->GetDiagnostics().AddStatusRecord(status_record);
   }

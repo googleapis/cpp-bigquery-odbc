@@ -63,8 +63,9 @@ struct DescriptorRecord {
   odbc_internal::StatusRecord SetParameterType(SQLSMALLINT value);
   odbc_internal::StatusRecord SetUnnamed(SQLSMALLINT value);
   odbc_internal::StatusRecord SetType(SQLSMALLINT value,
-                                      DescriptorType desc_type);
-  odbc_internal::StatusRecord SetConciseType(SQLSMALLINT value);
+                                      DescriptorType const& desc_type);
+  odbc_internal::StatusRecord SetConciseType(SQLSMALLINT value,
+                                             DescriptorType const& desc_type);
   odbc_internal::StatusRecord SetDataPointer(SQLPOINTER data_ptr,
                                              DescriptorType const& desc_type);
   [[nodiscard]] odbc_internal::StatusRecord ConsistencyCheck() const;
@@ -107,8 +108,10 @@ struct DescriptorRecord {
  private:
   void SetIntervalType(Interval const& entry, DescriptorType desc_type);
   void SetDatetimeType(Interval const& entry, DescriptorType desc_type);
-  odbc_internal::StatusRecord SetOtherType(SQLSMALLINT value,
-                                           std::string const& error_message);
+  odbc_internal::StatusRecord SetOtherCType(SQLSMALLINT value,
+                                            std::string const& error_message);
+  odbc_internal::StatusRecord SetOtherSQLType(SQLSMALLINT value,
+                                              std::string const& error_message);
   [[nodiscard]] bool IsTypeValid(SQLSMALLINT valid_type,
                                  SQLSMALLINT valid_concise_type,
                                  SQLSMALLINT valid_code) const;
