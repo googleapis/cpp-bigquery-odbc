@@ -57,7 +57,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
   // indicates how they should converted back for the application buffers in
   // SQLFetch.
 
-  for (auto struct_val : rows) {
+  for (auto const& struct_val : rows) {
     DSRow rs_row;
     for (auto const& field_entry : struct_val.fields) {
       Value bq_val = field_entry.second;
