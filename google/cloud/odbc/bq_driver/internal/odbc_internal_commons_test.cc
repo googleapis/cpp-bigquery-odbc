@@ -58,4 +58,15 @@ TEST(DSValue, Basic_ComplexStruct) {
   EXPECT_EQ(custom_data.double_var, expected->double_var);
 }
 
+TEST(DSValue, Basic_Int) {
+  SQLINTEGER expected = 10;
+  DSValue value;
+  IntToDSValue(expected, value);
+
+  SQLINTEGER actual;
+
+  actual = DSValueToInt(value);
+  EXPECT_EQ(expected, actual);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

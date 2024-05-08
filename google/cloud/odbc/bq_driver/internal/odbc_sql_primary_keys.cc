@@ -56,15 +56,30 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
   // stored as strings because of how the server returns them. The row schema
   // indicates how they should converted back for the application buffers in
   // SQLFetch.
-
   for (auto const& struct_val : rows) {
     DSRow rs_row;
+    int i = 0;
     for (auto const& field_entry : struct_val.fields) {
       Value bq_val = field_entry.second;
+      BQDataType col_type = result_set.row_schema[i++].col_type;
       std::string data = absl::get<std::string>(bq_val.value_kind);
       if (!data.empty()) {
         DSValue row_val;
-        StringToDSValue(data, row_val);
+        switch (col_type) {
+          case BQDataType::kString: {
+            StringToDSValue(data, row_val);
+            break;
+          }
+          case BQDataType::kInt64: {
+            auto l_data = std::stol(data);
+            IntToDSValue(l_data, row_val);
+            break;
+          }
+          default: {
+            return StatusRecord{SQLStates::k_HY000(),
+                                "Invalid or unsupported col BQ data type"};
+          }
+        }
         rs_row.emplace_back(row_val);
       }
     }

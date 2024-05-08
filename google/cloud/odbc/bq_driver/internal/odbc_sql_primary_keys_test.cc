@@ -116,8 +116,8 @@ void AssertResults(StatusRecordOr<ResultSet> status_record_or) {
   EXPECT_EQ(data, "table-name-1");
   DSValueToString(status_record_or->rows[0][3], data);
   EXPECT_EQ(data, "col-name-1");
-  DSValueToString(status_record_or->rows[0][4], data);
-  EXPECT_EQ(data, "1");
+  auto i_data = DSValueToInt(status_record_or->rows[0][4]);
+  EXPECT_EQ(i_data, 1);
   DSValueToString(status_record_or->rows[0][5], data);
   EXPECT_EQ(data, "pk-constraint-1");
   DSValueToString(status_record_or->rows[1][0], data);
@@ -128,8 +128,8 @@ void AssertResults(StatusRecordOr<ResultSet> status_record_or) {
   EXPECT_EQ(data, "table-name-2");
   DSValueToString(status_record_or->rows[1][3], data);
   EXPECT_EQ(data, "col-name-2");
-  DSValueToString(status_record_or->rows[1][4], data);
-  EXPECT_EQ(data, "2");
+  i_data = DSValueToInt(status_record_or->rows[1][4]);
+  EXPECT_EQ(i_data, 2);
   DSValueToString(status_record_or->rows[1][5], data);
   EXPECT_EQ(data, "pk-constraint-2");
 }
