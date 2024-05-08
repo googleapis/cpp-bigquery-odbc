@@ -167,7 +167,7 @@ SQLSMALLINT GetLengthForIntervalCode(SQLSMALLINT datetime_interval_code) {
     case SQL_CODE_MINUTE_TO_SECOND:
       return 12;
     default:
-      return 2;
+      return 0;
   }
 }
 
@@ -208,31 +208,44 @@ void DescriptorRecord::SetDatetimeType(Interval const& entry,
 
 StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
                                              std::string const& error_message) {
-  if (value == SQL_C_CHAR || value == SQL_C_BINARY) {
-    // SQL_C_VARBOOKMARK == SQL_C_BINARY
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 1;
-  } else if (value == SQL_C_NUMERIC) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 38;
-  } else if (value == SQL_C_FLOAT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 24;
-  } else if (value == SQL_C_DOUBLE) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 53;
-  } else if (value == SQL_C_BIT || value == SQL_C_WCHAR ||
-             value == SQL_C_SSHORT || value == SQL_C_USHORT ||
-             value == SQL_C_SLONG || value == SQL_C_ULONG ||
-             value == SQL_C_STINYINT || value == SQL_C_UTINYINT ||
-             value == SQL_C_SBIGINT || value == SQL_C_UBIGINT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 0;
-  } else if (value == SQL_C_GUID) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 16;
-  } else {
-    return StatusRecord{SQLStates::k_HY021(), error_message};
+  switch (value) {
+    case SQL_C_CHAR:
+    case SQL_C_BINARY:
+      // case SQL_C_VARBOOKMARK: (this macro has same value as SQL_C_BINARY)
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 1;
+      break;
+    case SQL_C_NUMERIC:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 38;
+      break;
+    case SQL_C_FLOAT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 24;
+      break;
+    case SQL_C_DOUBLE:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 53;
+      break;
+    case SQL_C_BIT:
+    case SQL_C_WCHAR:
+    case SQL_C_SSHORT:
+    case SQL_C_USHORT:
+    case SQL_C_SLONG:
+    case SQL_C_ULONG:
+    case SQL_C_STINYINT:
+    case SQL_C_UTINYINT:
+    case SQL_C_SBIGINT:
+    case SQL_C_UBIGINT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 0;
+      break;
+    case SQL_C_GUID:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 16;
+      break;
+    default:
+      return StatusRecord{SQLStates::k_HY021(), error_message};
   }
   datetime_interval_code = scale = 0;
   return StatusRecord::Ok();
@@ -240,53 +253,72 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
 
 StatusRecord DescriptorRecord::SetOtherSQLType(
     SQLSMALLINT const value, std::string const& error_message) {
-  if (value == SQL_CHAR || value == SQL_VARCHAR || value == SQL_BINARY ||
-      value == SQL_VARBINARY || value == SQL_LONGVARBINARY) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 1;
-  } else if (value == SQL_LONGVARCHAR || value == SQL_WCHAR ||
-             value == SQL_WVARCHAR || value == SQL_WLONGVARCHAR) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-  } else if (value == SQL_NUMERIC || value == SQL_DECIMAL) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 38;
-    scale = 0;
-  } else if (value == SQL_SMALLINT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-    length = 5;
-  } else if (value == SQL_INTEGER) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-    length = 10;
-  } else if (value == SQL_REAL) {
-    type = concise_type = value;
-    datetime_interval_precision = 14;
-    precision = 24;
-    length = 7;
-  } else if (value == SQL_FLOAT || value == SQL_DOUBLE) {
-    type = concise_type = value;
-    datetime_interval_precision = 24;
-    precision = 53;
-    length = 15;
-  } else if (value == SQL_BIT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-    length = 1;
-  } else if (value == SQL_TINYINT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-    length = 3;
-  } else if (value == SQL_BIGINT) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length;
-    length = 19;
-  } else if (value == SQL_GUID) {
-    type = concise_type = value;
-    datetime_interval_precision = precision = length = 36;
-  } else {
-    return StatusRecord{SQLStates::k_HY021(), error_message};
+  switch (value) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 1;
+      break;
+    case SQL_LONGVARCHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      break;
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 38;
+      scale = 0;
+      break;
+    case SQL_SMALLINT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      length = 5;
+      break;
+    case SQL_INTEGER:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      length = 10;
+      break;
+    case SQL_REAL:
+      type = concise_type = value;
+      datetime_interval_precision = 14;
+      precision = 24;
+      length = 7;
+      break;
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      type = concise_type = value;
+      datetime_interval_precision = 24;
+      precision = 53;
+      length = 15;
+      break;
+    case SQL_BIT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      length = 1;
+      break;
+    case SQL_TINYINT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      length = 3;
+      break;
+    case SQL_BIGINT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length;
+      length = 19;
+      break;
+    case SQL_GUID:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 36;
+      break;
+    default:
+      return StatusRecord{SQLStates::k_HY021(), error_message};
   }
   datetime_interval_code = 0;
   return StatusRecord::Ok();
