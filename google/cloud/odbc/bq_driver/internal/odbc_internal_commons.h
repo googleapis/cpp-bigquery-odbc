@@ -64,13 +64,13 @@ inline void DSValueToString(
   str.assign(value.begin(), value.end());
 }
 
-inline void IntToDSValue(long int int_val, DSValue& ds_value) {
+inline void IntToDSValue(int64_t int_val, DSValue& ds_value) {
   ds_value.resize(sizeof(int_val));
-  std::memcpy(ds_value.data(), &int_val, sizeof(long));
+  std::memcpy(ds_value.data(), &int_val, sizeof(int64_t));
 }
 
-inline long int DSValueToInt(DSValue& ds_value) {
-  long int int_val;
+inline int64_t DSValueToInt(DSValue& ds_value) {
+  int64_t int_val;
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
 }
