@@ -76,7 +76,7 @@ TEST(CatalogTest, SQLTables) {
   // Create tables
   for (auto it : kTables) {
     std::string table_name = it.first;
-    std::string table_name_full = kDatasetName + "." + table_name;
+    std::string table_name_full = kDatasetWithTablePrefix + table_name;
     // Create Table
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
     Table(table_name_full).Create(conn, getSchemaStr(it.second));
@@ -92,7 +92,8 @@ TEST(CatalogTest, SQLTables) {
   auto table_names = (*Catalog::GetTables(conn, kDatasetName))[kDatasetName];
   std::vector<std::string> test_table_names;
   for (auto it : kTables) {
-    EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first),
+    EXPECT_NE(std::find(table_names.begin(), table_names.end(),
+                        kTableNamePrefix + it.first),
               table_names.end());
     test_table_names.push_back(it.first);
   }
@@ -106,7 +107,7 @@ TEST(CatalogTest, SQLTablesA) {
   // Create tables
   for (auto it : kTablesAnsi) {
     std::string table_name = it.first;
-    std::string table_name_full = kDatasetName + "." + table_name;
+    std::string table_name_full = kDatasetWithTablePrefix + table_name;
     // Create Table
     EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
     Table(table_name_full).Create(conn, getSchemaStr(it.second), true);
@@ -123,7 +124,8 @@ TEST(CatalogTest, SQLTablesA) {
       (*Catalog::GetTables(conn, kDatasetName, true))[kDatasetName];
   std::vector<std::string> test_table_names;
   for (auto it : kTablesAnsi) {
-    EXPECT_NE(std::find(table_names.begin(), table_names.end(), it.first),
+    EXPECT_NE(std::find(table_names.begin(), table_names.end(),
+                        kTableNamePrefix + it.first),
               table_names.end());
     test_table_names.push_back(it.first);
   }

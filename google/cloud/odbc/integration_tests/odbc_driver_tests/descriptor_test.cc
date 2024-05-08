@@ -201,7 +201,8 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 }
 
 TEST(DescriptorFieldsTest, SQLSetDescRec) {
-  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_REC_TEST";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SET_DESCRIPTOR_REC_TEST";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -220,7 +221,8 @@ TEST(DescriptorFieldsTest, SQLSetDescRec) {
 }
 
 TEST(DescriptorFieldsTest, SQLSetDescRec_ANSI) {
-  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_REC_TEST_ANSI";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SET_DESCRIPTOR_REC_TEST_ANSI";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -239,7 +241,7 @@ TEST(DescriptorFieldsTest, SQLSetDescRec_ANSI) {
 }
 
 TEST(DescriptorFieldsTest, SQLCopyDesc) {
-  auto const table_name = kDatasetName + ".ODBC_COPY_DESCRIPTOR_TEST";
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_COPY_DESCRIPTOR_TEST";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -258,7 +260,8 @@ TEST(DescriptorFieldsTest, SQLCopyDesc) {
 }
 
 TEST(DescriptorFieldsTest, SQLCopyDesc_ANSI) {
-  auto const table_name = kDatasetName + ".ODBC_COPY_DESCRIPTOR_TEST_ANSI";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_COPY_DESCRIPTOR_TEST_ANSI";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -277,7 +280,8 @@ TEST(DescriptorFieldsTest, SQLCopyDesc_ANSI) {
 }
 
 TEST(DescriptorFieldsTest, SQLSetDescField) {
-  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_FIELD_TEST";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SET_DESCRIPTOR_FIELD_TEST";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -307,7 +311,8 @@ TEST(DescriptorFieldsTest, SQLSetDescField) {
 }
 
 TEST(DescriptorFieldsTest, SQLSetDescField_ANSI) {
-  auto const table_name = kDatasetName + ".ODBC_SET_DESCRIPTOR_FIELD_TEST_ANSI";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SET_DESCRIPTOR_FIELD_TEST_ANSI";
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);

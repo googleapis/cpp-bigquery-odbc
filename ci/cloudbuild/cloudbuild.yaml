@@ -99,10 +99,12 @@ steps:
   secretEnv: ['CODECOV_TOKEN']
   env: [
     'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}',
+    'BRANCH_NAME=${BRANCH_NAME}',
     'DEPENDENCIES=${_DEPENDENCIES}',
     'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
     'SCCACHE_GCS_KEY_PREFIX=sccache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}',
     'SCCACHE_GCS_RW_MODE=READ_WRITE',
+    'TRIGGER_NAME=${TRIGGER_NAME}',
     'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME},readwrite'
   ]
 

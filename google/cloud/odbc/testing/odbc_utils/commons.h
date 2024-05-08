@@ -37,7 +37,17 @@ using Results = std::map<std::string, std::vector<std::string>>;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
+inline std::string const GetDefaultTablePrefix() {
+  std::string const env_name = "CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX";
+  auto const* val = std::getenv(env_name.c_str());
+  if (val) return std::string{val};
+  return "";
+}
+
+std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
 std::string const kDatasetName = "ODBC_TEST_DATASET";
+std::string const kDatasetWithTablePrefix =
+    kDatasetName + "." + kTableNamePrefix;
 
 // Stores information about the driver fetched from SQLGetInfo within the
 // ODBCHandles. This is populated in the ODBCHandles after calling

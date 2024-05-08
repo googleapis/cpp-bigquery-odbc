@@ -104,7 +104,7 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
-  std::string const table_name = kDatasetName + "." + in_table_name;
+  std::string const table_name = kDatasetWithTablePrefix + in_table_name;
   Table table(table_name);
 
   // Create Table
@@ -207,7 +207,7 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
 
 TEST(StatementTest, SQLNumParams) {
   auto conn = std::make_shared<ODBCHandles>();
-  auto table_name = kDatasetName + ".ODBC_NUM_PARAMS_TEST";
+  auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
   auto insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
   Table table(table_name);
 
@@ -232,7 +232,8 @@ TEST(StatementTest, SQLNumParams) {
   ////////////////
   /// USE ANSI
   ////////////////
-  auto const table_name_ansi = kDatasetName + ".ODBC_NUM_PARAMS_TEST_ANSI";
+  auto const table_name_ansi =
+      kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST_ANSI";
   auto const insert_stmt_ansi =
       "INSERT INTO " + table_name_ansi + " VALUES (?, ?, ?)";
   Table table_ansi(table_name_ansi);
@@ -259,7 +260,8 @@ TEST(StatementTest, SQLNumParams) {
 }
 
 TEST(StatementTest, SQLDescribeCol) {
-  auto const table_name = kDatasetName + ".ODBC_COLUMN_DESCRIPTION_TEST";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_COLUMN_DESCRIPTION_TEST";
   Table table(table_name);
 
   Schema schema{{"StringField", SQL_VARCHAR},
@@ -290,7 +292,7 @@ TEST(StatementTest, SQLDescribeCol) {
   /// USE ANSI
   ////////////////
   auto const table_name_ansi =
-      kDatasetName + ".ODBC_COLUMN_DESCRIPTION_TEST_ANSI";
+      kDatasetWithTablePrefix + "ODBC_COLUMN_DESCRIPTION_TEST_ANSI";
   Table table_ansi(table_name_ansi);
 
   // Create Table
@@ -316,7 +318,7 @@ TEST(StatementTest, SQLDescribeCol) {
 }
 
 void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
-  auto const table_name = kDatasetName + ".ODBC_CHECK_RESULTS_TEST_" +
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_CHECK_RESULTS_TEST_" +
                           (use_ansi ? "ANSI_" : "NON_ANSI") +
                           (use_bind_col ? "true" : "false");
   Table table(table_name);
@@ -387,7 +389,7 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
 
 // No ANSI version.
 TEST(StatementTest, SQLFetchScroll) {
-  auto const table_name = kDatasetName + ".ODBC_SCROLL_RESULTS_TEST";
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_RESULTS_TEST";
   Table table(table_name);
 
   // Create Table
@@ -418,7 +420,7 @@ TEST(StatementTest, SQLFetchScroll) {
 }
 
 TEST(StatementTest, SQLGetData) {
-  auto const table_name = kDatasetName + ".ODBC_GET_DATA_TEST";
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
   Table table(table_name);
 
   // Create Table
@@ -451,7 +453,8 @@ TEST(StatementTest, SQLGetData) {
   ////////////////
   /// USE ANSI
   ////////////////
-  auto const table_name_ansi = kDatasetName + ".ODBC_GET_DATA_TEST_ANSI";
+  auto const table_name_ansi =
+      kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST_ANSI";
   Table table_ansi(table_name_ansi);
 
   // Create Table
@@ -486,7 +489,7 @@ TEST(StatementTest, SQLGetData) {
 // This test is temporarily disabled till we are able to debug this with help
 // from the vendor
 TEST(StatementTest, DISABLED_SQLPutData) {
-  auto const table_name = kDatasetName + ".ODBC_PUT_DATA_TEST";
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
   Table table(table_name);
 
   // TODO(#14): Add integer and floating point fields too
@@ -565,7 +568,7 @@ TEST(StatementTest, SQLSetCursorName) {
 }
 
 TEST(StatementTest, FetchDirectRowWise) {
-  std::string const table_name = kDatasetName + "." + "ROW_WISE_FETCH";
+  std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
   Table table(table_name);
 
   // Create Table

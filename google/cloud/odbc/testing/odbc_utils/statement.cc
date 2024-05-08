@@ -36,7 +36,8 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName + ".ODBC_INSERT_DIRECT_TEST_ANSI_" +
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_DIRECT_TEST_ANSI_" +
                           (use_ansi ? "true" : "false");
   Table table(table_name);
 
@@ -60,7 +61,8 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName + ".ODBC_INSERT_PARAMS_TEST_ANSI_" +
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_TEST_ANSI_" +
                           (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
@@ -106,8 +108,8 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                                            bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName +
-                          ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
                           (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
@@ -162,8 +164,8 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
 SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
                                               bool use_ansi) {
   SQLRETURN status;
-  auto const table_name = kDatasetName +
-                          ".ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
                           (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
