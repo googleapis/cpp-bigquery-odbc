@@ -18,14 +18,8 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
-using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::Struct;
-using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
-using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
-using ::google::cloud::bigquery_v2_minimal_internal::Value;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -45,18 +39,16 @@ std::string const kBasicPrimaryKeysQuery =
     " kc.table_name = tc.table_name "
     " WHERE tc.constraint_type = 'PRIMARY KEY'";
 
-namespace {}  // namespace
-
 StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     StatementHandle* stmt_handle, std::string const& catalog_name,
-    int catalogNameLen, std::string const& schema_name, int schema_name_len,
+    int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len) {
   // Input validation of required parameters.
   if (!stmt_handle) {
     return StatusRecord{SQLStates::k_HY013(),
                         "Parameter statement_handle cannot be null"};
   }
-  if (catalog_name.empty() || catalogNameLen <= 0) {
+  if (catalog_name.empty() || catalog_name_len <= 0) {
     return StatusRecord{SQLStates::k_HY090(),
                         "Parameter catelog_name cannot be empty"};
   }
@@ -69,8 +61,8 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
                         "Parameter table_name cannot be empty"};
   }
   // Construct post query request.
-  std::string kPrimaryKeysQuery(kBasicPrimaryKeysQuery);
-  kPrimaryKeysQuery.append(" AND kc.table_catelog = '")
+  std::string primary_keys_query(kBasicPrimaryKeysQuery);
+  primary_keys_query.append(" AND kc.table_catelog = '")
       .append(catalog_name)
       .append("'")
       .append(" AND kc.table_schema = ")
@@ -86,7 +78,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   ds_ref.dataset_id = schema_name;
   query_request.set_dry_run(false);
   query_request.set_default_dataset(ds_ref);
-  query_request.set_query(kPrimaryKeysQuery);
+  query_request.set_query(primary_keys_query);
   query_request.set_use_legacy_sql(
       false);  // This is required for the query to execute successfully.
   post_request.set_project_id(catalog_name);

@@ -17,19 +17,16 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
-using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
-
-using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Struct;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::Value;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
     TableSchema const& schema, std::vector<Struct> const& rows) {
