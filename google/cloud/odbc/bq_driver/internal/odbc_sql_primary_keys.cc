@@ -17,8 +17,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Struct;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -27,115 +30,69 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-namespace {
-StatusRecordOr<ResultSet> ProcessResultSetRows(
-    TableSchema const& schema, std::vector<Struct> const& rows) {
-  // Per the SQLPrimaryKeys design, query results returned by the data source
-  // are as follows:
-  // Col-0: Table Catalog name, STRING
-  // Col-1: Table Dataset/Schema name, STRING
-  // Col-2: Table Name, STRING
-  // Col-3: Column Name, STRING
-  // Col-4: Ordinal Position, INTEGER
-  // Col-5: PK Constraint Name, STRING
-  ResultSet result_set;
-  // Populate the schema first
-  for (int i = 0; i < schema.fields.size(); i++) {
-    TableFieldSchema table_field_schema = schema.fields[i];
-    StatusRecordOr<BQDataType> type_status_record =
-        ConvertDSType(table_field_schema.type);
-    if (!type_status_record.Ok()) {
-      return type_status_record.GetStatusRecord();
-    }
-    ColumnSchema col_schema;
-    col_schema.col_index = i;
-    col_schema.col_type = *type_status_record;
-    result_set.row_schema.emplace_back(col_schema);
-  }
-  // Now populate the data for each row. For SQLPrimaryKeys all column data are
-  // stored as strings because of how the server returns them. The row schema
-  // indicates how they should converted back for the application buffers in
-  // SQLFetch.
-  for (auto const& struct_val : rows) {
-    DSRow rs_row;
-    int i = 0;
-    for (auto const& field_entry : struct_val.fields) {
-      Value bq_val = field_entry.second;
-      BQDataType col_type = result_set.row_schema[i++].col_type;
-      std::string data = absl::get<std::string>(bq_val.value_kind);
-      if (!data.empty()) {
-        DSValue row_val;
-        switch (col_type) {
-          case BQDataType::kString: {
-            StringToDSValue(data, row_val);
-            break;
-          }
-          case BQDataType::kInt64: {
-            auto l_data = std::stol(data);
-            IntToDSValue(l_data, row_val);
-            break;
-          }
-          default: {
-            return StatusRecord{SQLStates::k_HY000(),
-                                "Invalid or unsupported col BQ data type"};
-          }
-        }
-        rs_row.emplace_back(row_val);
-      }
-    }
-    result_set.rows.emplace_back(rs_row);
-  }
-  return result_set;
-}
-}  // namespace
+std::string const kBasicPrimaryKeysQuery =
+    "SELECT kc.table_catelog,"
+    " kc.table_schema,"
+    " kc.table_name,"
+    " kc.column_name,"
+    " kc.ordinal_position,"
+    " kc.constraint_name"
+    " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE as kc"
+    " INNER JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS as tc"
+    " ON kc.constraint_name = tc.constraint_name AND"
+    " kc.table_catalog = tc.table_catalog AND"
+    " kc.table_schema = tc.table_schema AND"
+    " kc.table_name = tc.table_name "
+    " WHERE tc.constraint_type = 'PRIMARY KEY'";
 
-odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
-    std::string const& type) {
-  if (type == "STRING") {
-    return BQDataType::kString;
-  }
-  if (type == "INTEGER") {
-    return BQDataType::kInt64;
-  }
-  std::string err_msg = "Invalid Data Type: ";
-  err_msg.append(type);
-  return StatusRecord{SQLStates::k_HY000(), err_msg};
-}
+namespace {}  // namespace
 
-StatusRecordOr<DSPrimaryKeysResults> FetchPrimaryKeysFromDataSource(
-    std::string const& /*catalog_name*/, int /*catalogNameLen*/,
-    std::string const& /*schemaName*/, int /*schemaNameLen*/,
-    std::string const& /*tableName*/, int /*tableNameLen*/) {
-  // Not Yet Implemented.
-  return StatusRecord::Ok();
-}
-
-StatusRecordOr<ResultSet> ProcessPKPostQueryResults(
-    PostQueryResults const& primaryKeysQueryResults) {
-  if (!primaryKeysQueryResults.job_complete) {
-    // If this method is being called then the assumption is PostQueryResults
-    // contains all the results which in turn means job_complete would be set to
-    // true.
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Internal Error: Unexpected value for job_complete: expecting true"};
+StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
+    StatementHandle* stmt_handle, std::string const& catalog_name,
+    int catalogNameLen, std::string const& schema_name, int schema_name_len,
+    std::string const& table_name, int table_name_len) {
+  // Input validation of required parameters.
+  if (!stmt_handle) {
+    return StatusRecord{SQLStates::k_HY013(),
+                        "Parameter statement_handle cannot be null"};
   }
-  return ProcessResultSetRows(primaryKeysQueryResults.schema,
-                              primaryKeysQueryResults.rows);
-}
-
-StatusRecordOr<ResultSet> ProcessPKGetQueryResults(
-    GetQueryResults const& primaryKeysQueryResults) {
-  if (!primaryKeysQueryResults.job_complete) {
-    // If this method is being called then the assumption is GetQueryResults
-    // contains all the results which in turn means job_complete would be set to
-    // true.
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Internal Error: Unexpected value for job_complete: expecting true"};
+  if (catalog_name.empty() || catalogNameLen <= 0) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Parameter catelog_name cannot be empty"};
   }
-  return ProcessResultSetRows(primaryKeysQueryResults.schema,
-                              primaryKeysQueryResults.rows);
+  if (schema_name.empty() || schema_name_len <= 0) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Parameter schema_name cannot be empty"};
+  }
+  if (table_name.empty() || table_name_len <= 0) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Parameter table_name cannot be empty"};
+  }
+  // Construct post query request.
+  std::string kPrimaryKeysQuery(kBasicPrimaryKeysQuery);
+  kPrimaryKeysQuery.append(" AND kc.table_catelog = '")
+      .append(catalog_name)
+      .append("'")
+      .append(" AND kc.table_schema = ")
+      .append(schema_name)
+      .append("'")
+      .append(" AND kc.table_name = ")
+      .append(table_name)
+      .append("'");
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+  DatasetReference ds_ref;
+  ds_ref.project_id = catalog_name;
+  ds_ref.dataset_id = schema_name;
+  query_request.set_dry_run(false);
+  query_request.set_default_dataset(ds_ref);
+  query_request.set_query(kPrimaryKeysQuery);
+  query_request.set_use_legacy_sql(
+      false);  // This is required for the query to execute successfully.
+  post_request.set_project_id(catalog_name);
+  post_request.set_query_request(query_request);
+  // Fetch BQ Data using the query request above.
+  return FetchBQData(stmt_handle->GetConnectionHandle(), post_request);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
