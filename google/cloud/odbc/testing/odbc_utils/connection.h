@@ -22,10 +22,8 @@ namespace google::cloud::odbc_tests {
 
 // Returns the default DSN name after checking if ODBC_TESTS_DSN env is defined
 inline std::string const GetDefaultDSN() {
-  std::string const env_name = "ODBC_TESTS_DSN";
-  auto const* val = std::getenv(env_name.c_str());
-  if (val) return std::string{val};
-  return "ODBCTestsDSN";
+  return google::cloud::internal::GetEnv("ODBC_TESTS_DSN")
+      .value_or("ODBCTestsDSN");
 }
 
 std::string const kDefaultDataSource = GetDefaultDSN();

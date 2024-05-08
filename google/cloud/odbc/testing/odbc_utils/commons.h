@@ -17,6 +17,7 @@
 
 // We need sorting functions
 #include "google/cloud/internal/backoff_policy.h"
+#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <locale.h>
@@ -33,15 +34,14 @@
 namespace google::cloud::odbc_tests {
 
 using ::google::cloud::internal::ExponentialBackoffPolicy;
+using ::google::cloud::internal::GetEnv;
 using Results = std::map<std::string, std::vector<std::string>>;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
 inline std::string const GetDefaultTablePrefix() {
-  std::string const env_name = "CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX";
-  auto const* val = std::getenv(env_name.c_str());
-  if (val) return std::string{val};
-  return "";
+  return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
+      .value_or("");
 }
 
 std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
