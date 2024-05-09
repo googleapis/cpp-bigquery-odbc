@@ -60,6 +60,10 @@ class StatementHandle : public Handle {
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
+  inline void SetResultSet(ResultSet const& result_set) {
+    result_set_ = result_set;
+  }
+
  private:
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;

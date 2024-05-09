@@ -105,18 +105,29 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
   return ProcessResultSetRows(getQueryResults.schema, getQueryResults.rows);
 }
 
-StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle* conn_handle, PostQueryRequest const& postQueryResults) {
-  // Validate the  connection handle.
-  if (!conn_handle) {
-    return StatusRecord{SQLStates::k_HY013(),
-                        "Internal connection handle is null"};
+odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
+    DSResults const& queryResults) {
+  if (absl::holds_alternative<PostQueryResults>(
+          queryResults.data_source_results)) {
+    return ProcessPostQueryResults(
+        absl::get<PostQueryResults>(queryResults.data_source_results));
+
+  } else if (absl::holds_alternative<GetQueryResults>(
+                 queryResults.data_source_results)) {
+    return ProcessGetQueryResults(
+        absl::get<GetQueryResults>(queryResults.data_source_results));
   }
-  if (!conn_handle->IsConnected()) {
+  return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
+}
+
+StatusRecordOr<DSResults> FetchBQData(
+    ConnectionHandle& conn_handle, PostQueryRequest const& postQueryResults) {
+  // Validate the  connection handle.
+  if (!conn_handle.IsConnected()) {
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
-  auto bq_client = conn_handle->GetClient();
+  auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
     return StatusRecord{
         SQLStates::k_HY000(),

@@ -39,7 +39,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    the GetQueryResults will be populated in DSPrimaryKeysResults structure.
 //
 odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
-    StatementHandle* stmt_handle, std::string const& catalog_name,
+    StatementHandle& stmt_handle, std::string const& catalog_name,
     int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len);
 

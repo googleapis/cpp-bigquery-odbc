@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -27,6 +28,7 @@ using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::HandleType;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -38,6 +40,22 @@ std::string const kDsnDescription = "test-dsn";
 std::string const kDsnCatalog = "bigquery-test";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
+
+std::string const kCatalog = "test-catalog";
+std::string const kDataset = "test-schema";
+std::string const kTable = "test-table";
+
+SQLCHAR* const kSqlCatalog =
+    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalog.c_str()));
+SQLCHAR* const kSqlDataset =
+    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDataset.c_str()));
+SQLCHAR* const kSqlTable =
+    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kTable.c_str()));
+SQLCHAR* const kSqlEmpty = reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
+
+SQLSMALLINT const kSqlCatalogLen = kCatalog.length();
+SQLSMALLINT const kSqlDatasetLen = kDataset.length();
+SQLSMALLINT const kSqlTableLen = kTable.length();
 
 // Helper class and functions specific to odbc metadata unit tests.
 namespace {
@@ -81,6 +99,11 @@ void CreateConnectedHandleWithDsn() {
 void FreeHandles() { delete connection_handle; }
 
 StatusRecord GetLastStatusRecord(ConnectionHandle& handle) {
+  auto status_records = handle.GetDiagnostics().GetStatusRecords();
+  return status_records[status_records.size() - 1];
+}
+
+StatusRecord GetLastStatusRecord(StatementHandle& handle) {
   auto status_records = handle.GetDiagnostics().GetStatusRecords();
   return status_records[status_records.size() - 1];
 }
@@ -463,6 +486,119 @@ TEST(SQLGetInfoInternal, InvalidInputBufferLength) {
   StatusRecord status_record = GetLastStatusRecord(*connection_handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
   EXPECT_EQ(status_record.message, "Invalid Input BufferLength");
+  FreeHandles();
+}
+
+TEST(SQLPrimaryKeys, Failure_InvalidStatementHandle) {
+  ASSERT_EQ(SQL_INVALID_HANDLE,
+            SQLPrimaryKeys(nullptr, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlEmpty, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter catelog_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeys(&handle, kSqlCatalog, 0, kSqlDataset,
+                                      kSqlDatasetLen, kSqlTable, kSqlTableLen));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter catelog_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlEmpty,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter schema_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptySchemaLen) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen,
+                                      kSqlDataset, 0, kSqlTable, kSqlTableLen));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter schema_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptyTableName) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlEmpty, kSqlTableLen));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter table_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_EmptyTableLen) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, 0));
+
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Parameter table_name cannot be empty");
+}
+
+TEST(SQLPrimaryKeys, Failure_NullConnectionHandle) {
+  StatementHandle handle;
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY013());
+  EXPECT_EQ(status_record.message, "Internal connection handle is null");
+}
+
+TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
+  CreateDisconnectedHandle();
+  StatementHandle handle(connection_handle);
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+}
+
+TEST(SQLPrimaryKeys, Failure_InvalidBQClient) {
+  CreateConnectedHandle();
+  StatementHandle handle(connection_handle);
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(status_record.message,
+            "Invalid or null BQ Client within the connection handle");
   FreeHandles();
 }
 

@@ -193,18 +193,44 @@ TEST(DSValue, Basic_Int) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST(ProcessBQResults, PostQueryResults_Success) {
+TEST(ProcessBQResults, ProcessPostQueryResults_Success) {
   PostQueryResults results = CreatePostQueryResults();
   auto status_record_or = ProcessPostQueryResults(results);
   ASSERT_STATUS_RECORD_OK(status_record_or);
   AssertResults(status_record_or);
 }
 
-TEST(ProcessBQResults, GetQueryResults_Success) {
+TEST(ProcessBQResults, ProcessGetQueryResults_Success) {
   GetQueryResults results = CreateGetQueryResults();
   auto status_record_or = ProcessGetQueryResults(results);
   ASSERT_STATUS_RECORD_OK(status_record_or);
   AssertResults(status_record_or);
+}
+
+TEST(ProcessBQResults, ProcessQueryResults_PostQueryResults_Success) {
+  DSResults results;
+  PostQueryResults post_results = CreatePostQueryResults();
+  results.data_source_results = post_results;
+  auto status_record_or = ProcessQueryResults(results);
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  AssertResults(status_record_or);
+}
+
+TEST(ProcessBQResults, ProcessQueryResults_GetQueryResults_Success) {
+  DSResults results;
+  GetQueryResults get_results = CreateGetQueryResults();
+  results.data_source_results = get_results;
+  auto status_record_or = ProcessQueryResults(results);
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  AssertResults(status_record_or);
+}
+
+TEST(ProcessBQResults, ProcessQueryResults_Failure) {
+  DSResults results;
+  auto status_record_or = ProcessQueryResults(results);
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid query results object")));
 }
 
 TEST(ProcessBQResults, PostQueryResults_Error_InvalidDataType) {
@@ -257,19 +283,10 @@ TEST(ProcessBQResults, GetQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
-TEST(FetchBQResults, Failure_Null_ConnectionHandle) {
-  PostQueryRequest req;
-  auto status_record_or = FetchBQData(nullptr, req);
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY013(),
-                             HasSubstr("Internal connection handle is null")));
-}
-
 TEST(FetchBQResults, Failure_Not_Connected) {
   PostQueryRequest req;
   ConnectionHandle handle;
-  auto status_record_or = FetchBQData(&handle, req);
+  auto status_record_or = FetchBQData(handle, req);
 
   EXPECT_THAT(
       status_record_or,
@@ -280,7 +297,7 @@ TEST(FetchBQResults, Failure_Not_Connected) {
 TEST(FetchBQResults, Failure_Null_BQClient) {
   PostQueryRequest req;
   auto handle = CreateConnectionHandle(true);
-  auto status_record_or = FetchBQData(&handle, req);
+  auto status_record_or = FetchBQData(handle, req);
 
   EXPECT_THAT(
       status_record_or,

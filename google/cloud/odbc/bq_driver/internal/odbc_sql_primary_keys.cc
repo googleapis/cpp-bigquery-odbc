@@ -40,25 +40,33 @@ std::string const kBasicPrimaryKeysQuery =
     " WHERE tc.constraint_type = 'PRIMARY KEY'";
 
 StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
-    StatementHandle* stmt_handle, std::string const& catalog_name,
+    StatementHandle& stmt_handle, std::string const& catalog_name,
     int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len) {
   // Input validation of required parameters.
-  if (!stmt_handle) {
-    return StatusRecord{SQLStates::k_HY013(),
-                        "Parameter statement_handle cannot be null"};
-  }
   if (catalog_name.empty() || catalog_name_len <= 0) {
-    return StatusRecord{SQLStates::k_HY090(),
-                        "Parameter catelog_name cannot be empty"};
+    auto status_record = StatusRecord{SQLStates::k_HY090(),
+                                      "Parameter catelog_name cannot be empty"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
   }
   if (schema_name.empty() || schema_name_len <= 0) {
-    return StatusRecord{SQLStates::k_HY090(),
-                        "Parameter schema_name cannot be empty"};
+    auto status_record = StatusRecord{SQLStates::k_HY090(),
+                                      "Parameter schema_name cannot be empty"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
   }
   if (table_name.empty() || table_name_len <= 0) {
-    return StatusRecord{SQLStates::k_HY090(),
-                        "Parameter table_name cannot be empty"};
+    auto status_record = StatusRecord{SQLStates::k_HY090(),
+                                      "Parameter table_name cannot be empty"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
+  }
+  if (stmt_handle.GetConnectionHandle() == nullptr) {
+    auto status_record = StatusRecord{SQLStates::k_HY013(),
+                                      "Internal connection handle is null"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
   }
   // Construct post query request.
   // TODO(b/339618125): Cleanse this query to avoid
@@ -86,7 +94,13 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   post_request.set_project_id(catalog_name);
   post_request.set_query_request(query_request);
   // Fetch BQ Data using the query request above.
-  return FetchBQData(stmt_handle->GetConnectionHandle(), post_request);
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  auto status_record_or = FetchBQData(conn_handle, post_request);
+  if (!status_record_or) {
+    stmt_handle.GetDiagnostics().AddStatusRecord(
+        status_record_or.GetStatusRecord());
+  }
+  return status_record_or;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

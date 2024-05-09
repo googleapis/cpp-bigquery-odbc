@@ -97,7 +97,7 @@ struct DSResults {
 // Common Helper functions for data retrieval from BQ data source
 /////////////////////////////////////////////////////////////////////
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle* conn_handle,
+    ConnectionHandle& conn_handle,
     ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         postQueryResults);
 
@@ -118,6 +118,9 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(
 odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
     ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
         getQueryResults);
+
+odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
+    DSResults const& queryResults);
 
 ///////////////////////////////////////////////////////
 // Common helper functions for converting datasource data types.
