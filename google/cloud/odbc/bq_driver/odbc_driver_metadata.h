@@ -82,10 +82,9 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type);
 // Design Doc: http://goto.google.com/odbc-sql-primarykeys-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprimarykeys-function?view=sql-server-ver16
-SQLRETURN SQLPrimaryKeys(SQLHSTMT stmt_handle, SQLCHAR* const catalog_name,
-                         SQLSMALLINT catalog_name_len,
-                         SQLCHAR* const schema_name,
-                         SQLSMALLINT schema_name_len, SQLCHAR* const table_name,
+SQLRETURN SQLPrimaryKeys(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
+                         SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+                         SQLSMALLINT schema_name_len, SQLCHAR* table_name,
                          SQLSMALLINT table_name_len);
 
 }  // namespace google::cloud::odbc_bq_driver
