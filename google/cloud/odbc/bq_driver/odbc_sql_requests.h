@@ -33,7 +33,16 @@
 // SQLBulkOperationsInternal
 ///////////////////////////////////////////////////////////
 
+#include "google/cloud/odbc/internal/odbc_includes.h"
+
 namespace google::cloud::odbc_bq_driver {
+
+SQLRETURN SQLBindParameterInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT parameter_number,
+    SQLSMALLINT input_output_type, SQLSMALLINT value_type,
+    SQLSMALLINT parameter_type, SQLULEN column_size, SQLSMALLINT decimal_digits,
+    SQLPOINTER parameter_value_ptr, SQLLEN buffer_length,
+    SQLLEN* str_len_or_ind_ptr);
 
 }  // namespace google::cloud::odbc_bq_driver
 

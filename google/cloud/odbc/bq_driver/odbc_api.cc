@@ -23,6 +23,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_diagnostics.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
@@ -47,6 +48,7 @@ using ::google::cloud::Status;
 using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
@@ -67,6 +69,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
@@ -1131,18 +1134,31 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLBindParameter(
-    SQLHSTMT statementHandle, SQLUSMALLINT paramNumber, SQLSMALLINT paramType,
-    SQLSMALLINT paramCType, SQLSMALLINT paramSqlType, SQLULEN paramColSize,
-    SQLSMALLINT paramScale, SQLPOINTER paramDataValue,
-    SQLLEN paramDataValueBufferLen, SQLLEN* paramDataValueStringLen) {
+SQLRETURN SQL_API
+SQLBindParameter(SQLHSTMT statementHandle, SQLUSMALLINT parameterNumber,
+                 SQLSMALLINT inputOutputType, SQLSMALLINT valueType,
+                 SQLSMALLINT parameterType, SQLULEN columnSize,
+                 SQLSMALLINT decimalDigits, SQLPOINTER parameterValuePtr,
+                 SQLLEN bufferLength, SQLLEN* strLen_or_IndPtr) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLBindParameter");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLBindParameter(
+        statementHandle, parameterNumber, inputOutputType, valueType,
+        parameterType, columnSize, decimalDigits, parameterValuePtr,
+        bufferLength, strLen_or_IndPtr, *(*kTraceOption));
 
   // Call to internal function for SQLBindParameter in odbc_sql_requests.h.
+  rc = google::cloud::odbc_bq_driver::SQLBindParameterInternal(
+      statementHandle, parameterNumber, inputOutputType, valueType,
+      parameterType, columnSize, decimalDigits, parameterValuePtr, bufferLength,
+      strLen_or_IndPtr);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLBindParameter(rc, *(*kTraceOption));
 
   return rc;
 }

@@ -32,6 +32,20 @@ void GetDescField(SQLHDESC descriptor_handle, SQLSMALLINT rec_number,
                   SQLINTEGER value_buffer_len, SQLINTEGER* value_string_len,
                   bool use_ansi);
 
+void CheckType(SQLHDESC desc, SQLSMALLINT type_expected, bool use_ansi);
+void CheckConciseType(SQLHDESC desc, SQLSMALLINT concise_type_expected,
+                      bool use_ansi);
+void CheckDatetimeIntervalPrecision(
+    SQLHDESC desc, SQLSMALLINT datetime_interval_precision_expected,
+    bool use_ansi);
+void CheckPrecision(SQLHDESC desc, SQLSMALLINT precision_expected,
+                    bool use_ansi);
+void CheckLength(SQLHDESC desc, SQLULEN length_expected, bool use_ansi);
+void CheckDatetimeIntervalCode(SQLHDESC desc,
+                               SQLSMALLINT datetime_interval_code_expected,
+                               bool use_ansi);
+void CheckScale(SQLHDESC desc, SQLSMALLINT scale_expected, bool use_ansi);
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_DESCRIPTOR_H
