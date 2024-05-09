@@ -111,9 +111,9 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
           queryResults.data_source_results)) {
     return ProcessPostQueryResults(
         absl::get<PostQueryResults>(queryResults.data_source_results));
-
-  } else if (absl::holds_alternative<GetQueryResults>(
-                 queryResults.data_source_results)) {
+  }
+  if (absl::holds_alternative<GetQueryResults>(
+          queryResults.data_source_results)) {
     return ProcessGetQueryResults(
         absl::get<GetQueryResults>(queryResults.data_source_results));
   }

@@ -586,6 +586,7 @@ TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+  FreeHandles();
 }
 
 TEST(SQLPrimaryKeys, Failure_InvalidBQClient) {
