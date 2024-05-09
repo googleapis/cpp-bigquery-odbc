@@ -61,6 +61,8 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
                         "Parameter table_name cannot be empty"};
   }
   // Construct post query request.
+  // TODO(b/339618125): Cleanse this query to avoid 
+  // potential SQL injection issues.
   std::string primary_keys_query(kBasicPrimaryKeysQuery);
   primary_keys_query.append(" AND kc.table_catelog = '")
       .append(catalog_name)
