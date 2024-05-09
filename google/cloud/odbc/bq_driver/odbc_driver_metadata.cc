@@ -256,9 +256,12 @@ SQLRETURN SQLPrimaryKeys(SQLHSTMT stmt_handle, SQLCHAR const* catalog_name,
   // First fetch the primary keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
       FetchPrimaryKeysFromDataSource(
-          handle, reinterpret_cast<char*>(catalog_name), catalog_name_len,
-          reinterpret_cast<char*>(schema_name), schema_name_len,
-          reinterpret_cast<char*>(table_name), table_name_len);
+          handle, reinterpret_cast<char*>(const_cast<SQLCHAR*>(catalog_name)),
+          catalog_name_len,
+          reinterpret_cast<char*>(const_cast<SQLCHAR*>(schema_name)),
+          schema_name_len,
+          reinterpret_cast<char*>(const_cast<SQLCHAR*>(table_name)),
+          table_name_len);
   if (!ds_status_record_or) {
     auto status_record = ds_status_record_or.GetStatusRecord();
     TracePrintInternal(opts, status_record.message);
