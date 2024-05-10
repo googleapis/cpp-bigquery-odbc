@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -24,12 +25,47 @@ using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
+using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
-StatusRecord GetLastStatusRecord(StatementHandle& handle) {
-  auto status_records = handle.GetDiagnostics().GetStatusRecords();
-  return status_records[status_records.size() - 1];
+TEST(StatementHandle, BindColumn_Basic) {
+  SQLCHAR buf[10];
+  SQLLEN res_len = 0;
+  StatementHandle handle;
+  EXPECT_EQ(handle.BindColumn(0, SQL_C_CHAR, buf, 10, &res_len), SQL_SUCCESS);
+  EXPECT_TRUE(handle.GetDiagnostics().GetStatusRecords().empty());
+}
+
+TEST(StatementHandle, BindColumn_NullBuffer) {
+  SQLLEN res_len = 0;
+  StatementHandle handle;
+  ASSERT_EQ(handle.BindColumn(0, SQL_C_CHAR, nullptr, 10, &res_len), SQL_ERROR);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY001());
+  EXPECT_EQ(status_record.message, "TargetValuePtr should not be null");
+}
+
+TEST(StatementHandle, BindColumn_BuflenLessThanZero) {
+  SQLCHAR buf[10];
+  SQLLEN res_len = 0;
+  StatementHandle handle;
+  ASSERT_EQ(handle.BindColumn(0, SQL_C_CHAR, buf, -1, &res_len), SQL_ERROR);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "BufferLength should not be less than zero");
+}
+
+TEST(StatementHandle, BindColumn_NullResLen) {
+  SQLCHAR buf[10];
+  StatementHandle handle;
+  ASSERT_EQ(handle.BindColumn(0, SQL_C_CHAR, buf, 10, nullptr), SQL_ERROR);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(status_record.message, "TargetValueStrLen should not be null");
 }
 
 TEST(GetDescriptorHandle, GetARD_impl) {

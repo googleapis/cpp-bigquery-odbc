@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -32,6 +33,7 @@ using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
@@ -51,7 +53,8 @@ SQLCHAR* const kSqlDataset =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDataset.c_str()));
 SQLCHAR* const kSqlTable =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kTable.c_str()));
-SQLCHAR* const kSqlEmpty = reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
+
+SQLCHAR const kSqlEmpty[256] = "";
 
 SQLSMALLINT const kSqlCatalogLen = kCatalog.length();
 SQLSMALLINT const kSqlDatasetLen = kDataset.length();
@@ -97,16 +100,6 @@ void CreateConnectedHandleWithDsn() {
 }
 
 void FreeHandles() { delete connection_handle; }
-
-StatusRecord GetLastStatusRecord(ConnectionHandle& handle) {
-  auto status_records = handle.GetDiagnostics().GetStatusRecords();
-  return status_records[status_records.size() - 1];
-}
-
-StatusRecord GetLastStatusRecord(StatementHandle& handle) {
-  auto status_records = handle.GetDiagnostics().GetStatusRecords();
-  return status_records[status_records.size() - 1];
-}
 
 }  // namespace
 

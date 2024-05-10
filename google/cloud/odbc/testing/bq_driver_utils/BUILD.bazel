@@ -26,5 +26,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//google/cloud/odbc:google_cloud_odbc_bq_driver",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
     ],
 )

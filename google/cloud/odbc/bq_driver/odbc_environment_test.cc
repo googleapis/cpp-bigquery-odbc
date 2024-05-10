@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -26,14 +27,10 @@ using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
-
-StatusRecord GetLastStatusRecord(EnvironmentHandle& handle) {
-  auto status_records = handle.GetDiagnostics().GetStatusRecords();
-  return status_records[status_records.size() - 1];
-}
 
 TEST(SetEnvAttr, Success) {
   SQLHENV env_handle;

@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -21,13 +22,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 using ::google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
-
-StatusRecord GetLastStatusRecord(EnvironmentHandle& handle) {
-  auto status_records = handle.GetDiagnostics().GetStatusRecords();
-  return status_records[status_records.size() - 1];
-}
 
 TEST(EnvAttrConnectionPool, ConnectionPoolDefault) {
   EnvAttrConnectionPool default_val;

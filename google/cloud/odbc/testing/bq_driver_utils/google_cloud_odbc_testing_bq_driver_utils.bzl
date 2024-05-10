@@ -18,8 +18,10 @@
 
 google_cloud_odbc_testing_bq_driver_utils_hdrs = [
     "handles.h",
+    "status_utils.h",
 ]
 
 google_cloud_odbc_testing_bq_driver_utils_srcs = [
     "handles.cc",
+    "status_utils.cc",
 ]

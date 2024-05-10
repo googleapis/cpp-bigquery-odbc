@@ -104,6 +104,10 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
   return rc;
 }
 
+char* to_char_str(SQLCHAR const* sql_str) {
+  return reinterpret_cast<char*>(const_cast<SQLCHAR*>(sql_str));
+}
+
 }  // namespace
 
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
@@ -255,13 +259,10 @@ SQLRETURN SQLPrimaryKeys(SQLHSTMT stmt_handle, SQLCHAR const* catalog_name,
 
   // First fetch the primary keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
-      FetchPrimaryKeysFromDataSource(
-          handle, reinterpret_cast<char*>(const_cast<SQLCHAR*>(catalog_name)),
-          catalog_name_len,
-          reinterpret_cast<char*>(const_cast<SQLCHAR*>(schema_name)),
-          schema_name_len,
-          reinterpret_cast<char*>(const_cast<SQLCHAR*>(table_name)),
-          table_name_len);
+      FetchPrimaryKeysFromDataSource(handle, to_char_str(catalog_name),
+                                     catalog_name_len, to_char_str(schema_name),
+                                     schema_name_len, to_char_str(table_name),
+                                     table_name_len);
   if (!ds_status_record_or) {
     auto status_record = ds_status_record_or.GetStatusRecord();
     TracePrintInternal(opts, status_record.message);

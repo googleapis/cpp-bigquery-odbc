@@ -25,9 +25,10 @@ if (NOT COMMAND create_bazel_config)
 endif ()
 
 add_library(google_cloud_odbc_testing_bq_driver_utils # cmake-format: sort
-            handles.cc handles.h)
+            handles.cc handles.h status_utils.cc status_utils.h)
 
-target_link_libraries(google_cloud_odbc_testing_bq_driver_utils
-                      google_cloud_odbc_bq_driver)
+target_link_libraries(
+    google_cloud_odbc_testing_bq_driver_utils google_cloud_odbc_bq_driver
+    google_cloud_odbc_testing_utils)
 
 create_bazel_config(google_cloud_odbc_testing_bq_driver_utils YEAR 2024)
