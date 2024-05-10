@@ -1,5 +1,5 @@
 # ~~~
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,18 +14,18 @@
 # limitations under the License.
 # ~~~
 
-if (NOT ODBC_INTEGRATION_TESTING
-    AND NOT ODBC_UNIT_TESTING
-    AND NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
+if (NOT ODBC_UNIT_TESTING)
     return()
 endif ()
 
-if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
-    add_subdirectory(bq_client_interface_utils)
-    add_subdirectory(bq_driver_utils)
-    add_subdirectory(odbc_utils)
+if (NOT COMMAND create_bazel_config)
+    include(CreateOdbcBazelConfig)
 endif ()
 
-add_subdirectory(client_library_utils)
+add_library(google_cloud_odbc_testing_bq_client_interface_utils # cmake-format: sort
+    bq_client_mock.cc bq_client_mock.h)
 
-add_subdirectory(utils)
+target_link_libraries(google_cloud_odbc_testing_bq_client_interface_utils
+    odbc_bq_client_interface GTest::gtest_main)
+
+create_bazel_config(google_cloud_odbc_testing_bq_client_interface_utils YEAR 2024)

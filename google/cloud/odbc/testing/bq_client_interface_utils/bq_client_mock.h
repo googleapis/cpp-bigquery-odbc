@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_TESTING_UTILS_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_TESTING_UTILS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_MOCK_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_MOCK_H
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/bigquery/storage/v1/mocks/mock_bigquery_read_connection.h"
@@ -22,10 +22,10 @@
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_table_connection.h"
 
-namespace google::cloud::odbc_bigquery_client_interface {
+namespace google::cloud::odbc_testing_bq_client_interface_utils {
 
 struct BQClientMocks {
-  ODBCBQClient mock_bq_client;
+  google::cloud::odbc_bigquery_client_interface::ODBCBQClient mock_bq_client;
   std::shared_ptr<
       ::google::cloud::bigquery_v2_minimal_internal::MockDatasetConnection>
       mock_dataset_connection;
@@ -45,6 +45,6 @@ struct BQClientMocks {
 
 BQClientMocks CreateBQClientMocks();
 
-}  // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_testing_bq_client_interface_utils
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_TESTING_UTILS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_BQ_CLIENT_MOCK_H

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/bq_client_interface/bq_client_testing_utils.h"
+#include "google/cloud/odbc/testing/bq_client_interface_utils/bq_client_mock.h"
 
-namespace google::cloud::odbc_bigquery_client_interface {
+namespace google::cloud::odbc_testing_bq_client_interface_utils {
 
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
 using ::google::cloud::bigquery_storage_v1_mocks::MockBigQueryReadConnection;
@@ -26,6 +26,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MockTableConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClientMockBuilder;
 
 BQClientMocks CreateBQClientMocks() {
   Options options;
@@ -60,4 +62,4 @@ BQClientMocks CreateBQClientMocks() {
           mock_table_connection, mock_bq_read_connection};
 }
 
-}  // namespace google::cloud::odbc_bigquery_client_interface
+}  // namespace google::cloud::odbc_testing_bq_client_interface_utils

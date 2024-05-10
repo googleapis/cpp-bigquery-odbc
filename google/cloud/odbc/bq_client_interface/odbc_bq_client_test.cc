@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
-#include "google/cloud/odbc/bq_client_interface/bq_client_testing_utils.h"
+#include "google/cloud/odbc/testing/bq_client_interface_utils/bq_client_mock.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/mocks/mock_stream_range.h"
@@ -28,6 +28,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetTableRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
+using ::google::cloud::odbc_testing_bq_client_interface_utils::BQClientMocks;
+using ::google::cloud::odbc_testing_bq_client_interface_utils::CreateBQClientMocks;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using google::cloud::internal::GetEnv;
 using ::google::cloud::mocks::MakeStreamRange;
