@@ -61,16 +61,11 @@ function (client_interface_define_unit_tests)
 
     add_executable(odbc_bq_client_interface_unit_tests
                    ${bq_client_interface_unit_tests_cc})
-#        ../testing/bq_client_interface_utils/bq_client_testing_utils.cc
-#        ../testing/bq_client_interface_utils/bq_client_testing_utils.h)
-#    add_library(
-#        odbc_bq_client_interface_unit_tests
-#        bq_client_testing_utils.cc
-#        bq_client_testing_utils.h)
 
     target_link_libraries(
         odbc_bq_client_interface_unit_tests odbc_bq_client_interface
-        google_cloud_odbc_testing_utils google_cloud_odbc_testing_bq_client_interface_utils GTest::gtest_main)
+        google_cloud_odbc_testing_utils
+        google_cloud_odbc_testing_bq_client_interface_utils GTest::gtest_main)
 
     include(GoogleTest)
     gtest_discover_tests(odbc_bq_client_interface_unit_tests)

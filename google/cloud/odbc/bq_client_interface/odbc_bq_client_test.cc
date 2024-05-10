@@ -28,13 +28,14 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetTableRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
-using ::google::cloud::odbc_testing_bq_client_interface_utils::BQClientMocks;
-using ::google::cloud::odbc_testing_bq_client_interface_utils::CreateBQClientMocks;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using google::cloud::internal::GetEnv;
 using ::google::cloud::mocks::MakeStreamRange;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::odbc_testing_bq_client_interface_utils::BQClientMocks;
+using ::google::cloud::odbc_testing_bq_client_interface_utils::
+    CreateBQClientMocks;
 
 TEST(ODBCBQClient, CreateBQClient) {
   std::string test_data_path =
@@ -112,9 +113,7 @@ TEST(ODBCBQClientMock, GetTable) {
   std::string project_id = "project_id";
   std::string dataset_id = "dataset_id";
   std::string table_id = "table_id";
-  TableFilter table_filter{
-      {"field_1"},
-      ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView::Full()};
+  TableFilter table_filter{{}};
   Table table{"t-kind", "t-etag", "table_id"};
   BQClientMocks mocks = CreateBQClientMocks();
   EXPECT_CALL(*mocks.mock_table_connection, GetTable)

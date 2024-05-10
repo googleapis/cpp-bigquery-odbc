@@ -22,10 +22,12 @@ if (NOT COMMAND create_bazel_config)
     include(CreateOdbcBazelConfig)
 endif ()
 
-add_library(google_cloud_odbc_testing_bq_client_interface_utils # cmake-format: sort
+add_library(
+    google_cloud_odbc_testing_bq_client_interface_utils # cmake-format: sort
     bq_client_mock.cc bq_client_mock.h)
 
 target_link_libraries(google_cloud_odbc_testing_bq_client_interface_utils
-    odbc_bq_client_interface GTest::gtest_main)
+                      odbc_bq_client_interface GTest::gmock)
 
-create_bazel_config(google_cloud_odbc_testing_bq_client_interface_utils YEAR 2024)
+create_bazel_config(google_cloud_odbc_testing_bq_client_interface_utils YEAR
+                    2024)

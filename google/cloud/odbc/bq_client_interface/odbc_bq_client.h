@@ -25,7 +25,6 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
-#include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -250,7 +249,7 @@ class ODBCBQClient {
 // It should be used only for tests.
 class ODBCBQClientMockBuilder {
  public:
-  ODBCBQClient CreateBQClientMock(
+  static ODBCBQClient CreateBQClientMock(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
           dataset_client,
       ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client,

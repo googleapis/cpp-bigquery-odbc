@@ -37,8 +37,8 @@ cc_library(
     tags = ["unit-tests"],
     deps = [
         "//:odbc_bq_client_interface",
-        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_client_interface_utils",
+        "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_cloud_cpp//:bigquery_mocks",
         "@com_google_cloud_cpp//:experimental-bigquery-rest_mocks",
         "@com_google_cloud_cpp//:mocks",

@@ -29,6 +29,6 @@ cc_library(
         "@com_google_cloud_cpp//:bigquery_mocks",
         "@com_google_cloud_cpp//:experimental-bigquery-rest_mocks",
         "@com_google_cloud_cpp//:mocks",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )

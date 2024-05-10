@@ -52,8 +52,7 @@ BQClientMocks CreateBQClientMocks() {
   EXPECT_CALL(*mock_bq_read_connection, options);
   BigQueryReadClient mock_bq_read_client(mock_bq_read_connection);
 
-  ODBCBQClientMockBuilder mock_builder;
-  ODBCBQClient mock_bq_client = mock_builder.CreateBQClientMock(
+  ODBCBQClient mock_bq_client = ODBCBQClientMockBuilder::CreateBQClientMock(
       mock_dataset_client, mock_job_client, mock_project_client,
       mock_table_client, nullptr, mock_bq_read_client);
 
