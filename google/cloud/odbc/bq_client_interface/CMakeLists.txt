@@ -16,6 +16,8 @@
 
 add_library(
     odbc_bq_client_interface
+    bq_client_testing_utils.cc
+    bq_client_testing_utils.h
     datasets.cc
     datasets.h
     jobs.cc

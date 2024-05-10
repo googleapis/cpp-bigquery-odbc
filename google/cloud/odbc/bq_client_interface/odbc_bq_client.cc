@@ -230,4 +230,14 @@ ODBCBQClient::ReadRows(
       bigquery_read_client_, read_rows_request, max_read_responses, options);
 }
 
+ODBCBQClient ODBCBQClientMockBuilder::CreateBQClientMock(
+    DatasetClient dataset_client, JobClient job_client,
+    ProjectClient project_client, TableClient table_client,
+    std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator,
+    BigQueryReadClient bigquery_read_client) {
+  return ODBCBQClient(std::move(dataset_client), std::move(job_client),
+                      std::move(project_client), std::move(table_client),
+                      std::move(generator), std::move(bigquery_read_client));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

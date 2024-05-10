@@ -234,6 +234,8 @@ class ODBCBQClient {
         access_token_generator_(std::move(access_token_generator)),
         bigquery_read_client_(std::move(bigquery_read_client)) {}
 
+  friend class ODBCBQClientMockBuilder;
+
   ::google::cloud::bigquery_v2_minimal_internal::DatasetClient dataset_client_;
   ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client_;
   ::google::cloud::bigquery_v2_minimal_internal::ProjectClient project_client_;
@@ -242,6 +244,22 @@ class ODBCBQClient {
       access_token_generator_;
   ::google::cloud::bigquery_storage_v1::BigQueryReadClient
       bigquery_read_client_;
+};
+
+// This class helps to create mock version of ODBCBQClient.
+// It should be used only for tests.
+class ODBCBQClientMockBuilder {
+ public:
+  ODBCBQClient CreateBQClientMock(
+      ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
+          dataset_client,
+      ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client,
+      ::google::cloud::bigquery_v2_minimal_internal::ProjectClient
+          project_client,
+      ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client,
+      std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator,
+      ::google::cloud::bigquery_storage_v1::BigQueryReadClient
+          bigquery_read_client);
 };
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
