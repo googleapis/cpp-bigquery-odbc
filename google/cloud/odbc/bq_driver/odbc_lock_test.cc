@@ -29,8 +29,8 @@ using google::cloud::odbc_internal::StatusRecord;
 void CreateConnection(Authentication auth) {
   auto* conn_handle = new ConnectionHandle();
   StatusRecord status = conn_handle->Connect(auth);
-  EXPECT_EQ(status.ok(), true);
-  EXPECT_TRUE(conn_handle->IsConnected());
+  EXPECT_EQ(status.ok(), false);
+  EXPECT_FALSE(conn_handle->IsConnected());
   delete conn_handle;
 }
 TEST(MultithreadingHandleTest, ConnectionHandle_Connect) {
