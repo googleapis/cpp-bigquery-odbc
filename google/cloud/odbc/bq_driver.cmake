@@ -160,6 +160,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/odbc_environment_test.cc
         bq_driver/odbc_sql_results_test.cc
         bq_driver/odbc_statement_test.cc
+        bq_driver/odbc_lock_test.cc
         bq_driver/odbc_utils_test.cc)
 
     target_link_libraries(
