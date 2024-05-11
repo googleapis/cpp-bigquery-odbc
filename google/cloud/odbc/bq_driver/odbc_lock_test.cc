@@ -15,13 +15,12 @@
 #include "google/cloud/odbc/bq_driver/odbc_lock.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
-#include "google/cloud/internal/getenv.h"
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
-namespace google::cloud::odbc_tests_internal {
-
+namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
@@ -33,7 +32,7 @@ using google::cloud::odbc_tests::Disconnect;
 using google::cloud::odbc_tests::kDefaultConnectionString;
 using google::cloud::odbc_tests::ODBCHandles;
 
-void CreateConnection(Authentication auth){
+void CreateConnection(Authentication auth) {
   auto* conn_handle = new ConnectionHandle();
   StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), true);
@@ -46,18 +45,18 @@ TEST(MultithreadingHandleTest, ConnectionHandle_Connect) {
   Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
 
-std::vector <std::thread> threads;
+  std::vector<std::thread> threads;
 
-for(int i = 0; i < 4; i++){
-		std::thread t(CreateConnection, auth);
-		threads.push_back(std::move(t)); 
-	}
+  for (int i = 0; i < 4; i++) {
+    std::thread t(CreateConnection, auth);
+    threads.push_back(std::move(t));
+  }
 
-for(auto &t: threads){
-		t.join();
-        std::cout << "Running thread '" << "\n";
+  for (auto& t : threads) {
+    t.join();
+    std::cout << "Running thread '"
+              << "\n";
+  }
 }
-}
-
 
 }  // namespace google::cloud::odbc_bq_driver
