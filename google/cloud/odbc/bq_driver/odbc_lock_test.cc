@@ -15,8 +15,6 @@
 #include "google/cloud/odbc/bq_driver/odbc_lock.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
-#include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
@@ -27,10 +25,6 @@ using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_internal::StatusRecord;
-using google::cloud::odbc_tests::Connect;
-using google::cloud::odbc_tests::Disconnect;
-using google::cloud::odbc_tests::kDefaultConnectionString;
-using google::cloud::odbc_tests::ODBCHandles;
 
 void CreateConnection(Authentication auth) {
   auto* conn_handle = new ConnectionHandle();
