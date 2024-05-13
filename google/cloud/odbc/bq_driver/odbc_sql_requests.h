@@ -44,6 +44,9 @@ SQLRETURN SQLBindParameterInternal(
     SQLPOINTER parameter_value_ptr, SQLLEN buffer_length,
     SQLLEN* str_len_or_ind_ptr);
 
+SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle, 
+    SQLCHAR * in_statement_text,
+    SQLINTEGER in_text_length);
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_REQUESTS_H

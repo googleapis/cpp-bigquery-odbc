@@ -15,8 +15,22 @@
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h" 
+
 
 namespace google::cloud::odbc_tests {
+
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+using ::google::cloud::odbc_bq_driver_internal::ResultSet;
+using ::google::cloud::odbc_bq_driver_internal::BQDataType;
+
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+bool const kIsBqDriver = true;
+#else
+bool const kIsBqDriver = false;
+#endif
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
@@ -1065,6 +1079,38 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
 
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLPrepare) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  std::string query = "Select 1";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+  
+  if(kIsBqDriver)
+  {
+       // Cast hstmt to StatementHandle*
+    auto stmt_handle = static_cast<google::cloud::odbc_bq_driver_internal::StatementHandle*>(conn->hstmt);
+
+        // Retrieve the result set
+    const ResultSet& result_set = stmt_handle->GetResultSet();
+
+    ASSERT_EQ(result_set.row_schema.size(), 1); 
+
+    const ColumnSchema& column = result_set.row_schema[0];
+    EXPECT_EQ(column.col_index, 0);
+    EXPECT_EQ(column.col_type, BQDataType::kInt64); 
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
 }
 
 }  // namespace google::cloud::odbc_tests
