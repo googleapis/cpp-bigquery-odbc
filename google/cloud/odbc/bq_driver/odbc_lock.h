@@ -15,11 +15,10 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H
 
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <sql.h>
-#include <sqlext.h>
 #include <thread>
 
 ///////////////////////////////////////////////////////////
