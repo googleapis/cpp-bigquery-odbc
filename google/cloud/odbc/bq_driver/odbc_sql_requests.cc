@@ -161,4 +161,32 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
       handle.GetParamCount(), param_count, nullptr);
 }
 
+SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle, SQLCHAR * in_statement_text, SQLINTEGER in_text_length)
+{
+    StatusRecordOr<StatementHandle*> handle_result =
+    ValidateStatementHandle(statement_handle);
+    if (!handle_result) {
+        TracePrintInternal(*(*kTraceOption),
+        handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+  }
+  
+  StatementHandle& handle_ref = *(*handle_result);
+
+  if (in_text_length < 1) {
+    StatusRecord status_record = {SQLStates::k_HY090(),
+                                  "Invalid query length"};
+    handle_ref.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  
+  StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
+
+  handle_ref.GetDiagnostics().AddStatusRecord(status);
+  
+  if (!status.ok()) {
+    return SQL_ERROR;
+  }
+  return SQL_SUCCESS;
+}
 }  // namespace google::cloud::odbc_bq_driver

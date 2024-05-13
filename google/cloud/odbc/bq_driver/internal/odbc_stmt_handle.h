@@ -56,6 +56,7 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
 
+  odbc_internal::StatusRecord PrepareQuery(const SQLCHAR* query_text);
   HandleType kType = HandleType::kStmtHandle;
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
@@ -70,6 +71,10 @@ class StatementHandle : public Handle {
   inline void SetParamCount(SQLSMALLINT param_count) {
     param_count_ = param_count;
   }
+  
+  [[nodiscard]] inline ResultSet const& GetResultSet() const {
+    return result_set_;
+  }
 
  private:
   std::shared_ptr<Query> query_;
@@ -78,6 +83,9 @@ class StatementHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   ResultSet result_set_;
   SQLSMALLINT param_count_ = 0;
+  std::string query_str_;
+  odbc_internal::StatusRecord PopulatResultSet(const google::cloud::bigquery_v2_minimal_internal::TableSchema& schema);
+
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
