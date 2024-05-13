@@ -436,6 +436,23 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+void CreateDriverConnection() {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(MultipleConnectionTest, SQLDriverConnect) {
+  std::thread threads[5];
+
+  for (int i = 0; i < 5; i++) {
+    threads[i] = std::thread(CreateDriverConnection);
+  }
+
+  for (int i = 0; i < 5; i++) {
+    threads[i].join();
+  }
+}
+
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
