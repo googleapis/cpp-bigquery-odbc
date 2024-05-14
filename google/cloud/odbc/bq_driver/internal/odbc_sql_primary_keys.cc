@@ -25,7 +25,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 std::string const kBasicPrimaryKeysQuery =
-    "SELECT kc.table_catelog,"
+    "SELECT kc.table_catalog,"
     " kc.table_schema,"
     " kc.table_name,"
     " kc.column_name,"
@@ -46,7 +46,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   // Input validation of required parameters.
   if (catalog_name.empty() || catalog_name_len <= 0) {
     auto status_record = StatusRecord{SQLStates::k_HY090(),
-                                      "Parameter catelog_name cannot be empty"};
+                                      "Parameter catalog_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
@@ -72,7 +72,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   // TODO(b/339618125): Cleanse this query to avoid
   // potential SQL injection issues.
   std::string primary_keys_query(kBasicPrimaryKeysQuery);
-  primary_keys_query.append(" AND kc.table_catelog = '")
+  primary_keys_query.append(" AND kc.table_catalog = '")
       .append(catalog_name)
       .append("'")
       .append(" AND kc.table_schema = ")
