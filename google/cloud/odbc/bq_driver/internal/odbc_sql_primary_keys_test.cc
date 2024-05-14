@@ -40,7 +40,7 @@ TEST(FetchPrimaryKeys, failure_empty_catalog_name) {
   EXPECT_THAT(
       status_record_or,
       StatusRecordIs(SQLStates::k_HY090(),
-                     HasSubstr("Parameter catelog_name cannot be empty")));
+                     HasSubstr("Parameter catalog_name cannot be empty")));
 }
 TEST(FetchPrimaryKeys, failure_empty_catalog_len) {
   StatementHandle handle;
@@ -50,7 +50,7 @@ TEST(FetchPrimaryKeys, failure_empty_catalog_len) {
   EXPECT_THAT(
       status_record_or,
       StatusRecordIs(SQLStates::k_HY090(),
-                     HasSubstr("Parameter catelog_name cannot be empty")));
+                     HasSubstr("Parameter catalog_name cannot be empty")));
 }
 
 TEST(FetchPrimaryKeys, failure_empty_schema_name) {

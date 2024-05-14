@@ -497,7 +497,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  EXPECT_EQ(status_record.message, "Parameter catelog_name cannot be empty");
+  EXPECT_EQ(status_record.message, "Parameter catalog_name cannot be empty");
 }
 
 TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
@@ -508,7 +508,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  EXPECT_EQ(status_record.message, "Parameter catelog_name cannot be empty");
+  EXPECT_EQ(status_record.message, "Parameter catalog_name cannot be empty");
 }
 
 TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
