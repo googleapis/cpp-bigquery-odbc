@@ -64,6 +64,8 @@ class StatementHandle : public Handle {
     result_set_ = result_set;
   }
 
+  SQLSMALLINT param_count;
+
  private:
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;

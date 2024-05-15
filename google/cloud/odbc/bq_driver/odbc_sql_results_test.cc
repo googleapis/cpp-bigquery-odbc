@@ -292,4 +292,23 @@ TEST(SQLBindColInternal, InvalidCType) {
   EXPECT_EQ(0, GetDescCount(ard));
 }
 
+TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
+  SQLSMALLINT num_param = 0;
+
+  SQLRETURN status = SQLNumParamsInternal(nullptr, &num_param);
+
+  ASSERT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLNumParamsInternal, ReturnsParamCount) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.param_count = 2;
+  SQLSMALLINT num_param = 0;
+
+  SQLRETURN status = SQLNumParamsInternal(&handle, &num_param);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(2, num_param);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

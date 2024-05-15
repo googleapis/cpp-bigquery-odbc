@@ -226,28 +226,11 @@ TEST(StatementTest, SQLNumParams) {
   EXPECT_EQ(num_params, 3);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ////////////////
   /// USE ANSI
   ////////////////
-  auto const table_name_ansi =
-      kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST_ANSI";
-  auto const insert_stmt_ansi =
-      "INSERT INTO " + table_name_ansi + " VALUES (?, ?, ?)";
-  Table table_ansi(table_name_ansi);
-
-  // Create Table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
-      true);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  status =
-      SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt_ansi.c_str(), SQL_NTS);
+  status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn, true);
   status = SQLNumParams(conn->hstmt, &num_params);
   CheckError(status, "SQLNumParams", conn);
@@ -255,7 +238,50 @@ TEST(StatementTest, SQLNumParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Drop(conn, true);
+  table.Drop(conn, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLNumParamsAndSQLBindParam) {
+  auto conn = std::make_shared<ODBCHandles>();
+  auto table_name =
+      kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_AND_BIND_PARAM_TEST";
+  auto insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+  Table table(table_name);
+
+  // Create Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Prepare statement
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLSMALLINT num_params;
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  // Bind parameter with number 10
+  SQLUSMALLINT param_number = 10;
+  SQLINTEGER param_val = 30;
+  status = SQLBindParameter(conn->hstmt, param_number, SQL_PARAM_INPUT,
+                            SQL_C_CHAR, SQL_CHAR, 10, 20, &param_val, 40, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(count, param_number);
+  // Check SQLNumParams returns count of parameters from SQLPrepare
+  status = SQLNumParams(conn->hstmt, &num_params);
+  CheckError(status, "SQLNumParams", conn);
+  EXPECT_EQ(num_params, 3);
+  EXPECT_NE(num_params, count);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  table.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

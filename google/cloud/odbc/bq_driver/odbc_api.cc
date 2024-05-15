@@ -64,6 +64,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
@@ -89,6 +90,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
@@ -1401,12 +1403,19 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
 SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
                                SQLSMALLINT* paramCount) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLSetDescField");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLNumParams(statementHandle, paramCount,
+                                    *(*kTraceOption));
 
   // Call to internal function for SQLNumParams in odbc_sql_requests.h.
+  rc = google::cloud::odbc_bq_driver::SQLNumParamsInternal(statementHandle,
+                                                           paramCount);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLNumParams(rc, *(*kTraceOption));
 
   return rc;
 }
