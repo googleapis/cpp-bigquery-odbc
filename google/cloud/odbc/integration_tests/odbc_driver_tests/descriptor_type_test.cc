@@ -25,6 +25,57 @@ INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI,
                          DescriptorTypeParameterizedTest,
                          testing::Values(false, true));
 
+void CheckType(SQLHDESC desc, SQLSMALLINT type_expected, bool use_ansi) {
+  SQLSMALLINT type;
+  GetDescField(desc, 1, SQL_DESC_TYPE, &type, 0, NULL, use_ansi);
+  EXPECT_EQ(type_expected, type);
+}
+
+void CheckConciseType(SQLHDESC desc, SQLSMALLINT concise_type_expected,
+                      bool use_ansi) {
+  SQLSMALLINT concise_type;
+  GetDescField(desc, 1, SQL_DESC_CONCISE_TYPE, &concise_type, 0, NULL,
+               use_ansi);
+  EXPECT_EQ(concise_type_expected, concise_type);
+}
+
+void CheckDatetimeIntervalPrecision(
+    SQLHDESC desc, SQLSMALLINT datetime_interval_precision_expected,
+    bool use_ansi) {
+  SQLINTEGER datetime_interval_precision = 0;
+  GetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+               &datetime_interval_precision, 0, NULL, use_ansi);
+  EXPECT_EQ(datetime_interval_precision_expected, datetime_interval_precision);
+}
+
+void CheckPrecision(SQLHDESC desc, SQLSMALLINT precision_expected,
+                    bool use_ansi) {
+  SQLSMALLINT precision = 0;
+  GetDescField(desc, 1, SQL_DESC_PRECISION, &precision, 0, NULL, use_ansi);
+  EXPECT_EQ(precision_expected, precision);
+}
+
+void CheckLength(SQLHDESC desc, SQLULEN length_expected, bool use_ansi) {
+  SQLULEN length = 0;
+  GetDescField(desc, 1, SQL_DESC_LENGTH, &length, 0, NULL, use_ansi);
+  EXPECT_EQ(length_expected, length);
+}
+
+void CheckDatetimeIntervalCode(SQLHDESC desc,
+                               SQLSMALLINT datetime_interval_code_expected,
+                               bool use_ansi) {
+  SQLSMALLINT datetime_interval_code = 0;
+  GetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
+               &datetime_interval_code, 0, NULL, use_ansi);
+  EXPECT_EQ(datetime_interval_code_expected, datetime_interval_code);
+}
+
+void CheckScale(SQLHDESC desc, SQLSMALLINT scale_expected, bool use_ansi) {
+  SQLSMALLINT scale = 0;
+  GetDescField(desc, 1, SQL_DESC_SCALE, &scale, 0, NULL, use_ansi);
+  EXPECT_EQ(scale_expected, scale);
+}
+
 ///////////////////////////////////////////////////////////////////////
 //  Set SQL_DESC_TYPE for C types except datetime and interval types
 ///////////////////////////////////////////////////////////////////////

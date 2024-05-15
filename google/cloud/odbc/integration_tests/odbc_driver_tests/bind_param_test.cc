@@ -12,939 +12,429 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
-#include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace google::cloud::odbc_tests {
 
-class BindParameterParameterizedTest : public ::testing::TestWithParam<bool> {};
+enum class DescriptorType { kAPD, kIPD };
 
-INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI,
-                         BindParameterParameterizedTest,
-                         testing::Values(false, true));
+static constexpr SQLULEN col_size = 10;
+static constexpr SQLSMALLINT decimal_digits = 3;
 
-void RandomiseDescriptorAttributes(std::shared_ptr<ODBCHandles> conn,
-                                   SQLUSMALLINT param_number, bool use_ansi) {
-  SQLRETURN status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC,
-                                 &conn->apd, 0, NULL, use_ansi);
+static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
+    {SQL_CHAR,
+     {SQL_CHAR, SQL_CHAR, 0, col_size, col_size, kScaleUnchanged, col_size}},
+    {SQL_VARCHAR,
+     {SQL_VARCHAR, SQL_VARCHAR, 0, col_size, col_size, kScaleUnchanged,
+      col_size}},
+    {SQL_LONGVARCHAR,
+     {SQL_LONGVARCHAR, SQL_LONGVARCHAR, 0, col_size, col_size, kScaleUnchanged,
+      col_size}},
+    {SQL_BINARY,
+     {SQL_BINARY, SQL_BINARY, 0, col_size, col_size, kScaleUnchanged,
+      col_size}},
+    {SQL_VARBINARY,
+     {SQL_VARBINARY, SQL_VARBINARY, 0, col_size, col_size, kScaleUnchanged,
+      col_size}},
+    {SQL_LONGVARBINARY,
+     {SQL_LONGVARBINARY, SQL_LONGVARBINARY, 0, col_size, col_size,
+      kScaleUnchanged, col_size}},
+    {SQL_DECIMAL,
+     {SQL_DECIMAL, SQL_DECIMAL, 0, col_size, col_size, decimal_digits,
+      col_size}},
+    {SQL_NUMERIC,
+     {SQL_NUMERIC, SQL_NUMERIC, 0, col_size, col_size, decimal_digits,
+      col_size}},
+    {SQL_REAL, {SQL_REAL, SQL_REAL, 0, 7, 24, kScaleUnchanged, 14}},
+    {SQL_FLOAT, {SQL_FLOAT, SQL_FLOAT, 0, 15, 53, kScaleUnchanged, 24}},
+    {SQL_DOUBLE, {SQL_DOUBLE, SQL_DOUBLE, 0, 15, 53, kScaleUnchanged, 24}},
+    {SQL_WCHAR,
+     {SQL_WCHAR, SQL_WCHAR, 0, col_size, col_size, kScaleUnchanged, col_size}},
+    {SQL_WVARCHAR,
+     {SQL_WVARCHAR, SQL_WVARCHAR, 0, col_size, col_size, kScaleUnchanged,
+      col_size}},
+    {SQL_WLONGVARCHAR,
+     {SQL_WLONGVARCHAR, SQL_WLONGVARCHAR, 0, col_size, col_size,
+      kScaleUnchanged, col_size}},
+    {SQL_BIT,
+     {SQL_BIT, SQL_BIT, 0, 1, kLengthUnchanged, kScaleUnchanged,
+      kLengthUnchanged}},
+    {SQL_TINYINT,
+     {SQL_TINYINT, SQL_TINYINT, 0, 3, kLengthUnchanged, kScaleUnchanged,
+      kLengthUnchanged}},
+    {SQL_SMALLINT,
+     {SQL_SMALLINT, SQL_SMALLINT, 0, 5, kLengthUnchanged, kScaleUnchanged,
+      kLengthUnchanged}},
+    {SQL_INTEGER,
+     {SQL_INTEGER, SQL_INTEGER, 0, 10, kLengthUnchanged, kScaleUnchanged,
+      kLengthUnchanged}},
+    {SQL_BIGINT,
+     {SQL_BIGINT, SQL_BIGINT, 0, 19, kLengthUnchanged, kScaleUnchanged,
+      kLengthUnchanged}},
+    {SQL_GUID, {SQL_GUID, SQL_GUID, 0, 36, 36, kScaleUnchanged, 36}},
+
+    {SQL_TYPE_DATE,
+     {SQL_DATETIME, SQL_TYPE_DATE, SQL_CODE_DATE, 10, 0, 0, kLengthUnchanged}},
+    {SQL_TYPE_TIME,
+     {SQL_DATETIME, SQL_TYPE_TIME, SQL_CODE_TIME, 12, decimal_digits,
+      decimal_digits, kLengthUnchanged}},
+    {SQL_TYPE_TIMESTAMP,
+     {SQL_DATETIME, SQL_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP, 23, decimal_digits,
+      decimal_digits, kLengthUnchanged}},
+
+    {SQL_INTERVAL_MONTH,
+     {SQL_INTERVAL, SQL_INTERVAL_MONTH, SQL_CODE_MONTH, 2, 0, 0, 2}},
+    {SQL_INTERVAL_YEAR,
+     {SQL_INTERVAL, SQL_INTERVAL_YEAR, SQL_CODE_YEAR, 2, 0, 0, 2}},
+    {SQL_INTERVAL_YEAR_TO_MONTH,
+     {SQL_INTERVAL, SQL_INTERVAL_YEAR_TO_MONTH, SQL_CODE_YEAR_TO_MONTH, 5, 0, 0,
+      2}},
+    {SQL_INTERVAL_DAY,
+     {SQL_INTERVAL, SQL_INTERVAL_DAY, SQL_CODE_DAY, 2, 0, 0, 2}},
+    {SQL_INTERVAL_HOUR,
+     {SQL_INTERVAL, SQL_INTERVAL_HOUR, SQL_CODE_HOUR, 2, 0, 0, 2}},
+    {SQL_INTERVAL_MINUTE,
+     {SQL_INTERVAL, SQL_INTERVAL_MINUTE, SQL_CODE_MINUTE, 2, 0, 0, 2}},
+    {SQL_INTERVAL_SECOND,
+     {SQL_INTERVAL, SQL_INTERVAL_SECOND, SQL_CODE_SECOND, 6, decimal_digits,
+      decimal_digits, 2}},
+    {SQL_INTERVAL_DAY_TO_HOUR,
+     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_HOUR, SQL_CODE_DAY_TO_HOUR, 5, 0, 0,
+      2}},
+    {SQL_INTERVAL_DAY_TO_MINUTE,
+     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_MINUTE, SQL_CODE_DAY_TO_MINUTE, 8, 0, 0,
+      2}},
+    {SQL_INTERVAL_DAY_TO_SECOND,
+     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_SECOND, SQL_CODE_DAY_TO_SECOND, 15,
+      decimal_digits, decimal_digits, 2}},
+    {SQL_INTERVAL_HOUR_TO_MINUTE,
+     {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_MINUTE, SQL_CODE_HOUR_TO_MINUTE, 5, 0,
+      0, 2}},
+    {SQL_INTERVAL_HOUR_TO_SECOND,
+     {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_SECOND, SQL_CODE_HOUR_TO_SECOND, 12,
+      decimal_digits, decimal_digits, 2}},
+    {SQL_INTERVAL_MINUTE_TO_SECOND,
+     {SQL_INTERVAL, SQL_INTERVAL_MINUTE_TO_SECOND, SQL_CODE_MINUTE_TO_SECOND, 9,
+      decimal_digits, decimal_digits, 2}},
+};
+
+void RandomiseDescriptorAttributes(std::shared_ptr<ODBCHandles> conn) {
+  SQLRETURN status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_PARAM_DESC)", conn);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+  RandomizeDefaultValues(conn->apd, 1);
+  RandomizeDefaultValues(conn->ipd, 1);
+}
+
+void CheckAttributes(std::shared_ptr<ODBCHandles> conn, SQLHDESC desc,
+                     DescriptorType desc_type, SQLSMALLINT type) {
+  auto expected = (desc_type == DescriptorType::kAPD)
+                      ? kAppDescTestMap.at(type)
+                      : kImpDescTestMap.at(type);
+  SQLSMALLINT out_c_type;
+  SQLRETURN status =
+      SQLGetDescField(desc, 1, SQL_DESC_TYPE, &out_c_type, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn);
+  EXPECT_EQ(expected.c_type, out_c_type);
+
+  SQLSMALLINT out_concise_c_type;
+  status = SQLGetDescField(desc, 1, SQL_DESC_CONCISE_TYPE, &out_concise_c_type,
+                           0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(expected.concise_c_type, out_concise_c_type);
+
+  SQLSMALLINT out_desc_datetime_code;
+  status = SQLGetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
+                           &out_desc_datetime_code, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
+  EXPECT_EQ(expected.desc_datetime_interval_code, out_desc_datetime_code);
+
+  SQLULEN out_desc_len;
+  status = SQLGetDescField(desc, 1, SQL_DESC_LENGTH, &out_desc_len, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(expected.desc_len, out_desc_len);
+
+  SQLSMALLINT out_desc_precision;
+  status = SQLGetDescField(desc, 1, SQL_DESC_PRECISION, &out_desc_precision, 0,
+                           nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(expected.desc_precision, out_desc_precision);
+
+  SQLSMALLINT out_desc_scale;
+  status =
+      SQLGetDescField(desc, 1, SQL_DESC_SCALE, &out_desc_scale, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_SCALE)", conn);
+  EXPECT_EQ(expected.desc_scale, out_desc_scale);
+
+  SQLINTEGER out_desc_datetime_precision;
+  status = SQLGetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+                           &out_desc_datetime_precision, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
+             conn);
+  EXPECT_EQ(expected.desc_datetime_precision, out_desc_datetime_precision);
+}
+
+void CheckApdAttributes(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {
+  CheckAttributes(conn, conn->apd, DescriptorType::kAPD, c_type);
+}
+
+void CheckIpdAttributes(std::shared_ptr<ODBCHandles> conn,
+                        SQLSMALLINT sql_type) {
+  CheckAttributes(conn, conn->ipd, DescriptorType::kIPD, sql_type);
+}
+
+void BindParameterAndTest(std::shared_ptr<ODBCHandles> conn,
+                          SQLSMALLINT value_type, SQLSMALLINT param_type) {
+  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
+  SQLINTEGER param_val = 30;
+  SQLLEN buff_len = 40;
+  SQLLEN str_len = 50;
+  RandomiseDescriptorAttributes(conn);
+
+  SQLRETURN status = SQLBindParameter(conn->hstmt, 1, in_out_type, value_type,
+                                      param_type, col_size, decimal_digits,
+                                      &param_val, buff_len, &str_len);
+  CheckError(status, "SQLBindParameter", conn);
+
+  SQLSMALLINT desc_in_out_type = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_PARAMETER_TYPE,
+                           &desc_in_out_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  EXPECT_EQ(in_out_type, desc_in_out_type);
+
+  CheckApdAttributes(conn, value_type);
+  CheckIpdAttributes(conn, param_type);
+
+  SQLPOINTER desc_data_ptr = nullptr;
+  status =
+      SQLGetDescField(conn->apd, 1, SQL_DESC_DATA_PTR, &desc_data_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATA_PTR)", conn);
+  EXPECT_EQ(&param_val, desc_data_ptr);
+
+  SQLLEN desc_octet_length = 0;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_OCTET_LENGTH,
+                           &desc_octet_length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_OCTET_LENGTH)", conn);
+  EXPECT_EQ(buff_len, desc_octet_length);
+
+  SQLPOINTER desc_octet_length_ptr = nullptr;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_OCTET_LENGTH_PTR,
+                           &desc_octet_length_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
+  EXPECT_EQ(&str_len, desc_octet_length_ptr);
+
+  SQLPOINTER desc_indicator_ptr = nullptr;
+  status = SQLGetDescField(conn->apd, 1, SQL_DESC_INDICATOR_PTR,
+                           &desc_indicator_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_INDICATOR_PTR)", conn);
+  EXPECT_EQ(&str_len, desc_indicator_ptr);
+}
+
+void BindParameterForLength(std::shared_ptr<ODBCHandles> conn,
+                            SQLSMALLINT value_type, SQLSMALLINT param_type,
+                            SQLSMALLINT digits) {
+  SQLUSMALLINT param_number = 1;
+  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
+  SQLINTEGER param_val = 30;
+  SQLLEN buff_len = 40;
+  SQLLEN str_len = 50;
+
+  SQLRETURN status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
+                                      value_type, param_type, col_size, digits,
+                                      &param_val, buff_len, &str_len);
+  CheckError(status, "SQLBindParameter", conn);
+
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   CheckError(status, "SQLGetStmtAttr", conn);
-  status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                       NULL, use_ansi);
-  CheckError(status, "SQLGetStmtAttr", conn);
-  RandomizeDefaultValues(conn->apd, param_number);
-  RandomizeDefaultValues(conn->ipd, param_number);
 }
 
 ///////////////////////////////////////////////////////////////////////
 //  Check all SQL types except datetime and interval types
 ///////////////////////////////////////////////////////////////////////
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_CHAR) {
+TEST(SQLBindParameter, Bind_SQL_CHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_CHAR;
-  SQLSMALLINT param_type = SQL_CHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check in_out_type behavior
-  SQLSMALLINT desc_in_out_type = 0;
-  GetDescField(conn->ipd, param_number, SQL_DESC_PARAMETER_TYPE,
-               &desc_in_out_type, 0, NULL, GetParam());
-  EXPECT_EQ(in_out_type, desc_in_out_type);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
-
-  // Check param_val behavior
-  SQLPOINTER desc_data_ptr = nullptr;
-  GetDescField(conn->apd, param_number, SQL_DESC_DATA_PTR, &desc_data_ptr, 0,
-               NULL, GetParam());
-  EXPECT_EQ(&param_val, desc_data_ptr);
-
-  // Check buff_len behavior
-  SQLLEN desc_octet_length = 0;
-  GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH,
-               &desc_octet_length, 0, NULL, GetParam());
-  EXPECT_EQ(buff_len, desc_octet_length);
-
-  // Check str_len behavior
-  SQLPOINTER desc_octet_length_ptr = nullptr;
-  GetDescField(conn->apd, param_number, SQL_DESC_OCTET_LENGTH_PTR,
-               &desc_octet_length_ptr, 0, NULL, GetParam());
-  EXPECT_EQ(&str_len, desc_octet_length_ptr);
-  SQLPOINTER desc_indicator_ptr = nullptr;
-  GetDescField(conn->apd, param_number, SQL_DESC_INDICATOR_PTR,
-               &desc_indicator_ptr, 0, NULL, GetParam());
-  EXPECT_EQ(&str_len, desc_indicator_ptr);
+  BindParameterAndTest(conn, SQL_C_CHAR, SQL_CHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_VARCHAR) {
+TEST(SQLBindParameter, Bind_SQL_VARCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_CHAR;
-  SQLSMALLINT param_type = SQL_VARCHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_CHAR, SQL_VARCHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_LONGVARCHAR) {
+TEST(SQLBindParameter, Bind_SQL_LONGVARCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_CHAR;
-  SQLSMALLINT param_type = SQL_VARCHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_CHAR, SQL_LONGVARCHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_BINARY) {
+TEST(SQLBindParameter, Bind_SQL_BINARY) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_BINARY;
-  SQLSMALLINT param_type = SQL_BINARY;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_BINARY, SQL_BINARY);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_VARBINARY) {
+TEST(SQLBindParameter, Bind_SQL_VARBINARY) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_BINARY;
-  SQLSMALLINT param_type = SQL_VARBINARY;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_BINARY, SQL_VARBINARY);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_LONGVARBINARY) {
+TEST(SQLBindParameter, Bind_SQL_LONGVARBINARY) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_BINARY;
-  SQLSMALLINT param_type = SQL_LONGVARBINARY;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_BINARY, SQL_LONGVARBINARY);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_DECIMAL) {
+TEST(SQLBindParameter, Bind_SQL_DECIMAL) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_CHAR;
-  SQLSMALLINT param_type = SQL_DECIMAL;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_CHAR, SQL_DECIMAL);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_NUMERIC) {
+TEST(SQLBindParameter, Bind_SQL_NUMERIC) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_CHAR;
-  SQLSMALLINT param_type = SQL_NUMERIC;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
-  CheckLength(conn->apd, 1, GetParam());
-  CheckPrecision(conn->apd, 1, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_CHAR, SQL_NUMERIC);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_REAL) {
+TEST(SQLBindParameter, Bind_SQL_REAL) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_FLOAT;
-  SQLSMALLINT param_type = SQL_REAL;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 24, GetParam());
-  CheckLength(conn->apd, 24, GetParam());
-  CheckPrecision(conn->apd, 24, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 14, GetParam());
-  CheckLength(conn->ipd, 7, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 24, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_FLOAT, SQL_REAL);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_FLOAT) {
+TEST(SQLBindParameter, Bind_SQL_FLOAT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_DOUBLE;
-  SQLSMALLINT param_type = SQL_FLOAT;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 53, GetParam());
-  CheckLength(conn->apd, 53, GetParam());
-  CheckPrecision(conn->apd, 53, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 24, GetParam());
-  CheckLength(conn->ipd, 15, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 53, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_DOUBLE, SQL_FLOAT);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_DOUBLE) {
+TEST(SQLBindParameter, Bind_SQL_DOUBLE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_DOUBLE;
-  SQLSMALLINT param_type = SQL_DOUBLE;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 53, GetParam());
-  CheckLength(conn->apd, 53, GetParam());
-  CheckPrecision(conn->apd, 53, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 24, GetParam());
-  CheckLength(conn->ipd, 15, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 53, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_DOUBLE, SQL_DOUBLE);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_WCHAR) {
+TEST(SQLBindParameter, Bind_SQL_WCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_WCHAR;
-  SQLSMALLINT param_type = SQL_WCHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_WCHAR, SQL_WCHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_WVARCHAR) {
+TEST(SQLBindParameter, Bind_SQL_WVARCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_WCHAR;
-  SQLSMALLINT param_type = SQL_WVARCHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_WCHAR, SQL_WVARCHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_WLONGVARCHAR) {
+TEST(SQLBindParameter, Bind_SQL_WLONGVARCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_WCHAR;
-  SQLSMALLINT param_type = SQL_WLONGVARCHAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, col_size, GetParam());
-  CheckLength(conn->ipd, col_size, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, col_size, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_WCHAR, SQL_WLONGVARCHAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_BIT) {
+TEST(SQLBindParameter, Bind_SQL_BIT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_BIT;
-  SQLSMALLINT param_type = SQL_BIT;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 1, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_BIT, SQL_BIT);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_TINYINT) {
+TEST(SQLBindParameter, Bind_SQL_TINYINT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_STINYINT;
-  SQLSMALLINT param_type = SQL_TINYINT;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 3, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_STINYINT, SQL_TINYINT);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_SMALLINT) {
+TEST(SQLBindParameter, Bind_SQL_SMALLINT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_SSHORT;
-  SQLSMALLINT param_type = SQL_SMALLINT;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 5, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_SSHORT, SQL_SMALLINT);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTEGER) {
+TEST(SQLBindParameter, Bind_SQL_INTEGER) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_SLONG;
-  SQLSMALLINT param_type = SQL_INTEGER;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 10, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_SLONG, SQL_INTEGER);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_BIGINT) {
+TEST(SQLBindParameter, Bind_SQL_BIGINT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_SBIGINT;
-  SQLSMALLINT param_type = SQL_BIGINT;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 19, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_SBIGINT, SQL_BIGINT);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_GUID) {
+TEST(SQLBindParameter, Bind_SQL_GUID) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_GUID;
-  SQLSMALLINT param_type = SQL_GUID;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, value_type, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 16, GetParam());
-  CheckLength(conn->apd, 16, GetParam());
-  CheckPrecision(conn->apd, 16, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, param_type, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 36, GetParam());
-  CheckLength(conn->ipd, 36, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 36, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, kScaleUnchanged, GetParam());
+  BindParameterAndTest(conn, SQL_C_GUID, SQL_GUID);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -953,192 +443,65 @@ TEST_P(BindParameterParameterizedTest, Bind_SQL_GUID) {
 //  Check all SQL datetime types
 ///////////////////////////////////////////////////////////////////////
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_TYPE_DATE) {
+TEST(SQLBindParameter, Bind_SQL_TYPE_DATE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_TYPE_DATE;
-  SQLSMALLINT param_type = SQL_TYPE_DATE;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 2;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_DATE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DATE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 10, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_TYPE_DATE, SQL_TYPE_DATE);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_TYPE_TIME) {
+TEST(SQLBindParameter, Bind_SQL_TYPE_TIME) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_TYPE_TIME;
-  SQLSMALLINT param_type = SQL_TYPE_TIME;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
 
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_TIME, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_TIME, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 12, GetParam());
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_TYPE_TIME, SQL_TYPE_TIME);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Check_SQL_LENGTH_For_SQL_TYPE_TIME) {
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_TYPE_TIME) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_TYPE_TIME;
-    SQLSMALLINT param_type = SQL_TYPE_TIME;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_TYPE_TIME, SQL_TYPE_TIME, digits);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 8 : 9 + decimal_digits,
-                GetParam());
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 8 : 9 + digits, length);
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST_P(BindParameterParameterizedTest, Bind_SQL_TYPE_TIMESTAMP) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_TYPE_TIMESTAMP;
-  SQLSMALLINT param_type = SQL_TYPE_TIMESTAMP;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_TIMESTAMP, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 0, GetParam());
-  CheckPrecision(conn->apd, 6, GetParam());
-  CheckScale(conn->apd, 6, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_DATETIME, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_TIMESTAMP, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckLength(conn->ipd, 23, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest,
-       Check_SQL_LENGTH_For_SQL_TYPE_TIMESTAMP) {
+TEST(SQLBindParameter, Bind_SQL_TYPE_TIMESTAMP) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_TYPE_TIMESTAMP;
-    SQLSMALLINT param_type = SQL_TYPE_TIMESTAMP;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  BindParameterAndTest(conn, SQL_C_TYPE_TIMESTAMP, SQL_TYPE_TIMESTAMP);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 19 : 20 + decimal_digits,
-                GetParam());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_TYPE_TIMESTAMP) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_TYPE_TIMESTAMP, SQL_TYPE_TIMESTAMP,
+                           digits);
+
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 19 : 20 + digits, length);
   }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -1146,704 +509,199 @@ TEST_P(BindParameterParameterizedTest,
 //  Check all SQL interval types
 ///////////////////////////////////////////////////////////////////////
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_MONTH) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_MONTH) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_MONTH;
-  SQLSMALLINT param_type = SQL_INTERVAL_MONTH;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_MONTH, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MONTH, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 2, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_MONTH, SQL_INTERVAL_MONTH);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_YEAR) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_YEAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_YEAR;
-  SQLSMALLINT param_type = SQL_INTERVAL_YEAR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_YEAR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_YEAR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 2, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_YEAR, SQL_INTERVAL_YEAR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_YEAR_TO_MONTH) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_YEAR_TO_MONTH) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_YEAR_TO_MONTH;
-  SQLSMALLINT param_type = SQL_INTERVAL_YEAR_TO_MONTH;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_YEAR_TO_MONTH, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_YEAR_TO_MONTH, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 5, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_YEAR_TO_MONTH,
+                       SQL_INTERVAL_YEAR_TO_MONTH);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_DAY) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_DAY) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_DAY;
-  SQLSMALLINT param_type = SQL_INTERVAL_DAY;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_DAY, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 2, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_DAY, SQL_INTERVAL_DAY);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_HOUR) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_HOUR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_HOUR;
-  SQLSMALLINT param_type = SQL_INTERVAL_HOUR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_HOUR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 2, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_HOUR, SQL_INTERVAL_HOUR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_MINUTE) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_MINUTE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_MINUTE;
-  SQLSMALLINT param_type = SQL_INTERVAL_MINUTE;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 2, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_MINUTE, SQL_INTERVAL_MINUTE);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_SECOND) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_SECOND;
-  SQLSMALLINT param_type = SQL_INTERVAL_SECOND;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 6, GetParam());
-  CheckScale(conn->apd, 6, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 6, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_SECOND, SQL_INTERVAL_SECOND);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest,
-       Check_SQL_LENGTH_For_SQL_INTERVAL_SECOND) {
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_SECOND) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_INTERVAL_SECOND;
-    SQLSMALLINT param_type = SQL_INTERVAL_SECOND;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_INTERVAL_SECOND, SQL_INTERVAL_SECOND,
+                           digits);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 2 : 3 + decimal_digits,
-                GetParam());
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 2 : 3 + digits, length);
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_DAY_TO_HOUR) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_DAY_TO_HOUR;
-  SQLSMALLINT param_type = SQL_INTERVAL_DAY_TO_HOUR;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_DAY_TO_HOUR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_HOUR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 5, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_DAY_TO_MINUTE) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_DAY_TO_HOUR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_DAY_TO_MINUTE;
-  SQLSMALLINT param_type = SQL_INTERVAL_DAY_TO_MINUTE;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_DAY_TO_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 8, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_DAY_TO_HOUR,
+                       SQL_INTERVAL_DAY_TO_HOUR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_DAY_TO_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_DAY_TO_MINUTE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_DAY_TO_SECOND;
-  SQLSMALLINT param_type = SQL_INTERVAL_DAY_TO_SECOND;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_DAY_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 6, GetParam());
-  CheckScale(conn->apd, 6, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 15, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_DAY_TO_MINUTE,
+                       SQL_INTERVAL_DAY_TO_MINUTE);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest,
-       Check_SQL_LENGTH_For_SQL_INTERVAL_DAY_TO_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_DAY_TO_SECOND) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_INTERVAL_DAY_TO_SECOND;
-    SQLSMALLINT param_type = SQL_INTERVAL_DAY_TO_SECOND;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  BindParameterAndTest(conn, SQL_C_INTERVAL_DAY_TO_SECOND,
+                       SQL_INTERVAL_DAY_TO_SECOND);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 11 : 12 + decimal_digits,
-                GetParam());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_DAY_TO_SECOND) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_INTERVAL_DAY_TO_SECOND,
+                           SQL_INTERVAL_DAY_TO_SECOND, digits);
+
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 11 : 12 + digits, length);
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_HOUR_TO_MINUTE) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_HOUR_TO_MINUTE;
-  SQLSMALLINT param_type = SQL_INTERVAL_HOUR_TO_MINUTE;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 20;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_HOUR_TO_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 0, GetParam());
-  CheckScale(conn->apd, 0, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR_TO_MINUTE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 5, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, 0, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, 0, GetParam());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_HOUR_TO_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_HOUR_TO_MINUTE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
 
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_HOUR_TO_SECOND;
-  SQLSMALLINT param_type = SQL_INTERVAL_HOUR_TO_SECOND;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_HOUR_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 6, GetParam());
-  CheckScale(conn->apd, 6, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 12, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
+  BindParameterAndTest(conn, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+                       SQL_INTERVAL_HOUR_TO_MINUTE);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest,
-       Check_SQL_LENGTH_For_SQL_INTERVAL_HOUR_TO_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_HOUR_TO_SECOND) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_INTERVAL_HOUR_TO_SECOND;
-    SQLSMALLINT param_type = SQL_INTERVAL_HOUR_TO_SECOND;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  BindParameterAndTest(conn, SQL_C_INTERVAL_HOUR_TO_SECOND,
+                       SQL_INTERVAL_HOUR_TO_SECOND);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 8 : 9 + decimal_digits,
-                GetParam());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_HOUR_TO_SECOND) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_INTERVAL_HOUR_TO_SECOND,
+                           SQL_INTERVAL_HOUR_TO_SECOND, digits);
+
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 8 : 9 + digits, length);
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST_P(BindParameterParameterizedTest, Bind_SQL_INTERVAL_MINUTE_TO_SECOND) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-
-  SQLUSMALLINT param_number = 1;
-  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-  SQLSMALLINT value_type = SQL_C_INTERVAL_MINUTE_TO_SECOND;
-  SQLSMALLINT param_type = SQL_INTERVAL_MINUTE_TO_SECOND;
-  SQLULEN col_size = 10;
-  SQLSMALLINT decimal_digits = 3;
-  SQLINTEGER param_val = 30;
-  SQLLEN buff_len = 40;
-  SQLLEN str_len = 50;
-  RandomiseDescriptorAttributes(conn, param_number, GetParam());
-
-  status = SQLBindParameter(conn->hstmt, param_number, in_out_type, value_type,
-                            param_type, col_size, decimal_digits, &param_val,
-                            buff_len, &str_len);
-  CheckError(status, "SQLBindParameter", conn);
-
-  // Check value_type behavior
-  CheckType(conn->apd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->apd, value_type, GetParam());
-  CheckDatetimeIntervalCode(conn->apd, SQL_CODE_MINUTE_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
-  CheckPrecision(conn->apd, 6, GetParam());
-  CheckScale(conn->apd, 6, GetParam());
-
-  //   Check param_type behavior
-  CheckType(conn->ipd, SQL_INTERVAL, GetParam());
-  CheckConciseType(conn->ipd, param_type, GetParam());
-  CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MINUTE_TO_SECOND, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 2, GetParam());
-  CheckLength(conn->ipd, 9, GetParam());
-
-  // Check col_size (or param_type) behavior
-  CheckPrecision(conn->ipd, decimal_digits, GetParam());
-  // Check decimal_digits (or param_type) behavior
-  CheckScale(conn->ipd, decimal_digits, GetParam());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(BindParameterParameterizedTest,
-       Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
+TEST(SQLBindParameter, Bind_SQL_INTERVAL_MINUTE_TO_SECOND) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-  for (SQLSMALLINT decimal_digits = 0; decimal_digits < 10; decimal_digits++) {
-    SQLUSMALLINT param_number = 1;
-    SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
-    SQLSMALLINT value_type = SQL_C_INTERVAL_MINUTE_TO_SECOND;
-    SQLSMALLINT param_type = SQL_INTERVAL_MINUTE_TO_SECOND;
-    SQLULEN col_size = 10;
-    SQLINTEGER param_val = 30;
-    SQLLEN buff_len = 40;
-    SQLLEN str_len = 50;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr", conn);
 
-    status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                              value_type, param_type, col_size, decimal_digits,
-                              &param_val, buff_len, &str_len);
-    CheckError(status, "SQLBindParameter", conn);
+  BindParameterAndTest(conn, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+                       SQL_INTERVAL_MINUTE_TO_SECOND);
 
-    CheckLength(conn->ipd, (decimal_digits == 0) ? 5 : 6 + decimal_digits,
-                GetParam());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  for (SQLSMALLINT digits = 0; digits < 10; digits++) {
+    BindParameterForLength(conn, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+                           SQL_INTERVAL_MINUTE_TO_SECOND, digits);
+
+    SQLULEN length = 0;
+    SQLRETURN status =
+        SQLGetDescField(conn->ipd, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+    EXPECT_EQ((digits == 0) ? 5 : 6 + digits, length);
   }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
