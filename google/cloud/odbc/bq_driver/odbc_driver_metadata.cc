@@ -242,11 +242,13 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT /* stmt_handle */,
   return SQL_SUCCESS;
 }
 
-SQLRETURN SQLPrimaryKeys(SQLHSTMT stmt_handle, SQLCHAR const* catalog_name,
-                         SQLSMALLINT catalog_name_len,
-                         SQLCHAR const* schema_name,
-                         SQLSMALLINT schema_name_len, SQLCHAR const* table_name,
-                         SQLSMALLINT table_name_len) {
+SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
+                                 SQLCHAR const* catalog_name,
+                                 SQLSMALLINT catalog_name_len,
+                                 SQLCHAR const* schema_name,
+                                 SQLSMALLINT schema_name_len,
+                                 SQLCHAR const* table_name,
+                                 SQLSMALLINT table_name_len) {
   SQLRETURN rc = SQL_SUCCESS;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);

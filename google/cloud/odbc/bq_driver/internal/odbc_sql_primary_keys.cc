@@ -75,10 +75,10 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   primary_keys_query.append(" AND kc.table_catalog = '")
       .append(catalog_name)
       .append("'")
-      .append(" AND kc.table_schema = ")
+      .append(" AND kc.table_schema = '")
       .append(schema_name)
       .append("'")
-      .append(" AND kc.table_name = ")
+      .append(" AND kc.table_name = '")
       .append(table_name)
       .append("'");
   PostQueryRequest post_request;

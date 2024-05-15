@@ -483,15 +483,16 @@ TEST(SQLGetInfoInternal, InvalidInputBufferLength) {
 }
 
 TEST(SQLPrimaryKeys, Failure_InvalidStatementHandle) {
-  ASSERT_EQ(SQL_INVALID_HANDLE,
-            SQLPrimaryKeys(nullptr, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
-                           kSqlDatasetLen, kSqlTable, kSqlTableLen));
+  ASSERT_EQ(
+      SQL_INVALID_HANDLE,
+      SQLPrimaryKeysInternal(nullptr, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                             kSqlDatasetLen, kSqlTable, kSqlTableLen));
 }
 
 TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlEmpty, kSqlCatalogLen, kSqlDataset,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlEmpty, kSqlCatalogLen, kSqlDataset,
                            kSqlDatasetLen, kSqlTable, kSqlTableLen));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
@@ -502,8 +503,9 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
 
 TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeys(&handle, kSqlCatalog, 0, kSqlDataset,
-                                      kSqlDatasetLen, kSqlTable, kSqlTableLen));
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeysInternal(&handle, kSqlCatalog, 0, kSqlDataset,
+                                   kSqlDatasetLen, kSqlTable, kSqlTableLen));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -513,8 +515,8 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
 
 TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlEmpty,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlCatalog, kSqlCatalogLen, kSqlEmpty,
                            kSqlDatasetLen, kSqlTable, kSqlTableLen));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
@@ -525,8 +527,9 @@ TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
 
 TEST(SQLPrimaryKeys, Failure_EmptySchemaLen) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen,
-                                      kSqlDataset, 0, kSqlTable, kSqlTableLen));
+  ASSERT_EQ(SQL_ERROR,
+            SQLPrimaryKeysInternal(&handle, kSqlCatalog, kSqlCatalogLen,
+                                   kSqlDataset, 0, kSqlTable, kSqlTableLen));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -536,8 +539,8 @@ TEST(SQLPrimaryKeys, Failure_EmptySchemaLen) {
 
 TEST(SQLPrimaryKeys, Failure_EmptyTableName) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                            kSqlDatasetLen, kSqlEmpty, kSqlTableLen));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
@@ -549,8 +552,8 @@ TEST(SQLPrimaryKeys, Failure_EmptyTableName) {
 TEST(SQLPrimaryKeys, Failure_EmptyTableLen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
-                           kSqlDatasetLen, kSqlTable, 0));
+            SQLPrimaryKeysInternal(&handle, kSqlCatalog, kSqlCatalogLen,
+                                   kSqlDataset, kSqlDatasetLen, kSqlTable, 0));
 
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -560,8 +563,8 @@ TEST(SQLPrimaryKeys, Failure_EmptyTableLen) {
 
 TEST(SQLPrimaryKeys, Failure_NullConnectionHandle) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                            kSqlDatasetLen, kSqlTable, kSqlTableLen));
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -572,8 +575,8 @@ TEST(SQLPrimaryKeys, Failure_NullConnectionHandle) {
 TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
   CreateDisconnectedHandle();
   StatementHandle handle(connection_handle);
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                            kSqlDatasetLen, kSqlTable, kSqlTableLen));
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -585,8 +588,8 @@ TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
 TEST(SQLPrimaryKeys, Failure_InvalidBQClient) {
   CreateConnectedHandle();
   StatementHandle handle(connection_handle);
-  ASSERT_EQ(SQL_ERROR,
-            SQLPrimaryKeys(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+  ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
+                           &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                            kSqlDatasetLen, kSqlTable, kSqlTableLen));
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);

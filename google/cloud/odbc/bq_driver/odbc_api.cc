@@ -64,6 +64,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
@@ -88,11 +89,13 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetFunctions;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
+
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_internal::StatusRecord;
@@ -2104,14 +2107,20 @@ SQLRETURN SQL_API SQLPrimaryKeys(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                  SQLCHAR* schemaName, SQLSMALLINT schemaNameLen,
                                  SQLCHAR* tableName, SQLSMALLINT tableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
-
+  bool is_tracing_enabled = IsTracingEnabled("SQLPrimaryKeys");
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLPrimaryKeys(
+        statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+        tableName, tableNameLen, *(*kTraceOption));
   // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
   // in odbc_driver_metadata.h.
-
+  rc = google::cloud::odbc_bq_driver::SQLPrimaryKeysInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      tableName, tableNameLen);
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLPrimaryKeys(rc, *(*kTraceOption));
   return rc;
 }
 ////////////////////////////////////////
