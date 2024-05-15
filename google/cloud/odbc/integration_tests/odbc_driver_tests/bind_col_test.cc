@@ -17,51 +17,6 @@
 
 namespace google::cloud::odbc_tests {
 
-struct ExpectedBindColTestConfig {
-  SQLSMALLINT c_type;
-  SQLSMALLINT concise_c_type;
-  SQLULEN desc_len;
-  SQLSMALLINT desc_precision;
-  SQLSMALLINT desc_scale;
-  SQLINTEGER desc_datetime_precision;
-};
-
-static std::map<SQLSMALLINT,
-                ExpectedBindColTestConfig> const kBindColTestsMap = {
-    {SQL_C_CHAR, {SQL_C_CHAR, SQL_C_CHAR, 1, 1, 0, 1}},
-    {SQL_C_NUMERIC, {SQL_C_NUMERIC, SQL_C_NUMERIC, 38, 38, 0, 38}},
-    {SQL_C_FLOAT, {SQL_C_FLOAT, SQL_C_FLOAT, 24, 24, 0, 24}},
-    {SQL_C_DOUBLE, {SQL_C_DOUBLE, SQL_C_DOUBLE, 53, 53, 0, 53}},
-    {SQL_C_BIT, {SQL_C_BIT, SQL_C_BIT, 0, 0, 0, 0}},
-    {SQL_C_GUID, {SQL_C_GUID, SQL_C_GUID, 16, 16, 0, 16}},
-    {SQL_C_INTERVAL_MONTH, {SQL_INTERVAL, SQL_C_INTERVAL_MONTH, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_YEAR, {SQL_INTERVAL, SQL_C_INTERVAL_YEAR, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_YEAR_TO_MONTH,
-     {SQL_INTERVAL, SQL_C_INTERVAL_YEAR_TO_MONTH, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_DAY, {SQL_INTERVAL, SQL_C_INTERVAL_DAY, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_MONTH,
-     {SQL_INTERVAL, SQL_C_INTERVAL_YEAR_TO_MONTH, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_HOUR, {SQL_INTERVAL, SQL_C_INTERVAL_HOUR, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_MINUTE, {SQL_INTERVAL, SQL_C_INTERVAL_MINUTE, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_SECOND, {SQL_INTERVAL, SQL_C_INTERVAL_SECOND, 2, 6, 6, 2}},
-    {SQL_C_INTERVAL_DAY_TO_HOUR,
-     {SQL_INTERVAL, SQL_C_INTERVAL_DAY_TO_HOUR, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_DAY_TO_MINUTE,
-     {SQL_INTERVAL, SQL_C_INTERVAL_DAY_TO_MINUTE, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_DAY_TO_SECOND,
-     {SQL_INTERVAL, SQL_C_INTERVAL_DAY_TO_SECOND, 2, 6, 6, 2}},
-    {SQL_C_INTERVAL_HOUR_TO_MINUTE,
-     {SQL_INTERVAL, SQL_C_INTERVAL_HOUR_TO_MINUTE, 2, 0, 0, 2}},
-    {SQL_C_INTERVAL_HOUR_TO_SECOND,
-     {SQL_INTERVAL, SQL_C_INTERVAL_HOUR_TO_SECOND, 2, 6, 6, 2}},
-    {SQL_C_INTERVAL_MINUTE_TO_SECOND,
-     {SQL_INTERVAL, SQL_C_INTERVAL_MINUTE_TO_SECOND, 2, 6, 6, 2}},
-    {SQL_C_TYPE_DATE, {SQL_DATETIME, SQL_C_TYPE_DATE, 0, 0, 0, 0}},
-    {SQL_C_TYPE_TIME, {SQL_DATETIME, SQL_C_TYPE_TIME, 0, 0, 0, 0}},
-    {SQL_C_TYPE_TIMESTAMP, {SQL_DATETIME, SQL_C_TYPE_TIMESTAMP, 0, 6, 6, 0}},
-    {SQL_C_TYPE_TIMESTAMP, {SQL_DATETIME, SQL_C_TYPE_TIMESTAMP, 0, 0, 0, 0}},
-};
-
 void TestCTypeBasic(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {
   SQLCHAR buf[20];
   SQLLEN target_str_len;
@@ -79,7 +34,7 @@ void TestCTypeBasic(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {
   CheckError(status, "SQLGetDescField(SQL_DESC_DATA_PTR)", conn);
   EXPECT_EQ(buf, out_buf);
 
-  auto expected = kBindColTestsMap.at(c_type);
+  auto expected = kAppDescTestMap.at(c_type);
 
   SQLSMALLINT out_c_type;
   status =
