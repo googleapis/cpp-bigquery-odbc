@@ -157,7 +157,8 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
-// Remove the flag once SQLFetch is implemented for Google BQ Driver.
+// TODO(sachinpro): Remove the flag once SQLFetch is implemented for Google BQ
+// Driver.
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   while (1) {
     status = SQLFetch(conn->hstmt);
