@@ -22,16 +22,16 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
-using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
-using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
-using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
-using google::cloud::odbc_internal::SQLStates;
-using google::cloud::odbc_internal::StatusRecord;
-using google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using ::google::cloud::odbc_bq_driver_internal::DescriptorType;
+using ::google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
+using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
+using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_bq_driver_internal::ToSqlPointer;
+using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -153,7 +153,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
   }
   StatementHandle& handle = *(*handle_result);
 
-  // TODO(340440354) Check if statement handle is in 'prepared' state
+  // TODO(b/340440354) Check if statement handle is in 'prepared' state
 
   return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       handle.GetParamCount(), param_count, nullptr);
