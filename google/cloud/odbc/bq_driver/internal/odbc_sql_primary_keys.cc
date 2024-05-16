@@ -24,6 +24,11 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
+namespace {
+std::string const kNamedCatalogParam = "catalog_name";
+std::string const kNamedSchemaParam = "schema_name";
+std::string const kNamedTableParam = "table_name";
+
 std::string const kBasicPrimaryKeysQuery =
     "SELECT kc.table_catalog,"
     " kc.table_schema,"
@@ -38,6 +43,7 @@ std::string const kBasicPrimaryKeysQuery =
     " kc.table_schema = tc.table_schema AND"
     " kc.table_name = tc.table_name "
     " WHERE tc.constraint_type = 'PRIMARY KEY'";
+}  // namespace
 
 StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     StatementHandle& stmt_handle, std::string const& catalog_name,
@@ -72,25 +78,35 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   // TODO(b/339618125): Cleanse this query to avoid
   // potential SQL injection issues.
   std::string primary_keys_query(kBasicPrimaryKeysQuery);
-  primary_keys_query.append(" AND kc.table_catalog = '")
-      .append(catalog_name)
-      .append("'")
-      .append(" AND kc.table_schema = '")
-      .append(schema_name)
-      .append("'")
-      .append(" AND kc.table_name = '")
-      .append(table_name)
-      .append("'");
+  primary_keys_query.append(" AND kc.table_catalog = @")
+      .append(kNamedCatalogParam)
+      .append(" AND kc.table_schema = @")
+      .append(kNamedSchemaParam)
+      .append(" AND kc.table_name = @")
+      .append(kNamedTableParam);
   PostQueryRequest post_request;
   QueryRequest query_request;
   DatasetReference ds_ref;
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({kNamedCatalogParam, catalog_name});
+  named_query_params.insert({kNamedSchemaParam, schema_name});
+  named_query_params.insert({kNamedTableParam, table_name});
+  auto query_param_status = ConstructStringQueryParameters(named_query_params);
+  if (!query_param_status) {
+    return query_param_status.GetStatusRecord();
+  }
+  // Set dataset info.
   ds_ref.project_id = catalog_name;
   ds_ref.dataset_id = schema_name;
+  // Construct query request.
   query_request.set_dry_run(false);
   query_request.set_default_dataset(ds_ref);
   query_request.set_query(primary_keys_query);
-  query_request.set_use_legacy_sql(
-      false);  // This is required for the query to execute successfully.
+  // Following are specific to parametrized queries.
+  query_request.set_parameter_mode("NAMED");
+  query_request.set_query_parameters(*query_param_status);
+  query_request.set_use_legacy_sql(false);
+  // Set billing info and query request.
   post_request.set_project_id(catalog_name);
   post_request.set_query_request(query_request);
   // Fetch BQ Data using the query request above.

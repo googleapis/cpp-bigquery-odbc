@@ -20,6 +20,9 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterType;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
 using ::google::cloud::bigquery_v2_minimal_internal::Struct;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -168,6 +171,36 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);
   return StatusRecord{SQLStates::k_HY000(), err_msg};
+}
+
+odbc_internal::StatusRecordOr<std::vector<QueryParameter>>
+ConstructStringQueryParameters(
+    std::map<std::string, std::string> const& params) {
+  std::vector<QueryParameter> query_params;
+  for (auto const& entry : params) {
+    std::string parameter_name = entry.first;
+    std::string parameter_value = entry.second;
+
+    if (parameter_name.empty()) {
+      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+    }
+    if (parameter_value.empty()) {
+      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter value"};
+    }
+
+    QueryParameter query_param;
+    QueryParameterType query_param_type;
+    QueryParameterValue query_param_value;
+
+    query_param_type.type = "STRING";
+    query_param_value.value = parameter_value;
+    query_param.name = parameter_name;
+    query_param.parameter_type = query_param_type;
+    query_param.parameter_value = query_param_value;
+
+    query_params.emplace_back(query_param);
+  }
+  return query_params;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

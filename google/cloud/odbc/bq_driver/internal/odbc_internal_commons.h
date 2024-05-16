@@ -88,8 +88,8 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
 //   - All query results rows will be present in GetQueryResults.
 struct DSResults {
   absl::variant<absl::monostate,
-                ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults,
-                ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+                google::cloud::bigquery_v2_minimal_internal::PostQueryResults,
+                google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
       data_source_results;
 };
 
@@ -98,7 +98,7 @@ struct DSResults {
 /////////////////////////////////////////////////////////////////////
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle,
-    ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         postQueryResults);
 
 ////////////////////////////////////////////////////////////////////////
@@ -107,26 +107,31 @@ odbc_internal::StatusRecordOr<DSResults> FetchBQData(
 ////////////////////////////////////////////////////////////////////////
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessResultSetRows(
-    ::google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::Struct> const&
+    google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
+    std::vector<google::cloud::bigquery_v2_minimal_internal::Struct> const&
         rows);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(
-    ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults const&
+    google::cloud::bigquery_v2_minimal_internal::PostQueryResults const&
         postQueryResults);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
-    ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
+    google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
         getQueryResults);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
     DSResults const& queryResults);
 
 ///////////////////////////////////////////////////////
-// Common helper functions for converting datasource data types.
+// Common helper functions.
 ////////////////////////////////////////////////////////
 odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type);
+
+odbc_internal::StatusRecordOr<
+    std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>>
+ConstructStringQueryParameters(
+    std::map<std::string, std::string> const& params);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

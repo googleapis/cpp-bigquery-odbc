@@ -22,6 +22,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Struct;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
@@ -304,6 +305,55 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
       StatusRecordIs(
           SQLStates::k_HY000(),
           HasSubstr("Invalid or null BQ Client within the connection handle")));
+}
+
+TEST(ConstructQueryParams, Success) {
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param-name-1", "param-val-1"});
+  named_query_params.insert({"param-name-2", "param-val-2"});
+  named_query_params.insert({"param-name-3", "param-val-3"});
+
+  auto status_record_or = ConstructStringQueryParameters(named_query_params);
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_FALSE(status_record_or->empty());
+  EXPECT_EQ(status_record_or->size(), 3);
+  // Verify results.
+  std::vector<QueryParameter> query_params = *status_record_or;
+  EXPECT_EQ(query_params[0].name, "param-name-1");
+  EXPECT_EQ(query_params[1].name, "param-name-2");
+  EXPECT_EQ(query_params[2].name, "param-name-3");
+
+  EXPECT_EQ(query_params[0].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[1].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[2].parameter_type.type, "STRING");
+
+  EXPECT_EQ(query_params[0].parameter_value.value, "param-val-1");
+  EXPECT_EQ(query_params[1].parameter_value.value, "param-val-2");
+  EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
+}
+
+TEST(ConstructQueryParams, Failure_Empty_Param_name) {
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"", "param-val-1"});
+
+  auto status_record_or = ConstructStringQueryParameters(named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructQueryParams, Failure_Empty_Param_value) {
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param-name-1", ""});
+
+  auto status_record_or = ConstructStringQueryParameters(named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter value")));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
