@@ -156,7 +156,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
   // TODO(340440354) Check if statement handle is in 'prepared' state
 
   return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-      handle.param_count, param_count, nullptr);
+      handle.GetParamCount(), param_count, nullptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

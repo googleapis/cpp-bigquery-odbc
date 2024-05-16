@@ -302,7 +302,7 @@ TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
 
 TEST(SQLNumParamsInternal, ReturnsParamCount) {
   StatementHandle handle = CreateStatementHandle();
-  handle.param_count = 2;
+  handle.SetParamCount(2);
   SQLSMALLINT num_param = 0;
 
   SQLRETURN status = SQLNumParamsInternal(&handle, &num_param);
