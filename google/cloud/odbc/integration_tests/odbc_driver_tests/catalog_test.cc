@@ -30,8 +30,8 @@ static std::string const kCatalogDatasetTableWithoutPKFull =
 static std::string const kTableWithPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
     " "
-    "(StringField STRING, IntField INT64, FloatField FLOAT64) "
-    "PRIMARY KEY (StringField, IntField) NOT ENFORCED";
+    "(StringField STRING, IntField INT64, FloatField FLOAT64, "
+    "PRIMARY KEY (StringField, IntField) NOT ENFORCED)";
 
 static std::string const kTableWithOutPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithoutPKFull +
@@ -130,6 +130,16 @@ TEST(CatalogTest, SQLTablesA) {
     test_table_names.push_back(it.first);
   }
 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create primary keys table via Simba Driver since execute is not implemented
+  // for BQ Drivers.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema);
+  CreateTableDirect(conn, kTableWithOutPKSchema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

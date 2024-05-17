@@ -128,32 +128,18 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
     col_idx++;
   }
 
-  if (dataset.length()) {
-    if (use_ansi) {
-      status = SQLPrimaryKeysA(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
-          (SQLSMALLINT)table.length());
-    } else {
-      status = SQLPrimaryKeys(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
-          (SQLSMALLINT)table.length());
-    }
+  if (use_ansi) {
+    status = SQLPrimaryKeysA(
+        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+        (SQLSMALLINT)table.length());
   } else {
-    if (use_ansi) {
-      status =
-          SQLPrimaryKeysA(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-                          (SQLSMALLINT)catalog_name.length(), NULL, 0,
-                          (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
-    } else {
-      status =
-          SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-                         (SQLSMALLINT)catalog_name.length(), NULL, 0,
-                         (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
-    }
+    status =
+        SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+                       (SQLSMALLINT)catalog_name.length(),
+                       (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
+                       (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
