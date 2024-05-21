@@ -116,7 +116,7 @@ void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
                    bool use_ansi) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
-            "CREATE TABLE IF NOT EXISTS " + table_name_ + " " + schema_str);
+            "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
   SQLRETURN status;
   if (use_ansi) {
     status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
@@ -165,8 +165,8 @@ void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
 
 // TODO(#11): Generic implementation of InsertIntoTable function from
 // testing/commons.*
-void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                   bool use_ansi) {
+void Table::InsertStd(std::shared_ptr<ODBCHandles> conn, StdRows rows,
+                      bool use_ansi) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -213,6 +213,38 @@ void Table::Insert(std::shared_ptr<ODBCHandles> conn, StdRows rows,
     status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   }
   CheckError(status, "SQLExecDirect", conn, use_ansi);
+}
+
+void Table::InsertStr(std::shared_ptr<ODBCHandles> conn,
+                      std::vector<std::string> rows, bool insert_index) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    std::string str_field = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+    if (!str_field.empty()) {
+      row_str.append("'" + str_field + "'");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
 }
 
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,

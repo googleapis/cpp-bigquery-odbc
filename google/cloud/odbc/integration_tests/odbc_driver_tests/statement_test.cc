@@ -117,7 +117,7 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
-  table.Insert(conn, kSampleData, use_ansi);
+  table.InsertStd(conn, kSampleData, use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
@@ -303,7 +303,7 @@ TEST(StatementTest, SQLDescribeCol) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Insert(conn, kSampleData);
+  table.InsertStd(conn, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -331,7 +331,7 @@ TEST(StatementTest, SQLDescribeCol) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Insert(conn, kSampleData, true);
+  table_ansi.InsertStd(conn, kSampleData, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -366,7 +366,7 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
-  table.Insert(conn, kSampleData, use_ansi);
+  table.InsertStd(conn, kSampleData, use_ansi);
   SQLLEN rows_count = 0;
   auto status = SQLRowCount(conn->hstmt, &rows_count);
   CheckError(status, "SQLRowCount", conn);
@@ -427,7 +427,7 @@ TEST(StatementTest, SQLFetchScroll) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Insert(conn, kSampleData);
+  table.InsertStd(conn, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
@@ -458,7 +458,7 @@ TEST(StatementTest, SQLGetData) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Insert(conn, kSampleData);
+  table.InsertStd(conn, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
@@ -493,7 +493,7 @@ TEST(StatementTest, SQLGetData) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Insert(conn, kSampleData, true);
+  table_ansi.InsertStd(conn, kSampleData, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
@@ -607,7 +607,7 @@ TEST(StatementTest, FetchDirectRowWise) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
-  table.Insert(conn, kSampleData, false);
+  table.InsertStd(conn, kSampleData, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected

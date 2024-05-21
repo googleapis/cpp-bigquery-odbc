@@ -575,7 +575,7 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
   auto num_cols = cols.size();
 
   status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecDirect", conn);
+  CheckError(status, "SQLExecute", conn);
 
   Results results;
   // Read all the rows using SQLFetch
@@ -613,7 +613,6 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
     }
   }
   return std::make_shared<Results>(results);
-  ;
 }
 
 void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
