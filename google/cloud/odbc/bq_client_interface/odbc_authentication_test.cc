@@ -69,16 +69,6 @@ TEST(ServiceAuthentication, EmptyPath) {
                              HasSubstr("The path to the file can't be empty")));
 }
 
-TEST(ServiceAuthentication, FileNotExist) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kServiceAccount, "not_existing_file.json"});
-
-  EXPECT_THAT(
-      credentials,
-      StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
-                     HasSubstr("There was an error while opening the file")));
-}
-
 TEST(GetOAuth2Token, GetToken) {
   auto const expiration =
       std::chrono::system_clock::now() + std::chrono::minutes(15);

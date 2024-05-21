@@ -39,22 +39,12 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     return StatusRecord{SQLStates::k_HY000(),
                         "The path to the file can't be empty"};
   }
-  auto is = std::ifstream(credentials_file_path);
-  if (!is.is_open()) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "There was an error while opening the file: " + credentials_file_path};
-  }
-  auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
-  if (is.bad()) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "There was an error while reading the file: " + credentials_file_path};
-  }
-  std::size_t found = contents.find(R"("type": "service_account")");
-  if (found != std::string::npos) {
-    return ::google::cloud::MakeServiceAccountCredentials(contents);
-  }
+  // Client libraries don't have a special function for user authentication.
+  // We use MakeGoogleDefaultCredentials() and override
+  // GOOGLE_APPLICATION_CREDENTIALS env var to point to the file with
+  // credentials. It works for both: user authentication and service
+  // authentication.
+  // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/credentials.h#L113
   SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
   return ::google::cloud::MakeGoogleDefaultCredentials();
 }
