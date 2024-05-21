@@ -25,6 +25,7 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
@@ -142,6 +143,22 @@ SQLRETURN SQLBindParameterInternal(
   ipd.BindNewDescriptorRecord(parameter_number, temp_ipd_record);
 
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
+                               SQLSMALLINT* param_count) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  // TODO(b/340440354) Check if statement handle is in 'prepared' state
+
+  return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      handle.GetParamCount(), param_count, nullptr);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
