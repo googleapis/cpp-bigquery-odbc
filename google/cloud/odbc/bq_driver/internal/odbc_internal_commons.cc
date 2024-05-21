@@ -165,32 +165,53 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   if (type == "STRING") {
     return BQDataType::kString;
   }
-  else if (type == "INTEGER" || type == "INT64") {
+  if (type == "INTEGER" || type == "INT64") {
     return BQDataType::kInt64;
   }
-  else if (type == "BOOL") {
+  if (type == "BOOL") {
     return BQDataType::kBool;
   }
-  else if (type == "FLOAT64") {
+  if (type == "FLOAT64") {
     return BQDataType::kFloat64;
   }
-  else if (type == "DECIMAL" || type == "NUMERIC") {
+  if (type == "DECIMAL" || type == "NUMERIC") {
     return BQDataType::kNumeric;
   }
-  else if (type == "BYTES") {
+  if (type == "BYTES") {
     return BQDataType::kBytes;
   }
-  else if (type == "DATE") {
+  if (type == "DATE") {
     return BQDataType::kDate;
   }
-  else if (type == "DATETIME") {
+  if (type == "DATETIME") {
     return BQDataType::kDatetime;
   }
-  else if (type == "TIME") {
+  if (type == "TIME") {
     return BQDataType::kTime;
   }
-  else if (type == "TIMESTAMP") {
-    return BQDataType::KTimeStamp;
+  if (type == "TIMESTAMP") {
+    return BQDataType::kTimeStamp;
+  }
+  if (type == "BIGNUMERIC") {
+    return BQDataType::kBigNumeric;
+  }
+  if (type == "RANGE") {
+    return BQDataType::kRange;
+  }
+  if (type == "STRUCT") {
+    return BQDataType::kStruct;
+  }
+  if (type == "JSON") {
+    return BQDataType::kJson;
+  }
+  if (type == "NULL") {
+    return BQDataType::kNull;
+  }
+  if (type == "INTERVAL") {
+    return BQDataType::kInterval;
+  }
+  if (type == "GEOGRAPHY") {
+    return BQDataType::kGeography;
   }
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);
