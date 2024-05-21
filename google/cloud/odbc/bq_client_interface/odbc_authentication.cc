@@ -51,7 +51,12 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
         SQLStates::k_HY000(),
         "There was an error while reading the file: " + credentials_file_path};
   }
-  return ::google::cloud::MakeServiceAccountCredentials(contents);
+  std::size_t found = contents.find(R"("type": "service_account")");
+  if (found != std::string::npos) {
+    return ::google::cloud::MakeServiceAccountCredentials(contents);
+  }
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
+  return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
