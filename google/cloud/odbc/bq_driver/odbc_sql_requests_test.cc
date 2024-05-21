@@ -139,15 +139,14 @@ TEST(SQLBindParameterInternal,
 }
 
 TEST(SQLPrepareInternal, Fail_InvalidHandle) {
-    StatementHandle  *stmt_handle = nullptr;
-    std::string queryStr = "Select 1";
-    SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-    SQLINTEGER len = queryStr.length();
+  StatementHandle* stmt_handle = nullptr;
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
 
   SQLRETURN status = SQLPrepare(stmt_handle, query, len);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
-
 
 }  // namespace google::cloud::odbc_bq_driver
