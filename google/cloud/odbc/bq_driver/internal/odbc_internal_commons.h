@@ -28,6 +28,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 // Data Types as supported by the BQ DataSource.
 enum BQDataType {
+  kArray,
   kBigNumeric,
   kBool,
   kBytes,

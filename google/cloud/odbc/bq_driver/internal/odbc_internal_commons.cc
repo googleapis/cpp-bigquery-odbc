@@ -168,7 +168,7 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   if (type == "INTEGER" || type == "INT64") {
     return BQDataType::kInt64;
   }
-  if (type == "BOOL") {
+  if (type == "BOOL" || type == "BOOLEAN") {
     return BQDataType::kBool;
   }
   if (type == "FLOAT64") {
@@ -212,6 +212,9 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   }
   if (type == "GEOGRAPHY") {
     return BQDataType::kGeography;
+  }
+  if (type == "ARRAY") {
+    return BQDataType::kArray;
   }
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);

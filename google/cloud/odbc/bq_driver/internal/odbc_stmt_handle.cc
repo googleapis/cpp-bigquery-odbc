@@ -20,6 +20,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_internal::SQLStates;
@@ -93,8 +94,7 @@ StatusRecord StatementHandle::SetAttribute(int attribute, SQLULEN value) {
   return StatusRecord::Ok();
 }
 
-odbc_internal::StatusRecord StatementHandle::PopulatResultSet(
-    TableSchema const& schema) {
+StatusRecord StatementHandle::PopulatResultSet(TableSchema const& schema) {
   for (int i = 0; i < schema.fields.size(); ++i) {
     auto const& field = schema.fields[i];
     ColumnSchema column;
@@ -108,30 +108,42 @@ odbc_internal::StatusRecord StatementHandle::PopulatResultSet(
     }
 
     column.col_type = *type_status_record;
-    result_set_.row_schema.push_back(column);
+    result_set_.row_schema.emplace_back(column);
   }
 
   return StatusRecord::Ok();
 }
 
 StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
+  // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
+  // risk.
+  if (query_text == nullptr) {
+    return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
+  }
+
   QueryRequest req;
 
   std::string query(reinterpret_cast<char const*>(query_text));
 
   req.set_query(query).set_dry_run(true);
-  ::google::cloud::Options opt;
+  Options opt;
 
   auto response = this->GetConnectionHandle()->GetClient()->Query(
       GetConnectionHandle()->GetDsn().catalog, req, opt);
 
-  if (response.Ok()) {
-    auto& schema = response.GetValue().schema;
-    query_str_ = query;
-    return PopulatResultSet(schema);
+  if (!response.Ok()) {
+    return response.GetStatusRecord();
   }
 
-  return StatusRecord{SQLStates::k_HY000(), "Internal error occurred"};
+  auto& schema = response.GetValue().schema;
+  auto pop_response = PopulatResultSet(schema);
+
+  if (!pop_response.ok()) {
+    return pop_response;
+  }
+
+  query_str_ = query;
+  return StatusRecord::Ok();
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {

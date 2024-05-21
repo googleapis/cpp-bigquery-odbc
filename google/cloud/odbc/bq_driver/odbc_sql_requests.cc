@@ -182,11 +182,11 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
 
-  handle_ref.GetDiagnostics().AddStatusRecord(status);
-
   if (!status.ok()) {
-    return SQL_ERROR;
+    handle_ref.GetDiagnostics().AddStatusRecord(status);
+    return status.CalculateReturnCode();
   }
+
   return SQL_SUCCESS;
 }
 }  // namespace google::cloud::odbc_bq_driver

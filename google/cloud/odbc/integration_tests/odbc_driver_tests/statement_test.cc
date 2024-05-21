@@ -13,21 +13,22 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#endif
+
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
 
-using ::google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::ColumnSchema;
-using ::google::cloud::odbc_bq_driver_internal::ResultSet;
-
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-bool const kIsBqDriver = true;
-#else
-bool const kIsBqDriver = false;
+using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 #endif
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
@@ -1092,21 +1093,19 @@ TEST(StatementTest, SQLPrepare) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
-  if (kIsBqDriver) {
-    // Cast hstmt to StatementHandle*
-    auto stmt_handle =
-        static_cast<google::cloud::odbc_bq_driver_internal::StatementHandle*>(
-            conn->hstmt);
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
-    // Retrieve the result set
-    ResultSet const& result_set = stmt_handle->GetResultSet();
+  // Retrieve the result set
+  ResultSet const& result_set = stmt_handle->GetResultSet();
 
-    ASSERT_EQ(result_set.row_schema.size(), 1);
+  ASSERT_EQ(result_set.row_schema.size(), 1);
 
-    ColumnSchema const& column = result_set.row_schema[0];
-    EXPECT_EQ(column.col_index, 0);
-    EXPECT_EQ(column.col_type, BQDataType::kInt64);
-  }
+  ColumnSchema const& column = result_set.row_schema[0];
+  EXPECT_EQ(column.col_index, 0);
+  EXPECT_EQ(column.col_type, BQDataType::kInt64);
+#endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
