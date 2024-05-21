@@ -248,14 +248,20 @@ class Table {
 
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
 
-  void InsertStd(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                 bool use_ansi = false);
+  void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
+                  bool use_ansi = false);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be
   // populated to order the values
-  void InsertStr(std::shared_ptr<ODBCHandles> conn,
-                 std::vector<std::string> rows, bool insert_index = false);
+  void InsertStrData(std::shared_ptr<ODBCHandles> conn,
+                     std::vector<std::string> rows, bool insert_index = false);
+
+  // This is used to insert strings into a table which only has a string column.
+  // If `insert_index` is set to true, an additional column `index` will be
+  // populated to order the values
+  void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+                         std::vector<double> rows, bool insert_index = false);
 
  private:
   std::string table_name_;

@@ -165,8 +165,8 @@ void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
 
 // TODO(#11): Generic implementation of InsertIntoTable function from
 // testing/commons.*
-void Table::InsertStd(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                      bool use_ansi) {
+void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
+                       bool use_ansi) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -215,8 +215,8 @@ void Table::InsertStd(std::shared_ptr<ODBCHandles> conn, StdRows rows,
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
-void Table::InsertStr(std::shared_ptr<ODBCHandles> conn,
-                      std::vector<std::string> rows, bool insert_index) {
+void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
+                          std::vector<std::string> rows, bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -234,6 +234,34 @@ void Table::InsertStr(std::shared_ptr<ODBCHandles> conn,
     } else {
       row_str.append("NULL, ");
     }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+}
+
+void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+                              std::vector<double> rows, bool insert_index) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    double numeric_field = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+    row_str.append(std::to_string(numeric_field));
 
     row_str.append(")");
     if (i != (num_rows - 1)) {

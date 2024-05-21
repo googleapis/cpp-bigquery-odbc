@@ -29,6 +29,15 @@ struct StrBasicTestStruct {
   SQLRETURN status;
 };
 
+struct NumericBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  double value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
 std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
     {SQL_C_FLOAT, "19.1", SQL_SUCCESS},
@@ -48,6 +57,24 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_BIT, "0", SQL_SUCCESS},
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
+};
+
+std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
+    {SQL_C_CHAR, 123, SQL_SUCCESS},
+    {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
+    {SQL_C_FLOAT, -157.8, SQL_SUCCESS},
+    {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
+    {SQL_C_SLONG, -13, SQL_SUCCESS},
+    {SQL_C_SLONG, 13.3,
+     SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
+                              // precision
+    {SQL_C_ULONG, 81, SQL_SUCCESS},
+    {SQL_C_ULONG, -8, SQL_ERROR},
+    {SQL_C_ULONG, 1.1, SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because
+                                                // there is loss of precision
+    {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BIT, 1, SQL_SUCCESS},
+    {SQL_C_BIT, 2, SQL_ERROR},
 };
 
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
@@ -97,23 +124,23 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
             // to understand the expectations regarding typecasting applications
             // buffers.
             if (expected.target_c_type == SQL_C_CHAR) {
-              std::string val = (char*)data;
-              EXPECT_EQ(val, expected.value);
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_FLOAT) {
-              SQLREAL* val = (SQLREAL*)data;
-              EXPECT_EQ(*val, stof(expected.value));
+              SQLREAL* returned_val = (SQLREAL*)data;
+              EXPECT_EQ(*returned_val, std::stof(expected.value));
             } else if (expected.target_c_type == SQL_C_DOUBLE) {
-              SQLDOUBLE* val = (SQLDOUBLE*)data;
-              EXPECT_EQ(*val, stod(expected.value));
+              SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
+              EXPECT_EQ(*returned_val, std::stod(expected.value));
             } else if (expected.target_c_type == SQL_C_SLONG) {
-              SQLINTEGER* val = (SQLINTEGER*)data;
-              EXPECT_EQ(*val, stoi(expected.value));
+              SQLINTEGER* returned_val = (SQLINTEGER*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
             } else if (expected.target_c_type == SQL_C_ULONG) {
-              SQLUINTEGER* val = (SQLUINTEGER*)data;
-              EXPECT_EQ(*val, stoi(expected.value));
+              SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
             } else if (expected.target_c_type == SQL_C_BIT) {
-              SQLCHAR* val = (SQLCHAR*)data;
-              EXPECT_EQ(*val, stod(expected.value));
+              SQLCHAR* returned_val = (SQLCHAR*)data;
+              EXPECT_EQ(*returned_val, std::stod(expected.value));
             }
             row_count++;
           }
@@ -126,6 +153,86 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
     }
   }
   EXPECT_EQ(row_count, kConversionFromStrTestData.size());
+}
+
+void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
+                                 std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  // Read all the rows using SQLFetch
+  int row_count = 0;
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    while (1) {
+      NumericBasicTestStruct expected =
+          kConversionFromNumericTestData[row_count];
+      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                          kBufferLength, &strlen_or_ind);
+      std::cout << "Testing row: " << expected.target_c_type << ", "
+                << expected.value << ", " << expected.status << std::endl;
+      EXPECT_EQ(status, expected.status);
+      if (status != SQL_SUCCESS) {
+        row_count++;
+        break;
+      }
+      CheckError(status,
+                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+                 conn);
+      if (SQL_SUCCEEDED(status)) {
+        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        if (status == SQL_NO_DATA) {
+          if (strlen_or_ind >= 0) {
+            // Refer
+            // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+            // to understand the expectations regarding typecasting applications
+            // buffers.
+            if (expected.target_c_type == SQL_C_CHAR) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(std::stod(returned_val), expected.value);
+            } else if (expected.target_c_type == SQL_C_FLOAT) {
+              SQLREAL* returned_val = (SQLREAL*)data;
+              SQLREAL expected_val = expected.value;
+              EXPECT_EQ(*returned_val, expected_val);
+            } else if (expected.target_c_type == SQL_C_DOUBLE) {
+              SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
+              EXPECT_EQ(*returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_SLONG) {
+              SQLINTEGER* returned_val = (SQLINTEGER*)data;
+              EXPECT_EQ(*returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_ULONG) {
+              SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
+              EXPECT_EQ(*returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_BIT) {
+              SQLCHAR* returned_val = (SQLCHAR*)data;
+              EXPECT_EQ(*returned_val, expected.value);
+            }
+            row_count++;
+          }
+          break;
+        }
+        CheckError(status, "SQLGetDiagField", conn);
+      } else {
+        break;
+      }
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromNumericTestData.size());
 }
 
 // This test should follow translations according to
@@ -147,7 +254,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   for (auto elem : kConversionFromStrTestData) {
     string_data_to_insert.push_back(elem.value);
   }
-  table.InsertStr(conn, string_data_to_insert, true);
+  table.InsertStrData(conn, string_data_to_insert, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
@@ -155,6 +262,41 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   std::string query =
       "SELECT StringField FROM " + table_name + " ORDER BY index";
   TestTranslationsFromString(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// This test should follow translations according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
+TEST(DataTranslationTest, From_NUMERIC_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(index INT64, NumericField NUMERIC)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<double> numeric_data_to_insert;
+  for (auto elem : kConversionFromNumericTestData) {
+    numeric_data_to_insert.push_back(elem.value);
+  }
+  table.InsertNumericData(conn, numeric_data_to_insert, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT NumericField FROM " + table_name + " ORDER BY index";
+  TestTranslationsFromNumeric(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
