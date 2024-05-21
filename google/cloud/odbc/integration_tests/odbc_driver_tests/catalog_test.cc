@@ -17,26 +17,66 @@
 
 namespace google::cloud::odbc_tests {
 
-static std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
-static std::string const kCatalogDatasetTableWithPK =
+namespace {
+// Tables and schema for SQLPrimaryKeys
+std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
+std::string const kCatalogDatasetTableWithPK =
     "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
-static std::string const kCatalogDatasetTableWithoutPK =
+std::string const kCatalogDatasetTableWithoutPK =
     "ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK";
-static std::string const kCatalogDatasetTableWithPKFull =
+std::string const kCatalogDatasetTableWithPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
-static std::string const kCatalogDatasetTableWithoutPKFull =
+std::string const kCatalogDatasetTableWithoutPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
 
-static std::string const kTableWithPKSchema =
+std::string const kTableWithPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
     " "
     "(StringField STRING, IntField INT64, FloatField FLOAT64, "
     "PRIMARY KEY (StringField, IntField) NOT ENFORCED)";
 
-static std::string const kTableWithOutPKSchema =
+std::string const kTableWithOutPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithoutPKFull +
     " "
     "(StringField STRING, IntField INT64, FloatField FLOAT64)";
+
+// Tables and schema for SQLForeignKeys.
+std::string const kTableOrders = "ODBC_SQLForeignKeys_TABLE_ORDERS";
+std::string const kTableLines = "ODBC_SQLForeignKeys_TABLE_LINES";
+std::string const kTableCustomer = "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
+std::string const kTableOrdersFull = kCatalogFnsDataset + "." + kTableOrders;
+std::string const kTableLinesFull = kCatalogFnsDataset + "." + kTableLines;
+std::string const kTableCustomerFull =
+    kCatalogFnsDataset + "." + kTableCustomer;
+
+std::string const kTableCustomerSchema =
+    "CREATE TABLE IF NOT EXISTS " + kTableCustomerFull +
+    " "
+    "(CustId STRING, CustName STRING, CustAddress STRING, "
+    "PRIMARY KEY (CustId) NOT ENFORCED)";
+
+std::string const kTableOrdersSchema =
+    "CREATE TABLE IF NOT EXISTS " + kTableOrdersFull +
+    " "
+    "(OrderId STRING, CustId STRING, OrderName STRING, OrderStatus STRING, "
+    "PRIMARY KEY (OrderId) NOT ENFORCED, "
+    "FOREIGN KEY (CustId) "
+    "REFERENCES " +
+    kTableCustomerFull +
+    " (CustId) "
+    "NOT ENFORCED)";
+
+std::string const kTableLinesSchema =
+    "CREATE TABLE IF NOT EXISTS " + kTableLinesFull +
+    " "
+    "(LineItemId STRING, OrderId STRING, Quantity INT64, "
+    "PRIMARY KEY (LineItemId) NOT ENFORCED, "
+    "FOREIGN KEY (OrderId) "
+    "REFERENCES " +
+    kTableOrdersFull +
+    " (OrderId) "
+    "NOT ENFORCED)";
+}  // namespace
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -143,9 +183,25 @@ TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#else
+TEST(CatalogTest, SQLPrimaryKeys_CreateForeignKeysTables) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create primary keys table via Simba Driver since execute is not implemented
+  // for BQ Drivers.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-// SQLPrimaryKeys is not implemented by Simba
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#else
+/////////////////////////////////////////////////////
+// SQLPrimaryKeys is not implemented by Simba Driver.
+////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
@@ -157,7 +213,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   // table resource can be reused for other catalog functions as well.
   auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
                                               kCatalogDatasetTableWithPK);
-  // Uncomment the statement below once the function is implemented.
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
   // EXPECT_FALSE(primary_keys.empty());
   if (primary_keys.empty()) {
     std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
@@ -189,7 +246,8 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   // table resource can be reused for other catalog functions as well.
   auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
                                               kCatalogDatasetTableWithPK, true);
-  // Uncomment the statement below once the function is implemented.
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
   // EXPECT_FALSE(primary_keys.empty());
   if (primary_keys.empty()) {
     std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
@@ -208,6 +266,173 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto primary_keys = Catalog::GetPrimaryKeys(
       conn, kCatalogFnsDataset, kCatalogDatasetTableWithoutPK, true);
   EXPECT_TRUE(primary_keys.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+/////////////////////////////////////////////////////
+// SQLForeignKeys is not implemented by Simba Driver.
+////////////////////////////////////////////////////
+TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys =
+      Catalog::GetForeignKeys(conn, kCatalogFnsDataset, kTableCustomer,
+                              kTableOrders); /* both PK and FK table supplied*/
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, kTableCustomer); /* empty FK table */
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders);
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, kTableCustomer, kTableOrders,
+      true); /* both PK and FK table supplied*/
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, kTableCustomer, "" /* empty FK table */, true);
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Connect to DS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // Use existing dataset and table created with primary keys.
+  // We are not creating and dropping tables. This existing
+  // table resource can be reused for other catalog functions as well.
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders, true);
+
+  // Uncomment the statement below once the function is fully implemented
+  // with SQLFetch.
+  // EXPECT_FALSE(primary_keys.empty());
+  if (foreign_keys.empty()) {
+    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

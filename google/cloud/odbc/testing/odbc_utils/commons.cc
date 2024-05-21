@@ -116,7 +116,7 @@ void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
                    bool use_ansi) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
-            "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
+            "CREATE TABLE IF NOT EXISTS " + table_name_ + " " + schema_str);
   SQLRETURN status;
   if (use_ansi) {
     status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
