@@ -51,6 +51,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
@@ -77,6 +78,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
@@ -1473,12 +1475,22 @@ SQLRETURN SQL_API SQLDescribeParam(SQLHSTMT statementHandle,
                                    SQLULEN* paramSize, SQLSMALLINT* paramScale,
                                    SQLSMALLINT* paramNullable) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLDescribeParam");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLDescribeParam(statementHandle, paramNumber,
+                                        paramSqlType, paramSize, paramScale,
+                                        paramNullable, *(*kTraceOption));
 
   // Call to internal function for SQLDescribeParam in odbc_sql_requests.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLDescribeParamInternal(
+      statementHandle, paramNumber, paramSqlType, paramSize, paramScale,
+      paramNullable);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLDescribeParam(rc, *(*kTraceOption));
 
   return rc;
 }

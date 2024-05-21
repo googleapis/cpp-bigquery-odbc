@@ -25,6 +25,7 @@ using google::cloud::odbc_bq_driver::SQLAllocStmtHandle;
 using google::cloud::odbc_bq_driver::SQLFreeHandleInternal;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 
@@ -72,6 +73,16 @@ StatementHandle CreateStatementHandle() {
 
 DescriptorHandle CreateExplicitDescriptor() {
   return DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+}
+
+DescriptorRecord CreateDescRecordWithRandomValues(SQLSMALLINT concise_type) {
+  DescriptorRecord record;
+  record.concise_type = concise_type;
+  record.precision = 10;
+  record.scale = 20;
+  record.length = 30;
+  record.nullable = SQL_NO_NULLS;
+  return record;
 }
 
 }  // namespace google::cloud::odbc_testing_bq_driver_utils

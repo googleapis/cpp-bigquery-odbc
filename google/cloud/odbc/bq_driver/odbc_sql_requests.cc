@@ -145,6 +145,79 @@ SQLRETURN SQLBindParameterInternal(
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
+                                   SQLUSMALLINT parameter_number,
+                                   SQLSMALLINT* data_type_ptr,
+                                   SQLULEN* parameter_size_ptr,
+                                   SQLSMALLINT* decimal_digits_ptr,
+                                   SQLSMALLINT* nullable_ptr) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle* handle = *handle_result;
+
+  // TODO(b/341855123) Check if statement handle is in 'prepared' state
+
+  if (parameter_number < 1) {
+    StatusRecord status_record = {SQLStates::k_07009(),
+                                  "Invalid descriptor index"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+  if (!ipd.HasDescriptorRecord(parameter_number)) {
+    StatusRecord status_record = {
+        SQLStates::k_07009(),
+        "Invalid descriptor index - no parameter for such value"};
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  DescriptorRecord& desc_record = ipd.GetDescriptorRecord(parameter_number);
+
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.concise_type, data_type_ptr, nullptr);
+  switch (desc_record.concise_type) {
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+    case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, parameter_size_ptr, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
+          desc_record.length, parameter_size_ptr, nullptr);
+  }
+  switch (desc_record.concise_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_CODE_SECOND:
+    case SQL_CODE_DAY_TO_SECOND:
+    case SQL_CODE_HOUR_TO_SECOND:
+    case SQL_CODE_MINUTE_TO_SECOND:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, decimal_digits_ptr, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.scale, decimal_digits_ptr, nullptr);
+      break;
+  }
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.nullable, nullable_ptr, nullptr);
+
+  return SQL_SUCCESS;
+}
+
 SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
                                SQLSMALLINT* param_count) {
   StatusRecordOr<StatementHandle*> handle_result =

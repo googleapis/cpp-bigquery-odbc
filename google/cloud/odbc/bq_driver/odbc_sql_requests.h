@@ -44,6 +44,13 @@ SQLRETURN SQLBindParameterInternal(
     SQLPOINTER parameter_value_ptr, SQLLEN buffer_length,
     SQLLEN* str_len_or_ind_ptr);
 
+SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
+                                   SQLUSMALLINT parameter_number,
+                                   SQLSMALLINT* data_type_ptr,
+                                   SQLULEN* parameter_size_ptr,
+                                   SQLSMALLINT* decimal_digits_ptr,
+                                   SQLSMALLINT* nullable_ptr);
+
 SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
                                SQLSMALLINT* param_count);
 
