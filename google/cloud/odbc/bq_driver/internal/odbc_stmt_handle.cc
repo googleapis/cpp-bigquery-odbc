@@ -18,15 +18,13 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
-
-
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::bigquery_v2_minimal_internal::QueryRequest;
-using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 
 DescriptorHandle& StatementHandle::GetDescriptorHandle(
     DescriptorType type) const {
@@ -95,10 +93,10 @@ StatusRecord StatementHandle::SetAttribute(int attribute, SQLULEN value) {
   return StatusRecord::Ok();
 }
 
-odbc_internal::StatusRecord StatementHandle::PopulatResultSet(const TableSchema& schema)
-{
+odbc_internal::StatusRecord StatementHandle::PopulatResultSet(
+    TableSchema const& schema) {
   for (int i = 0; i < schema.fields.size(); ++i) {
-    const auto& field = schema.fields[i];
+    auto const& field = schema.fields[i];
     ColumnSchema column;
 
     column.col_index = i;
@@ -118,32 +116,29 @@ odbc_internal::StatusRecord StatementHandle::PopulatResultSet(const TableSchema&
 
 StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   QueryRequest req;
-  
-  std::string query(reinterpret_cast<const char*>(query_text));
 
-  req.set_query(query)
-     .set_dry_run(true);
+  std::string query(reinterpret_cast<char const*>(query_text));
+
+  req.set_query(query).set_dry_run(true);
   ::google::cloud::Options opt;
 
-  auto response = this->GetConnectionHandle()->GetClient()->Query(GetConnectionHandle()->GetDsn().catalog, req, opt);
-  
-  if(response.Ok())
-  {
+  auto response = this->GetConnectionHandle()->GetClient()->Query(
+      GetConnectionHandle()->GetDsn().catalog, req, opt);
+
+  if (response.Ok()) {
     auto& schema = response.GetValue().schema;
     query_str_ = query;
     return PopulatResultSet(schema);
   }
 
-  return  StatusRecord{SQLStates::k_HY000(), "Internal error occurred"};
+  return StatusRecord{SQLStates::k_HY000(), "Internal error occurred"};
 }
-
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   if (!IsStatementAttributeValid(attribute)) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   return attributes_[attribute];
-  
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

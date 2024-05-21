@@ -28,7 +28,6 @@
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
-#include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/status_or.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -66,6 +65,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumParams;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
@@ -73,7 +73,6 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
-using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepare;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
@@ -1114,12 +1113,12 @@ SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
   if (IsTracingEnabled)
     TraceFunctionEntry_SQLPrepare(statementHandle, statementText,
                                   statementTextLen, *(*kTraceOption));
-                                  
+
   // Call to common internal function for SQLPrepare and SQLPrepareW
   // in odbc_sql_requests.h.
-  rc = google::cloud::odbc_bq_driver::SQLPrepareInternal(statementHandle, statementText,
-                                                        statementTextLen);
-      
+  rc = google::cloud::odbc_bq_driver::SQLPrepareInternal(
+      statementHandle, statementText, statementTextLen);
+
   if (IsTracingEnabled) TraceFunctionExit_SQLPrepare(rc, *(*kTraceOption));
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
