@@ -38,12 +38,12 @@ class Catalog {
                                             bool use_ansi = false);
 
   // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
-  static std::map<int, std::string> GetPrimaryKeys(
+  static std::vector<std::map<int, std::string>> GetPrimaryKeys(
       std::shared_ptr<ODBCHandles> conn, std::string dataset = "",
       std::string table = "", bool use_ansi = false);
 
   // Uses the SQLForeignKeys API to fetch foreign keys in a dataset.
-  static std::map<int, std::string> GetForeignKeys(
+  static std::vector<std::map<int, std::string>> GetForeignKeys(
       std::shared_ptr<ODBCHandles> conn, std::string dataset = "",
       std::string pk_table = "", std::string fk_table = "",
       bool use_ansi = false);

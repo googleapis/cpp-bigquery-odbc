@@ -81,14 +81,14 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
-std::map<int, std::string> Catalog::GetPrimaryKeys(
+std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
     std::shared_ptr<ODBCHandles> conn, std::string dataset, std::string table,
     bool use_ansi) {
   SQLRETURN status;
   int res_cols = 6;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::map<int, std::string> results;
+  std::vector<std::map<int, std::string>> results;
 
   if (dataset.empty()) {
     return results;
@@ -155,6 +155,7 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
 // Driver.
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   while (1) {
+    std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -173,25 +174,27 @@ std::map<int, std::string> Catalog::GetPrimaryKeys(
         reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
     std::string pk_name = (char*)catalog_result[6].target_value;
 
-    if (!table_cat.empty()) results.insert({1, table_cat});
-    if (!table_schema.empty()) results.insert({2, table_schema});
-    if (!table_name.empty()) results.insert({3, table_name});
-    if (!col_name.empty()) results.insert({4, col_name});
-    if (key_seq && *key_seq >= 0) results.insert({5, std::to_string(*key_seq)});
-    if (!pk_name.empty()) results.insert({6, pk_name});
+    if (!table_cat.empty()) catalog_results.insert({1, table_cat});
+    if (!table_schema.empty()) catalog_results.insert({2, table_schema});
+    if (!table_name.empty()) catalog_results.insert({3, table_name});
+    if (!col_name.empty()) catalog_results.insert({4, col_name});
+    if (key_seq && *key_seq >= 0)
+      catalog_results.insert({5, std::to_string(*key_seq)});
+    if (!pk_name.empty()) catalog_results.insert({6, pk_name});
+    results.emplace_back(catalog_results);
   }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
   return results;
 }
 
-std::map<int, std::string> Catalog::GetForeignKeys(
+std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
     std::shared_ptr<ODBCHandles> conn, std::string dataset,
     std::string pk_table, std::string fk_table, bool use_ansi) {
   SQLRETURN status;
   int res_cols = 15;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::map<int, std::string> results;
+  std::vector<std::map<int, std::string>> results;
   if (dataset.empty()) {
     return results;
   }
@@ -300,6 +303,7 @@ std::map<int, std::string> Catalog::GetForeignKeys(
 // Driver.
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   while (1) {
+    std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -328,21 +332,23 @@ std::map<int, std::string> Catalog::GetForeignKeys(
     SQLSMALLINT* deferrability =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[14].target_value);
 
-    if (!pk_table_cat.empty()) results.insert({1, pk_table_cat});
-    if (!pk_table_schema.empty()) results.insert({2, pk_table_schema});
-    if (!pk_table_name.empty()) results.insert({3, pk_table_name});
-    if (!pk_col_name.empty()) results.insert({4, pk_col_name});
-    if (!fk_table_cat.empty()) results.insert({5, fk_table_cat});
-    if (!fk_table_schema.empty()) results.insert({6, fk_table_schema});
-    if (!fk_table_name.empty()) results.insert({7, fk_table_name});
-    if (!fk_col_name.empty()) results.insert({8, fk_col_name});
-    if (key_seq && *key_seq >= 0) results.insert({9, std::to_string(*key_seq)});
-    results.insert({10, "NULL"});  // UPDATE_RULE
-    results.insert({11, "NULL"});  // DELETE_RULE
-    if (!fk_name.empty()) results.insert({12, fk_name});
-    if (!pk_name.empty()) results.insert({13, pk_name});
+    if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
+    if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
+    if (!pk_table_name.empty()) catalog_results.insert({3, pk_table_name});
+    if (!pk_col_name.empty()) catalog_results.insert({4, pk_col_name});
+    if (!fk_table_cat.empty()) catalog_results.insert({5, fk_table_cat});
+    if (!fk_table_schema.empty()) catalog_results.insert({6, fk_table_schema});
+    if (!fk_table_name.empty()) catalog_results.insert({7, fk_table_name});
+    if (!fk_col_name.empty()) catalog_results.insert({8, fk_col_name});
+    if (key_seq && *key_seq >= 0)
+      catalog_results.insert({9, std::to_string(*key_seq)});
+    catalog_results.insert({10, "NULL"});  // UPDATE_RULE
+    catalog_results.insert({11, "NULL"});  // DELETE_RULE
+    if (!fk_name.empty()) catalog_results.insert({12, fk_name});
+    if (!pk_name.empty()) catalog_results.insert({13, pk_name});
     if (deferrability && *deferrability >= 0)
-      results.insert({14, std::to_string(*deferrability)});
+      catalog_results.insert({14, std::to_string(*deferrability)});
+    results.emplace_back(catalog_results);
   }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
