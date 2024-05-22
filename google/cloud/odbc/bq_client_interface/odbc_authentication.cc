@@ -51,8 +51,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
 
 StatusRecordOr<std::shared_ptr<Credentials>>
 CreateApplicationDefaultCredentials() {
-  auto env_var = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
-  if (!env_var.has_value()) {
+  if (!GetEnv("GOOGLE_APPLICATION_CREDENTIALS").has_value()) {
     return StatusRecord{SQLStates::k_28000(),
                         "No value present in the "
                         "GOOGLE_APPLICATION_CREDENTIALS environment variable"};
