@@ -39,7 +39,8 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
       return descriptors_.apd_expl_ != nullptr ? *descriptors_.apd_expl_
                                                : *descriptors_.apd_;
     case DescriptorType::kIRD:
-      return *descriptors_.ird_;
+      return descriptors_.ird_expl_ != nullptr ? *descriptors_.ird_expl_
+                                               : *descriptors_.ird_;
     case DescriptorType::kIPD:
       return *descriptors_.ipd_;
   }
@@ -75,6 +76,10 @@ StatusRecord StatementHandle::SetDescriptorHandle(
     case DescriptorType::kAPD:
       DissociateDescriptorHandle(descriptors_.apd_expl_, type, this);
       descriptors_.apd_expl_ = descriptor_handle;
+      break;
+    case DescriptorType::kIRD:
+      DissociateDescriptorHandle(descriptors_.ird_expl_, type, this);
+      descriptors_.ird_expl_ = descriptor_handle;
       break;
     default:
       return StatusRecord{SQLStates::k_HY017(),
@@ -128,8 +133,13 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   if (response.Ok()) {
     auto& schema = response.GetValue().schema;
-    auto desc_handle = GetDescriptorHandle(DescriptorType::kIRD);
-    PopulateIrd(desc_handle, schema);
+    auto* desc_handle =
+        new DescriptorHandle(DescriptorType::kIRD, SQL_DESC_ALLOC_USER);
+    StatusRecord status_record = PopulateIrd(desc_handle, schema);
+    if (!status_record.ok()) {
+      return StatusRecord{SQLStates::k_HY000(), "Internal error occurred"};
+    }
+    this->SetDescriptorHandle(DescriptorType::kIRD, desc_handle);
     query_str_ = query;
     return PopulatResultSet(schema);
   }
@@ -138,7 +148,7 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 }
 
 odbc_internal::StatusRecord StatementHandle::PopulateIrd(
-    DescriptorHandle& descriptor_handle, TableSchema const& schema) {
+    DescriptorHandle* descriptor_handle, TableSchema const& schema) {
   std::map<SQLSMALLINT, DescriptorRecord> records;
   for (auto const& res : schema.fields) {
     DescriptorRecord descriptor_record;
@@ -161,10 +171,10 @@ odbc_internal::StatusRecord StatementHandle::PopulateIrd(
     records[records.size() + 1] = descriptor_record;
   }
 
-  StatusRecord status_record = descriptor_handle.SetDescriptorRecords(records);
+  StatusRecord status_record = descriptor_handle->SetDescriptorRecords(records);
 
   if (!status_record.ok()) {
-    descriptor_handle.GetDiagnostics().AddStatusRecord(status_record);
+    descriptor_handle->GetDiagnostics().AddStatusRecord(status_record);
   }
 
   return status_record;

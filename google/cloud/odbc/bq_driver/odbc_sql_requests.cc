@@ -165,6 +165,22 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
 
+  DescriptorHandle& ird = handle_ref.GetDescriptorHandle(DescriptorType::kIRD);
+  std::map<SQLSMALLINT, DescriptorRecord> desRecord =
+      ird.GetDescriptorRecords();
+  std::cout << "Populating IRD **** Size " << desRecord.size() << std::endl;
+  for (auto it = desRecord.begin(); it != desRecord.end(); it++) {
+    std::cout << "Populating IRD **** Name " << it->second.name << std::endl;
+    std::cout << "Populating IRD **** length " << it->second.length
+              << std::endl;
+    std::cout << "Populating IRD **** Precision " << it->second.precision
+              << std::endl;
+    std::cout << "Populating IRD **** type " << it->second.concise_type
+              << std::endl;
+    std::cout << "Populating IRD **** Nullable " << it->second.nullable
+              << std::endl;
+  }
+
   handle_ref.GetDiagnostics().AddStatusRecord(status);
 
   if (!status.ok()) {

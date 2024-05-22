@@ -54,6 +54,7 @@ struct Descriptors {
   std::unique_ptr<DescriptorHandle> apd_;
   DescriptorHandle* apd_expl_ = nullptr;
   std::unique_ptr<DescriptorHandle> ird_;
+  DescriptorHandle* ird_expl_ = nullptr;
   std::unique_ptr<DescriptorHandle> ipd_;
 };
 
