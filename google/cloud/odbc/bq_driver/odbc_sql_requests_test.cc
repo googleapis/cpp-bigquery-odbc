@@ -153,8 +153,17 @@ TEST(SQLDescribeParam, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
+void AssertDescribeParamResults(SQLRETURN status,
+                                DescriptorRecord const& record,
+                                SQLSMALLINT data_type, SQLSMALLINT nullable) {
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(record.concise_type, data_type);
+  EXPECT_EQ(record.nullable, nullable);
+}
+
 TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
   StatementHandle stmt_handle = CreateStatementHandle();
+  // TODO(b/340440354) Change stmt handle state to 'prepared'
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -170,6 +179,7 @@ TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
 
 TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
   StatementHandle stmt_handle = CreateStatementHandle();
+  // TODO(b/340440354) Change stmt handle state to 'prepared'
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -185,6 +195,7 @@ TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
 
 TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
   StatementHandle stmt_handle = CreateStatementHandle();
+  // TODO(b/340440354) Change stmt handle state to 'prepared'
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -198,15 +209,14 @@ TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  ASSERT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(record.concise_type, data_type);
+  AssertDescribeParamResults(status, record, data_type, nullable);
   EXPECT_EQ(record.precision, param_size);
   EXPECT_EQ(record.scale, decimal_digits);
-  EXPECT_EQ(record.nullable, nullable);
 }
 
 TEST(SQLDescribeParam, Describe_SQL_CHAR) {
   StatementHandle stmt_handle = CreateStatementHandle();
+  // TODO(b/340440354) Change stmt handle state to 'prepared'
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -220,15 +230,14 @@ TEST(SQLDescribeParam, Describe_SQL_CHAR) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  ASSERT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(record.concise_type, data_type);
+  AssertDescribeParamResults(status, record, data_type, nullable);
   EXPECT_EQ(record.length, param_size);
   EXPECT_EQ(record.scale, decimal_digits);
-  EXPECT_EQ(record.nullable, nullable);
 }
 
 TEST(SQLDescribeParam, Describe_SQL_DATE) {
   StatementHandle stmt_handle = CreateStatementHandle();
+  // TODO(b/340440354) Change stmt handle state to 'prepared'
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -242,11 +251,9 @@ TEST(SQLDescribeParam, Describe_SQL_DATE) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  ASSERT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(record.concise_type, data_type);
+  AssertDescribeParamResults(status, record, data_type, nullable);
   EXPECT_EQ(record.length, param_size);
   EXPECT_EQ(record.precision, decimal_digits);
-  EXPECT_EQ(record.nullable, nullable);
 }
 
 TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
