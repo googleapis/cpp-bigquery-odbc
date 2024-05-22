@@ -27,8 +27,18 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Data Types as supported by the BQ DataSource.
-enum BQDataType { kString, kInt64, kBool, 
-kFloat64, kDate, kDatetime, kTime, kBytes, KTimeStamp, kNumeric};
+enum BQDataType {
+  kString,
+  kInt64,
+  kBool,
+  kFloat64,
+  kDate,
+  kDatetime,
+  kTime,
+  kBytes,
+  KTimeStamp,
+  kNumeric
+};
 
 // Contains the column data types, as represented by the data source,
 // for each column in a ResultSet row.
