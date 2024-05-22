@@ -29,6 +29,7 @@ using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 #endif
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
@@ -1096,6 +1097,8 @@ TEST(StatementTest, SQLPrepare) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
 
   // Retrieve the result set
   ResultSet const& result_set = stmt_handle->GetResultSet();

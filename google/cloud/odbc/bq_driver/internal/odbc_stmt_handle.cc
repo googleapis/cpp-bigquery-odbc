@@ -143,6 +143,7 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   }
 
   query_str_ = query;
+  stmt_state_ = StmtStates::kStatementPrepared;
   return StatusRecord::Ok();
 }
 

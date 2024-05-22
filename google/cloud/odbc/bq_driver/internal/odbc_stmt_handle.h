@@ -27,6 +27,18 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// These are the states statement handle maintains for validations in ODBC APIs
+// using it.
+enum class StmtStates {
+  kStatementNotPrepared,
+  kStatementPrepared,
+  kStatementStillExecuting,
+  kStatementExecutedWithoutRs,
+  kStatementExecutedWithRs,
+  kNeedsParams,
+  kNeedsPutData,
+};
+
 class ConnectionHandle;
 
 class StatementHandle : public Handle {
@@ -61,6 +73,10 @@ class StatementHandle : public Handle {
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
+  inline void SetStmtState(StmtStates stmt_state) { stmt_state_ = stmt_state; }
+
+  [[nodiscard]] inline StmtStates GetStmtState() const { return stmt_state_; }
+
   inline void SetResultSet(ResultSet const& result_set) {
     result_set_ = result_set;
   }
@@ -76,14 +92,17 @@ class StatementHandle : public Handle {
     return result_set_;
   }
 
+ protected:
+  StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
+  ResultSet result_set_;
+  std::string query_str_;
+
  private:
   std::shared_ptr<Query> query_;
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
-  ResultSet result_set_;
   SQLSMALLINT param_count_ = 0;
-  std::string query_str_;
   odbc_internal::StatusRecord PopulatResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

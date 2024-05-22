@@ -38,6 +38,7 @@ using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
 using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
@@ -280,8 +281,14 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return rs_status_record_or.GetCalculatedReturnCode();
   }
-  // Store the resultset in statement handle.
-  handle.SetResultSet(*rs_status_record_or);
+
+  if (!rs_status_record_or->rows.empty()) {
+    // Store the resultset in statement handle.
+    handle.SetResultSet(*rs_status_record_or);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
   return rc;
 }
 
