@@ -49,11 +49,23 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
   return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
+StatusRecordOr<std::shared_ptr<Credentials>>
+CreateApplicationDefaultCredentials() {
+  if (!GetEnv("GOOGLE_APPLICATION_CREDENTIALS")) {
+    return StatusRecord{SQLStates::k_28000(),
+                        "No value present in the "
+                        "GOOGLE_APPLICATION_CREDENTIALS environment variable"};
+  }
+  return ::google::cloud::MakeGoogleDefaultCredentials();
+}
+
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAccount:
       return CreateServiceCredentials(oauth.credentials_file_path);
+    case OauthMechanism::kApplicationDefault:
+      return CreateApplicationDefaultCredentials();
     case OauthMechanism::kExternalUser:
       return StatusRecord{SQLStates::k_HY000(), "Currently not implemented"};
   }

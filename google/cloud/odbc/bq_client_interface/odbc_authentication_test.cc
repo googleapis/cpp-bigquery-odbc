@@ -61,6 +61,27 @@ TEST(ServiceAuthentication, UserAccountAuthentication) {
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
+TEST(DefaultApplicationAuthentication, Fails_NoEnvVar) {
+  auto credentials =
+      CreateCredentials({OauthMechanism::kApplicationDefault, ""});
+
+  EXPECT_THAT(
+      credentials,
+      StatusRecordIs(
+          odbc_internal::SQLStates::k_28000(),
+          HasSubstr("No value present in the GOOGLE_APPLICATION_CREDENTIALS")));
+}
+
+TEST(DefaultApplicationAuthentication, DefaultApplicationAuthentication) {
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", "path-to-the-file");
+
+  auto credentials =
+      CreateCredentials({OauthMechanism::kApplicationDefault, ""});
+
+  ASSERT_STATUS_RECORD_OK(credentials);
+  UnsetEnv("GOOGLE_APPLICATION_CREDENTIALS");
+}
+
 TEST(ServiceAuthentication, EmptyPath) {
   auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, ""});
 

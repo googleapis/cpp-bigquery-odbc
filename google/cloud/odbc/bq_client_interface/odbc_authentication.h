@@ -27,6 +27,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 //  because the driver layer is tightly coupled to the integer values.
 enum class OauthMechanism {
   kServiceAccount = 0,
+  kApplicationDefault = 3,
   kExternalUser = 4,
 };
 
