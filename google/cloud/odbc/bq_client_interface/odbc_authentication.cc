@@ -51,11 +51,9 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
 
 StatusRecordOr<std::shared_ptr<Credentials>>
 CreateApplicationDefaultCredentials() {
-  if (!GetEnv("GOOGLE_APPLICATION_CREDENTIALS").has_value()) {
-    return StatusRecord{SQLStates::k_28000(),
-                        "No value present in the "
-                        "GOOGLE_APPLICATION_CREDENTIALS environment variable"};
-  }
+  // C++ client library in google-cloud-cpp first checks
+  // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
+  // looks for a 'default' location of the file with credentials.
   return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
