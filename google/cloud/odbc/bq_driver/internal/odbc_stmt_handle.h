@@ -87,8 +87,8 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord PopulatResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 
-  odbc_internal::StatusRecord PopulateIrd(
-      google::cloud::odbc_bq_driver_internal::DescriptorHandle
+  static odbc_internal::StatusRecord PopulateIrd(
+      google::cloud::odbc_bq_driver_internal::DescriptorHandle&
           descriptor_handle,
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

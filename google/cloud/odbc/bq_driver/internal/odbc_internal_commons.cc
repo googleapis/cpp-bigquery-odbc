@@ -164,23 +164,32 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
-  } else if (type == "INTEGER" || type == "INT64") {
+  }
+  if (type == "INTEGER" || type == "INT64") {
     return BQDataType::kInt64;
-  } else if (type == "BOOL") {
+  }
+  if (type == "BOOL") {
     return BQDataType::kBool;
-  } else if (type == "FLOAT64") {
+  }
+  if (type == "FLOAT64") {
     return BQDataType::kFloat64;
-  } else if (type == "DECIMAL" || type == "NUMERIC") {
+  }
+  if (type == "DECIMAL" || type == "NUMERIC") {
     return BQDataType::kNumeric;
-  } else if (type == "BYTES") {
+  }
+  if (type == "BYTES") {
     return BQDataType::kBytes;
-  } else if (type == "DATE") {
+  }
+  if (type == "DATE") {
     return BQDataType::kDate;
-  } else if (type == "DATETIME") {
+  }
+  if (type == "DATETIME") {
     return BQDataType::kDatetime;
-  } else if (type == "TIME") {
+  }
+  if (type == "TIME") {
     return BQDataType::kTime;
-  } else if (type == "TIMESTAMP") {
+  }
+  if (type == "TIMESTAMP") {
     return BQDataType::kTimeStamp;
   }
   std::string err_msg = "Invalid Data Type: ";

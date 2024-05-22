@@ -22,6 +22,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -137,11 +138,9 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 }
 
 odbc_internal::StatusRecord StatementHandle::PopulateIrd(
-    google::cloud::odbc_bq_driver_internal::DescriptorHandle descriptor_handle,
-    google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema) {
-  std::cout << "Populating IRD " << std::endl;
+    DescriptorHandle& descriptor_handle, TableSchema const& schema) {
   std::map<SQLSMALLINT, DescriptorRecord> records;
-  for (auto res : schema.fields) {
+  for (auto const& res : schema.fields) {
     DescriptorRecord descriptor_record;
     descriptor_record.SetName(res.name, SQL_NTS);
     descriptor_record.length = res.max_length;
@@ -152,26 +151,23 @@ odbc_internal::StatusRecord StatementHandle::PopulateIrd(
       return type_status_record.GetStatusRecord();
     }
 
-    descriptor_record.SetConciseType(*type_status_record, DescriptorType::kIRD);
+    StatusRecord status_record = descriptor_record.SetConciseType(
+        *type_status_record, DescriptorType::kIRD);
+    if (!status_record.ok()) {
+      return status_record;
+    }
     descriptor_record.nullable =
         res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
     records[records.size() + 1] = descriptor_record;
   }
 
-  for (auto it = records.begin(); it != records.end(); it++) {
-    std::cout << "Populating IRD **** Name " << it->second.name << std::endl;
-    std::cout << "Populating IRD **** length " << it->second.length
-              << std::endl;
-    std::cout << "Populating IRD **** Precision " << it->second.precision
-              << std::endl;
-    std::cout << "Populating IRD **** type " << it->second.concise_type
-              << std::endl;
-    std::cout << "Populating IRD **** Nullable " << it->second.nullable
-              << std::endl;
-  }
-  descriptor_handle.SetDescriptorRecords(records);
+  StatusRecord status_record = descriptor_handle.SetDescriptorRecords(records);
 
-  return odbc_internal::StatusRecord();
+  if (!status_record.ok()) {
+    descriptor_handle.GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  return status_record;
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
