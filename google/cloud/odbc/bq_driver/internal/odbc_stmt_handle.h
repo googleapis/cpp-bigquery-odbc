@@ -59,6 +59,7 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord PrepareQuery(const SQLCHAR* query_text);
   HandleType kType = HandleType::kStmtHandle;
 
+
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
   inline void SetResultSet(ResultSet const& result_set) {
@@ -86,6 +87,10 @@ class StatementHandle : public Handle {
   std::string query_str_;
   odbc_internal::StatusRecord PopulatResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
+  
+  odbc_internal::StatusRecord PopulateIpd(
+    DescriptorHandle* handle,
+    TableSchema const& schema);
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

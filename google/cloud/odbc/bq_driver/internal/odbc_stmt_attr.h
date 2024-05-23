@@ -55,6 +55,7 @@ struct Descriptors {
   DescriptorHandle* apd_expl_ = nullptr;
   std::unique_ptr<DescriptorHandle> ird_;
   std::unique_ptr<DescriptorHandle> ipd_;
+  DescriptorHandle* ipd_expl_ = nullptr;
 };
 
 bool IsStatementAttributeValid(int attribute);

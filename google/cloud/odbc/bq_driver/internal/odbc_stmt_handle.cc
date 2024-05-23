@@ -39,8 +39,10 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
                                                : *descriptors_.apd_;
     case DescriptorType::kIRD:
       return *descriptors_.ird_;
+
     case DescriptorType::kIPD:
-      return *descriptors_.ipd_;
+      return descriptors_.ipd_expl_ != nullptr ? *descriptors_.ipd_expl_
+                                               : *descriptors_.ipd_;
   }
 }
 
@@ -127,6 +129,9 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   if (response.Ok()) {
     auto& schema = response.GetValue().schema;
+    // DescriptorHandle* desc_handle = GetDescriptorHandle(DescriptorType::kIPD);
+    auto* desc_handle = new DescriptorHandle(DescriptorType::kIPD, SQL_DESC_ALLOC_USER);
+    StatusRecord desc_record = PopulateIpd(desc_handle, schema);
     query_str_ = query;
     return PopulatResultSet(schema);
   }
@@ -140,5 +145,42 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   }
   return attributes_[attribute];
 }
+
+StatusRecord StatementHandle::PopulateIpd(
+    DescriptorHandle* handle,
+    TableSchema const& schema
+    ) {
+  std::cout <<"here IPD Sec-- Start" << std::endl;
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  for(int index=0; index < schema.fields.size(); index++){
+  // for (auto value: schema.fields) {
+    auto record = schema.fields[index];
+    // std::cout << "-------Name----" << record.name << record.max_length
+    //           << std::endl;
+    // std::cout << "-------DataType----" << record.type << record.max_length
+    //           << std::endl;
+    DescriptorRecord descriptor_record;
+    descriptor_record.SetName(record.name, record.name.size());
+    descriptor_record.length = record.max_length;
+    descriptor_record.precision = record.precision;
+    descriptor_record.type_name = record.type;
+    StatusRecordOr<BQDataType> record_type = ConvertDSType(record.type);
+    if(!record_type.Ok()){
+      return record_type.GetStatusRecord();
+    }
+
+    if(record_type = BQDataType::kTime){
+      StatusRecord concise_status =  descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
+      if (!concise_status.ok()){
+        return concise_status;
+      }
+    }
+
+    records[records.size() +1] = descriptor_record;
+  }
+  StatusRecord status_record = handle->SetDescriptorRecords(records);
+  return status_record;
+}
+
 
 }  // namespace google::cloud::odbc_bq_driver_internal
