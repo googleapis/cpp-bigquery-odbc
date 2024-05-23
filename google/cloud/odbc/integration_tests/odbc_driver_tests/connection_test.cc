@@ -697,6 +697,39 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  status = SQLDisconnect(conn->hdbc);
+  CheckError(status, "SQLDisconnect", conn);
+
+  // Check that descriptor handle is freed
+  SQLSMALLINT alloc_type;
+  status =
+      SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  if (kIsBqDriver) {
+    EXPECT_EQ(SQL_INVALID_HANDLE, status);
+  } else {
+    EXPECT_EQ(SQL_SUCCESS, status);
+  }
+  // Check that statement handle is freed
+  SQLULEN metadata_id_stmt;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
+                          0, NULL);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+  // Check connection handle is disconnected
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DBC)", conn);
+  status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_ENV)", conn);
+}
+
 #else
 
 // This test should not be run for Simba Driver since different values are

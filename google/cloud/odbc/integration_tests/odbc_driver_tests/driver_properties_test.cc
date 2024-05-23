@@ -18,12 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-bool const kIsBqDriver = true;
-#else
-bool const kIsBqDriver = false;
-#endif
-
 using ::google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using ::google::cloud::odbc_bq_driver_internal::TypeInfoRow;
 

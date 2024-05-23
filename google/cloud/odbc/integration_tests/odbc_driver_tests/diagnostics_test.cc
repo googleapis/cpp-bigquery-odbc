@@ -17,12 +17,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-bool const kIsBqDriver = true;
-#else
-bool const kIsBqDriver = false;
-#endif
-
 TEST(DiagnosticsTest, SQLGetDiagRec) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

@@ -37,6 +37,12 @@ using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
 using Results = std::map<std::string, std::vector<std::string>>;
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+bool const kIsBqDriver = true;
+#else
+bool const kIsBqDriver = false;
+#endif
+
 constexpr SQLSMALLINT kBufferLength = 1024;
 
 inline std::string const GetDefaultTablePrefix() {
