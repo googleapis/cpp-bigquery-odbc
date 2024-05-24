@@ -210,7 +210,6 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     default:
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.scale, decimal_digits_ptr, nullptr);
-      break;
   }
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       desc_record.nullable, nullable_ptr, nullptr);

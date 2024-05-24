@@ -141,6 +141,41 @@ TEST(SQLBindParameterInternal,
                    .count);
 }
 
+void AssertDescribeParamResults(SQLRETURN status,
+                                DescriptorRecord const& record,
+                                SQLSMALLINT data_type, SQLULEN param_size,
+                                SQLSMALLINT decimal_digits,
+                                SQLSMALLINT nullable) {
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(record.concise_type, data_type);
+  switch (data_type) {
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+    case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
+      EXPECT_EQ(record.precision, param_size);
+      break;
+    default:
+      EXPECT_EQ(record.length, param_size);
+  }
+  switch (data_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_CODE_SECOND:
+    case SQL_CODE_DAY_TO_SECOND:
+    case SQL_CODE_HOUR_TO_SECOND:
+    case SQL_CODE_MINUTE_TO_SECOND:
+      EXPECT_EQ(record.precision, decimal_digits);
+      break;
+    default:
+      EXPECT_EQ(record.scale, decimal_digits);
+  }
+  EXPECT_EQ(record.nullable, nullable);
+}
+
 TEST(SQLDescribeParam, Fail_InvalidHandle) {
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
@@ -151,14 +186,6 @@ TEST(SQLDescribeParam, Fail_InvalidHandle) {
       nullptr, 1, &data_type, &param_size, &decimal_digits, &nullable);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
-}
-
-void AssertDescribeParamResults(SQLRETURN status,
-                                DescriptorRecord const& record,
-                                SQLSMALLINT data_type, SQLSMALLINT nullable) {
-  ASSERT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(record.concise_type, data_type);
-  EXPECT_EQ(record.nullable, nullable);
 }
 
 TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
@@ -209,9 +236,8 @@ TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  AssertDescribeParamResults(status, record, data_type, nullable);
-  EXPECT_EQ(record.precision, param_size);
-  EXPECT_EQ(record.scale, decimal_digits);
+  AssertDescribeParamResults(status, record, data_type, param_size,
+                             decimal_digits, nullable);
 }
 
 TEST(SQLDescribeParam, Describe_SQL_CHAR) {
@@ -230,9 +256,8 @@ TEST(SQLDescribeParam, Describe_SQL_CHAR) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  AssertDescribeParamResults(status, record, data_type, nullable);
-  EXPECT_EQ(record.length, param_size);
-  EXPECT_EQ(record.scale, decimal_digits);
+  AssertDescribeParamResults(status, record, data_type, param_size,
+                             decimal_digits, nullable);
 }
 
 TEST(SQLDescribeParam, Describe_SQL_DATE) {
@@ -251,9 +276,8 @@ TEST(SQLDescribeParam, Describe_SQL_DATE) {
       SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
                                &param_size, &decimal_digits, &nullable);
 
-  AssertDescribeParamResults(status, record, data_type, nullable);
-  EXPECT_EQ(record.length, param_size);
-  EXPECT_EQ(record.precision, decimal_digits);
+  AssertDescribeParamResults(status, record, data_type, param_size,
+                             decimal_digits, nullable);
 }
 
 TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
