@@ -37,26 +37,15 @@ using ::testing::Return;
 using ::testing::StrEq;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  std::string credentials_file_path =
-      test_data_path + "service_account_auth_keys.json";
-
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kServiceAccount, credentials_file_path});
+  auto credentials =
+      CreateCredentials({OauthMechanism::kServiceAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
 TEST(ServiceAuthentication, UserAccountAuthentication) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  std::string credentials_file_path = test_data_path + "user_account.json";
-
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kServiceAccount, credentials_file_path});
+  auto credentials =
+      CreateCredentials({OauthMechanism::kServiceAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }

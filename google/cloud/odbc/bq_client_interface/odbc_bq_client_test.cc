@@ -23,14 +23,8 @@ using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
 TEST(ODBCBQClient, CreateBQClient) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  std::string credentials_file_path =
-      test_data_path + "service_account_auth_keys.json";
-
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, credentials_file_path});
+      {OauthMechanism::kServiceAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 }

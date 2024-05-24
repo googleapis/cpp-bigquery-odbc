@@ -46,13 +46,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
 }
 
 TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  std::string credentials_file_path =
-      test_data_path + "service_account_auth_keys.json";
-
-  Authentication auth = {OauthMechanism::kExternalUser, credentials_file_path};
+  Authentication auth = {OauthMechanism::kExternalUser, "path-to-the-file"};
   auto* conn_handle = new ConnectionHandle();
   StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -62,13 +56,7 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
 }
 
 TEST(ConnectionHandle, ConnectWithInvalidAuth) {
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  std::string credentials_file_path =
-      test_data_path + "service_account_auth_keys.json";
-
-  Authentication auth = {static_cast<OauthMechanism>(7), credentials_file_path};
+  Authentication auth = {static_cast<OauthMechanism>(7), "path-to-the-file"};
   auto* conn_handle = new ConnectionHandle();
   StatusRecord status = conn_handle->Connect(auth);
   EXPECT_EQ(status.ok(), false);
