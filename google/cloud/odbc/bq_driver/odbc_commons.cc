@@ -67,7 +67,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       // Dissociate itself from a connection handle
       stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
           stmt_handle);
-      (*handle_result)->kType = HandleType::kUnspecified;
+      stmt_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }
@@ -79,14 +79,17 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      DescriptorHandle* desc_handle = *handle_result;
       // Dissociate this handle from all statement handles it was associated
       // with
       std::set<std::pair<StatementHandle*, DescriptorType>> pairs =
-          (*handle_result)->GetAssociatedStatementHandles();
+          desc_handle->GetAssociatedStatementHandles();
       for (auto const& [stmt_handle, type] : pairs) {
         stmt_handle->SetDescriptorHandle(type, nullptr);
       }
-      (*handle_result)->kType = HandleType::kUnspecified;
+      desc_handle->GetConnectionHandle()->GetDescriptorHandles().erase(
+          desc_handle);
+      desc_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
     }

@@ -50,6 +50,7 @@ struct Dsn {
 };
 
 class StatementHandle;
+class DescriptorHandle;
 
 class ConnectionHandle : public Handle {
  public:
@@ -81,6 +82,7 @@ class ConnectionHandle : public Handle {
   HandleType kType = HandleType::kConnHandle;
 
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
+  std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
 
  protected:
   bool is_connected_ = false;
@@ -98,6 +100,9 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, std::string> attribute_str_values_;
   // storage of all statement handles associated with this connection handle
   std::set<StatementHandle*> stmt_handles_;
+  // storage of all explicitly allocated descriptor handles associated with this
+  // connection handle
+  std::set<DescriptorHandle*> desc_handles_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

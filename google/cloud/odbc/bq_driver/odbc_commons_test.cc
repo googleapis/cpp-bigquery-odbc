@@ -28,6 +28,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SQLFreeHandleInternal, InvalidType) {
@@ -94,6 +95,8 @@ TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
 
 TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
   auto* desc_handle = new DescriptorHandle();
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  desc_handle->SetConnectionHandle(&conn_handle);
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
 
@@ -114,6 +117,9 @@ TEST(SQLFreeHandleInternal, DissociateDescriptorHandle) {
   auto* desc_handle =
       new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
   stmt_handle.SetDescriptorHandle(DescriptorType::kAPD, desc_handle);
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  conn_handle.GetDescriptorHandles().emplace(desc_handle);
+  desc_handle->SetConnectionHandle(&conn_handle);
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
 
@@ -122,6 +128,7 @@ TEST(SQLFreeHandleInternal, DissociateDescriptorHandle) {
             stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
                 .GetHeaderRecord()
                 .GetAllocType());
+  EXPECT_TRUE(conn_handle.GetDescriptorHandles().empty());
 }
 
 }  // namespace google::cloud::odbc_bq_driver

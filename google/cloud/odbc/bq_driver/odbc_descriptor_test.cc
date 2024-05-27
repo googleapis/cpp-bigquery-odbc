@@ -20,13 +20,30 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
+
+TEST(SQLAllocDescHandle, SQLAllocDescHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLPOINTER output;
+
+  auto status = SQLAllocDescHandle(&conn_handle, &output);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  auto* desc_handle = reinterpret_cast<DescriptorHandle*>(output);
+  std::set<DescriptorHandle*>& desc_handles =
+      conn_handle.GetDescriptorHandles();
+  EXPECT_FALSE(desc_handles.empty());
+  EXPECT_TRUE(desc_handles.find(desc_handle) != desc_handles.end());
+  delete desc_handle;
+}
 
 TEST(SQLSetDescFieldInternal, Fails_InvalidHandle) {
   EnvironmentHandle handle;
