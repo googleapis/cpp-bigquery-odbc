@@ -25,6 +25,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+class ConnectionHandle;
 class StatementHandle;
 
 class DescriptorHandle : public Handle {
@@ -78,10 +79,16 @@ class DescriptorHandle : public Handle {
     return associated_stmt_handles_;
   };
 
+  inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
+  inline void SetConnectionHandle(ConnectionHandle* conn_handle) {
+    conn_handle_ = conn_handle;
+  };
+
  private:
   DescriptorType type_;
   HeaderRecord header_record_;
   std::map<SQLSMALLINT, DescriptorRecord> descriptor_records_;
+  ConnectionHandle* conn_handle_{nullptr};
   std::set<std::pair<StatementHandle*, DescriptorType>>
       associated_stmt_handles_;
 };

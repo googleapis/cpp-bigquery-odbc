@@ -137,10 +137,13 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  // TODO(b/332816203) Associate Descriptor Handle with a Connection Handle
+  ConnectionHandle* conn_handle = *handle_result;
 
   auto* desc_handle =
       new DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
+  conn_handle->GetDescriptorHandles().insert(desc_handle);
+  desc_handle->SetConnectionHandle(conn_handle);
+
   *out_desc_handle = desc_handle;
   return SQL_SUCCESS;
 }
