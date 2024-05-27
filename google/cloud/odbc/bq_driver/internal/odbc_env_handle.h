@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/status_or.h"
 #include <memory>
+#include <mutex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -130,6 +131,8 @@ class EnvironmentHandle : public Handle {
   SQLRETURN SetAttribute(SQLINTEGER attribute, void* value, void* length);
 
   HandleType kType = HandleType::kEnvHandle;
+
+  std::mutex environment_handle_mutex_;
 
  private:
   std::shared_ptr<EnvAttrConnectionPool> connection_pool_;

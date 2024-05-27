@@ -15,6 +15,13 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
+#include <iostream>
+
 ///////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
 // ODBC locking:
@@ -24,7 +31,9 @@
 ///////////////////////////////////////////////////////////
 
 namespace google::cloud::odbc_bq_driver {
+void AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType);
 
+void ReleaseHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType);
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H

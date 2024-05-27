@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <map>
+#include <mutex>
 #include <set>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -34,10 +35,12 @@ class DescriptorHandle : public Handle {
 
   ~DescriptorHandle() = default;
 
-  DescriptorHandle(DescriptorHandle const&) = default;
-  DescriptorHandle& operator=(DescriptorHandle const&) = default;
-  DescriptorHandle(DescriptorHandle&&) = default;
-  DescriptorHandle& operator=(DescriptorHandle&&) = default;
+  DescriptorHandle(DescriptorHandle const& descriptorHandle);
+  DescriptorHandle& operator=(DescriptorHandle const& descriptorHandle);
+  DescriptorHandle(DescriptorHandle&& descriptorHandle) noexcept;
+  DescriptorHandle& operator=(DescriptorHandle&& descriptorHandle) noexcept;
+
+  std::mutex descriptor_handle_mutex_;
 
   DescriptorType GetType() { return type_; }
 

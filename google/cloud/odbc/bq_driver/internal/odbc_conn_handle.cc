@@ -63,6 +63,55 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
 
 }  // namespace
 
+ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle) {
+  std::mutex connection_handle_mutex_;
+  client_ = connectionHandle.client_;
+  dsn_ = connectionHandle.dsn_;
+  auth_ = connectionHandle.auth_;
+  attribute_str_values_ = connectionHandle.attribute_str_values_;
+  attribute_values_ = connectionHandle.attribute_values_;
+  stmt_handles_ = connectionHandle.stmt_handles_;
+  is_connected_ = connectionHandle.is_connected_;
+}
+
+ConnectionHandle& ConnectionHandle::operator=(
+    ConnectionHandle const& connectionHandle) {
+  std::mutex connection_handle_mutex_;
+  client_ = connectionHandle.client_;
+  dsn_ = connectionHandle.dsn_;
+  auth_ = connectionHandle.auth_;
+  attribute_str_values_ = connectionHandle.attribute_str_values_;
+  attribute_values_ = connectionHandle.attribute_values_;
+  stmt_handles_ = connectionHandle.stmt_handles_;
+  is_connected_ = connectionHandle.is_connected_;
+  return *this;
+}
+
+ConnectionHandle::ConnectionHandle(
+    ConnectionHandle&& connectionHandle) noexcept {
+  std::mutex connection_handle_mutex_;
+  client_ = std::move(connectionHandle.client_);
+  dsn_ = std::move(connectionHandle.dsn_);
+  auth_ = std::move(connectionHandle.auth_);
+  attribute_str_values_ = std::move(connectionHandle.attribute_str_values_);
+  attribute_values_ = std::move(connectionHandle.attribute_values_);
+  stmt_handles_ = std::move(connectionHandle.stmt_handles_);
+  is_connected_ = std::move(connectionHandle.is_connected_);
+}
+
+ConnectionHandle& ConnectionHandle::operator=(
+    ConnectionHandle&& connectionHandle) noexcept {
+  std::mutex connection_handle_mutex_;
+  client_ = std::move(connectionHandle.client_);
+  dsn_ = std::move(connectionHandle.dsn_);
+  auth_ = std::move(connectionHandle.auth_);
+  attribute_str_values_ = std::move(connectionHandle.attribute_str_values_);
+  attribute_values_ = std::move(connectionHandle.attribute_values_);
+  stmt_handles_ = std::move(connectionHandle.stmt_handles_);
+  is_connected_ = std::move(connectionHandle.is_connected_);
+  return *this;
+}
+
 void ConnectionHandle::SetUp(Section& dsn_section,
                              std::string const& dsn_name) {
   dsn_.description = dsn_section["Description"];

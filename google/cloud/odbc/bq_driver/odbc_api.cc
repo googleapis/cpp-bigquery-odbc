@@ -23,6 +23,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_diagnostics.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_lock.h"
 #include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
@@ -101,6 +102,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
 
+using ::google::cloud::odbc_bq_driver::AcquireHandleMutex;
+using ::google::cloud::odbc_bq_driver::ReleaseHandleMutex;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
@@ -237,6 +240,7 @@ SQLRETURN SQL_API SQLDriverConnect(
   bool is_tracing_enabled = IsTracingEnabled("SQLDriverConnect");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLDriverConnect(
@@ -257,6 +261,7 @@ SQLRETURN SQL_API SQLDriverConnect(
     TraceFunctionExit_SQLDriverConnect(rc, *(*kTraceOption));
 
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -271,6 +276,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -280,6 +286,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -310,6 +317,7 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
   // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
@@ -317,6 +325,7 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -332,6 +341,7 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -341,6 +351,7 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -367,6 +378,7 @@ SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
   bool is_tracing_enabled = IsTracingEnabled("SQLConnect");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLConnect(connectionHandle, serverName, serverNameLen,
@@ -379,6 +391,7 @@ SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLConnect(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -392,6 +405,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -401,6 +415,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -428,6 +443,7 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetInfo");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetInfo(connectionHandle, infoType, infoValue,
@@ -443,6 +459,7 @@ SQLRETURN SQL_API SQLGetInfo(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLGetInfo(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -456,6 +473,7 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -465,6 +483,7 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -482,6 +501,7 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetFunctions");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetFunctions(connectionHandle, functionId,
@@ -495,6 +515,7 @@ SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
   if (is_tracing_enabled)
     TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -516,6 +537,7 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetTypeInfo");
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
+  AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetTypeInfo(statementHandle, dataType,
@@ -530,6 +552,7 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
   if (is_tracing_enabled)
     TraceFunctionExit_SQLGetTypeInfo(rc, *(*kTraceOption));
   // Call to Release mutex for statement handle in odbc_lock.h.
+  ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
 
   return rc;
 }
@@ -542,6 +565,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Call to internal common function for SQLGetTypeInfo and SQLGetTypeInfoW
@@ -550,6 +574,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(SQLHSTMT statementHandle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
 
   return rc;
 }
@@ -573,6 +598,7 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttr");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSetConnectAttr(connectionHandle, attribute, value,
@@ -587,6 +613,7 @@ SQLRETURN SQL_API SQLSetConnectAttr(SQLHDBC connectionHandle,
   if (is_tracing_enabled)
     TraceFunctionExit_SQLSetConnectAttr(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -599,6 +626,7 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -608,6 +636,7 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -634,6 +663,7 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttr");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetConnectAttr(connectionHandle, attribute, value,
@@ -649,6 +679,7 @@ SQLRETURN SQL_API SQLGetConnectAttr(SQLHDBC connectionHandle,
   if (is_tracing_enabled)
     TraceFunctionExit_SQLGetConnectAttr(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -662,6 +693,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -671,6 +703,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -798,6 +831,7 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   bool is_tracing_enabled = IsTracingEnabled("SQLSetEnvAttr");
 
   // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
+  AcquireHandleMutex(environmentHandle, SQL_HANDLE_ENV);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSetEnvAttr(environmentHandle, attribute, value,
@@ -810,6 +844,7 @@ SQLRETURN SQL_API SQLSetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLSetEnvAttr(rc, *(*kTraceOption));
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
+  ReleaseHandleMutex(environmentHandle, SQL_HANDLE_ENV);
 
   return rc;
 }
@@ -827,6 +862,7 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetEnvAttr");
 
   // Call to Acquire mutex for environmentHandle handle in odbc_lock.h.
+  AcquireHandleMutex(environmentHandle, SQL_HANDLE_ENV);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetEnvAttr(environmentHandle, attribute, value,
@@ -840,6 +876,7 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLGetEnvAttr(rc, *(*kTraceOption));
   // Call to Release mutex for environmentHandle handle in odbc_lock.h.
+  ReleaseHandleMutex(environmentHandle, SQL_HANDLE_ENV);
 
   return rc;
 }
@@ -1371,6 +1408,7 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
   // Call to common internal function for SQLNativeSql and SQLNativeSqlW
@@ -1378,6 +1416,7 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -1393,6 +1432,7 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -1402,6 +1442,7 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -1558,6 +1599,7 @@ SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   bool is_tracing_enabled = IsTracingEnabled("SQLFetch");
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
+  AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLFetch(statementHandle, *(*kTraceOption));
@@ -1569,6 +1611,7 @@ SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLFetch(rc, *(*kTraceOption));
   // Call to Release mutex for statement handle in odbc_lock.h.
+  ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
 
   return rc;
 }
@@ -1788,6 +1831,7 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
   bool is_tracing_enabled = IsTracingEnabled("SQLBindCol");
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
+  AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLBindCol(statementHandle, columnNumber, targetCType,
@@ -1803,6 +1847,7 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLBindCol(rc, *(*kTraceOption));
   // Call to Release mutex for statement handle in odbc_lock.h.
+  ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
 
   return rc;
 }
@@ -1895,6 +1940,7 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagField");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetDiagField(
@@ -1912,6 +1958,7 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT handleType, SQLHANDLE handle,
     TraceFunctionExit_SQLGetDiagField(rc, *(*kTraceOption));
 
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
 
   return rc;
 }
@@ -1927,6 +1974,7 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -1936,6 +1984,7 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
 
   return rc;
 }
@@ -1965,6 +2014,7 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
   bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRec");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetDiagRec(
@@ -1981,6 +2031,7 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT handleType, SQLHANDLE handle,
   if (is_tracing_enabled) TraceFunctionExit_SQLGetDiagRec(rc, *(*kTraceOption));
 
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
 
   return rc;
 }
@@ -1995,6 +2046,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
 
   // Handle Unicode conversion of input parameters.
@@ -2004,6 +2056,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex in odbc_lock.h as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
 
   return rc;
 }
@@ -2578,12 +2631,14 @@ SQLRETURN SQL_API SQLFreeStmt(SQLHSTMT statementHandle, SQLUSMALLINT option) {
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
+  AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
   // Call to internal function for SQLFreeStmt in odbc_statement.h.
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for statement handle in odbc_lock.h.
+  ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
 
   return rc;
 }
@@ -2600,6 +2655,7 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  AcquireHandleMutex(handle, handleType);
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
 
@@ -2607,6 +2663,7 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  ReleaseHandleMutex(handle, handleType);
   // passed in.
 
   return rc;
@@ -2659,12 +2716,14 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle) {
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
+  AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
 
   // Call to internal function for SQLCancel in odbc_connection.h.
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   // Call to Release mutex for connection handle in odbc_lock.h.
+  ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
 
   return rc;
 }
@@ -2680,7 +2739,8 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLFreeHandle");
 
-  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
   if (is_tracing_enabled)
@@ -2691,7 +2751,8 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLFreeHandle(rc, *(*kTraceOption));
-  // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
   // passed in.
 
   return rc;
@@ -2712,14 +2773,16 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
 SQLRETURN SQLCancelHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   SQLRETURN rc = SQL_SUCCESS;
 
-  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type.
+  AcquireHandleMutex(handle, handleType);
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
 
   // Call to internal function for SQLCancelHandle in odbc_environment.h
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-  // Call to Release mutex in odbc_lock.h, as applicable for the handle type
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type.
+  ReleaseHandleMutex(handle, handleType);
   // passed in.
 
   return rc;

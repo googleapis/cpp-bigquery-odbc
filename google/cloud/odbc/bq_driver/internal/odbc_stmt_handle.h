@@ -59,6 +59,8 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
+  std::mutex statement_handle_mutex_;
+
   [[nodiscard]] DescriptorHandle& GetDescriptorHandle(
       DescriptorType type) const;
 

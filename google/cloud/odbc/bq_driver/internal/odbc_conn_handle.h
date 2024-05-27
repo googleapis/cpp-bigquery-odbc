@@ -56,10 +56,10 @@ class ConnectionHandle : public Handle {
   explicit ConnectionHandle() = default;
   ~ConnectionHandle() = default;
 
-  ConnectionHandle(ConnectionHandle const&) = default;
-  ConnectionHandle& operator=(ConnectionHandle const&) = default;
-  ConnectionHandle(ConnectionHandle&&) = default;
-  ConnectionHandle& operator=(ConnectionHandle&&) = default;
+  ConnectionHandle(ConnectionHandle const& connectionHandle);
+  ConnectionHandle& operator=(ConnectionHandle const& connectionHandle);
+  ConnectionHandle(ConnectionHandle&& connectionHandle) noexcept;
+  ConnectionHandle& operator=(ConnectionHandle&& connectionHandle) noexcept;
 
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
@@ -81,6 +81,8 @@ class ConnectionHandle : public Handle {
   HandleType kType = HandleType::kConnHandle;
 
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
+
+  std::mutex connection_handle_mutex_;
 
  protected:
   bool is_connected_ = false;
