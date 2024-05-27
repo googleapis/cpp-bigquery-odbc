@@ -640,6 +640,32 @@ TEST(StatementTest, FetchDirectRowWise) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+void PrepareAndCheckQuery(std::string const& query,
+                          std::shared_ptr<ODBCHandles> conn,
+                          int expected_param_count,
+                          std::string const& expected_param_type = "",
+                          std::string const& expected_param_name = "") {
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+  EXPECT_EQ(stmt_handle->GetQueryParameters().size(), expected_param_count);
+
+  if (expected_param_count > 0) {
+    EXPECT_EQ(stmt_handle->GetQueryParameters().at(0).parameter_type.type,
+              expected_param_type);
+    if (!expected_param_name.empty()) {
+      EXPECT_EQ(stmt_handle->GetQueryParameters().at(0).name,
+                expected_param_name);
+    }
+  }
+#endif
+}
+
 TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1081,7 +1107,7 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLPrepare) {
+TEST(SQLPrepare, SimpleStatementTest) {
   auto conn = std::make_shared<ODBCHandles>();
 
   // Execute a read query and check whether the results returned are as expected
@@ -1108,6 +1134,78 @@ TEST(StatementTest, SQLPrepare) {
   ColumnSchema const& column = result_set.row_schema[0];
   EXPECT_EQ(column.col_index, 0);
   EXPECT_EQ(column.col_type, BQDataType::kInt64);
+#endif
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, StatementFailure) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select * from NON_EXISTENT_TABLE";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, InsertQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query =
+      "INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'Alice', 28)";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+
+  // Retrieve the result set
+  ResultSet const& result_set = stmt_handle->GetResultSet();
+
+  ASSERT_EQ(result_set.row_schema.size(), 3);
+
+  ColumnSchema const& column = result_set.row_schema[0];
+  EXPECT_EQ(column.col_index, 0);
+  EXPECT_EQ(column.col_type, BQDataType::kInt64);
+
+  ColumnSchema const& column2 = result_set.row_schema[1];
+  EXPECT_EQ(column2.col_index, 1);
+  EXPECT_EQ(column2.col_type, BQDataType::kString);
+
+  ColumnSchema const& column3 = result_set.row_schema[2];
+  EXPECT_EQ(column3.col_index, 2);
+  EXPECT_EQ(column3.col_type, BQDataType::kInt64);
+#endif
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ParametrizedQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+
+  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=1",
+                       conn, 0);
+  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
+                       conn, 1, "INT64");
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  PrepareAndCheckQuery(
+      "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
+      "INT64", "var");
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

@@ -17,11 +17,12 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::Options;
-using google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -94,7 +95,7 @@ StatusRecord StatementHandle::SetAttribute(int attribute, SQLULEN value) {
   return StatusRecord::Ok();
 }
 
-StatusRecord StatementHandle::PopulatResultSet(TableSchema const& schema) {
+StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
   for (int i = 0; i < schema.fields.size(); ++i) {
     auto const& field = schema.fields[i];
     ColumnSchema column;
@@ -121,22 +122,41 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
   }
 
-  QueryRequest req;
-
+  Job req;
   std::string query(reinterpret_cast<char const*>(query_text));
+  req.configuration.query.query = query;
+  req.configuration.query.use_query_cache = true;
+  req.configuration.dry_run = true;
+  req.configuration.query.use_legacy_sql = false;
 
-  req.set_query(query).set_dry_run(true);
+  std::regex positional_pattern(R"(\?)");
+  std::regex named_pattern(R"([:@]\w+)");
+
+  // Check for positional parameters
+  if (std::regex_search(query, positional_pattern)) {
+    req.configuration.query.parameter_mode = "POSITIONAL";
+  }
+
+  // Check for named parameters
+  if (std::regex_search(query, named_pattern)) {
+    req.configuration.query.parameter_mode = "NAMED";
+  }
+
   Options opt;
 
-  auto response = this->GetConnectionHandle()->GetClient()->Query(
+  auto response = this->GetConnectionHandle()->GetClient()->InsertJob(
       GetConnectionHandle()->GetDsn().catalog, req, opt);
 
   if (!response.Ok()) {
     return response.GetStatusRecord();
   }
+  auto& schema = response.GetValue().statistics.job_query_stats.schema;
 
-  auto& schema = response.GetValue().schema;
-  auto pop_response = PopulatResultSet(schema);
+  auto pop_response = PopulateResultSet(schema);
+
+  SetQueryParameters(
+      response.GetValue()
+          .statistics.job_query_stats.undeclared_query_parameters);
 
   if (!pop_response.ok()) {
     return pop_response;

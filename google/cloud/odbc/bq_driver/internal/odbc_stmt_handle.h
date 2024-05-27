@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_attr.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
 #include <map>
 #include <memory>
 
@@ -82,14 +83,24 @@ class StatementHandle : public Handle {
   }
 
   [[nodiscard]] inline SQLSMALLINT GetParamCount() const {
-    return param_count_;
-  }
-  inline void SetParamCount(SQLSMALLINT param_count) {
-    param_count_ = param_count;
+    return query_parameters_.size();
   }
 
   [[nodiscard]] inline ResultSet const& GetResultSet() const {
     return result_set_;
+  }
+
+  [[nodiscard]] inline std::vector<
+      google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
+  GetQueryParameters() const {
+    return query_parameters_;
+  }
+
+  inline void SetQueryParameters(
+      std::vector<
+          google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
+          query_parameters) {
+    query_parameters_ = query_parameters;
   }
 
  protected:
@@ -102,8 +113,10 @@ class StatementHandle : public Handle {
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
-  SQLSMALLINT param_count_ = 0;
-  odbc_internal::StatusRecord PopulatResultSet(
+  std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+      query_parameters_;
+
+  odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };
 

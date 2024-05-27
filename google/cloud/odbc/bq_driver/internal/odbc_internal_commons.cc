@@ -171,7 +171,7 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   if (type == "BOOL" || type == "BOOLEAN") {
     return BQDataType::kBool;
   }
-  if (type == "FLOAT64") {
+  if (type == "FLOAT64" || type == "FLOAT") {
     return BQDataType::kFloat64;
   }
   if (type == "DECIMAL" || type == "NUMERIC") {
