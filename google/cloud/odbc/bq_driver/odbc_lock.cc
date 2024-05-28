@@ -22,56 +22,60 @@ using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 void AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
-  switch (handleType) {
-    case SQL_HANDLE_ENV: {
-      auto* Env_Handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
-      Env_Handle_ptr->environment_handle_mutex_.lock();
-      break;
+  if (handle) {
+    switch (handleType) {
+      case SQL_HANDLE_ENV: {
+        auto* env_handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
+        env_handle_ptr->GetMutex().lock();
+        break;
+      }
+      case SQL_HANDLE_DBC: {
+        auto* conn_handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
+        conn_handle_ptr->GetMutex().lock();
+        break;
+      }
+      case SQL_HANDLE_STMT: {
+        auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(handle);
+        stmt_handle_ptr->GetMutex().lock();
+        break;
+      }
+      case SQL_HANDLE_DESC: {
+        auto* desc_handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
+        desc_handle_ptr->GetMutex().lock();
+        break;
+      }
+      default:
+        std::cout << "Unknown Handle Type to Acquire the lock" << std::endl;
     }
-    case SQL_HANDLE_DBC: {
-      auto* Conn_Handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
-      Conn_Handle_ptr->connection_handle_mutex_.lock();
-      break;
-    }
-    case SQL_HANDLE_STMT: {
-      auto* Stmt_Handle_ptr = reinterpret_cast<StatementHandle*>(handle);
-      Stmt_Handle_ptr->statement_handle_mutex_.lock();
-      break;
-    }
-    case SQL_HANDLE_DESC: {
-      auto* Desc_Handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
-      Desc_Handle_ptr->descriptor_handle_mutex_.lock();
-      break;
-    }
-    default:
-      std::cout << "Unknown Handle Type to Acquire the lock" << std::endl;
   }
 }
 
 void ReleaseHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
-  switch (handleType) {
-    case SQL_HANDLE_ENV: {
-      auto* Env_Handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
-      Env_Handle_ptr->environment_handle_mutex_.unlock();
-      break;
+  if (handle) {
+    switch (handleType) {
+      case SQL_HANDLE_ENV: {
+        auto* env_handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
+        env_handle_ptr->GetMutex().unlock();
+        break;
+      }
+      case SQL_HANDLE_DBC: {
+        auto* conn_handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
+        conn_handle_ptr->GetMutex().unlock();
+        break;
+      }
+      case SQL_HANDLE_STMT: {
+        auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(handle);
+        stmt_handle_ptr->GetMutex().unlock();
+        break;
+      }
+      case SQL_HANDLE_DESC: {
+        auto* desc_handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
+        desc_handle_ptr->GetMutex().unlock();
+        break;
+      }
+      default:
+        std::cout << "Unknown Handle Type to Release the lock" << std::endl;
     }
-    case SQL_HANDLE_DBC: {
-      auto* Conn_Handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
-      Conn_Handle_ptr->connection_handle_mutex_.unlock();
-      break;
-    }
-    case SQL_HANDLE_STMT: {
-      auto* Stmt_Handle_ptr = reinterpret_cast<StatementHandle*>(handle);
-      Stmt_Handle_ptr->statement_handle_mutex_.unlock();
-      break;
-    }
-    case SQL_HANDLE_DESC: {
-      auto* Desc_Handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
-      Desc_Handle_ptr->descriptor_handle_mutex_.unlock();
-      break;
-    }
-    default:
-      std::cout << "Unknown Handle Type to Release the lock" << std::endl;
   }
 }
 

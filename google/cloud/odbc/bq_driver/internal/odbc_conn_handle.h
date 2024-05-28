@@ -84,7 +84,7 @@ class ConnectionHandle : public Handle {
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
   std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
 
-  std::mutex connection_handle_mutex_;
+  std::mutex& GetMutex() { return connection_handle_mutex_; }
 
  protected:
   bool is_connected_ = false;
@@ -102,6 +102,7 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, std::string> attribute_str_values_;
   // storage of all statement handles associated with this connection handle
   std::set<StatementHandle*> stmt_handles_;
+  std::mutex connection_handle_mutex_;
   // storage of all explicitly allocated descriptor handles associated with this
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;

@@ -41,8 +41,6 @@ class DescriptorHandle : public Handle {
   DescriptorHandle(DescriptorHandle&& descriptorHandle) noexcept;
   DescriptorHandle& operator=(DescriptorHandle&& descriptorHandle) noexcept;
 
-  std::mutex descriptor_handle_mutex_;
-
   DescriptorType GetType() { return type_; }
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
@@ -79,6 +77,8 @@ class DescriptorHandle : public Handle {
     return associated_stmt_handles_;
   };
 
+  std::mutex& GetMutex() { return descriptor_handle_mutex_; }
+
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
   inline void SetConnectionHandle(ConnectionHandle* conn_handle) {
     conn_handle_ = conn_handle;
@@ -91,6 +91,7 @@ class DescriptorHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::set<std::pair<StatementHandle*, DescriptorType>>
       associated_stmt_handles_;
+  std::mutex descriptor_handle_mutex_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

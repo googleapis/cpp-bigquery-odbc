@@ -59,8 +59,6 @@ class StatementHandle : public Handle {
   StatementHandle(StatementHandle&&) = default;
   StatementHandle& operator=(StatementHandle&&) = default;
 
-  std::mutex statement_handle_mutex_;
-
   [[nodiscard]] DescriptorHandle& GetDescriptorHandle(
       DescriptorType type) const;
 
@@ -94,6 +92,8 @@ class StatementHandle : public Handle {
     return result_set_;
   }
 
+  std::mutex& GetMutex() { return statement_handle_mutex_; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -105,6 +105,7 @@ class StatementHandle : public Handle {
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
   SQLSMALLINT param_count_ = 0;
+  std::mutex statement_handle_mutex_;
   odbc_internal::StatusRecord PopulatResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };
