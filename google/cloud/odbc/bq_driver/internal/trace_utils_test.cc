@@ -181,6 +181,7 @@ TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
   EXPECT_EQ(1, (*test_option)->log_level);
 
   (*test_option)->trace_file.close();
+  
 }
 
 TEST(TraceLoggingConsole, BasicODBCTypes) {
