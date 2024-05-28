@@ -64,6 +64,8 @@ class ConnectionHandle : public Handle {
 
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
+  inline void Disconnect() { is_connected_ = false; };
+
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
   Dsn GetDsn() { return dsn_; }

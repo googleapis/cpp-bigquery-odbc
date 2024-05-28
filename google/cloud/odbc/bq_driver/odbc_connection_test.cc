@@ -17,9 +17,17 @@
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
+
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SetConnectionAttr, SuccessNonChar) {
   SQLHENV env_handle;
@@ -113,6 +121,23 @@ TEST(GetConnectionAttr, FailUnSupportedAttribute) {
                                                  &val, 0, &str_len));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_DBC, handle));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
+}
+
+TEST(SQLDisconnectInternal, Disconnect) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  DescriptorHandle impl_desc;
+  StatementHandle* stmt_handle = new StatementHandle(
+      &conn_handle, {impl_desc, impl_desc, impl_desc, impl_desc});
+  conn_handle.GetStatementHandles().emplace(stmt_handle);
+  DescriptorHandle* desc_handle = new DescriptorHandle();
+  conn_handle.GetDescriptorHandles().emplace(desc_handle);
+  desc_handle->SetConnectionHandle(&conn_handle);
+
+  auto status = SQLDisconnectInternal(&conn_handle);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_TRUE(conn_handle.GetStatementHandles().empty());
+  EXPECT_TRUE(conn_handle.GetDescriptorHandles().empty());
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -52,6 +52,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
@@ -80,6 +81,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
@@ -2657,13 +2659,18 @@ SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLDisconnect(SQLHDBC connectionHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLDisconnect");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLDisconnect(connectionHandle, *(*kTraceOption));
 
   // Call to internal function for SQLCancel in odbc_connection.h.
+  rc = google::cloud::odbc_bq_driver::SQLDisconnectInternal(connectionHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLDisconnect(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;

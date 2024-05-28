@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -27,9 +29,11 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::Section;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::StatusRecord;
@@ -200,6 +204,34 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
     }
   }
 
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(connection_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  ConnectionHandle* conn_handle = *handle_result;
+
+  conn_handle->Disconnect();
+  std::set<DescriptorHandle*> desc_handles{conn_handle->GetDescriptorHandles()};
+  for (auto* const desc_handle : desc_handles) {
+    auto status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
+    if (status != SQL_SUCCESS) {
+      return status;
+    }
+  }
+  std::set<StatementHandle*> stmt_handles{conn_handle->GetStatementHandles()};
+  for (auto* const stmt_handle : stmt_handles) {
+    auto status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
+    if (status != SQL_SUCCESS) {
+      return status;
+    }
+  }
   return SQL_SUCCESS;
 }
 
