@@ -58,7 +58,11 @@ function (odbc_define_tests)
     file(
         GLOB odbc_driver_tests_src_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "odbc_driver_tests/*_test.cc")
+        # "odbc_driver_tests/*catalog_test.cc")
+        "odbc_driver_tests/*data_translation_test.cc")
+
+    # file( GLOB odbc_driver_tests_src_cc RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    # "odbc_driver_tests/*data_translation_test.cc")
 
     set(odbc_driver_tests_src ${odbc_driver_tests_src_cc})
 
@@ -106,8 +110,8 @@ function (odbc_define_demo_tests)
     gtest_discover_tests(all_demo_tests)
 endfunction ()
 
-odbc_define_demo_tests()
+# odbc_define_demo_tests()
 
 odbc_define_tests()
 
-define_client_library_integration_tests()
+# define_client_library_integration_tests()

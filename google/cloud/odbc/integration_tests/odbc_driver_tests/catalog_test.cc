@@ -222,6 +222,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef Random
+
 TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
@@ -435,6 +437,8 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif  // Random
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

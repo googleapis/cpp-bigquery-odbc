@@ -22,15 +22,24 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
-using ::google::cloud::odbc_bq_driver_internal::DescriptorType;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
-using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::ToSqlPointer;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
-using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::DSRow;
+using google::cloud::odbc_bq_driver_internal::DSValue;
+using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::ReadInt64;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::RowSchema;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
+using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -138,7 +147,87 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
+StatusRecord WriteToApplicationBuffer(DSValue& ds_val, BQDataType bq_data_type,
+                                      DescriptorRecord& app_desc) {
+  SQLSMALLINT target_c_type = app_desc.concise_type;
+  SQLPOINTER app_buffer = app_desc.data_ptr;
+  SQLLEN app_buffer_len = app_desc.octet_length;
+  SQLPOINTER indicator_ptr = app_desc.indicator_ptr;
+  SQLLEN* octet_length_ptr = app_desc.octet_length_ptr;
+  if (bq_data_type == BQDataType::kInt64) {
+    SQLBIGINT sql_val = ReadInt64(ds_val);
+    if (target_c_type == SQL_C_CHAR) {
+      std::string str_val = std::to_string(sql_val);
+      // return StringValueToOutputBufferResponse<SQLINTEGER>(
+      //     str_val.c_str(), app_buffer,
+      //     static_cast<SQLINTEGER>(app_buffer_len),
+      //     (SQLINTEGER*)octet_length_ptr);
+      //  SQLLEN bytes_to_write = str_val.size();
+      //  if(bytes_to_write > app_buffer_len) {
+      //    return StatusRecord{odbc_internal::SQLStates::k_HY090(),
+      //                                "Buffer length is negative"};
+      //  }
+      //  std::memcpy(app_buffer, str_val.c_str(), str_val.size());
+      //  return StatusRecord::Ok();
+    } else if (target_c_type == SQL_C_FLOAT || target_c_type == SQL_C_DOUBLE ||
+               target_c_type == SQL_C_SBIGINT) {
+      // IntValueToOutputBufferResponse();
+      // val_ptr = reinterpret_cast<T*>(buffer_ptr);
+    }
+  } else if (bq_data_type == BQDataType::kString) {
+    if (target_c_type == SQL_C_CHAR) {
+      // std::string str_val = (SQLCHAR*)ds_val.data();
+      // return StringValueToOutputBufferResponse<SQLINTEGER>(str_val.c_str(),
+      // app_buffer, (SQLINTEGER)app_buffer_len, (SQLINTEGER*)octet_length_ptr);
+    }
+  }
+}
+
+StatusRecord WriteDSRow(DSRow& ds_row, RowSchema& schema,
+                        DescriptorHandle& ard) {
+  for (ColumnSchema& col_schema : schema) {
+    int col_index = col_schema.col_index + 1;
+    DSValue& ds_val = ds_row[col_index];
+    // Column is not bound.
+    if (!ard.HasDescriptorRecord(col_index)) {
+      continue;
+    }
+
+    DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index);
+  }
+  return StatusRecord::Ok();
+}
+
+SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
+    return SQL_NO_DATA_FOUND;
+  }
+
+  if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
+    StatusRecord status_record = {SQLStates::k_HY010(),
+                                  "No statement has been executed"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
+  int rowset_size = ard.GetHeaderRecord().array_size;
+
+  ResultSet& result_set = handle.GetResultSet();
+
+  // if(result_set.cursor > result_set) {
+  // }
+
+  return SQL_SUCCESS;
+}
 
 // NOLINTEND(misc-unused-parameters)
 

@@ -241,7 +241,7 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
     }
     insert_stmt.append(row_str);
   }
-
+  std::cout << "insert_stmt:: " << insert_stmt << std::endl;
   SQLRETURN status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);

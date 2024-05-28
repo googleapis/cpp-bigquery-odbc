@@ -48,6 +48,13 @@ enum BQDataType {
   kNull
 };
 
+// enum BQDataType1 {
+//   kBool,
+//   kFloat64,
+//   kInt64,
+//   kString,
+// };
+
 // Contains the column data types, as represented by the data source,
 // for each column in a ResultSet row.
 struct ColumnSchema {
@@ -72,6 +79,9 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
+  int cursor = 0;
+  // SQLULEN rowset_size = 1;
+  int next_rowset_start = 0;
 };
 
 inline void StringToDSValue(std::string& str, DSValue& value) {
@@ -88,10 +98,28 @@ inline void IntToDSValue(int64_t int_val, DSValue& ds_value) {
   std::memcpy(ds_value.data(), &int_val, sizeof(int64_t));
 }
 
+template <typename SrcType>
+inline void ArithmeticToDSValue(SrcType arithmetic_val, DSValue& ds_value) {
+  ds_value.resize(sizeof(SrcType));
+  std::memcpy(ds_value.data(), &arithmetic_val, sizeof(SrcType));
+}
+
 inline int64_t DSValueToInt(DSValue& ds_value) {
   int64_t int_val;
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
+}
+
+inline SQLBIGINT ReadInt64(DSValue& val) {
+  SQLBIGINT ret_val;
+  std::memcpy(&ret_val, val.data(), sizeof(ret_val));
+  return ret_val;
+}
+
+inline SQLDOUBLE ReadFloat64(DSValue& val) {
+  SQLDOUBLE ret_val;
+  std::memcpy(&ret_val, val.data(), sizeof(ret_val));
+  return ret_val;
 }
 
 // This is the result populated by performing a bq query API.

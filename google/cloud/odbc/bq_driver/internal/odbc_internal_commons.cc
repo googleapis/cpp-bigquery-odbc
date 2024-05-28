@@ -65,7 +65,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kInt64: {
-            auto l_data = std::stol(data);
+            SQLBIGINT l_data = std::stol(data);
             IntToDSValue(l_data, row_val);
             break;
           }

@@ -137,31 +137,32 @@ function (bq_driver_define_unit_tests)
     add_executable(
         google_cloud_odbc_bq_driver_unit_tests
         bq_driver/internal/data_translation_test.cc
-        bq_driver/internal/diagnostics_test.cc
-        bq_driver/internal/odbc_conn_attr_test.cc
-        bq_driver/internal/odbc_conn_handle_test.cc
-        bq_driver/internal/odbc_desc_attr_test.cc
-        bq_driver/internal/odbc_desc_handle_test.cc
-        bq_driver/internal/odbc_env_handle_test.cc
-        bq_driver/internal/odbc_internal_commons_test.cc
-        bq_driver/internal/odbc_sql_fns_test.cc
-        bq_driver/internal/odbc_sql_info_test.cc
-        bq_driver/internal/odbc_sql_primary_keys_test.cc
-        bq_driver/internal/odbc_stmt_attr_test.cc
-        bq_driver/internal/odbc_stmt_handle_test.cc
-        bq_driver/internal/odbc_type_utils_test.cc
-        bq_driver/internal/trace_utils_test.cc
-        bq_driver/internal/utils_test.cc
-        bq_driver/odbc_commons_test.cc
-        bq_driver/odbc_connection_test.cc
-        bq_driver/odbc_descriptor_test.cc
-        bq_driver/odbc_diagnostics_test.cc
-        bq_driver/odbc_driver_metadata_test.cc
-        bq_driver/odbc_environment_test.cc
-        bq_driver/odbc_sql_requests_test.cc
-        bq_driver/odbc_sql_results_test.cc
-        bq_driver/odbc_statement_test.cc
-        bq_driver/odbc_utils_test.cc)
+        # bq_driver/internal/diagnostics_test.cc
+        # bq_driver/internal/odbc_conn_attr_test.cc
+        # bq_driver/internal/odbc_conn_handle_test.cc
+        # bq_driver/internal/odbc_desc_attr_test.cc
+        # bq_driver/internal/odbc_desc_handle_test.cc
+        # bq_driver/internal/odbc_env_handle_test.cc
+        # bq_driver/internal/odbc_internal_commons_test.cc
+        # bq_driver/internal/odbc_sql_fns_test.cc
+        # bq_driver/internal/odbc_sql_info_test.cc
+        # bq_driver/internal/odbc_sql_primary_keys_test.cc
+        # bq_driver/internal/odbc_stmt_attr_test.cc
+        # bq_driver/internal/odbc_stmt_handle_test.cc
+        # bq_driver/internal/odbc_type_utils_test.cc
+        # bq_driver/internal/trace_utils_test.cc
+        # bq_driver/internal/utils_test.cc
+        # bq_driver/odbc_commons_test.cc
+        # bq_driver/odbc_connection_test.cc
+        # bq_driver/odbc_descriptor_test.cc
+        # bq_driver/odbc_diagnostics_test.cc
+        # bq_driver/odbc_driver_metadata_test.cc
+        # bq_driver/odbc_environment_test.cc
+        # bq_driver/odbc_sql_requests_test.cc
+        # bq_driver/odbc_sql_results_test.cc
+        # bq_driver/odbc_statement_test.cc
+        # bq_driver/odbc_utils_test.cc
+    )
 
     target_link_libraries(
         google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils

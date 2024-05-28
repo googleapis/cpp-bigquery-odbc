@@ -88,9 +88,7 @@ class StatementHandle : public Handle {
     param_count_ = param_count;
   }
 
-  [[nodiscard]] inline ResultSet const& GetResultSet() const {
-    return result_set_;
-  }
+  [[nodiscard]] inline ResultSet& GetResultSet() { return result_set_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;

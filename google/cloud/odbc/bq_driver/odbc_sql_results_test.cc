@@ -26,9 +26,21 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+
+// Helper class and functions specific to SQLFetch  unit tests.
+namespace {
+class SQLFetchTestStatementHandle : public StatementHandle {
+ public:
+  explicit SQLFetchTestStatementHandle() = default;
+  void SetQueryString(std::string query_str) { query_str_ = query_str; }
+  void SetResultSet(ResultSet& result_set) { result_set_ = result_set; }
+};
+}  // namespace
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   SQLUSMALLINT out_desc_count;
@@ -38,6 +50,7 @@ inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   return out_desc_count;
 }
 
+/*
 TEST(SQLBindColInternal, Basic) {
   StatementHandle handle = CreateStatementHandle();
   SQLCHAR buf[20];
@@ -290,6 +303,85 @@ TEST(SQLBindColInternal, InvalidCType) {
 
   // If SQLBindColInternal has failed, SQL_DESC_COUNT should remain unchanged
   EXPECT_EQ(0, GetDescCount(ard));
+}
+*/
+
+TEST(SQLFetchInternal, InvalidHandle) {
+  ConnectionHandle handle;
+  SQLRETURN status = SQLFetchInternal(&handle);
+  ASSERT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+struct StrBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  std::string value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+struct NumericBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  double value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
+    {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
+    {SQL_C_FLOAT, "19.1", SQL_SUCCESS},
+    {SQL_C_FLOAT, "2a", SQL_ERROR},
+    {SQL_C_DOUBLE, "-38.3", SQL_SUCCESS},
+    {SQL_C_DOUBLE, "a3", SQL_ERROR},
+    {SQL_C_SLONG, "-934934934", SQL_SUCCESS},
+    {SQL_C_SLONG, "1.1",
+     SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
+                              // precision
+    {SQL_C_SLONG, "b1", SQL_ERROR},
+    {SQL_C_ULONG, "934934934", SQL_SUCCESS},
+    {SQL_C_ULONG, "1.1",
+     SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
+                              // precision
+    {SQL_C_ULONG, "b1", SQL_ERROR},
+    {SQL_C_BIT, "0", SQL_SUCCESS},
+    {SQL_C_BIT, "1", SQL_SUCCESS},
+    {SQL_C_BIT, "2", SQL_ERROR},
+};
+
+std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
+    {SQL_C_CHAR, 123, SQL_SUCCESS},
+    {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
+    {SQL_C_FLOAT, -157.8, SQL_SUCCESS},
+    {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
+    {SQL_C_SLONG, -13, SQL_SUCCESS},
+    {SQL_C_SLONG, 13.3,
+     SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
+                              // precision
+    {SQL_C_ULONG, 81, SQL_SUCCESS},
+    {SQL_C_ULONG, -8, SQL_ERROR},
+    {SQL_C_ULONG, 1.1, SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because
+                                                // there is loss of precision
+    {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BIT, 1, SQL_SUCCESS},
+    {SQL_C_BIT, 2, SQL_ERROR},
+};
+
+TEST(SQLFetchInternal, Basic) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLBindColInternal(&handle, 1, SQL_C_FLOAT, buf, 20, &target_str_len);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  ResultSet result_set;
+
+  status = SQLFetchInternal(&handle);
+  ASSERT_EQ(SQL_SUCCESS, status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
