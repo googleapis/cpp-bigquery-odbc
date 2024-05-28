@@ -18,6 +18,7 @@
 #ifdef _WIN32
 
 #define _WINSOCKAPI_
+#include <limits>
 #include <windows.h>
 #include <winreg.h>
 
