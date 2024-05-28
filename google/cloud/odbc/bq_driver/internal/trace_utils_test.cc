@@ -183,6 +183,18 @@ TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
   (*test_option)->trace_file.close();
 }
 
+TEST(TraceLogging, TraceLoggingDisabled) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections2);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_trace_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+
+  std::shared_ptr<TraceOptions> test_trace_opts_console =
+      *(TraceOptions::CreateTraceOptionsConsole(false, 0));
+
+  EXPECT_FALSE((*test_trace_opts_file)->logging_enabled);
+  EXPECT_FALSE((test_trace_opts_console)->logging_enabled);
+}
+
 TEST(TraceLoggingConsole, BasicODBCTypes) {
   std::string fmt1 = FormatSqlSmallInt(1);
   std::string fmt2 = FormatSqlUSmallInt(2);
