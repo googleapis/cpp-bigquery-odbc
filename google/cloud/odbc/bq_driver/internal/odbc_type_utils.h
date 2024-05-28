@@ -23,6 +23,20 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+struct DataBuffer {
+  // C data type of the data the application expects
+  SQLSMALLINT type;
+
+  // Pointer to the buffer provided by the application
+  SQLPOINTER buf;
+
+  // Length of the buffer provided by the application
+  SQLLEN buflen;
+
+  // Length of the result populated by the driver
+  SQLLEN* result_len;
+};
+
 struct Interval {
   SQLSMALLINT concise_sql_type;
   SQLSMALLINT concise_c_type;
@@ -79,7 +93,7 @@ inline SQLPOINTER ToSqlPointer(T x) {
 }
 // NOLINTEND(performance-no-int-to-ptr)
 
-// U usually can be SQLINTEGER and SQLSMALLINT
+// U usually can be SQLINTEGER, SQLSMALLINT or SQLLEN
 template <typename U>
 odbc_internal::StatusRecord StringValueToOutputBufferResponse(
     char const* src, SQLPOINTER buffer_ptr, U buffer_len, U* str_len_ptr) {
@@ -117,6 +131,12 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
   }
 
   return status_record;
+}
+
+inline odbc_internal::StatusRecord StringValueToOutputBufferResponse(
+    char const* src, DataBuffer& dest_data) {
+  return StringValueToOutputBufferResponse<SQLLEN>(
+      src, dest_data.buf, dest_data.buflen, dest_data.result_len);
 }
 
 // T usually can be SQLINTEGER, SQLSMALLINT, SQLLEN, and it's unsigned values

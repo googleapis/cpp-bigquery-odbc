@@ -88,6 +88,12 @@ inline void IntToDSValue(int64_t int_val, DSValue& ds_value) {
   std::memcpy(ds_value.data(), &int_val, sizeof(int64_t));
 }
 
+template <typename SrcType>
+inline void ArithmeticToDSValue(SrcType arithmetic_val, DSValue& ds_value) {
+  ds_value.resize(sizeof(SrcType));
+  std::memcpy(ds_value.data(), &arithmetic_val, sizeof(SrcType));
+}
+
 inline int64_t DSValueToInt(DSValue& ds_value) {
   int64_t int_val;
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
