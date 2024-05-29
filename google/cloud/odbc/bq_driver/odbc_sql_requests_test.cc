@@ -44,7 +44,7 @@ TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
   SQLLEN buff_len = 40;
   SQLLEN str_len = 50;
 
-  SQLRETURN status = SQLBindParameter(
+  SQLRETURN status = SQLBindParameterInternal(
       &desc_handle, param_number, in_out_type, value_type, param_type, col_size,
       decimal_digits, &param_val, buff_len, &str_len);
 
@@ -63,7 +63,7 @@ TEST(SQLBindParameterInternal, Fail_ParameterNumberIsZero) {
   SQLLEN buff_len = 40;
   SQLLEN str_len = 50;
 
-  SQLRETURN status = SQLBindParameter(
+  SQLRETURN status = SQLBindParameterInternal(
       &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
       decimal_digits, &param_val, buff_len, &str_len);
 
@@ -84,7 +84,7 @@ TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
   SQLLEN buff_len = -40;
   SQLLEN str_len = 50;
 
-  SQLRETURN status = SQLBindParameter(
+  SQLRETURN status = SQLBindParameterInternal(
       &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
       decimal_digits, &param_val, buff_len, &str_len);
 
@@ -106,7 +106,7 @@ TEST(SQLBindParameterInternal,
   SQLLEN buff_len = 40;
   SQLLEN str_len = 50;
 
-  SQLRETURN status = SQLBindParameter(
+  SQLRETURN status = SQLBindParameterInternal(
       &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
       decimal_digits, &param_val, buff_len, &str_len);
 
@@ -131,7 +131,7 @@ TEST(SQLBindParameterInternal,
   SQLLEN buff_len = 40;
   SQLLEN str_len = 50;
 
-  SQLRETURN status = SQLBindParameter(
+  SQLRETURN status = SQLBindParameterInternal(
       &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
       decimal_digits, &param_val, buff_len, &str_len);
 
@@ -322,7 +322,7 @@ TEST(SQLPrepareInternal, Fail_InvalidHandle) {
   SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
   SQLINTEGER len = queryStr.length();
 
-  SQLRETURN status = SQLPrepare(stmt_handle, query, len);
+  SQLRETURN status = SQLPrepareInternal(stmt_handle, query, len);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
