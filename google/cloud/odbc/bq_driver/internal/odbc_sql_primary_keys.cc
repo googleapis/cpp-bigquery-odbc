@@ -106,11 +106,6 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   query_request.set_parameter_mode("NAMED");
   query_request.set_query_parameters(*query_param_status);
   query_request.set_use_legacy_sql(false);
-  // TODO(b/343189825): Remove these once json filtering is working
-  // correctly.
-  query_request.set_timeout(kQueryTimeoutMs);
-  query_request.set_max_results(kMaxResults);
-  query_request.set_maximum_bytes_billed(kMaxBytesBilled);
   // Set billing info and query request.
   post_request.set_project_id(catalog_name);
   post_request.set_query_request(query_request);

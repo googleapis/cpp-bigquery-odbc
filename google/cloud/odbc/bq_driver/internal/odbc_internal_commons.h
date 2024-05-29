@@ -75,12 +75,6 @@ struct ResultSet {
   ResultSetRows rows;
 };
 
-// TODO(b/343189825): Remove these once json filtering is working correctly.
-std::int64_t const kMaxResults = 100000;
-std::chrono::milliseconds const kQueryTimeoutMs =
-    std::chrono::milliseconds(30000);  // 30 seconds
-std::int64_t const kMaxBytesBilled = 20971520;
-
 inline void StringToDSValue(std::string& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());
