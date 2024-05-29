@@ -28,6 +28,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 
 SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref) {
   SQLRETURN status = SQLAllocEnvHandle(env_handle_ref);
@@ -69,6 +70,12 @@ StatementHandle CreateStatementHandle() {
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
   return StatementHandle(nullptr, {ard, apd, ird, ipd});
+}
+
+StatementHandle CreatePreparedStatementHandle() {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+  return stmt_handle;
 }
 
 DescriptorHandle CreateExplicitDescriptor() {

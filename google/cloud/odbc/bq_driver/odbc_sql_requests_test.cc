@@ -28,6 +28,8 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
@@ -189,8 +191,7 @@ TEST(SQLDescribeParam, Fail_InvalidHandle) {
 }
 
 TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  // TODO(b/340440354) Change stmt handle state to 'prepared'
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -205,8 +206,7 @@ TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
 }
 
 TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  // TODO(b/340440354) Change stmt handle state to 'prepared'
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -220,9 +220,28 @@ TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
+TEST(SQLDescribeParam, Fail_StatementIsNotPrepared) {
   StatementHandle stmt_handle = CreateStatementHandle();
-  // TODO(b/340440354) Change stmt handle state to 'prepared'
+  DescriptorRecord record;
+  DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
+  SQLUSMALLINT param_number = 1;
+  ipd.BindNewDescriptorRecord(param_number, record);
+
+  SQLSMALLINT data_type = 0;
+  SQLULEN param_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLRETURN status =
+      SQLDescribeParamInternal(&stmt_handle, param_number, &data_type,
+                               &param_size, &decimal_digits, &nullable);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -241,8 +260,7 @@ TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
 }
 
 TEST(SQLDescribeParam, Describe_SQL_CHAR) {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  // TODO(b/340440354) Change stmt handle state to 'prepared'
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -261,8 +279,7 @@ TEST(SQLDescribeParam, Describe_SQL_CHAR) {
 }
 
 TEST(SQLDescribeParam, Describe_SQL_DATE) {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  // TODO(b/340440354) Change stmt handle state to 'prepared'
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;

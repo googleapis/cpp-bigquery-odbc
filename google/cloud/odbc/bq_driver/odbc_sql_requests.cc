@@ -28,6 +28,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -158,23 +159,29 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  StatementHandle* handle = *handle_result;
+  StatementHandle& handle = *(*handle_result);
 
-  // TODO(b/341855123) Check if statement handle is in 'prepared' state
+  if (handle.GetStmtState() < StmtStates::kStatementPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
 
   if (parameter_number < 1) {
     StatusRecord status_record = {SQLStates::k_07009(),
                                   "Invalid descriptor index"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
+    handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
 
-  DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+  DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
   if (!ipd.HasDescriptorRecord(parameter_number)) {
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no parameter for such value"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
+    handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
 
