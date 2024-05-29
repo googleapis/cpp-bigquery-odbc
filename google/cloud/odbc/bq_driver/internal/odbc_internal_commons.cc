@@ -26,7 +26,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
-using ::google::cloud::bigquery_v2_minimal_internal::Value;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;

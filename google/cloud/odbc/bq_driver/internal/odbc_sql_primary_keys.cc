@@ -108,7 +108,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   query_request.set_use_legacy_sql(false);
   // TODO(b/343189825): Remove these once json filtering is working
   // correctly.
-  query_request.set_timeout(kqueryTimeoutMs);
+  query_request.set_timeout(kQueryTimeoutMs);
   query_request.set_max_results(kMaxResults);
   query_request.set_maximum_bytes_billed(kMaxBytesBilled);
   // Set billing info and query request.
