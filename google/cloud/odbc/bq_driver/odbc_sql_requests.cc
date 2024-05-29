@@ -161,7 +161,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
   }
   StatementHandle& handle = *(*handle_result);
 
-  if (handle.GetStmtState() < StmtStates::kStatementPrepared) {
+  if (handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
