@@ -234,7 +234,13 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
   }
   StatementHandle& handle = *(*handle_result);
 
-  // TODO(b/340440354) Check if statement handle is in 'prepared' state
+  if (handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
 
   return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       handle.GetParamCount(), param_count, nullptr);

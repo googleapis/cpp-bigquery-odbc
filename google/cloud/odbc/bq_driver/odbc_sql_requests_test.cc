@@ -305,16 +305,29 @@ TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-// TEST(SQLNumParamsInternal, ReturnsParamCount) {
-//   StatementHandle handle = CreateStatementHandle();
-//   handle.SetParamCount(2);
-//   SQLSMALLINT num_param = 0;
+TEST(SQLNumParamsInternal, Fail_StatementIsNotPrepared) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLSMALLINT num_param = 0;
 
-//   SQLRETURN status = SQLNumParamsInternal(&handle, &num_param);
+  SQLRETURN status = SQLNumParamsInternal(&handle, &num_param);
 
-//   EXPECT_EQ(SQL_SUCCESS, status);
-//   EXPECT_EQ(2, num_param);
-// }
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY010(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLNumParamsInternal, ReturnsParamCount) {
+  StatementHandle handle = CreatePreparedStatementHandle();
+  ::google::cloud::bigquery_v2_minimal_internal::QueryParameter
+      query_parameter = {"min_age", {"INTEGER"}, {"30"}};
+  handle.SetQueryParameters({query_parameter});
+  SQLSMALLINT num_param = 0;
+
+  SQLRETURN status = SQLNumParamsInternal(&handle, &num_param);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(1, num_param);
+}
 
 TEST(SQLPrepareInternal, Fail_InvalidHandle) {
   StatementHandle* stmt_handle = nullptr;
