@@ -85,6 +85,12 @@ std::vector<std::string> CreateKeysToFilterOut(
   if (query_request.maximum_bytes_billed() <= 0) {
     default_filtered_keys.emplace_back("maximumBytesBilled");
   }
+  if (query_request.max_results() <= 0) {
+    default_filtered_keys.emplace_back("maxResults");
+  }
+  if (query_request.timeout() == std::chrono::milliseconds(0)) {
+    default_filtered_keys.emplace_back("timeoutMs");
+  }
   return default_filtered_keys;
 }
 

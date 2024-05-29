@@ -555,6 +555,8 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
     EXPECT_EQ(project_id, request.project_id());
     EXPECT_THAT(request.json_filter_keys(), Contains("defaultDataset"));
     EXPECT_THAT(request.json_filter_keys(), Contains("maximumBytesBilled"));
+    EXPECT_THAT(request.json_filter_keys(), Contains("maxResults"));
+    EXPECT_THAT(request.json_filter_keys(), Contains("timeoutMs"));
     return make_status_or(expected);
   });
   JobClient job_client(std::move(mock));
