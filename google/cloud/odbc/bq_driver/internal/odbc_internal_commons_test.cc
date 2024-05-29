@@ -19,15 +19,15 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::ColumnData;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::Struct;
+using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
-using ::google::cloud::bigquery_v2_minimal_internal::Value;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -66,36 +66,26 @@ TableSchema CreateTableSchema() {
   return schema;
 }
 
-std::vector<Struct> CreateTableRows() {
-  std::vector<Struct> rows;
-  Struct row1, row2;
-  Value v1, v2, v3, v4, v5, v6;
-  v1.value_kind = std::string("table-catalog-1");
-  v2.value_kind = std::string("table-schema-1");
-  v3.value_kind = std::string("table-name-1");
-  v4.value_kind = std::string("col-name-1");
-  v5.value_kind = std::string("1");
-  v6.value_kind = std::string("pk-constraint-1");
-  row1.fields.insert({"k1", v1});
-  row1.fields.insert({"k2", v2});
-  row1.fields.insert({"k3", v3});
-  row1.fields.insert({"k4", v4});
-  row1.fields.insert({"k5", v5});
-  row1.fields.insert({"k6", v6});
-  v1.value_kind = std::string("table-catalog-2");
-  v2.value_kind = std::string("table-schema-2");
-  v3.value_kind = std::string("table-name-2");
-  v4.value_kind = std::string("col-name-2");
-  v5.value_kind = std::string("2");
-  v6.value_kind = std::string("pk-constraint-2");
-  row2.fields.insert({"k1", v1});
-  row2.fields.insert({"k2", v2});
-  row2.fields.insert({"k3", v3});
-  row2.fields.insert({"k4", v4});
-  row2.fields.insert({"k5", v5});
-  row2.fields.insert({"k6", v6});
-  rows.emplace_back(row1);
-  rows.emplace_back(row2);
+std::vector<RowData> CreateTableRows() {
+  std::vector<RowData> rows;
+  RowData row1, row2;
+
+  row1.columns.push_back(ColumnData{"table-catalog-1"});
+  row1.columns.push_back(ColumnData{"table-schema-1"});
+  row1.columns.push_back(ColumnData{"table-name-1"});
+  row1.columns.push_back(ColumnData{"col-name-1"});
+  row1.columns.push_back(ColumnData{"1"});
+
+  row1.columns.push_back(ColumnData{"pk-constraint-1"});
+  row2.columns.push_back(ColumnData{"table-catalog-2"});
+  row2.columns.push_back(ColumnData{"table-schema-2"});
+  row2.columns.push_back(ColumnData{"table-name-2"});
+  row2.columns.push_back(ColumnData{"col-name-2"});
+  row2.columns.push_back(ColumnData{"2"});
+  row2.columns.push_back(ColumnData{"pk-constraint-2"});
+
+  rows.push_back(row1);
+  rows.push_back(row2);
   return rows;
 }
 

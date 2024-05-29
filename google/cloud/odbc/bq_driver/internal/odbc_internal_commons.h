@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "absl/types/variant.h"
+#include <chrono>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -73,6 +74,12 @@ struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
 };
+
+// TODO(b/343189825): Remove these once json filtering is working correctly.
+long const kMaxResults = 100000;
+std::chrono::milliseconds const kqueryTimeoutMs =
+    std::chrono::milliseconds(30000);  // 30 seconds
+long const kMaxBytesBilled = 20971520;
 
 inline void StringToDSValue(std::string& str, DSValue& value) {
   value.resize(str.size());
@@ -133,7 +140,7 @@ odbc_internal::StatusRecordOr<DSResults> FetchBQData(
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessResultSetRows(
     google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
-    std::vector<google::cloud::bigquery_v2_minimal_internal::Struct> const&
+    std::vector<google::cloud::bigquery_v2_minimal_internal::RowData> const&
         rows);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(

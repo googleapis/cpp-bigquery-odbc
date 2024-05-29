@@ -23,7 +23,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterType;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
-using ::google::cloud::bigquery_v2_minimal_internal::Struct;
+using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::Value;
@@ -32,7 +32,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
-    TableSchema const& schema, std::vector<Struct> const& rows) {
+    TableSchema const& schema, std::vector<RowData> const& rows) {
   ResultSet result_set;
   // Populate the schema for each row. The row schema
   // indicates how they should converted back for the application buffers in
@@ -50,13 +50,12 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.
-  for (auto const& struct_val : rows) {
+  for (auto const& row : rows) {
     DSRow rs_row;
     int i = 0;
-    for (auto const& field_entry : struct_val.fields) {
-      Value bq_val = field_entry.second;
+    for (auto const& col : row.columns) {
       BQDataType col_type = result_set.row_schema[i++].col_type;
-      std::string data = absl::get<std::string>(bq_val.value_kind);
+      std::string data = col.value;
       if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {

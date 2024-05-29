@@ -748,9 +748,9 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
   std::string location = "location";
   GetQueryResults expected_1;
   expected_1.page_token = "token";
-  expected_1.rows = {{{{"1", {"value_1"}}}}};
+  expected_1.rows = {{{{{"value_1"}}}}};
   GetQueryResults expected_2;
-  expected_2.rows = {{{{"1", {"value_2"}}}}};
+  expected_2.rows = {{{{{"value_2"}}}}};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, QueryResults)
