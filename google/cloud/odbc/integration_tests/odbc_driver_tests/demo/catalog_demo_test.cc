@@ -22,18 +22,18 @@ namespace google::cloud::odbc_tests {
 namespace {
 std::string const kCatalog = "bigquery-devtools-drivers";
 std::string const kDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
-std::string const kTable = "ODBC_TEST_TABLE_WITH_PK";
+std::string const kPKTable = "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
 
 SQLCHAR* const kSqlCatalog =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalog.c_str()));
 SQLCHAR* const kSqlDataset =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDataset.c_str()));
-SQLCHAR* const kSqlTable =
-    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kTable.c_str()));
+SQLCHAR* const kSqlPKTable =
+    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kPKTable.c_str()));
 
 SQLSMALLINT const kSqlCatalogLen = kCatalog.length();
 SQLSMALLINT const kSqlDatasetLen = kDataset.length();
-SQLSMALLINT const kSqlTableLen = kTable.length();
+SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 
 }  // namespace
 
@@ -77,7 +77,7 @@ TEST(CatalogDemoTest, SQLPrimaryKeys) {
             << std::endl;
 
   rc = SQLPrimaryKeys(hstmt, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
-                      kSqlDatasetLen, kSqlTable, kSqlTableLen);
+                      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen);
   ASSERT_EQ(rc, SQL_SUCCESS);
   std::cout << "Successfully fetched primary Keys for Catalog: " << kCatalog
             << ", and Dataset: " << kDataset << std::endl
