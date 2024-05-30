@@ -37,6 +37,9 @@ using ::testing::HasSubstr;
 
 namespace {
 
+std::string const kTestCatalog = "test-catalog";
+std::string const kTestSchema = "test-schema";
+
 struct NativeDataTypesStruct {
   bool flag;
   char character;
@@ -297,7 +300,7 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(ConstructQueryParams, Success) {
+TEST(ConstructQueryParamsTest, Success) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"param-name-1", "param-val-1"});
   named_query_params.insert({"param-name-2", "param-val-2"});
@@ -322,7 +325,7 @@ TEST(ConstructQueryParams, Success) {
   EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
 }
 
-TEST(ConstructQueryParams, Failure_Empty_Param_name) {
+TEST(ConstructQueryParamsTest, Failure_Empty_Param_name) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"", "param-val-1"});
 
@@ -334,11 +337,119 @@ TEST(ConstructQueryParams, Failure_Empty_Param_name) {
                              HasSubstr("Invalid parameter name")));
 }
 
-TEST(ConstructQueryParams, Failure_Empty_Param_value) {
+TEST(ConstructQueryParamsTest, Failure_Empty_Param_value) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"param-name-1", ""});
 
   auto status_record_or = ConstructStringQueryParameters(named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter value")));
+}
+
+TEST(ConstructnamedPostQueryRequestTest, Success) {
+  PostQueryRequest expected;
+  std::string named_query =
+      "select * from test_table where test_col1 = @param1 and test_col2 = "
+      "@param2 and test_col3 = "
+      "@param3";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param1", "param-val-1"});
+  named_query_params.insert({"param2", "param-val-2"});
+  named_query_params.insert({"param3", "param-val-3"});
+
+  std::string expected_query =
+      "select * from test_table where test_col1 = @param1 and test_col2 = "
+      "@param2 and test_col3 = "
+      "@param3";
+
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, named_query, named_query_params);
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  // Verify results pertaining to query request.
+  PostQueryRequest actual = *status_record_or;
+  EXPECT_EQ(actual.project_id(), kTestCatalog);
+  EXPECT_EQ(actual.query_request().parameter_mode(), "NAMED");
+  EXPECT_EQ(actual.query_request().query(), named_query);
+  EXPECT_FALSE(actual.query_request().dry_run());
+  EXPECT_FALSE(actual.query_request().use_legacy_sql());
+  // Verify query params
+  auto query_params = actual.query_request().query_parameters();
+  EXPECT_FALSE(query_params.empty());
+  EXPECT_EQ(query_params.size(), 3);
+  EXPECT_EQ(query_params[0].name, "param1");
+  EXPECT_EQ(query_params[1].name, "param2");
+  EXPECT_EQ(query_params[2].name, "param3");
+
+  EXPECT_EQ(query_params[0].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[1].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[2].parameter_type.type, "STRING");
+
+  EXPECT_EQ(query_params[0].parameter_value.value, "param-val-1");
+  EXPECT_EQ(query_params[1].parameter_value.value, "param-val-2");
+  EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
+  std::string named_query = "select * from table where col = @param1";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param1", "param-val-1"});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      "", kTestSchema, named_query, named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("catalog name is required")));
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
+  std::string named_query = "select * from table where col = @param1";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param1", "param-val-1"});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, "", named_query, named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("dataset name is required")));
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
+  std::string named_query = "";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param1", "param-val-1"});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, "", named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("parametrized query is required")));
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Invalid_Param_Name) {
+  std::string named_query = "select * from table where col = @param1";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"", "param-val-1"});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, named_query, named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Invalid_Param_Value) {
+  std::string named_query = "select * from table where col = @param1";
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param1", ""});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, named_query, named_query_params);
   EXPECT_FALSE(status_record_or.Ok());
 
   EXPECT_THAT(status_record_or,

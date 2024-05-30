@@ -74,9 +74,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  // Construct post query request.
-  // TODO(b/339618125): Cleanse this query to avoid
-  // potential SQL injection issues.
+  // Parametrized Primary Keys Query.
   std::string primary_keys_query(kBasicPrimaryKeysQuery);
   primary_keys_query.append(" AND kc.table_catalog = @")
       .append(kNamedCatalogParam)
@@ -84,9 +82,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
       .append(kNamedSchemaParam)
       .append(" AND kc.table_name = @")
       .append(kNamedTableParam);
-  PostQueryRequest post_request;
-  QueryRequest query_request;
-  DatasetReference ds_ref;
+  // Construct named parameters.
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({kNamedCatalogParam, catalog_name});
   named_query_params.insert({kNamedSchemaParam, schema_name});
@@ -95,24 +91,17 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   if (!query_param_status) {
     return query_param_status.GetStatusRecord();
   }
-  // Set dataset info.
-  ds_ref.project_id = catalog_name;
-  ds_ref.dataset_id = schema_name;
-  // Construct query request.
-  query_request.set_dry_run(false);
-  query_request.set_default_dataset(ds_ref);
-  query_request.set_query(primary_keys_query);
-  // Following are specific to parametrized queries.
-  query_request.set_parameter_mode("NAMED");
-  query_request.set_query_parameters(*query_param_status);
-  query_request.set_use_legacy_sql(false);
-  // Set billing info and query request.
-  post_request.set_project_id(catalog_name);
-  post_request.set_query_request(query_request);
-
+  // Construct post query request.
+  auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
+      catalog_name, schema_name, primary_keys_query, named_query_params);
+  if (!post_query_request_status) {
+    auto status_record = post_query_request_status.GetStatusRecord();
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
+  }
   // Fetch BQ Data using the query request above.
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  auto status_record_or = FetchBQData(conn_handle, post_request);
+  auto status_record_or = FetchBQData(conn_handle, *post_query_request_status);
   if (!status_record_or) {
     stmt_handle.GetDiagnostics().AddStatusRecord(
         status_record_or.GetStatusRecord());

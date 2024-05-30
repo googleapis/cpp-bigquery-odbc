@@ -125,7 +125,7 @@ struct DSResults {
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        postQueryResults);
+        postQueryRequest);
 
 ////////////////////////////////////////////////////////////////////////
 // Common Helper functions for processing data results from BQ data source and
@@ -158,6 +158,13 @@ odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>>
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>
+ConstructNamedParametersPostQueryRequest(
+    std::string const& catalog, std::string const& dataset,
+    std::string const& named_query,
+    std::map<std::string, std::string> const& named_query_params);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

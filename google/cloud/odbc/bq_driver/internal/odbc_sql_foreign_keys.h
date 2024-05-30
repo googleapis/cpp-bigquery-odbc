@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_PRIMARY_KEYS_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_PRIMARY_KEYS_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FOREIGN_KEYS_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FOREIGN_KEYS_H
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
@@ -26,7 +26,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-// Executes a BQ query and fetches the primary key results and
+// Executes a BQ query and fetches the foreign key results and
 // populates the DSResults, as mentioned below:
 //
 // 1) First makes a call to ODBCBQClient::Query()
@@ -38,11 +38,15 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
-    StatementHandle& stmt_handle, std::string const& catalog_name,
-    int catalog_name_len, std::string const& schema_name, int schema_name_len,
-    std::string const& table_name, int table_name_len);
+odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
+    StatementHandle& stmt_handle, std::string const& pk_catalog_name,
+    int pk_catalog_name_len, std::string const& pk_schema_name,
+    int pk_schema_name_len, std::string const& pk_table_name,
+    int pk_table_name_len, std::string const& fk_catalog_name,
+    int fk_catalog_name_len, std::string const& fk_schema_name,
+    int fk_schema_name_len, std::string const& fk_table_name,
+    int fk_table_name_len);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_PRIMARY_KEYS_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FOREIGN_KEYS_H

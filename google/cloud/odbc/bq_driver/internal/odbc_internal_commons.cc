@@ -17,12 +17,14 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterType;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -122,7 +124,7 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
 }
 
 StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle, PostQueryRequest const& postQueryResults) {
+    ConnectionHandle& conn_handle, PostQueryRequest const& postQueryRequest) {
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
     return StatusRecord{SQLStates::k_08S01(),
@@ -137,7 +139,7 @@ StatusRecordOr<DSResults> FetchBQData(
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
-  auto pq_status = bq_client->PostQuery(postQueryResults, options);
+  auto pq_status = bq_client->PostQuery(postQueryRequest, options);
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
@@ -247,6 +249,50 @@ ConstructStringQueryParameters(
     query_params.emplace_back(query_param);
   }
   return query_params;
+}
+
+odbc_internal::StatusRecordOr<PostQueryRequest>
+ConstructNamedParametersPostQueryRequest(
+    std::string const& catalog, std::string const& dataset,
+    std::string const& named_query,
+    std::map<std::string, std::string> const& named_query_params) {
+  if (catalog.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: catalog name is required"};
+  }
+  if (dataset.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: dataset name is required"};
+  }
+  if (named_query.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: parametrized query is required"};
+  }
+  auto query_param_status = ConstructStringQueryParameters(named_query_params);
+  if (!query_param_status) {
+    return query_param_status.GetStatusRecord();
+  }
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+  DatasetReference ds_ref;
+  // Set dataset info.
+  ds_ref.project_id = catalog;
+  ds_ref.dataset_id = dataset;
+  // Construct query request.
+  query_request.set_dry_run(false);
+  query_request.set_default_dataset(ds_ref);
+  query_request.set_query(named_query);
+  // Following are specific to parametrized queries.
+  query_request.set_parameter_mode("NAMED");
+  query_request.set_query_parameters(*query_param_status);
+  query_request.set_use_legacy_sql(false);
+  // Set billing info and query request.
+  post_request.set_project_id(catalog);
+  post_request.set_query_request(query_request);
+  return post_request;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

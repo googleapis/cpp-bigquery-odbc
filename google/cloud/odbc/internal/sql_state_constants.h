@@ -86,6 +86,7 @@ struct SQLStates {
   static inline std::string k_HY109() { return "HY109"; };
   static inline std::string k_HY110() { return "HY110"; };
   static inline std::string k_HY111() { return "HY111"; };
+  static inline std::string k_HYC00() { return "HYC00"; };
   static inline std::string k_HYT00() { return "HYT00"; };
   static inline std::string k_HYT01() { return "HYT01"; };
   static inline std::string k_IM001() { return "IM001"; };
