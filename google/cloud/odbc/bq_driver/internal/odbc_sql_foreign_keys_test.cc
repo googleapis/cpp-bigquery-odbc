@@ -46,12 +46,36 @@ TEST(FetchForeignKeys, failure_empty_catalog_name) {
                      HasSubstr("Catalog name for both primary and foreign keys "
                                "cannot be empty")));
 }
+TEST(FetchForeignKeys, failure_empty_catalog_name_len) {
+  StatementHandle handle;
+  auto status_record_or = FetchForeignKeysFromDataSource(
+      handle, kCatalog, 0, kDataset, kDatasetLen, kPKTable, kPKTableLen,
+      kCatalog, 0, kDataset, kDatasetLen, kFKTable, kFKTableLen);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_HY090(),
+                     HasSubstr("Catalog name for both primary and foreign keys "
+                               "cannot be empty")));
+}
 
 TEST(FetchForeignKeys, failure_empty_schema_name) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, "", kDatasetLen, kPKTable, kPKTableLen,
       kCatalog, kCatalogLen, "", kDatasetLen, kFKTable, kFKTableLen);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_HY090(),
+                     HasSubstr("Schema name for both primary and foreign keys "
+                               "cannot be empty")));
+}
+TEST(FetchForeignKeys, failure_empty_schema_name_len) {
+  StatementHandle handle;
+  auto status_record_or = FetchForeignKeysFromDataSource(
+      handle, kCatalog, kCatalogLen, kDataset, 0, kPKTable, kPKTableLen,
+      kCatalog, kCatalogLen, kDataset, 0, kFKTable, kFKTableLen);
 
   EXPECT_THAT(
       status_record_or,
@@ -95,6 +119,19 @@ TEST(FetchForeignKeys, failure_empty_table_name) {
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, "", 0, kCatalog,
       kCatalogLen, kDataset, kDatasetLen, "", 0);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY009(),
+          HasSubstr(
+              "Both Primary and Foreign key table names cannot be empty")));
+}
+TEST(FetchForeignKeys, failure_empty_table_name_len) {
+  StatementHandle handle;
+  auto status_record_or = FetchForeignKeysFromDataSource(
+      handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable, 0,
+      kCatalog, kCatalogLen, kDataset, kDatasetLen, kFKTable, 0);
 
   EXPECT_THAT(
       status_record_or,

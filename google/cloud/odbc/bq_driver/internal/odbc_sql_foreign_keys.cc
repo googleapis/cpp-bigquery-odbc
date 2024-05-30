@@ -17,9 +17,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
-using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -90,7 +87,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
       (!pk_catalog_name.empty())
           ? pk_catalog_name
           : ((!fk_catalog_name.empty()) ? fk_catalog_name : "");
-  if (catalog_name.empty()) {
+  if (catalog_name.empty() ||
+      (pk_catalog_name_len == 0 && fk_catalog_name_len == 0)) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(),
                      "Catalog name for both primary and foreign keys "
@@ -111,7 +109,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
       (!pk_schema_name.empty())
           ? pk_schema_name
           : ((!fk_schema_name.empty()) ? fk_schema_name : "");
-  if (schema_name.empty()) {
+  if (schema_name.empty() ||
+      (pk_schema_name_len == 0 && fk_schema_name_len == 0)) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(),
                      "Schema name for both primary and foreign keys "
@@ -128,7 +127,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  if (pk_table_name.empty() && fk_table_name.empty()) {
+  if ((pk_table_name.empty() && fk_table_name.empty()) ||
+      (pk_table_name_len == 0 && fk_table_name_len == 0)) {
     auto status_record = StatusRecord{
         SQLStates::k_HY009(),
         "Both Primary and Foreign key table names cannot be empty"};

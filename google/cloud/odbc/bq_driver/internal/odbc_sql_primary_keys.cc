@@ -17,9 +17,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
-using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
