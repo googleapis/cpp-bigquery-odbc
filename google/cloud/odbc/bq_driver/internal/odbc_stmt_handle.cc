@@ -156,10 +156,13 @@ odbc_internal::StatusRecord StatementHandle::PopulateArd(
     descriptor_record.precision = res.precision;
     records[records.size() + 1] = descriptor_record;
   }
+  StatusRecord status_record = descriptor_handle->SetDescriptorRecords(records);
 
-  descriptor_handle->SetDescriptorRecords(records);
+  if (!status_record.ok()) {
+    descriptor_handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
 
-  return odbc_internal::StatusRecord();
+  return status_record;
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
