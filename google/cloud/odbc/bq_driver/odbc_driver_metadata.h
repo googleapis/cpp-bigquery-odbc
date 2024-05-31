@@ -90,6 +90,24 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                                  SQLCHAR const* table_name,
                                  SQLSMALLINT table_name_len);
 
+// Implements the semantics for SQLForeignKeys ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// Design Doc: http://goto.google.com/odbc-sql-foreignkeys-design
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function?view=sql-server-ver16
+SQLRETURN SQLForeignKeysInternal(
+    SQLHSTMT stmt_handle, SQLCHAR const* pk_catalog_name,
+    SQLSMALLINT pk_catalog_name_len, SQLCHAR const* pk_schema_name,
+    SQLSMALLINT pk_schema_name_len, SQLCHAR const* pk_table_name,
+    SQLSMALLINT pk_table_name_len, SQLCHAR const* fk_catalog_name,
+    SQLSMALLINT fk_catalog_name_len, SQLCHAR const* fk_schema_name,
+    SQLSMALLINT fk_schema_name_len, SQLCHAR const* fk_table_name,
+    SQLSMALLINT fk_table_name_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

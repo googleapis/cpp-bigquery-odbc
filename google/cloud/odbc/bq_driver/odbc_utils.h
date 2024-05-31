@@ -33,6 +33,14 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+inline char* ToCharStr(SQLCHAR const* sql_str) {
+  return reinterpret_cast<char*>(const_cast<SQLCHAR*>(sql_str));
+}
+
+inline SQLCHAR* ToSqlChar(char const* str) {
+  return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
+}
+
 odbc_internal::StatusRecordOr<
     google::cloud::odbc_bq_driver_internal::ConnectionHandle*>
 ValidateConnectionHandle(SQLHDBC connection_handle,

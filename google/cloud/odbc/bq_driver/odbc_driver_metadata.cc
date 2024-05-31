@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
@@ -24,6 +25,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::DSResults;
+using ::google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
 using ::google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
@@ -103,10 +105,6 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                                  in_buffer_len, str_len_ptr);
   delete[] info_val_char.info_val;
   return rc;
-}
-
-char* to_char_str(SQLCHAR const* sql_str) {
-  return reinterpret_cast<char*>(const_cast<SQLCHAR*>(sql_str));
 }
 
 }  // namespace
@@ -262,10 +260,62 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
 
   // First fetch the primary keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
-      FetchPrimaryKeysFromDataSource(handle, to_char_str(catalog_name),
-                                     catalog_name_len, to_char_str(schema_name),
-                                     schema_name_len, to_char_str(table_name),
+      FetchPrimaryKeysFromDataSource(handle, ToCharStr(catalog_name),
+                                     catalog_name_len, ToCharStr(schema_name),
+                                     schema_name_len, ToCharStr(table_name),
                                      table_name_len);
+  if (!ds_status_record_or) {
+    auto status_record = ds_status_record_or.GetStatusRecord();
+    TracePrintInternal(opts, status_record.message);
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return ds_status_record_or.GetCalculatedReturnCode();
+  }
+  // Process the DSResults and convert to ResultSet.
+  StatusRecordOr<ResultSet> rs_status_record_or =
+      ProcessQueryResults(*ds_status_record_or);
+  if (!rs_status_record_or) {
+    auto status_record = rs_status_record_or.GetStatusRecord();
+    TracePrintInternal(opts, status_record.message);
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return rs_status_record_or.GetCalculatedReturnCode();
+  }
+
+  if (!rs_status_record_or->rows.empty()) {
+    // Store the resultset in statement handle.
+    handle.SetResultSet(*rs_status_record_or);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
+  return rc;
+}
+
+SQLRETURN SQLForeignKeysInternal(
+    SQLHSTMT stmt_handle, SQLCHAR const* pk_catalog_name,
+    SQLSMALLINT pk_catalog_name_len, SQLCHAR const* pk_schema_name,
+    SQLSMALLINT pk_schema_name_len, SQLCHAR const* pk_table_name,
+    SQLSMALLINT pk_table_name_len, SQLCHAR const* fk_catalog_name,
+    SQLSMALLINT fk_catalog_name_len, SQLCHAR const* fk_schema_name,
+    SQLSMALLINT fk_schema_name_len, SQLCHAR const* fk_table_name,
+    SQLSMALLINT fk_table_name_len) {
+  SQLRETURN rc = SQL_SUCCESS;
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  // First fetch the foreign keys from data source.
+  StatusRecordOr<DSResults> ds_status_record_or =
+      FetchForeignKeysFromDataSource(
+          handle, ToCharStr(pk_catalog_name), pk_catalog_name_len,
+          ToCharStr(pk_schema_name), pk_schema_name_len,
+          ToCharStr(pk_table_name), pk_table_name_len,
+          ToCharStr(fk_catalog_name), fk_catalog_name_len,
+          ToCharStr(fk_schema_name), fk_schema_name_len,
+          ToCharStr(fk_table_name), fk_table_name_len);
   if (!ds_status_record_or) {
     auto status_record = ds_status_record_or.GetStatusRecord();
     TracePrintInternal(opts, status_record.message);
