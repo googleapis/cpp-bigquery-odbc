@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
@@ -25,6 +26,8 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
@@ -529,6 +532,21 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_COUNT) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
+TEST(SQLGetDescFieldInternal, Fail_StatementIsNotPrepared_IRD) {
+  StatementHandle stmt_handle;
+  DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
+  SQLULEN* out_buf;
+
+  auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_CASE_SENSITIVE,
+                                        &out_buf, 0, nullptr);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY007(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLULEN rows_processed_ptr[] = {1, 2, 3};
@@ -590,7 +608,11 @@ TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.auto_unique_value = 42;
   SQLSMALLINT rec_number = 1;
@@ -607,7 +629,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.base_column_name = "column";
   SQLSMALLINT rec_number = 1;
@@ -624,7 +650,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.base_table_name = "table";
   SQLSMALLINT rec_number = 1;
@@ -641,7 +671,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.case_sensitive = 42;
   SQLSMALLINT rec_number = 1;
@@ -658,7 +688,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.catalog_name = "catalog";
   SQLSMALLINT rec_number = 1;
@@ -747,7 +781,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.display_size = 42;
   SQLSMALLINT rec_number = 1;
@@ -764,7 +802,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.fixed_prec_scale = 42;
   SQLSMALLINT rec_number = 1;
@@ -815,7 +853,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.label = "label";
   SQLSMALLINT rec_number = 1;
@@ -849,7 +891,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.literal_prefix = "prefix";
   SQLSMALLINT rec_number = 1;
@@ -866,7 +912,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.literal_suffix = "sufix";
   SQLSMALLINT rec_number = 1;
@@ -883,7 +933,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.local_type_name = "local name";
   SQLSMALLINT rec_number = 1;
@@ -900,7 +950,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "name";
   SQLSMALLINT rec_number = 1;
@@ -917,7 +967,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.nullable = 42;
   SQLSMALLINT rec_number = 1;
@@ -934,7 +984,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.num_prec_radix = 42;
   SQLSMALLINT rec_number = 1;
@@ -1053,7 +1103,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.schema_name = "schema name";
   SQLSMALLINT rec_number = 1;
@@ -1070,7 +1124,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.searchable = 42;
   SQLSMALLINT rec_number = 1;
@@ -1087,7 +1145,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.table_name = "table name";
   SQLSMALLINT rec_number = 1;
@@ -1121,7 +1183,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.type_name = "type name";
   SQLSMALLINT rec_number = 1;
@@ -1138,7 +1204,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.unnamed = 42;
   SQLSMALLINT rec_number = 1;
@@ -1155,7 +1221,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
-  DescriptorHandle handle(DescriptorType::kIRD);
+  DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.sql_desc_unsigned = 42;
   SQLSMALLINT rec_number = 1;
@@ -1172,7 +1238,11 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
+  StatementHandle stmt_handle;
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
+  handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
+                                                 DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
   descriptor_record.updatable = 42;
   SQLSMALLINT rec_number = 1;

@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -32,6 +33,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -306,11 +308,6 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
     return status_record.CalculateReturnCode();
   }
 
-  if (handle->GetType() == DescriptorType::kIPD) {
-    // TODO(332469364) Check if statement handle is in 'prepared' or 'executed'
-    // state (HY007)
-  }
-
   // HeaderRecord fields
   HeaderRecord& header_record = handle->GetHeaderRecord();
   switch (field_identifier) {
@@ -350,6 +347,17 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
         "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return SQL_NO_DATA;
+  }
+
+  if (handle->GetType() == DescriptorType::kIRD) {
+    // For IPD and IRD there can be only one associated statement handle
+    auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
+    if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
+      StatusRecord status_record{SQLStates::k_HY007(),
+                                 "Associated statement is not prepared"};
+      handle->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
+    }
   }
 
   // DescriptorRecord fields

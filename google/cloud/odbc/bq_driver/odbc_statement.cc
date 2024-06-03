@@ -56,6 +56,13 @@ StatusRecord SetConnectionAttributes(ConnectionHandle* conn_handle,
   return stmt_handle->SetAttribute(SQL_ATTR_ASYNC_ENABLE, async_enable);
 }
 
+void AssociateDescriptorHandle(StatementHandle* stmt_handle,
+                               DescriptorType type) {
+  stmt_handle->GetDescriptorHandle(type)
+      .GetAssociatedStatementHandles()
+      .emplace(stmt_handle, type);
+}
+
 SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
@@ -79,6 +86,10 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
     return status_record.CalculateReturnCode();
   }
   conn_handle->GetStatementHandles().insert(stmt_handle);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kARD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kAPD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kIRD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kIPD);
 
   *out_conn_handle = stmt_handle;
   return SQL_SUCCESS;
