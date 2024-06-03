@@ -218,14 +218,18 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   ConnectionHandle* conn_handle = *handle_result;
 
   conn_handle->Disconnect();
-  std::set<DescriptorHandle*> desc_handles{conn_handle->GetDescriptorHandles()};
+  std::vector<DescriptorHandle*> desc_handles(
+      conn_handle->GetDescriptorHandles().begin(),
+      conn_handle->GetDescriptorHandles().end());
   for (auto* const desc_handle : desc_handles) {
     auto status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
     if (status != SQL_SUCCESS) {
       return status;
     }
   }
-  std::set<StatementHandle*> stmt_handles{conn_handle->GetStatementHandles()};
+  std::vector<StatementHandle*> stmt_handles(
+      conn_handle->GetStatementHandles().begin(),
+      conn_handle->GetStatementHandles().end());
   for (auto* const stmt_handle : stmt_handles) {
     auto status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
     if (status != SQL_SUCCESS) {

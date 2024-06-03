@@ -65,8 +65,10 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       }
       StatementHandle* stmt_handle = *handle_result;
       // Dissociate itself from a connection handle
-      stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
-          stmt_handle);
+      if (stmt_handle->GetConnectionHandle()) {
+        stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
+            stmt_handle);
+      }
       stmt_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
@@ -87,8 +89,10 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       for (auto const& [stmt_handle, type] : pairs) {
         stmt_handle->SetDescriptorHandle(type, nullptr);
       }
-      desc_handle->GetConnectionHandle()->GetDescriptorHandles().erase(
-          desc_handle);
+      if (desc_handle->GetConnectionHandle()) {
+        desc_handle->GetConnectionHandle()->GetDescriptorHandles().erase(
+            desc_handle);
+      }
       desc_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
