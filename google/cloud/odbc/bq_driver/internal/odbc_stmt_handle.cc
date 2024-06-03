@@ -151,7 +151,8 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return response.GetStatusRecord();
   }
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
-
+  DescriptorHandle desc_handle = GetDescriptorHandle(DescriptorType::kARD);
+  PopulateArd(&desc_handle, schema);
   auto pop_response = PopulateResultSet(schema);
 
   SetQueryParameters(
@@ -165,6 +166,34 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   query_str_ = query;
   stmt_state_ = StmtStates::kStatementPrepared;
   return StatusRecord::Ok();
+}
+odbc_internal::StatusRecord StatementHandle::PopulateArd(
+    DescriptorHandle* descriptor_handle,
+    google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema) {
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  for (auto const& res : schema.fields) {
+    DescriptorRecord descriptor_record;
+    StatusRecordOr<BQDataType> type_status_record = ConvertDSType(res.type);
+
+    if (!type_status_record.Ok()) {
+      return type_status_record.GetStatusRecord();
+    }
+
+    descriptor_record.SetConciseType(*type_status_record, DescriptorType::kARD);
+    descriptor_record.SetType(*type_status_record, DescriptorType::kARD);
+    descriptor_record.scale = res.scale;
+    descriptor_record.SetName(res.name, SQL_NTS);
+    descriptor_record.length = res.max_length;
+    descriptor_record.precision = res.precision;
+    records[records.size() + 1] = descriptor_record;
+  }
+  StatusRecord status_record = descriptor_handle->SetDescriptorRecords(records);
+
+  if (!status_record.ok()) {
+    descriptor_handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  return status_record;
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
