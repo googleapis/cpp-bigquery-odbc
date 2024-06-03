@@ -40,7 +40,8 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
       return descriptors_.apd_expl_ != nullptr ? *descriptors_.apd_expl_
                                                : *descriptors_.apd_;
     case DescriptorType::kIRD:
-      return *descriptors_.ird_;
+      return descriptors_.ird_expl_ != nullptr ? *descriptors_.ird_expl_
+                                               : *descriptors_.ird_;
     case DescriptorType::kIPD:
       return *descriptors_.ipd_;
   }
@@ -76,6 +77,10 @@ StatusRecord StatementHandle::SetDescriptorHandle(
     case DescriptorType::kAPD:
       DissociateDescriptorHandle(descriptors_.apd_expl_, type, this);
       descriptors_.apd_expl_ = descriptor_handle;
+      break;
+    case DescriptorType::kIRD:
+      DissociateDescriptorHandle(descriptors_.ird_expl_, type, this);
+      descriptors_.ird_expl_ = descriptor_handle;
       break;
     default:
       return StatusRecord{SQLStates::k_HY017(),
@@ -162,9 +167,50 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return pop_response;
   }
 
+  auto* desc_handle =
+      new DescriptorHandle(DescriptorType::kIRD, SQL_DESC_ALLOC_USER);
+  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+  if (!ird_response.ok()) {
+    std::cout << "failed" << std::endl;
+    return ird_response;
+  }
+  SetDescriptorHandle(DescriptorType::kIRD, desc_handle);
+
   query_str_ = query;
   stmt_state_ = StmtStates::kStatementPrepared;
   return StatusRecord::Ok();
+}
+
+StatusRecord StatementHandle::PopulateIrd(DescriptorHandle* descriptor_handle,
+                                          TableSchema const& schema) {
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  for (auto const& res : schema.fields) {
+    DescriptorRecord descriptor_record;
+    descriptor_record.SetName(res.name, SQL_NTS);
+    descriptor_record.length = res.max_length;
+    descriptor_record.precision = res.precision;
+    StatusRecordOr<BQDataType> type_status_record = ConvertDSType(res.type);
+
+    if (!type_status_record.Ok()) {
+      return type_status_record.GetStatusRecord();
+    }
+    StatusRecord status_record = descriptor_record.SetConciseType(
+        *type_status_record, DescriptorType::kIRD);
+    if (!status_record.ok()) {
+      return status_record;
+    }
+    descriptor_record.nullable =
+        res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
+    records[records.size() + 1] = descriptor_record;
+  }
+
+  StatusRecord status_record = descriptor_handle->SetDescriptorRecords(records);
+
+  if (!status_record.ok()) {
+    descriptor_handle->GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  return status_record;
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {

@@ -126,7 +126,7 @@ TEST(SetDescriptorHandle, Fails_InvalidAllocType) {
 
 TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   StatementHandle handle;
-  DescriptorHandle desc = CreateExplicitDescriptor();
+  DescriptorHandle desc(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
 
   StatusRecord status_record =
       handle.SetDescriptorHandle(DescriptorType::kIRD, &desc);

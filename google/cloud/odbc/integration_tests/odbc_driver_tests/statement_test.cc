@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #endif
@@ -27,6 +28,9 @@ namespace google::cloud::odbc_tests {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
@@ -1206,6 +1210,38 @@ TEST(SQLPrepare, ParametrizedQuery) {
   PrepareAndCheckQuery(
       "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
       "INT64", "var");
+#endif
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ValidateIrdDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "SELECT * from INTEGRATION_TESTS.Test_Table";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+
+  // Retrieve Ird Data set
+
+  DescriptorHandle& ird =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kIRD);
+  std::map<SQLSMALLINT, DescriptorRecord> desRecord =
+      ird.GetDescriptorRecords();
+
+  EXPECT_EQ(desRecord.size(), 3);
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

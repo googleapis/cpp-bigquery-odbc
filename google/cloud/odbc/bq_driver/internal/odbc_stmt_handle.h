@@ -115,7 +115,9 @@ class StatementHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
-
+  static odbc_internal::StatusRecord PopulateIrd(
+      DescriptorHandle* descriptor_handle,
+      google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };
