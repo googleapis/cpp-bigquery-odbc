@@ -1221,7 +1221,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string query = "SELECT * from INTEGRATION_TESTS.Test_Table";
+  std::string query = "SELECT name from INTEGRATION_TESTS.Test_Table";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
@@ -1241,7 +1241,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   std::map<SQLSMALLINT, DescriptorRecord> desRecord =
       ird.GetDescriptorRecords();
 
-  EXPECT_EQ(desRecord.size(), 3);
+  EXPECT_EQ(desRecord.size(), 1);
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
