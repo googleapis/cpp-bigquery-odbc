@@ -167,14 +167,12 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return pop_response;
   }
 
-  auto* desc_handle =
-      new DescriptorHandle(DescriptorType::kIRD, SQL_DESC_ALLOC_USER);
-  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+  DescriptorHandle& desc_handle =
+      this->GetDescriptorHandle(DescriptorType::kIRD);
+  StatusRecord ird_response = PopulateIrd(&desc_handle, schema);
   if (!ird_response.ok()) {
-    std::cout << "failed" << std::endl;
     return ird_response;
   }
-  SetDescriptorHandle(DescriptorType::kIRD, desc_handle);
 
   query_str_ = query;
   stmt_state_ = StmtStates::kStatementPrepared;
@@ -183,8 +181,8 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle* descriptor_handle,
                                           TableSchema const& schema) {
-  std::map<SQLSMALLINT, DescriptorRecord> records;
-  for (auto const& res : schema.fields) {
+  for (int i = 0; i < schema.fields.size(); ++i) {
+    auto const& res = schema.fields[i];
     DescriptorRecord descriptor_record;
     descriptor_record.SetName(res.name, SQL_NTS);
     descriptor_record.length = res.max_length;
@@ -201,16 +199,10 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle* descriptor_handle,
     }
     descriptor_record.nullable =
         res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
-    records[records.size() + 1] = descriptor_record;
+    descriptor_handle->BindNewDescriptorRecord(i, descriptor_record);
   }
 
-  StatusRecord status_record = descriptor_handle->SetDescriptorRecords(records);
-
-  if (!status_record.ok()) {
-    descriptor_handle->GetDiagnostics().AddStatusRecord(status_record);
-  }
-
-  return status_record;
+  return StatusRecord::Ok();
 }
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {

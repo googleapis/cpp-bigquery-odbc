@@ -1242,6 +1242,12 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
       ird.GetDescriptorRecords();
 
   EXPECT_EQ(desRecord.size(), 1);
+  DescriptorRecord& desc_record = ird.GetDescriptorRecord(0);
+  EXPECT_EQ(desc_record.name, "name");
+  EXPECT_EQ(desc_record.concise_type, SQL_VARCHAR);
+  EXPECT_EQ(desc_record.precision, 1);
+  EXPECT_EQ(desc_record.length, 1);
+  EXPECT_EQ(desc_record.nullable, SQL_NULLABLE);
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
