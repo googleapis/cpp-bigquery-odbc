@@ -30,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -135,7 +136,13 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   if (attribute == SQL_ATTR_CONCURRENCY || attribute == SQL_ATTR_CURSOR_TYPE ||
       attribute == SQL_ATTR_SIMULATE_CURSOR ||
       attribute == SQL_ATTR_USE_BOOKMARKS) {
-    // TODO(b/334849872) Check if statement was not prepared
+    if (handle->GetStmtState() != StmtStates::kStatementNotPrepared) {
+      StatusRecord status_record{
+          SQLStates::k_HY011(),
+          "Attribute cannot be set now - statement was prepared"};
+      handle->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
+    }
   }
   if (attribute == SQL_ATTR_CONCURRENCY || attribute == SQL_ATTR_CURSOR_TYPE ||
       attribute == SQL_ATTR_SIMULATE_CURSOR ||

@@ -27,6 +27,8 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
@@ -74,6 +76,19 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY017(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLSetStmtAttrInternal,
+     FailsToSet_SQL_ATTR_CONCURRENCY_PreparedStatement) {
+  StatementHandle handle = CreatePreparedStatementHandle();
+  SQLULEN concurrency = 0;
+
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY, &concurrency, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY011(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
