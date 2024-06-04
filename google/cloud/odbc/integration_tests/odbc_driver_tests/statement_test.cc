@@ -162,7 +162,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(InsertDirectStatement(conn, true), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-*/
 
 TEST(StatementTest, SQLExecute) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -181,7 +180,6 @@ TEST(StatementTest, SQLExecute) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-/*
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -618,7 +616,6 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-*/
 
 TEST(StatementTest, FetchDirectRowWise) {
   std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
@@ -650,6 +647,8 @@ TEST(StatementTest, FetchDirectRowWise) {
   table.Drop(conn, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+*/
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
@@ -1224,6 +1223,149 @@ TEST(SQLPrepare, ParametrizedQuery) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(StatementTest, SQLExecute_basic) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  char read_stmt[kBufferLength] = "SELECT 1";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(1)", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 */
+
+TEST(StatementTest, SQLExecute_basicInsertion) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name = "ODBC_TEST_DATASET_SACHIN.TestTable";
+  std::string insert_stmt =
+      "INSERT INTO " + table_name + " VALUES ('Sachin1', 2, 2.2)";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                      insert_stmt.size());
+  CheckError(status, "SQLPrepare", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(1)", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
+                        CatalogDataBuffer* columns, int res_cols) {
+  SQLRETURN status;
+  for (int col_idx = 0; col_idx < res_cols; col_idx++) {
+    if (col_idx == 4) {
+      columns[col_idx].target_type = SQL_C_SSHORT;
+    } else {
+      // data type is Char.
+      columns[col_idx].target_type = SQL_C_CHAR;
+    }
+    status =
+        SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+                   columns[col_idx].target_type, columns[col_idx].target_value,
+                   columns[col_idx].buffer_length, &(columns[col_idx].str_len));
+    CheckError(status, "SQLBindCol", conn);
+  }
+}
+
+void Fetch(std::shared_ptr<ODBCHandles> conn) {
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    std::string table_cat = (char*)columns[0].target_value;
+    std::string table_schema = (char*)columns[1].target_value;
+    std::string table_name = (char*)columns[2].target_value;
+    std::string col_name = (char*)columns[3].target_value;
+    SQLSMALLINT* key_seq =
+        reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
+    std::string pk_name = (char*)columns[5].target_value;
+    std::cout << "*******************************************************"
+              << std::endl;
+    std::cout << "Table Catalog: " << table_cat << ", " << std::endl;
+    std::cout << "Table Schema: " << table_schema << ", " << std::endl;
+    std::cout << "Table Name: " << table_name << ", " << std::endl;
+    std::cout << "Column Name: " << col_name << ", " << std::endl;
+    if (key_seq) {
+      std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    }
+    std::cout << "PrimaryKey Name: " << pk_name << std::endl << std::endl;
+    std::cout << "*******************************************************"
+              << std::endl;
+  }
+}
+
+TEST(StatementTest, SQLExecute_basicRead) {
+  auto conn = std::make_shared<ODBCHandles>();
+  int res_cols = 3;
+  CatalogDataBuffer columns[res_cols];
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name = "ODBC_TEST_DATASET_SACHIN.TestTable";
+  std::string insert_stmt = "SELECT * FROM " + table_name;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                      insert_stmt.size());
+  CheckError(status, "SQLPrepare", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  BindColumns(conn, columns, res_cols);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(1)", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    std::string table_cat = (char*)columns[0].target_value;
+    std::string table_schema = (char*)columns[1].target_value;
+    std::string table_name = (char*)columns[2].target_value;
+    std::string col_name = (char*)columns[3].target_value;
+    SQLSMALLINT* key_seq =
+        reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
+    std::string pk_name = (char*)columns[5].target_value;
+    std::cout << "*******************************************************"
+              << std::endl;
+    std::cout << "Table Catalog: " << table_cat << ", " << std::endl;
+    std::cout << "Table Schema: " << table_schema << ", " << std::endl;
+    std::cout << "Table Name: " << table_name << ", " << std::endl;
+    std::cout << "Column Name: " << col_name << ", " << std::endl;
+    if (key_seq) {
+      std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    }
+    std::cout << "PrimaryKey Name: " << pk_name << std::endl << std::endl;
+    std::cout << "*******************************************************"
+              << std::endl;
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests

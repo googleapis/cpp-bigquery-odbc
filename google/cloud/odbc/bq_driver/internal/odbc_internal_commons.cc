@@ -16,13 +16,17 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterType;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -106,7 +110,7 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
   return ProcessResultSetRows(getQueryResults.schema, getQueryResults.rows);
 }
 
-odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
+StatusRecordOr<ResultSet> ProcessQueryResults(
     DSResults const& queryResults) {
   if (absl::holds_alternative<PostQueryResults>(
           queryResults.data_source_results)) {
@@ -158,7 +162,7 @@ StatusRecordOr<DSResults> FetchBQData(
   return results;
 }
 
-odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
+StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
@@ -219,7 +223,35 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
-odbc_internal::StatusRecordOr<std::vector<QueryParameter>>
+/*
+StatusRecordOr<std::vector<RowData>> ExecuteQuery(std::string query_str, std::string catalog_name) {
+  std::string dataset_id = "abc";
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+
+  DatasetReference ds_ref;
+  // Set dataset info.
+  ds_ref.project_id = catalog_name;
+  ds_ref.dataset_id = dataset_id;
+  query_request.set_default_dataset(ds_ref);
+
+  query_request.set_dry_run(false);
+  query_request.set_query(query_str);
+  query_request.set_use_legacy_sql(false);
+
+  // Set billing info and query request.
+  post_request.set_project_id(catalog_name);
+  post_request.set_query_request(query_request);
+  auto status_record_or = FetchBQData(conn_handle, post_request);
+  if (!status_record_or) {
+    return status_record_or.GetStatusRecord();
+  }
+  std::vector<RowData> results;
+  return results;
+}
+*/
+
+StatusRecordOr<std::vector<QueryParameter>>
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params) {
   std::vector<QueryParameter> query_params;

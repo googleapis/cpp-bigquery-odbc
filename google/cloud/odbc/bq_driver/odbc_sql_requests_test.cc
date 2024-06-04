@@ -340,4 +340,10 @@ TEST(SQLPrepareInternal, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
+TEST(SQLExecuteInternal, Fail_UnPreparedHandle) {
+  StatementHandle* stmt_handle = CreateStatementHandle();
+  SQLRETURN status = SQLPrepareInternal(stmt_handle);
+  EXPECT_EQ(SQL_ERROR, status);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

@@ -320,8 +320,8 @@ std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute(1)", conn, false);
 
-  //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  //CheckError(status, "SQLExecDirect(1)", conn, false);
+  // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt,
+  // strlen(read_stmt)); CheckError(status, "SQLExecDirect(1)", conn, false);
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;

@@ -62,7 +62,8 @@ function (odbc_define_tests)
         # "odbc_driver_tests/*data_translation_test.cc")
         # "odbc_driver_tests/*catalog_test.cc"
         # "odbc_driver_tests/*driver_properties_test.cc")
-        "odbc_driver_tests/*statement_test.cc")
+        "odbc_driver_tests/*statement_test.cc"
+        )
 
     # file( GLOB odbc_driver_tests_src_cc RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     # "odbc_driver_tests/*data_translation_test.cc")
@@ -71,8 +72,9 @@ function (odbc_define_tests)
 
     # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
     if (BQ_DRIVER_INTEGRATION_TESTS)
-        # set(odbc_driver_tests_src ${odbc_driver_tests_src}
-        # odbc_driver_tests/internal/connection_test.cc)
+        set(odbc_driver_tests_src ${odbc_driver_tests_src}
+        # odbc_driver_tests/internal/connection_test.cc
+        odbc_driver_tests/internal/execution_test.cc)
         add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
     endif ()
 
