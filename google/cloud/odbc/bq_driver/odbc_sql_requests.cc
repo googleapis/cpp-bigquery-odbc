@@ -274,4 +274,44 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   return SQL_SUCCESS;
 }
+
+SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  if (handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is still executing"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs
+   || handle.GetStmtState() == StmtStates::kStatementExecutedWithRs) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement has already executed"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  
+
+}
+
 }  // namespace google::cloud::odbc_bq_driver
