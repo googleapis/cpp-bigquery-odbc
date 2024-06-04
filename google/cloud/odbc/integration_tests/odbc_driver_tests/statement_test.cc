@@ -25,15 +25,20 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+// using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+// using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+// using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
+// using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+// using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 #endif
 
@@ -1247,37 +1252,48 @@ TEST(SQLPrepare, ValidateIpdDescriptorForSimpleStatement) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, ValidateIpdDescForParametrizedQuery) {
+TEST(SQLPrepare, ValidateIpdDescForNamedParameterQuery) {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query =
-      "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-
   // Retrieve Ipd Descriptor data set
-  DescriptorHandle& ipd =
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  PrepareAndCheckQuery(
+      "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
+      "INT64", "var");
+  DescriptorHandle& handle =
       stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
-  std::map<SQLSMALLINT, DescriptorRecord> desc_record =
-      ipd.GetDescriptorRecords();
+  std::map<SQLSMALLINT, DescriptorRecord> desRecord =
+      handle.GetDescriptorRecords();
 
-  EXPECT_EQ(desc_record.size(), 1);
-
-  DescriptorRecord& record = ipd.GetDescriptorRecord(0);
+  EXPECT_EQ(desRecord.size(), 1);
+  DescriptorRecord& record = handle.GetDescriptorRecord(0);
   EXPECT_EQ(record.name, "var");
   EXPECT_EQ(record.concise_type, BQDataType::kInt64);
 
 #endif
+}
+
+TEST(SQLPrepare, ValidateIpdDescForPositionalParameterQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
+                       conn, 1, "INT64");
+  // Retrieve Ipd Descriptor data set
+  DescriptorHandle& handle =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
+  std::map<SQLSMALLINT, DescriptorRecord> desRecord =
+      handle.GetDescriptorRecords();
+
+  EXPECT_EQ(desRecord.size(), 1);
+  DescriptorRecord& ipd_record = handle.GetDescriptorRecord(0);
+  EXPECT_EQ(ipd_record.name, "");
+  EXPECT_EQ(ipd_record.concise_type, BQDataType::kInt64);
 }
 
 }  // namespace google::cloud::odbc_tests

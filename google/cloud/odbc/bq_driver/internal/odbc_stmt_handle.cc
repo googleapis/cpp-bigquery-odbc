@@ -23,6 +23,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::Job;
+using google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -166,7 +167,8 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   stmt_state_ = StmtStates::kStatementPrepared;
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIPD);
-  StatusRecord ipd_response = PopulateIpd(&desc_handle, response);
+  auto job_statics = response.GetValue().statistics;
+  StatusRecord ipd_response = PopulateIpd(&desc_handle, job_statics);
   return StatusRecord::Ok();
 }
 
@@ -177,16 +179,13 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   return attributes_[attribute];
 }
 
-StatusRecord StatementHandle::PopulateIpd(
-    DescriptorHandle* handle,
-    google::cloud::odbc_internal::StatusRecordOr<
-        google::cloud::bigquery_v2_minimal_internal::Job> const& qry_res) {
+StatusRecord StatementHandle::PopulateIpd(DescriptorHandle* handle,
+                                          JobStatistics const& job_statics) {
   std::map<SQLSMALLINT, DescriptorRecord> records;
   DescriptorRecord descriptor_record;
 
-  auto stmt_params =
-      qry_res.GetValue().statistics.job_query_stats.undeclared_query_parameters;
-  TableSchema schema = qry_res.GetValue().statistics.job_query_stats.schema;
+  auto stmt_params = job_statics.job_query_stats.undeclared_query_parameters;
+  TableSchema schema = job_statics.job_query_stats.schema;
   if (stmt_params.empty()) {
     return StatusRecord::Ok();
   }
