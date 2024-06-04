@@ -81,14 +81,14 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
-std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
-    std::shared_ptr<ODBCHandles> conn, std::string dataset, std::string table,
-    bool use_ansi) {
+RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
+                                       std::string dataset, std::string table,
+                                       bool use_ansi) {
   SQLRETURN status;
   int res_cols = 6;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::vector<std::map<int, std::string>> results;
+  RowWiseResults results;
 
   if (dataset.empty()) {
     return results;
@@ -151,9 +151,7 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
-// TODO(sachinpro): Remove the flag once SQLFetch is implemented for Google BQ
-// Driver.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  int i = 0;
   while (1) {
     std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
@@ -162,17 +160,18 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
     }
     if (!SQL_SUCCEEDED(status)) {
       CheckError(status, "SQLFetch", conn);
-      break;
     }
     // Col1: catalog, Col2: schema, Col3: table name,
-    // Col4: column name, Col5: key sequence , Col6: primary key,
-    std::string table_cat = (char*)catalog_result[1].target_value;
-    std::string table_schema = (char*)catalog_result[2].target_value;
-    std::string table_name = (char*)catalog_result[3].target_value;
-    std::string col_name = (char*)catalog_result[4].target_value;
+    // Col4: column name, Col5: key sequence , Col6: primary key
+    // Note: ODBC coumns typically start from 1, but catalog_result
+    // will be populated starting from index 0
+    std::string table_cat = (char*)catalog_result[0].target_value;
+    std::string table_schema = (char*)catalog_result[1].target_value;
+    std::string table_name = (char*)catalog_result[2].target_value;
+    std::string col_name = (char*)catalog_result[3].target_value;
     SQLSMALLINT* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
-    std::string pk_name = (char*)catalog_result[6].target_value;
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[4].target_value);
+    std::string pk_name = (char*)catalog_result[5].target_value;
 
     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
@@ -183,18 +182,18 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
     if (!pk_name.empty()) catalog_results.insert({6, pk_name});
     results.emplace_back(catalog_results);
   }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
   return results;
 }
 
-std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
-    std::shared_ptr<ODBCHandles> conn, std::string dataset,
-    std::string pk_table, std::string fk_table, bool use_ansi) {
+RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
+                                       std::string dataset,
+                                       std::string pk_table,
+                                       std::string fk_table, bool use_ansi) {
   SQLRETURN status;
   int res_cols = 15;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::vector<std::map<int, std::string>> results;
+  RowWiseResults results;
   if (dataset.empty()) {
     return results;
   }
