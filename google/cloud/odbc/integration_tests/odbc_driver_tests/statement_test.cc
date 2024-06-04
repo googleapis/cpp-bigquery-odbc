@@ -162,7 +162,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(InsertDirectStatement(conn, true), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-*/
 
 TEST(StatementTest, SQLExecute) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -181,7 +180,6 @@ TEST(StatementTest, SQLExecute) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-/*
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -618,7 +616,6 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-*/
 
 TEST(StatementTest, FetchDirectRowWise) {
   std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
@@ -650,6 +647,8 @@ TEST(StatementTest, FetchDirectRowWise) {
   table.Drop(conn, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+*/
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
@@ -1225,5 +1224,42 @@ TEST(SQLPrepare, ParametrizedQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 */
+
+TEST(StatementTest, SQLExecute_basic) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  char read_stmt[kBufferLength] = "SELECT 1";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(1)", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLExecute_basicInsertion) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  std::string table_name =  "ODBC_TEST_DATASET_SACHIN.TestTable";
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES ('Sachin1', 2, 2.2)";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size());
+  CheckError(status, "SQLPrepare", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(1)", conn, false);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests
