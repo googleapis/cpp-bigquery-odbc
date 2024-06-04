@@ -110,16 +110,16 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
 }
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
-    DSResults const& queryResults) {
+    DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
-          queryResults.data_source_results)) {
+          query_results.data_source_results)) {
     return ProcessPostQueryResults(
-        absl::get<PostQueryResults>(queryResults.data_source_results));
+        absl::get<PostQueryResults>(query_results.data_source_results));
   }
   if (absl::holds_alternative<GetQueryResults>(
-          queryResults.data_source_results)) {
+          query_results.data_source_results)) {
     return ProcessGetQueryResults(
-        absl::get<GetQueryResults>(queryResults.data_source_results));
+        absl::get<GetQueryResults>(query_results.data_source_results));
   }
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
 }
