@@ -153,10 +153,10 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     foreign_keys_query.append(kNamedPKTableParam);
   }
   if (!fk_table_name.empty()) {
-    foreign_keys_query.append(" AND key_column_usage.table_name  LIKE @");
+    foreign_keys_query.append(" AND key_column_usage.table_name LIKE @");
     foreign_keys_query.append(kNamedFKTableParam);
   }
-  foreign_keys_query.append(kBasicForeignKeysQuerySuffix);
+  foreign_keys_query.append(" ").append(kBasicForeignKeysQuerySuffix);
   // Construct named query params
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({kNamedCatalogParam, catalog_name});
