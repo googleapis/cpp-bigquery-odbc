@@ -23,10 +23,20 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ArithmeticToDSValue;
+using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::DSRow;
+using google::cloud::odbc_bq_driver_internal::DSValue;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::RowSchema;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::StringToDSValue;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
@@ -290,6 +300,78 @@ TEST(SQLBindColInternal, InvalidCType) {
 
   // If SQLBindColInternal has failed, SQL_DESC_COUNT should remain unchanged
   EXPECT_EQ(0, GetDescCount(ard));
+}
+
+TEST(SQLFetchInternal, Fail_InvalidHandle) {
+  ConnectionHandle handle;
+  SQLRETURN status = SQLFetchInternal(&handle);
+  ASSERT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLFetchInternal, Fail_UnprepraredHandle) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLRETURN status = SQLFetchInternal(&handle);
+  ASSERT_EQ(SQL_ERROR, status);
+}
+
+TEST(SQLFetchInternal, Fail_EmptyResultSet) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  SQLRETURN status = SQLFetchInternal(&handle);
+  ASSERT_EQ(SQL_NO_DATA, status);
+}
+
+void AddGenericResultSet(StatementHandle& handle, SQLBIGINT int_value,
+                         std::string str_value, SQLDOUBLE double_value) {
+  DSRow dsrow;
+  DSValue ds_value;
+  ArithmeticToDSValue<SQLBIGINT>(int_value, ds_value);
+  dsrow.push_back(ds_value);
+  StringToDSValue(str_value, ds_value);
+  dsrow.push_back(ds_value);
+  ArithmeticToDSValue<SQLDOUBLE>(double_value, ds_value);
+  dsrow.push_back(ds_value);
+
+  ResultSet& result_set = handle.GetResultSet();
+  result_set.row_schema = {{0, BQDataType::kInt64},
+                           {1, BQDataType::kString},
+                           {2, BQDataType::kFloat64}};
+  result_set.rows.emplace_back(dsrow);
+  handle.SetResultSet(result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+}
+
+TEST(SQLFetchInternal, Basic) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLBIGINT int_value = 101;
+  std::string str_value = "Hello";
+  SQLDOUBLE double_value = 3.14;
+  AddGenericResultSet(handle, int_value, str_value, double_value);
+
+  SQLBIGINT buf1;
+  SQLRETURN status = SQLBindColInternal(&handle, 1, SQL_C_SLONG, &buf1,
+                                        sizeof(SQL_C_SLONG), nullptr);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  SQLCHAR buf2[20];
+  status = SQLBindColInternal(&handle, 2, SQL_C_CHAR, buf2, 20, nullptr);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  SQLDOUBLE buf3;
+  status = SQLBindColInternal(&handle, 3, SQL_C_DOUBLE, &buf3,
+                              sizeof(SQL_C_DOUBLE), nullptr);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  status = SQLFetchInternal(&handle);
+  ASSERT_EQ(status, SQL_SUCCESS);
+
+  EXPECT_EQ(buf1, int_value);
+  std::string buf_str((char*)buf2);
+  EXPECT_EQ(buf_str, str_value);
+  EXPECT_EQ(buf3, double_value);
+
+  status = SQLFetchInternal(&handle);
+  ASSERT_EQ(status, SQL_NO_DATA);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
