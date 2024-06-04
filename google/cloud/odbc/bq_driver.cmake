@@ -153,6 +153,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_sql_foreign_keys_test.cc
         bq_driver/internal/odbc_sql_info_test.cc
         bq_driver/internal/odbc_sql_primary_keys_test.cc
+        bq_driver/internal/odbc_sql_type_info_test.cc
         bq_driver/internal/odbc_stmt_attr_test.cc
         bq_driver/internal/odbc_stmt_handle_test.cc
         bq_driver/internal/odbc_type_utils_test.cc

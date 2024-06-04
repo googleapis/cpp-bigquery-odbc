@@ -17,34 +17,33 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
-using ::google::cloud::odbc_bq_driver_internal::DSResults;
-using ::google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
-using ::google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
-using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
-using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
-using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
-using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
-using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
-using ::google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
-using ::google::cloud::odbc_bq_driver_internal::ResultSet;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
-using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::StmtStates;
-using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
-using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::DSResults;
+using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
+using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
+using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
+using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
+using google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -234,11 +233,6 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
       InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
   handle->GetDiagnostics().AddStatusRecord(status_record);
   return status_record.CalculateReturnCode();
-}
-
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT /* stmt_handle */,
-                                 SQLSMALLINT /* data_type */) {
-  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,

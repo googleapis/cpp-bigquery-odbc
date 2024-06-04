@@ -502,6 +502,10 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
                               {"BIGNUMERIC", kBqBignumericTypeInfoRow},
                           }}};
 
+DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info);
+
+void CreateTypeInfoRowSchema(ResultSet& result_set);
+
 class TypeInfoQuery : public Query {
  public:
   explicit TypeInfoQuery() = default;
