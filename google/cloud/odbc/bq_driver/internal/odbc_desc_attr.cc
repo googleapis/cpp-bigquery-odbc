@@ -323,10 +323,12 @@ StatusRecord DescriptorRecord::SetConciseType(SQLSMALLINT value,
       return StatusRecord::Ok();
     }
   }
+  std::string error_message =
+      "Illegal descriptor concise type: " + std::to_string(value);
   if (IsDescriptorTypeApplication(desc_type)) {
-    return SetOtherCType(value, "Illegal descriptor concise type");
+    return SetOtherCType(value, error_message);
   }
-  return SetOtherSQLType(value, "Illegal descriptor concise type");
+  return SetOtherSQLType(value, error_message);
 }
 
 bool DescriptorRecord::IsTypeValid(SQLSMALLINT valid_type,

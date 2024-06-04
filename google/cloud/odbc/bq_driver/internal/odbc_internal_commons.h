@@ -62,7 +62,7 @@ using DSValue = std::vector<char>;
 // Data Source Row.
 using DSRow = std::vector<DSValue>;
 
-// ResultSet rowa containing data source rows.
+// ResultSet rows containing data source rows.
 using ResultSetRows = std::vector<DSRow>;
 
 // Row schema representing the column schema of the
@@ -73,11 +73,17 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
+  int cursor = 0;  // points to the next row that can be fetched
 };
 
 inline void StringToDSValue(std::string& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());
+}
+
+inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
+  std::string str = reinterpret_cast<char const*>(c_str);
+  StringToDSValue(str, value);
 }
 
 inline void DSValueToString(DSValue& value, std::string& str) {
@@ -93,6 +99,13 @@ template <typename SrcType>
 inline void ArithmeticToDSValue(SrcType arithmetic_val, DSValue& ds_value) {
   ds_value.resize(sizeof(SrcType));
   std::memcpy(ds_value.data(), &arithmetic_val, sizeof(SrcType));
+}
+
+template <typename SrcType>
+inline SrcType DSValueToArithmetic(DSValue& ds_value) {
+  SrcType val;
+  std::memcpy(&val, ds_value.data(), sizeof(val));
+  return val;
 }
 
 inline int64_t DSValueToInt(DSValue& ds_value) {

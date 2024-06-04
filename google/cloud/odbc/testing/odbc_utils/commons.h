@@ -35,7 +35,10 @@ namespace google::cloud::odbc_tests {
 
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
+// Column-wise results
 using Results = std::map<std::string, std::vector<std::string>>;
+// Row-wise results
+using RowWiseResults = std::vector<std::map<int, std::string>>;
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 bool const kIsBqDriver = true;
@@ -263,9 +266,9 @@ class Table {
   void InsertStrData(std::shared_ptr<ODBCHandles> conn,
                      std::vector<std::string> rows, bool insert_index = false);
 
-  // This is used to insert strings into a table which only has a string column.
-  // If `insert_index` is set to true, an additional column `index` will be
-  // populated to order the values
+  // This is used to insert 'double' into a table which only has a NUMERIC
+  // column. If `insert_index` is set to true, an additional column `index` will
+  // be populated to order the values
   void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<double> rows, bool insert_index = false);
 

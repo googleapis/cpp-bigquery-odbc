@@ -29,6 +29,21 @@ std::string const kCatalogDatasetTableWithPKFull =
 std::string const kCatalogDatasetTableWithoutPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
 
+RowWiseResults const kCatalogPrimaryKeysExpected{
+    {{1, "bigquery-devtools-drivers"},
+     {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+     {3, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK"},
+     {4, "StringField"},
+     {5, "1"},
+     {6, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK.pk$"}},
+    {{1, "bigquery-devtools-drivers"},
+     {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+     {3, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK"},
+     {4, "IntField"},
+     {5, "2"},
+     {6, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK.pk$"}},
+};
+
 std::string const kTableWithPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
     " "
@@ -199,6 +214,38 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
 }
 
 #else
+
+void VerifyRowWiseResults(RowWiseResults& actual_results,
+                          RowWiseResults const& expected_results) {
+  // Check if both result sets have the same number of rows
+  EXPECT_EQ(actual_results.size(), expected_results.size())
+      << "Number of rows mismatch";
+
+  // Iterate over each row and compare the maps
+  for (size_t i = 0; i < actual_results.size(); ++i) {
+    auto const& actual_row = actual_results[i];
+    auto const& expected_row = expected_results[i];
+    EXPECT_EQ(actual_row.size(), expected_row.size())
+        << "Number of elements in row " << i << " mismatch";
+
+    // Sort map elements for comparison to ensure ordering consistency
+    std::vector<std::pair<int, std::string> > sorted_actual_row(
+        actual_row.begin(), actual_row.end());
+    std::vector<std::pair<int, std::string> > sorted_expected_row(
+        expected_row.begin(), expected_row.end());
+
+    std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
+    std::sort(sorted_expected_row.begin(), sorted_expected_row.end());
+
+    for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
+      // Check if keys and values match
+      EXPECT_EQ(sorted_actual_row[j].first, sorted_expected_row[j].first)
+          << "Key mismatch at row " << i << ", position " << j;
+      EXPECT_EQ(sorted_actual_row[j].second, sorted_expected_row[j].second)
+          << "Value mismatch at row " << i << ", position " << j;
+    }
+  }
+}
 /////////////////////////////////////////////////////
 // SQLPrimaryKeys is not implemented by Simba Driver.
 ////////////////////////////////////////////////////
@@ -211,14 +258,10 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
-  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
-                                              kCatalogDatasetTableWithPK);
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (primary_keys.empty()) {
-    std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
-  }
+  RowWiseResults primary_keys = Catalog::GetPrimaryKeys(
+      conn, kCatalogFnsDataset, kCatalogDatasetTableWithPK);
+  VerifyRowWiseResults(primary_keys, kCatalogPrimaryKeysExpected);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -246,12 +289,7 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   // table resource can be reused for other catalog functions as well.
   auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
                                               kCatalogDatasetTableWithPK, true);
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (primary_keys.empty()) {
-    std::cout << "SQLPrimaryKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(primary_keys, kCatalogPrimaryKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
