@@ -360,11 +360,6 @@ TEST(ConstructnamedPostQueryRequestTest, Success) {
   named_query_params.insert({"param2", "param-val-2"});
   named_query_params.insert({"param3", "param-val-3"});
 
-  std::string expected_query =
-      "select * from test_table where test_col1 = @param1 and test_col2 = "
-      "@param2 and test_col3 = "
-      "@param3";
-
   auto status_record_or = ConstructNamedParametersPostQueryRequest(
       kTestCatalog, kTestSchema, named_query, named_query_params);
   ASSERT_STATUS_RECORD_OK(status_record_or);

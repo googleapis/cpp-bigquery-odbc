@@ -83,8 +83,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
 }
 
 StatusRecordOr<ResultSet> ProcessPostQueryResults(
-    PostQueryResults const& postQueryResults) {
-  if (!postQueryResults.job_complete) {
+    PostQueryResults const& post_query_results) {
+  if (!post_query_results.job_complete) {
     // If this method is being called then the assumption is PostQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
@@ -92,12 +92,13 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
-  return ProcessResultSetRows(postQueryResults.schema, postQueryResults.rows);
+  return ProcessResultSetRows(post_query_results.schema,
+                              post_query_results.rows);
 }
 
 StatusRecordOr<ResultSet> ProcessGetQueryResults(
-    GetQueryResults const& getQueryResults) {
-  if (!getQueryResults.job_complete) {
+    GetQueryResults const& get_query_results) {
+  if (!get_query_results.job_complete) {
     // If this method is being called then the assumption is GetQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
@@ -105,7 +106,7 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
-  return ProcessResultSetRows(getQueryResults.schema, getQueryResults.rows);
+  return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
@@ -124,7 +125,7 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
 }
 
 StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle, PostQueryRequest const& postQueryRequest) {
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
     return StatusRecord{SQLStates::k_08S01(),
@@ -139,7 +140,7 @@ StatusRecordOr<DSResults> FetchBQData(
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
-  auto pq_status = bq_client->PostQuery(postQueryRequest, options);
+  auto pq_status = bq_client->PostQuery(post_query_request, options);
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }

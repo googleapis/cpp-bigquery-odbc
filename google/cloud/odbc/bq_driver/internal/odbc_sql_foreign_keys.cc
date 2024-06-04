@@ -84,9 +84,7 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     int fk_table_name_len) {
   // Parameter validation.
   std::string catalog_name =
-      (!pk_catalog_name.empty())
-          ? pk_catalog_name
-          : ((!fk_catalog_name.empty()) ? fk_catalog_name : "");
+      (!pk_catalog_name.empty()) ? pk_catalog_name : fk_catalog_name;
   if (catalog_name.empty() ||
       (pk_catalog_name_len == 0 && fk_catalog_name_len == 0)) {
     auto status_record =
@@ -106,9 +104,7 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     return status_record;
   }
   std::string schema_name =
-      (!pk_schema_name.empty())
-          ? pk_schema_name
-          : ((!fk_schema_name.empty()) ? fk_schema_name : "");
+      (!pk_schema_name.empty()) ? pk_schema_name : fk_schema_name;
   if (schema_name.empty() ||
       (pk_schema_name_len == 0 && fk_schema_name_len == 0)) {
     auto status_record =
