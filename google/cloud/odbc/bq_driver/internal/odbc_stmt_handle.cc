@@ -164,6 +164,9 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   query_str_ = query;
   stmt_state_ = StmtStates::kStatementPrepared;
+  DescriptorHandle& desc_handle =
+      this->GetDescriptorHandle(DescriptorType::kIPD);
+  StatusRecord ipd_response = PopulateIpd(&desc_handle, response);
   return StatusRecord::Ok();
 }
 
@@ -172,6 +175,37 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   return attributes_[attribute];
+}
+
+StatusRecord StatementHandle::PopulateIpd(
+    DescriptorHandle* handle,
+    google::cloud::odbc_internal::StatusRecordOr<
+        google::cloud::bigquery_v2_minimal_internal::Job> const& qry_res) {
+  std::map<SQLSMALLINT, DescriptorRecord> records;
+  DescriptorRecord descriptor_record;
+
+  auto stmt_params =
+      qry_res.GetValue().statistics.job_query_stats.undeclared_query_parameters;
+  TableSchema schema = qry_res.GetValue().statistics.job_query_stats.schema;
+  if (stmt_params.empty()) {
+    return StatusRecord::Ok();
+  }
+
+  for (int i = 0; i < stmt_params.size(); i++) {
+    StatusRecordOr<BQDataType> record_type =
+        ConvertDSType(stmt_params[i].parameter_type.type);
+
+    descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
+    descriptor_record.SetName(stmt_params[i].name, stmt_params[i].name.size());
+    descriptor_record.type_name = stmt_params[i].parameter_type.type;
+
+    descriptor_record.nullable =
+        schema.fields[i].mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
+
+    handle->BindNewDescriptorRecord(i, descriptor_record);
+  }
+
+  return StatusRecord::Ok();
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
