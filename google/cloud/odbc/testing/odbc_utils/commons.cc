@@ -275,6 +275,34 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+                            std::vector<SQLBIGINT> rows, bool insert_index) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    SQLBIGINT numeric_field = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+    row_str.append(std::to_string(numeric_field));
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+}
+
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
                  bool use_ansi) {

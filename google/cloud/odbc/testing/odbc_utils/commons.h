@@ -272,6 +272,12 @@ class Table {
   void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<double> rows, bool insert_index = false);
 
+  // This is used to insert 'SQLBIGINT' into a table which only has a INT64
+  // column. If `insert_index` is set to true, an additional column `index` will
+  // be populated to order the values
+  void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+                       std::vector<SQLBIGINT> rows, bool insert_index = false);
+
  private:
   std::string table_name_;
 };
