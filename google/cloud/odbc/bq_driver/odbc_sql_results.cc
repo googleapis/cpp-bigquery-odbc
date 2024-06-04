@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fetch.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -23,10 +24,13 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
+using google::cloud::odbc_bq_driver_internal::CreateTypeInfoRowSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
+using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
@@ -143,8 +147,6 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   return SQL_SUCCESS;
 }
 
-// NOLINTBEGIN(misc-unused-parameters)
-
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
@@ -185,6 +187,41 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   return status_record.CalculateReturnCode();
 }
 
-// NOLINTEND(misc-unused-parameters)
+SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
+  SQLRETURN rc = SQL_SUCCESS;
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle& handle = *(*handle_result);
+
+  ResultSet result_set;
+  if (data_type == SQL_ALL_TYPES) {
+    for (auto [sql_data_type, bq_data_type_info] : kSqlToBqDataTypes) {
+      for (auto [bq_data_type, type_info] : bq_data_type_info) {
+        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+      }
+    }
+  } else {
+    if (kSqlToBqDataTypes.count(data_type)) {
+      for (auto [bq_data_type, type_info] : kSqlToBqDataTypes.at(data_type)) {
+        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+      }
+    }
+  }
+
+  if (!result_set.rows.empty()) {
+    CreateTypeInfoRowSchema(result_set);
+    handle.SetResultSet(result_set);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
+
+  return SQL_SUCCESS;
+}
 
 }  // namespace google::cloud::odbc_bq_driver
