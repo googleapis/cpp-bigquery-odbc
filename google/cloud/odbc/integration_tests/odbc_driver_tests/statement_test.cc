@@ -25,15 +25,15 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 #endif
 
@@ -1251,9 +1251,9 @@ TEST(SQLPrepare, ValidateIpdDescForNamedParameterQuery) {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
   PrepareAndCheckQuery(
       "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
       "INT64", "var");
@@ -1275,9 +1275,9 @@ TEST(SQLPrepare, ValidateIpdDescForNamedParameterQuery) {
 TEST(SQLPrepare, ValidateIpdDescForPositionalParameterQuery) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
   PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
                        conn, 1, "INT64");
 
