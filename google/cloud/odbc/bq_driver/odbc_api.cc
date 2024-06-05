@@ -55,6 +55,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDescField;
@@ -84,6 +85,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDescField;
@@ -2482,13 +2484,25 @@ SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
                SQLSMALLINT fkSchemaNameLen, SQLCHAR* fkTableName,
                SQLSMALLINT fkTableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLForeignKeys");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLForeignKeys(
+        statementHandle, pkCatalogName, pkCatalogNameLen, pkSchemaName,
+        pkSchemaNameLen, pkTableName, pkTableNameLen, fkCatalogName,
+        fkCatalogNameLen, fkSchemaName, fkSchemaNameLen, fkTableName,
+        fkTableNameLen, *(*kTraceOption));
   // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
   // in odbc_driver_metadata.h.
-
+  rc = google::cloud::odbc_bq_driver::SQLForeignKeysInternal(
+      statementHandle, pkCatalogName, pkCatalogNameLen, pkSchemaName,
+      pkSchemaNameLen, pkTableName, pkTableNameLen, fkCatalogName,
+      fkCatalogNameLen, fkSchemaName, fkSchemaNameLen, fkTableName,
+      fkTableNameLen);
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLForeignKeys(rc, *(*kTraceOption));
 
   return rc;
 }

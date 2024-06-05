@@ -183,7 +183,7 @@ TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLPrimaryKeys_CreateForeignKeysTables) {
+TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create primary keys table via Simba Driver since execute is not implemented
   // for BQ Drivers.
