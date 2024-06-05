@@ -349,7 +349,8 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
     return SQL_NO_DATA;
   }
 
-  if (handle->GetType() == DescriptorType::kIRD) {
+  if (handle->GetType() == DescriptorType::kIRD &&
+      !handle->GetAssociatedStatementHandles().empty()) {
     // For IPD and IRD there can be only one associated statement handle
     auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
     if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
