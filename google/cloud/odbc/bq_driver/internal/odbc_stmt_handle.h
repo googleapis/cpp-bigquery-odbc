@@ -86,7 +86,9 @@ class StatementHandle : public Handle {
     return query_parameters_.size();
   }
 
-  [[nodiscard]] inline ResultSet& GetResultSet() { return result_set_; }
+  [[nodiscard]] inline ResultSet const& GetResultSet() const {
+    return result_set_;
+  }
 
   [[nodiscard]] inline std::vector<
       google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&

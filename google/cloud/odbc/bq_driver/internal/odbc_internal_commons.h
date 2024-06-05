@@ -73,7 +73,7 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
-  int cursor = 0;  // points to the next row that can be fetched
+  mutable int cursor{0};  // points to the next row that can be fetched
 };
 
 inline void StringToDSValue(std::string& str, DSValue& value) {
@@ -86,7 +86,7 @@ inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
   StringToDSValue(str, value);
 }
 
-inline void DSValueToString(DSValue& value, std::string& str) {
+inline void DSValueToString(DSValue const& value, std::string& str) {
   str.assign(value.begin(), value.end());
 }
 
