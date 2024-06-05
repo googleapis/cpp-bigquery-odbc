@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
-#include "google/cloud/odbc/bq_driver/internal/data_translation.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_fetch.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -23,13 +23,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::ColumnSchema;
-using google::cloud::odbc_bq_driver_internal::ConvertFromArithmeticDSValue;
-using google::cloud::odbc_bq_driver_internal::ConvertFromStringDSValue;
-using google::cloud::odbc_bq_driver_internal::DataBuffer;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
-using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
@@ -40,6 +34,7 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -150,68 +145,6 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 
 // NOLINTBEGIN(misc-unused-parameters)
 
-StatusRecord WriteToApplicationBuffer(DSValue& ds_val, BQDataType bq_data_type,
-                                      DescriptorRecord& app_desc_rec) {
-  if (ds_val.empty()) {
-    return StatusRecord::Ok();
-  }
-  SQLSMALLINT target_c_type = app_desc_rec.concise_type;
-  SQLPOINTER app_buffer = app_desc_rec.data_ptr;
-  SQLLEN app_buffer_len = app_desc_rec.octet_length;
-  SQLLEN* indicator_ptr = app_desc_rec.indicator_ptr;
-  SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
-  DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
-                     octet_length_ptr};
-
-  StatusRecord status_record;
-  if (bq_data_type == BQDataType::kInt64) {
-    return ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
-  }
-  if (bq_data_type == BQDataType::kFloat64) {
-    return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
-  }
-  if (bq_data_type == BQDataType::kString) {
-    using google::cloud::odbc_bq_driver_internal::DSValueToString;
-    std::string tmp_str;
-    DSValueToString(ds_val, tmp_str);
-    return ConvertFromStringDSValue(ds_val, data);
-  }
-  return {SQLStates::k_HYC00(), "Optional feature not implemented"};
-}
-
-StatusRecord WriteDSRow(DSRow& ds_row, RowSchema& schema,
-                        DescriptorHandle& ard) {
-  for (ColumnSchema& col_schema : schema) {
-    int col_index = col_schema.col_index;
-    DSValue& ds_val = ds_row[col_index];
-    // Column is not bound.
-    if (!ard.HasDescriptorRecord(col_index + 1)) {
-      continue;
-    }
-    DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
-    StatusRecord status_record =
-        WriteToApplicationBuffer(ds_val, col_schema.col_type, col_desc);
-    if (!status_record.ok()) {
-      return status_record;
-    }
-  }
-  return StatusRecord::Ok();
-}
-
-StatusRecord WriteRowset(ResultSet& result_set, int rowset_size,
-                         DescriptorHandle& ard) {
-  int cursor = result_set.cursor;
-  for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
-       i++, result_set.cursor = i) {
-    StatusRecord status_record =
-        WriteDSRow(result_set.rows[i], result_set.row_schema, ard);
-    if (!status_record.ok()) {
-      return status_record;
-    }
-  }
-  return StatusRecord::Ok();
-}
-
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
@@ -234,7 +167,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  ResultSet& result_set = handle.GetResultSet();
+  ResultSet const& result_set = handle.GetResultSet();
   if (result_set.cursor >= result_set.rows.size()) {
     return SQL_NO_DATA;
   }

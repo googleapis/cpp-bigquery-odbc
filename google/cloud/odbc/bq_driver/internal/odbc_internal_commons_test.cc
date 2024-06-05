@@ -187,6 +187,42 @@ TEST(DSValue, Basic_Int) {
   EXPECT_EQ(expected, actual);
 }
 
+TEST(StringToDSValue, SQLCHAR_String) {
+  const SQLCHAR expected[10] = "Hello";
+  DSValue value;
+  StringToDSValue(expected, value);
+
+  std::string dsvalue_converted;
+  DSValueToString(value, dsvalue_converted);
+  EXPECT_STREQ(dsvalue_converted.c_str(), (char*)expected);
+}
+
+TEST(ArithmeticToDSValue, Success_SQLBIGINT) {
+  SQLBIGINT expected = 404;
+  DSValue value;
+  ArithmeticToDSValue<SQLBIGINT>(expected, value);
+
+  EXPECT_EQ(DSValueToArithmetic<SQLBIGINT>(value), expected);
+}
+
+TEST(ArithmeticToDSValue, Success_SQLDOUBLE) {
+  SQLDOUBLE expected = 3.14;
+  DSValue value;
+  ArithmeticToDSValue<SQLDOUBLE>(expected, value);
+
+  EXPECT_EQ(DSValueToArithmetic<SQLDOUBLE>(value), expected);
+}
+
+TEST(StringToDSValue, Std_String) {
+  std::string expected = "Hello";
+  DSValue value;
+  StringToDSValue(expected, value);
+
+  std::string dsvalue_converted;
+  DSValueToString(value, dsvalue_converted);
+  EXPECT_EQ(dsvalue_converted, expected);
+}
+
 TEST(ProcessBQResults, ProcessPostQueryResults_Success) {
   PostQueryResults results = CreatePostQueryResults();
   auto status_record_or = ProcessPostQueryResults(results);
@@ -450,6 +486,15 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Invalid_Param_Value) {
   EXPECT_THAT(status_record_or,
               StatusRecordIs(SQLStates::k_HY000(),
                              HasSubstr("Invalid parameter value")));
+}
+
+TEST(ProcessResultSetRows, Success_Basic) {
+  TableSchema table_schema = CreateTableSchema();
+  std::vector<RowData> rows = CreateTableRows();
+  StatusRecordOr<ResultSet> results_status =
+      ProcessResultSetRows(table_schema, rows);
+  ASSERT_STATUS_RECORD_OK(results_status);
+  AssertResults(results_status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
