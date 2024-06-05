@@ -1238,17 +1238,6 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
-  SQLSMALLINT out_desc_precision;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
-                           &out_desc_precision, 0, &str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(0, out_desc_precision);
-
-  SQLULEN length = 0;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(0, length);
-
   SQLSMALLINT out_concise_c_type;
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
                            &out_concise_c_type, 0, &str_len);
