@@ -54,18 +54,6 @@ def cpp_bigquery_odbc_development_deps(name = None):
         strip_prefix = "rules_cc-0.0.9",
     )
 
-    # Load Abseil: works with v2.22.0 tag of google-cloud-cpp
-    # maybe(
-    #    http_archive,
-    #   name = "com_google_absl",
-    #    urls = [
-    #       "https://storage.googleapis.com/cloud-cpp-community-archive/com_google_absl/20230802.1.tar.gz",
-    #        "https://github.com/abseil/abseil-cpp/archive/20230802.1.tar.gz",
-    #   ],
-    #   sha256 = "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed",
-    #   strip_prefix = "abseil-cpp-20230802.1",
-    #)
-
     # Load Abseil : google-cloud-cpp updated the version
     maybe(
         http_archive,
@@ -106,7 +94,7 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/main.tar.gz",
+            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.25.0.tar.gz",
         ],
-        strip_prefix = "google-cloud-cpp-main",
+        strip_prefix = "google-cloud-cpp-2.25.0",
     )
