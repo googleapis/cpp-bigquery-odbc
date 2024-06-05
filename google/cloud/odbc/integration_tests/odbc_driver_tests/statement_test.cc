@@ -13,19 +13,14 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#endif
-
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -34,7 +29,6 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
-#endif
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
@@ -1227,8 +1221,6 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
 
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
@@ -1241,14 +1233,30 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   std::map<SQLSMALLINT, DescriptorRecord> desRecord =
       ird.GetDescriptorRecords();
 
-  EXPECT_EQ(desRecord.size(), 1);
-  DescriptorRecord& desc_record = ird.GetDescriptorRecord(0);
+  EXPECT_EQ(ird.GetHeaderRecord().count, desRecord.size());
+  DescriptorRecord& desc_record = ird.GetDescriptorRecord(1);
   EXPECT_EQ(desc_record.name, "name");
   EXPECT_EQ(desc_record.concise_type, SQL_VARCHAR);
-  EXPECT_EQ(desc_record.precision, 1);
-  EXPECT_EQ(desc_record.length, 1);
+  EXPECT_EQ(desc_record.precision, 0);
+  EXPECT_EQ(desc_record.length, 0);
   EXPECT_EQ(desc_record.nullable, SQL_NULLABLE);
-#endif
+
+  SQLINTEGER str_len = 0;
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(&ird, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(1, count);
+
+  SQLULEN length = 0;
+  status = SQLGetDescField(&ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(0, length);
+
+  SQLSMALLINT out_concise_c_type;
+  status = SQLGetDescField(&ird, 1, SQL_DESC_CONCISE_TYPE, &out_concise_c_type,
+                           0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(desc_record.concise_type, out_concise_c_type);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

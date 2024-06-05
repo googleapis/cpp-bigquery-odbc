@@ -40,8 +40,7 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
       return descriptors_.apd_expl_ != nullptr ? *descriptors_.apd_expl_
                                                : *descriptors_.apd_;
     case DescriptorType::kIRD:
-      return descriptors_.ird_expl_ != nullptr ? *descriptors_.ird_expl_
-                                               : *descriptors_.ird_;
+      return *descriptors_.ird_;
     case DescriptorType::kIPD:
       return *descriptors_.ipd_;
   }
@@ -77,10 +76,6 @@ StatusRecord StatementHandle::SetDescriptorHandle(
     case DescriptorType::kAPD:
       DissociateDescriptorHandle(descriptors_.apd_expl_, type, this);
       descriptors_.apd_expl_ = descriptor_handle;
-      break;
-    case DescriptorType::kIRD:
-      DissociateDescriptorHandle(descriptors_.ird_expl_, type, this);
-      descriptors_.ird_expl_ = descriptor_handle;
       break;
     default:
       return StatusRecord{SQLStates::k_HY017(),
@@ -169,7 +164,7 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord ird_response = PopulateIrd(&desc_handle, schema);
+  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
   if (!ird_response.ok()) {
     return ird_response;
   }
@@ -179,15 +174,14 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   return StatusRecord::Ok();
 }
 
-StatusRecord StatementHandle::PopulateIrd(DescriptorHandle* descriptor_handle,
+StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                           TableSchema const& schema) {
+  std::string const nullable = "NULLABLE";
   for (int i = 0; i < schema.fields.size(); ++i) {
     auto const& res = schema.fields[i];
     DescriptorRecord descriptor_record;
-    descriptor_record.SetName(res.name, SQL_NTS);
-    descriptor_record.length = res.max_length;
-    descriptor_record.precision = res.precision;
-    StatusRecordOr<BQDataType> type_status_record = ConvertDSType(res.type);
+    descriptor_record.SetName(res.name, res.name.length());
+    StatusRecordOr<SQLSMALLINT> type_status_record = GetSQLDataType(res.type);
 
     if (!type_status_record.Ok()) {
       return type_status_record.GetStatusRecord();
@@ -197,11 +191,13 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle* descriptor_handle,
     if (!status_record.ok()) {
       return status_record;
     }
+    descriptor_record.length = res.max_length;
+    descriptor_record.precision = res.precision;
     descriptor_record.nullable =
-        res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
-    descriptor_handle->BindNewDescriptorRecord(i, descriptor_record);
+        res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
+    descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
-
+  descriptor_handle.GetHeaderRecord().count = schema.fields.size();
   return StatusRecord::Ok();
 }
 
