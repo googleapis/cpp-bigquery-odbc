@@ -1221,42 +1221,39 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
 
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
-  // Cast hstmt to StatementHandle*
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-
-  // Retrieve Ird Data set
-
-  DescriptorHandle& ird =
-      stmt_handle->GetDescriptorHandle(DescriptorType::kIRD);
-  std::map<SQLSMALLINT, DescriptorRecord> desRecord =
-      ird.GetDescriptorRecords();
-
-  EXPECT_EQ(ird.GetHeaderRecord().count, desRecord.size());
-  DescriptorRecord& desc_record = ird.GetDescriptorRecord(1);
-  EXPECT_EQ(desc_record.name, "name");
-  EXPECT_EQ(desc_record.concise_type, SQL_VARCHAR);
-  EXPECT_EQ(desc_record.precision, 0);
-  EXPECT_EQ(desc_record.length, 0);
-  EXPECT_EQ(desc_record.nullable, SQL_NULLABLE);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
 
   SQLINTEGER str_len = 0;
   SQLSMALLINT count = 0;
-  status = SQLGetDescField(&ird, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_COUNT, &count, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
+  SQLSMALLINT out_nullable;
+  status =
+      SQLGetDescField(conn->ird, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
+  EXPECT_EQ(SQL_NULLABLE, out_nullable);
+
+  SQLSMALLINT out_desc_precision;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
+                           &out_desc_precision, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(0, out_desc_precision);
+
   SQLULEN length = 0;
-  status = SQLGetDescField(&ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(0, length);
 
   SQLSMALLINT out_concise_c_type;
-  status = SQLGetDescField(&ird, 1, SQL_DESC_CONCISE_TYPE, &out_concise_c_type,
-                           0, &str_len);
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
+                           &out_concise_c_type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(desc_record.concise_type, out_concise_c_type);
+  EXPECT_EQ(SQL_VARCHAR, out_concise_c_type);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
