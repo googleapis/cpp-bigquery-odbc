@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+#include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -20,9 +22,17 @@ namespace google::cloud::odbc_tests {
 
 // Helper functions for this test only.
 namespace {
+
 std::string const kCatalog = "bigquery-devtools-drivers";
 std::string const kDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
 std::string const kPKTable = "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
+
+struct DataBuffer {
+  SQLSMALLINT target_type;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
+  SQLLEN str_len;
+};
 
 SQLCHAR* const kSqlCatalog =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalog.c_str()));
@@ -37,59 +47,87 @@ SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 
 }  // namespace
 
-TEST(CatalogDemoTest, SQLPrimaryKeys) {
-  short buf_len;
-  std::string in_conn_str = "DSN=SampleDSN";
-  short in_conn_str_len = strlen(in_conn_str.c_str());
-  SQLTCHAR out_conn_str[4096];
-  SQLSMALLINT out_conn_str_buf_len = (sizeof(out_conn_str) / sizeof(SQLTCHAR));
-  HENV henv;
-  HDBC hdbc;
-  HSTMT hstmt;
-  SQLRETURN rc = SQL_SUCCESS;
+inline void BindColumns(std::shared_ptr<ODBCHandles> conn, DataBuffer* columns,
+                        int res_cols) {
+  SQLRETURN status;
+  int col_idx = 0;
+  while (col_idx < res_cols) {
+    if (col_idx == 4) {
+      columns[col_idx].target_type = SQL_C_SSHORT;
+    } else {
+      // data type is Char.
+      columns[col_idx].target_type = SQL_C_CHAR;
+    }
+    status =
+        SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+                   columns[col_idx].target_type, columns[col_idx].target_value,
+                   columns[col_idx].buffer_length, &(columns[col_idx].str_len));
+    CheckError(status, "SQLBindCol", conn);
+    col_idx++;
+  }
+}
 
-  // 1) Allocate the environment handle.
-  std::cout << "Allocating environment handle..." << std::endl << std::endl;
-  ASSERT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &henv), SQL_SUCCESS);
-  std::cout << "Successfully allocated environment handle" << std::endl
-            << std::endl;
-  // 2) Allocate the connection handle.
-  std::cout << "Allocating connection handle..." << std::endl << std::endl;
-  ASSERT_EQ(SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc), SQL_SUCCESS);
-  std::cout << "Successfully allocated connection handle" << std::endl
-            << std::endl;
-  // 3) Connect to the data source.
-  std::cout << "Connecting to the data source" << std::endl << std::endl;
-  rc = SQLDriverConnect(hdbc, 0, (SQLCHAR*)in_conn_str.c_str(), in_conn_str_len,
-                        (SQLCHAR*)out_conn_str, out_conn_str_buf_len, &buf_len,
-                        SQL_DRIVER_COMPLETE);
-  ASSERT_EQ(rc, SQL_SUCCESS);
+TEST(CatalogDemoTest, SQLPrimaryKeys) {
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::cout << "Connecting to the data source..." << std::endl << std::endl;
+  ASSERT_EQ(Connect("DSN=SampleDSN", conn, true), SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
-  // 4) Allocate Statement Handle.
-  std::cout << "Allocating statement handle..." << std::endl << std::endl;
-  rc = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-  ASSERT_EQ(rc, SQL_SUCCESS);
-  std::cout << "Successfully allocated statement handle" << std::endl
+
+  int res_cols = 6;
+  DataBuffer columns[res_cols];
+  std::cout << "Binding columns buffers to fetch data..." << std::endl
             << std::endl;
+  BindColumns(conn, columns, res_cols);
+  std::cout << "Successfully bound all columns!" << std::endl << std::endl;
+
   // (5) Fetching Primary Keys.
   std::cout << "Fetching Primary Keys from the data source" << std::endl
             << std::endl;
 
-  rc = SQLPrimaryKeys(hstmt, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
-                      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen);
-  ASSERT_EQ(rc, SQL_SUCCESS);
+  status = SQLPrimaryKeys(conn->hstmt, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                          kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen);
+  CheckError(status, "SQLPrimaryKeys", conn);
+  while (1) {
+    std::map<int, std::string> catalog_results;
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    std::string table_cat = (char*)columns[0].target_value;
+    std::string table_schema = (char*)columns[1].target_value;
+    std::string table_name = (char*)columns[2].target_value;
+    std::string col_name = (char*)columns[3].target_value;
+    SQLSMALLINT* key_seq =
+        reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
+    std::string pk_name = (char*)columns[5].target_value;
+
+    std::cout << "Table Catalog: " << table_cat << ", ";
+    std::cout << " Table Schema: " << table_schema << ", ";
+    std::cout << " Table Name: " << table_name << ", ";
+    std::cout << " Column Name: " << col_name << ", ";
+    std::cout << " Key Sequence: " << *key_seq << ", ";
+    std::cout << " PrimaryKey Name: " << pk_name << std::endl << std::endl;
+  }
+
   std::cout << "Successfully fetched primary Keys for Catalog: " << kCatalog
             << ", and Dataset: " << kDataset << std::endl
             << std::endl;
-  // (6) TODO(sachinpro): Add SQLFetch statements here and printout the results.
 
   std::cout << "Freeing statement handle" << std::endl << std::endl;
-  rc = SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+  status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+  CheckError(status, "SQLFreeHandle", conn);
   std::cout << "Freeing connection handle" << std::endl << std::endl;
-  rc = SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
+  status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+  CheckError(status, "SQLFreeHandle", conn);
   std::cout << "Freeing environment handle" << std::endl << std::endl;
-  rc = SQLFreeHandle(SQL_HANDLE_ENV, henv);
+  status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
+  CheckError(status, "SQLFreeHandle", conn);
   std::cout << "Successfully freed all handles!" << std::endl;
 }
 

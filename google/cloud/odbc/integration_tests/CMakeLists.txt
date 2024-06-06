@@ -94,7 +94,7 @@ function (odbc_define_demo_tests)
         all_demo_tests odbc_driver_tests/demo/catalog_demo_test.cc
                        odbc_driver_tests/demo/connection_demo_test.cc)
 
-    target_link_libraries(all_demo_tests google_cloud_odbc_bq_driver
+    target_link_libraries(all_demo_tests google_cloud_odbc_testing_odbc_utils
                           GTest::gtest_main)
 
     target_include_directories(all_demo_tests PUBLIC ${CMAKE_SOURCE_DIR})
