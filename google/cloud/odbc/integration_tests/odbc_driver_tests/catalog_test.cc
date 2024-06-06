@@ -19,11 +19,6 @@ namespace google::cloud::odbc_tests {
 
 namespace {
 // Tables and schema for SQLPrimaryKeys
-std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
-std::string const kCatalogDatasetTableWithPK =
-    "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
-std::string const kCatalogDatasetTableWithoutPK =
-    "ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK";
 std::string const kCatalogDatasetTableWithPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
 std::string const kCatalogDatasetTableWithoutPKFull =
@@ -56,9 +51,6 @@ std::string const kTableWithOutPKSchema =
     "(StringField STRING, IntField INT64, FloatField FLOAT64)";
 
 // Tables and schema for SQLForeignKeys.
-std::string const kTableOrders = "ODBC_SQLForeignKeys_TABLE_ORDERS";
-std::string const kTableLines = "ODBC_SQLForeignKeys_TABLE_LINES";
-std::string const kTableCustomer = "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
 std::string const kTableOrdersFull = kCatalogFnsDataset + "." + kTableOrders;
 std::string const kTableLinesFull = kCatalogFnsDataset + "." + kTableLines;
 std::string const kTableCustomerFull =

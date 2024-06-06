@@ -91,11 +91,11 @@ function (odbc_define_demo_tests)
     enable_testing()
 
     add_executable(
-        all_demo_tests odbc_driver_tests/demo/catalog_demo_test.cc
-                       odbc_driver_tests/demo/connection_demo_test.cc)
+        all_demo_tests odbc_driver_tests/demo/connection_demo_test.cc
+                       odbc_driver_tests/demo/primary_keys_demo_test.cc)
 
-    target_link_libraries(all_demo_tests google_cloud_odbc_bq_driver
-                          GTest::gtest_main)
+    target_link_libraries(all_demo_tests google_cloud_odbc_testing_odbc_utils
+                          google_cloud_odbc_bq_driver GTest::gtest_main)
 
     target_include_directories(all_demo_tests PUBLIC ${CMAKE_SOURCE_DIR})
     target_include_directories(all_demo_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
