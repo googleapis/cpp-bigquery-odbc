@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -31,6 +32,9 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::odbc_bq_driver_internal::ResultSet;
+using ::google::cloud::odbc_bq_driver_internal::HeaderRecord;
+using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -139,6 +143,46 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 // NOLINTBEGIN(misc-unused-parameters)
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
+
+SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
+                                  SQLSMALLINT* ColumnCountPtr) {
+                              
+if (ColumnCountPtr == nullptr)
+            return SQL_ERROR;
+
+ResultSet* result_set = reinterpret_cast<ResultSet*>(statement_handle);
+if (result_set == nullptr || result_set->row_schema.empty()) {
+        *ColumnCountPtr = 0;
+    }
+*ColumnCountPtr = static_cast<SQLSMALLINT>(result_set->row_schema.size());
+
+   StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle* handle = *handle_result;
+
+ auto stmtState = handle->GetStmtState();
+ switch (stmtState) {
+    case StmtStates::kStatementPrepared: break;
+    case StmtStates::kStatementExecutedWithRs: break;
+    case StmtStates::kStatementExecutedWithoutRs: break;  
+    case StmtStates::kStatementStillExecuting: return SQL_ERROR;
+    case StmtStates::kNeedsPutData: return SQL_ERROR;
+    default:
+         return SQL_ERROR;
+}
+
+DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+auto status_record = SetDescField(&ird, 0, SQL_DESC_COUNT, (SQLPOINTER)ColumnCountPtr, 0);
+if (!status_record.ok()) {
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+return SQL_SUCCESS;
+}
 
 // NOLINTEND(misc-unused-parameters)
 

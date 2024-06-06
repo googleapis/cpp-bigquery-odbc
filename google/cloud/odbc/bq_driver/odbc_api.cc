@@ -75,6 +75,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumResultCols;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
@@ -1538,15 +1540,21 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
                                    SQLSMALLINT* columnCount) {
   SQLRETURN rc = SQL_SUCCESS;
-
+  bool is_tracing_enabled = IsTracingEnabled("SQLNumResultCols");
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled)
+    TraceFunctionEntry_SQLNumResultCols(statementHandle,columnCount, *(*kTraceOption));
 
   // Call to internal function for SQLNumResultCols in odbc_sql_results.h.
+  rc = google::cloud::odbc_bq_driver::SQLNumResultColsnternal(
+      statementHandle,columnCount);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled) TraceFunctionExit_SQLNumResultCols(rc, *(*kTraceOption));
 
   return rc;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Fetches the next rowset of data from the result set and returns data for
