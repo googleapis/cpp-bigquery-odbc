@@ -1246,15 +1246,18 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
                        conn, 1, "INT64");
 
+  DescriptorHandle& ipd =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
+
   SQLSMALLINT count = 0;
-  auto status = SQLGetDescField(&conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  auto status = SQLGetDescField(&ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
   SQLINTEGER str_len = 0;
   SQLSMALLINT concise_C_Type;
-  status = SQLGetDescField(&conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
-                           &concise_C_Type, 0, &str_len);
+  status = SQLGetDescField(&ipd, 1, SQL_DESC_CONCISE_TYPE, &concise_C_Type, 0,
+                           &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_INTEGER, concise_C_Type);
 

@@ -222,4 +222,12 @@ TEST(GetAttribute, GetDefaultAttribute) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
 }
 
+TEST(PopulateIpd, Fail_InvalidHandle){
+  // DescriptorHandle& handle =;
+
+}
+
+// TEST(PopulateIpd, ){
+
+// }
 }  // namespace google::cloud::odbc_bq_driver_internal
