@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/odbc_utils/catalog.h"
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -20,9 +21,10 @@ namespace google::cloud::odbc_tests {
 
 // Helper functions for this test only.
 namespace {
-std::string const kCatalog = "bigquery-devtools-drivers";
-std::string const kDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
-std::string const kPKTable = "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
+
+std::string const kCatalog = kCatalogName;
+std::string const kDataset = kCatalogFnsDataset;
+std::string const kPKTable = kCatalogDatasetTableWithPK;
 
 SQLCHAR* const kSqlCatalog =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalog.c_str()));

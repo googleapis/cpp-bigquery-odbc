@@ -22,7 +22,17 @@
 namespace google::cloud::odbc_tests {
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
-
+// Dataset used for catalog functions
+std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
+// Tables for catalog function : SQLForeignKeys
+std::string const kTableOrders = "ODBC_SQLForeignKeys_TABLE_ORDERS";
+std::string const kTableLines = "ODBC_SQLForeignKeys_TABLE_LINES";
+std::string const kTableCustomer = "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
+// Tables for catalog function : SQLPrimaryKeys
+std::string const kCatalogDatasetTableWithPK =
+    "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
+std::string const kCatalogDatasetTableWithoutPK =
+    "ODBC_SQLPrimaryKeys_TABLE_WITHOUT_PK";
 class Catalog {
  public:
   ~Catalog();
