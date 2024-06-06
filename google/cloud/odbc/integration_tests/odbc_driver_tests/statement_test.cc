@@ -21,12 +21,12 @@
 namespace google::cloud::odbc_tests {
 
 using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
@@ -1242,9 +1242,13 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
   PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
                        conn, 1, "INT64");
+
+    // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
 
   DescriptorHandle& ipd =
       stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);

@@ -223,7 +223,14 @@ TEST(GetAttribute, GetDefaultAttribute) {
 }
 
 TEST(PopulateIpd, Fail_InvalidHandle){
-  // DescriptorHandle& handle =;
+  DescriptorHandle ard;
+  DescriptorHandle apd;
+  DescriptorHandle ird;
+  DescriptorHandle ipd;
+  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
+
+  DescriptorHandle& desc_handle = handle.GetDescriptorHandle(DescriptorType::kIPD);
+  
 
 }
 
