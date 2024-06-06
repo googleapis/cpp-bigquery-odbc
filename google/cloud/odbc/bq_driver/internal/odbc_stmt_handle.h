@@ -120,9 +120,9 @@ class StatementHandle : public Handle {
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 
   static odbc_internal::StatusRecord PopulateIpd(
-      DescriptorHandle* handle,
+      DescriptorHandle& handle,
       google::cloud::bigquery_v2_minimal_internal::JobStatistics const&
-          job_statics);
+          job_statistics);
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

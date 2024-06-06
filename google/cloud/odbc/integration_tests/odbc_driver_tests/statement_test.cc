@@ -13,12 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#endif
-
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
@@ -26,7 +20,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -35,7 +28,6 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
-#endif
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
@@ -1216,7 +1208,7 @@ TEST(SQLPrepare, ParametrizedQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, ValidateIpdDescriptorForSimpleStatement) {
+TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
   auto conn = std::make_shared<ODBCHandles>();
 
   // Execute a read query and check whether the results returned are as expected
@@ -1229,7 +1221,6 @@ TEST(SQLPrepare, ValidateIpdDescriptorForSimpleStatement) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
@@ -1243,56 +1234,40 @@ TEST(SQLPrepare, ValidateIpdDescriptorForSimpleStatement) {
 
   EXPECT_EQ(desc_record.size(), 0);
 
-#endif
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, ValidateIpdDescForNamedParameterQuery) {
+TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-  PrepareAndCheckQuery(
-      "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
-      "INT64", "var");
-
-  // Retrieve Ipd Descriptor data set
-  DescriptorHandle& ipd =
-      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
-  std::map<SQLSMALLINT, DescriptorRecord> desc_record =
-      ipd.GetDescriptorRecords();
-
-  EXPECT_EQ(desc_record.size(), 1);
-  DescriptorRecord& record = ipd.GetDescriptorRecord(0);
-  EXPECT_EQ(record.name, "var");
-  EXPECT_EQ(record.concise_type, BQDataType::kInt64);
-
-#endif
-}
-
-TEST(SQLPrepare, ValidateIpdDescForPositionalParameterQuery) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
   PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
                        conn, 1, "INT64");
 
-  // Retrieve Ipd Descriptor data set
   DescriptorHandle& ipd =
       stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
-  std::map<SQLSMALLINT, DescriptorRecord> desc_record =
-      ipd.GetDescriptorRecords();
 
-  EXPECT_EQ(desc_record.size(), 1);
-  DescriptorRecord& record = ipd.GetDescriptorRecord(0);
-  EXPECT_EQ(record.name, "");
-  EXPECT_EQ(record.concise_type, BQDataType::kInt64);
+  SQLSMALLINT count = 0;
+  auto status = SQLGetDescField(&ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  std::cout << "count----> " << count << std::endl;
+  EXPECT_EQ(1, count);
 
-#endif
+  SQLINTEGER str_len = 0;
+  SQLSMALLINT concise_C_Type;
+  status = SQLGetDescField(&ipd, 1, SQL_DESC_CONCISE_TYPE, &concise_C_Type, 0,
+                           &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(SQL_INTEGER, concise_C_Type);
+
+  SQLSMALLINT name;
+  status = SQLGetDescField(&ipd, 1, SQL_DESC_NAME, &name, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+  EXPECT_EQ(0, name);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
