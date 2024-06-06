@@ -203,8 +203,6 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
     handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
 
-  handle.GetHeaderRecord().count = stmt_params.size();
-
   return StatusRecord::Ok();
 }
 
