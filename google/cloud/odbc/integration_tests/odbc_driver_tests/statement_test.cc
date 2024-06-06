@@ -21,12 +21,12 @@
 namespace google::cloud::odbc_tests {
 
 using google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
@@ -1226,13 +1226,19 @@ TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
 
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
 
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
   // Retrieve Ipd Descriptor data set
-  DescriptorHandle& ipd =
-      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
-  std::map<SQLSMALLINT, DescriptorRecord> desc_record =
-      ipd.GetDescriptorRecords();
+  // DescriptorHandle& ipd =
+  //     stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
+  // std::map<SQLSMALLINT, DescriptorRecord> desc_record =
+  //     &conn->ipd.GetDescriptorRecords();
 
-  EXPECT_EQ(desc_record.size(), 0);
+  // EXPECT_EQ(desc_record.size(), 0);
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(0, count);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1245,23 +1251,23 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
                        conn, 1, "INT64");
 
-    // Cast hstmt to StatementHandle*
+  // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
 
-  DescriptorHandle& ipd =
-      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
+  auto status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
 
   SQLSMALLINT count = 0;
-  auto status = SQLGetDescField(&ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
   SQLINTEGER str_len = 0;
   SQLSMALLINT concise_C_Type;
-  status = SQLGetDescField(&ipd, 1, SQL_DESC_CONCISE_TYPE, &concise_C_Type, 0,
-                           &str_len);
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE, &concise_C_Type,
+                           0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_INTEGER, concise_C_Type);
 

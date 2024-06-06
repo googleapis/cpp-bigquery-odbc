@@ -222,19 +222,4 @@ TEST(GetAttribute, GetDefaultAttribute) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
 }
 
-TEST(PopulateIpd, Fail_InvalidHandle){
-  DescriptorHandle ard;
-  DescriptorHandle apd;
-  DescriptorHandle ird;
-  DescriptorHandle ipd;
-  StatementHandle handle(nullptr, {ard, apd, ird, ipd});
-
-  DescriptorHandle& desc_handle = handle.GetDescriptorHandle(DescriptorType::kIPD);
-  
-
-}
-
-// TEST(PopulateIpd, ){
-
-// }
 }  // namespace google::cloud::odbc_bq_driver_internal
