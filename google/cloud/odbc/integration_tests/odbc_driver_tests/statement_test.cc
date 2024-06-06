@@ -1224,7 +1224,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
 
   status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
-  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
 
   SQLINTEGER str_len = 0;
   SQLSMALLINT count = 0;
@@ -1238,11 +1238,31 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
-  SQLSMALLINT out_concise_c_type;
+  SQLSMALLINT out_concise_type;
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_c_type, 0, &str_len);
+                           &out_concise_type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(SQL_VARCHAR, out_concise_c_type);
+  EXPECT_EQ(SQL_VARCHAR, out_concise_type);
+
+  SQLCHAR out_column_Name[20];
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_NAME, &out_column_Name,
+                           kBufferLength, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+  EXPECT_STREQ((char const*)out_column_Name, "name");
+
+// will make changes once SQLdescribeCol implemented
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  SQLSMALLINT out_desc_precision;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
+                           &out_desc_precision, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(0, out_desc_precision);
+
+  SQLULEN length = 0;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(0, length);
+#endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

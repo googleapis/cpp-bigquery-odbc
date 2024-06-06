@@ -176,6 +176,11 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                           TableSchema const& schema) {
+  if (&descriptor_handle == nullptr ||
+      descriptor_handle.GetType() != DescriptorType::kIRD) {
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Invalid attribute value (invalid descriptor handle)"};
+  }
   std::string const nullable = "NULLABLE";
   for (int i = 0; i < schema.fields.size(); ++i) {
     auto const& res = schema.fields[i];
@@ -197,7 +202,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
-  descriptor_handle.GetHeaderRecord().count = schema.fields.size();
   return StatusRecord::Ok();
 }
 
