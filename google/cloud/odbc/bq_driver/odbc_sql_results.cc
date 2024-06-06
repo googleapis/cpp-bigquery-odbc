@@ -17,24 +17,23 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
+#include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using ::google::cloud::odbc_bq_driver_internal::DescriptorType;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
+using ::google::cloud::odbc_bq_driver_internal::ResultSet;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 using ::google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
-using ::google::cloud::odbc_bq_driver_internal::ResultSet;
-using ::google::cloud::odbc_bq_driver_internal::HeaderRecord;
-using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -146,17 +145,15 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
 
 SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
                                   SQLSMALLINT* ColumnCountPtr) {
-                              
-if (ColumnCountPtr == nullptr)
-            return SQL_ERROR;
+  if (ColumnCountPtr == nullptr) return SQL_ERROR;
 
-ResultSet* result_set = reinterpret_cast<ResultSet*>(statement_handle);
-if (result_set == nullptr || result_set->row_schema.empty()) {
-        *ColumnCountPtr = 0;
-    }
-*ColumnCountPtr = static_cast<SQLSMALLINT>(result_set->row_schema.size());
+  auto* result_set = reinterpret_cast<ResultSet*>(statement_handle);
+  if (result_set == nullptr || result_set->row_schema.empty()) {
+    *ColumnCountPtr = 0;
+  }
+  *ColumnCountPtr = static_cast<SQLSMALLINT>(result_set->row_schema.size());
 
-   StatusRecordOr<StatementHandle*> handle_result =
+  StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
     TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
@@ -164,24 +161,26 @@ if (result_set == nullptr || result_set->row_schema.empty()) {
   }
   StatementHandle* handle = *handle_result;
 
- auto stmtState = handle->GetStmtState();
- switch (stmtState) {
-    case StmtStates::kStatementPrepared: break;
-    case StmtStates::kStatementExecutedWithRs: break;
-    case StmtStates::kStatementExecutedWithoutRs: break;  
-    case StmtStates::kStatementStillExecuting: return SQL_ERROR;
-    case StmtStates::kNeedsPutData: return SQL_ERROR;
+  auto stmt_state = handle->GetStmtState();
+  switch (stmt_state) {
+    case StmtStates::kStatementPrepared:
+    case StmtStates::kStatementExecutedWithRs:
+    case StmtStates::kStatementExecutedWithoutRs:
+      break;
+    case StmtStates::kStatementStillExecuting:
+    case StmtStates::kNeedsPutData:
     default:
-         return SQL_ERROR;
-}
+      return SQL_ERROR;
+  }
 
-DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
-auto status_record = SetDescField(&ird, 0, SQL_DESC_COUNT, (SQLPOINTER)ColumnCountPtr, 0);
-if (!status_record.ok()) {
+  DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+  auto status_record = SetDescField(&ird, 0, SQL_DESC_COUNT,
+                                    static_cast<SQLPOINTER>(ColumnCountPtr), 0);
+  if (!status_record.ok()) {
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
-return SQL_SUCCESS;
+  return SQL_SUCCESS;
 }
 
 // NOLINTEND(misc-unused-parameters)
