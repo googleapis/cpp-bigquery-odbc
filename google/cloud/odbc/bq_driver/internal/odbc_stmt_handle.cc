@@ -181,6 +181,7 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
 
 StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
                                           JobStatistics const& job_statistics) {
+  // StatusRecord<DescriptorHandle>;
   DescriptorRecord descriptor_record;
   std::string const nullable = "NULLABLE";
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
