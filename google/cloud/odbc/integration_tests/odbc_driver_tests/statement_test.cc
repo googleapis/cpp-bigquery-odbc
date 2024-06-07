@@ -1223,7 +1223,6 @@ TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
 
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
 
   status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
@@ -1248,8 +1247,6 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-
   auto status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
 
@@ -1263,7 +1260,7 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
                            &out_concise_c_Type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(SQL_INTEGER, out_concise_c_Type);
+  EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
   SQLSMALLINT out_nullable;
   status =

@@ -167,7 +167,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     return SQL_VARCHAR;
   }
   if (type == "INTEGER" || type == "INT64") {
-    return SQL_INTEGER;
+    return SQL_BIGINT;
   }
   if (type == "BOOL" || type == "BOOLEAN") {
     return SQL_BIT;
@@ -209,7 +209,7 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   if (type == "STRING") {
     return BQDataType::kString;
   }
-  if (type == "INTEGER" || type == "INT64") {
+  if (type == "INTEGER" || type == "INT64 ") {
     return BQDataType::kInt64;
   }
   if (type == "BOOL" || type == "BOOLEAN") {
