@@ -45,9 +45,9 @@ TableSchema CreateTableSchema() {
   f2.precision = 10;
   f3.precision = 14;
 
-  f1.max_length = 10;
+  f1.max_length = 16384;
   f2.max_length = 20;
-  f3.max_length = 34;
+  f3.max_length = 16384;
 
   f1.mode = "NULLABLE";
   f2.mode = "NULLABLE";
@@ -309,6 +309,9 @@ TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).concise_type,
               *type_status_record);
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).length, res.max_length);
+    if(res.type == "STRING")
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).precision, res.max_length);
+    else
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).precision, res.precision);
     SQLSMALLINT nullable = res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).nullable, nullable);
