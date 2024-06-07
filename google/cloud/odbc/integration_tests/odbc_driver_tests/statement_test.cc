@@ -1242,7 +1242,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
                            &out_concise_type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(SQL_INTEGER, out_concise_type);
+  EXPECT_EQ(SQL_BIGINT, out_concise_type);
 
   SQLCHAR out_column_Name[20];
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_NAME, &out_column_Name,
@@ -1256,12 +1256,12 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
                            &out_desc_precision, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(0, out_desc_precision);
+  EXPECT_EQ(19, out_desc_precision);
 
   SQLULEN length = 0;
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(0, length);
+  EXPECT_EQ(19, length);
 
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
