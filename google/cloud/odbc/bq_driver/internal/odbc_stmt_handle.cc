@@ -186,6 +186,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     auto const& res = schema.fields[i];
     DescriptorRecord descriptor_record;
     descriptor_record.SetName(res.name, res.name.length());
+    descriptor_record.length = res.max_length;
     StatusRecordOr<SQLSMALLINT> type_status_record = GetSQLDataType(res.type);
 
     if (!type_status_record.Ok()) {
