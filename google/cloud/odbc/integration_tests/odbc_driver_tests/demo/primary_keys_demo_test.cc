@@ -115,13 +115,16 @@ TEST(CatalogDemoTest, SQLPrimaryKeys) {
     SQLSMALLINT* key_seq =
         reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
     std::string pk_name = (char*)columns[5].target_value;
-
-    std::cout << "Table Catalog: " << table_cat << ", ";
-    std::cout << " Table Schema: " << table_schema << ", ";
-    std::cout << " Table Name: " << table_name << ", ";
-    std::cout << " Column Name: " << col_name << ", ";
-    std::cout << " Key Sequence: " << *key_seq << ", ";
-    std::cout << " PrimaryKey Name: " << pk_name << std::endl << std::endl;
+    std::cout << "*******************************************************"
+              << std::endl;
+    std::cout << "Table Catalog: " << table_cat << ", " << std::endl;
+    std::cout << "Table Schema: " << table_schema << ", " << std::endl;
+    std::cout << "Table Name: " << table_name << ", " << std::endl;
+    std::cout << "Column Name: " << col_name << ", " << std::endl;
+    std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    std::cout << "PrimaryKey Name: " << pk_name << std::endl << std::endl;
+    std::cout << "*******************************************************"
+              << std::endl;
   }
 
   std::cout << "Freeing ODBC handles..." << std::endl << std::endl;
