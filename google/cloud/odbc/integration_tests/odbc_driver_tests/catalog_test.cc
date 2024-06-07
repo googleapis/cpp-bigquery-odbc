@@ -39,6 +39,25 @@ RowWiseResults const kCatalogPrimaryKeysExpected{
      {6, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK.pk$"}},
 };
 
+RowWiseResults const kCatalogForeignKeysExpected{
+    {
+        {1, "bigquery-devtools-drivers"},
+        {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+        {3, "ODBC_SQLForeignKeys_TABLE_CUSTOMER"},
+        {4, "CustId"},
+        {5, "bigquery-devtools-drivers"},
+        {6, "ODBC_TEST_DATASET_CATALOG_FNS"},
+        {7, "ODBC_SQLForeignKeys_TABLE_ORDERS"},
+        {8, "CustId"},
+        {9, "1"},
+        {10, "NULL"},
+        {11, "NULL"},
+        {12, "ODBC_SQLForeignKeys_TABLE_ORDERS.fk$1"},
+        {13, "ODBC_SQLForeignKeys_TABLE_CUSTOMER.pk$"},
+        {14, "7"},
+    },
+};
+
 std::string const kTableWithPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
     " "
@@ -320,13 +339,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   auto foreign_keys =
       Catalog::GetForeignKeys(conn, kCatalogFnsDataset, kTableCustomer,
                               kTableOrders); /* both PK and FK table supplied*/
-
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -348,12 +361,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
   auto foreign_keys = Catalog::GetForeignKeys(
       conn, kCatalogFnsDataset, kTableCustomer); /* empty FK table */
 
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -375,12 +383,7 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
   auto foreign_keys = Catalog::GetForeignKeys(
       conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders);
 
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -403,12 +406,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
       conn, kCatalogFnsDataset, kTableCustomer, kTableOrders,
       true); /* both PK and FK table supplied*/
 
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -429,13 +427,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
   // table resource can be reused for other catalog functions as well.
   auto foreign_keys = Catalog::GetForeignKeys(
       conn, kCatalogFnsDataset, kTableCustomer, "" /* empty FK table */, true);
-
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -456,13 +448,7 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
   // table resource can be reused for other catalog functions as well.
   auto foreign_keys = Catalog::GetForeignKeys(
       conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders, true);
-
-  // Uncomment the statement below once the function is fully implemented
-  // with SQLFetch.
-  // EXPECT_FALSE(primary_keys.empty());
-  if (foreign_keys.empty()) {
-    std::cout << "SQLForeignKeys not yet implemented" << std::endl;
-  }
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

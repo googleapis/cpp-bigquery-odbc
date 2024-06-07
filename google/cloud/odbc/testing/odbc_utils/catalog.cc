@@ -190,7 +190,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string pk_table,
                                        std::string fk_table, bool use_ansi) {
   SQLRETURN status;
-  int res_cols = 15;
+  int res_cols = 11;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
   RowWiseResults results;
@@ -217,15 +217,10 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
   // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
   // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
-  // Col10: update rule, Col 11: delete rule, Col12: fk name,
-  // Col13: pk name, Col14: Deferrability
+  // Col10: fk name, Col11: pk name.
   SQLSMALLINT val;
   while (col_idx < res_cols) {
-    if (col_idx == 9 || col_idx == 10) {
-      // UPDATE_RULE and DELETE_RULE not supported by BQ so skip.
-      col_idx++;
-      continue;
-    } else if (col_idx == 13 || col_idx == 8) {
+    if (col_idx == 8) {
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
@@ -298,9 +293,6 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
-// TODO(sachinpro): Remove the flag once SQLFetch is implemented for Google BQ
-// Driver.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
   while (1) {
     std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
@@ -314,8 +306,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
     // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
     // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
-    // Col10: update rule, Col 11: delete rule, Col12: fk name,
-    // Col13: pk name, Col14: Deferrability
+    // Col10: fk name, Col11: pk name.
     std::string pk_table_cat = (char*)catalog_result[0].target_value;
     std::string pk_table_schema = (char*)catalog_result[1].target_value;
     std::string pk_table_name = (char*)catalog_result[2].target_value;
@@ -326,10 +317,8 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     std::string fk_col_name = (char*)catalog_result[7].target_value;
     SQLSMALLINT* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
-    std::string fk_name = (char*)catalog_result[11].target_value;
-    std::string pk_name = (char*)catalog_result[12].target_value;
-    SQLSMALLINT* deferrability =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[13].target_value);
+    std::string fk_name = (char*)catalog_result[9].target_value;
+    std::string pk_name = (char*)catalog_result[10].target_value;
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
@@ -341,16 +330,15 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     if (!fk_col_name.empty()) catalog_results.insert({8, fk_col_name});
     if (key_seq && *key_seq >= 0)
       catalog_results.insert({9, std::to_string(*key_seq)});
-    catalog_results.insert({10, "NULL"});  // UPDATE_RULE
-    catalog_results.insert({11, "NULL"});  // DELETE_RULE
+    catalog_results.insert({10, "NULL"});  // UPDATE_RULE (Not supported by BQ)
+    catalog_results.insert({11, "NULL"});  // DELETE_RULE (Not supported by BQ)
     if (!fk_name.empty()) catalog_results.insert({12, fk_name});
     if (!pk_name.empty()) catalog_results.insert({13, pk_name});
-    if (deferrability && *deferrability >= 0)
-      catalog_results.insert({14, std::to_string(*deferrability)});
+    catalog_results.insert(
+        {14, std::to_string(
+                 SQL_NOT_DEFERRABLE)});  // DEFERRABILITY (Not supported by BQ)
     results.emplace_back(catalog_results);
   }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
   return results;
 }
