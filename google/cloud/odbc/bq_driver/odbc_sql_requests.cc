@@ -259,7 +259,8 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   StatementHandle& handle_ref = *(*handle_result);
 
-  if (in_text_length < 1) {
+  if ((in_text_length < 1)  && (in_text_length != SQL_NTS))
+  {  
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
     handle_ref.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();

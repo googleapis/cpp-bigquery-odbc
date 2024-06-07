@@ -1211,4 +1211,36 @@ TEST(SQLPrepare, ParametrizedQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select 1";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+
+  // Retrieve the result set
+  ResultSet const& result_set = stmt_handle->GetResultSet();
+
+  ASSERT_EQ(result_set.row_schema.size(), 1);
+
+  ColumnSchema const& column = result_set.row_schema[0];
+  EXPECT_EQ(column.col_index, 0);
+  EXPECT_EQ(column.col_type, BQDataType::kInt64);
+#endif
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
