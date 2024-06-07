@@ -301,7 +301,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   if (type == "STRING") {
     return SQL_VARCHAR;
   }
-  if (type == "INTEGER" || type == "INT64") {
+  if (type == "INT64") {
     return SQL_INTEGER;
   }
   if (type == "BOOL" || type == "BOOLEAN") {
@@ -328,7 +328,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   if (type == "TIMESTAMP") {
     return SQL_TIMESTAMP;
   }
-  if (type == "BIGNUMERIC") {
+  if (type == "INTEGER" || type == "BIGNUMERIC") {
     return SQL_BIGINT;
   }
   if (type == "INTERVAL") {
