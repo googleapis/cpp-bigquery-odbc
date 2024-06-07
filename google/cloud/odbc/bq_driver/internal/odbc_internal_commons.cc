@@ -301,38 +301,47 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   if (type == "STRING") {
     return SQL_VARCHAR;
   }
-  if (type == "INT64") {
-    return SQL_INTEGER;
+  if (type == "INTEGER" || type == "INT64") {
+    return SQL_BIGINT;
   }
   if (type == "BOOL" || type == "BOOLEAN") {
     return SQL_BIT;
   }
   if (type == "FLOAT64" || type == "FLOAT") {
-    return SQL_FLOAT;
+    return SQL_DOUBLE;
   }
   if (type == "DECIMAL" || type == "NUMERIC") {
-    return SQL_DECIMAL;
+    return SQL_NUMERIC;
   }
   if (type == "BYTES") {
-    return SQL_TINYINT;
+    return SQL_VARBINARY;
   }
   if (type == "DATE") {
     return SQL_DATE;
   }
   if (type == "DATETIME") {
-    return SQL_DATETIME;
+    return SQL_TYPE_TIMESTAMP;
   }
   if (type == "TIME") {
     return SQL_TIME;
   }
   if (type == "TIMESTAMP") {
-    return SQL_TIMESTAMP;
+    return SQL_TYPE_TIMESTAMP;
   }
-  if (type == "INTEGER" || type == "BIGNUMERIC") {
-    return SQL_BIGINT;
+  if (type == "STRUCT") {
+    return SQL_VARCHAR;
+  }
+  if (type == "JSON") {
+    return SQL_VARCHAR;
   }
   if (type == "INTERVAL") {
     return SQL_INTERVAL;
+  }
+  if (type == "GEOGRAPHY") {
+    return SQL_VARCHAR;
+  }
+  if (type == "ARRAY") {
+    return SQL_VARCHAR;
   }
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);
