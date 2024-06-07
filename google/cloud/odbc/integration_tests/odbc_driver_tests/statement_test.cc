@@ -1277,7 +1277,7 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_TYPE_NAME,
                            &out_param_type_name, 0, 0);
   CheckError(status, "SQLGetDescField(SQL_DESC_TYPE_NAME)", conn);
-  EXPECT_EQ(0, out_param_type_name);
+  EXPECT_EQ(SQL_INTEGER, out_param_type_name);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
