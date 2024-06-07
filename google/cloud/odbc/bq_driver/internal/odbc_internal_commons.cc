@@ -161,6 +161,49 @@ StatusRecordOr<DSResults> FetchBQData(
   return results;
 }
 
+odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
+    std::string const& type) {
+  if (type == "STRING") {
+    return SQL_VARCHAR;
+  }
+  if (type == "INTEGER" || type == "INT64") {
+    return SQL_INTEGER;
+  }
+  if (type == "BOOL" || type == "BOOLEAN") {
+    return SQL_BIT;
+  }
+  if (type == "FLOAT64" || type == "FLOAT") {
+    return SQL_FLOAT;
+  }
+  if (type == "DECIMAL" || type == "NUMERIC") {
+    return SQL_DECIMAL;
+  }
+  if (type == "BYTES") {
+    return SQL_TINYINT;
+  }
+  if (type == "DATE") {
+    return SQL_DATE;
+  }
+  if (type == "DATETIME") {
+    return SQL_DATETIME;
+  }
+  if (type == "TIME") {
+    return SQL_TIME;
+  }
+  if (type == "TIMESTAMP") {
+    return SQL_TIMESTAMP;
+  }
+  if (type == "BIGNUMERIC") {
+    return SQL_BIGINT;
+  }
+  if (type == "INTERVAL") {
+    return SQL_INTERVAL;
+  }
+  std::string err_msg = "Invalid Data Type: ";
+  err_msg.append(type);
+  return StatusRecord{SQLStates::k_HY000(), err_msg};
+}
+
 odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type) {
   if (type == "STRING") {

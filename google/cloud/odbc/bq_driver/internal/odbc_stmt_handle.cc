@@ -167,8 +167,12 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   stmt_state_ = StmtStates::kStatementPrepared;
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIPD);
-  auto job_statics = response.GetValue().statistics;
-  StatusRecord ipd_response = PopulateIpd(&desc_handle, job_statics);
+  auto job_statistics = (*response).statistics;
+  StatusRecord ipd_response = PopulateIpd(desc_handle, job_statistics);
+
+  if (!ipd_response.ok()) {
+    return ipd_response;
+  }
   return StatusRecord::Ok();
 }
 
@@ -179,29 +183,33 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   return attributes_[attribute];
 }
 
-StatusRecord StatementHandle::PopulateIpd(DescriptorHandle* handle,
-                                          JobStatistics const& job_statics) {
-  std::map<SQLSMALLINT, DescriptorRecord> records;
+StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
+                                          JobStatistics const& job_statistics) {
+  if (&handle == nullptr || handle.GetType() != DescriptorType::kIPD) {
+    return StatusRecord(
+        {SQLStates::k_HY024(),
+         "Invalid attribute value (invalid descriptor handle)"});
+  }
   DescriptorRecord descriptor_record;
-
-  auto stmt_params = job_statics.job_query_stats.undeclared_query_parameters;
-  TableSchema schema = job_statics.job_query_stats.schema;
+  std::string const nullable = "NULLABLE";
+  auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
+  TableSchema schema = job_statistics.job_query_stats.schema;
   if (stmt_params.empty()) {
     return StatusRecord::Ok();
   }
 
   for (int i = 0; i < stmt_params.size(); i++) {
-    StatusRecordOr<BQDataType> record_type =
-        ConvertDSType(stmt_params[i].parameter_type.type);
+    StatusRecordOr<SQLSMALLINT> record_type =
+        GetSQLDataType(stmt_params[i].parameter_type.type);
 
     descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
     descriptor_record.SetName(stmt_params[i].name, stmt_params[i].name.size());
     descriptor_record.type_name = stmt_params[i].parameter_type.type;
 
     descriptor_record.nullable =
-        schema.fields[i].mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
+        schema.fields[i].mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
 
-    handle->BindNewDescriptorRecord(i, descriptor_record);
+    handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
 
   return StatusRecord::Ok();

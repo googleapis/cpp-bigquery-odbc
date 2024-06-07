@@ -103,6 +103,11 @@ class StatementHandle : public Handle {
     query_parameters_ = query_parameters;
   }
 
+  static odbc_internal::StatusRecord PopulateIpd(
+      DescriptorHandle& handle,
+      google::cloud::bigquery_v2_minimal_internal::JobStatistics const&
+          job_statistics);
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -118,11 +123,6 @@ class StatementHandle : public Handle {
 
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
-
-  static odbc_internal::StatusRecord PopulateIpd(
-      DescriptorHandle* handle,
-      google::cloud::bigquery_v2_minimal_internal::JobStatistics const&
-          job_statics);
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
