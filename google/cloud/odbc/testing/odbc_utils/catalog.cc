@@ -316,20 +316,20 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
     // Col10: update rule, Col 11: delete rule, Col12: fk name,
     // Col13: pk name, Col14: Deferrability
-    std::string pk_table_cat = (char*)catalog_result[1].target_value;
-    std::string pk_table_schema = (char*)catalog_result[2].target_value;
-    std::string pk_table_name = (char*)catalog_result[3].target_value;
-    std::string pk_col_name = (char*)catalog_result[4].target_value;
-    std::string fk_table_cat = (char*)catalog_result[5].target_value;
-    std::string fk_table_schema = (char*)catalog_result[6].target_value;
-    std::string fk_table_name = (char*)catalog_result[7].target_value;
-    std::string fk_col_name = (char*)catalog_result[8].target_value;
+    std::string pk_table_cat = (char*)catalog_result[0].target_value;
+    std::string pk_table_schema = (char*)catalog_result[1].target_value;
+    std::string pk_table_name = (char*)catalog_result[2].target_value;
+    std::string pk_col_name = (char*)catalog_result[3].target_value;
+    std::string fk_table_cat = (char*)catalog_result[4].target_value;
+    std::string fk_table_schema = (char*)catalog_result[5].target_value;
+    std::string fk_table_name = (char*)catalog_result[6].target_value;
+    std::string fk_col_name = (char*)catalog_result[7].target_value;
     SQLSMALLINT* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[9].target_value);
-    std::string fk_name = (char*)catalog_result[12].target_value;
-    std::string pk_name = (char*)catalog_result[13].target_value;
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
+    std::string fk_name = (char*)catalog_result[11].target_value;
+    std::string pk_name = (char*)catalog_result[12].target_value;
     SQLSMALLINT* deferrability =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[14].target_value);
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[13].target_value);
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
