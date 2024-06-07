@@ -68,14 +68,6 @@ inline void BindColumns(std::shared_ptr<ODBCHandles> conn, DataBuffer* columns,
 }  // namespace
 
 TEST(CatalogDemoTest, SQLPrimaryKeys) {
-  short buf_len;
-  std::string in_conn_str = "DSN=SampleDSN";
-  short in_conn_str_len = strlen(in_conn_str.c_str());
-  SQLTCHAR out_conn_str[4096];
-  SQLSMALLINT out_conn_str_buf_len = (sizeof(out_conn_str) / sizeof(SQLTCHAR));
-  HENV henv;
-  HDBC hdbc;
-  HSTMT hstmt;
   int res_cols = 6;
 
   SQLRETURN status;
@@ -100,7 +92,6 @@ TEST(CatalogDemoTest, SQLPrimaryKeys) {
             << ", and Dataset: " << kDataset << std::endl
             << std::endl;
   while (1) {
-    std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
