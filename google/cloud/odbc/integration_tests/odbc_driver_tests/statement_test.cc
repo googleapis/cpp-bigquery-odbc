@@ -1251,7 +1251,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   EXPECT_STREQ((char const*)out_column_Name, "name");
 
 // will make changes once SQLdescribeCol implemented
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+
   SQLSMALLINT out_desc_precision;
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
                            &out_desc_precision, 0, &str_len);
@@ -1262,7 +1262,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(0, length);
-#endif
+
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
