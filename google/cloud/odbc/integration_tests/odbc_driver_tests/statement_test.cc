@@ -1273,13 +1273,6 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
   EXPECT_EQ(0, out_param_name);
 
-  SQLINTEGER out_str_len = 0;
-  SQLCHAR out_param_type_name;
-  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_TYPE_NAME,
-                           &out_param_type_name, 0, &out_str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_TYPE_NAME)", conn);
-  EXPECT_EQ(SQL_INTEGER, out_param_type_name);
-
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

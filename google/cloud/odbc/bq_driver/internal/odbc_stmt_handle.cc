@@ -201,9 +201,7 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
   for (int i = 0; i < stmt_params.size(); i++) {
     StatusRecordOr<SQLSMALLINT> record_type =
         GetSQLDataType(stmt_params[i].parameter_type.type);
-    std::cout << *record_type << std::endl;
     descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
-    std::cout << "afyterr" << stmt_params[i].parameter_type.type << std::endl;
     descriptor_record.SetName(stmt_params[i].name, stmt_params[i].name.size());
     descriptor_record.type_name = stmt_params[i].parameter_type.type;
 
