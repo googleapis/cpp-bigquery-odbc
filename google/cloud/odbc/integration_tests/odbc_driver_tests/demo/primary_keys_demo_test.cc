@@ -121,7 +121,9 @@ TEST(CatalogDemoTest, SQLPrimaryKeys) {
     std::cout << "Table Schema: " << table_schema << ", " << std::endl;
     std::cout << "Table Name: " << table_name << ", " << std::endl;
     std::cout << "Column Name: " << col_name << ", " << std::endl;
-    std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    if (key_seq) {
+      std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    }
     std::cout << "PrimaryKey Name: " << pk_name << std::endl << std::endl;
     std::cout << "*******************************************************"
               << std::endl;
