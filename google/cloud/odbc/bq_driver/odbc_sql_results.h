@@ -74,6 +74,20 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
 SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type);
 
+// Implements the semantics for SQLDescribeCol ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldescribecol-function?view=sql-server-ver16
+SQLRETURN SQLDescribeColInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT column_number, SQLCHAR* column_name,
+    SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_Le,
+    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
+    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H

@@ -51,6 +51,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
@@ -81,6 +82,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
@@ -1745,13 +1747,25 @@ SQLRETURN SQL_API SQLDescribeCol(
     SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLDescribeCol");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLDescribeCol(
+        statementHandle, columnNumber, columnName, columnNameBufferLen,
+        columnNameLe, columnSQLdataType, columnSize, decimalDigits,
+        columnNullable, *(*kTraceOption));
 
   // Call to common internal function for SQLDescribeCol and SQLDescribeColW
   // in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLDescribeColInternal(
+      statementHandle, columnNumber, columnName, columnNameBufferLen,
+      columnNameLe, columnSQLdataType, columnSize, decimalDigits,
+      columnNullable);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLDescribeParam(rc, *(*kTraceOption));
 
   return rc;
 }
