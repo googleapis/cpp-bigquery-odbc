@@ -48,11 +48,12 @@ bool const kIsBqDriver = false;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
-std::string const kDefaultTablePrefix =
-    google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
-        .value_or("");
-std::string const kTableNamePrefix =
-    (kDefaultTablePrefix.empty()) ? "" : kDefaultTablePrefix + "_";
+inline std::string const GetDefaultTablePrefix() {
+  return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
+      .value_or("");
+}
+
+std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
 std::string const kDatasetName = "ODBC_TEST_DATASET";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
