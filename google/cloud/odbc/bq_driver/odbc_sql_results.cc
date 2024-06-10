@@ -159,9 +159,9 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
   if (result_set.row_schema.empty() || result_set.rows.empty()) {
     *ColumnCountPtr = 0;
     return SQL_SUCCESS;
-  } 
-    *ColumnCountPtr = static_cast<SQLSMALLINT>(result_set.row_schema.size());
-  
+  }
+  *ColumnCountPtr = static_cast<SQLSMALLINT>(result_set.row_schema.size());
+
   auto stmt_state = handle->GetStmtState();
   switch (stmt_state) {
     case StmtStates::kStatementPrepared:
