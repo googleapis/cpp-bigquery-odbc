@@ -20,11 +20,14 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "odbc_sql_results.h"
 
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
@@ -32,6 +35,7 @@ using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::WriteRowset;
@@ -186,5 +190,105 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 }
 
 // NOLINTEND(misc-unused-parameters)
+
+SQLRETURN SQLDescribeColInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT column_number, SQLCHAR* column_name,
+    SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_Le,
+    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
+    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  //-------------Validation-------------
+
+  if (handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (column_number < 0) {
+    StatusRecord status_record = {SQLStates::k_HY000(),
+                                  "ColumnNumber should not < 0"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  StatusRecordOr<SQLULEN> use_bookmarks_status =
+      handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
+  if (!use_bookmarks_status) {
+    handle.GetDiagnostics().AddStatusRecord(
+        use_bookmarks_status.GetStatusRecord());
+    return use_bookmarks_status.GetCalculatedReturnCode();
+  }
+  if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
+    StatusRecord status_record = {SQLStates::k_07006(),
+                                  "ColumnNumber should not be 0"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  if (!ird.HasDescriptorRecord(column_number)) {
+    StatusRecord status_record = {
+        SQLStates::k_07009(),
+        "Invalid descriptor index - no column for such value"};
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  DescriptorRecord& desc_record = ird.GetDescriptorRecord(column_number);
+
+  StatusRecord status_record =
+      StringValueToOutputBufferResponse(desc_record.name.c_str(), column_name,
+                                        column_name_buffer_len, column_name_Le);
+  if (!status_record.ok()) {
+    handle.GetDiagnostics().AddStatusRecord(status_record);
+  }
+
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.concise_type, column_sql_data_type, nullptr);
+
+  switch (desc_record.concise_type) {
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+    case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, column_size, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
+          desc_record.length, column_size, nullptr);
+  }
+  switch (desc_record.concise_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_CODE_SECOND:
+    case SQL_CODE_DAY_TO_SECOND:
+    case SQL_CODE_HOUR_TO_SECOND:
+    case SQL_CODE_MINUTE_TO_SECOND:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, decimal_digits, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.scale, decimal_digits, nullptr);
+  }
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.nullable, column_nullable, nullptr);
+
+  return SQL_SUCCESS;
+}
 
 }  // namespace google::cloud::odbc_bq_driver
