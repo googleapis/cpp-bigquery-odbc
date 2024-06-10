@@ -48,12 +48,11 @@ bool const kIsBqDriver = false;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
-inline std::string const GetDefaultTablePrefix() {
-  return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
-      .value_or("");
-}
-
-std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
+std::string const kDefaultTablePrefix =
+    google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
+        .value_or("");
+std::string const kTableNamePrefix =
+    (kDefaultTablePrefix.empty()) ? "" : kDefaultTablePrefix + "_";
 std::string const kDatasetName = "ODBC_TEST_DATASET";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
@@ -252,8 +251,8 @@ class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
 
-  void Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
-              bool use_ansi = false);
+  void Create(std::shared_ptr<ODBCHandles> conn,
+              std::string schema_str = "(Str1 STRING)", bool use_ansi = false);
 
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
 

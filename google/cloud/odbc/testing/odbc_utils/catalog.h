@@ -22,6 +22,15 @@
 namespace google::cloud::odbc_tests {
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
+
+struct SQLTableResult {
+  std::string project_name;
+  std::string dataset_name;
+  std::string table_name;
+  std::string table_type;
+  std::string description;
+};
+
 // Dataset for catalogn functions.
 std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
 // Tables for SQLPrimaryKeys.
@@ -52,9 +61,10 @@ class Catalog {
   SQLLEN str_len;
 
   // Uses the SQLTables API to fetch tables in a dataset.
-  static std::shared_ptr<Results> GetTables(std::shared_ptr<ODBCHandles> conn,
-                                            std::string dataset = "",
-                                            bool use_ansi = false);
+  static std::vector<SQLTableResult> GetTables(
+      std::shared_ptr<ODBCHandles> conn, std::string const& project_id = "",
+      char const* dataset = nullptr, char const* table = nullptr,
+      char const* table_type = nullptr, bool use_ansi = false);
 
   // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
   static RowWiseResults GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,

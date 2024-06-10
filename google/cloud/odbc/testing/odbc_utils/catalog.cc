@@ -18,52 +18,47 @@
 
 namespace google::cloud::odbc_tests {
 
+struct DataBuffer {
+  SQLSMALLINT target_type;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
+  SQLLEN str_len;
+};
+
 Catalog::~Catalog() = default;
 
-std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
-                                            std::string dataset,
-                                            bool use_ansi) {
+std::vector<SQLTableResult> Catalog::GetTables(
+    std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
+    char const* dataset, char const* table, char const* table_type,
+    bool use_ansi) {
   SQLRETURN status;
   int res_cols = 5;
-  Catalog catalog_result[res_cols];
-  Results results;
+  DataBuffer columns[res_cols];
+  std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
-    catalog_result[i].target_type = SQL_C_CHAR;
-    catalog_result[i].buffer_length = kBufferLength;
-    catalog_result[i].target_value =
-        malloc(sizeof(unsigned char) * catalog_result[i].buffer_length);
-    status = SQLBindCol(
-        conn->hstmt, (SQLUSMALLINT)i + 1, catalog_result[i].target_type,
-        catalog_result[i].target_value, catalog_result[i].buffer_length,
-        &(catalog_result[i].str_len));
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                        SQL_C_CHAR, columns[i].target_value,
+                        columns[i].buffer_length, &(columns[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
-  // No results are returned if we don't append "%"
-  auto project_id = conn->metadata.project_id + "%";
 
-  if (dataset.length()) {
-    if (use_ansi) {
-      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                          (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
-    } else {
-      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                         (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
-    }
+  SQLSMALLINT dataset_length = dataset ? SQL_NTS : 0;
+  SQLSMALLINT table_length = table ? SQL_NTS : 0;
+  SQLSMALLINT table_type_length = table_type ? SQL_NTS : 0;
+
+  if (use_ansi) {
+    status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                        (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+                        table_length, (SQLCHAR*)table_type, table_type_length);
   } else {
-    if (use_ansi) {
-      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                          NULL, 0, NULL, 0, NULL, 0);
-
-    } else {
-      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                         NULL, 0, NULL, 0, NULL, 0);
-    }
+    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                       (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+                       table_length, (SQLCHAR*)table_type, table_type_length);
   }
   CheckError(status, "SQLTables", conn, use_ansi);
 
-  int i = 0, count = 0;
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -72,13 +67,32 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
       CheckError(status, "SQLFetch", conn);
       break;
     }
-    // Col1: Catalog Name/Project Id, Col2: Dataset name, Col3: Table Name
-    std::string dataset_name = (char*)catalog_result[1].target_value;
-    std::string table_name = (char*)catalog_result[2].target_value;
-    results[dataset_name].emplace_back(table_name);
+    std::string project_name =
+        (columns[0].str_len != -1)
+            ? reinterpret_cast<char*>(columns[0].target_value)
+            : "";
+    std::string dataset_name =
+        (columns[1].str_len != -1)
+            ? reinterpret_cast<char*>(columns[1].target_value)
+            : "";
+    std::string table_name =
+        (columns[2].str_len != -1)
+            ? reinterpret_cast<char*>(columns[2].target_value)
+            : "";
+    std::string table_type_name =
+        (columns[3].str_len != -1)
+            ? reinterpret_cast<char*>(columns[3].target_value)
+            : "";
+    std::string description =
+        (columns[4].str_len != -1)
+            ? reinterpret_cast<char*>(columns[4].target_value)
+            : "";
+
+    results.push_back(
+        {project_name, dataset_name, table_name, table_type_name, description});
   }
 
-  return std::make_shared<Results>(results);
+  return results;
 }
 
 RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
