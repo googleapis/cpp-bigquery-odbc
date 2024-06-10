@@ -63,8 +63,8 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
 
-SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
-                                  SQLSMALLINT* ColumnCountPtr);
+SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
+                                   SQLSMALLINT* ColumnCountPtr);
 
 }  // namespace google::cloud::odbc_bq_driver
 

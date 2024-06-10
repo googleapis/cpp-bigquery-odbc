@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
+#include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -143,16 +144,10 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) { return SQL_SUCCESS; }
 
-SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
-                                  SQLSMALLINT* ColumnCountPtr) {
+SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
+                                   SQLSMALLINT* ColumnCountPtr) {
   if (ColumnCountPtr == nullptr) return SQL_ERROR;
-
-  auto* result_set = reinterpret_cast<ResultSet*>(statement_handle);
-  if (result_set == nullptr || result_set->row_schema.empty()) {
-    *ColumnCountPtr = 0;
-  }
-  *ColumnCountPtr = static_cast<SQLSMALLINT>(result_set->row_schema.size());
-
+  if (statement_handle == nullptr) return SQL_ERROR;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -160,7 +155,13 @@ SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle* handle = *handle_result;
-
+  ResultSet result_set = handle->GetResultSet();
+  if (result_set.row_schema.empty() || result_set.rows.empty()) {
+    *ColumnCountPtr = 0;
+    return SQL_SUCCESS;
+  } 
+    *ColumnCountPtr = static_cast<SQLSMALLINT>(result_set.row_schema.size());
+  
   auto stmt_state = handle->GetStmtState();
   switch (stmt_state) {
     case StmtStates::kStatementPrepared:
@@ -173,12 +174,11 @@ SQLRETURN SQLNumResultColsnternal(SQLHSTMT statement_handle,
       return SQL_ERROR;
   }
 
-  DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
-  auto status_record = SetDescField(&ird, 0, SQL_DESC_COUNT,
-                                    static_cast<SQLPOINTER>(ColumnCountPtr), 0);
-  if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+  DescriptorHandle ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+  ird.GetHeaderRecord().count = *ColumnCountPtr;
+
+  if (ird.GetHeaderRecord().count < 0) {
+    return SQL_ERROR;
   }
   return SQL_SUCCESS;
 }

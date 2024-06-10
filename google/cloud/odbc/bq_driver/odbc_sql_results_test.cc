@@ -23,10 +23,15 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using ::google::cloud::odbc_bq_driver_internal::ResultSet;
+using ::google::cloud::odbc_bq_driver_internal::ResultSetRows;
+using ::google::cloud::odbc_bq_driver_internal::RowSchema;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
@@ -290,6 +295,57 @@ TEST(SQLBindColInternal, InvalidCType) {
 
   // If SQLBindColInternal has failed, SQL_DESC_COUNT should remain unchanged
   EXPECT_EQ(0, GetDescCount(ard));
+}
+
+TEST(SQLNumResultColsInternal, InvalidHandle) {
+  StatementHandle* stmt_handle = nullptr;
+  SQLSMALLINT column_count;
+
+  SQLRETURN ret = SQLNumResultColsInternal(stmt_handle, &column_count);
+
+  EXPECT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLNumResultColsInternal, ValidResultSet) {
+  RowSchema row_schema;
+  row_schema = {{1, BQDataType::kInt64}};
+
+  ResultSet resultSet;
+  resultSet.row_schema = row_schema;
+  resultSet.rows = {{{'1'}, {'J', 'o', 'h', 'n'}, {'2'}}};
+
+  StatementHandle statement_handle = CreateStatementHandle();
+  statement_handle.SetResultSet(resultSet);
+  statement_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+
+  SQLSMALLINT column_count;
+  SQLRETURN ret = SQLNumResultColsInternal(&statement_handle, &column_count);
+
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(column_count, 1);
+}
+
+TEST(SQLNumResultColsInternal, NullColumnCountPtr) {
+  ResultSet* result_set;
+  StatementHandle* statement_handle;
+  SQLRETURN ret = SQLNumResultColsInternal(statement_handle, nullptr);
+
+  ASSERT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLNumResultColsInternal, EmptySchema) {
+  ResultSet result_set;
+  result_set.row_schema = {};
+
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetResultSet(result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+
+  SQLSMALLINT column_count = 0;
+  SQLRETURN ret = SQLNumResultColsInternal(&handle, &column_count);
+
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(column_count, 0);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

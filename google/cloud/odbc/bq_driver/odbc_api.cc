@@ -1547,8 +1547,8 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
                                         *(*kTraceOption));
 
   // Call to internal function for SQLNumResultCols in odbc_sql_results.h.
-  rc = google::cloud::odbc_bq_driver::SQLNumResultColsnternal(statementHandle,
-                                                              columnCount);
+  rc = google::cloud::odbc_bq_driver::SQLNumResultColsInternal(statementHandle,
+                                                               columnCount);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (IsTracingEnabled)
