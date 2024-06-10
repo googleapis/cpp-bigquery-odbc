@@ -25,11 +25,16 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreateDescRecordWithRandomValues;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
@@ -322,5 +327,175 @@ TEST(SQLNumResultColsInternal, StateCheck) {
   EXPECT_EQ(ret, SQL_SUCCESS);
   EXPECT_EQ(column_count, 0);
 }
+void AssertDescribeColumnResults(
+    SQLRETURN status, DescriptorRecord const& record, SQLCHAR column_name[15],
+    SQLSMALLINT column_name_Le, SQLSMALLINT data_type, SQLULEN column_size,
+    SQLSMALLINT decimal_digits, SQLSMALLINT nullable) {
+  ASSERT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(record.concise_type, data_type);
+  switch (data_type) {
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+    case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
+      EXPECT_EQ(record.precision, column_size);
+      break;
+    default:
+      EXPECT_EQ(record.length, column_size);
+  }
+  switch (data_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_CODE_SECOND:
+    case SQL_CODE_DAY_TO_SECOND:
+    case SQL_CODE_HOUR_TO_SECOND:
+    case SQL_CODE_MINUTE_TO_SECOND:
+      EXPECT_EQ(record.precision, decimal_digits);
+      break;
+    default:
+      EXPECT_EQ(record.scale, decimal_digits);
+  }
+  EXPECT_EQ(record.nullable, nullable);
+  EXPECT_EQ(record.name, std::string(reinterpret_cast<char*>(column_name)));
+  EXPECT_EQ(record.name.size(), column_name_Le);
+}
 
+TEST(SQLDescribeColumn, Fail_InvalidHandle) {
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR* column_name = nullptr;
+  SQLSMALLINT column_name_Le = 0;
+
+  SQLRETURN status = SQLDescribeColInternal(
+      nullptr, 1, column_name, 1, &column_name_Le, &data_type, &column_size,
+      &decimal_digits, &nullable);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLDescribeColumn, Fail_ColumnNumberIsZero) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR* column_name = nullptr;
+  SQLSMALLINT column_name_Le = 0;
+
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, 0, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_07006(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLDescribeColumn, Fail_InvalidColumnNumber) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR* column_name = nullptr;
+  SQLSMALLINT column_name_Le = 0;
+
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, 10, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_07009(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLDescribeColumn, Fail_StatementIsNotPrepared) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  DescriptorRecord record;
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  SQLUSMALLINT column_number = 1;
+  ird.BindNewDescriptorRecord(column_number, record);
+
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR* column_name = nullptr;
+  SQLSMALLINT column_name_Le = 0;
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, column_number, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLDescribeColumn, Describe_SQL_NUMERIC) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  SQLUSMALLINT column_number = 1;
+  ird.BindNewDescriptorRecord(column_number, record);
+
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR column_name[15];
+  SQLSMALLINT column_name_Le = 0;
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, column_number, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+                              data_type, column_size, decimal_digits, nullable);
+}
+
+TEST(SQLDescribeColumn, Describe_SQL_CHAR) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  SQLUSMALLINT column_number = 1;
+  ird.BindNewDescriptorRecord(column_number, record);
+
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR column_name[15];
+  SQLSMALLINT column_name_Le = 0;
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, column_number, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+                              data_type, column_size, decimal_digits, nullable);
+}
+
+TEST(SQLDescribeColumn, Describe_SQL_DATE) {
+  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  SQLUSMALLINT column_number = 1;
+  ird.BindNewDescriptorRecord(column_number, record);
+
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  SQLCHAR column_name[15];
+  SQLSMALLINT column_name_Le = 0;
+  SQLRETURN status = SQLDescribeColInternal(
+      &stmt_handle, column_number, column_name, 1, &column_name_Le, &data_type,
+      &column_size, &decimal_digits, &nullable);
+
+  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+                              data_type, column_size, decimal_digits, nullable);
+}
 }  // namespace google::cloud::odbc_bq_driver
