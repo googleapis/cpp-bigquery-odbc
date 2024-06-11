@@ -18,13 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-struct DataBuffer {
-  SQLSMALLINT target_type;
-  SQLCHAR target_value[512];
-  SQLLEN buffer_length = 512;
-  SQLLEN str_len;
-};
-
 Catalog::~Catalog() = default;
 
 std::vector<SQLTableResult> Catalog::GetTables(
@@ -33,7 +26,7 @@ std::vector<SQLTableResult> Catalog::GetTables(
     bool use_ansi) {
   SQLRETURN status;
   int res_cols = 5;
-  DataBuffer columns[res_cols];
+  CatalogDataBuffer columns[res_cols];
   std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
@@ -68,23 +61,23 @@ std::vector<SQLTableResult> Catalog::GetTables(
       break;
     }
     std::string project_name =
-        (columns[0].str_len != -1)
+        (columns[0].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[0].target_value)
             : "";
     std::string dataset_name =
-        (columns[1].str_len != -1)
+        (columns[1].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[1].target_value)
             : "";
     std::string table_name =
-        (columns[2].str_len != -1)
+        (columns[2].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[2].target_value)
             : "";
     std::string table_type_name =
-        (columns[3].str_len != -1)
+        (columns[3].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[3].target_value)
             : "";
     std::string description =
-        (columns[4].str_len != -1)
+        (columns[4].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[4].target_value)
             : "";
 
