@@ -300,7 +300,7 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
-      kTableNamePrefix + "ODBC_SQLTables_SQLTables_TablesAndViews_1"};
+      "ODBC_SQLTables_SQLTables_TablesAndViews_1"};
   for (auto const& name : table_names) {
     Table(kDatasetWithTablePrefix + name).Create(conn, "(Str1 STRING)");
   }
@@ -331,7 +331,8 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
-    view_found = view_found || view_name == result.table_name;
+    view_found =
+        view_found || (kTableNamePrefix + view_name) == result.table_name;
     EXPECT_TRUE(result.table_type == "TABLE" || result.table_type == "VIEW")
         << "Actual type is " << result.table_type;
     EXPECT_EQ(result.project_name, result.description);
