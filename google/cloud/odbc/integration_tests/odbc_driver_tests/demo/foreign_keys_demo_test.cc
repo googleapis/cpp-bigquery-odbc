@@ -42,18 +42,10 @@ SQLSMALLINT const kSqlDatasetLen = kDataset.length();
 SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 SQLSMALLINT const kSqlFKTableLen = kFKTable.length();
 
-struct DataBuffer {
-  SQLSMALLINT target_type;
-  SQLCHAR target_value[512];
-  SQLLEN buffer_length = 512;
-  SQLLEN str_len;
-};
-
-inline void BindColumns(std::shared_ptr<ODBCHandles> conn, DataBuffer* columns,
-                        int res_cols) {
+inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
+                        CatalogDataBuffer* columns, int res_cols) {
   SQLRETURN status;
-  int col_idx = 0;
-  while (col_idx < res_cols) {
+  for (int col_idx = 0; col_idx < res_cols; col_idx++) {
     if (col_idx == 8) {
       // data type is SMALLINT.
       columns[col_idx].target_type = SQL_C_SSHORT;
@@ -67,7 +59,6 @@ inline void BindColumns(std::shared_ptr<ODBCHandles> conn, DataBuffer* columns,
                    columns[col_idx].target_type, columns[col_idx].target_value,
                    columns[col_idx].buffer_length, &(columns[col_idx].str_len));
     CheckError(status, "SQLBindCol", conn);
-    col_idx++;
   }
 }
 
@@ -84,7 +75,7 @@ TEST(CatalogDemoTest, SQLForeignKeys) {
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
   // (2) Bind Columns
-  DataBuffer columns[res_cols];
+  CatalogDataBuffer columns[res_cols];
   std::cout << "Binding Columns..." << std::endl << std::endl;
   BindColumns(conn, columns, res_cols);
   // (3) Fetching Foreign Keys.

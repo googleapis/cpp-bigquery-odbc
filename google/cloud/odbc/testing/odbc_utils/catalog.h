@@ -33,6 +33,15 @@ std::string const kCatalogDatasetTableWithoutPK =
 std::string const kTableOrders = "ODBC_SQLForeignKeys_TABLE_ORDERS";
 std::string const kTableLines = "ODBC_SQLForeignKeys_TABLE_LINES";
 std::string const kTableCustomer = "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
+// Data Buffer used in catalog demo tests for foreign and primary keys.
+// If you modify this please sure the corresponding demo tests are working
+struct CatalogDataBuffer {
+  SQLSMALLINT target_type;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
+  SQLLEN str_len;
+};
+
 class Catalog {
  public:
   ~Catalog();
