@@ -267,8 +267,7 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       break;
     case SQL_BIGINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 19;
+      datetime_interval_precision = precision = length = 19;
       break;
     case SQL_GUID:
       type = concise_type = value;
