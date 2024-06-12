@@ -207,9 +207,14 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (!status_record.ok()) {
       return status_record;
     }
+    descriptor_record.scale = res.scale;
+    if(res.type == "STRING"){
+      descriptor_record.length = 16384;
+      descriptor_record.precision = 16384;
+      descriptor_record.scale = 16384;
+    }
     descriptor_record.nullable =
         res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
-    descriptor_record.scale = res.scale;
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();
