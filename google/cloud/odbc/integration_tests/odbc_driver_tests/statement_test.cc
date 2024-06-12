@@ -13,14 +13,17 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
 namespace google::cloud::odbc_tests {
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -29,6 +32,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
