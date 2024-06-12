@@ -110,13 +110,13 @@ void ValidateExpectedResults(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(nullable, out_nullable);
 
-  /*SQLCHAR out_column_Name[20];
+  SQLCHAR out_column_Name[20];
   SQLINTEGER str_len = 0;
   status = SQLGetDescField(conn->ird, column_number, SQL_DESC_NAME,
                            &out_column_Name, kBufferLength, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
   EXPECT_STREQ((char const*)column_name, (char const*)out_column_Name);
-  EXPECT_EQ(column_name_Le, str_len);*/
+  EXPECT_EQ(column_name_Le, str_len);
 }
 
 std::string CreateColumnName(int i) {
@@ -207,16 +207,8 @@ TEST(StatementTest, SQLDescribeColumn) {
 
     DescribeCol(conn, col_ptr, i + 1);
 
-    SQLSMALLINT out_desc_precision;
-  SQLRETURN status =
-      SQLGetDescField(conn->ird, i+1, SQL_DESC_PRECISION,
-                      &out_desc_precision, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(col_ptr->decimal_digits, out_desc_precision);
-
-  
   SQLSMALLINT out_nullable;
-  status = SQLGetDescField(conn->ird, i+1, SQL_DESC_NULLABLE,
+  SQLRETURN status = SQLGetDescField(conn->ird, i+1, SQL_DESC_NULLABLE,
                            &out_nullable, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(col_ptr->nullable, out_nullable);
@@ -235,8 +227,33 @@ TEST(StatementTest, SQLDescribeColumn) {
                       &out_concise_c_type, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
     EXPECT_EQ(col_ptr->data_type, out_concise_c_type);
+
+    SQLSMALLINT out_desc_precision;
+    switch (out_concise_c_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_CODE_SECOND:
+    case SQL_CODE_DAY_TO_SECOND:
+    case SQL_CODE_HOUR_TO_SECOND:
+    case SQL_CODE_MINUTE_TO_SECOND:
+      
+   status =
+      SQLGetDescField(conn->ird, i+1, SQL_DESC_PRECISION,
+                      &out_desc_precision, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(col_ptr->decimal_digits, out_desc_precision);
+      break;
+    default:
+   status =
+      SQLGetDescField(conn->ird, i+1, SQL_DESC_SCALE,
+                      &out_desc_precision, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_SCALE)", conn);
+  EXPECT_EQ(col_ptr->decimal_digits, out_desc_precision);
+  }
   }
 
+  
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 

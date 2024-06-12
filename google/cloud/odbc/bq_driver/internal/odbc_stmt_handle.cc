@@ -209,6 +209,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     }
     descriptor_record.nullable =
         res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
+    descriptor_record.scale = res.scale;
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();
