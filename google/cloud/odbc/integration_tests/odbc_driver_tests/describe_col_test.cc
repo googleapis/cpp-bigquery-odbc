@@ -14,10 +14,12 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <gtest/gtest.h>
 #include <regex>
 
 namespace google::cloud::odbc_tests {
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
@@ -175,5 +177,69 @@ TEST(SQLDescribeCol, DescribeAllColumns) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(StatementTest, SQLDescribeColumn) {
+   auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query =
+      "SELECT * FROM INTEGRATION_TESTS.Test_Table";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+   status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
+
+  SQLSMALLINT num_cols = 0;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_COUNT, &num_cols, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+
+  // Loop through columns and verify descriptions
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1);
+
+    SQLSMALLINT out_desc_precision;
+  SQLRETURN status =
+      SQLGetDescField(conn->ird, i+1, SQL_DESC_PRECISION,
+                      &out_desc_precision, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(col_ptr->decimal_digits, out_desc_precision);
+
+  
+  SQLSMALLINT out_nullable;
+  status = SQLGetDescField(conn->ird, i+1, SQL_DESC_NULLABLE,
+                           &out_nullable, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
+  EXPECT_EQ(col_ptr->nullable, out_nullable);
+
+  SQLCHAR out_column_Name[20];
+  SQLINTEGER str_len = 0;
+  status = SQLGetDescField(conn->ird, i+1, SQL_DESC_NAME,
+                           &out_column_Name, kBufferLength, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+  EXPECT_STREQ((char const*)col_ptr->name, (char const*)out_column_Name);
+  EXPECT_EQ(col_ptr->name_len, str_len);
+
+    SQLSMALLINT out_concise_c_type;
+ status =
+      SQLGetDescField(conn->ird, i+1, SQL_DESC_CONCISE_TYPE,
+                      &out_concise_c_type, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+    EXPECT_EQ(col_ptr->data_type, out_concise_c_type);
+  }
+
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+}
 
 }  // namespace google::cloud::odbc_tests
