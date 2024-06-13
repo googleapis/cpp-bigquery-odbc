@@ -343,4 +343,103 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
+RowWiseResults Catalog::GetTablePrivileges(std::shared_ptr<ODBCHandles> conn,
+                                           std::string dataset,
+                                           std::string table, bool use_ansi) {
+  SQLRETURN status;
+  int res_cols = 7;
+  int col_idx = 0;
+  Catalog catalog_result[res_cols];
+  RowWiseResults results;
+
+  if (dataset.empty()) {
+    return results;
+  }
+
+  if (table.empty()) {
+    return results;
+  }
+
+  absl::optional<std::string> project_id_opt =
+      ::google::cloud::internal::GetEnv(
+          "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto catalog_name =
+      (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
+
+  // Make sure we treat the catalog arguments as OA (ordinary arguments).
+  // See here for more info on catalog function arguments:
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Col1: catalog name , Col2: schema name, Col3: table name,
+  // Col4: grantor, Col5: grantee , Col6: privilege, Col7: is grantable
+  SQLSMALLINT val;
+  while (col_idx < res_cols) {
+    // data type is Char for all columns.
+    catalog_result[col_idx].target_type = SQL_C_CHAR;
+    catalog_result[col_idx].buffer_length = kBufferLength;
+    catalog_result[col_idx].target_value =
+        malloc(sizeof(unsigned char) * catalog_result[col_idx].buffer_length);
+
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+                        catalog_result[col_idx].target_type,
+                        catalog_result[col_idx].target_value,
+                        catalog_result[col_idx].buffer_length,
+                        &(catalog_result[col_idx].str_len));
+    CheckError(status, "SQLBindCol", conn);
+    col_idx++;
+  }
+
+  if (use_ansi) {
+    status = SQLTablePrivilegesA(
+        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+        (SQLSMALLINT)table.length());
+  } else {
+    status = SQLTablePrivilegesA(
+        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+        (SQLSMALLINT)table.length());
+  }
+  CheckError(status, "SQLTablePrivilegesA", conn, use_ansi);
+
+  int i = 0;
+  while (1) {
+    std::map<int, std::string> catalog_results;
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    // Col1: catalog name , Col2: schema name, Col3: table name,
+    // Col4: grantor, Col5: grantee , Col6: privilege, Col7: is grantable
+    // Note: ODBC coumns typically start from 1, but catalog_result
+    // will be populated starting from index 0
+    std::string table_cat = (char*)catalog_result[0].target_value;
+    std::string table_schema = (char*)catalog_result[1].target_value;
+    std::string table_name = (char*)catalog_result[2].target_value;
+    std::string grantor = (char*)catalog_result[3].target_value;
+    std::string grantee = (char*)catalog_result[4].target_value;
+    std::string privilege = (char*)catalog_result[5].target_value;
+    std::string is_grantable = (char*)catalog_result[6].target_value;
+
+    if (!table_cat.empty()) catalog_results.insert({1, table_cat});
+    if (!table_schema.empty()) catalog_results.insert({2, table_schema});
+    if (!table_name.empty()) catalog_results.insert({3, table_name});
+    if (!grantor.empty()) catalog_results.insert({4, grantor});
+    if (!grantee.empty()) catalog_results.insert({5, grantee});
+    if (!privilege.empty()) catalog_results.insert({6, privilege});
+    if (!is_grantable.empty()) catalog_results.insert({7, privilege});
+
+    results.emplace_back(catalog_results);
+  }
+  return results;
+}
+
 }  // namespace google::cloud::odbc_tests

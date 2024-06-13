@@ -68,6 +68,11 @@ class Catalog {
                                        std::string pk_table = "",
                                        std::string fk_table = "",
                                        bool use_ansi = false);
+
+  static RowWiseResults GetTablePrivileges(std::shared_ptr<ODBCHandles> conn,
+                                           std::string dataset = "",
+                                           std::string table = "",
+                                           bool use_ansi = false);
 };
 
 }  // namespace google::cloud::odbc_tests
