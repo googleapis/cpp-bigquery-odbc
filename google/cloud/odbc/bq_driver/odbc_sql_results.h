@@ -73,8 +73,10 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
 SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type);
+
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
                                    SQLSMALLINT* column_count_ptr);
+
 // Implements the semantics for SQLDescribeCol ODBC API
 // as per the ODBC 3.8 spec and the design doc.
 //
