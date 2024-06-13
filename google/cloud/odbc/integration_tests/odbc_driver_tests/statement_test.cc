@@ -39,7 +39,9 @@ class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
                          testing::Values(false, true));
 
-
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
@@ -84,9 +86,7 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
   }
 }
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
@@ -656,10 +656,34 @@ TEST(StatementTest, SQLDescribeColumn) {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  CheckColumnData(conn, table_name, schema);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, "SELECT * FROM " + table_name);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+ 
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  // Check if the number of columns returned is correct
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, schema.size());
+
+  // Loop through columns and verify descriptions
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1);
+
+    // Verify returned column descriptions with the table schema
+    EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
+    EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
+    EXPECT_EQ(col_ptr->data_type, schema[i].type);
+    EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
+  }
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
