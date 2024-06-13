@@ -32,8 +32,8 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
-using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
+using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
@@ -302,8 +302,9 @@ SQLRETURN SQLDescribeColInternal(
   }
 
   if (column_number < 0) {
-    StatusRecord status_record = {SQLStates::k_HY000(),
-                                  "ColumnNumber should not < 0"};
+    StatusRecord status_record = {
+        SQLStates::k_HY000(),
+        "Invalid ColumnNumber parameter - should not be < 0"};
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
@@ -316,8 +317,9 @@ SQLRETURN SQLDescribeColInternal(
     return use_bookmarks_status.GetCalculatedReturnCode();
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
-    StatusRecord status_record = {SQLStates::k_07006(),
-                                  "ColumnNumber should not be 0"};
+    StatusRecord status_record = {
+        SQLStates::k_07006(),
+        "Invalid column number value for bookmark attribute - should not be 0"};
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
@@ -338,6 +340,7 @@ SQLRETURN SQLDescribeColInternal(
                                         column_name_buffer_len, column_name_Le);
   if (!status_record.ok()) {
     handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
 
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
