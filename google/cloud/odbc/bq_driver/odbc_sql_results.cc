@@ -241,8 +241,6 @@ SQLRETURN SQLDescribeColInternal(
   }
   StatementHandle& handle = *(*handle_result);
 
-  //-------------Validation-------------
-
   if (handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
@@ -253,7 +251,7 @@ SQLRETURN SQLDescribeColInternal(
 
   if (column_number < 0) {
     StatusRecord status_record = {SQLStates::k_HY000(),
-                                  "ColumnNumber should not < 0"};
+                                  "Invalid ColumnNumber parameter - should not be < 0"};
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
@@ -267,7 +265,7 @@ SQLRETURN SQLDescribeColInternal(
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     StatusRecord status_record = {SQLStates::k_07006(),
-                                  "ColumnNumber should not be 0"};
+                                  "Invalid column number value for bookmark attribute - should not be 0"};
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
@@ -288,6 +286,7 @@ SQLRETURN SQLDescribeColInternal(
                                         column_name_buffer_len, column_name_Le);
   if (!status_record.ok()) {
     handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
   }
 
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(

@@ -39,9 +39,7 @@ class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
                          testing::Values(false, true));
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
@@ -85,6 +83,10 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
@@ -326,9 +328,9 @@ TEST(StatementTest, SQLDescribeCol) {
   CheckColumnData(conn, table_name, schema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+ // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.Drop(conn);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   ////////////////
   /// USE ANSI
@@ -641,6 +643,26 @@ TEST(StatementTest, FetchDirectRowWise) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(StatementTest, SQLDescribeColumn) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_COLUMN_DESCRIPTION_TEST";
+  Table table(table_name);
+
+  Schema schema{{"StringField", SQL_VARCHAR},
+                {"IntegerField", SQL_BIGINT},
+                {"FloatField", SQL_DOUBLE}};
+
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CheckColumnData(conn, table_name, schema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 void PrepareAndCheckQuery(std::string const& query,
                           std::shared_ptr<ODBCHandles> conn,
