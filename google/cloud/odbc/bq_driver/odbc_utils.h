@@ -33,9 +33,10 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-inline char* ToCharStr(SQLCHAR const* sql_str) {
+inline char* ToCharStr(SQLCHAR const* sql_str,
+                       std::string const& default_val = "") {
   if (!sql_str) {
-    return reinterpret_cast<char*>(const_cast<char*>(""));
+    return const_cast<char*>(default_val.c_str());
   }
   return reinterpret_cast<char*>(const_cast<SQLCHAR*>(sql_str));
 }
