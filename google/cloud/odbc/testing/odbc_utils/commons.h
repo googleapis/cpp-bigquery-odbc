@@ -253,7 +253,7 @@ class Table {
   Table(std::string table_name) { table_name_ = table_name; };
 
   void Create(std::shared_ptr<ODBCHandles> conn,
-              std::string schema_str = "(Str1 STRING)", bool use_ansi = false);
+              std::string schema_str = "(Column INT64)", bool use_ansi = false);
 
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
 

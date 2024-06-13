@@ -18,6 +18,8 @@
 
 namespace google::cloud::odbc_tests {
 
+using ::testing::StartsWith;
+
 namespace {
 // Tables and schema for SQLPrimaryKeys
 std::string const kCatalogDatasetTableWithPKFull =
@@ -283,8 +285,8 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 
   int count_tables = 0;
   for (auto const& result : results) {
-    EXPECT_THAT(result.project_name, ::testing::StartsWith(project_to_filter));
-    EXPECT_THAT(result.dataset_name, ::testing::StartsWith(dataset_to_filter));
+    EXPECT_THAT(result.project_name, StartsWith(project_to_filter));
+    EXPECT_THAT(result.dataset_name, StartsWith(dataset_to_filter));
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
