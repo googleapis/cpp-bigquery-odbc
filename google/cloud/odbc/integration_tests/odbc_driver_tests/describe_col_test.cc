@@ -49,7 +49,7 @@ static std::vector<ExpectedResults> const kExpectedResults = {
     {"ARRAY<INT64>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
 };
 
-void CheckPrecision(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
+void ValidatePrecision(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
                     SQLSMALLINT expected) {
   SQLSMALLINT out_desc_precision;
   SQLRETURN status =
@@ -59,7 +59,7 @@ void CheckPrecision(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number
   EXPECT_EQ(expected, out_desc_precision);
 }
 
-void CheckScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
+void ValidateScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
                 SQLSMALLINT expected) {
   SQLSMALLINT out_desc_scale;
   SQLRETURN status = SQLGetDescField(conn->ird, column_number, SQL_DESC_SCALE,
@@ -68,7 +68,7 @@ void CheckScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
   EXPECT_EQ(expected, out_desc_scale);
 }
 
-void CheckLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
+void ValidateLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
                  SQLULEN expected) {
   SQLSMALLINT out_desc_len;
   SQLRETURN status = SQLGetDescField(conn->ird, column_number, SQL_DESC_LENGTH,
@@ -77,7 +77,7 @@ void CheckLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
   EXPECT_EQ(expected, out_desc_len);
 }
 
-void CheckExpectedResults(std::shared_ptr<ODBCHandles> conn,SQLCHAR column_name[15],
+void ValidateExpectedResults(std::shared_ptr<ODBCHandles> conn,SQLCHAR column_name[15],
     SQLSMALLINT column_name_Le,
                           SQLSMALLINT column_number, SQLSMALLINT sql_type,
                           SQLULEN column_size, SQLSMALLINT decimal_digits,
@@ -91,15 +91,15 @@ void CheckExpectedResults(std::shared_ptr<ODBCHandles> conn,SQLCHAR column_name[
   EXPECT_EQ(sql_type, out_concise_c_type);
 
   if (expected_result.column_size_source == SQL_DESC_PRECISION) {
-    CheckPrecision(conn, column_number, column_size);
+    ValidatePrecision(conn, column_number, column_size);
   } else if (expected_result.column_size_source == SQL_DESC_LENGTH) {
-    CheckLength(conn, column_number, column_size);
+    ValidateLength(conn, column_number, column_size);
   }
 
   if (expected_result.decimal_digits_source == SQL_DESC_PRECISION) {
-    CheckPrecision(conn, column_number, decimal_digits);
+    ValidatePrecision(conn, column_number, decimal_digits);
   } else if (expected_result.decimal_digits_source == SQL_DESC_SCALE) {
-    CheckScale(conn, column_number, decimal_digits);
+    ValidateScale(conn, column_number, decimal_digits);
   }
 
   SQLSMALLINT out_nullable;
@@ -109,7 +109,7 @@ void CheckExpectedResults(std::shared_ptr<ODBCHandles> conn,SQLCHAR column_name[
   EXPECT_EQ(nullable, out_nullable);
 }
 
-std::string ConstructColumnName(int i) {
+std::string CreateColumnName(int i) {
   std::string name = "col_" + kExpectedResults[i].bq_type + " ";
   std::replace_if(name.begin(), name.end(), ::ispunct, '_');
   std::remove_if(name.begin(), name.end(), ::isblank);
@@ -122,10 +122,10 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   auto table_name = kDatasetWithTablePrefix + "ODBC_DESCRIBE_PARAMS_TEST";
   Table table(table_name);
   std::string table_schema =
-      "(" + ConstructColumnName(0) + kExpectedResults[0].bq_type;
+      "(" + CreateColumnName(0) + kExpectedResults[0].bq_type;
   std::string params = "?";
   for (int i = 1; i < kExpectedResults.size(); i++) {
-    table_schema.append(", " + ConstructColumnName(i) +
+    table_schema.append(", " + CreateColumnName(i) +
                         kExpectedResults[i].bq_type);
     params.append(", ?");
   }
@@ -156,7 +156,7 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
     CheckError(status, "SQLDescribeCol[" + std::to_string(i) + "]", conn);
 
     std::cout << "Checking param number: " << i << "\n";
-    CheckExpectedResults(conn, column_name, column_name_Le, i, data_type, column_size, decimal_digits,
+    ValidateExpectedResults(conn, column_name, column_name_Le, i, data_type, column_size, decimal_digits,
                          nullable);
   }
 
