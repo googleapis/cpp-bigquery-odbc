@@ -26,6 +26,8 @@
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include "google/cloud/status_or.h"
+#include <optional>
+#include <regex>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -84,6 +86,11 @@ class ODBCBQClient {
   FilterProjects(std::vector<std::string> const& project_ids,
                  ::google::cloud::Options const& options);
 
+  // Filter projects for the user, based on regex for project_ids.
+  odbc_internal::StatusRecordOr<std::vector<std::string>> FilterProjectIds(
+      std::optional<std::regex> const& regex_filter,
+      ::google::cloud::Options const& options);
+
   ///////////////
   // Dataset APIs
   ///////////////
@@ -107,6 +114,11 @@ class ODBCBQClient {
   FilterDatasets(std::string const& project_id,
                  DatasetFilter const& dataset_filter,
                  ::google::cloud::Options const& options);
+
+  odbc_internal::StatusRecordOr<std::vector<std::string>> FilterDatasetIds(
+      std::string const& project_id,
+      std::optional<std::regex> const& regex_filter,
+      ::google::cloud::Options const& options);
 
   ///////////////
   // Table APIs

@@ -17,6 +17,8 @@
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
+#include <optional>
+#include <regex>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -42,6 +44,14 @@ FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                    project_client,
                std::vector<std::string> const& project_ids,
                ::google::cloud::Options const& options);
+
+// Filter project ids for the user, based on regex for project_id.
+// If regex is empty - returns all
+odbc_internal::StatusRecordOr<std::vector<std::string>> FilterProjectIds(
+    ::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
+        project_client,
+    std::optional<std::regex> const& regex_filter,
+    ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 

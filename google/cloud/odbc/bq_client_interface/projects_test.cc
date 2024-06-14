@@ -42,7 +42,8 @@ TEST(ListAllProjects, ListZeroProjects) {
   StatusRecordOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
-  EXPECT_EQ(0, projects->size());
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_TRUE(projects->empty());
 }
 
 TEST(ListAllProjects, ListOneProject) {
@@ -59,6 +60,7 @@ TEST(ListAllProjects, ListOneProject) {
   StatusRecordOr<std::vector<Project>> projects =
       ListAllProjects(mocked_project_client, options);
 
+  ASSERT_STATUS_RECORD_OK(projects);
   EXPECT_EQ(1, projects->size());
   EXPECT_EQ(expected.id, projects->at(0).id);
 }
@@ -94,6 +96,7 @@ TEST(GetProjects, GetOneProject) {
   StatusRecordOr<Project> project =
       GetProject(mocked_project_client, expected.id, options);
 
+  ASSERT_STATUS_RECORD_OK(project);
   EXPECT_EQ(expected.id, project->id);
 }
 
@@ -144,7 +147,8 @@ TEST(FilterProjects, FilterZeroProjects) {
   StatusRecordOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {"id_1", "id_2"}, options);
 
-  EXPECT_EQ(0, projects->size());
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_TRUE(projects->empty());
 }
 
 TEST(FilterProjects, FilterOneProject) {
@@ -162,6 +166,7 @@ TEST(FilterProjects, FilterOneProject) {
   StatusRecordOr<std::vector<Project>> projects =
       FilterProjects(mocked_project_client, {response_1.id, "id_2"}, options);
 
+  ASSERT_STATUS_RECORD_OK(projects);
   EXPECT_EQ(1, projects->size());
   EXPECT_EQ(response_1.id, projects->at(0).id);
 }
@@ -181,6 +186,110 @@ TEST(FilterProjects, FilterProjectsFailure_UnauthenticatedRequest) {
 
   EXPECT_THAT(projects, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
                                        HasSubstr("denied")));
+}
+
+TEST(FilterProjectIds, FilterAllProjects_RegexMatchAll) {
+  auto mock = std::make_shared<MockProjectConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  Project expected_1{"p-kind", "p-id-1"};
+  Project expected_2{"p-kind", "p-id-2"};
+  EXPECT_CALL(*mock, ListProjects).WillOnce([&](ListProjectsRequest const&) {
+    return mocks::MakeStreamRange<Project>({expected_1, expected_2});
+  });
+  ProjectClient mocked_project_client(std::move(mock));
+
+  std::regex filter = std::regex(".*");
+  StatusRecordOr<std::vector<std::string>> projects =
+      FilterProjectIds(mocked_project_client, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_EQ(2, projects->size());
+  EXPECT_EQ(expected_1.id, projects->at(0));
+  EXPECT_EQ(expected_2.id, projects->at(1));
+}
+
+TEST(FilterProjectIds, FilterAllProjects_RegexIsEmpty) {
+  auto mock = std::make_shared<MockProjectConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  Project expected_1{"p-kind", "p-id-1"};
+  Project expected_2{"p-kind", "p-id-2"};
+  EXPECT_CALL(*mock, ListProjects).WillOnce([&](ListProjectsRequest const&) {
+    return mocks::MakeStreamRange<Project>({expected_1, expected_2});
+  });
+  ProjectClient mocked_project_client(std::move(mock));
+
+  std::optional<std::regex> empty_optional;
+  StatusRecordOr<std::vector<std::string>> projects =
+      FilterProjectIds(mocked_project_client, empty_optional, options);
+
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_EQ(2, projects->size());
+  EXPECT_EQ(expected_1.id, projects->at(0));
+  EXPECT_EQ(expected_2.id, projects->at(1));
+}
+
+TEST(FilterProjectIds, FilterZeroProjects_EmptyString) {
+  auto mock = std::make_shared<MockProjectConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  Project expected_1{"p-kind", "p-id-1"};
+  Project expected_2{"p-kind", "p-id-2"};
+  EXPECT_CALL(*mock, ListProjects).WillOnce([&](ListProjectsRequest const&) {
+    return mocks::MakeStreamRange<Project>({expected_1, expected_2});
+  });
+  ProjectClient mocked_project_client(std::move(mock));
+
+  std::regex filter = std::regex("");
+  StatusRecordOr<std::vector<std::string>> projects =
+      FilterProjectIds(mocked_project_client, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_TRUE(projects->empty());
+}
+
+TEST(FilterProjectIds, FilterProjectsByRegex) {
+  auto mock = std::make_shared<MockProjectConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  Project expected_1{"p-kind", "p-id-1"};
+  Project expected_2{"p-kind", "p-id-2"};
+  EXPECT_CALL(*mock, ListProjects).WillOnce([&](ListProjectsRequest const&) {
+    return mocks::MakeStreamRange<Project>({expected_1, expected_2});
+  });
+  ProjectClient mocked_project_client(std::move(mock));
+
+  std::regex filter = std::regex(".*-1");
+  StatusRecordOr<std::vector<std::string>> projects =
+      FilterProjectIds(mocked_project_client, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_EQ(1, projects->size());
+  EXPECT_EQ(expected_1.id, projects->at(0));
+}
+
+TEST(FilterProjectIds, FilterProjectsByRegex_IgnoreCase) {
+  auto mock = std::make_shared<MockProjectConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  Project expected_1{"p-kind", "p-id"};
+  Project expected_2{"p-kind", "P-ID"};
+  Project expected_3{"p-kind", "p-id-3"};
+  EXPECT_CALL(*mock, ListProjects).WillOnce([&](ListProjectsRequest const&) {
+    return mocks::MakeStreamRange<Project>(
+        {expected_1, expected_2, expected_3});
+  });
+  ProjectClient mocked_project_client(std::move(mock));
+
+  std::regex filter = std::regex("p-id", std::regex_constants::icase);
+  StatusRecordOr<std::vector<std::string>> projects =
+      FilterProjectIds(mocked_project_client, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(projects);
+  EXPECT_EQ(2, projects->size());
+  EXPECT_EQ(expected_1.id, projects->at(0));
+  EXPECT_EQ(expected_2.id, projects->at(1));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

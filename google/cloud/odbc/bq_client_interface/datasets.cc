@@ -82,4 +82,27 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   return datasets;
 }
 
+StatusRecordOr<std::vector<std::string>> FilterDatasetIds(
+    DatasetClient& dataset_client, std::string const& project_id,
+    std::optional<std::regex> const& regex_filter, Options const& options) {
+  ListDatasetsRequest request;
+  request.set_project_id(project_id);
+
+  StreamRange<ListFormatDataset> datasets_response =
+      dataset_client.ListDatasets(request, options);
+
+  std::vector<std::string> dataset_ids;
+  for (auto const& dataset : datasets_response) {
+    if (!dataset) {
+      return StatusRecord::ConvertFrom(dataset.status());
+    }
+    if (!regex_filter || std::regex_match(dataset->dataset_reference.dataset_id,
+                                          *regex_filter)) {
+      dataset_ids.push_back(dataset->dataset_reference.dataset_id);
+    }
+  }
+
+  return dataset_ids;
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

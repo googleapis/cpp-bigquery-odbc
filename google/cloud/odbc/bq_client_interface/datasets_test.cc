@@ -22,6 +22,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
@@ -30,6 +31,15 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
+
+ListFormatDataset CreateListFormatDataset(std::string project_id,
+                                          std::string dataset_id) {
+  DatasetReference dataset_reference{dataset_id, project_id};
+  ListFormatDataset list_format_dataset{"d-kind",
+                                        project_id + ":" + dataset_id};
+  list_format_dataset.dataset_reference = dataset_reference;
+  return list_format_dataset;
+}
 
 TEST(GetDataset, GetDatasetSuccess) {
   auto mock = std::make_shared<MockDatasetConnection>();
@@ -270,6 +280,140 @@ TEST(FilterDatasets, FilterDatasetsFailure_UnauthenticatedRequest) {
 
   EXPECT_THAT(datasets,
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+}
+
+TEST(FilterDatasetIds, FilterAllDatasets_RegexMatchAll) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected_1 =
+      CreateListFormatDataset(project_id, "dataset_id_1");
+  ListFormatDataset expected_2 =
+      CreateListFormatDataset(project_id, "dataset_id_2");
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {expected_1, expected_2});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  std::regex filter = std::regex(".*");
+  StatusRecordOr<std::vector<std::string>> datasets =
+      FilterDatasetIds(mocked_dataset_client, project_id, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(datasets);
+  EXPECT_EQ(2, datasets->size());
+  EXPECT_EQ(expected_1.dataset_reference.dataset_id, datasets->at(0));
+  EXPECT_EQ(expected_2.dataset_reference.dataset_id, datasets->at(1));
+}
+
+TEST(FilterDatasetIds, FilterAllDatasets_RegexIsEmpty) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected_1 =
+      CreateListFormatDataset(project_id, "dataset_id_1");
+  ListFormatDataset expected_2 =
+      CreateListFormatDataset(project_id, "dataset_id_2");
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {expected_1, expected_2});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  std::optional<std::regex> empty_optional;
+  StatusRecordOr<std::vector<std::string>> datasets = FilterDatasetIds(
+      mocked_dataset_client, project_id, empty_optional, options);
+
+  ASSERT_STATUS_RECORD_OK(datasets);
+  EXPECT_EQ(2, datasets->size());
+  EXPECT_EQ(expected_1.dataset_reference.dataset_id, datasets->at(0));
+  EXPECT_EQ(expected_2.dataset_reference.dataset_id, datasets->at(1));
+}
+
+TEST(FilterDatasetIds, FilterZeroDatasets_EmptyString) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected_1 =
+      CreateListFormatDataset(project_id, "dataset_id_1");
+  ListFormatDataset expected_2 =
+      CreateListFormatDataset(project_id, "dataset_id_2");
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {expected_1, expected_2});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  std::regex filter = std::regex("");
+  StatusRecordOr<std::vector<std::string>> datasets =
+      FilterDatasetIds(mocked_dataset_client, project_id, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(datasets);
+  EXPECT_TRUE(datasets->empty());
+}
+
+TEST(FilterDatasetIds, FilterDatasetsByRegex) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected_1 =
+      CreateListFormatDataset(project_id, "dataset_id_1");
+  ListFormatDataset expected_2 =
+      CreateListFormatDataset(project_id, "dataset_id_2");
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {expected_1, expected_2});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  std::regex filter = std::regex("data.*id.1");
+  StatusRecordOr<std::vector<std::string>> datasets =
+      FilterDatasetIds(mocked_dataset_client, project_id, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(datasets);
+  EXPECT_EQ(1, datasets->size());
+  EXPECT_EQ(expected_1.dataset_reference.dataset_id, datasets->at(0));
+}
+
+TEST(FilterDatasetIds, FilterDatasetsByRegex_IgnoreCase) {
+  auto mock = std::make_shared<MockDatasetConnection>();
+  Options options;
+  std::string project_id = "project_id";
+  ListFormatDataset expected_1 =
+      CreateListFormatDataset(project_id, "dataset_id");
+  ListFormatDataset expected_2 =
+      CreateListFormatDataset(project_id, "DATAset_id");
+  ListFormatDataset expected_3 =
+      CreateListFormatDataset(project_id, "dataset_id_3");
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListDatasets)
+      .WillOnce([&](ListDatasetsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        return mocks::MakeStreamRange<ListFormatDataset>(
+            {expected_1, expected_2});
+      });
+  DatasetClient mocked_dataset_client(std::move(mock));
+
+  std::regex filter = std::regex("dataset_id", std::regex_constants::icase);
+  StatusRecordOr<std::vector<std::string>> datasets =
+      FilterDatasetIds(mocked_dataset_client, project_id, filter, options);
+
+  ASSERT_STATUS_RECORD_OK(datasets);
+  EXPECT_EQ(2, datasets->size());
+  EXPECT_EQ(expected_1.dataset_reference.dataset_id, datasets->at(0));
+  EXPECT_EQ(expected_2.dataset_reference.dataset_id, datasets->at(1));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
@@ -84,6 +85,28 @@ StatusRecordOr<std::vector<Project>> FilterProjects(
   }
 
   return projects;
+}
+
+odbc_internal::StatusRecordOr<std::vector<std::string>> FilterProjectIds(
+    ProjectClient& project_client,
+    std::optional<std::regex> const& regex_filter,
+    ::google::cloud::Options const& options) {
+  ListProjectsRequest request;
+
+  StreamRange<Project> projects_response =
+      project_client.ListProjects(request, options);
+
+  std::vector<std::string> project_ids;
+  for (auto const& project : projects_response) {
+    if (!project) {
+      return StatusRecord::ConvertFrom(project.status());
+    }
+    if (!regex_filter || std::regex_match(project->id, *regex_filter)) {
+      project_ids.push_back(project->id);
+    }
+  }
+
+  return project_ids;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

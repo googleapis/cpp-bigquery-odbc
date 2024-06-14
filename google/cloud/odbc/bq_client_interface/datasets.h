@@ -17,6 +17,8 @@
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
+#include <optional>
+#include <regex>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -54,6 +56,15 @@ FilterDatasets(::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
                std::string const& project_id,
                DatasetFilter const& dataset_filter,
                ::google::cloud::Options const& options);
+
+// Returns list of dataset ids for a Project, filtered based on regex for
+// dataset_id If regex is empty - returns all
+odbc_internal::StatusRecordOr<std::vector<std::string>> FilterDatasetIds(
+    ::google::cloud::bigquery_v2_minimal_internal::DatasetClient&
+        dataset_client,
+    std::string const& project_id,
+    std::optional<std::regex> const& regex_filter,
+    ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
