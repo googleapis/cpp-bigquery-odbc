@@ -399,6 +399,8 @@ TEST(StatementTest, SQLDescribeColumn) {
     EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
     EXPECT_EQ(col_ptr->data_type, schema[i].type);
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
+    EXPECT_EQ(col_ptr->decimal_digits, 1);
+    EXPECT_EQ(col_ptr->data_len, 1);
     std::cout<<"precision "<<col_ptr->decimal_digits<<std::endl;
     std::cout<<"length "<<col_ptr->data_size<<std::endl;
   }
