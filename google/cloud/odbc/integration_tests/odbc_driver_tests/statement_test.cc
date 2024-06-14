@@ -361,19 +361,19 @@ TEST(StatementTest, SQLDescribeCol) {
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLDescribeColumn) {
-  auto const table_name ="ODBC_TEST_DATASET.integration_production_pr_testSQLDescribecol_ODBC_COLUMN_DESCRIPTION_TEST";
+  auto const table_name ="INTEGRATION_TESTS.Test_Table";
   Table table(table_name);
 
-  Schema schema{{"StringField", SQL_VARCHAR},
-                {"IntegerField", SQL_BIGINT},
-                {"FloatField", SQL_DOUBLE}};
+  Schema schema{{"id", SQL_BIGINT},
+                {"name", SQL_VARCHAR},
+                {"age", SQL_BIGINT}};
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
    SQLRETURN status;
   char read_stmt[kBufferLength];
-  StrToChar(read_stmt, "SELECT * FROM ODBC_TEST_DATASET.integration_production_pr_testSQLDescribecol_ODBC_COLUMN_DESCRIPTION_TEST");
+  StrToChar(read_stmt, "SELECT * FROM INTEGRATION_TESTS.Test_Table");
 
     status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
 
@@ -399,6 +399,8 @@ TEST(StatementTest, SQLDescribeColumn) {
     EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
     EXPECT_EQ(col_ptr->data_type, schema[i].type);
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
+    std::cout<<"precision "<<col_ptr->decimal_digits<<std::endl;
+    std::cout<<"length "<<col_ptr->data_size<<std::endl;
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
