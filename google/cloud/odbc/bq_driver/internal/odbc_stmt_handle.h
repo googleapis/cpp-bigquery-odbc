@@ -103,6 +103,8 @@ class StatementHandle : public Handle {
     query_parameters_ = query_parameters;
   }
 
+  inline std::string GetQueryStr() { return query_str_; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;

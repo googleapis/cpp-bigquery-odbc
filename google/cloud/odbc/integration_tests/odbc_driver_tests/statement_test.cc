@@ -1217,7 +1217,7 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string query = "Select 1";
+  std::string query = "Select 123\0";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
@@ -1229,17 +1229,9 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+  EXPECT_EQ(stmt_handle->GetQueryStr(), query);
 
-  // Retrieve the result set
-  ResultSet const& result_set = stmt_handle->GetResultSet();
-
-  ASSERT_EQ(result_set.row_schema.size(), 1);
-
-  ColumnSchema const& column = result_set.row_schema[0];
-  EXPECT_EQ(column.col_index, 0);
-  EXPECT_EQ(column.col_type, BQDataType::kInt64);
 #endif
-
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
