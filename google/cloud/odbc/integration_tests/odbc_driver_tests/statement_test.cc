@@ -387,6 +387,7 @@ TEST(StatementTest, SQLDescribeColumn) {
 
   // Loop through columns and verify descriptions
   std::vector<std::shared_ptr<Column>> cols(num_cols);
+  std::cout<<"number of cols "<<num_cols<<std::endl;
   for (int i = 0; i < num_cols; i++) {
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
