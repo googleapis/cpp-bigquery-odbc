@@ -402,7 +402,7 @@ TEST(StatementTest, SQLDescribeColumn) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
+  //table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
  
 }
