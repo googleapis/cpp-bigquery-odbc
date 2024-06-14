@@ -207,8 +207,15 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (!status_record.ok()) {
       return status_record;
     }
+    descriptor_record.scale = res.scale;
     descriptor_record.nullable =
         res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
+    std::cout<<"Name "<<descriptor_record.name<<"----"<<res.name<<std::endl;
+    std::cout<<"Type "<<descriptor_record.concise_type<<"----"<<res.type<<std::endl;
+    std::cout<<"Nullable "<<descriptor_record.nullable<<"----"<<res.mode<<std::endl;
+    std::cout<<"Precision "<<descriptor_record.precision<<"----"<<res.precision<<std::endl;
+    std::cout<<"Length "<<descriptor_record.length<<"----"<<res.max_length<<std::endl;
+    std::cout<<"Scale "<<descriptor_record.scale<<"----"<<res.scale<<std::endl;
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();
