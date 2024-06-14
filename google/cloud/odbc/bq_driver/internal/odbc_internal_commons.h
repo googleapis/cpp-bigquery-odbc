@@ -171,6 +171,11 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     std::string const& type);
 
 odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+ConstructStringQueryParameter(std::string const& parameter_name,
+                              std::string const& parameter_value);
+
+odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>>
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
@@ -180,7 +185,9 @@ odbc_internal::StatusRecordOr<
 ConstructNamedParametersPostQueryRequest(
     std::string const& catalog, std::string const& dataset,
     std::string const& named_query,
-    std::map<std::string, std::string> const& named_query_params);
+    std::vector<
+        google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
+        named_query_params);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

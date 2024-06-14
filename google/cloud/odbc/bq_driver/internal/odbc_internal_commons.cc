@@ -222,32 +222,35 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
-odbc_internal::StatusRecordOr<std::vector<QueryParameter>>
-ConstructStringQueryParameters(
+StatusRecordOr<QueryParameter> ConstructStringQueryParameter(
+    std::string const& parameter_name, std::string const& parameter_value) {
+  if (parameter_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  }
+
+  QueryParameter query_param;
+  QueryParameterType query_param_type;
+  QueryParameterValue query_param_value;
+
+  query_param_type.type = "STRING";
+  query_param_value.value = parameter_value;
+  query_param.name = parameter_name;
+  query_param.parameter_type = query_param_type;
+  query_param.parameter_value = query_param_value;
+
+  return query_param;
+}
+
+StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params) {
   std::vector<QueryParameter> query_params;
-  for (auto const& entry : params) {
-    std::string parameter_name = entry.first;
-    std::string parameter_value = entry.second;
-
-    if (parameter_name.empty()) {
-      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  for (auto const& [parameter_name, parameter_value] : params) {
+    auto query_parameter_response =
+        ConstructStringQueryParameter(parameter_name, parameter_value);
+    if (!query_parameter_response) {
+      return query_parameter_response.GetStatusRecord();
     }
-    if (parameter_value.empty()) {
-      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter value"};
-    }
-
-    QueryParameter query_param;
-    QueryParameterType query_param_type;
-    QueryParameterValue query_param_value;
-
-    query_param_type.type = "STRING";
-    query_param_value.value = parameter_value;
-    query_param.name = parameter_name;
-    query_param.parameter_type = query_param_type;
-    query_param.parameter_value = query_param_value;
-
-    query_params.emplace_back(query_param);
+    query_params.emplace_back(*query_parameter_response);
   }
   return query_params;
 }
@@ -256,7 +259,7 @@ odbc_internal::StatusRecordOr<PostQueryRequest>
 ConstructNamedParametersPostQueryRequest(
     std::string const& catalog, std::string const& dataset,
     std::string const& named_query,
-    std::map<std::string, std::string> const& named_query_params) {
+    std::vector<QueryParameter> const& named_query_params) {
   if (catalog.empty()) {
     return StatusRecord{SQLStates::k_HY090(),
                         "Cannot construct named parameter query "
@@ -272,10 +275,6 @@ ConstructNamedParametersPostQueryRequest(
                         "Cannot construct named parameter query "
                         "request: parametrized query is required"};
   }
-  auto query_param_status = ConstructStringQueryParameters(named_query_params);
-  if (!query_param_status) {
-    return query_param_status.GetStatusRecord();
-  }
   PostQueryRequest post_request;
   QueryRequest query_request;
   DatasetReference ds_ref;
@@ -288,7 +287,7 @@ ConstructNamedParametersPostQueryRequest(
   query_request.set_query(named_query);
   // Following are specific to parametrized queries.
   query_request.set_parameter_mode("NAMED");
-  query_request.set_query_parameters(*query_param_status);
+  query_request.set_query_parameters(named_query_params);
   query_request.set_use_legacy_sql(false);
   // Set billing info and query request.
   post_request.set_project_id(catalog);

@@ -171,9 +171,15 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   if (!fk_table_name.empty()) {
     named_query_params.insert({kNamedFKTableParam, fk_table_name});
   }
+  auto query_param_status = ConstructStringQueryParameters(named_query_params);
+  if (!query_param_status) {
+    auto status_record = query_param_status.GetStatusRecord();
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record;
+  }
   // Construct post query request.
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
-      catalog_name, schema_name, foreign_keys_query, named_query_params);
+      catalog_name, schema_name, foreign_keys_query, *query_param_status);
   if (!post_query_request_status) {
     auto status_record = post_query_request_status.GetStatusRecord();
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);

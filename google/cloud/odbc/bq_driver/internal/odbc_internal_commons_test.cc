@@ -336,7 +336,34 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(ConstructQueryParamsTest, Success) {
+TEST(ConstructStringQueryParameter, Success) {
+  auto status_record_or =
+      ConstructStringQueryParameter("param-name-1", "param-val-1");
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ((*status_record_or).name, "param-name-1");
+  EXPECT_EQ((*status_record_or).parameter_type.type, "STRING");
+  EXPECT_EQ((*status_record_or).parameter_value.value, "param-val-1");
+}
+
+TEST(ConstructStringQueryParameter, Success_EmptyParamValue) {
+  auto status_record_or = ConstructStringQueryParameter("param-name-1", "");
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ((*status_record_or).name, "param-name-1");
+  EXPECT_EQ((*status_record_or).parameter_type.type, "STRING");
+  EXPECT_EQ((*status_record_or).parameter_value.value, "");
+}
+
+TEST(ConstructStringQueryParameter, Failure_EmptyParamName) {
+  auto status_record_or = ConstructStringQueryParameter("", "param-val-1");
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructStringQueryParameters, Success) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"param-name-1", "param-val-1"});
   named_query_params.insert({"param-name-2", "param-val-2"});
@@ -361,7 +388,7 @@ TEST(ConstructQueryParamsTest, Success) {
   EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
 }
 
-TEST(ConstructQueryParamsTest, Failure_Empty_Param_name) {
+TEST(ConstructStringQueryParameters, Failure_Empty_Param_name) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"", "param-val-1"});
 
@@ -373,28 +400,19 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Param_name) {
                              HasSubstr("Invalid parameter name")));
 }
 
-TEST(ConstructQueryParamsTest, Failure_Empty_Param_value) {
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param-name-1", ""});
-
-  auto status_record_or = ConstructStringQueryParameters(named_query_params);
-  EXPECT_FALSE(status_record_or.Ok());
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Invalid parameter value")));
-}
-
 TEST(ConstructnamedPostQueryRequestTest, Success) {
   PostQueryRequest expected;
   std::string named_query =
       "select * from test_table where test_col1 = @param1 and test_col2 = "
       "@param2 and test_col3 = "
       "@param3";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param1", "param-val-1"});
-  named_query_params.insert({"param2", "param-val-2"});
-  named_query_params.insert({"param3", "param-val-3"});
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
+  named_query_params.emplace_back(
+      QueryParameter{"param2", {"STRING"}, {"param-val-2"}});
+  named_query_params.emplace_back(
+      QueryParameter{"param3", {"STRING"}, {"param-val-3"}});
 
   auto status_record_or = ConstructNamedParametersPostQueryRequest(
       kTestCatalog, kTestSchema, named_query, named_query_params);
@@ -425,8 +443,9 @@ TEST(ConstructnamedPostQueryRequestTest, Success) {
 
 TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
   std::string named_query = "select * from table where col = @param1";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param1", "param-val-1"});
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
   auto status_record_or = ConstructNamedParametersPostQueryRequest(
       "", kTestSchema, named_query, named_query_params);
   EXPECT_FALSE(status_record_or.Ok());
@@ -438,8 +457,9 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
 
 TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
   std::string named_query = "select * from table where col = @param1";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param1", "param-val-1"});
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
   auto status_record_or = ConstructNamedParametersPostQueryRequest(
       kTestCatalog, "", named_query, named_query_params);
   EXPECT_FALSE(status_record_or.Ok());
@@ -451,8 +471,9 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
 
 TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
   std::string named_query = "";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param1", "param-val-1"});
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
   auto status_record_or = ConstructNamedParametersPostQueryRequest(
       kTestCatalog, kTestSchema, "", named_query_params);
   EXPECT_FALSE(status_record_or.Ok());
@@ -460,32 +481,6 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
   EXPECT_THAT(status_record_or,
               StatusRecordIs(SQLStates::k_HY090(),
                              HasSubstr("parametrized query is required")));
-}
-
-TEST(ConstructQueryParamsTest, Failure_Empty_Invalid_Param_Name) {
-  std::string named_query = "select * from table where col = @param1";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"", "param-val-1"});
-  auto status_record_or = ConstructNamedParametersPostQueryRequest(
-      kTestCatalog, kTestSchema, named_query, named_query_params);
-  EXPECT_FALSE(status_record_or.Ok());
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Invalid parameter name")));
-}
-
-TEST(ConstructQueryParamsTest, Failure_Empty_Invalid_Param_Value) {
-  std::string named_query = "select * from table where col = @param1";
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param1", ""});
-  auto status_record_or = ConstructNamedParametersPostQueryRequest(
-      kTestCatalog, kTestSchema, named_query, named_query_params);
-  EXPECT_FALSE(status_record_or.Ok());
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Invalid parameter value")));
 }
 
 TEST(ProcessResultSetRows, Success_Basic) {
