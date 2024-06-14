@@ -114,6 +114,10 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   return int_val;
 }
 
+template <typename BasicJsonType>
+inline void JsonToString(BasicJsonType jsonsrcval, std::string& str) {
+  str = to_string(jsonsrcval);
+}
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:

@@ -334,6 +334,23 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+template <typename BasicJsonType>
+inline odbc_internal::StatusRecord ConvertFromJsonToString(
+    BasicJsonType& jsonsrc_val, DataBuffer& dest_data) {
+  using odbc_internal::StatusRecord;
+  std::string con_src_str;
+  JsonToString(jsonsrc_val, con_src_str);
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+
+  if (dest_type == SQL_VARCHAR) {
+    StatusRecord status_record =
+        StringValueToOutputBufferResponse(con_src_str.c_str(), dest_data);
+    return status_record;
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

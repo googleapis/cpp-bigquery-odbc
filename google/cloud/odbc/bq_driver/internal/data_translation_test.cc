@@ -244,4 +244,18 @@ TEST(ConvertFromStringDSValue, To_SQL_C_USHORT) {
                                            "Numeric value out of range");
 }
 
+using json = nlohmann::json;
+
+TEST(ConvertFromJsonToString, To_SQL_VARCHAR) {
+  SQLLEN buflen = 100;
+  SQLPOINTER buf = malloc(buflen);
+  DataBuffer data = {SQL_VARCHAR, buf, buflen, nullptr};
+  json jsonsrcval = {{"one", 1}, {"two", 2}};
+  std::string expected_val = "{\"one\":1,\"two\":2}";
+  StatusRecord status_record = ConvertFromJsonToString(jsonsrcval, data);
+  std::string returned_val = (char*)(SQLCHAR*)data.buf;
+  EXPECT_EQ(returned_val, expected_val);
+
+  free(buf);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
