@@ -124,6 +124,33 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
 }
 
+StatusRecordOr<std::vector<RowData>> GetRowsResults(
+    DSResults const& query_results) {
+  if (absl::holds_alternative<PostQueryResults>(
+          query_results.data_source_results)) {
+    auto results =
+        absl::get<PostQueryResults>(query_results.data_source_results);
+    if (!results.job_complete) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Unexpected value for job_complete: expecting true"};
+    }
+    return results.rows;
+  }
+  if (absl::holds_alternative<GetQueryResults>(
+          query_results.data_source_results)) {
+    auto results =
+        absl::get<GetQueryResults>(query_results.data_source_results);
+    if (!results.job_complete) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Unexpected value for job_complete: expecting true"};
+    }
+    return results.rows;
+  }
+  return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
+}
+
 StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
   // Validate the  connection handle.
@@ -234,6 +261,37 @@ StatusRecordOr<QueryParameter> ConstructStringQueryParameter(
 
   query_param_type.type = "STRING";
   query_param_value.value = parameter_value;
+  query_param.name = parameter_name;
+  query_param.parameter_type = query_param_type;
+  query_param.parameter_value = query_param_value;
+
+  return query_param;
+}
+
+StatusRecordOr<QueryParameter> ConstructStringArrayQueryParameter(
+    std::string const& parameter_name,
+    std::vector<std::string> const& parameter_values) {
+  if (parameter_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  }
+  if (parameter_values.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Empty parameter values"};
+  }
+
+  QueryParameter query_param;
+  QueryParameterType query_param_type;
+  QueryParameterType query_param_array_type;
+  QueryParameterValue query_param_value;
+
+  query_param_array_type.type = "STRING";
+  query_param_type.type = "ARRAY";
+  query_param_type.array_type =
+      std::make_shared<QueryParameterType>(query_param_array_type);
+  for (auto const& param_val : parameter_values) {
+    QueryParameterValue query_param_array_value;
+    query_param_array_value.value = param_val;
+    query_param_value.array_values.push_back(query_param_array_value);
+  }
   query_param.name = parameter_name;
   query_param.parameter_type = query_param_type;
   query_param.parameter_value = query_param_value;

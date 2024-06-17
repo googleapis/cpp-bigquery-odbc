@@ -313,6 +313,66 @@ TEST(ProcessBQResults, GetQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
+TEST(GetRowsResults, GetQueryResults_Success) {
+  DSResults results;
+  GetQueryResults get_results = CreateGetQueryResults();
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
+}
+
+TEST(GetRowsResults, GetQueryResults_Success_Error_JobComplete) {
+  DSResults results;
+  GetQueryResults get_results;
+  get_results.job_complete = false;
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Internal Error: Unexpected value for "
+                                       "job_complete")));
+}
+
+TEST(GetRowsResults, PostQueryResults_Success) {
+  DSResults results;
+  PostQueryResults get_results = CreatePostQueryResults();
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
+}
+
+TEST(GetRowsResults, PostQueryResults_Error_JobComplete) {
+  DSResults results;
+  PostQueryResults get_results = CreatePostQueryResults();
+  get_results.job_complete = false;
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Internal Error: Unexpected value for "
+                                       "job_complete")));
+}
+
+TEST(GetRowsResults, Failure_NoResults) {
+  DSResults results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid query results object")));
+}
+
 TEST(FetchBQResults, Failure_Not_Connected) {
   PostQueryRequest req;
   ConnectionHandle handle;
@@ -334,6 +394,37 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
       StatusRecordIs(
           SQLStates::k_HY000(),
           HasSubstr("Invalid or null BQ Client within the connection handle")));
+}
+
+TEST(ConstructStringArrayQueryParameter, Success) {
+  auto status_record_or = ConstructStringArrayQueryParameter(
+      "param-name-1", {"param-val-1", "param-val-2"});
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  QueryParameter param = *status_record_or;
+  EXPECT_EQ(param.name, "param-name-1");
+  EXPECT_EQ(param.parameter_type.type, "ARRAY");
+  EXPECT_EQ(param.parameter_type.array_type->type, "STRING");
+  EXPECT_EQ(param.parameter_value.array_values[0].value, "param-val-1");
+  EXPECT_EQ(param.parameter_value.array_values[1].value, "param-val-2");
+}
+
+TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamName) {
+  auto status_record_or =
+      ConstructStringArrayQueryParameter("", {"param-val-1"});
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamVector) {
+  auto status_record_or =
+      ConstructStringArrayQueryParameter("param-name-1", {});
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Empty parameter values")));
 }
 
 TEST(ConstructStringQueryParameter, Success) {

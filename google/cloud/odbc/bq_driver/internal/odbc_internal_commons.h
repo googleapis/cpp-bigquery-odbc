@@ -161,6 +161,10 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
     DSResults const& query_results);
 
+odbc_internal::StatusRecordOr<
+    std::vector<google::cloud::bigquery_v2_minimal_internal::RowData>>
+GetRowsResults(DSResults const& query_results);
+
 ///////////////////////////////////////////////////////
 // Common helper functions.
 ////////////////////////////////////////////////////////
@@ -169,6 +173,12 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     std::string const& type);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+ConstructStringArrayQueryParameter(
+    std::string const& parameter_name,
+    std::vector<std::string> const& parameter_values);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::QueryParameter>
