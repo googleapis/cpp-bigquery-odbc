@@ -225,4 +225,16 @@ std::string GetPathToOdbcIni() {
   return "";
 }
 
+std::vector<std::string> SplitTableTypes(std::string const& filter) {
+  std::vector<std::string> types = Split(filter, ",");
+  for (auto& type : types) {
+    Trim(type);
+    if (type[0] == '\'' && type[type.length() - 1] == '\'') {
+      type = type.substr(1, type.length() - 2);
+      Trim(type);
+    }
+  }
+  return types;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

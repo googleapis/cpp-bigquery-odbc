@@ -263,4 +263,35 @@ TEST(FilterUsingOdbcRegex, UseComplexPattern) {
   EXPECT_FALSE(std::regex_match("%abc_def00ghi", odbc_regex));
 }
 
+TEST(SplitTableTypes, SplitZeroTypes) {
+  std::vector<std::string> types = SplitTableTypes("  ");
+
+  EXPECT_EQ(1, types.size());
+  EXPECT_EQ("", types[0]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithSpaces) {
+  std::vector<std::string> types = SplitTableTypes(" TABLE , VIEW ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("TABLE", types[0]);
+  EXPECT_EQ("VIEW", types[1]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithQuotes) {
+  std::vector<std::string> types = SplitTableTypes(" ' TABLE ' , ' VIEW ' ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("TABLE", types[0]);
+  EXPECT_EQ("VIEW", types[1]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
+  std::vector<std::string> types = SplitTableTypes(" ' TABLE  ,  VIEW ' ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("' TABLE", types[0]);
+  EXPECT_EQ("VIEW '", types[1]);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
