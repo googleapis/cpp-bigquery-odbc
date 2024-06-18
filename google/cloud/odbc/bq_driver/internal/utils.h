@@ -129,7 +129,7 @@ inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   return std::regex_replace(underscore_filter_out, std::regex("\\\\"), "");
 }
 
-std::vector<std::string> SplitTableTypes(std::string const& filter);
+std::vector<std::string> SplitTableTypes(std::string const& table_types);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

@@ -225,8 +225,8 @@ std::string GetPathToOdbcIni() {
   return "";
 }
 
-std::vector<std::string> SplitTableTypes(std::string const& filter) {
-  std::vector<std::string> types = Split(filter, ",");
+std::vector<std::string> SplitTableTypes(std::string const& table_types) {
+  std::vector<std::string> types = Split(table_types, ",");
   for (auto& type : types) {
     Trim(type);
     if (type[0] == '\'' && type[type.length() - 1] == '\'') {
