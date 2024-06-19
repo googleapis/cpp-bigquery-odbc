@@ -56,7 +56,7 @@ class MockConnectionHandle : public ConnectionHandle {
   void SetConnected() { is_connected_ = true; }
 };
 
-ConnectionHandle CreateConnectionHandle(bool is_connected) {
+ConnectionHandle CreateConnectionHandle(bool is_connected = true) {
   MockConnectionHandle conn_handle;
   if (is_connected) {
     conn_handle.SetConnected();
@@ -64,13 +64,12 @@ ConnectionHandle CreateConnectionHandle(bool is_connected) {
   return conn_handle;
 }
 
-StatementHandle CreateStatementHandle(
-    odbc_bq_driver_internal::ConnectionHandle* conn_handle) {
+StatementHandle CreateStatementHandle() {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ipd(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO);
-  return StatementHandle(conn_handle, {ard, apd, ird, ipd});
+  return StatementHandle(nullptr, {ard, apd, ird, ipd});
 }
 
 StatementHandle CreatePreparedStatementHandle() {

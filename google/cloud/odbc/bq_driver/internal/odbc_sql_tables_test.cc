@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
-#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -23,25 +23,22 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
-using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CastToSQLCHAR;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
-SQLCHAR* Cast(char const* str) {
-  return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
-}
-
 TEST(ValidateInputParameters, Success) {
   StatusRecord status = ValidateInputParameters(
-      Cast("project"), 7, Cast("dataset"), 7, Cast("table"), 5, 5, SQL_TRUE);
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
 
   EXPECT_TRUE(status.ok());
 }
 
 TEST(ValidateInputParameters, Failure_CatalogNameLengthNegative) {
   StatusRecord status = ValidateInputParameters(
-      Cast("project"), -7, Cast("dataset"), 7, Cast("table"), 5, 5, SQL_TRUE);
+      CastToSQLCHAR("project"), -7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
   EXPECT_THAT(status.message, HasSubstr("catalog length is invalid"));
@@ -49,7 +46,8 @@ TEST(ValidateInputParameters, Failure_CatalogNameLengthNegative) {
 
 TEST(ValidateInputParameters, Failure_SchemaNameLengthNegative) {
   StatusRecord status = ValidateInputParameters(
-      Cast("project"), 7, Cast("dataset"), -7, Cast("table"), 5, 5, SQL_TRUE);
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), -7,
+      CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
   EXPECT_THAT(status.message, HasSubstr("schema length is invalid"));
@@ -57,7 +55,8 @@ TEST(ValidateInputParameters, Failure_SchemaNameLengthNegative) {
 
 TEST(ValidateInputParameters, Failure_TableNameLengthNegative) {
   StatusRecord status = ValidateInputParameters(
-      Cast("project"), 7, Cast("dataset"), 7, Cast("table"), -5, 5, SQL_TRUE);
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), -5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
   EXPECT_THAT(status.message, HasSubstr("table name length is invalid"));
@@ -65,15 +64,17 @@ TEST(ValidateInputParameters, Failure_TableNameLengthNegative) {
 
 TEST(ValidateInputParameters, Failure_TableTypeLengthNegative) {
   StatusRecord status = ValidateInputParameters(
-      Cast("project"), 7, Cast("dataset"), 7, Cast("table"), 5, -5, SQL_TRUE);
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, -5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
   EXPECT_THAT(status.message, HasSubstr("table type length is invalid"));
 }
 
 TEST(ValidateInputParameters, Failure_NullCatalog) {
-  StatusRecord status = ValidateInputParameters(nullptr, 7, Cast("dataset"), 7,
-                                                Cast("table"), 5, 5, SQL_TRUE);
+  StatusRecord status =
+      ValidateInputParameters(nullptr, 7, CastToSQLCHAR("dataset"), 7,
+                              CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY009(), status.sql_state);
   EXPECT_THAT(status.message,
@@ -81,8 +82,9 @@ TEST(ValidateInputParameters, Failure_NullCatalog) {
 }
 
 TEST(ValidateInputParameters, Failure_NullSchema) {
-  StatusRecord status = ValidateInputParameters(Cast("project"), 7, nullptr, 7,
-                                                Cast("table"), 5, 5, SQL_TRUE);
+  StatusRecord status =
+      ValidateInputParameters(CastToSQLCHAR("project"), 7, nullptr, 7,
+                              CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY009(), status.sql_state);
   EXPECT_THAT(status.message,
@@ -90,8 +92,9 @@ TEST(ValidateInputParameters, Failure_NullSchema) {
 }
 
 TEST(ValidateInputParameters, Failure_NullTableName) {
-  StatusRecord status = ValidateInputParameters(
-      Cast("project"), 7, Cast("dataset"), 7, nullptr, 5, 5, SQL_TRUE);
+  StatusRecord status = ValidateInputParameters(CastToSQLCHAR("project"), 7,
+                                                CastToSQLCHAR("dataset"), 7,
+                                                nullptr, 5, 5, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY009(), status.sql_state);
   EXPECT_THAT(status.message,
@@ -103,67 +106,6 @@ TEST(ValidateInputParameters, Success_AllNulls_MetadataFalse) {
       ValidateInputParameters(nullptr, 0, nullptr, 0, nullptr, 0, 0, SQL_FALSE);
 
   EXPECT_TRUE(status.ok());
-}
-
-TEST(GetFilteredProjectIds, Failure_NullConnectionHandle) {
-  auto stmt_handle = CreateStatementHandle();
-
-  auto status_record_or =
-      GetFilteredProjectIds(stmt_handle, "project", SQL_FALSE);
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY013(),
-                             HasSubstr("Internal connection handle is null")));
-}
-
-TEST(GetFilteredProjectIds, Failure_NullBqClient) {
-  auto conn_handle = CreateConnectionHandle();
-  auto stmt_handle = CreateStatementHandle(&conn_handle);
-
-  auto status_record_or =
-      GetFilteredProjectIds(stmt_handle, "project", SQL_FALSE);
-
-  EXPECT_THAT(
-      status_record_or,
-      StatusRecordIs(
-          SQLStates::k_HY000(),
-          HasSubstr("Invalid or null BQ Client within the connection handle")));
-}
-
-TEST(GetFilteredDatasetIds, Failure_NullConnectionHandle) {
-  auto stmt_handle = CreateStatementHandle();
-
-  auto status_record_or =
-      GetFilteredDatasetIds(stmt_handle, "project", "dataset", SQL_FALSE);
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY013(),
-                             HasSubstr("Internal connection handle is null")));
-}
-
-TEST(GetFilteredDatasetIds, Failure_NullBqClient) {
-  auto conn_handle = CreateConnectionHandle();
-  auto stmt_handle = CreateStatementHandle(&conn_handle);
-
-  auto status_record_or =
-      GetFilteredDatasetIds(stmt_handle, "project", "dataset", SQL_FALSE);
-
-  EXPECT_THAT(
-      status_record_or,
-      StatusRecordIs(
-          SQLStates::k_HY000(),
-          HasSubstr("Invalid or null BQ Client within the connection handle")));
-}
-
-TEST(GetFilteredTables, Failure_NullConnectionHandle) {
-  auto stmt_handle = CreateStatementHandle();
-
-  auto status_record_or = GetFilteredTables(
-      stmt_handle, "project", "dataset", "table_name", "table_type", SQL_TRUE);
-
-  EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY013(),
-                             HasSubstr("Internal connection handle is null")));
 }
 
 TEST(ConstructQuery, ConstructWithTwoClauses_MetadataFalse) {
@@ -229,6 +171,7 @@ TEST(ConstructQuery, ConstructWithTableTypeClause) {
             "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES "
             "WHERE table_type IN UNNEST (@table_type)");
   EXPECT_EQ(1, named_query_params.size());
+  EXPECT_EQ(2, named_query_params[0].parameter_value.array_values.size());
   EXPECT_EQ("BASE TABLE",
             named_query_params[0].parameter_value.array_values[0].value);
   EXPECT_EQ("VIEW",
@@ -255,12 +198,14 @@ TEST(CreateResultSetForProjects, CreateResultSetForProjects) {
 
   EXPECT_EQ(2, result_set.rows.size());
   std::string data;
+  EXPECT_EQ(5, result_set.rows[0].size());
   DSValueToString(result_set.rows[0][0], data);
   EXPECT_EQ("id-1", data);
   EXPECT_EQ(kNullValue, result_set.rows[0][1]);
   EXPECT_EQ(kNullValue, result_set.rows[0][2]);
   EXPECT_EQ(kNullValue, result_set.rows[0][3]);
   EXPECT_EQ(kNullValue, result_set.rows[0][4]);
+  EXPECT_EQ(5, result_set.rows[1].size());
   DSValueToString(result_set.rows[1][0], data);
   EXPECT_EQ("id-2", data);
   EXPECT_EQ(kNullValue, result_set.rows[1][1]);
@@ -276,12 +221,14 @@ TEST(CreateResultSetForDatasets, CreateResultSetForDatasets) {
 
   EXPECT_EQ(2, result_set.rows.size());
   std::string data;
+  EXPECT_EQ(5, result_set.rows[0].size());
   EXPECT_EQ(kNullValue, result_set.rows[0][0]);
   DSValueToString(result_set.rows[0][1], data);
   EXPECT_EQ("id-1", data);
   EXPECT_EQ(kNullValue, result_set.rows[0][2]);
   EXPECT_EQ(kNullValue, result_set.rows[0][3]);
   EXPECT_EQ(kNullValue, result_set.rows[0][4]);
+  EXPECT_EQ(5, result_set.rows[1].size());
   EXPECT_EQ(kNullValue, result_set.rows[1][0]);
   DSValueToString(result_set.rows[1][1], data);
   EXPECT_EQ("id-2", data);
@@ -296,6 +243,7 @@ TEST(CreateResultSetForTableTypes, CreateResultSetForTableTypes) {
   EXPECT_EQ(kAllTableTypes.size(), result_set.rows.size());
   std::string data;
   for (int i = 0; i < result_set.rows.size(); i++) {
+    EXPECT_EQ(5, result_set.rows[i].size());
     EXPECT_EQ(kNullValue, result_set.rows[i][0]);
     EXPECT_EQ(kNullValue, result_set.rows[i][1]);
     EXPECT_EQ(kNullValue, result_set.rows[i][2]);
@@ -314,6 +262,7 @@ TEST(ProcessStringResults, ProcessStringResults) {
 
   EXPECT_EQ(2, result_set.rows.size());
   std::string data;
+  EXPECT_EQ(5, result_set.rows[0].size());
   DSValueToString(result_set.rows[0][0], data);
   EXPECT_EQ("project-1", data);
   DSValueToString(result_set.rows[0][1], data);
@@ -324,6 +273,7 @@ TEST(ProcessStringResults, ProcessStringResults) {
   EXPECT_EQ("table-type-1", data);
   DSValueToString(result_set.rows[0][4], data);
   EXPECT_EQ("desc-1", data);
+  EXPECT_EQ(5, result_set.rows[1].size());
   DSValueToString(result_set.rows[1][0], data);
   EXPECT_EQ("project-2", data);
   DSValueToString(result_set.rows[1][1], data);

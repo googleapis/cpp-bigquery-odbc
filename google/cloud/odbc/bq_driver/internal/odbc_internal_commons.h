@@ -76,7 +76,7 @@ struct ResultSet {
   mutable int cursor{0};  // points to the next row that can be fetched
 };
 
-DSValue const kNullValue = {0};
+DSValue const kNullValue{0};
 
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());

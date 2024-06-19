@@ -87,28 +87,15 @@ std::regex BuildRegex(std::string filter_pattern, SQLULEN metadata_id) {
 }
 
 StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
-    StatementHandle& stmt_handle, std::string const& projects_filter,
+    ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id) {
-  if (stmt_handle.GetConnectionHandle() == nullptr) {
-    auto status_record = StatusRecord{SQLStates::k_HY013(),
-                                      "Internal connection handle is null"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record;
-  }
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  auto bq_client = conn_handle.GetClient();
-  if (!bq_client) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"};
-  }
   std::vector<std::string> project_ids;
   std::regex filter_regex = BuildRegex(projects_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
   Options options;
   StatusRecordOr<std::vector<Project>> projects =
-      bq_client->ListAllProjects(options);
+      bq_client.ListAllProjects(options);
   if (!projects) {
     return projects.GetStatusRecord();
   }
@@ -122,21 +109,8 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
 }
 
 StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
-    StatementHandle& stmt_handle, std::string const& project_id,
+    ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& datasets_filter, SQLULEN metadata_id) {
-  if (stmt_handle.GetConnectionHandle() == nullptr) {
-    auto status_record = StatusRecord{SQLStates::k_HY013(),
-                                      "Internal connection handle is null"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record;
-  }
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  auto bq_client = conn_handle.GetClient();
-  if (!bq_client) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"};
-  }
   std::vector<std::string> dataset_ids;
   std::regex filter_regex = BuildRegex(datasets_filter, metadata_id);
   // For now, we use default options.
@@ -145,7 +119,7 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   DatasetFilter filter;
   filter.all = false;
   StatusRecordOr<std::vector<ListFormatDataset>> datasets =
-      bq_client->FilterDatasets(project_id, filter, options);
+      bq_client.FilterDatasets(project_id, filter, options);
   if (!datasets) {
     return datasets.GetStatusRecord();
   }
@@ -214,7 +188,7 @@ StatusRecordOr<std::string> ConstructQuery(
 }
 
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
-    StatementHandle& stmt_handle, std::string const& project_id,
+    ConnectionHandle& conn_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
   std::vector<QueryParameter> named_query_params;
@@ -230,13 +204,6 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     return post_query_request_status.GetStatusRecord();
   }
 
-  if (stmt_handle.GetConnectionHandle() == nullptr) {
-    auto status_record = StatusRecord{SQLStates::k_HY013(),
-                                      "Internal connection handle is null"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record;
-  }
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto fetch_status_record_or =
       FetchBQData(conn_handle, *post_query_request_status);
   if (!fetch_status_record_or) {
