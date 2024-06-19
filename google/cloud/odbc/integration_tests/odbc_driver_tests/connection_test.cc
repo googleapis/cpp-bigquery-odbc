@@ -90,6 +90,7 @@ static std::map<SQLUSMALLINT, SQLUSMALLINT> const kSupportedUSmallIntMap = {
     {SQL_NULL_COLLATION, 1},
     {SQL_QUOTED_IDENTIFIER_CASE, 3},
     {SQL_TXN_CAPABLE, 1}};
+  
 
 static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedUIntMap = {
     {SQL_ASYNC_MODE, 2},
