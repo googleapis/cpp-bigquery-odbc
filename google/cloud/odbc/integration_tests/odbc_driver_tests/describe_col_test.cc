@@ -142,22 +142,18 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   table.Create(conn, table_schema);
 
   auto insert_stmt = "INSERT INTO " + table_name + " VALUES (" + params + ")";
-
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
-
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, "SELECT * FROM "+table_name);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
   SQLSMALLINT num_columns;
-  status = SQLNumResultCols(conn->hstmt, &num_columns);
-  CheckError(status, "SQLNumParams", conn);
+  //status = SQLNumResultCols(conn->hstmt, &num_columns);
+  //CheckError(status, "SQLNumParams", conn);
   status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
+
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_COUNT, &num_columns, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
 
  // EXPECT_TRUE(num_columns > 0);
 
