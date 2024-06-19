@@ -141,8 +141,15 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   table_schema.append(")");
   table.Create(conn, table_schema);
 
-  auto insert_stmt = "SELECT * FROM " + table_name;
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  auto insert_stmt = "INSERT INTO " + table_name + " VALUES (" + params + ")";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, "SELECT * FROM "+table_name);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
   SQLSMALLINT num_columns;
