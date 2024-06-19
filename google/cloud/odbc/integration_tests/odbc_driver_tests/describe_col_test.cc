@@ -141,18 +141,18 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   table_schema.append(")");
   table.Create(conn, table_schema);
 
-  auto insert_stmt = "SELECT * FROM " + table_name; //+ " VALUES (" + params + ")";
+  auto insert_stmt = "INSERT INTO " + table_name + " VALUES (" + params + ")";
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
-  SQLSMALLINT num_columns;
+  SQLSMALLINT num_columns = kExpectedResults.size();
   status = SQLNumResultCols(conn->hstmt, &num_columns);
   CheckError(status, "SQLNumParams", conn);
   status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
 
-  //EXPECT_TRUE(num_columns > 0);
+  EXPECT_TRUE(num_columns > 0);
 
   for (int i = 1; i <= num_columns; i++) {
     SQLSMALLINT data_type = 0;
