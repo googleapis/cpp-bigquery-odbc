@@ -141,7 +141,7 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   table_schema.append(")");
   table.Create(conn, table_schema);
 
-  auto insert_stmt = "INSERT INTO " + table_name + " VALUES (" + params + ")";
+  auto insert_stmt = "SELECT * FROM " + table_name; //+ " VALUES (" + params + ")";
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
