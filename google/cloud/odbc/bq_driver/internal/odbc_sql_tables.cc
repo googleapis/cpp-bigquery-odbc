@@ -279,4 +279,74 @@ ResultSet ProcessStringResults(
   return result_set;
 }
 
+StatusRecordOr<ResultSet> GetResultSetForProjects(ODBCBQClient& bq_client,
+                                                  SQLULEN metadata_id) {
+  auto project_ids_status =
+      GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
+  if (!project_ids_status) {
+    return project_ids_status.GetStatusRecord();
+  }
+  return CreateResultSetForProjects(*project_ids_status);
+}
+
+StatusRecordOr<ResultSet> GetResultSetForDatasets(ODBCBQClient& bq_client,
+                                                  SQLULEN metadata_id) {
+  auto project_ids_status =
+      GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
+  if (!project_ids_status) {
+    return project_ids_status.GetStatusRecord();
+  }
+  std::vector<std::string> dataset_ids;
+  for (auto const& project_id : *project_ids_status) {
+    auto dataset_ids_status =
+        GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
+    if (!dataset_ids_status) {
+      return dataset_ids_status.GetStatusRecord();
+    }
+    std::vector<std::string> ids = *dataset_ids_status;
+    dataset_ids.insert(dataset_ids.end(), ids.begin(), ids.end());
+  }
+  return CreateResultSetForDatasets(dataset_ids);
+}
+
+StatusRecordOr<ResultSet> GetResultSetForTables(
+    ConnectionHandle& conn_handle, ODBCBQClient& bq_client,
+    std::string const& project_filter, std::string const& dataset_filter,
+    std::string const& table_filter, std::string const& table_type_filter,
+    SQLULEN metadata_id) {
+  auto projects_status_record_or =
+      GetFilteredProjectIds(bq_client, project_filter, metadata_id);
+  if (!projects_status_record_or) {
+    return projects_status_record_or.GetStatusRecord();
+  }
+  std::vector<std::string> project_ids = *projects_status_record_or;
+
+  std::map<std::string, std::vector<std::string>> projects_datasets;
+  for (auto const& project_id : project_ids) {
+    auto datasets_status_record_or = GetFilteredDatasetIds(
+        bq_client, project_id, dataset_filter, metadata_id);
+    if (!datasets_status_record_or) {
+      return datasets_status_record_or.GetStatusRecord();
+    }
+    projects_datasets.emplace(project_id, *datasets_status_record_or);
+  }
+
+  std::vector<std::vector<std::string>> tables_result_set;
+  for (auto const& [project_id, datasets] : projects_datasets) {
+    for (auto const& dataset_id : datasets) {
+      auto tables_status_record_or =
+          GetFilteredTables(conn_handle, project_id, dataset_id, table_filter,
+                            table_type_filter, metadata_id);
+      if (!tables_status_record_or) {
+        return tables_status_record_or.GetStatusRecord();
+      }
+      for (auto const& table : *tables_status_record_or) {
+        tables_result_set.push_back({project_id, dataset_id, table.table_name,
+                                     table.table_type, project_id});
+      }
+    }
+  }
+  return ProcessStringResults(tables_result_set);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

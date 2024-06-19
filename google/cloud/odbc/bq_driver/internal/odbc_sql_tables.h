@@ -24,6 +24,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 std::vector<std::string> const kAllTableTypes = {
     "BASE TABLE", "VIEW", "EXTERNAL", "MATERIALIZED VIEW", "SNAPSHOT"};
 
+std::string const kMatchAll = "%";
+
 struct FilteredTableResponse {
   std::string table_name;
   std::string table_type;
@@ -92,6 +94,21 @@ ResultSet CreateResultSetForTableTypes();
 // is according to ODBC spec.
 ResultSet ProcessStringResults(
     std::vector<std::vector<std::string>> const& rows);
+
+// Search for all projects and populate ResultSet for it.
+odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
+    ODBCBQClient& bq_client, SQLULEN metadata_id);
+
+// Search for all datasets in all projects and populate ResultSet for it.
+odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
+    ODBCBQClient& bq_client, SQLULEN metadata_id);
+
+// Search for tables and populate ResultSet according to ODBC spec
+odbc_internal::StatusRecordOr<ResultSet> GetResultSetForTables(
+    ConnectionHandle& conn_handle, ODBCBQClient& bq_client,
+    std::string const& project_filter, std::string const& dataset_filter,
+    std::string const& table_filter, std::string const& table_type_filter,
+    SQLULEN metadata_id);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
