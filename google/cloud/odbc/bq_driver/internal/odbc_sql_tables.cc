@@ -132,10 +132,9 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   return dataset_ids;
 }
 
-std::string ConstructTableNameWhereClause(std::string tables_filter,
+std::string ConstructTableNameWhereClause(std::string const& tables_filter,
                                           SQLULEN metadata_id) {
   if (metadata_id == SQL_TRUE) {
-    RTrim(tables_filter);
     return "LOWER(table_name) = LOWER(@" + kTableNameParam + ")";
   }
   if (tables_filter != "%") {
@@ -153,8 +152,11 @@ std::string ConstructTableTypeWhereClause(std::string table_types_filter) {
 }
 
 StatusRecordOr<std::string> ConstructQuery(
-    std::string const& tables_filter, std::string const& table_types_filter,
+    std::string tables_filter, std::string const& table_types_filter,
     SQLULEN metadata_id, std::vector<QueryParameter>& named_query_params) {
+  if (metadata_id == SQL_TRUE) {
+    RTrim(tables_filter);
+  }
   std::string table_name_where_clause =
       ConstructTableNameWhereClause(tables_filter, metadata_id);
   std::string table_type_where_clause =

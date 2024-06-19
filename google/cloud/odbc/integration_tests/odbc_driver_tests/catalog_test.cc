@@ -21,6 +21,14 @@ namespace google::cloud::odbc_tests {
 using ::testing::StartsWith;
 
 namespace {
+
+std::string const kTable = kIsBqDriver ? "BASE TABLE" : "TABLE";
+std::string const kView = "VIEW";
+std::string const kExternal = "EXTERNAL";
+std::string const kMaterializedView =
+    kIsBqDriver ? "MATERIALIZED VIEW" : "MATERIALIZED_VIEW";
+std::string const kSnapshot = "SNAPSHOT";
+
 // Tables and schema for SQLPrimaryKeys
 std::string const kCatalogDatasetTableWithPKFull =
     kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
@@ -106,42 +114,39 @@ std::string const kTableLinesSchema =
     " (OrderId) "
     "NOT ENFORCED)";
 }  // namespace
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 bool FindTableInVector(std::string const& table_name,
                        std::vector<std::string>& table_names) {
   return std::find_if(table_names.begin(), table_names.end(),
                       [table_name](std::string const& name) {
-                        return kTableNamePrefix + name == table_name;
+                        return name == table_name;
                       }) != table_names.end();
 }
 
 TEST(CatalogTest, SQLTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {"ODBC_SQLTables1_TEST_1",
                                           "ODBC_SQLTables1_TEST_2",
                                           "ODBC_SQLTables1_TEST_3"};
   for (auto const& name : table_names) {
-    Table(kDatasetWithTablePrefix + name).Create(conn);
+    Table(kCatalogFnsDataset + "." + name).Create(conn);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
   // created
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str());
+      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str());
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kDatasetName, result.dataset_name);
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
@@ -156,28 +161,28 @@ TEST(CatalogTest, SQLTablesA) {
   auto conn = std::make_shared<ODBCHandles>();
 
   // Create tables
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {"ODBC_SQLTablesAnsi_TEST_1",
                                           "ODBC_SQLTablesAnsi_TEST_2",
                                           "ODBC_SQLTableAnsi_TEST_3"};
   for (auto const& name : table_names) {
-    Table(kDatasetWithTablePrefix + name).Create(conn);
+    Table(kCatalogFnsDataset + "." + name).Create(conn);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
   // created
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> results = Catalog::GetTables(
-      conn, kCatalogName, kDatasetName.c_str(), nullptr, nullptr, true);
+      conn, kCatalogName, kCatalogFnsDataset.c_str(), nullptr, nullptr, true);
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kDatasetName, result.dataset_name);
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
@@ -190,7 +195,7 @@ TEST(CatalogTest, SQLTablesA) {
 
 TEST(CatalogTest, SQLTables_AllProjects) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
@@ -211,7 +216,7 @@ TEST(CatalogTest, SQLTables_AllProjects) {
 
 TEST(CatalogTest, SQLTables_AllDatasets) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
@@ -222,7 +227,7 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
   bool catalog_found = false;
   for (auto const& result : results) {
     EXPECT_TRUE(result.project_name.empty());
-    catalog_found = catalog_found || kDatasetName == result.dataset_name;
+    catalog_found = catalog_found || kCatalogFnsDataset == result.dataset_name;
     EXPECT_TRUE(result.table_name.empty());
     EXPECT_TRUE(result.table_type.empty());
     EXPECT_TRUE(result.description.empty());
@@ -234,7 +239,7 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
 
 TEST(CatalogTest, SQLTables_AllTableTypes) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
@@ -242,8 +247,8 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, "", "", "", SQL_ALL_TABLE_TYPES);
 
-  std::vector<std::string> expected_types = {"TABLE", "VIEW", "EXTERNAL",
-                                             "MATERIALIZED_VIEW", "SNAPSHOT"};
+  std::vector<std::string> expected_types = {kTable, kView, kExternal,
+                                             kMaterializedView, kSnapshot};
   EXPECT_EQ(expected_types.size(), results.size());
   for (auto const& result : results) {
     EXPECT_TRUE(result.project_name.empty());
@@ -260,28 +265,28 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
 
 TEST(CatalogTest, SQLTables_WithFiltering) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
       "ODBC_SQLTables_SQLTables_WithFiltering_1",
       "ODBC_SQLTables_SQLTables_WithFiltering_2"};
   for (auto const& name : table_names) {
-    Table(kDatasetWithTablePrefix + name).Create(conn);
+    Table(kCatalogFnsDataset + "." + name).Create(conn);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
   // created
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::string project_to_filter = kCatalogName.substr(0, 8);
-  std::string dataset_to_filter = kDatasetName.substr(0, 8);
+  std::string dataset_to_filter = kCatalogFnsDataset.substr(0, 8);
 
   std::vector<SQLTableResult> results = Catalog::GetTables(
       conn, project_to_filter + "%", (dataset_to_filter + "%").c_str(),
-      R"(%ODBC\_SQL_ables\_SQLT_bles\_With_iltering\_%)", "TABLE");
+      R"(%ODBC\_SQL_ables\_SQLT_bles\_With_iltering\_%)", kTable.c_str());
 
   int count_tables = 0;
   for (auto const& result : results) {
@@ -290,7 +295,7 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
-    EXPECT_EQ("TABLE", result.table_type);
+    EXPECT_EQ(kTable, result.table_type);
     EXPECT_EQ(result.project_name, result.description);
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
@@ -300,42 +305,43 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 
 TEST(CatalogTest, SQLTables_TablesAndViews) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
       "ODBC_SQLTables_SQLTables_TablesAndViews_1"};
   for (auto const& name : table_names) {
-    Table(kDatasetWithTablePrefix + name).Create(conn, "(Str1 STRING)");
+    Table(kCatalogFnsDataset + "." + name).Create(conn, "(Str1 STRING)");
   }
   std::string view_name = "ODBC_SQLTables_SQLTables_TablesAndViews_View_1";
   std::string view_creation = "CREATE VIEW IF NOT EXISTS " +
-                              kDatasetWithTablePrefix + view_name +
-                              " AS (SELECT Str1 FROM " +
-                              kDatasetWithTablePrefix + table_names[0] + ");";
+                              kCatalogFnsDataset + "." + view_name +
+                              " AS (SELECT Str1 FROM " + kCatalogFnsDataset +
+                              "." + table_names[0] + ");";
   CreateTableDirect(conn, view_creation);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
   // created
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLTableResult> results = Catalog::GetTables(
-      conn, kCatalogName, kDatasetName.c_str(), nullptr, "TABLE,VIEW");
+  std::string table_type_filter = " ' " + kTable + " ' , ' " + kView + " ' ";
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                         nullptr, table_type_filter.c_str());
 
-  EXPECT_TRUE(results.size() > 0);
+  EXPECT_FALSE(results.empty());
   int count_tables = 0;
   bool view_found = false;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kDatasetName, result.dataset_name);
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
-    view_found =
-        view_found || (kTableNamePrefix + view_name) == result.table_name;
-    EXPECT_TRUE(result.table_type == "TABLE" || result.table_type == "VIEW")
+    view_found = view_found || (view_name == result.table_name);
+    EXPECT_TRUE(result.table_type == kTable || result.table_type == kView)
         << "Actual type is " << result.table_type;
     EXPECT_EQ(result.project_name, result.description);
   }
@@ -347,34 +353,34 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
 
 TEST(CatalogTest, SQLTables_MetadataId_True) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
       "ODBC_SQLTables_SQLTables_MetadataId_True_1",
       "odbc_sqltables_sqltables_metadataid_true_1"};
   for (auto const& name : table_names) {
-    Table(kDatasetWithTablePrefix + name).Create(conn);
+    Table(kCatalogFnsDataset + "." + name).Create(conn);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
   // created
-  EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_TRUE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str(),
-                         (kTableNamePrefix + table_names[0] + "   ").c_str());
+      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                         (table_names[0] + "   ").c_str());
 
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kDatasetName, result.dataset_name);
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
     if (FindTableInVector(result.table_name, table_names)) {
       count_tables++;
     }
-    EXPECT_EQ("TABLE", result.table_type);
+    EXPECT_EQ(kTable, result.table_type);
     EXPECT_EQ(result.project_name, result.description);
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
@@ -407,7 +413,9 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#else
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 
 void VerifyRowWiseResults(RowWiseResults& actual_results,
                           RowWiseResults const& expected_results) {

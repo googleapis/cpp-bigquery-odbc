@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
@@ -35,6 +36,7 @@ using ::google::cloud::odbc_bq_driver_internal::StmtStates;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 
 using google::cloud::odbc_testing_utils::StatusIs;
@@ -794,6 +796,96 @@ TEST(SQLForeignKeys, Failure_InvalidBQClient) {
   EXPECT_EQ(status_record.message,
             "Invalid or null BQ Client within the connection handle");
   FreeHandles();
+}
+
+TEST(SQLTablesInternal, Failure_CatalogNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, -7, kSqlDataset, 7,
+                                       kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - catalog length is invalid");
+}
+
+TEST(SQLTablesInternal, Failure_SchemaNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, -7,
+                                       kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - schema length is invalid");
+}
+
+TEST(SQLTablesInternal, Failure_TableNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
+                                       kSqlPKTable, -7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - table name length is invalid");
+}
+
+TEST(SQLTablesInternal, Failure_TableTypeLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
+                                       kSqlPKTable, 7, kSqlFKTable, -7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - table type length is invalid");
+}
+
+TEST(SQLTablesInternal, Failure_NullConnectionHandle) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
+                                       kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY013());
+  EXPECT_EQ(status_record.message, "Internal connection handle is null");
+}
+
+TEST(SQLTablesInternal, Failure_InvalidBQClient) {
+  auto conn_handle = CreateConnectionHandle();
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
+                                       kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(status_record.message, "Error establishing Datasource connection");
+}
+
+TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
+                                       kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
 }  // namespace google::cloud::odbc_bq_driver

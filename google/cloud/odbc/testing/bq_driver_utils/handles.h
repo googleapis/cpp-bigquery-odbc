@@ -26,7 +26,7 @@ SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref);
 SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);
 
 odbc_bq_driver_internal::ConnectionHandle CreateConnectionHandle(
-    bool is_connected);
+    bool is_connected = true);
 
 odbc_bq_driver_internal::StatementHandle CreateStatementHandle();
 odbc_bq_driver_internal::StatementHandle CreatePreparedStatementHandle();

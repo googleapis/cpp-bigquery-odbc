@@ -48,20 +48,20 @@ odbc_internal::StatusRecord ValidateInputParameters(
 // 'projects_filter'. Returns all project ids if SQL_ATTR_METADATA_ID ==
 // SQL_FALSE and projects_filter == "%".
 odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
-    StatementHandle& stmt_handle, std::string const& projects_filter,
+    ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id);
 
 // Return a list of dataset ids depending on SQL_ATTR_METADATA_ID and
 // 'datasets_filter'. Returns all dataset ids if SQL_ATTR_METADATA_ID ==
 // SQL_FALSE and datasets_filter == "%".
 odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
-    StatementHandle& stmt_handle, std::string const& project_id,
+    ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& datasets_filter, SQLULEN metadata_id);
 
 // Construct a query to INFORMATION_SCHEMA.TABLES table depending on input
 // parameters. Populate 'named_query_params' with named parameters if needed.
 odbc_internal::StatusRecordOr<std::string> ConstructQuery(
-    std::string const& tables_filter, std::string const& table_types_filter,
+    std::string tables_filter, std::string const& table_types_filter,
     SQLULEN metadata_id,
     std::vector<::google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
         named_query_params);
@@ -70,7 +70,7 @@ odbc_internal::StatusRecordOr<std::string> ConstructQuery(
 // Returns all tables if SQL_ATTR_METADATA_ID == SQL_FALSE and tables_filter ==
 // "%" and table_types_filter == "%".
 odbc_internal::StatusRecordOr<std::vector<FilteredTableResponse>>
-GetFilteredTables(StatementHandle& stmt_handle, std::string const& project_id,
+GetFilteredTables(ConnectionHandle& conn_handle, std::string const& project_id,
                   std::string const& dataset_id,
                   std::string const& tables_filter,
                   std::string const& table_types_filter, SQLULEN metadata_id);

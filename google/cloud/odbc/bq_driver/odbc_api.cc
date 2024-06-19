@@ -77,6 +77,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTables;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 
@@ -108,6 +109,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTables;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
@@ -2114,11 +2116,20 @@ SQLRETURN SQL_API SQLTables(SQLHSTMT statementHandle, SQLCHAR* catalogName,
   SQLRETURN rc = SQL_SUCCESS;
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  bool is_tracing_enabled = IsTracingEnabled("SQLTables");
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLTables(
+        statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+        tableName, tableNameLen, tableType, tableTypeLen, *(*kTraceOption));
 
   // Call to common internal function for SQLTables and SQLTablesW
   // in odbc_driver_metadata.h.
+  rc = google::cloud::odbc_bq_driver::SQLTablesInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      tableName, tableNameLen, tableType, tableTypeLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLTables(rc, *(*kTraceOption));
 
   return rc;
 }

@@ -56,7 +56,7 @@ class MockConnectionHandle : public ConnectionHandle {
   void SetConnected() { is_connected_ = true; }
 };
 
-ConnectionHandle CreateConnectionHandle(bool is_connected = true) {
+ConnectionHandle CreateConnectionHandle(bool is_connected) {
   MockConnectionHandle conn_handle;
   if (is_connected) {
     conn_handle.SetConnected();
