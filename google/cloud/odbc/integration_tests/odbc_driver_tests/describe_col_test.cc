@@ -131,10 +131,10 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   auto table_name = kDatasetWithTablePrefix + "ODBC_DESCRIBE_COLUMNS_TEST";
   Table table(table_name);
   std::string table_schema =
-      "(" + CreateColumnName(0) + kExpectedResults[0].bq_type;
+      "(" + CreateColumnName(0) + " " + kExpectedResults[0].bq_type;
   std::string params = "?";
   for (int i = 1; i < kExpectedResults.size(); i++) {
-    table_schema.append(", " + CreateColumnName(i) +
+    table_schema.append(", " + CreateColumnName(i) + " " +
                         kExpectedResults[i].bq_type);
     params.append(", ?");
   }
@@ -145,9 +145,9 @@ TEST(SQLDescribeColumn, DescribeAllParams) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
-  SQLSMALLINT num_columns = kExpectedResults.size();
-  //status = SQLNumResultCols(conn->hstmt, &num_columns);
-  //CheckError(status, "SQLNumParams", conn);
+  SQLSMALLINT num_columns;
+  status = SQLNumResultCols(conn->hstmt, &num_columns);
+  CheckError(status, "SQLNumParams", conn);
   status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
