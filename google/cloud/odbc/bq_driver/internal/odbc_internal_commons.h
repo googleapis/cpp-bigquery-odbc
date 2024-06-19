@@ -118,6 +118,11 @@ template <typename BasicJsonType>
 inline void JsonToString(BasicJsonType jsonsrcval, std::string& str) {
   str = to_string(jsonsrcval);
 }
+
+template <typename BasicJsonType>
+inline void StringToJson(std::string& str, BasicJsonType& jsondestval) {
+  jsondestval = nlohmann::json::parse(str);
+}
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:

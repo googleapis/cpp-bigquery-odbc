@@ -19,7 +19,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-
+using json = nlohmann::json;
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Checks if an arithmetic value can be converted to another accurately.
@@ -351,6 +351,21 @@ inline odbc_internal::StatusRecord ConvertFromJsonToString(
   }
 }
 
+template <typename BasicJsonType>
+inline odbc_internal::StatusRecord ConvertFromStringToJson(
+    DSValue const& src_dsval, BasicJsonType& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+  std::string src_str;
+  json json_dest_value;
+  DSValueToString(src_dsval, src_str);
+  if (!json::accept(src_str)) {
+    return StatusRecord{SQLStates::k_HY000(), "Conversion not supported"};
+  }
+  StringToJson(src_str, json_dest_value);
+  dest_data = json_dest_value;
+  return StatusRecord::Ok();
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

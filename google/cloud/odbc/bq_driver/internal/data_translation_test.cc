@@ -258,4 +258,34 @@ TEST(ConvertFromJsonToString, To_SQL_VARCHAR) {
 
   free(buf);
 }
+
+template <typename BasicJsonType>
+void FromStringToJsonTest(std::string& src_val, BasicJsonType& expected_val,
+                          std::string expected_state = "",
+                          std::string expected_message = "") {
+  BasicJsonType data;
+  DSValue ds_value;
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record =
+      ConvertFromStringToJson<BasicJsonType>(ds_value, data);
+  BasicJsonType returned_val = data;
+  if (expected_state.empty() || expected_state == SQLStates::k_HY000()) {
+    EXPECT_EQ(expected_message, status_record.message);
+  } else {
+    EXPECT_EQ(returned_val, expected_val);
+  }
+}
+
+TEST(ConvertFromStringToJson, To_JSON_success) {
+  std::string src_val = "{\"hello\": \"world\", \"answer\": 42}";
+  json expected_val = {{"hello", "world"}, {"answer", 42}};
+  FromStringToJsonTest(src_val, expected_val);
+}
+
+TEST(ConvertFromStringToJson, To_JSON_failure) {
+  std::string src_val = "{\"hello\": \"world\", \"answer\": 42,,}";
+  json expected_val = "";
+  FromStringToJsonTest(src_val, expected_val, SQLStates::k_HY000(),
+                       "Conversion not supported");
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
