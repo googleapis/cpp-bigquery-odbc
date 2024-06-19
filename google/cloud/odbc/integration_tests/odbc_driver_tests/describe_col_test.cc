@@ -128,7 +128,7 @@ std::string CreateColumnName(int i) {
 TEST(SQLDescribeColumn, DescribeAllParams) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  auto table_name = kDatasetWithTablePrefix + "ODBC_DESCRIBE_PARAMS_TEST";
+  auto table_name = kDatasetWithTablePrefix + "ODBC_DESCRIBE_COLUMNS_TEST";
   Table table(table_name);
   std::string table_schema =
       "(" + CreateColumnName(0) + kExpectedResults[0].bq_type;
