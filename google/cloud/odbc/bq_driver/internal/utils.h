@@ -30,10 +30,13 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
+#include <codecvt>
 #include <fstream>
+#include <locale>
 #include <map>
 #include <memory>
 #include <regex>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -80,6 +83,10 @@ std::vector<std::string> Split(std::string const& s,
 
 std::string Join(std::vector<std::string> v, std::string const& separator = "",
                  int start_ind = 0);
+
+std::string Utf16ToUtf8(std::wstring const& utf16Str);
+
+std::wstring Utf8ToUtf16(std::string const& utf8Str);
 
 #ifdef _WIN32
 

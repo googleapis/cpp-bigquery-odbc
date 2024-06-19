@@ -237,4 +237,43 @@ std::vector<std::string> SplitTableTypes(std::string const& table_types) {
   return types;
 }
 
+std::string Utf16ToUtf8(std::wstring const& utf16Str) {
+#ifdef _WIN32
+  int utf8Length = WideCharToMultiByte(CP_UTF8, 0, utf16Str.c_str(), -1, NULL,
+                                       0, NULL, NULL);
+  if (utf8Length == 0) {
+    throw std::runtime_error("Error determining buffer size");
+  }
+  std::string utf8Str(utf8Length, 0);
+  int result = WideCharToMultiByte(CP_UTF8, 0, utf16Str.c_str(), -1,
+                                   &utf8Str[0], utf8Length, NULL, NULL);
+  if (result == 0) {
+    throw std::runtime_error("Error converting string");
+  }
+  return utf8Str;
+#else
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.to_bytes(utf16Str);
+#endif
+}
+
+std::wstring Utf8ToUtf16(std::string const& utf8Str) {
+#ifdef _WIN32
+  int utf16Length =
+      MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, NULL, 0);
+  if (utf16Length == 0) {
+    throw std::runtime_error("Error determining buffer size");
+  }
+  std::wstring utf16Str(utf16Length, 0);
+  int result = MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1,
+                                   &utf16Str[0], utf16Length);
+  if (result == 0) {
+    throw std::runtime_error("Error converting string");
+  }
+  return utf16Str;
+#else
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.from_bytes(utf8Str);
+#endif
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
