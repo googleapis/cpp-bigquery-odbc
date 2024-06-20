@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -22,11 +23,17 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -274,4 +281,86 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   return SQL_SUCCESS;
 }
+
+SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is still executing"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
+      stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithRs) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement has already executed"};
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  Job prepared_job = stmt_handle.GetPreparedJob();
+  std::string statement_type =
+      prepared_job.statistics.job_query_stats.statement_type;
+
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  std::string catalog_name = conn_handle.GetDsn().catalog;
+
+  // This should not be needed for us and is not always known, but BQ expects us
+  // to set it.
+  std::string dataset_id = "abc";
+  std::string query_str = stmt_handle.GetQueryString();
+  PostQueryRequest post_request =
+      ConstructBasicPostQueryRequest(catalog_name, dataset_id, query_str);
+
+  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+  if (!ds_status_record_or) {
+    stmt_handle.GetDiagnostics().AddStatusRecord(
+        ds_status_record_or.GetStatusRecord());
+    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    return ds_status_record_or.GetCalculatedReturnCode();
+  }
+
+  // Process the DSResults and convert to ResultSet.
+  StatusRecordOr<ResultSet> rs_status_record_or =
+      ProcessQueryResults(*ds_status_record_or);
+  if (!rs_status_record_or) {
+    auto status_record = rs_status_record_or.GetStatusRecord();
+    TracePrintInternal(*(*kTraceOption), status_record.message);
+    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
+    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    return rs_status_record_or.GetCalculatedReturnCode();
+  }
+
+  if (statement_type != "SELECT") {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  } else {
+    // Store the resultset in statement handle.
+    stmt_handle.SetResultSet(*rs_status_record_or);
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  }
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

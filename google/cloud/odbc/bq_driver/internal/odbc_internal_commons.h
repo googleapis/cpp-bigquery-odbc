@@ -192,6 +192,11 @@ odbc_internal::StatusRecordOr<
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
 
+google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
+ConstructBasicPostQueryRequest(std::string const& catalog,
+                               std::string const& dataset,
+                               std::string const& query_str);
+
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>
 ConstructNamedParametersPostQueryRequest(

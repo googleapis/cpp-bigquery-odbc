@@ -69,6 +69,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
             break;
           }
+          case BQDataType::kFloat64: {
+            SQLDOUBLE d_data = std::stod(data);
+            ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
+            break;
+          }
           default: {
             return StatusRecord{SQLStates::k_HY000(),
                                 "Invalid or unsupported col BQ data type"};
@@ -109,8 +114,7 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
   return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
 
-odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
-    DSResults const& query_results) {
+StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
     return ProcessPostQueryResults(
@@ -188,8 +192,7 @@ StatusRecordOr<DSResults> FetchBQData(
   return results;
 }
 
-odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
-    std::string const& type) {
+StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
   }
@@ -311,6 +314,26 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
     query_params.emplace_back(*query_parameter_response);
   }
   return query_params;
+}
+
+PostQueryRequest ConstructBasicPostQueryRequest(std::string const& catalog,
+                                                std::string const& dataset,
+                                                std::string const& query_str) {
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+  DatasetReference ds_ref;
+  // Set dataset info.
+  ds_ref.project_id = catalog;
+  ds_ref.dataset_id = dataset;
+  // Construct query request.
+  query_request.set_dry_run(false);
+  query_request.set_default_dataset(ds_ref);
+  query_request.set_query(query_str);
+  query_request.set_use_legacy_sql(false);
+  // Set billing info and query request.
+  post_request.set_project_id(catalog);
+  post_request.set_query_request(query_request);
+  return post_request;
 }
 
 odbc_internal::StatusRecordOr<PostQueryRequest>

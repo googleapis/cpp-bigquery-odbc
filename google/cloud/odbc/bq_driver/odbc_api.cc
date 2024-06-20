@@ -55,6 +55,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
@@ -89,6 +90,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
@@ -1295,12 +1297,20 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLExecute");
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLExecute(statementHandle, *(*kTraceOption));
 
-  // Call to internal function for SQLExecute in odbc_sql_requests.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLExecuteInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLExecute(rc, *(*kTraceOption));
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
 }

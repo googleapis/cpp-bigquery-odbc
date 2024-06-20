@@ -151,9 +151,12 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   if (!response.Ok()) {
     return response.GetStatusRecord();
   }
-  auto& schema = response.GetValue().statistics.job_query_stats.schema;
 
+  auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
+  if (!pop_response.ok()) {
+    return pop_response;
+  }
 
   SetQueryParameters(
       response.GetValue()
@@ -179,6 +182,7 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   }
 
   query_str_ = query;
+  prepared_job_ = response.GetValue();
   stmt_state_ = StmtStates::kStatementPrepared;
 
   return StatusRecord::Ok();

@@ -112,6 +112,13 @@ class StatementHandle : public Handle {
     query_parameters_ = query_parameters;
   }
 
+  [[nodiscard]] inline std::string GetQueryString() const { return query_str_; }
+
+  [[nodiscard]] inline ::google::cloud::bigquery_v2_minimal_internal::Job&
+  GetPreparedJob() {
+    return prepared_job_;
+  }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -124,6 +131,7 @@ class StatementHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
+  google::cloud::bigquery_v2_minimal_internal::Job prepared_job_;
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

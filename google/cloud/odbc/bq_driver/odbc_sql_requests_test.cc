@@ -21,11 +21,14 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
 using google::cloud::odbc_testing_bq_driver_utils::
@@ -338,6 +341,42 @@ TEST(SQLPrepareInternal, Fail_InvalidHandle) {
   SQLRETURN status = SQLPrepareInternal(stmt_handle, query, len);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLExecuteInternal, Fail_NullHandle) {
+  SQLRETURN status = SQLExecuteInternal(nullptr);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLExecuteInternal, Fail_InvalidHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLRETURN status = SQLExecuteInternal(&conn_handle);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLExecuteInternal, Fail_UnPreparedHandle) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLExecuteInternal(&stmt_handle);
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Function sequence error - statement is not prepared",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLExecuteInternal, Fail_ExecutionInProgress) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  SQLRETURN status = SQLExecuteInternal(&stmt_handle);
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Function sequence error - statement is still executing",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

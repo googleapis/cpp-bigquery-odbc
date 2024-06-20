@@ -491,6 +491,17 @@ TEST(ConstructStringQueryParameters, Failure_Empty_Param_name) {
                              HasSubstr("Invalid parameter name")));
 }
 
+TEST(ConstructBasicPostQueryRequest, Basic) {
+  std::string dataset_id = "abc";
+  std::string query_str = "SELECT 1";
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(kTestCatalog, dataset_id, query_str);
+  EXPECT_EQ(returned.project_id(), kTestCatalog);
+  EXPECT_EQ(returned.query_request().query(), query_str);
+  EXPECT_FALSE(returned.query_request().dry_run());
+  EXPECT_FALSE(returned.query_request().use_legacy_sql());
+}
+
 TEST(ConstructnamedPostQueryRequestTest, Success) {
   PostQueryRequest expected;
   std::string named_query =
