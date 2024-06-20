@@ -94,7 +94,8 @@ function (odbc_define_demo_tests)
         all_demo_tests
         odbc_driver_tests/demo/connection_demo_test.cc
         odbc_driver_tests/demo/foreign_keys_demo_test.cc
-        odbc_driver_tests/demo/primary_keys_demo_test.cc)
+        odbc_driver_tests/demo/primary_keys_demo_test.cc
+        odbc_driver_tests/demo/query_execution_demo_test.cc)
 
     target_link_libraries(all_demo_tests google_cloud_odbc_testing_odbc_utils
                           google_cloud_odbc_bq_driver GTest::gtest_main)
