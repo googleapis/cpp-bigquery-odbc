@@ -69,6 +69,9 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.driver = dsn_section["Driver"];
   dsn_.catalog = dsn_section["Catalog"];
   dsn_.dsn_name = dsn_name;
+
+  std::string sql_dialect = dsn_section["SQLDialect"];
+  dsn_.is_bq_legacy_sql = (sql_dialect == "0");
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {

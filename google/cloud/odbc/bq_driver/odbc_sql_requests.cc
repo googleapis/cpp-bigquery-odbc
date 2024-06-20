@@ -325,13 +325,13 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   std::string catalog_name = conn_handle.GetDsn().catalog;
+  bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
 
   // This should not be needed for us and is not always known, but BQ expects us
   // to set it.
-  std::string dataset_id = "abc";
   std::string query_str = stmt_handle.GetQueryString();
   PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(catalog_name, dataset_id, query_str);
+      ConstructBasicPostQueryRequest(catalog_name, query_str, is_bq_legacy_sql);
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {

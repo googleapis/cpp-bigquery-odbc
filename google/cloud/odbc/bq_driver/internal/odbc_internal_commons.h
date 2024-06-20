@@ -194,8 +194,8 @@ ConstructStringQueryParameters(
 
 google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
 ConstructBasicPostQueryRequest(std::string const& catalog,
-                               std::string const& dataset,
-                               std::string const& query_str);
+                               std::string const& query_str,
+                               bool is_bq_legacy_sql = false);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>
