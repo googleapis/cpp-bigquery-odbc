@@ -66,18 +66,32 @@ class Catalog {
       char const* dataset = nullptr, char const* table = nullptr,
       char const* table_type = nullptr, bool use_ansi = false);
 
-  // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
+  // Uses the SQLPrimaryKeys API to fetch primary keys for a table in a dataset.
   static RowWiseResults GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string dataset = "",
                                        std::string table = "",
                                        bool use_ansi = false);
 
-  // Uses the SQLForeignKeys API to fetch foreign keys in a dataset.
+  // Uses the SQLForeignKeys API to fetch foreign keys for tables, in a dataset.
   static RowWiseResults GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string dataset = "",
                                        std::string pk_table = "",
                                        std::string fk_table = "",
                                        bool use_ansi = false);
+
+  // Uses the SQLColumnPrivileges API to fetch column privileges for a table in
+  // a dataset.
+  static RowWiseResults GetColumnPrivileges(std::shared_ptr<ODBCHandles> conn,
+                                            std::string dataset = "",
+                                            std::string table = "",
+                                            std::string column = "",
+                                            bool use_ansi = false);
+  // Uses the SQLColumns API to fetch columns for a table in a dataset.
+  // static RowWiseResults GetColumns(std::shared_ptr<ODBCHandles> conn,
+  //                                           std::string dataset = "",
+  //                                           std::string table = "",
+  //                                           std::string column = "",
+  //                                           bool use_ansi = false);
 };
 
 }  // namespace google::cloud::odbc_tests

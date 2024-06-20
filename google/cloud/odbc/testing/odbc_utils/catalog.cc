@@ -350,4 +350,278 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
+RowWiseResults Catalog::GetColumnPrivileges(std::shared_ptr<ODBCHandles> conn,
+                                            std::string dataset,
+                                            std::string table,
+                                            std::string column, bool use_ansi) {
+  SQLRETURN status;
+  int res_cols = 8;
+  int col_idx = 0;
+  Catalog catalog_result[res_cols];
+  RowWiseResults results;
+
+  if (dataset.empty()) {
+    return results;
+  }
+
+  if (table.empty()) {
+    return results;
+  }
+
+  absl::optional<std::string> project_id_opt =
+      ::google::cloud::internal::GetEnv(
+          "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto catalog_name =
+      (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
+
+  // Make sure we treat the catalog arguments as OA (ordinary arguments).
+  // See here for more info on catalog function arguments:
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Col1: catalog name , Col2: schema name, Col3: table name,
+  // Col4: grantor, Col5: grantee , Col6: privilege, Col7: is grantable
+  SQLSMALLINT val;
+  while (col_idx < res_cols) {
+    // data type is Char for all columns.
+    catalog_result[col_idx].target_type = SQL_C_CHAR;
+    catalog_result[col_idx].buffer_length = kBufferLength;
+    catalog_result[col_idx].target_value =
+        malloc(sizeof(unsigned char) * catalog_result[col_idx].buffer_length);
+
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+                        catalog_result[col_idx].target_type,
+                        catalog_result[col_idx].target_value,
+                        catalog_result[col_idx].buffer_length,
+                        &(catalog_result[col_idx].str_len));
+    CheckError(status, "SQLBindCol", conn);
+    col_idx++;
+  }
+
+  if (use_ansi) {
+    status = SQLColumnPrivilegesA(
+        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+        (SQLSMALLINT)table.length(), (SQLCHAR*)column.c_str(),
+        (SQLSMALLINT)column.length());
+  } else {
+    status = SQLColumnPrivilegesA(
+        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
+        (SQLSMALLINT)table.length(), (SQLCHAR*)column.c_str(),
+        (SQLSMALLINT)column.length());
+  }
+  CheckError(status, "SQLColumnPrivileges", conn, use_ansi);
+
+  int i = 0;
+  while (1) {
+    std::map<int, std::string> catalog_results;
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    // Col1: catalog name , Col2: schema name, Col3: table name,
+    // Col4: column name, Col5: grantor, Col6: grantee ,
+    // Col7: privilege, Col8: is grantable
+    // Note: ODBC coumns typically start from 1, but catalog_result
+    // will be populated starting from index 0
+    std::string table_cat = (char*)catalog_result[0].target_value;
+    std::string table_schema = (char*)catalog_result[1].target_value;
+    std::string table_name = (char*)catalog_result[2].target_value;
+    std::string col_name = (char*)catalog_result[3].target_value;
+    std::string grantor = (char*)catalog_result[4].target_value;
+    std::string grantee = (char*)catalog_result[5].target_value;
+    std::string privilege = (char*)catalog_result[6].target_value;
+    std::string is_grantable = (char*)catalog_result[7].target_value;
+
+    if (!table_cat.empty()) catalog_results.insert({1, table_cat});
+    if (!table_schema.empty()) catalog_results.insert({2, table_schema});
+    if (!table_name.empty()) catalog_results.insert({3, table_name});
+    if (!col_name.empty()) catalog_results.insert({4, col_name});
+    if (!grantor.empty()) catalog_results.insert({5, grantor});
+    if (!grantee.empty()) catalog_results.insert({6, grantee});
+    if (!privilege.empty()) catalog_results.insert({7, privilege});
+    if (!is_grantable.empty()) catalog_results.insert({8, privilege});
+
+    results.emplace_back(catalog_results);
+  }
+  return results;
+}
+
+// RowWiseResults Catalog::GetColumns(std::shared_ptr<ODBCHandles> conn,
+//                                    std::string dataset, std::string table,
+//                                    std::string column, bool use_ansi) {
+//   SQLRETURN status;
+//   int res_cols = 18;
+//   int col_idx = 0;
+//   Catalog catalog_result[res_cols];
+//   RowWiseResults results;
+//   std::cout << "JAYA - 1" << std::endl;
+//   if (dataset.empty()) {
+//     return results;
+//   }
+
+//   if (table.empty()) {
+//     return results;
+//   }
+
+//   absl::optional<std::string> project_id_opt =
+//       ::google::cloud::internal::GetEnv(
+//           "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+//   auto catalog_name =
+//       (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
+
+//   // Make sure we treat the catalog arguments as OA (ordinary arguments).
+//   // See here for more info on catalog function arguments:
+//   //
+//   https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
+//   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                           (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr", conn);
+
+//   std::string sql_table("%");
+//   sql_table.append(table).append("%");
+//   if (use_ansi) {
+//     status = SQLColumnsA(
+//         conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+//         (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
+//         (SQLSMALLINT)dataset.length(), (SQLCHAR*)sql_table.c_str(),
+//         (SQLSMALLINT)sql_table.length(), (SQLCHAR*)column.c_str(),
+//         (SQLSMALLINT)column.length());
+//   } else {
+//     status =
+//         SQLColumns(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
+//                    (SQLSMALLINT)catalog_name.length(),
+//                    (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
+//                    (SQLCHAR*)sql_table.c_str(),
+//                    (SQLSMALLINT)sql_table.length(), (SQLCHAR*)column.c_str(),
+//                    (SQLSMALLINT)column.length());
+//   }
+//   CheckError(status, "SQLColumns", conn, use_ansi);
+
+//   std::cout << "JAYA - 3" << std::endl;
+//   // check the spec for column details
+//   //
+//   https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function?view=sql-server-ver16#comments
+//   SQLSMALLINT val;
+//   while (col_idx < res_cols) {
+//     if (col_idx == 0 || col_idx == 1 || col_idx == 2 || col_idx == 3 ||
+//         col_idx == 5 || col_idx == 11 || col_idx == 12 || col_idx == 17) {
+//       catalog_result[col_idx].target_type = SQL_C_CHAR;
+//       catalog_result[col_idx].buffer_length = kBufferLength;
+//       catalog_result[col_idx].target_value =
+//           malloc(sizeof(unsigned char) *
+//           catalog_result[col_idx].buffer_length);
+//     } else if (col_idx == 6 || col_idx == 7 || col_idx == 15 || col_idx ==
+//     16) {
+//       catalog_result[col_idx].target_type = SQL_C_SLONG;
+//       catalog_result[col_idx].buffer_length = 0;
+//     } else {
+//       catalog_result[col_idx].target_type = SQL_C_SSHORT;
+//       catalog_result[col_idx].buffer_length = 0;
+//     }
+
+//     status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+//                         catalog_result[col_idx].target_type,
+//                         catalog_result[col_idx].target_value,
+//                         catalog_result[col_idx].buffer_length,
+//                         &(catalog_result[col_idx].str_len));
+//     CheckError(status, "SQLBindCol", conn);
+//     col_idx++;
+//   }
+//   std::cout << "JAYA - 4" << std::endl;
+//   int i = 0;
+//   while (1) {
+//     std::map<int, std::string> catalog_results;
+//     std::cout << "JAYA - BEFORE FETCH" << std::endl;
+//     status = SQLFetch(conn->hstmt);
+//     std::cout << "JAYA - AFTER FETCH" << std::endl;
+//     if (status == SQL_NO_DATA) {
+//       std::cout << "JAYA - SQL_NO_DATA" << std::endl;
+//       break;
+//     }
+//     if (!SQL_SUCCEEDED(status)) {
+//       CheckError(status, "SQLFetch", conn);
+//     }
+
+//     std::cout << "JAYA - *************************************** - Iteration:
+//     "
+//               << i++ << std::endl;
+//     std::cout << "JAYA - 5" << std::endl;
+//     // Note: ODBC coumns typically start from 1, but catalog_result
+//     // will be populated starting from index 0
+//     std::string table_cat = (char*)catalog_result[0].target_value;
+//     std::string table_schema = (char*)catalog_result[1].target_value;
+//     std::string table_name = (char*)catalog_result[2].target_value;
+//     std::string col_name = (char*)catalog_result[3].target_value;
+//     std::string type_name = (char*)catalog_result[5].target_value;
+//     std::string remarks = (char*)catalog_result[11].target_value;
+//     std::string col_def = (char*)catalog_result[12].target_value;
+//     std::string is_nullable = (char*)catalog_result[17].target_value;
+
+//     std::cout << "JAYA - 6" << std::endl;
+//     SQLINTEGER* col_size =
+//         reinterpret_cast<SQLINTEGER*>(catalog_result[6].target_value);
+//     SQLINTEGER* buf_len =
+//         reinterpret_cast<SQLINTEGER*>(catalog_result[7].target_value);
+//     SQLINTEGER* char_octet_len =
+//         reinterpret_cast<SQLINTEGER*>(catalog_result[15].target_value);
+//     SQLINTEGER* ord_pos =
+//         reinterpret_cast<SQLINTEGER*>(catalog_result[16].target_value);
+
+//     std::cout << "JAYA - 7" << std::endl;
+//     SQLSMALLINT* data_type =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[4].target_value);
+//     SQLSMALLINT* decimal_digits =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
+//     SQLSMALLINT* radix =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[9].target_value);
+//     SQLSMALLINT* nullable =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[10].target_value);
+//     SQLSMALLINT* sql_data_type =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[13].target_value);
+//     SQLSMALLINT* sql_datetime_sub =
+//         reinterpret_cast<SQLSMALLINT*>(catalog_result[14].target_value);
+
+//     std::cout << "JAYA - 8" << std::endl;
+//     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
+//     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
+//     if (!table_name.empty()) catalog_results.insert({3, table_name});
+//     if (!col_name.empty()) catalog_results.insert({4, col_name});
+//     if (data_type) catalog_results.insert({5, std::to_string(*data_type)});
+//     if (!type_name.empty()) catalog_results.insert({6, type_name});
+//     if (col_size) catalog_results.insert({7, std::to_string(*col_size)});
+//     if (buf_len) catalog_results.insert({8, std::to_string(*buf_len)});
+//     if (decimal_digits)
+//       catalog_results.insert({9, std::to_string(*decimal_digits)});
+//     if (radix) catalog_results.insert({10, std::to_string(*radix)});
+//     if (nullable) catalog_results.insert({11, std::to_string(*nullable)});
+//     if (!remarks.empty()) catalog_results.insert({12, remarks});
+//     if (!col_def.empty()) catalog_results.insert({13, col_def});
+//     if (sql_data_type)
+//       catalog_results.insert({14, std::to_string(*sql_data_type)});
+//     if (sql_datetime_sub)
+//       catalog_results.insert({15, std::to_string(*sql_datetime_sub)});
+//     if (char_octet_len)
+//       catalog_results.insert({16, std::to_string(*char_octet_len)});
+//     if (ord_pos) catalog_results.insert({17, std::to_string(*ord_pos)});
+//     if (!is_nullable.empty()) catalog_results.insert({18, is_nullable});
+
+//     results.emplace_back(catalog_results);
+
+//     std::cout << "JAYA - ***************************************" <<
+//     std::endl;
+//   }
+
+//   std::cout << "JAYA - 9" << std::endl;
+//   return results;
+// }
+
 }  // namespace google::cloud::odbc_tests

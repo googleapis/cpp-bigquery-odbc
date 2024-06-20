@@ -407,6 +407,67 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, SQLColumnPrivileges_StringColumn) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table if not exists.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema);
+
+  RowWiseResults actual_results = Catalog::GetColumnPrivileges(
+      conn, kCatalogFnsDataset, kCatalogDatasetTableWithPK, "StringField");
+
+  for (size_t i = 0; i < actual_results.size(); ++i) {
+    auto const& actual_row = actual_results[i];
+
+    // Sort map elements for comparison to ensure ordering consistency
+    std::vector<std::pair<int, std::string> > sorted_actual_row(
+        actual_row.begin(), actual_row.end());
+
+    std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
+    std::cout << "BEGIN ROW: " << i << std::endl;
+    for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
+      // print out the result
+      std::cout << "COLUMN NUMBER: " << j << std::endl;
+      std::cout << "KEY: " << sorted_actual_row[j].first << std::endl;
+      std::cout << "VALUE: " << sorted_actual_row[j].second << std::endl;
+    }
+    std::cout << "END ROW: " << i << std::endl;
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// TEST(CatalogTest, SQLColumns) {
+//   auto conn = std::make_shared<ODBCHandles>();
+//   // Create table if not exists.
+//   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//   CreateTableDirect(conn, kTableWithPKSchema);
+
+//   RowWiseResults actual_results =
+//       Catalog::GetColumns(conn, kCatalogFnsDataset,
+//       kCatalogDatasetTableWithPK);
+
+//   for (size_t i = 0; i < actual_results.size(); ++i) {
+//     auto const& actual_row = actual_results[i];
+
+//     // Sort map elements for comparison to ensure ordering consistency
+//     std::vector<std::pair<int, std::string> > sorted_actual_row(
+//         actual_row.begin(), actual_row.end());
+
+//     std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
+//     std::cout << "BEGIN ROW: " << i << std::endl;
+//     for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
+//       // print out the result
+//       std::cout << "COLUMN NUMBER: " << j << std::endl;
+//       std::cout << "KEY: " << sorted_actual_row[j].first << std::endl;
+//       std::cout << "VALUE: " << sorted_actual_row[j].second << std::endl;
+//     }
+//     std::cout << "END ROW: " << i << std::endl;
+//   }
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
 #else
 
 void VerifyRowWiseResults(RowWiseResults& actual_results,
