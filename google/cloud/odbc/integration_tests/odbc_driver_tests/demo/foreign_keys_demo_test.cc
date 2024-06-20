@@ -43,7 +43,7 @@ SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 SQLSMALLINT const kSqlFKTableLen = kFKTable.length();
 
 inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
-                        CatalogDataBuffer* columns, int res_cols) {
+                        TestingDataBuffer* columns, int res_cols) {
   SQLRETURN status;
   for (int col_idx = 0; col_idx < res_cols; col_idx++) {
     if (col_idx == 8) {
@@ -75,7 +75,7 @@ TEST(CatalogDemoTest, SQLForeignKeys) {
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
   // (2) Bind Columns
-  CatalogDataBuffer columns[res_cols];
+  TestingDataBuffer columns[res_cols];
   std::cout << "Binding Columns..." << std::endl << std::endl;
   BindColumns(conn, columns, res_cols);
   // (3) Fetching Foreign Keys.
@@ -91,7 +91,6 @@ TEST(CatalogDemoTest, SQLForeignKeys) {
             << ", and Dataset: " << kDataset << std::endl
             << std::endl;
   while (1) {
-    std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;

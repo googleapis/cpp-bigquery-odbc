@@ -58,6 +58,14 @@ std::string const kDatasetName = "ODBC_TEST_DATASET";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
 
+// Data Buffer used in demo and integration tests
+struct TestingDataBuffer {
+  SQLSMALLINT target_type;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
+  SQLLEN str_len;
+};
+
 // Stores information about the driver fetched from SQLGetInfo within the
 // ODBCHandles. This is populated in the ODBCHandles after calling
 // GetDriverInfo.
@@ -114,8 +122,8 @@ using Schema = std::vector<ColumnMinimal>;
 
 struct StdRow {
   std::string str_field;
-  int int_field;
-  float float_field;
+  SQLBIGINT int_field;
+  SQLDOUBLE float_field;
 };
 
 using StdRows = std::vector<StdRow>;
@@ -255,10 +263,15 @@ class Table {
   void Create(std::shared_ptr<ODBCHandles> conn,
               std::string schema_str = "(Column INT64)", bool use_ansi = false);
 
+  void CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                         std::string schema_str);
+
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
 
+  void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
+
   void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                  bool use_ansi = false);
+                  bool use_ansi = false, bool use_sqlprepare = false);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be
@@ -288,6 +301,12 @@ std::string getSchemaStr(Schema schema);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
+
+void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                            std::string table_name, std::string schema);
+
+void DropTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                          std::string table_name);
 
 // If SQL_ASYNC_ENABLE_ON, this function can be used to run a ODBC API till the
 // status is not SQL_STILL_EXECUTING
@@ -332,6 +351,10 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
                      std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
                      bool use_ansi = false);
+
+// Binds buffers TestingDataBuffer for StdRow type of data
+void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
+                    TestingDataBuffer* columns);
 
 }  // namespace google::cloud::odbc_tests
 

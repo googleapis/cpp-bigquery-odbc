@@ -26,7 +26,7 @@ std::vector<SQLTableResult> Catalog::GetTables(
     bool use_ansi) {
   SQLRETURN status;
   int res_cols = 5;
-  CatalogDataBuffer columns[res_cols];
+  TestingDataBuffer columns[res_cols];
   std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
