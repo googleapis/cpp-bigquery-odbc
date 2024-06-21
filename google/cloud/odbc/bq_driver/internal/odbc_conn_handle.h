@@ -45,6 +45,7 @@ struct Dsn {
   std::string description;
   std::string driver;
   std::string catalog;
+  std::string default_dataset;
   std::string dsn_name;
   bool is_bq_legacy_sql;
 };

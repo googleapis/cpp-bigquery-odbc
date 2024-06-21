@@ -39,6 +39,7 @@ namespace {
 
 std::string const kTestCatalog = "test-catalog";
 std::string const kTestSchema = "test-schema";
+std::string const kDefaultDataset = "default-dataset";
 
 struct NativeDataTypesStruct {
   bool flag;
@@ -499,16 +500,25 @@ TEST(ConstructBasicPostQueryRequest, Basic) {
   EXPECT_EQ(returned.query_request().query(), query_str);
   EXPECT_FALSE(returned.query_request().dry_run());
   EXPECT_FALSE(returned.query_request().use_legacy_sql());
+  EXPECT_TRUE(returned.query_request().default_dataset().project_id.empty());
+  EXPECT_TRUE(returned.query_request().default_dataset().dataset_id.empty());
 }
 
 TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
   std::string query_str = "SELECT 1";
   PostQueryRequest returned =
-      ConstructBasicPostQueryRequest(kTestCatalog, query_str, true);
-  EXPECT_EQ(returned.project_id(), kTestCatalog);
-  EXPECT_EQ(returned.query_request().query(), query_str);
-  EXPECT_FALSE(returned.query_request().dry_run());
+      ConstructBasicPostQueryRequest(kTestCatalog, query_str, "", true);
   EXPECT_TRUE(returned.query_request().use_legacy_sql());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
+  std::string query_str = "SELECT 1";
+  PostQueryRequest returned = ConstructBasicPostQueryRequest(
+      kTestCatalog, query_str, kDefaultDataset, true);
+  EXPECT_EQ(returned.query_request().default_dataset().project_id,
+            kTestCatalog);
+  EXPECT_EQ(returned.query_request().default_dataset().dataset_id,
+            kDefaultDataset);
 }
 
 TEST(ConstructnamedPostQueryRequestTest, Success) {

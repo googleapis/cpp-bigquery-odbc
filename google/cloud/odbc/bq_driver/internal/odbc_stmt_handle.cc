@@ -130,6 +130,15 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   req.configuration.dry_run = true;
   req.configuration.query.use_legacy_sql = false;
 
+  // Add default dataset from the config
+  ConnectionHandle& conn_handle = *GetConnectionHandle();
+  std::string catalog_name = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  if (!default_dataset.empty()) {
+    req.configuration.query.default_dataset.project_id = catalog_name;
+    req.configuration.query.default_dataset.dataset_id = default_dataset;
+  }
+
   std::regex positional_pattern(R"(\?)");
   std::regex named_pattern(R"([:@]\w+)");
 
@@ -145,8 +154,8 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   Options opt;
 
-  auto response = this->GetConnectionHandle()->GetClient()->InsertJob(
-      GetConnectionHandle()->GetDsn().catalog, req, opt);
+  auto response = conn_handle.GetClient()->InsertJob(
+      conn_handle.GetDsn().catalog, req, opt);
 
   if (!response.Ok()) {
     return response.GetStatusRecord();
@@ -182,7 +191,7 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   }
 
   query_str_ = query;
-  prepared_job_ = response.GetValue();
+  prepared_job_ = *response;
   stmt_state_ = StmtStates::kStatementPrepared;
 
   return StatusRecord::Ok();

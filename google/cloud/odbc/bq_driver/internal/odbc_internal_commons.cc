@@ -316,15 +316,22 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
   return query_params;
 }
 
-PostQueryRequest ConstructBasicPostQueryRequest(std::string const& catalog,
-                                                std::string const& query_str,
-                                                bool is_bq_legacy_sql) {
+PostQueryRequest ConstructBasicPostQueryRequest(
+    std::string const& catalog, std::string const& query_str,
+    std::string const& default_dataset, bool is_bq_legacy_sql) {
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
   query_request.set_dry_run(false);
   query_request.set_query(query_str);
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  if (!default_dataset.empty()) {
+    DatasetReference ds_ref;
+    // Set dataset info.
+    ds_ref.project_id = catalog;
+    ds_ref.dataset_id = default_dataset;
+    query_request.set_default_dataset(ds_ref);
+  }
   // Set billing info and query request.
   post_request.set_project_id(catalog);
   post_request.set_query_request(query_request);

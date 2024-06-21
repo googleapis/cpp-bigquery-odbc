@@ -68,6 +68,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.description = dsn_section["Description"];
   dsn_.driver = dsn_section["Driver"];
   dsn_.catalog = dsn_section["Catalog"];
+  dsn_.default_dataset = dsn_section["DefaultDataset"];
   dsn_.dsn_name = dsn_name;
 
   std::string sql_dialect = dsn_section["SQLDialect"];

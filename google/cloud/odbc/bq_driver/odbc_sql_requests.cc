@@ -319,19 +319,14 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
-  Job prepared_job = stmt_handle.GetPreparedJob();
-  std::string statement_type =
-      prepared_job.statistics.job_query_stats.statement_type;
-
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   std::string catalog_name = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
 
-  // This should not be needed for us and is not always known, but BQ expects us
-  // to set it.
   std::string query_str = stmt_handle.GetQueryString();
-  PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(catalog_name, query_str, is_bq_legacy_sql);
+  PostQueryRequest post_request = ConstructBasicPostQueryRequest(
+      catalog_name, query_str, default_dataset, is_bq_legacy_sql);
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {
@@ -352,6 +347,9 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     return rs_status_record_or.GetCalculatedReturnCode();
   }
 
+  Job prepared_job = stmt_handle.GetPreparedJob();
+  std::string statement_type =
+      prepared_job.statistics.job_query_stats.statement_type;
   if (statement_type != "SELECT") {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   } else {
