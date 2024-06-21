@@ -30,8 +30,8 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 template <typename T>
-SQLRETURN LogAndReturnCode(Handle& handle,
-                           odbc_internal::StatusRecordOr<T> status_record_or) {
+SQLRETURN LogAndReturnCode(
+    Handle& handle, odbc_internal::StatusRecordOr<T> const& status_record_or) {
   auto status_record = status_record_or.GetStatusRecord();
   handle.GetDiagnostics().AddStatusRecord(status_record);
   TracePrintInternal(*(*kTraceOption), status_record.message);

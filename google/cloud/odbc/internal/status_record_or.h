@@ -271,7 +271,7 @@ class StatusRecordOr final {
    * @return SQL_SUCCESS if 'Ok()', return_code_ if not empty, otherwise
    * calculate it based on status_record_.sql_state.
    */
-  SQLRETURN GetCalculatedReturnCode() {
+  [[nodiscard]] SQLRETURN GetCalculatedReturnCode() const {
     if (Ok()) {
       return SQL_SUCCESS;
     }
