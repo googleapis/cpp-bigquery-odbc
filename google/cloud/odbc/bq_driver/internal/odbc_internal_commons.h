@@ -17,6 +17,8 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "absl/types/variant.h"
@@ -26,6 +28,22 @@
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
+
+template <typename T>
+SQLRETURN LogAndReturnCode(Handle& handle,
+                           odbc_internal::StatusRecordOr<T> status_record_or) {
+  auto status_record = status_record_or.GetStatusRecord();
+  handle.GetDiagnostics().AddStatusRecord(status_record);
+  TracePrintInternal(*(*kTraceOption), status_record.message);
+  return status_record_or.GetCalculatedReturnCode();
+}
+
+inline SQLRETURN LogAndReturnCode(
+    Handle& handle, odbc_internal::StatusRecord const& status_record) {
+  handle.GetDiagnostics().AddStatusRecord(status_record);
+  TracePrintInternal(*(*kTraceOption), status_record.message);
+  return status_record.CalculateReturnCode();
+}
 
 // Data Types as supported by the BQ DataSource.
 enum BQDataType {

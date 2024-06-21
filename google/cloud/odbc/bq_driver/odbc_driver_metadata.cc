@@ -37,6 +37,7 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
 using google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
@@ -60,15 +61,6 @@ TraceOptions& opts = *(*kTraceOption);
 
 // Internal helper functions.
 namespace {
-
-template <typename T>
-SQLRETURN LogAndReturnCode(StatementHandle& handle,
-                           StatusRecordOr<T> status_record_or) {
-  auto status_record = status_record_or.GetStatusRecord();
-  handle.GetDiagnostics().AddStatusRecord(status_record);
-  TracePrintInternal(opts, status_record.message);
-  return status_record_or.GetCalculatedReturnCode();
-}
 
 StatusRecord InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   std::string message = mesg;
@@ -377,9 +369,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, table_type_len, metadata_id);
   if (!input_param_status.ok()) {
-    handle.GetDiagnostics().AddStatusRecord(input_param_status);
-    TracePrintInternal(opts, input_param_status.message);
-    return input_param_status.CalculateReturnCode();
+    return LogAndReturnCode(handle, input_param_status);
   }
 
   std::string project_filter = ToCharStr(catalog_name, kMatchAll);
@@ -388,27 +378,21 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   std::string table_type_filter = ToCharStr(table_type, kMatchAll);
 
   if (handle.GetConnectionHandle() == nullptr) {
-    auto status_record = StatusRecord{SQLStates::k_HY013(),
-                                      "Internal connection handle is null"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
   }
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
-    auto status_record = StatusRecord{
-        SQLStates::k_08S01(), "Connection to the data source is broken"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
   }
   std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
   if (!bq_client_ptr) {
-    auto status_record = StatusRecord{
-        SQLStates::k_HY000(), "Error establishing Datasource connection"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_HY000(),
+                             "Error establishing Datasource connection"});
   }
   ODBCBQClient& bq_client = *bq_client_ptr;
   StatusRecordOr<ResultSet> result_set_status;
