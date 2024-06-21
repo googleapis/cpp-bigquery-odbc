@@ -203,13 +203,16 @@ TEST(CatalogTest, SQLTables_AllProjects) {
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "");
 
+  bool project_found = false;
   for (auto const& result : results) {
+    project_found = project_found || (kCatalogName == result.project_name);
     EXPECT_EQ(kCatalogName, result.project_name);
     EXPECT_TRUE(result.dataset_name.empty());
     EXPECT_TRUE(result.table_name.empty());
     EXPECT_TRUE(result.table_type.empty());
     EXPECT_TRUE(result.description.empty());
   }
+  EXPECT_TRUE(project_found);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
