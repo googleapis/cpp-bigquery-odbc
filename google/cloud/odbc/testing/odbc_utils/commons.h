@@ -48,6 +48,8 @@ bool const kIsBqDriver = false;
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
+std::string const kCatalogName = "bigquery-devtools-drivers";
+
 inline std::string const GetDefaultTablePrefix() {
   return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
       .value_or("");

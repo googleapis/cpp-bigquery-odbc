@@ -648,6 +648,23 @@ TEST(ConnectionTest, SQLSetConnectAttrA_Integer) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, SQLGetConnectAttr_DefaultCatalog) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  auto status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                  (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  EXPECT_EQ(kCatalogName, actual);
+  EXPECT_EQ(kCatalogName.size(), length);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS

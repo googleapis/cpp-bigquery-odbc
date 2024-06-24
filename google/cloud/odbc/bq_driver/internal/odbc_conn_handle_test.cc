@@ -39,35 +39,32 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
 
   Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
-  auto* conn_handle = new ConnectionHandle();
-  StatusRecord status = conn_handle->Connect(auth);
+  ConnectionHandle conn_handle;
+  StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
-  EXPECT_FALSE(conn_handle->IsConnected());
-  delete conn_handle;
+  EXPECT_FALSE(conn_handle.IsConnected());
 }
 
 TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
   Authentication auth = {OauthMechanism::kExternalUser, "path-to-the-file"};
-  auto* conn_handle = new ConnectionHandle();
-  StatusRecord status = conn_handle->Connect(auth);
+  ConnectionHandle conn_handle;
+  StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
-  EXPECT_FALSE(conn_handle->IsConnected());
-  delete conn_handle;
+  EXPECT_FALSE(conn_handle.IsConnected());
 }
 
 TEST(ConnectionHandle, ConnectWithInvalidAuth) {
   Authentication auth = {static_cast<OauthMechanism>(7), "path-to-the-file"};
-  auto* conn_handle = new ConnectionHandle();
-  StatusRecord status = conn_handle->Connect(auth);
+  ConnectionHandle conn_handle;
+  StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
   EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
-  EXPECT_FALSE(conn_handle->IsConnected());
-  delete conn_handle;
+  EXPECT_FALSE(conn_handle.IsConnected());
 }
 
 TEST(ConnectionHandle, DsnSetup) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["Description"] = kDsnDescription;
   dsn_section["Driver"] = kDsnDriver;
@@ -75,8 +72,8 @@ TEST(ConnectionHandle, DsnSetup) {
   dsn_section["DefaultDataset"] = kDsnDefaultDataset;
   dsn_section["SQLDialect"] = "0";
 
-  conn_handle->SetUp(dsn_section, kDsnName);
-  Dsn actual = conn_handle->GetDsn();
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
 
   EXPECT_EQ(actual.catalog, kDsnCatalog);
   EXPECT_EQ(actual.default_dataset, kDsnDefaultDataset);
@@ -84,118 +81,138 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.description, kDsnDescription);
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
-  EXPECT_FALSE(conn_handle->IsConnected());
-
-  delete conn_handle;
+  EXPECT_FALSE(conn_handle.IsConnected());
 }
 
-TEST(ConnectionHandle, DsnSetup_SQLDialect_NotSet) {
-  auto* conn_handle = new ConnectionHandle();
+TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {
+  ConnectionHandle conn_handle;
   Section dsn_section;
+  dsn_section["Catalog"] = kDsnCatalog;
 
-  conn_handle->SetUp(dsn_section, kDsnName);
+  conn_handle.SetUp(dsn_section, kDsnName);
 
-  Dsn actual = conn_handle->GetDsn();
-  EXPECT_FALSE(actual.is_bq_legacy_sql);
-
-  delete conn_handle;
+  SQLCHAR buf_out[256];
+  auto status =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 256, nullptr);
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
+  EXPECT_EQ(actual_val, kDsnCatalog);
 }
 
-TEST(ConnectionHandle, SetAttribute_Success_SQLUInt) {
-  auto* conn_handle = new ConnectionHandle();
-
-  auto status_record = conn_handle->SetAttribute(
-      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
-  EXPECT_TRUE(status_record.ok());
-  delete conn_handle;
-}
-
-TEST(ConnectionHandle, SetAttribute_Success_SQLChar) {
-  auto* conn_handle = new ConnectionHandle();
+TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = kDsnCatalog;
 
   SQLCHAR buf[256] = "test";
   auto status_record =
-      conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
   EXPECT_TRUE(status_record.ok());
-  delete conn_handle;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  SQLCHAR buf_out[256];
+  auto status =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 256, nullptr);
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
+  EXPECT_NE(actual_val, kDsnCatalog);
+  EXPECT_EQ(actual_val, "test");
+}
+
+TEST(ConnectionHandle, DsnSetup_SQLDialect_NotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_FALSE(actual.is_bq_legacy_sql);
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLUInt) {
+  ConnectionHandle conn_handle;
+
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+  EXPECT_TRUE(status_record.ok());
+}
+
+TEST(ConnectionHandle, SetAttribute_Success_SQLChar) {
+  ConnectionHandle conn_handle;
+
+  SQLCHAR buf[256] = "test";
+  auto status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
+  EXPECT_TRUE(status_record.ok());
 }
 
 TEST(ConnectionHandle, SetAttribute_Success_SQLULen) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
-  auto status_record = conn_handle->SetAttribute(
+  auto status_record = conn_handle.SetAttribute(
       SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
   EXPECT_TRUE(status_record.ok());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Success_SQLIntBitmask) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
-  auto status_record = conn_handle->SetAttribute(
+  auto status_record = conn_handle.SetAttribute(
       SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_SERIALIZABLE, 0);
   EXPECT_TRUE(status_record.ok());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_UnsupportedSetAttribute) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
   auto status_record =
-      conn_handle->SetAttribute(SQL_ATTR_TRANSLATE_OPTION, (SQLPOINTER)1, 0);
+      conn_handle.SetAttribute(SQL_ATTR_TRANSLATE_OPTION, (SQLPOINTER)1, 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_UnSupportedAttribute) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
   auto status_record =
-      conn_handle->SetAttribute(SQL_ATTR_ODBC_CURSORS, (SQLPOINTER)1, 0);
+      conn_handle.SetAttribute(SQL_ATTR_ODBC_CURSORS, (SQLPOINTER)1, 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_InvalidAttributeValue) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
   auto status_record =
-      conn_handle->SetAttribute(SQL_ATTR_ACCESS_MODE, (SQLPOINTER)2, 0);
+      conn_handle.SetAttribute(SQL_ATTR_ACCESS_MODE, (SQLPOINTER)2, 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_NegativeStringLen) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
   SQLCHAR catalog[256] = "test";
-  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                 (SQLPOINTER)catalog, -1);
+  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                (SQLPOINTER)catalog, -1);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringLen) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
   SQLCHAR catalog[256] = "test";
-  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                 (SQLPOINTER)catalog, 2);
+  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                (SQLPOINTER)catalog, 2);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringValue) {
-  auto* conn_handle = new ConnectionHandle();
+  ConnectionHandle conn_handle;
 
-  auto status_record = conn_handle->SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                 (SQLPOINTER) nullptr, 0);
+  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                (SQLPOINTER) nullptr, 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY009());
-  delete conn_handle;
 }
 
 TEST(ConnectionHandle, GetAttribute_Fail_UnsupportedGetAttribute) {

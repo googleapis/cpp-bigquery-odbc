@@ -73,6 +73,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
 
   std::string sql_dialect = dsn_section["SQLDialect"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
+
+  if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {
+    attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
+  }
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {

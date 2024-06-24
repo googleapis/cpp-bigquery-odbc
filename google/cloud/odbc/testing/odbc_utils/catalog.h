@@ -21,8 +21,6 @@
 
 namespace google::cloud::odbc_tests {
 
-std::string const kCatalogName = "bigquery-devtools-drivers";
-
 struct SQLTableResult {
   std::string project_name;
   std::string dataset_name;
