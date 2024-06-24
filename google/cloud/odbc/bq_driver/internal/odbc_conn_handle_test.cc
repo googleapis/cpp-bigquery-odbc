@@ -106,7 +106,7 @@ TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
   SQLCHAR buf[256] = "test";
   auto status_record =
       conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
-  EXPECT_TRUE(status_record.ok());
+  ASSERT_TRUE(status_record.ok());
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -314,7 +314,7 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
   EXPECT_TRUE(status_record.ok());
   std::string actual_val3(reinterpret_cast<char*>(buf_out));
-  EXPECT_EQ(actual_val3, "test");
+  EXPECT_EQ(actual_val3, "aest");
   EXPECT_EQ(str_len, 4);
 }
 
@@ -348,6 +348,34 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
   std::string actual_val(reinterpret_cast<char*>(buf_out));
   EXPECT_EQ(status_record.sql_state, SQLStates::k_01004());
   EXPECT_EQ(actual_val, "tes");
+}
+
+TEST(ConnectionHandle, SetAttribute_SetTwice) {
+  ConnectionHandle conn_handle;
+
+  SQLCHAR buf_in[256] = "test";
+  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                                (SQLPOINTER)buf_in, SQL_NTS);
+  EXPECT_TRUE(status_record.ok());
+
+  SQLCHAR buf_out[256];
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 256, nullptr);
+  EXPECT_TRUE(status_record.ok());
+  std::string actual_val(reinterpret_cast<char*>(buf_out));
+  EXPECT_EQ(actual_val, "test");
+
+  SQLCHAR buf_in_2[256] = "test_2";
+  status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                                           (SQLPOINTER)buf_in_2, SQL_NTS);
+  EXPECT_TRUE(status_record.ok());
+
+  SQLCHAR buf_out_2[256];
+  status_record = conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out_2,
+                                           256, nullptr);
+  EXPECT_TRUE(status_record.ok());
+  std::string actual_val_2(reinterpret_cast<char*>(buf_out_2));
+  EXPECT_EQ(actual_val_2, "test_2");
 }
 
 // TODO(171): Add tests which use refresh token

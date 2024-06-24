@@ -221,7 +221,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
       // Store char attributes.
-      attribute_str_values_.insert({attribute, val});
+      attribute_str_values_.insert_or_assign(attribute, val);
       break;
     }
     default: {
