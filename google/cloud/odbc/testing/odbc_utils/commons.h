@@ -25,6 +25,7 @@
 #include <memory>
 #ifdef _WIN32
 #include <windows.h>
+#undef GetJob
 #endif
 #include <sql.h>
 #include <sqlext.h>

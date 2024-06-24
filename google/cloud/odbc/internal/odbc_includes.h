@@ -21,6 +21,7 @@
 
 #define _WINSOCKAPI_
 #include <Windows.h>
+#undef GetJob
 
 #endif  //_WIN32
 
