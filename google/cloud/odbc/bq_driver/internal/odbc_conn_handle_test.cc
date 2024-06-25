@@ -114,7 +114,6 @@ TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
   auto status =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 256, nullptr);
   std::string actual_val(reinterpret_cast<char*>(buf_out));
-  EXPECT_NE(actual_val, kDsnCatalog);
   EXPECT_EQ(actual_val, "test");
 }
 
