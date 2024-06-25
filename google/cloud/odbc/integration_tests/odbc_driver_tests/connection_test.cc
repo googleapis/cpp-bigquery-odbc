@@ -460,6 +460,31 @@ TEST(ConnectionTest, SQLDriverConnectA) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, SQLDriverConnectW) {
+  short buf_len;
+  std::wstring in_conn_str(
+      L"\u0044\u0053\u004e\u003d\u004f\u0044\u0042\u0043\u0054\u0065\u0073"
+      L"\u0074\u0073\u0044\u0053\u004e");
+  short in_conn_str_len = in_conn_str.size();
+  std::wstring out_conn_str;
+  SQLSMALLINT out_conn_str_buf_len = kBufferLength;
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc),
+            SQL_SUCCESS);
+
+  SQLRETURN rc = SQL_SUCCESS;
+
+  rc = SQLDriverConnectW(conn->hdbc, 0, (SQLWCHAR*)in_conn_str.data(),
+                         in_conn_str_len, (SQLWCHAR*)out_conn_str.data(),
+                         out_conn_str_buf_len, &buf_len, SQL_DRIVER_COMPLETE);
+  ASSERT_EQ(rc, SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(ConnectionTest, SQLSetConnectAttr_StringWithNullTermInMiddle) {
   SQLCHAR buf[256] = "te\0t";
   SQLINTEGER len = strlen(reinterpret_cast<char*>(buf));
