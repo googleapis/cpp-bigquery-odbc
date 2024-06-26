@@ -665,6 +665,20 @@ TEST(ConnectionTest, SQLGetConnectAttr_DefaultCatalog) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, GetDefaultValueForAutocommit) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLUINTEGER commit_mode = 0;
+  auto status =
+      SQLGetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT, &commit_mode, 0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  EXPECT_EQ(SQL_AUTOCOMMIT_ON, commit_mode);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS

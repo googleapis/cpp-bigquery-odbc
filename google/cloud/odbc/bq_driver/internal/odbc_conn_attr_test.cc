@@ -201,7 +201,7 @@ TEST(ConnectionAttributeTest, GetAttributeDefaultValue) {
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_ASYNC_ENABLE),
             (SQLPOINTER)SQL_ASYNC_ENABLE_OFF);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_AUTOCOMMIT),
-            (SQLPOINTER)SQL_AUTOCOMMIT_OFF);
+            (SQLPOINTER)SQL_AUTOCOMMIT_ON);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_CURRENT_CATALOG),
             nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_CONNECTION_TIMEOUT),
