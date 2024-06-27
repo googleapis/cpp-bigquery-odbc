@@ -1250,6 +1250,33 @@ TEST(SQLPrepare, InsertQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLPrepare, InsertQueryUnicode) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring query =L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)";
+  wchar_t read_stmt[kBufferLength];
+  wcscpy(read_stmt, query.c_str());
+
+  std::wcout<<"Query "<<query.data()<<std::endl;
+  std::wcout<<"read_stmt "<<read_stmt<<std::endl;
+  std::wcout<<"length "<<query.length()<<std::endl;
+
+
+  auto status = SQLPrepareW(conn->hstmt, (SQLWCHAR*)read_stmt, query.length());
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+
+#endif
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLPrepare, ParametrizedQuery) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
