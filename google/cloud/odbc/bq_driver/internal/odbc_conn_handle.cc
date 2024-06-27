@@ -200,8 +200,12 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute value.");
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
+      if (attribute == SQL_ATTR_TXN_ISOLATION) {
+        // BigQuery supports only one level of isolation
+        value = reinterpret_cast<SQLPOINTER>(SQL_TXN_SERIALIZABLE);
+      }
       // Store non char attributes.
-      attribute_values_.insert({attribute, value});
+      attribute_values_.insert_or_assign(attribute, value);
       break;
     }
     case ConnectionValueType::kSqlChr: {

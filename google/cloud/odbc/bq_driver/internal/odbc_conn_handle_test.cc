@@ -279,6 +279,21 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLIntBitmask) {
   EXPECT_EQ(str_len, expected_len);
 }
 
+TEST(ConnectionHandle, GetAttribute_IsolationLevel_GetOnlySupportedOne) {
+  ConnectionHandle conn_handle;
+  SQLINTEGER val;
+  SQLINTEGER str_len;
+  auto expected_len = sizeof(SQLINTEGER);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_READ_COMMITTED, 0);
+  EXPECT_TRUE(status_record.ok());
+  status_record =
+      conn_handle.GetAttribute(SQL_ATTR_TXN_ISOLATION, &val, 0, &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(val, (SQLUINTEGER)SQL_TRANSACTION_SERIALIZABLE);
+  EXPECT_EQ(str_len, expected_len);
+}
+
 TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   ConnectionHandle conn_handle;
   SQLCHAR buf_in[256] = "test";
