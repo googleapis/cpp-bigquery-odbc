@@ -213,6 +213,60 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
   }
 }
 
+
+void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn, StdUnicodeRows rows) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+  std::wstring wTableName = converter.from_bytes(table_name_);
+  SQLRETURN status;
+  std::wstring insert_stmt = L"INSERT INTO " + wTableName + L" VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::wstring row_str = L"( ";
+
+     auto int_field = row.int_field;
+    if (int_field != NULL) {
+      row_str.append(std::to_wstring(int_field) + L", ");
+    } else {
+      row_str.append(L"NULL, ");
+    }
+
+    auto str_field1 = row.str_field1;
+    if (!str_field1.empty()) {
+      row_str.append(L"'" + str_field1 + L"', ");
+    } else {
+      row_str.append(L"NULL, ");
+    }
+
+    auto str_field2 = row.str_field2;
+    if (!str_field2.empty()) {
+      row_str.append(L"'" + str_field2 + L"'");
+    } else {
+      row_str.append(L"NULL");
+    }
+    
+    row_str.append(L")");
+    if (i != (num_rows - 1)) {
+      row_str.append(L", ");
+    }
+    else {
+      row_str+= L'\0';
+    }
+    insert_stmt.append(row_str);
+  }
+
+  
+  std::vector<SQLWCHAR> sqlWStr(insert_stmt.begin(), insert_stmt.end());
+  
+    status =
+          SQLExecDirectW(conn->hstmt, sqlWStr.data(), SQL_NTS);
+    CheckError(status, "SQLExecDirectW", conn);
+}
+
 void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
                           std::vector<std::string> rows, bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";

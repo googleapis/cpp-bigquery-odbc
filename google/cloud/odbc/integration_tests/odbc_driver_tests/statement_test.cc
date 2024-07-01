@@ -50,6 +50,10 @@ StdRows const kSampleData{
     {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
 };
 
+StdUnicodeRows const kUnicodeSampleData{
+    {1, L"हिंदी1", L"中国人1"}, {2, L"हिंदी2", L"中国人2"}, {3, L"हिंदी3", L"中国人3"},
+};
+
 // Checks if the column description returned by DescribeCol matches the schema
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                      Schema schema, bool use_ansi = false) {
@@ -118,6 +122,38 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
   }
 }
 
+// Verify if the inserted data(<input_data>) is the same as the data fetched
+// col-wise Note: This doesn't verify the integrity of the fetched rows
+void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data, Results col_wise_data,
+                             std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+  for (auto col_name : col_names) {    
+      auto ret_col_values = col_wise_data[col_name];
+      // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+      sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      std::string dataStr = converter.to_bytes(data.str_field2);
+      input_col_values.emplace_back(dataStr);
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
+    }
+  }
+}
+
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
   std::string const table_name = kDatasetWithTablePrefix + in_table_name;
@@ -173,6 +209,36 @@ TEST(StatementTest, SQLExecute) {
   ////////////////
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   EXPECT_EQ(InsertStatement(conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLFetch_Unicode) {
+  std::string const table_name = kDatasetWithTablePrefix + "ODBC_UNICODE_TEST";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn,
+               "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertUnicodeData(conn, kUnicodeSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  auto const query = "SELECT Hindi, Chinese FROM " + table_name;
+  auto results = *FetchDirect(conn, query, 2);
+  VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results, std::vector<std::string>());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -1256,15 +1322,9 @@ TEST(SQLPrepare, InsertQueryUnicode) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::wstring query =L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)";
-  wchar_t read_stmt[kBufferLength];
-  wcscpy(read_stmt, query.c_str());
+  std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
 
-  std::wcout<<"Query "<<query.data()<<std::endl;
-  std::wcout<<"read_stmt "<<read_stmt<<std::endl;
-  std::wcout<<"length "<<query.length()<<std::endl;
-
-
-  auto status = SQLPrepareW(conn->hstmt, (SQLWCHAR*)read_stmt, query.length());
+  auto status = SQLPrepareW(conn->hstmt,sqlWStr.data(), sqlWStr.size());
   CheckError(status, "SQLPrepare", conn);
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS

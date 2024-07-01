@@ -294,4 +294,12 @@ TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
   EXPECT_EQ("VIEW '", types[1]);
 }
 
+TEST(UnicodeConversion, Success_UnicodeConversion) {
+  std::wstring wstr = L"आपका स्वागत है";
+  std::string result_str = Utf16ToUtf8(wstr.data());
+  EXPECT_STREQ("आपका स्वागत है", result_str.c_str());
+  std::wstring result_wstr = Utf8ToUtf16(result_str);
+  EXPECT_STREQ(wstr.data(), result_wstr.data());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
