@@ -648,68 +648,40 @@ TEST(StatementTest, RollBackTransaction) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(name STRING)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
   // Insert some data to the table
-  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES('a1');";
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare(insert)", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute(insert)", conn);
+  StdRow row = {"a1", 0, 0};
+  table.InsertData(conn, {row}, false, true);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
   SQLUINTEGER autocommit = SQL_AUTOCOMMIT_OFF;
-  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
-                             (SQLPOINTER)autocommit, 0);
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                                  (SQLPOINTER)autocommit, 0);
 
   // Try to update data in the table
-  std::string update_stmt =
-      "UPDATE " + table_name + " SET name='b1' WHERE name = 'a1';";
+  std::string update_stmt = "UPDATE " + table_name +
+                            " SET StringField='b1' WHERE StringField = 'a1';";
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare(update)", conn);
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute(update)", conn);
 
   // Check that the data was updated
-  std::string select_stmt = "SELECT name FROM " + table_name;
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare(select)", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute(select)", conn);
-  TestingDataBuffer updated_col[1];
-  status = SQLBindCol(conn->hstmt, 1, SQL_CHAR, updated_col[0].target_value,
-                      updated_col[0].buffer_length, &(updated_col[0].str_len));
-  CheckError(status, "SQLBindCol", conn);
-
-  SQLFetch(conn->hstmt);
-  CheckError(status, "SQLFetch", conn);
-
-  std::string actual = reinterpret_cast<char*>(updated_col[0].target_value);
-  EXPECT_EQ("b1", actual);
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"b1", 0, 0}}, results, std::vector<std::string>());
 
   // ROLLBACK TRANSACTION
   status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_ROLLBACK);
   CheckError(status, "SQLEndTran(after select)", conn);
 
   // Check that transaction was rolled back and the data has initial value
-  select_stmt = "SELECT name FROM " + table_name;
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare(select)", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute(select)", conn);
-
-  TestingDataBuffer columns[1];
-  status = SQLBindCol(conn->hstmt, 1, SQL_CHAR, columns[0].target_value,
-                      columns[0].buffer_length, &(columns[0].str_len));
-  CheckError(status, "SQLBindCol", conn);
-
-  SQLFetch(conn->hstmt);
-  CheckError(status, "SQLFetch", conn);
-
-  actual = reinterpret_cast<char*>(columns[0].target_value);
-  EXPECT_EQ("a1", actual);
+  results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"a1", 0, 0}}, results, std::vector<std::string>());
 
   // COMMIT TRANSACTION
   status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_COMMIT);
