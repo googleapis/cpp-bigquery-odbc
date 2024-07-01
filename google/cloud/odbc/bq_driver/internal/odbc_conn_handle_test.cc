@@ -81,7 +81,41 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.description, kDsnDescription);
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
+  EXPECT_FALSE(actual.sessions_enabled);
   EXPECT_FALSE(conn_handle.IsConnected());
+}
+
+TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["EnableSession"] = "aaaaaa";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.sessions_enabled);
+}
+
+TEST(ConnectionHandle, DsnSetup_SessionsEnabled_True) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["EnableSession"] = "1";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.sessions_enabled);
+}
+
+TEST(ConnectionHandle, DsnSetup_SessionsEnabled_False) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["EnableSession"] = "0";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_FALSE(actual.sessions_enabled);
 }
 
 TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {

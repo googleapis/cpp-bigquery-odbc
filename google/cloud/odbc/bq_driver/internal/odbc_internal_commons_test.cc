@@ -494,31 +494,82 @@ TEST(ConstructStringQueryParameters, Failure_Empty_Param_name) {
 
 TEST(ConstructBasicPostQueryRequest, Basic) {
   std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = kTestCatalog;
+  conn_handle.SetUp(dsn_section, "name");
+
   PostQueryRequest returned =
-      ConstructBasicPostQueryRequest(kTestCatalog, query_str);
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
   EXPECT_EQ(returned.project_id(), kTestCatalog);
   EXPECT_EQ(returned.query_request().query(), query_str);
   EXPECT_FALSE(returned.query_request().dry_run());
   EXPECT_FALSE(returned.query_request().use_legacy_sql());
   EXPECT_TRUE(returned.query_request().default_dataset().project_id.empty());
   EXPECT_TRUE(returned.query_request().default_dataset().dataset_id.empty());
+  EXPECT_FALSE(returned.query_request().create_session());
+  EXPECT_TRUE(returned.query_request().connection_properties().empty());
 }
 
 TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
   std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["SQLDialect"] = "0";
+  conn_handle.SetUp(dsn_section, "name");
+
   PostQueryRequest returned =
-      ConstructBasicPostQueryRequest(kTestCatalog, query_str, "", true);
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
   EXPECT_TRUE(returned.query_request().use_legacy_sql());
 }
 
 TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
   std::string query_str = "SELECT 1";
-  PostQueryRequest returned = ConstructBasicPostQueryRequest(
-      kTestCatalog, query_str, kDefaultDataset, true);
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = kTestCatalog;
+  dsn_section["DefaultDataset"] = kDefaultDataset;
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
   EXPECT_EQ(returned.query_request().default_dataset().project_id,
             kTestCatalog);
   EXPECT_EQ(returned.query_request().default_dataset().dataset_id,
             kDefaultDataset);
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["EnableSession"] = "1";
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_TRUE(returned.query_request().create_session());
+  EXPECT_TRUE(returned.query_request().connection_properties().empty());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_UseSession) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  conn_handle.SetSessionId("sessionId");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_FALSE(returned.query_request().create_session());
+  EXPECT_FALSE(returned.query_request().connection_properties().empty());
+  EXPECT_EQ("session_id",
+            returned.query_request().connection_properties()[0].key);
+  EXPECT_EQ(conn_handle.GetSessionId(),
+            returned.query_request().connection_properties()[0].value);
 }
 
 TEST(ConstructnamedPostQueryRequestTest, Success) {

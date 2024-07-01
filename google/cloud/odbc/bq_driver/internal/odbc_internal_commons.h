@@ -211,10 +211,8 @@ ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
 
 google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
-ConstructBasicPostQueryRequest(std::string const& catalog,
-                               std::string const& query_str,
-                               std::string const& default_dataset = "",
-                               bool is_bq_legacy_sql = false);
+ConstructBasicPostQueryRequest(ConnectionHandle const& conn_handle,
+                               std::string const& query_str);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>

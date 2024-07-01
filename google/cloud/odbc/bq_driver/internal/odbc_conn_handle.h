@@ -47,7 +47,8 @@ struct Dsn {
   std::string catalog;
   std::string default_dataset;
   std::string dsn_name;
-  bool is_bq_legacy_sql;
+  bool is_bq_legacy_sql = false;
+  bool sessions_enabled = false;
 };
 
 class StatementHandle;
@@ -69,7 +70,7 @@ class ConnectionHandle : public Handle {
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
-  Dsn GetDsn() { return dsn_; }
+  Dsn GetDsn() const { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
@@ -88,6 +89,12 @@ class ConnectionHandle : public Handle {
   std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
 
   std::mutex& GetMutex() const { return connection_handle_mutex_; }
+
+  inline std::string GetSessionId() const { return session_id_; }
+  inline void SetSessionId(std::string session_id) {
+    session_id_ = std::move(session_id);
+  }
+  inline bool IsSessionStarted() const { return !session_id_.empty(); }
 
  protected:
   bool is_connected_ = false;
@@ -109,6 +116,9 @@ class ConnectionHandle : public Handle {
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;
   mutable std::mutex connection_handle_mutex_;
+  // Session ID of the started session.
+  // Empty string if a session wasn't started
+  std::string session_id_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -320,13 +320,9 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  std::string catalog_name = conn_handle.GetDsn().catalog;
-  std::string default_dataset = conn_handle.GetDsn().default_dataset;
-  bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
-
   std::string query_str = stmt_handle.GetQueryString();
-  PostQueryRequest post_request = ConstructBasicPostQueryRequest(
-      catalog_name, query_str, default_dataset, is_bq_legacy_sql);
+  PostQueryRequest post_request =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {

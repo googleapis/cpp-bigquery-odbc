@@ -207,6 +207,12 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   if (std::regex_search(query, named_pattern)) {
     req.configuration.query.parameter_mode = "NAMED";
   }
+  if (conn_handle.IsSessionStarted()) {
+    req.configuration.query.connection_properties.push_back(
+        {"session_id", conn_handle.GetSessionId()});
+  } else if (conn_handle.GetDsn().sessions_enabled) {
+    req.configuration.query.create_session = true;
+  }
 
   Options opt;
 
@@ -244,6 +250,10 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
   if (!ipd_response.ok()) {
     return ipd_response;
+  }
+  if (!conn_handle.IsSessionStarted() &&
+      !response->statistics.session_info.session_id.empty()) {
+    conn_handle.SetSessionId(response->statistics.session_info.session_id);
   }
 
   query_str_ = query;

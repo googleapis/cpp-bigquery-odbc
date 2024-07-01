@@ -189,6 +189,10 @@ StatusRecordOr<DSResults> FetchBQData(
     }
     results.data_source_results = *gq_status;
   }
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status->session_info.session_id);
+  }
   return results;
 }
 
@@ -317,8 +321,10 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
 }
 
 PostQueryRequest ConstructBasicPostQueryRequest(
-    std::string const& catalog, std::string const& query_str,
-    std::string const& default_dataset, bool is_bq_legacy_sql) {
+    ConnectionHandle const& conn_handle, std::string const& query_str) {
+  std::string catalog = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
@@ -331,6 +337,12 @@ PostQueryRequest ConstructBasicPostQueryRequest(
     ds_ref.project_id = catalog;
     ds_ref.dataset_id = default_dataset;
     query_request.set_default_dataset(ds_ref);
+  }
+  if (conn_handle.IsSessionStarted()) {
+    query_request.set_connection_properties(
+        {{"session_id", conn_handle.GetSessionId()}});
+  } else if (conn_handle.GetDsn().sessions_enabled) {
+    query_request.set_create_session(true);
   }
   // Set billing info and query request.
   post_request.set_project_id(catalog);
