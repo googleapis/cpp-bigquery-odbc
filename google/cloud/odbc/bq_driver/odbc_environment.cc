@@ -22,7 +22,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -37,8 +37,6 @@ SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
 SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER val_str_len) {
-  TraceOptions& opts = *(*kTraceOption);
-
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
@@ -61,8 +59,6 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER /*value_buffer_len*/,
                                         SQLINTEGER* val_str_len) {
-  TraceOptions& opts = *(*kTraceOption);
-
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
@@ -75,11 +71,9 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
   EnvironmentHandle* env_handle = *env_handle_status;
 
   if (value == nullptr) {
-    TracePrintInternal(opts, "Null attribute value");
     auto status_record =
         StatusRecord{SQLStates::k_HY092(), "Null attribute value"};
-    env_handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*env_handle, status_record);
   }
 
   return env_handle->GetAttribute(attribute, value, &val_str_len);

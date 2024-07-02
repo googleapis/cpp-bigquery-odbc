@@ -32,6 +32,7 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
@@ -116,9 +117,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
   if (!connection_params_resp_status) {
-    handle_ref->GetDiagnostics().AddStatusRecord(
-        connection_params_resp_status.GetStatusRecord());
-    return connection_params_resp_status.GetCalculatedReturnCode();
+    return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
 
   auto connection_params_resp = *connection_params_resp_status;
@@ -143,10 +142,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   Authentication auth = CreateAuth(dsn_section);
   StatusRecord status = handle_ref->Connect(auth);
   if (!status.ok()) {
-    // Creating the connection failed
-    // TODO(#170): Add error tracing call here
-    // TODO(#158): SQLGetDiagRec should handle this
-    return SQL_ERROR;
+    return LogAndReturnCode(*handle_ref, status);
   }
   return SQL_SUCCESS;
 }
@@ -166,11 +162,9 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
   auto status_record =
       conn_handle->GetAttribute(attribute, value, buf_len, str_len);
   if (!status_record.ok()) {
-    conn_handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
+    return LogAndReturnCode(*conn_handle, status_record);
   }
-
-  return status_record.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
@@ -187,9 +181,7 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
   auto* conn_handle = *handle_result;
   auto status_record = conn_handle->SetAttribute(attribute, value, str_len);
   if (!status_record.ok()) {
-    conn_handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*conn_handle, status_record);
   }
 
   // Additionally set these attributes to all associated statement handles
@@ -198,8 +190,7 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
       status_record = stmt_handle->SetAttribute(
           attribute, reinterpret_cast<SQLULEN>(value));
       if (!status_record.ok()) {
-        conn_handle->GetDiagnostics().AddStatusRecord(status_record);
-        return status_record.CalculateReturnCode();
+        return LogAndReturnCode(*conn_handle, status_record);
       }
     }
   }

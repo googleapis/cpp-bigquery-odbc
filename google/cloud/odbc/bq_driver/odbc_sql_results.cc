@@ -35,6 +35,7 @@ using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -67,22 +68,18 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   if (column_number < 0) {
     StatusRecord status_record = {SQLStates::k_HY000(),
                                   "ColumnNumber should not < 0"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       handle->GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
-    handle->GetDiagnostics().AddStatusRecord(
-        use_bookmarks_status.GetStatusRecord());
-    return use_bookmarks_status.GetCalculatedReturnCode();
+    return LogAndReturnCode(*handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     StatusRecord status_record = {SQLStates::k_07006(),
                                   "ColumnNumber should not be 0"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // Unbinding column
@@ -98,8 +95,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   StatusRecord status_record;
   if (target_value_buffer_len < 0) {
     status_record = {SQLStates::k_HY090(), "BufferLength should not < 0"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // Setting DESC_CONCISE_TYPE will also set  DESC_TYPE and
@@ -108,8 +104,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                                ToSqlPointer<SQLSMALLINT>(target_c_type), 0);
   if (!status_record.ok()) {
     ard.UnbindDescriptorRecord(column_number);
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // ----- Set fields for target_value_buffer_len, target_value ------
@@ -119,16 +114,14 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                    ToSqlPointer<SQLLEN>(target_value_buffer_len), 0);
   if (!status_record.ok()) {
     ard.UnbindDescriptorRecord(column_number);
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record =
       SetDescField(&ard, column_number, SQL_DESC_DATA_PTR, target_value, 0);
   if (!status_record.ok()) {
     ard.UnbindDescriptorRecord(column_number);
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // ----- Set fields for target_value_str_len ------
@@ -137,16 +130,14 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
     ard.UnbindDescriptorRecord(column_number);
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = SetDescField(&ard, column_number, SQL_DESC_OCTET_LENGTH_PTR,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
     ard.UnbindDescriptorRecord(column_number);
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   return SQL_SUCCESS;
 }
@@ -167,8 +158,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
     StatusRecord status_record = {SQLStates::k_HY010(),
                                   "No statement has been executed"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
@@ -184,8 +174,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
   StatusRecord status_record = WriteRowset(result_set, rowset_size, ard);
   if (!status_record.ok()) {
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   return status_record.CalculateReturnCode();
@@ -203,8 +192,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
   if (column_count_ptr == nullptr) {
     status_record = {SQLStates::k_HY001(),
                      "Parameter 'column_count_ptr' cannot be null"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   auto stmt_state = handle->GetStmtState();
@@ -227,15 +215,13 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
       break;
   }
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   DescriptorHandle ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
   if (ird.GetHeaderRecord().count < 0) {
     status_record = {SQLStates::k_07006(),
                      "ColumnCount should not be less than 0"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   *column_count_ptr = ird.GetHeaderRecord().count;
   return status_record.CalculateReturnCode();
@@ -295,31 +281,26 @@ SQLRETURN SQLDescribeColInternal(
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   if (column_number < 0) {
     StatusRecord status_record = {
         SQLStates::k_HY000(),
         "Invalid ColumnNumber parameter - should not be < 0"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
-    handle.GetDiagnostics().AddStatusRecord(
-        use_bookmarks_status.GetStatusRecord());
-    return use_bookmarks_status.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     StatusRecord status_record = {
         SQLStates::k_07006(),
         "Invalid column number value for bookmark attribute - should not be 0"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
@@ -327,8 +308,7 @@ SQLRETURN SQLDescribeColInternal(
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no column for such value"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   DescriptorRecord& desc_record = ird.GetDescriptorRecord(column_number);
@@ -337,8 +317,7 @@ SQLRETURN SQLDescribeColInternal(
       StringValueToOutputBufferResponse(desc_record.name.c_str(), column_name,
                                         column_name_buffer_len, column_name_le);
   if (!status_record.ok()) {
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(

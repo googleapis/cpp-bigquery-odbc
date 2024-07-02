@@ -33,6 +33,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
@@ -291,9 +292,9 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
       SetDescField(*handle_result, rec_number, field_identifier, desc_value,
                    desc_value_buffer_len);
   if (!status_record.ok()) {
-    (*handle_result)->GetDiagnostics().AddStatusRecord(status_record);
+    return LogAndReturnCode(*(*handle_result), status_record);
   }
-  return status_record.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
@@ -304,8 +305,7 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     StatusRecord status_record{SQLStates::k_HY091(),
                                "Invalid descriptor field identifier"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // HeaderRecord fields
@@ -338,8 +338,7 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index (negative)"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   if (rec_number > header_record.count) {
     StatusRecord status_record{
@@ -356,8 +355,7 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
     if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
       StatusRecord status_record{SQLStates::k_HY007(),
                                  "Associated statement is not prepared"};
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
   }
 
@@ -503,9 +501,9 @@ SQLRETURN GetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
   }
 
   if (!result.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(result);
+    return LogAndReturnCode(*handle, result);
   }
-  return result.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
@@ -534,8 +532,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   if (!handle->HasDescriptorRecord(rec_number)) {
@@ -548,8 +545,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   temp_desc.datetime_interval_code = sub_type;
   StatusRecord status_record = temp_desc.SetType(type, handle->GetType());
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   temp_desc.octet_length = length;
   temp_desc.precision = precision;
@@ -560,8 +556,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
 
   status_record = temp_desc.ConsistencyCheck();
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   descriptor_record = temp_desc;
@@ -595,8 +590,7 @@ SQLRETURN GetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index (negative)"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   if (rec_number > handle->GetHeaderRecord().count) {
     StatusRecord status_record{
@@ -674,8 +668,7 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
   if (target_handle->GetType() == DescriptorType::kIRD) {
     StatusRecord status_record{
         SQLStates::k_HY016(), "Cannot modify an implementation row descriptor"};
-    target_handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*target_handle, status_record);
   }
   if (src_handle->GetType() == DescriptorType::kIRD) {
     // TODO(332469364) Check if statement handle is in 'prepared' or 'executed'
@@ -688,10 +681,10 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
   StatusRecord status_record =
       target_handle->SetDescriptorRecords(src_handle->GetDescriptorRecords());
   if (!status_record.ok()) {
-    target_handle->GetDiagnostics().AddStatusRecord(status_record);
+    return LogAndReturnCode(*target_handle, status_record);
   }
 
-  return status_record.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

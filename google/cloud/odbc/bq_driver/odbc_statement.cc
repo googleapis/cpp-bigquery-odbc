@@ -29,6 +29,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -83,8 +84,7 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecord status_record =
       SetConnectionAttributes(*handle_result, stmt_handle);
   if (!status_record.ok()) {
-    (*handle_result)->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*(*handle_result), status_record);
   }
   conn_handle->GetStatementHandles().insert(stmt_handle);
   AssociateDescriptorHandle(stmt_handle, DescriptorType::kARD);
@@ -102,8 +102,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       attribute == SQL_ATTR_IMP_ROW_DESC) {
     StatusRecord status_record{SQLStates::k_HY017(),
                                "Invalid try to set implementation descriptor"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   auto* desc_handle =
       reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(value);
@@ -112,8 +111,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
     StatusRecord status_record{
         SQLStates::k_HY024(),
         "Invalid attribute value (invalid descriptor handle)"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   StatusRecord status = StatusRecord::Ok();
@@ -126,8 +124,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       break;
   }
   if (!status.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status);
-    return status.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status);
   }
   return SQL_SUCCESS;
 }
@@ -151,8 +148,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
       StatusRecord status_record{
           SQLStates::k_HY011(),
           "Attribute cannot be set now - statement was prepared"};
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
   }
   if (attribute == SQL_ATTR_CONCURRENCY || attribute == SQL_ATTR_CURSOR_TYPE ||
@@ -241,9 +237,9 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   StatusRecord status_record =
       handle->SetAttribute(attribute, reinterpret_cast<SQLULEN>(value));
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return LogAndReturnCode(*handle, status_record);
   }
-  return status_record.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
@@ -347,8 +343,7 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 
   StatusRecordOr<SQLULEN> status = handle->GetAttribute(attribute);
   if (!status) {
-    handle->GetDiagnostics().AddStatusRecord(status.GetStatusRecord());
-    return status.GetCalculatedReturnCode();
+    return LogAndReturnCode(*handle, status);
   }
   return IntValueToOutputBufferResponse(*status, value, value_string_len);
 }

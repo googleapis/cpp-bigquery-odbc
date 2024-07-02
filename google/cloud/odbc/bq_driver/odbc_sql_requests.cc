@@ -33,6 +33,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
@@ -77,14 +78,12 @@ SQLRETURN SQLBindParameterInternal(
   if (parameter_number < 1) {
     StatusRecord status_record = {SQLStates::k_07009(),
                                   "Invalid descriptor index"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   if (buffer_length < 0) {
     StatusRecord status_record = {SQLStates::k_HY090(),
                                   "Invalid buffer length"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
@@ -104,20 +103,17 @@ SQLRETURN SQLBindParameterInternal(
   StatusRecord status_record =
       temp_ipd_record.SetParameterType(input_output_type);
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = temp_apd_record.SetConciseType(value_type, apd.GetType());
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = temp_ipd_record.SetConciseType(parameter_type, ipd.GetType());
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   if (parameter_type == SQL_CHAR || parameter_type == SQL_VARCHAR ||
@@ -172,8 +168,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   if (parameter_number < 1) {
@@ -188,8 +183,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no parameter for such value"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   DescriptorRecord& desc_record = ipd.GetDescriptorRecord(parameter_number);
@@ -245,8 +239,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
@@ -268,15 +261,13 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   if (in_text_length < 1) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
-    handle_ref.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status_record);
   }
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
 
   if (!status.ok()) {
-    handle_ref.GetDiagnostics().AddStatusRecord(status);
-    return status.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status);
   }
 
   return SQL_SUCCESS;
@@ -296,16 +287,14 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is still executing"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
@@ -313,8 +302,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement has already executed"};
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(stmt_handle, status_record);
   }
 
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
@@ -330,21 +318,16 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {
-    stmt_handle.GetDiagnostics().AddStatusRecord(
-        ds_status_record_or.GetStatusRecord());
     stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    return ds_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(stmt_handle, ds_status_record_or);
   }
 
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
-    auto status_record = rs_status_record_or.GetStatusRecord();
-    TracePrintInternal(*(*kTraceOption), status_record.message);
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    return rs_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(stmt_handle, rs_status_record_or);
   }
 
   Job prepared_job = stmt_handle.GetPreparedJob();

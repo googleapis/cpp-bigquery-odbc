@@ -97,8 +97,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
     default: {
       auto status_record = InvalidType(
           "HandleConnectionInformationTypes - Invalid infoType: ", info_type);
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
   }
 
@@ -132,9 +131,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   if (!supported_fn) {
     auto status_record = StatusRecord{SQLStates::k_HY024(),
                                       "Argument supported_fn cannot be null"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   switch (function_id) {
@@ -142,9 +139,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC3Functions(supported_fn);
       if (!status_record.ok()) {
-        handle->GetDiagnostics().AddStatusRecord(status_record);
-        TracePrintInternal(opts, status_record.message);
-        return status_record.CalculateReturnCode();
+        return LogAndReturnCode(*handle, status_record);
       }
       return rc;
     }
@@ -152,9 +147,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC2Functions(supported_fn);
       if (!status_record.ok()) {
-        handle->GetDiagnostics().AddStatusRecord(status_record);
-        TracePrintInternal(opts, status_record.message);
-        return status_record.CalculateReturnCode();
+        return LogAndReturnCode(*handle, status_record);
       }
       return rc;
     }
@@ -165,18 +158,14 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
     StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
     if (!status_record.ok()) {
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      TracePrintInternal(opts, status_record.message);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
   } else if (IsFunctionIdOdbc2(function_id)) {
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
     StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
     if (!status_record.ok()) {
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      TracePrintInternal(opts, status_record.message);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = odbc2_fns[function_id];
   }
@@ -198,9 +187,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   if (in_buffer_len < 0) {
     std::string mesg = "Invalid Input BufferLength";
     auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // Handle information types dependent on connection handle.
@@ -240,8 +227,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 
   auto status_record =
       InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
-  handle->GetDiagnostics().AddStatusRecord(status_record);
-  return status_record.CalculateReturnCode();
+  return LogAndReturnCode(*handle, status_record);
 }
 
 SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
@@ -268,19 +254,13 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                                      schema_name_len, ToCharStr(table_name),
                                      table_name_len);
   if (!ds_status_record_or) {
-    auto status_record = ds_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return ds_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, ds_status_record_or);
   }
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
-    auto status_record = rs_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return rs_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, rs_status_record_or);
   }
 
   if (!rs_status_record_or->rows.empty()) {
@@ -320,19 +300,13 @@ SQLRETURN SQLForeignKeysInternal(
           ToCharStr(fk_schema_name), fk_schema_name_len,
           ToCharStr(fk_table_name), fk_table_name_len);
   if (!ds_status_record_or) {
-    auto status_record = ds_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return ds_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, ds_status_record_or);
   }
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
-    auto status_record = rs_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return rs_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, rs_status_record_or);
   }
 
   if (!rs_status_record_or->rows.empty()) {
