@@ -51,7 +51,9 @@ StdRows const kSampleData{
 };
 
 StdUnicodeRows const kUnicodeSampleData{
-    {1, L"हिंदी1", L"中国人1"}, {2, L"हिंदी2", L"中国人2"}, {3, L"हिंदी3", L"中国人3"},
+    {1, L"हिंदी1", L"中国人1"},
+    {2, L"हिंदी2", L"中国人2"},
+    {3, L"हिंदी3", L"中国人3"},
 };
 
 // Checks if the column description returned by DescribeCol matches the schema
@@ -124,8 +126,9 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
 
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
-void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data, Results col_wise_data,
-                             std::vector<std::string> col_names) {
+void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
+                                    Results col_wise_data,
+                                    std::vector<std::string> col_names) {
   if (!col_names.size()) {
     std::vector<std::string> all_col_names;
     for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
@@ -134,11 +137,11 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data, Results col_wise_
     col_names = all_col_names;
   }
   std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-  for (auto col_name : col_names) {    
-      auto ret_col_values = col_wise_data[col_name];
-      // We have to sort inserted and returned values because we haven't specified
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+    // We have to sort inserted and returned values because we haven't specified
     // the ordering
-      sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
     std::vector<std::string> input_col_values;
     for (auto data : input_data) {
       std::string dataStr = converter.to_bytes(data.str_field2);
@@ -219,8 +222,7 @@ TEST(StatementTest, SQLFetch_Unicode) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn,
-               "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
+  table.Create(conn, "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -233,7 +235,8 @@ TEST(StatementTest, SQLFetch_Unicode) {
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT Hindi, Chinese FROM " + table_name;
   auto results = *FetchDirect(conn, query, 2);
-  VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results, std::vector<std::string>());
+  VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results,
+                                 std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -1321,10 +1324,11 @@ TEST(SQLPrepare, InsertQueryUnicode) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::wstring query =L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)";
+  std::wstring query(
+      L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
   std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
 
-  auto status = SQLPrepareW(conn->hstmt,sqlWStr.data(), sqlWStr.size());
+  auto status = SQLPrepareW(conn->hstmt, sqlWStr.data(), query.length());
   CheckError(status, "SQLPrepare", conn);
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS

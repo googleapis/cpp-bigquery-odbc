@@ -20,6 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <codecvt>
 #include <locale.h>
 #include <map>
 #include <memory>
@@ -30,7 +31,6 @@
 #include <stdlib.h>
 #include <string>
 #include <thread>
-#include <codecvt>
 
 namespace google::cloud::odbc_tests {
 
@@ -288,8 +288,9 @@ class Table {
 
   void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
                   bool use_ansi = false, bool use_sqlprepare = false);
-              
-  void InsertUnicodeData(std::shared_ptr<ODBCHandles> conn, StdUnicodeRows rows);
+
+  void InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+                         StdUnicodeRows rows);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be

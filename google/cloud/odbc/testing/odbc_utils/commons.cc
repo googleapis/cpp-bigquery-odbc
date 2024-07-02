@@ -213,8 +213,8 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
   }
 }
 
-
-void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn, StdUnicodeRows rows) {
+void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+                              StdUnicodeRows rows) {
   std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
   std::wstring wTableName = converter.from_bytes(table_name_);
   SQLRETURN status;
@@ -228,7 +228,7 @@ void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn, StdUnicodeRows 
     auto row = rows[i];
     std::wstring row_str = L"( ";
 
-     auto int_field = row.int_field;
+    auto int_field = row.int_field;
     if (int_field != NULL) {
       row_str.append(std::to_wstring(int_field) + L", ");
     } else {
@@ -248,23 +248,20 @@ void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn, StdUnicodeRows 
     } else {
       row_str.append(L"NULL");
     }
-    
+
     row_str.append(L")");
     if (i != (num_rows - 1)) {
       row_str.append(L", ");
-    }
-    else {
-      row_str+= L'\0';
+    } else {
+      row_str += L'\0';
     }
     insert_stmt.append(row_str);
   }
 
-  
   std::vector<SQLWCHAR> sqlWStr(insert_stmt.begin(), insert_stmt.end());
-  
-    status =
-          SQLExecDirectW(conn->hstmt, sqlWStr.data(), SQL_NTS);
-    CheckError(status, "SQLExecDirectW", conn);
+
+  status = SQLExecDirectW(conn->hstmt, sqlWStr.data(), SQL_NTS);
+  CheckError(status, "SQLExecDirectW", conn);
 }
 
 void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,

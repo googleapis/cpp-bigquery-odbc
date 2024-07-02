@@ -362,7 +362,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     SQLWCHAR* outConnectionString, SQLSMALLINT outConnectionStringBufferLen,
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLDriverConnectW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLDriverConnectW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -470,7 +471,8 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                     SQLSMALLINT outConnectionStringBufferLen,
                                     SQLSMALLINT* outConnectionStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   if (status != SQL_SUCCESS) {
@@ -569,7 +571,8 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                               SQLSMALLINT userNameLen, SQLWCHAR* authString,
                               SQLSMALLINT authStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLConnectW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLConnectW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -672,7 +675,8 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
                               SQLSMALLINT infoValueBufferLen,
                               SQLSMALLINT* infoValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetInfoW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetInfoW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -793,7 +797,8 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLGetTypeInfoW(SQLHSTMT statementHandle,
                                   SQLSMALLINT dataType) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetTypeInfoW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetTypeInfoW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
@@ -875,7 +880,8 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
                                      SQLINTEGER attribute, SQLPOINTER value,
                                      SQLINTEGER valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttrW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttrW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -964,7 +970,8 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                                      SQLINTEGER valueBufferLen,
                                      SQLINTEGER* valueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttrW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetConnectAttrW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -1534,19 +1541,19 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
                               SQLINTEGER statementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLPrepareW");
-  std::cout<<"Here 1"<<std::endl;
+  std::wcout << "Here 1 " << statementText << std::endl;
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (IsTracingEnabled)
     TraceFunctionEntry_SQLPrepareW(statementHandle, statementText,
                                    statementTextLen, *(*kTraceOption));
-  std::cout<<"Here 2"<<std::endl;
+  std::cout << "Here 2" << std::endl;
 
   // Handle Unicode conversion of input parameters.
   std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
   std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr.data());
   if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt.length();
-  std::wcout<<"Here 3 "<<stmt_txt_wstr<<std::endl;
-  std::cout<<"Here 4 "<<utf8_stmt_txt<<std::endl;
+  std::wcout << "Here 3 " << stmt_txt_wstr << std::endl;
+  std::cout << "Here 4 " << utf8_stmt_txt << std::endl;
 
   // Call to common internal function for SQLPrepare and SQLPrepareW
   // in odbc_sql_requests.h.
@@ -1864,7 +1871,8 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
                                 SQLINTEGER outStatementTextBufferLen,
                                 SQLINTEGER* outStatementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLNativeSqlW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLNativeSqlW");
 
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -2503,7 +2511,8 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
                                    SQLSMALLINT diagInfoBufferLen,
                                    SQLSMALLINT* diagInfoStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagFieldW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagFieldW");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
   status = AcquireHandleMutex(handle, handleType);
@@ -2599,7 +2608,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
                                  SQLSMALLINT messageTextBufferLen,
                                  SQLSMALLINT* messageTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRecW");
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRecW");
 
   // Call to Acquire mutex in odbc_lock.h as applicable for the handle type.
   status = AcquireHandleMutex(handle, handleType);
