@@ -50,12 +50,16 @@ struct Dsn {
   bool is_bq_legacy_sql;
 };
 
+class EnvironmentHandle;
 class StatementHandle;
 class DescriptorHandle;
 
 class ConnectionHandle : public Handle {
  public:
+  // This constructor is used only for tests
   explicit ConnectionHandle() = default;
+  explicit ConnectionHandle(EnvironmentHandle* env_handle)
+      : env_handle_(env_handle){};
   ~ConnectionHandle() = default;
 
   ConnectionHandle(ConnectionHandle const& connectionHandle);
@@ -86,6 +90,7 @@ class ConnectionHandle : public Handle {
 
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
   std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
+  inline EnvironmentHandle* GetEnvironmentHandle() { return env_handle_; };
 
   std::mutex& GetMutex() const { return connection_handle_mutex_; }
 
@@ -108,6 +113,7 @@ class ConnectionHandle : public Handle {
   // storage of all explicitly allocated descriptor handles associated with this
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;
+  EnvironmentHandle* env_handle_{nullptr};
   mutable std::mutex connection_handle_mutex_;
 };
 

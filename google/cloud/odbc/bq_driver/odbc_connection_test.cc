@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -24,11 +25,26 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+
+TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
+  EnvironmentHandle env_handle;
+  SQLPOINTER output;
+
+  auto status = SQLAllocConnHandle(&env_handle, &output);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  auto* conn_handle = reinterpret_cast<ConnectionHandle*>(output);
+  std::set<ConnectionHandle*>& conn_handles = env_handle.GetConnectionHandles();
+  EXPECT_FALSE(conn_handles.empty());
+  EXPECT_TRUE(conn_handles.find(conn_handle) != conn_handles.end());
+  delete conn_handle;
+}
 
 TEST(SetConnectionAttr, SuccessNonChar) {
   SQLHENV env_handle;

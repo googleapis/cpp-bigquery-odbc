@@ -89,8 +89,10 @@ SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
+  EnvironmentHandle* env_handle = *handle_result;
 
-  auto* conn_handle = new ConnectionHandle();
+  auto* conn_handle = new ConnectionHandle(env_handle);
+  env_handle->GetConnectionHandles().insert(conn_handle);
   *out_conn_handle = conn_handle;
   return SQL_SUCCESS;
 }
