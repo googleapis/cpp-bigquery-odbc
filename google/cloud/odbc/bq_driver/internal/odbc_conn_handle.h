@@ -101,6 +101,11 @@ class ConnectionHandle : public Handle {
   }
   inline bool IsSessionStarted() const { return !session_id_.empty(); }
 
+  inline bool IsTransactionActive() const { return is_transaction_active_; }
+  inline void SetTransactionActive(bool is_transaction_active) {
+    is_transaction_active_ = is_transaction_active;
+  }
+
  protected:
   bool is_connected_ = false;
 
@@ -125,6 +130,9 @@ class ConnectionHandle : public Handle {
   // Session ID of the started session.
   // Empty string if a session wasn't started
   std::string session_id_;
+  // True if transaction was begun within the session.
+  // False otherwise.
+  bool is_transaction_active_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
