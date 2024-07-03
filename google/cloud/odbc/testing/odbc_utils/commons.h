@@ -100,7 +100,8 @@ struct Column {
   SQLCHAR name[kBufferLength];  // Column name
   SQLSMALLINT name_len;
   SQLSMALLINT data_type;
-  SQLPOINTER data;      // Returned column data
+  SQLPOINTER data;  // Returned column data
+  TestingDataBuffer data_buf;
   SQLCHAR* result_set;  // Returned column data for a result set
   SQLULEN data_size;    // max size of column data
   // We need to allocate space for data_len_ptr in case the caller doesn't
@@ -240,16 +241,19 @@ inline std::string ToBqFieldType(SQLSMALLINT odbc_data_type) {
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
+      col_ptr->data_type = SQL_C_SBIGINT;
+      break;
     case SQL_INTEGER:
-      col_ptr->data_type = SQL_C_LONG;
+      col_ptr->data_type = SQL_C_SLONG;
       break;
     case SQL_DOUBLE:
       col_ptr->data_type = SQL_C_DOUBLE;
+      break;
     case SQL_FLOAT:
       col_ptr->data_type = SQL_C_FLOAT;
       break;
     case SQL_VARCHAR:
-    case SQL_C_CHAR:
+    case SQL_CHAR:
       col_ptr->data_type = SQL_C_CHAR;
       break;
     default:
