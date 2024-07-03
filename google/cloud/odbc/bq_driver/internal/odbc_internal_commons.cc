@@ -31,6 +31,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using json = nlohmann::json;
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
     TableSchema const& schema, std::vector<RowData> const& rows) {
@@ -72,6 +73,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           case BQDataType::kFloat64: {
             SQLDOUBLE d_data = std::stod(data);
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
+            break;
+          }
+          case BQDataType::kJson: {
+            JsonToDSValue<json>(data, row_val);
             break;
           }
           default: {

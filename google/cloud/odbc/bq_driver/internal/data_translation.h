@@ -334,6 +334,126 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+inline odbc_internal::StatusRecord ConvertFromJsonDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+  using odbc_internal::StatusRecordOr;
+
+  std::string src_str;
+  JsonDSValueToString(src_dsval, src_str);
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+
+  if (dest_type == SQL_C_CHAR) {
+    StatusRecord status_record =
+        StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+    return status_record;
+  }
+
+  StatusRecordOr<SQLDOUBLE> conversion_status = ConvertToDouble(src_str);
+  if (!conversion_status) {
+    return conversion_status.GetStatusRecord();
+  }
+  
+  SQLDOUBLE src_val = *conversion_status;
+  switch (dest_type) {
+    case SQL_C_FLOAT: {
+      auto* dest_val = static_cast<SQLREAL*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLREAL>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_DOUBLE: {
+      auto* dest_val = static_cast<SQLDOUBLE*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLDOUBLE>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_SBIGINT: {
+      auto* dest_val = static_cast<SQLBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLBIGINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_UBIGINT: {
+      auto* dest_val = static_cast<SQLUBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLUBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLUBIGINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_SSHORT: {
+      auto* dest_val = static_cast<SQLSMALLINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLSMALLINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_USHORT: {
+      auto* dest_val = static_cast<SQLUSMALLINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLUSMALLINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_SLONG: {
+      auto* dest_val = static_cast<SQLINTEGER*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLINTEGER>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_ULONG: {
+      auto* dest_val = static_cast<SQLUINTEGER*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLUINTEGER>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLUINTEGER>(src_val);
+      }
+      return status_record;
+    }
+    default: {
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H
