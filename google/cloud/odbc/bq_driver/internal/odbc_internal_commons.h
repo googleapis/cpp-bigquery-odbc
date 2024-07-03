@@ -134,6 +134,16 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   return int_val;
 }
 
+template <typename SrcType>
+inline void JsonToDSValue(SrcType const& json_src_val, DSValue& value) {
+  std::string str = json_src_val.dump();
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
+}
+
+inline void JsonDSValueToString(DSValue value, std::string& str) {
+  str.assign(value.begin(), value.end());
+}
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:
