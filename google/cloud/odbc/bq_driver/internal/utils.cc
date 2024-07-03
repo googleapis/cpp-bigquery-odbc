@@ -254,9 +254,9 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
 #else
 
   iconv_t cd = iconv_open("UTF-8", "UTF-16LE");
-  
+
   int errorno = -1;
-  int *errorptr = &errorno;
+  int* errorptr = &errorno;
   if (cd == static_cast<iconv_t>(errorptr)) {
     std::cerr << "iconv_open for utf16 failed: " << strerror(errno)
               << std::endl;
@@ -310,7 +310,7 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
 
   iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
   int errorno = -1;
-  int *errorptr = &errorno;
+  int* errorptr = &errorno;
   if (cd == static_cast<iconv_t>(errorptr)) {
     std::cerr << "iconv_open failed: " << strerror(errno) << std::endl;
     throw std::runtime_error("iconv_open failed");
