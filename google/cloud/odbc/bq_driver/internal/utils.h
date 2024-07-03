@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <codecvt>
 #include <fstream>
+#include <iconv.h>
 #include <locale>
 #include <map>
 #include <memory>

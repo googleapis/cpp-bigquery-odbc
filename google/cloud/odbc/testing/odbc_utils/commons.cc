@@ -232,21 +232,21 @@ void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
     if (int_field != NULL) {
       row_str.append(std::to_wstring(int_field) + L", ");
     } else {
-      row_str.append(L"NULL, ");
+      row_str += L'\0';
     }
 
     auto str_field1 = row.str_field1;
     if (!str_field1.empty()) {
       row_str.append(L"'" + str_field1 + L"', ");
     } else {
-      row_str.append(L"NULL, ");
+      row_str += L'\0';
     }
 
     auto str_field2 = row.str_field2;
     if (!str_field2.empty()) {
       row_str.append(L"'" + str_field2 + L"'");
     } else {
-      row_str.append(L"NULL");
+      row_str += L'\0';
     }
 
     row_str.append(L")");

@@ -252,8 +252,43 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
   }
   return utf8Str;
 #else
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-  return converter.to_bytes(utf16Str);
+
+  iconv_t cd = iconv_open("UTF-8", "UTF-16LE");
+  
+  int errorno = -1;
+  int *errorptr = &errorno;
+  if (cd == static_cast<iconv_t>(errorptr)) {
+    std::cerr << "iconv_open for utf16 failed: " << strerror(errno)
+              << std::endl;
+    throw std::runtime_error("iconv_open failed");
+  }
+
+  // Use string length * sizeof(wchar_t) to get the correct byte count
+  size_t inbytesleft = utf16Str.length() * sizeof(wchar_t);
+  // Allocate more space for the output buffer (3x should be enough for most
+  // cases)
+  size_t outbytesleft = inbytesleft * 3;
+
+  std::string utf8str(outbytesleft, '\0');
+
+  wchar_t utf16wchar[1026];
+  wcpcpy(utf16wchar, utf16Str.c_str());
+  char* inbuf = reinterpret_cast<char*>(utf16wchar);
+  char* outbuf = utf8str.data();
+
+  size_t res = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+  if (res == static_cast<size_t>(-1)) {
+    std::cerr << "conversion for utf16 failed: " << strerror(errno)
+              << std::endl;
+    iconv_close(cd);
+    throw std::runtime_error("iconv16 failed");
+  }
+
+  iconv_close(cd);
+
+  // Resize the output string to the actual converted size
+  utf8str.resize(outbuf - utf8str.data());
+  return utf8str;
 #endif
 }
 
@@ -272,8 +307,39 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
   }
   return utf16Str;
 #else
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-  return converter.from_bytes(utf8Str);
+
+  iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
+  int errorno = -1;
+  int *errorptr = &errorno;
+  if (cd == static_cast<iconv_t>(errorptr)) {
+    std::cerr << "iconv_open failed: " << strerror(errno) << std::endl;
+    throw std::runtime_error("iconv_open failed");
+  }
+
+  // Use string length for input byte count
+  size_t inbytesleft = utf8Str.length();
+  // Allocate more space for the output buffer (2x should be enough for UTF-16)
+  size_t outbytesleft = inbytesleft * 2;
+  std::wstring utf16str(outbytesleft / sizeof(wchar_t), L'\0');
+
+  char* inbuf = const_cast<char*>(utf8Str.data());
+  char* outbuf = reinterpret_cast<char*>(utf16str.data());
+
+  size_t res = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+  if (res == static_cast<size_t>(-1)) {
+    std::cerr << "conversion from UTF-8 to UTF-16 failed: " << strerror(errno)
+              << std::endl;
+    iconv_close(cd);
+    throw std::runtime_error("iconv failed");
+  }
+
+  iconv_close(cd);
+
+  // Resize the output string to the actual converted size
+  utf16str.resize((outbuf - reinterpret_cast<char*>(utf16str.data())) /
+                  sizeof(wchar_t));
+
+  return utf16str;
 #endif
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
