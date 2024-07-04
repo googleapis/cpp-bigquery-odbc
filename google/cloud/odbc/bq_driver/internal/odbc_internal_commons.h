@@ -133,6 +133,25 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
 }
+inline std::string convertDateToAndFro(DSValue const& value, std::string& str) {
+  str.assign(value.begin(), value.end());
+  std::regex date_pattern(R"(\d{4}-\d{2}-\d{2})");
+  if (std::regex_match(str, date_pattern)) {
+    return str;
+  }
+  throw std::invalid_argument(
+      "Invalid date format. Expected format: YYYY-MM-DD");
+}
+inline void DateToDSValue(std::string const& str, DSValue& value) {
+  // Validate the date string format
+  std::regex date_pattern(R"(\d{4}-\d{2}-\d{2})");
+  if (!std::regex_match(str, date_pattern)) {
+    throw std::invalid_argument(
+        "Invalid date format. Expected format: YYYY-MM-DD");
+  }
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
+}
 
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be

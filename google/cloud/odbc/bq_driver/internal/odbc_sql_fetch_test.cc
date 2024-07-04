@@ -24,17 +24,18 @@ using google::cloud::odbc_bq_driver::SQLBindColInternal;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-
+using SQLDATE = std::string;
 struct TestingResultSetRow {
   SQLBIGINT int_field;
   SQLDOUBLE double_field;
   std::string str_field;
+  SQLDATE date_field;
 };
 
 std::vector<TestingResultSetRow> const kTestingResultSetValues = {
     {9223372036854775807, /* highest int64 */
-     7.123, "12a"},
-    {12, 1.2, "12a"}};
+     7.123, "12a", "2020-10-10"},
+    {12, 1.2, "12a", "2020-10-10"}};
 
 void CreateTestingResultSet(ResultSet& result_set) {
   result_set.row_schema = {{
@@ -48,13 +49,18 @@ void CreateTestingResultSet(ResultSet& result_set) {
                            {
                                2,
                                BQDataType::kString,
+                           },
+                           {
+                               3,
+                               BQDataType::kDate,
                            }};
   for (TestingResultSetRow rs_row : kTestingResultSetValues) {
-    DSValue int_val, double_val, str_val;
+    DSValue int_val, double_val, str_val, date_val;
     ArithmeticToDSValue<SQLBIGINT>(rs_row.int_field, int_val);
     ArithmeticToDSValue<SQLDOUBLE>(rs_row.double_field, double_val);
     StringToDSValue(rs_row.str_field, str_val);
-    DSRow ds_row{int_val, double_val, str_val};
+    DateToDSValue(rs_row.date_field, date_val);
+    DSRow ds_row{int_val, double_val, str_val, date_val};
     result_set.rows.emplace_back(ds_row);
   }
 }
@@ -62,7 +68,7 @@ void CreateTestingResultSet(ResultSet& result_set) {
 TEST(WriteRowset, Success_Basic) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
-  SQLCHAR int_buf[20], double_buf[20], str_buf[20];
+  SQLCHAR int_buf[20], double_buf[20], str_buf[20], date_buf[20];
   status =
       SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 20, nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -73,6 +79,10 @@ TEST(WriteRowset, Success_Basic) {
 
   status =
       SQLBindColInternal(&stmt_handle, 3, SQL_C_CHAR, str_buf, 20, nullptr);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  status = SQLBindColInternal(&stmt_handle, 4, SQL_C_TYPE_DATE, date_buf, 20,
+                              nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
 
   ResultSet result_set;
@@ -90,6 +100,8 @@ TEST(WriteRowset, Success_Basic) {
   EXPECT_EQ(*double_populated, kTestingResultSetValues[0].double_field);
   std::string str_populated = (char*)(SQLCHAR*)str_buf;
   EXPECT_EQ(str_populated, kTestingResultSetValues[0].str_field);
+  SQLDATE date_populated(reinterpret_cast<char*>(date_buf));
+  EXPECT_EQ(date_populated, kTestingResultSetValues[0].date_field);
 
   // Writing second row
   status_record = WriteRowset(result_set, 1, ard);
@@ -97,6 +109,7 @@ TEST(WriteRowset, Success_Basic) {
   EXPECT_EQ(*int_populated, kTestingResultSetValues[1].int_field);
   EXPECT_EQ(*double_populated, kTestingResultSetValues[1].double_field);
   EXPECT_EQ(str_populated, kTestingResultSetValues[1].str_field);
+  EXPECT_EQ(date_populated, kTestingResultSetValues[1].date_field);
 }
 
 TEST(WriteRowset, Failure_TranslationOutOfRange) {
