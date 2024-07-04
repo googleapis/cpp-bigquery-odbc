@@ -697,6 +697,89 @@ TEST(StatementTest, RollBackTransaction) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+StdRows const kSampleData2{
+    {"Test String 1", 1, 1.1}
+};
+
+// Verify if the inserted data(<input_data>) is the same as the data fetched
+// col-wise Note: This doesn't verify the integrity of the fetched rows
+void VerifyColumnWiseResults2(StdRows input_data, Results col_wise_data,
+                             std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      input_col_values.emplace_back(data.str_field);
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
+    }
+  }
+}
+
+void FetchDataTest2(bool use_bind_col, bool use_ansi = false) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_CHECK_RESULTS_TEST_2_" +
+                          (use_ansi ? "ANSI_" : "NON_ANSI") +
+                          (use_bind_col ? "true" : "false");
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  if (use_ansi) {
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+    table.CreateWithPrepare(
+        conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  } else {
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.CreateWithPrepare(
+        conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.InsertData(conn, kSampleData2, use_ansi, true);
+//  SQLLEN rows_count = 0;
+//  auto status = SQLRowCount(conn->hstmt, &rows_count);
+//  CheckError(status, "SQLRowCount", conn);
+//  EXPECT_EQ(rows_count, kSampleData2.size());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *FetchResults(conn, query, use_bind_col);
+
+  VerifyColumnWiseResults2(kSampleData2, results, std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLFetch2) { FetchDataTest2(true); }
+
 void PrepareAndCheckQuery(std::string const& query,
                           std::shared_ptr<ODBCHandles> conn,
                           int expected_param_count,

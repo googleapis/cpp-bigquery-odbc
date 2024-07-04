@@ -401,6 +401,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, i + 1, use_ansi);
+    col_ptr->data_size = static_cast<SQLULEN>(kBufferLength);
 
     std::string col_name = (char*)col_ptr->name;
 
