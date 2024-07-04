@@ -56,6 +56,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLEndTran;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLForeignKeys;
@@ -91,6 +92,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLEndTran;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLForeignKeys;
@@ -2878,6 +2880,7 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
                              SQLSMALLINT completionType) {
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLEndTran");
   // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type
   status = AcquireHandleMutex(handle, handleType);
   if (status != SQL_SUCCESS) {
@@ -2885,10 +2888,16 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
   }
   // passed in. Call to Trace function entry in odbc_trace.h if tracing is
   // enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLEndTran(handleType, handle, completionType,
+                                  *(*kTraceOption));
 
   // Call to internal function for SQLEndTran in odbc_statement.h.
+  rc = google::cloud::odbc_bq_driver::SQLEndTranInternal(handleType, handle,
+                                                         completionType);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLEndTran(rc, *(*kTraceOption));
   // Call to Release mutex in odbc_lock.h, as applicable for the handle type
   status = ReleaseHandleMutex(handle, handleType);
   if (status != SQL_SUCCESS) {
