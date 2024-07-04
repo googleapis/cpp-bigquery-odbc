@@ -390,9 +390,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
-  SQLSMALLINT num_cols;
-  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
-  CheckError(status, "SQLNumResultCols", conn);
+  SQLSMALLINT num_cols = 1;
+//  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
+//  CheckError(status, "SQLNumResultCols", conn);
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
@@ -401,6 +401,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, i + 1, use_ansi);
+    col_ptr->data_size = static_cast<SQLULEN>(kBufferLength);
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -436,15 +437,17 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      auto col_name = (char*)cols[i_c]->name;
-      SQLPOINTER data = cols[i_c]->data;
+      std::cout << "Index: " << i_c << "\n";
+      std::cout << "Name: " << std::string((char*)(cols[i_c]->name)) << "\n";
+      std::cout << "Data: " << std::string((char*)(cols[i_c]->data)) << "\n";
+      std::string col_name = reinterpret_cast<char*>(cols[i_c]->name);
       SQLLEN data_len = cols[i_c]->data_len;
 
-      if (data_len == -1) {
-        results[col_name].emplace_back(std::string());
+      if (data_len == SQL_NULL_DATA) {
+        results[col_name].emplace_back();
         continue;
       }
-      std::string val = (char*)data;
+      std::string val = reinterpret_cast<char*>(cols[i_c]->data);
       results[col_name].push_back(val);
     }
   }

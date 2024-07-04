@@ -39,10 +39,6 @@ class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
                          testing::Values(false, true));
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
     {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
@@ -112,7 +108,8 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
 
     // Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for (int i = 0; i < ret_col_values.size(); i++) {
+    auto min = std::min(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < min; i++) {
       EXPECT_EQ(ret_col_values[i], input_col_values[i]);
     }
   }
@@ -149,6 +146,10 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
   table.Drop(conn, use_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -640,15 +641,17 @@ TEST(StatementTest, FetchDirectRowWise) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(StatementTest, RollBackTransaction) {
   std::string const table_name =
-      kDatasetWithTablePrefix + "_RollBackTransaction";
+      kDatasetWithTablePrefix + "RollBackTransaction";
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
+  table.CreateWithPrepare(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
   // Insert some data to the table
@@ -691,11 +694,9 @@ TEST(StatementTest, RollBackTransaction) {
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void PrepareAndCheckQuery(std::string const& query,
                           std::shared_ptr<ODBCHandles> conn,

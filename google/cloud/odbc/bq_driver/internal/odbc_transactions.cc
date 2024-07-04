@@ -20,6 +20,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
 StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
@@ -45,6 +46,27 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
     return ds_status_record_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(true);
+  return StatusRecord::Ok();
+}
+
+StatusRecord FinishTransactionIfNeeded(ConnectionHandle& conn_handle,
+                                       SQLSMALLINT completion_type) {
+  if (!conn_handle.IsTransactionActive()) {
+    return StatusRecord::Ok();
+  }
+  if (completion_type != SQL_COMMIT && completion_type != SQL_ROLLBACK) {
+    return {SQLStates::k_HY012(), "Invalid transaction operation code"};
+  }
+  std::string query = completion_type == SQL_COMMIT ? "COMMIT TRANSACTION;"
+                                                    : "ROLLBACK TRANSACTION;";
+  PostQueryRequest post_request =
+      ConstructBasicPostQueryRequest(conn_handle, query);
+
+  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+  if (!ds_status_record_or) {
+    return ds_status_record_or.GetStatusRecord();
+  }
+  conn_handle.SetTransactionActive(false);
   return StatusRecord::Ok();
 }
 

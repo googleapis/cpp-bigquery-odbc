@@ -241,7 +241,7 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
     case SQL_INTEGER:
-      col_ptr->data_type = SQL_C_LONG;
+      col_ptr->data_type = SQL_C_SLONG;
       break;
     case SQL_DOUBLE:
       col_ptr->data_type = SQL_C_DOUBLE;
