@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <regex>
 
@@ -25,6 +26,7 @@ using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -177,6 +179,11 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   // risk.
   if (query_text == nullptr) {
     return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
+  }
+
+  StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
+  if (!transaction_status.ok()) {
+    return transaction_status;
   }
 
   Job req;
