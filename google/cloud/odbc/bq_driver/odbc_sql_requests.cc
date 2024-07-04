@@ -17,7 +17,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -26,7 +25,6 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
-using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -264,13 +262,6 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   if (in_text_length < 1) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
     return LogAndReturnCode(handle_ref, status_record);
-  }
-
-  StatusRecord transaction_status =
-      BeginTransactionIfNeeded(*handle_ref.GetConnectionHandle());
-  if (!transaction_status.ok()) {
-    handle_ref.GetDiagnostics().AddStatusRecord(transaction_status);
-    return transaction_status.CalculateReturnCode();
   }
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);

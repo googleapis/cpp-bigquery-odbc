@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
@@ -26,7 +27,7 @@ TEST(BeginTransactionIfNeeded, Success_TransactionIsStarted) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   conn_handle.SetTransactionActive(true);
   conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT,
-                           reinterpret_cast<SQLPOINTER>(SQL_AUTOCOMMIT_OFF), 0);
+                           ToSqlPointer(SQL_AUTOCOMMIT_OFF), 0);
 
   StatusRecord status = BeginTransactionIfNeeded(conn_handle);
 
@@ -35,8 +36,8 @@ TEST(BeginTransactionIfNeeded, Success_TransactionIsStarted) {
 
 TEST(BeginTransactionIfNeeded, Success_AutocommitIsOn) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
-  conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT,
-                           reinterpret_cast<SQLPOINTER>(SQL_AUTOCOMMIT_ON), 0);
+  conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT, ToSqlPointer(SQL_AUTOCOMMIT_ON),
+                           0);
 
   StatusRecord status = BeginTransactionIfNeeded(conn_handle);
 
