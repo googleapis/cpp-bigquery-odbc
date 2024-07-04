@@ -48,7 +48,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
 
 StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
                         DescriptorHandle& ard) {
+  std::cout << "Size: " << schema.size() << "\n";
   for (ColumnSchema const& col_schema : schema) {
+    std::cout << "Column ind: " << col_schema.col_index << " : Column: " << col_schema.col_type << "\n";
     int col_index = col_schema.col_index;
     DSValue const& ds_val = ds_row[col_index];
     // Column is not bound.
