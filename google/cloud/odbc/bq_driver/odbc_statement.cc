@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -26,6 +27,8 @@ using google::cloud::odbc_bq_driver_internal::AddressToPointer;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::FinishTransactionIfNeeded;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
@@ -346,6 +349,47 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(*handle, status);
   }
   return IntValueToOutputBufferResponse(*status, value, value_string_len);
+}
+
+SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
+                             SQLSMALLINT completion_type) {
+  if (handle_type == SQL_HANDLE_DBC) {
+    StatusRecordOr<ConnectionHandle*> handle_result =
+        ValidateConnectionHandle(handle);
+    if (!handle_result) {
+      TracePrintInternal(*(*kTraceOption),
+                         handle_result.GetStatusRecord().message);
+      return handle_result.GetCalculatedReturnCode();
+    }
+    ConnectionHandle& conn_handle = *(*handle_result);
+
+    StatusRecord status_record =
+        FinishTransactionIfNeeded(conn_handle, completion_type);
+    if (!status_record.ok()) {
+      return LogAndReturnCode(conn_handle, status_record);
+    }
+  } else if (handle_type == SQL_HANDLE_ENV) {
+    StatusRecordOr<EnvironmentHandle*> handle_result =
+        ValidateEnvironmentHandle(handle);
+    if (!handle_result) {
+      TracePrintInternal(*(*kTraceOption),
+                         handle_result.GetStatusRecord().message);
+      return handle_result.GetCalculatedReturnCode();
+    }
+    EnvironmentHandle& env_handle = *(*handle_result);
+
+    for (auto* conn_handle : env_handle.GetConnectionHandles()) {
+      StatusRecord status_record =
+          FinishTransactionIfNeeded(*conn_handle, completion_type);
+      if (!status_record.ok()) {
+        return LogAndReturnCode(*conn_handle, status_record);
+      }
+    }
+  } else {
+    TracePrintInternal(*(*kTraceOption), "HandleType is undefined");
+    return SQL_INVALID_HANDLE;
+  }
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -23,6 +23,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 odbc_internal::StatusRecord BeginTransactionIfNeeded(
     ConnectionHandle& conn_handle);
 
+odbc_internal::StatusRecord FinishTransactionIfNeeded(
+    ConnectionHandle& conn_handle, SQLSMALLINT completion_type);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TRANSACTIONS_H
