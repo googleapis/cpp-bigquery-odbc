@@ -252,8 +252,7 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
   }
   return utf8Str;
 #else
-
-  iconv_t cd = iconv_open("UTF-8", "UTF-16LE");
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
 
   int errorno = -1;
   int* errorptr = &errorno;
@@ -308,7 +307,7 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
   return utf16Str;
 #else
 
-  iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
+  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -318,9 +317,9 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
 
   // Use string length for input byte count
   size_t inbytesleft = utf8Str.length();
-  // Allocate more space for the output buffer (2x should be enough for UTF-16)
-  size_t outbytesleft = inbytesleft * 2;
-  std::wstring utf16str(outbytesleft / sizeof(wchar_t), L'\0');
+  // Allocate more space for the output buffer
+  size_t outbytesleft = inbytesleft * sizeof(wchar_t);
+  std::wstring utf16str(outbytesleft + sizeof(wchar_t), L'\0');
 
   char* inbuf = const_cast<char*>(utf8Str.data());
   char* outbuf = reinterpret_cast<char*>(utf16str.data());
