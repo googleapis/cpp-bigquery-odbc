@@ -20,6 +20,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 
@@ -42,6 +43,24 @@ TEST(BeginTransactionIfNeeded, Success_AutocommitIsOn) {
   StatusRecord status = BeginTransactionIfNeeded(conn_handle);
 
   EXPECT_TRUE(status.ok());
+}
+
+TEST(FinishTransactionIfNeeded, DoNothing_NoActiveTransaction) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+
+  StatusRecord status = FinishTransactionIfNeeded(conn_handle, SQL_COMMIT);
+
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(FinishTransactionIfNeeded, Fail_InvalidCompletionType) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  conn_handle.SetTransactionActive(true);
+
+  StatusRecord status = FinishTransactionIfNeeded(conn_handle, 111);
+
+  EXPECT_EQ(SQLStates::k_HY012(), status.sql_state);
+  EXPECT_EQ("Invalid transaction operation code", status.message);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

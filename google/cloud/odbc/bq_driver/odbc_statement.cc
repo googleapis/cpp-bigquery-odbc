@@ -387,7 +387,7 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
     }
   } else {
     TracePrintInternal(*(*kTraceOption), "HandleType is undefined");
-    return SQL_ERROR;
+    return SQL_INVALID_HANDLE;
   }
   return SQL_SUCCESS;
 }
