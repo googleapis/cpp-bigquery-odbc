@@ -301,6 +301,64 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+void Table::InsertJsonData(std::shared_ptr<ODBCHandles> conn, StdJsonRows rows,
+                           bool use_ansi, bool use_sqlprepare) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::string row_str = "( ";
+
+    auto int_field = row.int_field;
+    if (int_field != NULL) {
+      row_str.append(std::to_string(int_field) + ", ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    auto json_field = row.json_field;
+    if (json_field != NULL) {
+      row_str.append("JSON '");
+      row_str.append(to_string(json_field));
+      row_str.append("'");
+    } else {
+      row_str.append("NULL");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status;
+  if (use_sqlprepare) {
+    if (use_ansi) {
+      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                           insert_stmt.size());
+    } else {
+      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                          insert_stmt.size());
+    }
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn, use_ansi);
+  } else {
+    if (use_ansi) {
+      status =
+          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    } else {
+      status =
+          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    }
+    CheckError(status, "SQLExecDirect", conn, use_ansi);
+  }
+}
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];

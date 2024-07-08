@@ -47,6 +47,15 @@ struct Int64BasicTestStruct {
   SQLRETURN status;
 };
 
+struct JsonBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  nlohmann::json value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
 std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
     {SQL_C_FLOAT, "19.1", SQL_SUCCESS},
@@ -113,6 +122,34 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
     {SQL_C_BIT, 0, SQL_SUCCESS},
     {SQL_C_BIT, 1, SQL_SUCCESS},
     {SQL_C_BIT, 2, SQL_ERROR},
+};
+
+std::vector<JsonBasicTestStruct> const kConversionFromJsonTestData{
+    {SQL_C_CHAR, 123, SQL_SUCCESS},
+    {SQL_C_FLOAT, 156, SQL_SUCCESS},
+    {SQL_C_FLOAT, -157, SQL_SUCCESS},
+    {SQL_C_FLOAT, 9223372036854775807 /* highest int64 */, SQL_SUCCESS},
+    {SQL_C_DOUBLE, -38, SQL_SUCCESS},
+    {SQL_C_SSHORT, 31, SQL_SUCCESS},
+    {SQL_C_SSHORT, -31, SQL_SUCCESS},
+    {SQL_C_USHORT, 3, SQL_SUCCESS},
+    {SQL_C_USHORT, 65537 /* 2^16 + 1 */, SQL_ERROR},
+    {SQL_C_USHORT, -3, SQL_ERROR},
+    {SQL_C_SSHORT, 9223372036854775807, SQL_ERROR},
+    {SQL_C_SLONG, -13, SQL_SUCCESS},
+    {SQL_C_ULONG, 81, SQL_SUCCESS},
+    {SQL_C_ULONG, -8, SQL_ERROR},
+    {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BIT, 1, SQL_SUCCESS},
+    {SQL_C_BIT, 2, SQL_ERROR},
+};
+
+StdJsonRows const kJsonSampleData{
+    {5, {"age" : 45.78, "name" : "Virat"}},
+    {4, {"age" : 45.5, "name" : "Ram"}},
+    {1, {"age" : 30, "name" : "Alice"}},
+    {3, {"age" : 55, "name" : "Kavita"}},
+    {2, {"age" : 24, "name" : "Bob"}},
 };
 
 template <typename TestStruct>
@@ -392,6 +429,117 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+void TestTranslationsFromJson(std::shared_ptr<ODBCHandles> conn,
+                              std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  // Read all the rows using SQLFetch
+  int row_count = 0;
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    while (1) {
+      StrBasicTestStruct expected = kConversionFromStrTestData[row_count];
+      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                          kBufferLength, &strlen_or_ind);
+      std::cout << "Testing row: " << expected.target_c_type << ", "
+                << expected.value << ", " << expected.status << std::endl;
+      EXPECT_EQ(status, expected.status);
+      if (status != SQL_SUCCESS) {
+        row_count++;
+        break;
+      }
+      CheckError(status,
+                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+                 conn);
+      if (SQL_SUCCEEDED(status)) {
+        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        if (status == SQL_NO_DATA) {
+          if (strlen_or_ind >= 0) {
+            // Refer
+            // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+            // to understand the expectations regarding typecasting applications
+            // buffers.
+            if (expected.target_c_type == SQL_C_CHAR) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_FLOAT) {
+              SQLREAL* returned_val = (SQLREAL*)data;
+              EXPECT_EQ(*returned_val, std::stof(expected.value));
+            } else if (expected.target_c_type == SQL_C_DOUBLE) {
+              SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
+              EXPECT_EQ(*returned_val, std::stod(expected.value));
+            } else if (expected.target_c_type == SQL_C_SSHORT) {
+              SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
+            } else if (expected.target_c_type == SQL_C_USHORT) {
+              SQLUSMALLINT* returned_val = (SQLUSMALLINT*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
+            } else if (expected.target_c_type == SQL_C_SLONG) {
+              SQLINTEGER* returned_val = (SQLINTEGER*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
+            } else if (expected.target_c_type == SQL_C_ULONG) {
+              SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
+              EXPECT_EQ(*returned_val, std::stoi(expected.value));
+            } else if (expected.target_c_type == SQL_C_BIT) {
+              SQLCHAR* returned_val = (SQLCHAR*)data;
+              EXPECT_EQ(*returned_val, std::stod(expected.value));
+            }
+            row_count++;
+          }
+          break;
+        }
+        CheckError(status, "SQLGetDiagField", conn);
+      } else {
+        break;
+      }
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromJsonTestData.size());
+}
+
+TEST(DataTranslationTest, From_Json_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_JSON";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(index INTEGER, JsonField JSON)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertJsonData(conn, kJsonSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT JsonField FROM " + table_name;
+  TestTranslationsFromString(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

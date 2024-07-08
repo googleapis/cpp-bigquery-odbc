@@ -19,6 +19,7 @@
 #include "google/cloud/internal/backoff_policy.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 #include <algorithm>
 #include <locale.h>
 #include <map>
@@ -128,7 +129,13 @@ struct StdRow {
   SQLDOUBLE float_field;
 };
 
+struct StdJsonRow {
+  SQLBIGINT int_field;
+  nlohmann::json json_field;
+};
+
 using StdRows = std::vector<StdRow>;
+using StdJsonRows = std::vector<StdJsonRow>;
 
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
@@ -292,6 +299,9 @@ class Table {
   // be populated to order the values
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
+
+  void InsertJsonData(std::shared_ptr<ODBCHandles> conn, StdJsonRows rows,
+                      bool use_ansi = false, bool use_sqlprepare = false);
 
  private:
   std::string table_name_;
