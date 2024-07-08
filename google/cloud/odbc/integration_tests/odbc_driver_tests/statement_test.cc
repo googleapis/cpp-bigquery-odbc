@@ -21,6 +21,19 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
+#ifdef _WIN32
+#undef SQLPrepare
+#undef SQLSetCursorName
+#undef SQLGetCursorName
+#undef SQLSetStmtAttr
+#undef SQLSetConnectAttr
+#undef SQLGetStmtAttr
+#undef SQLGetConnectAttr
+#undef SQLSetDescField
+#undef SQLGetDescField
+#undef SQLExecDirect
+#undef SQLDescribeCol
+#endif
 namespace google::cloud::odbc_tests {
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
