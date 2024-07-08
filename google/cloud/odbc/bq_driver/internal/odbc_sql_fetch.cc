@@ -76,9 +76,10 @@ StatusRecord WriteRowset(ResultSet const& result_set, int rowset_size,
   // We write 'rowset_size' rows from result_set.rows starting at the index
   // 'cursor'
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
-       i++, result_set.cursor = i) {
+       i++) {
     StatusRecord status_record =
         WriteDSRow(result_set.rows[i], result_set.row_schema, ard);
+    result_set.cursor++;
     if (!status_record.ok()) {
       return status_record;
     }

@@ -116,6 +116,7 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
   EXPECT_EQ("Numeric value out of range", status_record.message);
+  EXPECT_EQ(result_set.cursor, 1);
 }
 
 TEST(WriteRowset, Failure_FractionalTruncation) {
@@ -137,6 +138,7 @@ TEST(WriteRowset, Failure_FractionalTruncation) {
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
+  EXPECT_EQ(result_set.cursor, 1);
   SQLINTEGER* double_populated = (SQLINTEGER*)double_buf;
   EXPECT_EQ(*double_populated, floor(kTestingResultSetValues[0].double_field));
 }
