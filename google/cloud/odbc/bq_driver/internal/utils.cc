@@ -270,9 +270,12 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
 
   std::string utf8str(outbytesleft, '\0');
 
-  wchar_t utf16wchar[1026];
-  wcpcpy(utf16wchar, utf16Str.c_str());
-  char* inbuf = reinterpret_cast<char*>(utf16wchar);
+  //wchar_t utf16wchar[1026];
+  //wcpcpy(utf16wchar, utf16Str.c_str());
+
+  std::vector<wchar_t> utf16wchar(utf16Str.begin(), utf16Str.end());
+  //utf16wchar.emplace_back(L'\0');
+  char* inbuf = reinterpret_cast<char*>(utf16wchar.data());
   char* outbuf = utf8str.data();
 
   size_t res = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
