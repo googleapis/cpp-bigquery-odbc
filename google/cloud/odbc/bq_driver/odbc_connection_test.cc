@@ -173,4 +173,15 @@ TEST(SQLDisconnectInternal, Fail_NotConnectedHandle) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
+TEST(SQLDisconnectInternal, Fail_ActiveTransaction) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  conn_handle.SetTransactionActive(true);
+
+  auto status = SQLDisconnectInternal(&conn_handle);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_25000(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
