@@ -252,7 +252,7 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "UTF-16");
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
 
   int errorno = -1;
   int* errorptr = &errorno;
