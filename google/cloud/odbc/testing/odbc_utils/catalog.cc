@@ -15,7 +15,12 @@
 
 #include "catalog.h"
 #include "google/cloud/internal/getenv.h"
-
+#ifdef _WIN32
+#undef SQLTables
+#undef SQLSetStmtAttr
+#undef SQLPrimaryKeys
+#undef SQLForeignKeys
+#endif
 namespace google::cloud::odbc_tests {
 
 Catalog::~Catalog() = default;
@@ -26,13 +31,13 @@ std::vector<SQLTableResult> Catalog::GetTables(
     bool use_ansi) {
   SQLRETURN status;
 
-  #ifdef _WIN32
-  const int res_cols = 5;
-  #else
+#ifdef WIN32
+  int const res_cols = 5;
+#else
   int res_cols = 5;
-  #endif
-  
-  CatalogDataBuffer columns[res_cols];
+#endif
+
+  TestingDataBuffer columns[res_cols];
   std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
@@ -98,12 +103,12 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string dataset, std::string table,
                                        bool use_ansi) {
   SQLRETURN status;
-  #ifdef _WIN32
-  const int res_cols = 5;
-  #else
-  int res_cols = 5;
-  #endif
-    int col_idx = 0;
+#ifdef WIN32
+  int const res_cols = 6;
+#else
+  int res_cols = 6;
+#endif
+  int col_idx = 0;
   Catalog catalog_result[res_cols];
   RowWiseResults results;
 
@@ -207,12 +212,12 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string pk_table,
                                        std::string fk_table, bool use_ansi) {
   SQLRETURN status;
-  #ifdef _WIN32
-  const int res_cols = 5;
-  #else
-  int res_cols = 5;
-  #endif
-  
+#ifdef WIN32
+  int const res_cols = 11;
+#else
+  int res_cols = 11;
+#endif
+
   int col_idx = 0;
   Catalog catalog_result[res_cols];
   RowWiseResults results;

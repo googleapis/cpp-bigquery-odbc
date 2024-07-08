@@ -14,7 +14,10 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include <map>
-
+#ifdef _WIN32
+#undef SQLGetStmtAttr
+#undef SQLGetDescField
+#endif
 namespace google::cloud::odbc_tests {
 
 void TestCTypeBasic(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {

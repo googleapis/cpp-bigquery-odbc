@@ -65,8 +65,12 @@ Authentication CreateAuth(Section& dsn_section) {
 StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
                                        std::string const& dsn_name) {
   // TODO(#159): this has to handle windows too
-  std::string odbcini_path =
-      google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni();
+  std::string odbcini_path;
+#ifdef _WIN32
+  odbcini_path = "Software\\ODBC\\ODBC.INI";
+#else
+  odbcini_path = google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni();
+#endif
   if (!odbcini_path.empty()) {
     auto sections_status =
         google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);

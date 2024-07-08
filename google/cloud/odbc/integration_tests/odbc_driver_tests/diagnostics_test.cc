@@ -14,6 +14,11 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include <gmock/gmock.h>
+#ifdef _WIN32
+#undef SQLGetDiagField
+#undef SQLGetDiagRec
+#undef SQLGetInfo
+#endif
 
 namespace google::cloud::odbc_tests {
 

@@ -17,6 +17,10 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include <gtest/gtest.h>
 
+#ifdef _WIN32
+#undef SQLGetStmtAttr
+#undef SQLGetDescField
+#endif
 namespace google::cloud::odbc_tests {
 
 enum class DescriptorType { kAPD, kIPD };

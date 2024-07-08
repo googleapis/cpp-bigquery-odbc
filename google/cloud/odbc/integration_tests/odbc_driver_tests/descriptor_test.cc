@@ -194,11 +194,12 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
       status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
                                SQL_IS_SMALLINT, NULL);
     }
-    #ifdef _WIN32
-    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, 1); 
-    #else
-    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, __USE_DYNAMIC_STACK_SIZE);
-    #endif
+#ifdef _WIN32
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, 1);
+#else
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
+               __USE_DYNAMIC_STACK_SIZE);
+#endif
     EXPECT_EQ(ToBqFieldType(desc_copy.type), ToBqFieldType(schema[i].type));
   }
 }
