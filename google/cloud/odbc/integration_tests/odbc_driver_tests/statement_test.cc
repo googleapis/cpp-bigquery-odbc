@@ -1480,4 +1480,15 @@ TEST(SQLDescribeColumn, ValidateColumnDetails) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(JSONStatementTest, SQLExecute) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //EXPECT_EQ(InsertJsonStatement(conn), SQL_SUCCESS);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+ //std::string query = "SELECT PersonDetails FROM ODBC_TEST_DATASET._ODBC_INSERT_PARAMS_TEST_JSONfalse";
+  std::string query = "select name from ODBC_TEST_DATASET._ODBC_INSERT_PARAMS_Gaurav_TEST";
+  auto results = *FetchResults(conn, query, true);
+  //VerifyColumnWiseJsonResults(kJsonSampleData, results, std::vector<std::string>());
+}
+
 }  // namespace google::cloud::odbc_tests
