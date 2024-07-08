@@ -37,6 +37,7 @@ using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
@@ -209,6 +210,12 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* conn_handle = *handle_result;
+
+  if (conn_handle->IsTransactionActive()) {
+    StatusRecord record{SQLStates::k_25000(),
+                        "Outstanding transactions during disconnect"};
+    return LogAndReturnCode(*conn_handle, record);
+  }
 
   conn_handle->Disconnect();
   std::vector<DescriptorHandle*> desc_handles(
