@@ -1549,8 +1549,15 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
   std::cout << "Here 2" << std::endl;
 
   // Handle Unicode conversion of input parameters.
-  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
-  std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr.data());
+  //std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
+
+std::wstring stmt_txt_wstr;
+stmt_txt_wstr.reserve(statementTextLen);
+for (SQLSMALLINT i = 0; i < statementTextLen; ++i) {
+    stmt_txt_wstr.push_back(static_cast<wchar_t>(statementText[i]));
+}
+
+  std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr.c_str());
   if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt.length();
   std::wcout << "Here 3 " << stmt_txt_wstr << std::endl;
   std::cout << "Here 4 " << utf8_stmt_txt << std::endl;

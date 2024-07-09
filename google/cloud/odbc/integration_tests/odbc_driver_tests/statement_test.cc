@@ -1327,7 +1327,7 @@ TEST(SQLPrepare, InsertQueryUnicode) {
   std::wstring query(
       L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
   std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
-  sqlWStr.emplace_back(L'\0');
+  //sqlWStr.emplace_back(L'\0');
 
   auto status = SQLPrepareW(conn->hstmt, sqlWStr.data(), query.length());
   CheckError(status, "SQLPrepare", conn);

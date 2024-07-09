@@ -252,45 +252,33 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+    std::wcout<<"utf16Str :"<<utf16Str.c_str()<<std::endl;
+    iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+    if (cd == (iconv_t)-1) {
+        throw std::runtime_error("iconv_open failed: " + std::string(strerror(errno)));
+    }
 
-  int errorno = -1;
-  int* errorptr = &errorno;
-  if (cd == reinterpret_cast<iconv_t>(errorptr)) {
-    std::cerr << "iconv_open for utf16 failed: " << strerror(errno)
-              << std::endl;
-    throw std::runtime_error("iconv_open failed");
-  }
+    std::vector<char> inbuf(reinterpret_cast<const char*>(utf16Str.data()),
+                            reinterpret_cast<const char*>(utf16Str.data() + utf16Str.length()));
+    size_t inbytesleft = inbuf.size();
+    size_t outbytesleft = inbytesleft * 3; // Allocate more space for output
 
-  // Use string length * sizeof(wchar_t) to get the correct byte count
-  size_t inbytesleft = utf16Str.length() * sizeof(wchar_t);
-  // Allocate more space for the output buffer (3x should be enough for most
-  // cases)
-  size_t outbytesleft = inbytesleft * 3;
+    std::string utf8str(outbytesleft, '\0');
+    char* inptr = inbuf.data();
+    char* outptr = &utf8str[0];
 
-  std::string utf8str(outbytesleft, '\0');
+    size_t res = iconv(cd, &inptr, &inbytesleft, &outptr, &outbytesleft);
+    if (res == static_cast<size_t>(-1)) {
+        std::cerr << "conversion for utf16 failed: " << strerror(errno)
+                  << " (errno: " << errno << ")" << std::endl;
+        iconv_close(cd);
+        throw std::runtime_error("iconv16 failed");
+    }
 
-  //wchar_t utf16wchar[1026];
-  //wcpcpy(utf16wchar, utf16Str.c_str());
-
-  std::vector<wchar_t> utf16wchar(utf16Str.begin(), utf16Str.end());
-  //utf16wchar.emplace_back(L'\0');
-  char* inbuf = reinterpret_cast<char*>(utf16wchar.data());
-  char* outbuf = utf8str.data();
-
-  size_t res = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-  if (res == static_cast<size_t>(-1)) {
-    std::cerr << "conversion for utf16 failed: " << strerror(errno)
-              << std::endl;
     iconv_close(cd);
-    throw std::runtime_error("iconv16 failed");
-  }
-
-  iconv_close(cd);
-
-  // Resize the output string to the actual converted size
-  utf8str.resize(outbuf - utf8str.data());
-  return utf8str;
+    std::cout<<"utf16Str converted :"<<utf8str<<std::endl;
+    utf8str.resize(outptr - &utf8str[0]);
+    return utf8str;
 #endif
 }
 
