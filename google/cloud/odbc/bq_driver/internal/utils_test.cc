@@ -329,9 +329,12 @@ TEST(UnicodeConversion, Success_UnicodeConversion_test) {
   std::wstring wstr = L"आपका स्वागत है";
   std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
   sqlWStr.emplace_back(L'\0');
-  std::string result_str = Utf16ToUtf8(sqlWStr.data());
-  EXPECT_EQ("आपका स्वागत है", result_str);
+
+  SQLWCHAR* statementText = sqlWStr.data();
+  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
+   std::string result_str = Utf16ToUtf8(stmt_txt_wstr.data());
+  EXPECT_STREQ("आपका स्वागत है", result_str.data());
   std::wstring result_wstr = Utf8ToUtf16(result_str);
-  EXPECT_STREQ(sqlWStr.data(), result_wstr.data());
+  EXPECT_STREQ(stmt_txt_wstr.data(), result_wstr.data());
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

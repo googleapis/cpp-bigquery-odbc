@@ -298,7 +298,7 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
   return utf16Str;
 #else
 
-  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
+  iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
