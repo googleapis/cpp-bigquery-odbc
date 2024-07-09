@@ -20,11 +20,21 @@ namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
+using SQLDATE = std::string;
 struct StrBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
   std::string value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+struct DateBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQLDATE value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
@@ -71,6 +81,42 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_BIT, "0", SQL_SUCCESS},
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
+};
+std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
+    // Conversions to SQL_C_CHAR
+    {SQL_C_CHAR, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_CHAR, "2020-02-29", SQL_SUCCESS},  // Leap year
+    {SQL_C_CHAR, "2019-02-29", SQL_ERROR},    // Invalid date, not a leap year
+    {SQL_C_CHAR, "2024-13-01", SQL_ERROR},    // Invalid month
+    {SQL_C_CHAR, "2024-06-31", SQL_ERROR},    // Invalid day
+
+    // Conversions to SQL_C_WCHAR
+    {SQL_C_WCHAR, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2020-02-29", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2019-02-29", SQL_ERROR},
+    {SQL_C_WCHAR, "2024-13-01", SQL_ERROR},
+    {SQL_C_WCHAR, "2024-06-31", SQL_ERROR},
+
+    // Conversions to SQL_C_BINARY
+    {SQL_C_BINARY, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_BINARY, "2020-02-29", SQL_SUCCESS},
+    {SQL_C_BINARY, "2019-02-29", SQL_ERROR},
+    {SQL_C_BINARY, "2024-13-01", SQL_ERROR},
+    {SQL_C_BINARY, "2024-06-31", SQL_ERROR},
+
+    // Conversions to SQL_C_TYPE_DATE
+    {SQL_C_TYPE_DATE, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2020-02-29", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2019-02-29", SQL_ERROR},
+    {SQL_C_TYPE_DATE, "2024-13-01", SQL_ERROR},
+    {SQL_C_TYPE_DATE, "2024-06-31", SQL_ERROR},
+
+    // Conversions to SQL_C_TYPE_TIMESTAMP
+    {SQL_C_TYPE_TIMESTAMP, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2020-02-29", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2019-02-29", SQL_ERROR},
+    {SQL_C_TYPE_TIMESTAMP, "2024-13-01", SQL_ERROR},
+    {SQL_C_TYPE_TIMESTAMP, "2024-06-31", SQL_ERROR},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
@@ -285,6 +331,73 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
   }
   EXPECT_EQ(row_count, kConversionFromStrTestData.size());
 }
+void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn,
+                              std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  int row_count = 0;
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    while (1) {
+      DateBasicTestStruct expected = kConversionFromDateTestData[row_count];
+      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                          kBufferLength, &strlen_or_ind);
+      std::cout << "Testing row: " << expected.target_c_type << ", "
+                << expected.value << ", " << expected.status << std::endl;
+      EXPECT_EQ(status, expected.status);
+      if (status != SQL_SUCCESS) {
+        row_count++;
+        break;
+      }
+      CheckError(status,
+                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+                 conn);
+      if (SQL_SUCCEEDED(status)) {
+        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        if (status == SQL_NO_DATA) {
+          if (strlen_or_ind >= 0) {
+            if (expected.target_c_type == SQL_C_CHAR ||
+                expected.target_c_type == SQL_C_WCHAR) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_BINARY) {
+              std::string returned_val((char*)data, strlen_or_ind);
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TYPE_DATE ||
+                       expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+              SQL_DATE_STRUCT* date_val = (SQL_DATE_STRUCT*)data;
+              std::string returned_val = std::to_string(date_val->year) + "-" +
+                                         std::to_string(date_val->month) + "-" +
+                                         std::to_string(date_val->day);
+              EXPECT_EQ(returned_val, expected.value);
+            }
+            row_count++;
+          }
+          break;
+        }
+        CheckError(status, "SQLGetDiagField", conn);
+      } else {
+        break;
+      }
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromDateTestData.size());
+}
 
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16
@@ -320,7 +433,39 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+// This test should follow translations according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-date?view=sql-server-ver16
+TEST(DataTranslationTest, From_SQL_DATE_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_DATE";
+  Table table(table_name);
 
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(index INT64, DateField DATE)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<std::string> date_data_to_insert;
+  for (auto elem : kConversionFromDateTestData) {
+    date_data_to_insert.push_back(elem.value);
+  }
+  table.InsertDateData(conn, date_data_to_insert, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT DateField FROM " + table_name + " ORDER BY index";
+  TestTranslationsFromDate(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {

@@ -297,6 +297,9 @@ class Table {
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
+  void InsertDateData(std::shared_ptr<ODBCHandles> conn,
+                      std::vector<std::string> rows, bool insert_index = false);
+
  private:
   std::string table_name_;
 };
