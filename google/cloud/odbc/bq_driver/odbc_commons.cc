@@ -39,6 +39,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      (*handle_result)->GetMutex().unlock();
       (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
@@ -57,6 +58,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
         conn_handle->GetEnvironmentHandle()->GetConnectionHandles().erase(
             conn_handle);
       }
+      (*handle_result)->GetMutex().unlock();
       (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
@@ -75,6 +77,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
         stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
             stmt_handle);
       }
+      stmt_handle->GetMutex().unlock();
       stmt_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
@@ -99,6 +102,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
         desc_handle->GetConnectionHandle()->GetDescriptorHandles().erase(
             desc_handle);
       }
+      desc_handle->GetMutex().unlock();
       desc_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;
