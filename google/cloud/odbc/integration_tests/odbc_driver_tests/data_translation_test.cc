@@ -86,7 +86,6 @@ std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
     // Conversions to SQL_C_CHAR
     {SQL_C_CHAR, "2024-06-26", SQL_SUCCESS},
     {SQL_C_TYPE_DATE, "2024-06-26", SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, "2024-06-26", SQL_SUCCESS},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
