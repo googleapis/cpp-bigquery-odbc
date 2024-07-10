@@ -182,6 +182,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTables;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
+using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::Utf16ToUtf8;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
@@ -1549,18 +1550,11 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
   std::cout << "Here 2" << std::endl;
 
   // Handle Unicode conversion of input parameters.
-  //std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
-
-std::wstring stmt_txt_wstr;
-stmt_txt_wstr.reserve(statementTextLen);
-for (SQLSMALLINT i = 0; i < statementTextLen; ++i) {
-    stmt_txt_wstr.push_back(static_cast<wchar_t>(statementText[i]));
-}
-
-  std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr.c_str());
+  // std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t
+  // const*>(statementText));
+  std::string utf8_stmt_txt =
+      ConvertSQLWCHARToString(statementText, statementTextLen);
   if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt.length();
-  std::wcout << "Here 3 " << stmt_txt_wstr << std::endl;
-  std::cout << "Here 4 " << utf8_stmt_txt << std::endl;
 
   // Call to common internal function for SQLPrepare and SQLPrepareW
   // in odbc_sql_requests.h.

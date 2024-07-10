@@ -252,33 +252,37 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str) {
   }
   return utf8Str;
 #else
-    std::wcout<<"utf16Str :"<<utf16Str.c_str()<<std::endl;
-    iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
-    if (cd == (iconv_t)-1) {
-        throw std::runtime_error("iconv_open failed: " + std::string(strerror(errno)));
-    }
+  std::wcout << "utf16Str :" << utf16Str.c_str() << std::endl;
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+  int errorno = -1;
+  int* errorptr = &errorno;
+  if (cd == reinterpret_cast<iconv_t>(errorptr)) {
+    throw std::runtime_error("iconv_open failed: " +
+                             std::string(strerror(errno)));
+  }
 
-    std::vector<char> inbuf(reinterpret_cast<const char*>(utf16Str.data()),
-                            reinterpret_cast<const char*>(utf16Str.data() + utf16Str.length()));
-    size_t inbytesleft = inbuf.size();
-    size_t outbytesleft = inbytesleft * 3; // Allocate more space for output
+  std::vector<char> inbuf(
+      reinterpret_cast<char const*>(utf16Str.data()),
+      reinterpret_cast<char const*>(utf16Str.data() + utf16Str.length()));
+  size_t inbytesleft = inbuf.size();
+  size_t outbytesleft = inbytesleft * 3;  // Allocate more space for output
 
-    std::string utf8str(outbytesleft, '\0');
-    char* inptr = inbuf.data();
-    char* outptr = &utf8str[0];
+  std::string utf8str(outbytesleft, '\0');
+  char* inptr = inbuf.data();
+  char* outptr = utf8str.data();
 
-    size_t res = iconv(cd, &inptr, &inbytesleft, &outptr, &outbytesleft);
-    if (res == static_cast<size_t>(-1)) {
-        std::cerr << "conversion for utf16 failed: " << strerror(errno)
-                  << " (errno: " << errno << ")" << std::endl;
-        iconv_close(cd);
-        throw std::runtime_error("iconv16 failed");
-    }
-
+  size_t res = iconv(cd, &inptr, &inbytesleft, &outptr, &outbytesleft);
+  if (res == static_cast<size_t>(-1)) {
+    std::cerr << "conversion for utf16 failed: " << strerror(errno)
+              << " (errno: " << errno << ")" << std::endl;
     iconv_close(cd);
-    std::cout<<"utf16Str converted :"<<utf8str<<std::endl;
-    utf8str.resize(outptr - &utf8str[0]);
-    return utf8str;
+    throw std::runtime_error("iconv16 failed");
+  }
+
+  iconv_close(cd);
+  std::cout << "utf16Str converted :" << utf8str << std::endl;
+  utf8str.resize(outptr - utf8str.data());
+  return utf8str;
 #endif
 }
 
@@ -298,7 +302,7 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
   return utf16Str;
 #else
 
-  iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
+  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -331,5 +335,19 @@ std::wstring Utf8ToUtf16(std::string const& utf8Str) {
 
   return utf16str;
 #endif
+}
+
+std::string ConvertSQLWCHARToString(SQLWCHAR* SQLWCHARString,
+                                    SQLINTEGER SQLWCHARStringLen) {
+  std::wstring stmt_txt_wstr;
+  std::wstring wstr(reinterpret_cast<wchar_t const*>(SQLWCHARString));
+  if (SQLWCHARStringLen == SQL_NTS) {
+    SQLWCHARStringLen = wstr.size();
+  }
+  stmt_txt_wstr.reserve(SQLWCHARStringLen);
+  for (SQLINTEGER i = 0; i < SQLWCHARStringLen; ++i) {
+    stmt_txt_wstr.push_back(static_cast<wchar_t>(SQLWCHARString[i]));
+  }
+  return Utf16ToUtf8(stmt_txt_wstr);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

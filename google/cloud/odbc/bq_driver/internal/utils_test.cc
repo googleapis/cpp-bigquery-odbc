@@ -294,33 +294,25 @@ TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
   EXPECT_EQ("VIEW '", types[1]);
 }
 
-
 TEST(UnicodeConversion, Success_UnicodeConversion) {
-  //   std::wstring wstr(
-  //     L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
-  // std::vector<SQLWCHAR> sqlWStr(wstr.begin(), wstr.end());
-  // sqlWStr.emplace_back(L'\0');
-  // std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(sqlWStr));
-  // std::string result_str = Utf16ToUtf8(stmt_txt_wstr.data());
-    std::wstring query(L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
+  std::wstring query(
+      L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
   std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
-  //sqlWStr.emplace_back(L'\0');
-
-
+  sqlWStr.emplace_back(L'\0');
 
   SQLWCHAR* statementText = sqlWStr.data();
 
-SQLSMALLINT length = sqlWStr.size();
-std::wstring stmt_txt_wstr;
-stmt_txt_wstr.reserve(length);
-for (SQLSMALLINT i = 0; i < length; ++i) {
+  SQLSMALLINT length = sqlWStr.size();
+  std::wstring stmt_txt_wstr;
+  stmt_txt_wstr.reserve(length);
+  for (SQLSMALLINT i = 0; i < length; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(statementText[i]));
-}
+  }
 
-  
-   std::string result_str = Utf16ToUtf8(stmt_txt_wstr.c_str());
+  std::string result_str = Utf16ToUtf8(stmt_txt_wstr.c_str());
 
-  EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)", result_str.c_str());
+  EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)",
+               result_str.c_str());
   std::wstring result_wstr = Utf8ToUtf16(result_str);
   EXPECT_STREQ(stmt_txt_wstr.data(), result_wstr.data());
 }
@@ -329,12 +321,9 @@ TEST(UnicodeConversion, Success_UnicodeConversion_test) {
   std::wstring wstr = L"आपका स्वागत है";
   std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
   sqlWStr.emplace_back(L'\0');
-
-  SQLWCHAR* statementText = sqlWStr.data();
-  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
-   std::string result_str = Utf16ToUtf8(stmt_txt_wstr.data());
-  EXPECT_STREQ("आपका स्वागत है", result_str.data());
+  std::string result_str = Utf16ToUtf8(sqlWStr.data());
+  EXPECT_EQ("आपका स्वागत है", result_str);
   std::wstring result_wstr = Utf8ToUtf16(result_str);
-  EXPECT_STREQ(stmt_txt_wstr.data(), result_wstr.data());
+  EXPECT_STREQ(sqlWStr.data(), result_wstr.data());
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

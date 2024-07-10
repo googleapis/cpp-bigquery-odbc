@@ -90,6 +90,9 @@ std::string Utf16ToUtf8(std::wstring const& utf16Str);
 
 std::wstring Utf8ToUtf16(std::string const& utf8Str);
 
+std::string ConvertSQLWCHARToString(SQLWCHAR* SQLWCHARString,
+                                    SQLINTEGER SQLWCHARStringLen);
+
 #ifdef _WIN32
 
 constexpr int kMaxKeyLength = 4096;

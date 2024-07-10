@@ -16,6 +16,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
 using google::cloud::odbc_bq_driver_internal::FormatSqlChar;
 using google::cloud::odbc_bq_driver_internal::FormatSqlHandle;
 using google::cloud::odbc_bq_driver_internal::FormatSqlHandleType;
@@ -936,8 +937,7 @@ void TraceFunctionExit_SQLPrepare(SQLRETURN ret_code, TraceOptions& opts) {
 void TraceFunctionEntry_SQLPrepareW(SQLHSTMT statement_handle,
                                     SQLWCHAR* stmt_txt, SQLINTEGER stmt_txt_len,
                                     TraceOptions& opts) {
-  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(stmt_txt));
-  std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr);
+  std::string utf8_stmt_txt = ConvertSQLWCHARToString(stmt_txt, stmt_txt_len);
   if (stmt_txt_len != SQL_NTS) stmt_txt_len = utf8_stmt_txt.length();
 
   TraceFunctionEntry_SQLPrepare(
