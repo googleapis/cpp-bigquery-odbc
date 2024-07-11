@@ -184,7 +184,6 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTables;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
-using google::cloud::odbc_bq_driver_internal::Utf16ToUtf8;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
 using google::cloud::odbc_internal::StatusRecord;
 
@@ -380,13 +379,11 @@ SQLRETURN SQL_API SQLDriverConnectW(
         *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring in_connection_wstr(
-      reinterpret_cast<wchar_t const*>(inConnectionString));
-  std::string utf8_in_connection_str = Utf16ToUtf8(in_connection_wstr);
+  std::string utf8_in_connection_str =
+      ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
   inConnectionStringLen = utf8_in_connection_str.length();
-  std::wstring out_conn_wstr(
-      reinterpret_cast<wchar_t const*>(outConnectionString));
-  std::string utf8_out_conn_str = Utf16ToUtf8(out_conn_wstr);
+  std::string utf8_out_conn_str =
+      ConvertSQLWCHARToString(outConnectionString, *outConnectionStringLen);
   *outConnectionStringLen = utf8_out_conn_str.length();
 
   // Call to internal common function for SQLDriverConnect and SQLDriverConnectW
@@ -487,13 +484,11 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
         outConnectionStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring in_conn_wstr(
-      reinterpret_cast<wchar_t const*>(inConnectionString));
-  std::string utf8_in_connection_str = Utf16ToUtf8(in_conn_wstr.data());
+  std::string utf8_in_connection_str =
+      ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
   inConnectionStringLen = utf8_in_connection_str.length();
-  std::wstring out_conn_wstr(
-      reinterpret_cast<wchar_t const*>(outConnectionString));
-  std::string utf8_out_conn_str = Utf16ToUtf8(out_conn_wstr.data());
+  std::string utf8_out_conn_str =
+      ConvertSQLWCHARToString(outConnectionString, *outConnectionStringLen);
   *outConnectionStringLen = utf8_out_conn_str.length();
 
   // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
@@ -587,14 +582,13 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                                    authStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring server_name_wstr(reinterpret_cast<wchar_t const*>(serverName));
-  std::string utf8_server_name = Utf16ToUtf8(server_name_wstr.data());
+  std::string utf8_server_name =
+      ConvertSQLWCHARToString(serverName, serverNameLen);
   serverNameLen = utf8_server_name.length();
-  std::wstring user_name_wstr(reinterpret_cast<wchar_t const*>(userName));
-  std::string utf8_user_name = Utf16ToUtf8(user_name_wstr.data());
+  std::string utf8_user_name = ConvertSQLWCHARToString(userName, userNameLen);
   userNameLen = utf8_user_name.length();
-  std::wstring auth_str_wstr(reinterpret_cast<wchar_t const*>(authString));
-  std::string utf8_auth_str = Utf16ToUtf8(auth_str_wstr.data());
+  std::string utf8_auth_str =
+      ConvertSQLWCHARToString(authString, authStringLen);
   authStringLen = utf8_auth_str.length();
 
   // Call to internal common function for SQLConnect and SQLConnectW
@@ -1346,8 +1340,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
                                       descScale, nullable, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring name_wstr(reinterpret_cast<wchar_t const*>(name));
-  std::string utf8_name = Utf16ToUtf8(name_wstr.data());
+  std::string utf8_name = ConvertSQLWCHARToString(name, *nameStringLen);
   *nameStringLen = utf8_name.length();
 
   // Call to common internal function for SQLGetDescRec and SQLGetDescRecW
@@ -1542,16 +1535,12 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
                               SQLINTEGER statementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLPrepareW");
-  std::wcout << "Here 1 " << statementText << std::endl;
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (IsTracingEnabled)
     TraceFunctionEntry_SQLPrepareW(statementHandle, statementText,
                                    statementTextLen, *(*kTraceOption));
-  std::cout << "Here 2" << std::endl;
 
   // Handle Unicode conversion of input parameters.
-  // std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t
-  // const*>(statementText));
   std::string utf8_stmt_txt =
       ConvertSQLWCHARToString(statementText, statementTextLen);
   if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt.length();
@@ -1653,8 +1642,8 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
                                          cursorNameStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring cur_name_wstr(reinterpret_cast<wchar_t const*>(cursorName));
-  std::string utf8_cur_name = Utf16ToUtf8(cur_name_wstr.data());
+  std::string utf8_cur_name =
+      ConvertSQLWCHARToString(cursorName, *cursorNameStringLen);
   *cursorNameStringLen = utf8_cur_name.length();
 
   // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
@@ -1712,8 +1701,8 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
                                          cursorNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring cur_name_wstr(reinterpret_cast<wchar_t const*>(cursorName));
-  std::string utf8_cur_name = Utf16ToUtf8(cur_name_wstr.data());
+  std::string utf8_cur_name =
+      ConvertSQLWCHARToString(cursorName, cursorNameLen);
   cursorNameLen = utf8_cur_name.length();
 
   // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
@@ -1800,8 +1789,8 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
                                       statementTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(statementText));
-  std::string utf8_stmt_txt = Utf16ToUtf8(stmt_txt_wstr.data());
+  std::string utf8_stmt_txt =
+      ConvertSQLWCHARToString(statementText, statementTextLen);
   if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt.length();
 
   // Call to common internal function for SQLExecDirect and SQLExecDirectW
@@ -1887,13 +1876,11 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
         outStatementTextBufferLen, outStatementTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring in_stmt_txt_wstr(
-      reinterpret_cast<wchar_t const*>(inStatementText));
-  std::string utf8_in_stmt_txt = Utf16ToUtf8(in_stmt_txt_wstr.data());
+  std::string utf8_in_stmt_txt =
+      ConvertSQLWCHARToString(inStatementText, inStatementTextLen);
   inStatementTextLen = utf8_in_stmt_txt.length();
-  std::wstring out_stmt_txt_wstr(
-      reinterpret_cast<wchar_t const*>(outStatementText));
-  std::string utf8_out_stmt_txt = Utf16ToUtf8(out_stmt_txt_wstr.data());
+  std::string utf8_out_stmt_txt =
+      ConvertSQLWCHARToString(outStatementText, *outStatementTextLen);
   *outStatementTextLen = utf8_out_stmt_txt.length();
 
   // Call to common internal function for SQLNativeSql and SQLNativeSqlW
@@ -2321,8 +2308,8 @@ SQLRETURN SQL_API SQLDescribeColW(
         columnNullable, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring col_name_wstr(reinterpret_cast<wchar_t const*>(columnName));
-  std::string utf8_col_name = Utf16ToUtf8(col_name_wstr.data());
+  std::string utf8_col_name =
+      ConvertSQLWCHARToString(columnName, *columnNameLen);
   *columnNameLen = utf8_col_name.length();
 
   // Call to common internal function for SQLDescribeCol and SQLDescribeColW
@@ -2624,10 +2611,9 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
         messageTextBufferLen, messageTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring sql_state_wstr(reinterpret_cast<wchar_t const*>(sqlState));
-  std::string utf8_sql_state = Utf16ToUtf8(sql_state_wstr.data());
-  std::wstring msg_txt_wstr(reinterpret_cast<wchar_t const*>(messageText));
-  std::string utf8_msg_txt = Utf16ToUtf8(msg_txt_wstr.data());
+  std::string utf8_sql_state = ConvertSQLWCHARToString(sqlState, NULL);
+  std::string utf8_msg_txt =
+      ConvertSQLWCHARToString(messageText, *messageTextLen);
   *messageTextLen = utf8_msg_txt.length();
 
   // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
@@ -2706,17 +2692,17 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
         tableName, tableNameLen, columnName, columnNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
-  std::wstring col_name_wstr(reinterpret_cast<wchar_t const*>(columnName));
-  std::string utf8_col_name = Utf16ToUtf8(col_name_wstr.data());
+  std::string utf8_col_name =
+      ConvertSQLWCHARToString(columnName, columnNameLen);
   columnNameLen = utf8_col_name.length();
 
   // Call to common internal function for SQLColumns and SQLColumnsW
@@ -2797,17 +2783,17 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
         tableName, tableNameLen, tableType, tableTypeLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
-  std::wstring table_type_wstr(reinterpret_cast<wchar_t const*>(tableType));
-  std::string utf8_table_type = Utf16ToUtf8(table_type_wstr.data());
+  std::string utf8_table_type =
+      ConvertSQLWCHARToString(tableType, tableNameLen);
   tableTypeLen = utf8_table_type.length();
 
   // Call to common internal function for SQLTables and SQLTablesW
@@ -2882,14 +2868,14 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
         tableName, tableNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
 
   // Call to common internal function for SQLPrimaryKeys and SQLPrimaryKeysW
@@ -2963,17 +2949,16 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
         procName, procNameLen, columnName, columnNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring proc_name_wstr(reinterpret_cast<wchar_t const*>(procName));
-  std::string utf8_proc_name = Utf16ToUtf8(proc_name_wstr.data());
+  std::string utf8_proc_name = ConvertSQLWCHARToString(procName, procNameLen);
   procNameLen = utf8_proc_name.length();
-  std::wstring col_name_wstr(reinterpret_cast<wchar_t const*>(columnName));
-  std::string utf8_col_name = Utf16ToUtf8(col_name_wstr.data());
+  std::string utf8_col_name =
+      ConvertSQLWCHARToString(columnName, columnNameLen);
   columnNameLen = utf8_col_name.length();
 
   // Call to common internal function for SQLProcedureColumns and
@@ -3043,14 +3028,13 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
                                       procName, procNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring proc_name_wstr(reinterpret_cast<wchar_t const*>(procName));
-  std::string utf8_proc_name = Utf16ToUtf8(proc_name_wstr.data());
+  std::string utf8_proc_name = ConvertSQLWCHARToString(procName, procNameLen);
   procNameLen = utf8_proc_name.length();
 
   // Call to common internal function for SQLProcedures and SQLProceduresW
@@ -3124,14 +3108,14 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
         colNullable, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
 
   // Call to common internal function for SQLSpecialColumns and
@@ -3203,14 +3187,14 @@ SQLRETURN SQL_API SQLStatisticsW(
         tableName, tableNameLen, indexType, reserved, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
 
   // Call to common internal function for SQLStatistics and SQLStatisticsW
@@ -3278,14 +3262,14 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
         tableName, tableNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
 
   // Call to common internal function for SQLTablePrivileges and
@@ -3386,29 +3370,23 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
         fkTableNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring pk_catalog_name_wstr(
-      reinterpret_cast<wchar_t const*>(pkCatalogName));
-  std::string utf8_pk_catalog_name = Utf16ToUtf8(pk_catalog_name_wstr.data());
+  std::string utf8_pk_catalog_name =
+      ConvertSQLWCHARToString(pkCatalogName, pkCatalogNameLen);
   pkCatalogNameLen = utf8_pk_catalog_name.length();
-  std::wstring pk_schema_name_wstr(
-      reinterpret_cast<wchar_t const*>(pkSchemaName));
-  std::string utf8_pk_schema_name = Utf16ToUtf8(pk_schema_name_wstr.data());
+  std::string utf8_pk_schema_name =
+      ConvertSQLWCHARToString(pkSchemaName, pkSchemaNameLen);
   pkSchemaNameLen = utf8_pk_schema_name.length();
-  std::wstring pk_table_name_wstr(
-      reinterpret_cast<wchar_t const*>(pkTableName));
-  std::string utf8_pk_table_name = Utf16ToUtf8(pk_table_name_wstr.data());
+  std::string utf8_pk_table_name =
+      ConvertSQLWCHARToString(pkTableName, pkTableNameLen);
   pkTableNameLen = utf8_pk_table_name.length();
-  std::wstring fk_catalog_name_wstr(
-      reinterpret_cast<wchar_t const*>(fkCatalogName));
-  std::string utf8_fk_catalog_name = Utf16ToUtf8(fk_catalog_name_wstr.data());
+  std::string utf8_fk_catalog_name =
+      ConvertSQLWCHARToString(fkCatalogName, fkCatalogNameLen);
   fkCatalogNameLen = utf8_fk_catalog_name.length();
-  std::wstring fk_schema_name_wstr(
-      reinterpret_cast<wchar_t const*>(fkSchemaName));
-  std::string utf8_fk_schema_name = Utf16ToUtf8(fk_schema_name_wstr.data());
+  std::string utf8_fk_schema_name =
+      ConvertSQLWCHARToString(fkSchemaName, fkSchemaNameLen);
   fkSchemaNameLen = utf8_fk_schema_name.length();
-  std::wstring fk_table_name_wstr(
-      reinterpret_cast<wchar_t const*>(fkTableName));
-  std::string utf8_fk_table_name = Utf16ToUtf8(fk_table_name_wstr.data());
+  std::string utf8_fk_table_name =
+      ConvertSQLWCHARToString(fkTableName, fkTableNameLen);
   fkTableNameLen = utf8_fk_table_name.length();
 
   // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
@@ -3490,17 +3468,17 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
         tableName, tableNameLen, columnName, columnNameLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::wstring catalog_name_wstr(reinterpret_cast<wchar_t const*>(catalogName));
-  std::string utf8_catalog_name = Utf16ToUtf8(catalog_name_wstr.data());
+  std::string utf8_catalog_name =
+      ConvertSQLWCHARToString(catalogName, catalogNameLen);
   catalogNameLen = utf8_catalog_name.length();
-  std::wstring schema_name_wstr(reinterpret_cast<wchar_t const*>(schemaName));
-  std::string utf8_schema_name = Utf16ToUtf8(schema_name_wstr.data());
+  std::string utf8_schema_name =
+      ConvertSQLWCHARToString(schemaName, schemaNameLen);
   schemaNameLen = utf8_schema_name.length();
-  std::wstring table_name_wstr(reinterpret_cast<wchar_t const*>(tableName));
-  std::string utf8_table_name = Utf16ToUtf8(table_name_wstr.data());
+  std::string utf8_table_name =
+      ConvertSQLWCHARToString(tableName, tableNameLen);
   tableNameLen = utf8_table_name.length();
-  std::wstring col_name_wstr(reinterpret_cast<wchar_t const*>(columnName));
-  std::string utf8_col_name = Utf16ToUtf8(col_name_wstr.data());
+  std::string utf8_col_name =
+      ConvertSQLWCHARToString(columnName, columnNameLen);
   columnNameLen = utf8_col_name.length();
   // Call to common internal function for SQLColumnPrivileges and
   // SQLColumnPrivilegesW in odbc_driver_metadata.h.
