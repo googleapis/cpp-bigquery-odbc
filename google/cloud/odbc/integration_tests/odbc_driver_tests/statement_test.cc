@@ -1268,30 +1268,6 @@ TEST(SQLPrepare, ParametrizedQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query = "Select 123\0";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  // Cast hstmt to StatementHandle*
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-  EXPECT_EQ(stmt_handle->GetQueryString(), query);
-
-#endif
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLPrepare, ValidateIrdDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -1346,6 +1322,31 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select 123\0";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+  EXPECT_EQ(stmt_handle->GetQueryString(), query);
+
+#endif
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
   auto conn = std::make_shared<ODBCHandles>();
 
