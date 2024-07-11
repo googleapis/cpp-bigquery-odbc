@@ -23,6 +23,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::CancelJobRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
@@ -572,8 +573,10 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsFull) {
   std::string project_id = "project_id";
   QueryRequest query_request;
   query_request.set_maximum_bytes_billed(1);
-  query_request.set_default_dataset(
-      {.dataset_id = "dataset_id", .project_id = "project_id"});
+  DatasetReference ds_ref;
+  ds_ref.project_id = "project_id";
+  ds_ref.dataset_id = "dataset_id";
+  query_request.set_default_dataset(ds_ref);
   PostQueryResults expected;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
@@ -692,8 +695,10 @@ TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsFull) {
   std::string project_id = "project_id";
   QueryRequest query_request;
   query_request.set_maximum_bytes_billed(1);
-  query_request.set_default_dataset(
-      {.dataset_id = "dataset_id", .project_id = "project_id"});
+  DatasetReference ds_ref;
+  ds_ref.project_id = "project_id";
+  ds_ref.dataset_id = "dataset_id";
+  query_request.set_default_dataset(ds_ref);
 
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(project_id);

@@ -24,8 +24,9 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        msvc: [ msvc-2022, msvc-2019 ]
-        arch: [ x64 ]
+        # msvc: [ msvc-2022, msvc-2019 ]
+        msvc: [ msvc-2022 ]
+        arch: [ x64, x86 ]
         shard: [ Core ]
     steps:
     - uses: actions/checkout@v3
@@ -42,6 +43,18 @@ jobs:
     - uses: google-github-actions/setup-gcloud@v1
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
+    - name: Download and Install ODBC Driver
+      shell: powershell
+      run: |
+        .\ci\gha\builds\lib\odbc-driver-install.ps1
+    #- name: Download and Install ODBC Driver
+    #  shell: bash
+    #  run: |
+    #    export GCS_BUCKET=bq-dev-tools-testing-drivers
+    #    export ODBC_DRIVER_VERSION=3.0.5.1011
+    #    export ODBC_DRIVER_MSI_NAME=SimbaODBCDriverforGoogleBigQuery64_${ODBC_DRIVER_VERSION}.msi
+    #    gsutil -m cp gs://${GCS_BUCKET}/odbc-windows/64/${ODBC_DRIVER_MSI_NAME} .
+    #    msiexec /i ${ODBC_DRIVER_MSI_NAME} /qn /l*v install_log.txt 
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -84,6 +97,8 @@ jobs:
         # Put the CMake output in a directory with more space and keep it short
         # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
+        export MSVC_VERSION="${{ matrix.msvc }}"
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_${{ matrix.shard}}"
         ci/gha/builds/windows-cmake.sh
     env:
       SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
