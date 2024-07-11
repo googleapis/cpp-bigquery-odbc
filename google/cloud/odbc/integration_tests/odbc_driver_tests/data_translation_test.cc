@@ -58,6 +58,7 @@ struct Int64BasicTestStruct {
 };
 StdDateRows const kDateSampleData{
     {5, {2000, 1, 1}},
+    {2, {2024, 3, 20}},
 };
 std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
@@ -86,8 +87,8 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
 };
 std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
     // Conversions to SQL_C_CHAR
-    {SQL_C_CHAR, "2000/01/01", SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, "2024/03/20", SQL_SUCCESS},
+    {SQL_C_CHAR, "2000-01-01", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024-03-20", SQL_SUCCESS},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
