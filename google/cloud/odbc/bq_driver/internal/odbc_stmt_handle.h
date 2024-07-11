@@ -118,8 +118,6 @@ class StatementHandle : public Handle {
   GetPreparedJob() {
     return prepared_job_;
   }
-  inline std::string GetQueryStr() { return query_str_; }
-
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
  protected:
