@@ -64,6 +64,8 @@
 #undef SQLColAttribute
 #undef SQLColAttributes
 #undef SQLNativeSql
+#undef SQLSetPos
+#undef SQLCancelHandle
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -57,7 +57,7 @@ INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 StdRows const kSampleData{
-    {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
+    {"Test String 1", 1, 1.1},      {"", 237, 2.22},
     {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
     {"Test String 5", 53, 5},       {"Test String 6", 698, 0.31},
     {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
