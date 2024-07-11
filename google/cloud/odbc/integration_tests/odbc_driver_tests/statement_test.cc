@@ -1273,6 +1273,7 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
   std::string query = "SELECT id from INTEGRATION_TESTS.Test_Table";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
