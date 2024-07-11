@@ -1293,7 +1293,6 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
 }
 
 TEST(SQLPrepare, ValidateIrdDescriptor) {
-
   auto conn = std::make_shared<ODBCHandles>();
 
   // Execute a read query and check whether the results returned are as expected
