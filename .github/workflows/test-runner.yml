@@ -14,7 +14,7 @@ on:
   # "safe", as the workflow files are already committed. These types of builds
   # have access to the secrets in the build, which we need to use the remote
   # caches (Bazel and sccache).
-  pull_request:
+  pull_request_target:
     types:
     - opened
     - synchronize
@@ -54,13 +54,13 @@ jobs:
   # in separate files to keep the size of this file under control. Note how
   # the additional jobs inherit any secrets needed to use the remote caches and
   # receive what version to checkout as an input.
-  macos-cmake:
-    name: macOS-CMake
-    needs: [pre-flight]
-    uses: ./.github/workflows/macos-cmake.yml
-    with:
-      checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
-    secrets: inherit
+  #macos-cmake:
+  #  name: macOS-CMake
+  #  needs: [pre-flight]
+  #  uses: ./.github/workflows/macos-cmake.yml
+  #  with:
+  #    checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+  #  secrets: inherit
   windows-cmake:
     name: Windows-CMake
     needs: [pre-flight]

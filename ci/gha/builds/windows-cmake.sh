@@ -20,6 +20,8 @@ source "$(dirname "$0")/../../lib/init.sh"
 source module ci/gha/builds/lib/windows.sh
 source module ci/gha/builds/lib/cmake.sh
 
+export ODBC_TESTS_DSN="SampleDSN"
+
 if [[ -z "${CMAKE_OUT:-}" ]]; then
   CMAKE_OUT=cmake-out
 fi
@@ -43,12 +45,18 @@ fi
 # [2]: https://stackoverflow.com/questions/3775406
 args+=("-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:NO")
 
+args+=("-DODBC_INTEGRATION_TESTING=ON")
+args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
+args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
+args+=("-DODBC_UNIT_TESTING=ON")
+
+
 io::log_h1 "Starting Build"
 TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
 time {
   # Always run //google/cloud:status_test in case the list of targets has
   # no unit tests.
-  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=17
+  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=20
 }
 
 if command -v sccache >/dev/null 2>&1; then

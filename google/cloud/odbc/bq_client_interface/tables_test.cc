@@ -65,7 +65,7 @@ TEST(GetTable, GetTable_EmptyInputParams) {
   std::string project_id;
   std::string dataset_id;
   std::string table_id;
-  TableFilter table_filter{.selected_fields = {}};
+  TableFilter table_filter{{}};
   Table table{"t-kind", "t-etag", "table_id"};
   auto mock = std::make_shared<MockTableConnection>();
   EXPECT_CALL(*mock, options);
