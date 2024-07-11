@@ -17,12 +17,14 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterType;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -63,8 +65,13 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kInt64: {
-            auto l_data = std::stol(data);
-            IntToDSValue(l_data, row_val);
+            SQLBIGINT l_data = std::stoll(data);
+            ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
+            break;
+          }
+          case BQDataType::kFloat64: {
+            SQLDOUBLE d_data = std::stod(data);
+            ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
             break;
           }
           default: {
@@ -81,8 +88,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
 }
 
 StatusRecordOr<ResultSet> ProcessPostQueryResults(
-    PostQueryResults const& postQueryResults) {
-  if (!postQueryResults.job_complete) {
+    PostQueryResults const& post_query_results) {
+  if (!post_query_results.job_complete) {
     // If this method is being called then the assumption is PostQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
@@ -90,12 +97,13 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
-  return ProcessResultSetRows(postQueryResults.schema, postQueryResults.rows);
+  return ProcessResultSetRows(post_query_results.schema,
+                              post_query_results.rows);
 }
 
 StatusRecordOr<ResultSet> ProcessGetQueryResults(
-    GetQueryResults const& getQueryResults) {
-  if (!getQueryResults.job_complete) {
+    GetQueryResults const& get_query_results) {
+  if (!get_query_results.job_complete) {
     // If this method is being called then the assumption is GetQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
@@ -103,26 +111,52 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
-  return ProcessResultSetRows(getQueryResults.schema, getQueryResults.rows);
+  return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
 
-odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
-    DSResults const& queryResults) {
+StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
-          queryResults.data_source_results)) {
+          query_results.data_source_results)) {
     return ProcessPostQueryResults(
-        absl::get<PostQueryResults>(queryResults.data_source_results));
+        absl::get<PostQueryResults>(query_results.data_source_results));
   }
   if (absl::holds_alternative<GetQueryResults>(
-          queryResults.data_source_results)) {
+          query_results.data_source_results)) {
     return ProcessGetQueryResults(
-        absl::get<GetQueryResults>(queryResults.data_source_results));
+        absl::get<GetQueryResults>(query_results.data_source_results));
+  }
+  return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
+}
+
+StatusRecordOr<std::vector<RowData>> GetRowsResults(
+    DSResults const& query_results) {
+  if (absl::holds_alternative<PostQueryResults>(
+          query_results.data_source_results)) {
+    auto results =
+        absl::get<PostQueryResults>(query_results.data_source_results);
+    if (!results.job_complete) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Unexpected value for job_complete: expecting true"};
+    }
+    return results.rows;
+  }
+  if (absl::holds_alternative<GetQueryResults>(
+          query_results.data_source_results)) {
+    auto results =
+        absl::get<GetQueryResults>(query_results.data_source_results);
+    if (!results.job_complete) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Unexpected value for job_complete: expecting true"};
+    }
+    return results.rows;
   }
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
 }
 
 StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle, PostQueryRequest const& postQueryResults) {
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
     return StatusRecord{SQLStates::k_08S01(),
@@ -137,7 +171,7 @@ StatusRecordOr<DSResults> FetchBQData(
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
-  auto pq_status = bq_client->PostQuery(postQueryResults, options);
+  auto pq_status = bq_client->PostQuery(post_query_request, options);
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
@@ -155,11 +189,14 @@ StatusRecordOr<DSResults> FetchBQData(
     }
     results.data_source_results = *gq_status;
   }
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status->session_info.session_id);
+  }
   return results;
 }
 
-odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
-    std::string const& type) {
+StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
   }
@@ -219,34 +256,190 @@ odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
-odbc_internal::StatusRecordOr<std::vector<QueryParameter>>
-ConstructStringQueryParameters(
+StatusRecordOr<QueryParameter> ConstructStringQueryParameter(
+    std::string const& parameter_name, std::string const& parameter_value) {
+  if (parameter_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  }
+
+  QueryParameter query_param;
+  QueryParameterType query_param_type;
+  QueryParameterValue query_param_value;
+
+  query_param_type.type = "STRING";
+  query_param_value.value = parameter_value;
+  query_param.name = parameter_name;
+  query_param.parameter_type = query_param_type;
+  query_param.parameter_value = query_param_value;
+
+  return query_param;
+}
+
+StatusRecordOr<QueryParameter> ConstructStringArrayQueryParameter(
+    std::string const& parameter_name,
+    std::vector<std::string> const& parameter_values) {
+  if (parameter_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  }
+  if (parameter_values.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Empty parameter values"};
+  }
+
+  QueryParameter query_param;
+  QueryParameterType query_param_type;
+  QueryParameterType query_param_array_type;
+  QueryParameterValue query_param_value;
+
+  query_param_array_type.type = "STRING";
+  query_param_type.type = "ARRAY";
+  query_param_type.array_type =
+      std::make_shared<QueryParameterType>(query_param_array_type);
+  for (auto const& param_val : parameter_values) {
+    QueryParameterValue query_param_array_value;
+    query_param_array_value.value = param_val;
+    query_param_value.array_values.push_back(query_param_array_value);
+  }
+  query_param.name = parameter_name;
+  query_param.parameter_type = query_param_type;
+  query_param.parameter_value = query_param_value;
+
+  return query_param;
+}
+
+StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params) {
   std::vector<QueryParameter> query_params;
-  for (auto const& entry : params) {
-    std::string parameter_name = entry.first;
-    std::string parameter_value = entry.second;
-
-    if (parameter_name.empty()) {
-      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
+  for (auto const& [parameter_name, parameter_value] : params) {
+    auto query_parameter_response =
+        ConstructStringQueryParameter(parameter_name, parameter_value);
+    if (!query_parameter_response) {
+      return query_parameter_response.GetStatusRecord();
     }
-    if (parameter_value.empty()) {
-      return StatusRecord{SQLStates::k_HY000(), "Invalid parameter value"};
-    }
-
-    QueryParameter query_param;
-    QueryParameterType query_param_type;
-    QueryParameterValue query_param_value;
-
-    query_param_type.type = "STRING";
-    query_param_value.value = parameter_value;
-    query_param.name = parameter_name;
-    query_param.parameter_type = query_param_type;
-    query_param.parameter_value = query_param_value;
-
-    query_params.emplace_back(query_param);
+    query_params.emplace_back(*query_parameter_response);
   }
   return query_params;
+}
+
+PostQueryRequest ConstructBasicPostQueryRequest(
+    ConnectionHandle const& conn_handle, std::string const& query_str) {
+  std::string catalog = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+  // Construct query request.
+  query_request.set_dry_run(false);
+  query_request.set_query(query_str);
+  query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  if (!default_dataset.empty()) {
+    DatasetReference ds_ref;
+    // Set dataset info.
+    ds_ref.project_id = catalog;
+    ds_ref.dataset_id = default_dataset;
+    query_request.set_default_dataset(ds_ref);
+  }
+  if (conn_handle.IsSessionStarted()) {
+    query_request.set_connection_properties(
+        {{"session_id", conn_handle.GetSessionId()}});
+  } else if (conn_handle.GetDsn().sessions_enabled) {
+    query_request.set_create_session(true);
+  }
+  // Set billing info and query request.
+  post_request.set_project_id(catalog);
+  post_request.set_query_request(query_request);
+  return post_request;
+}
+
+odbc_internal::StatusRecordOr<PostQueryRequest>
+ConstructNamedParametersPostQueryRequest(
+    std::string const& catalog, std::string const& dataset,
+    std::string const& named_query,
+    std::vector<QueryParameter> const& named_query_params) {
+  if (catalog.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: catalog name is required"};
+  }
+  if (dataset.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: dataset name is required"};
+  }
+  if (named_query.empty()) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Cannot construct named parameter query "
+                        "request: parametrized query is required"};
+  }
+  PostQueryRequest post_request;
+  QueryRequest query_request;
+  DatasetReference ds_ref;
+  // Set dataset info.
+  ds_ref.project_id = catalog;
+  ds_ref.dataset_id = dataset;
+  // Construct query request.
+  query_request.set_dry_run(false);
+  query_request.set_default_dataset(ds_ref);
+  query_request.set_query(named_query);
+  // Following are specific to parametrized queries.
+  query_request.set_parameter_mode("NAMED");
+  query_request.set_query_parameters(named_query_params);
+  query_request.set_use_legacy_sql(false);
+  // Set billing info and query request.
+  post_request.set_project_id(catalog);
+  post_request.set_query_request(query_request);
+  return post_request;
+}
+
+odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
+    std::string const& type) {
+  if (type == "STRING") {
+    return SQL_VARCHAR;
+  }
+  if (type == "INTEGER" || type == "INT64") {
+    return SQL_BIGINT;
+  }
+  if (type == "BOOL" || type == "BOOLEAN") {
+    return SQL_BIT;
+  }
+  if (type == "FLOAT64" || type == "FLOAT") {
+    return SQL_DOUBLE;
+  }
+  if (type == "DECIMAL" || type == "NUMERIC") {
+    return SQL_NUMERIC;
+  }
+  if (type == "BYTES") {
+    return SQL_VARBINARY;
+  }
+  if (type == "DATE") {
+    return SQL_DATE;
+  }
+  if (type == "DATETIME") {
+    return SQL_TYPE_TIMESTAMP;
+  }
+  if (type == "TIME") {
+    return SQL_TIME;
+  }
+  if (type == "TIMESTAMP") {
+    return SQL_TYPE_TIMESTAMP;
+  }
+  if (type == "STRUCT") {
+    return SQL_VARCHAR;
+  }
+  if (type == "JSON") {
+    return SQL_VARCHAR;
+  }
+  if (type == "INTERVAL") {
+    return SQL_INTERVAL;
+  }
+  if (type == "GEOGRAPHY") {
+    return SQL_VARCHAR;
+  }
+  if (type == "ARRAY") {
+    return SQL_VARCHAR;
+  }
+  std::string err_msg = "Invalid Data Type: ";
+  err_msg.append(type);
+  return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

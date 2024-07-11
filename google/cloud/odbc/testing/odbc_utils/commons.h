@@ -35,7 +35,10 @@ namespace google::cloud::odbc_tests {
 
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
+// Column-wise results
 using Results = std::map<std::string, std::vector<std::string>>;
+// Row-wise results
+using RowWiseResults = std::vector<std::map<int, std::string>>;
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 bool const kIsBqDriver = true;
@@ -44,6 +47,8 @@ bool const kIsBqDriver = false;
 #endif
 
 constexpr SQLSMALLINT kBufferLength = 1024;
+
+std::string const kCatalogName = "bigquery-devtools-drivers";
 
 inline std::string const GetDefaultTablePrefix() {
   return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
@@ -54,6 +59,14 @@ std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
 std::string const kDatasetName = "ODBC_TEST_DATASET";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
+
+// Data Buffer used in demo and integration tests
+struct TestingDataBuffer {
+  SQLSMALLINT target_type;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
+  SQLLEN str_len;
+};
 
 // Stores information about the driver fetched from SQLGetInfo within the
 // ODBCHandles. This is populated in the ODBCHandles after calling
@@ -87,7 +100,8 @@ struct Column {
   SQLCHAR name[kBufferLength];  // Column name
   SQLSMALLINT name_len;
   SQLSMALLINT data_type;
-  SQLPOINTER data;      // Returned column data
+  SQLPOINTER data;  // Returned column data
+  TestingDataBuffer data_buf;
   SQLCHAR* result_set;  // Returned column data for a result set
   SQLULEN data_size;    // max size of column data
   // We need to allocate space for data_len_ptr in case the caller doesn't
@@ -111,8 +125,8 @@ using Schema = std::vector<ColumnMinimal>;
 
 struct StdRow {
   std::string str_field;
-  int int_field;
-  float float_field;
+  SQLBIGINT int_field;
+  SQLDOUBLE float_field;
 };
 
 using StdRows = std::vector<StdRow>;
@@ -227,16 +241,19 @@ inline std::string ToBqFieldType(SQLSMALLINT odbc_data_type) {
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
+      col_ptr->data_type = SQL_C_SBIGINT;
+      break;
     case SQL_INTEGER:
-      col_ptr->data_type = SQL_C_LONG;
+      col_ptr->data_type = SQL_C_SLONG;
       break;
     case SQL_DOUBLE:
       col_ptr->data_type = SQL_C_DOUBLE;
+      break;
     case SQL_FLOAT:
       col_ptr->data_type = SQL_C_FLOAT;
       break;
     case SQL_VARCHAR:
-    case SQL_C_CHAR:
+    case SQL_CHAR:
       col_ptr->data_type = SQL_C_CHAR;
       break;
     default:
@@ -249,13 +266,18 @@ class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
 
-  void Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
-              bool use_ansi = false);
+  void Create(std::shared_ptr<ODBCHandles> conn,
+              std::string schema_str = "(Column INT64)", bool use_ansi = false);
+
+  void CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                         std::string schema_str);
 
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
 
+  void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
+
   void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                  bool use_ansi = false);
+                  bool use_ansi = false, bool use_sqlprepare = false);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be
@@ -263,11 +285,17 @@ class Table {
   void InsertStrData(std::shared_ptr<ODBCHandles> conn,
                      std::vector<std::string> rows, bool insert_index = false);
 
-  // This is used to insert strings into a table which only has a string column.
-  // If `insert_index` is set to true, an additional column `index` will be
-  // populated to order the values
+  // This is used to insert 'double' into a table which only has a NUMERIC
+  // column. If `insert_index` is set to true, an additional column `index` will
+  // be populated to order the values
   void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<double> rows, bool insert_index = false);
+
+  // This is used to insert 'SQLBIGINT' into a table which only has a INT64
+  // column. If `insert_index` is set to true, an additional column `index` will
+  // be populated to order the values
+  void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+                       std::vector<SQLBIGINT> rows, bool insert_index = false);
 
  private:
   std::string table_name_;
@@ -279,6 +307,12 @@ std::string getSchemaStr(Schema schema);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
+
+void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                            std::string table_name, std::string schema);
+
+void DropTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                          std::string table_name);
 
 // If SQL_ASYNC_ENABLE_ON, this function can be used to run a ODBC API till the
 // status is not SQL_STILL_EXECUTING
@@ -323,6 +357,10 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
 void BindColManually(std::shared_ptr<ODBCHandles> conn,
                      std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
                      bool use_ansi = false);
+
+// Binds buffers TestingDataBuffer for StdRow type of data
+void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
+                    TestingDataBuffer* columns);
 
 }  // namespace google::cloud::odbc_tests
 

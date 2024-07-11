@@ -45,22 +45,28 @@ struct Dsn {
   std::string description;
   std::string driver;
   std::string catalog;
+  std::string default_dataset;
   std::string dsn_name;
-  bool is_bq_legacy_sql;
+  bool is_bq_legacy_sql = false;
+  bool sessions_enabled = false;
 };
 
+class EnvironmentHandle;
 class StatementHandle;
 class DescriptorHandle;
 
 class ConnectionHandle : public Handle {
  public:
+  // This constructor is used only for tests
   explicit ConnectionHandle() = default;
+  explicit ConnectionHandle(EnvironmentHandle* env_handle)
+      : env_handle_(env_handle){};
   ~ConnectionHandle() = default;
 
-  ConnectionHandle(ConnectionHandle const&) = default;
-  ConnectionHandle& operator=(ConnectionHandle const&) = default;
-  ConnectionHandle(ConnectionHandle&&) = default;
-  ConnectionHandle& operator=(ConnectionHandle&&) = default;
+  ConnectionHandle(ConnectionHandle const& connectionHandle);
+  ConnectionHandle& operator=(ConnectionHandle const& connectionHandle);
+  ConnectionHandle(ConnectionHandle&& connectionHandle) noexcept;
+  ConnectionHandle& operator=(ConnectionHandle&& connectionHandle) noexcept;
 
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
@@ -68,7 +74,7 @@ class ConnectionHandle : public Handle {
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
-  Dsn GetDsn() { return dsn_; }
+  Dsn GetDsn() const { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
@@ -85,6 +91,20 @@ class ConnectionHandle : public Handle {
 
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
   std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
+  inline EnvironmentHandle* GetEnvironmentHandle() { return env_handle_; };
+
+  std::mutex& GetMutex() const { return connection_handle_mutex_; }
+
+  inline std::string GetSessionId() const { return session_id_; }
+  inline void SetSessionId(std::string session_id) {
+    session_id_ = std::move(session_id);
+  }
+  inline bool IsSessionStarted() const { return !session_id_.empty(); }
+
+  inline bool IsTransactionActive() const { return is_transaction_active_; }
+  inline void SetTransactionActive(bool is_transaction_active) {
+    is_transaction_active_ = is_transaction_active;
+  }
 
  protected:
   bool is_connected_ = false;
@@ -105,6 +125,14 @@ class ConnectionHandle : public Handle {
   // storage of all explicitly allocated descriptor handles associated with this
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;
+  EnvironmentHandle* env_handle_{nullptr};
+  mutable std::mutex connection_handle_mutex_;
+  // Session ID of the started session.
+  // Empty string if a session wasn't started
+  std::string session_id_;
+  // True if transaction was begun within the session.
+  // False otherwise.
+  bool is_transaction_active_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

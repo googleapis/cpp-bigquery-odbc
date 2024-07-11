@@ -65,7 +65,7 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
 // the destination data type in the DataBuffer
 template <typename SrcType>
 inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
-    DSValue& src_dsval, DataBuffer& dest_data) {
+    DSValue const& src_dsval, DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   if (!std::is_arithmetic_v<SrcType>) {
@@ -79,6 +79,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
+  // Ref:
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+  // to understand the ODBC C data types and their typedefs
   // TODO(b/343404637): Handle all arithmetic types
   switch (dest_type) {
     case SQL_C_FLOAT: {
@@ -100,6 +103,28 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLDOUBLE>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_SBIGINT: {
+      auto* dest_val = static_cast<SQLBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SrcType, SQLBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLBIGINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_UBIGINT: {
+      auto* dest_val = static_cast<SQLUBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SrcType, SQLUBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLUBIGINT>(src_val);
       }
       return status_record;
     }
@@ -185,7 +210,7 @@ inline odbc_internal::StatusRecordOr<SQLDOUBLE> ConvertToDouble(
 // Assuming that DSValue hosts string data, this converts it to the destination
 // data type in the DataBuffer
 inline odbc_internal::StatusRecord ConvertFromStringDSValue(
-    DSValue& src_dsval, DataBuffer& dest_data) {
+    DSValue const& src_dsval, DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   using odbc_internal::StatusRecordOr;
@@ -233,6 +258,28 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLDOUBLE>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_SBIGINT: {
+      auto* dest_val = static_cast<SQLBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLBIGINT>(src_val);
+      }
+      return status_record;
+    }
+    case SQL_C_UBIGINT: {
+      auto* dest_val = static_cast<SQLUBIGINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SQLDOUBLE, SQLUBIGINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLUBIGINT>(src_val);
       }
       return status_record;
     }

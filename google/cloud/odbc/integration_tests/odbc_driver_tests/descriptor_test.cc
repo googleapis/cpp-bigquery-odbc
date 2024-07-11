@@ -361,6 +361,20 @@ TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetDescField, Fail_StatementIsNotPrepared) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  SQLINTEGER case_sensitive;
+  status = SQLGetDescField(conn->ird, 0, SQL_DESC_CASE_SENSITIVE,
+                           &case_sensitive, 0, NULL);
+
+  EXPECT_EQ(SQL_ERROR, status);
+}
+
 TEST(SQLGetDescFieldANSI, Field_SQL_DESC_ALLOC_TYPE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);

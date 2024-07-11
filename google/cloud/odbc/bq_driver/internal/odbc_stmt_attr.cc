@@ -52,6 +52,23 @@ bool IsValueValidForStatementAttribute(int attribute, SQLULEN value) {
           possible_values.end());
 }
 
+Descriptors::Descriptors(Descriptors const& descriptors) {
+  ard_ = std::make_unique<DescriptorHandle>(*descriptors.ard_);
+  apd_ = std::make_unique<DescriptorHandle>(*descriptors.apd_);
+  ird_ = std::make_unique<DescriptorHandle>(*descriptors.ird_);
+  ipd_ = std::make_unique<DescriptorHandle>(*descriptors.ipd_);
+};
+
+Descriptors& Descriptors::operator=(Descriptors const& descriptors) {
+  if (this != &descriptors) {
+    ard_ = std::make_unique<DescriptorHandle>(*descriptors.ard_);
+    apd_ = std::make_unique<DescriptorHandle>(*descriptors.apd_);
+    ird_ = std::make_unique<DescriptorHandle>(*descriptors.ird_);
+    ipd_ = std::make_unique<DescriptorHandle>(*descriptors.ipd_);
+  }
+  return *this;
+};
+
 StatusRecord ValidateStatementAttributeToSet(int attribute, SQLULEN value) {
   if (IsStatementAttributeReadOnly(attribute) ||
       !IsStatementAttributeValid(attribute)) {

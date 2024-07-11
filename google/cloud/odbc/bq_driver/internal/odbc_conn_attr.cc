@@ -26,7 +26,7 @@ ConnectionAttr::ConnectionAttr() {
         SupportedAttribute::kBoth, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF}},
       {SQL_ATTR_AUTOCOMMIT,
        {"SQL_ATTR_AUTOCOMMIT", ConnectionValidation::kEither,
-        SupportedAttribute::kBoth, (SQLPOINTER)SQL_AUTOCOMMIT_OFF}},
+        SupportedAttribute::kBoth, (SQLPOINTER)SQL_AUTOCOMMIT_ON}},
       {SQL_ATTR_CURRENT_CATALOG,
        {"SQL_ATTR_CURRENT_CATALOG", ConnectionValidation::kEither,
         SupportedAttribute::kBoth, nullptr}},

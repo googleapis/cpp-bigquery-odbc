@@ -20,50 +20,38 @@ namespace google::cloud::odbc_tests {
 
 Catalog::~Catalog() = default;
 
-std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
-                                            std::string dataset,
-                                            bool use_ansi) {
+std::vector<SQLTableResult> Catalog::GetTables(
+    std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
+    char const* dataset, char const* table, char const* table_type,
+    bool use_ansi) {
   SQLRETURN status;
   int res_cols = 5;
-  Catalog catalog_result[res_cols];
-  Results results;
+  TestingDataBuffer columns[res_cols];
+  std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
-    catalog_result[i].target_type = SQL_C_CHAR;
-    catalog_result[i].buffer_length = kBufferLength;
-    catalog_result[i].target_value =
-        malloc(sizeof(unsigned char) * catalog_result[i].buffer_length);
-    status = SQLBindCol(
-        conn->hstmt, (SQLUSMALLINT)i + 1, catalog_result[i].target_type,
-        catalog_result[i].target_value, catalog_result[i].buffer_length,
-        &(catalog_result[i].str_len));
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                        SQL_C_CHAR, columns[i].target_value,
+                        columns[i].buffer_length, &(columns[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
-  // No results are returned if we don't append "%"
-  auto project_id = conn->metadata.project_id + "%";
 
-  if (dataset.length()) {
-    if (use_ansi) {
-      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                          (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
-    } else {
-      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                         (SQLCHAR*)dataset.c_str(), SQL_NTS, NULL, 0, NULL, 0);
-    }
+  SQLSMALLINT dataset_length = dataset ? SQL_NTS : 0;
+  SQLSMALLINT table_length = table ? SQL_NTS : 0;
+  SQLSMALLINT table_type_length = table_type ? SQL_NTS : 0;
+
+  if (use_ansi) {
+    status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                        (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+                        table_length, (SQLCHAR*)table_type, table_type_length);
   } else {
-    if (use_ansi) {
-      status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                          NULL, 0, NULL, 0, NULL, 0);
-
-    } else {
-      status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                         NULL, 0, NULL, 0, NULL, 0);
-    }
+    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
+                       (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+                       table_length, (SQLCHAR*)table_type, table_type_length);
   }
   CheckError(status, "SQLTables", conn, use_ansi);
 
-  int i = 0, count = 0;
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -72,23 +60,42 @@ std::shared_ptr<Results> Catalog::GetTables(std::shared_ptr<ODBCHandles> conn,
       CheckError(status, "SQLFetch", conn);
       break;
     }
-    // Col1: Catalog Name/Project Id, Col2: Dataset name, Col3: Table Name
-    std::string dataset_name = (char*)catalog_result[1].target_value;
-    std::string table_name = (char*)catalog_result[2].target_value;
-    results[dataset_name].emplace_back(table_name);
+    std::string project_name =
+        (columns[0].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[0].target_value)
+            : "";
+    std::string dataset_name =
+        (columns[1].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[1].target_value)
+            : "";
+    std::string table_name =
+        (columns[2].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[2].target_value)
+            : "";
+    std::string table_type_name =
+        (columns[3].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[3].target_value)
+            : "";
+    std::string description =
+        (columns[4].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[4].target_value)
+            : "";
+
+    results.push_back(
+        {project_name, dataset_name, table_name, table_type_name, description});
   }
 
-  return std::make_shared<Results>(results);
+  return results;
 }
 
-std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
-    std::shared_ptr<ODBCHandles> conn, std::string dataset, std::string table,
-    bool use_ansi) {
+RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
+                                       std::string dataset, std::string table,
+                                       bool use_ansi) {
   SQLRETURN status;
   int res_cols = 6;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::vector<std::map<int, std::string>> results;
+  RowWiseResults results;
 
   if (dataset.empty()) {
     return results;
@@ -151,9 +158,7 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
-// TODO(sachinpro): Remove the flag once SQLFetch is implemented for Google BQ
-// Driver.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  int i = 0;
   while (1) {
     std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
@@ -162,17 +167,18 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
     }
     if (!SQL_SUCCEEDED(status)) {
       CheckError(status, "SQLFetch", conn);
-      break;
     }
     // Col1: catalog, Col2: schema, Col3: table name,
-    // Col4: column name, Col5: key sequence , Col6: primary key,
-    std::string table_cat = (char*)catalog_result[1].target_value;
-    std::string table_schema = (char*)catalog_result[2].target_value;
-    std::string table_name = (char*)catalog_result[3].target_value;
-    std::string col_name = (char*)catalog_result[4].target_value;
+    // Col4: column name, Col5: key sequence , Col6: primary key
+    // Note: ODBC coumns typically start from 1, but catalog_result
+    // will be populated starting from index 0
+    std::string table_cat = (char*)catalog_result[0].target_value;
+    std::string table_schema = (char*)catalog_result[1].target_value;
+    std::string table_name = (char*)catalog_result[2].target_value;
+    std::string col_name = (char*)catalog_result[3].target_value;
     SQLSMALLINT* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[5].target_value);
-    std::string pk_name = (char*)catalog_result[6].target_value;
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[4].target_value);
+    std::string pk_name = (char*)catalog_result[5].target_value;
 
     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
@@ -183,18 +189,18 @@ std::vector<std::map<int, std::string>> Catalog::GetPrimaryKeys(
     if (!pk_name.empty()) catalog_results.insert({6, pk_name});
     results.emplace_back(catalog_results);
   }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
   return results;
 }
 
-std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
-    std::shared_ptr<ODBCHandles> conn, std::string dataset,
-    std::string pk_table, std::string fk_table, bool use_ansi) {
+RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
+                                       std::string dataset,
+                                       std::string pk_table,
+                                       std::string fk_table, bool use_ansi) {
   SQLRETURN status;
-  int res_cols = 15;
+  int res_cols = 11;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
-  std::vector<std::map<int, std::string>> results;
+  RowWiseResults results;
   if (dataset.empty()) {
     return results;
   }
@@ -218,15 +224,10 @@ std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
   // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
   // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
   // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
-  // Col10: update rule, Col 11: delete rule, Col12: fk name,
-  // Col13: pk name, Col14: Deferrability
+  // Col10: fk name, Col11: pk name.
   SQLSMALLINT val;
   while (col_idx < res_cols) {
-    if (col_idx == 9 || col_idx == 10) {
-      // UPDATE_RULE and DELETE_RULE not supported by BQ so skip.
-      col_idx++;
-      continue;
-    } else if (col_idx == 13 || col_idx == 8) {
+    if (col_idx == 8) {
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
@@ -299,9 +300,6 @@ std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
-// TODO(sachinpro): Remove the flag once SQLFetch is implemented for Google BQ
-// Driver.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
   while (1) {
     std::map<int, std::string> catalog_results;
     status = SQLFetch(conn->hstmt);
@@ -315,22 +313,19 @@ std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
     // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
     // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
     // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
-    // Col10: update rule, Col 11: delete rule, Col12: fk name,
-    // Col13: pk name, Col14: Deferrability
-    std::string pk_table_cat = (char*)catalog_result[1].target_value;
-    std::string pk_table_schema = (char*)catalog_result[2].target_value;
-    std::string pk_table_name = (char*)catalog_result[3].target_value;
-    std::string pk_col_name = (char*)catalog_result[4].target_value;
-    std::string fk_table_cat = (char*)catalog_result[5].target_value;
-    std::string fk_table_schema = (char*)catalog_result[6].target_value;
-    std::string fk_table_name = (char*)catalog_result[7].target_value;
-    std::string fk_col_name = (char*)catalog_result[8].target_value;
+    // Col10: fk name, Col11: pk name.
+    std::string pk_table_cat = (char*)catalog_result[0].target_value;
+    std::string pk_table_schema = (char*)catalog_result[1].target_value;
+    std::string pk_table_name = (char*)catalog_result[2].target_value;
+    std::string pk_col_name = (char*)catalog_result[3].target_value;
+    std::string fk_table_cat = (char*)catalog_result[4].target_value;
+    std::string fk_table_schema = (char*)catalog_result[5].target_value;
+    std::string fk_table_name = (char*)catalog_result[6].target_value;
+    std::string fk_col_name = (char*)catalog_result[7].target_value;
     SQLSMALLINT* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[9].target_value);
-    std::string fk_name = (char*)catalog_result[12].target_value;
-    std::string pk_name = (char*)catalog_result[13].target_value;
-    SQLSMALLINT* deferrability =
-        reinterpret_cast<SQLSMALLINT*>(catalog_result[14].target_value);
+        reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
+    std::string fk_name = (char*)catalog_result[9].target_value;
+    std::string pk_name = (char*)catalog_result[10].target_value;
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
@@ -342,16 +337,15 @@ std::vector<std::map<int, std::string>> Catalog::GetForeignKeys(
     if (!fk_col_name.empty()) catalog_results.insert({8, fk_col_name});
     if (key_seq && *key_seq >= 0)
       catalog_results.insert({9, std::to_string(*key_seq)});
-    catalog_results.insert({10, "NULL"});  // UPDATE_RULE
-    catalog_results.insert({11, "NULL"});  // DELETE_RULE
+    catalog_results.insert({10, "NULL"});  // UPDATE_RULE (Not supported by BQ)
+    catalog_results.insert({11, "NULL"});  // DELETE_RULE (Not supported by BQ)
     if (!fk_name.empty()) catalog_results.insert({12, fk_name});
     if (!pk_name.empty()) catalog_results.insert({13, pk_name});
-    if (deferrability && *deferrability >= 0)
-      catalog_results.insert({14, std::to_string(*deferrability)});
+    catalog_results.insert(
+        {14, std::to_string(
+                 SQL_NOT_DEFERRABLE)});  // DEFERRABILITY (Not supported by BQ)
     results.emplace_back(catalog_results);
   }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
   return results;
 }

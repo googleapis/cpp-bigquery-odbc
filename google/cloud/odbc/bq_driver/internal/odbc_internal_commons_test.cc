@@ -37,6 +37,10 @@ using ::testing::HasSubstr;
 
 namespace {
 
+std::string const kTestCatalog = "test-catalog";
+std::string const kTestSchema = "test-schema";
+std::string const kDefaultDataset = "default-dataset";
+
 struct NativeDataTypesStruct {
   bool flag;
   char character;
@@ -184,6 +188,42 @@ TEST(DSValue, Basic_Int) {
   EXPECT_EQ(expected, actual);
 }
 
+TEST(StringToDSValue, SQLCHAR_String) {
+  const SQLCHAR expected[10] = "Hello";
+  DSValue value;
+  StringToDSValue(expected, value);
+
+  std::string dsvalue_converted;
+  DSValueToString(value, dsvalue_converted);
+  EXPECT_STREQ(dsvalue_converted.c_str(), (char*)expected);
+}
+
+TEST(ArithmeticToDSValue, Success_SQLBIGINT) {
+  SQLBIGINT expected = 404;
+  DSValue value;
+  ArithmeticToDSValue<SQLBIGINT>(expected, value);
+
+  EXPECT_EQ(DSValueToArithmetic<SQLBIGINT>(value), expected);
+}
+
+TEST(ArithmeticToDSValue, Success_SQLDOUBLE) {
+  SQLDOUBLE expected = 3.14;
+  DSValue value;
+  ArithmeticToDSValue<SQLDOUBLE>(expected, value);
+
+  EXPECT_EQ(DSValueToArithmetic<SQLDOUBLE>(value), expected);
+}
+
+TEST(StringToDSValue, Std_String) {
+  std::string expected = "Hello";
+  DSValue value;
+  StringToDSValue(expected, value);
+
+  std::string dsvalue_converted;
+  DSValueToString(value, dsvalue_converted);
+  EXPECT_EQ(dsvalue_converted, expected);
+}
+
 TEST(ProcessBQResults, ProcessPostQueryResults_Success) {
   PostQueryResults results = CreatePostQueryResults();
   auto status_record_or = ProcessPostQueryResults(results);
@@ -274,6 +314,66 @@ TEST(ProcessBQResults, GetQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
+TEST(GetRowsResults, GetQueryResults_Success) {
+  DSResults results;
+  GetQueryResults get_results = CreateGetQueryResults();
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
+}
+
+TEST(GetRowsResults, GetQueryResults_Success_Error_JobComplete) {
+  DSResults results;
+  GetQueryResults get_results;
+  get_results.job_complete = false;
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Internal Error: Unexpected value for "
+                                       "job_complete")));
+}
+
+TEST(GetRowsResults, PostQueryResults_Success) {
+  DSResults results;
+  PostQueryResults get_results = CreatePostQueryResults();
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
+}
+
+TEST(GetRowsResults, PostQueryResults_Error_JobComplete) {
+  DSResults results;
+  PostQueryResults get_results = CreatePostQueryResults();
+  get_results.job_complete = false;
+  results.data_source_results = get_results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Internal Error: Unexpected value for "
+                                       "job_complete")));
+}
+
+TEST(GetRowsResults, Failure_NoResults) {
+  DSResults results;
+
+  auto status_record_or = GetRowsResults(results);
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid query results object")));
+}
+
 TEST(FetchBQResults, Failure_Not_Connected) {
   PostQueryRequest req;
   ConnectionHandle handle;
@@ -297,7 +397,65 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(ConstructQueryParams, Success) {
+TEST(ConstructStringArrayQueryParameter, Success) {
+  auto status_record_or = ConstructStringArrayQueryParameter(
+      "param-name-1", {"param-val-1", "param-val-2"});
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  QueryParameter param = *status_record_or;
+  EXPECT_EQ(param.name, "param-name-1");
+  EXPECT_EQ(param.parameter_type.type, "ARRAY");
+  EXPECT_EQ(param.parameter_type.array_type->type, "STRING");
+  EXPECT_EQ(param.parameter_value.array_values[0].value, "param-val-1");
+  EXPECT_EQ(param.parameter_value.array_values[1].value, "param-val-2");
+}
+
+TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamName) {
+  auto status_record_or =
+      ConstructStringArrayQueryParameter("", {"param-val-1"});
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamVector) {
+  auto status_record_or =
+      ConstructStringArrayQueryParameter("param-name-1", {});
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Empty parameter values")));
+}
+
+TEST(ConstructStringQueryParameter, Success) {
+  auto status_record_or =
+      ConstructStringQueryParameter("param-name-1", "param-val-1");
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ((*status_record_or).name, "param-name-1");
+  EXPECT_EQ((*status_record_or).parameter_type.type, "STRING");
+  EXPECT_EQ((*status_record_or).parameter_value.value, "param-val-1");
+}
+
+TEST(ConstructStringQueryParameter, Success_EmptyParamValue) {
+  auto status_record_or = ConstructStringQueryParameter("param-name-1", "");
+
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  EXPECT_EQ((*status_record_or).name, "param-name-1");
+  EXPECT_EQ((*status_record_or).parameter_type.type, "STRING");
+  EXPECT_EQ((*status_record_or).parameter_value.value, "");
+}
+
+TEST(ConstructStringQueryParameter, Failure_EmptyParamName) {
+  auto status_record_or = ConstructStringQueryParameter("", "param-val-1");
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid parameter name")));
+}
+
+TEST(ConstructStringQueryParameters, Success) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"param-name-1", "param-val-1"});
   named_query_params.insert({"param-name-2", "param-val-2"});
@@ -322,7 +480,7 @@ TEST(ConstructQueryParams, Success) {
   EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
 }
 
-TEST(ConstructQueryParams, Failure_Empty_Param_name) {
+TEST(ConstructStringQueryParameters, Failure_Empty_Param_name) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"", "param-val-1"});
 
@@ -334,16 +492,202 @@ TEST(ConstructQueryParams, Failure_Empty_Param_name) {
                              HasSubstr("Invalid parameter name")));
 }
 
-TEST(ConstructQueryParams, Failure_Empty_Param_value) {
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({"param-name-1", ""});
+TEST(ConstructBasicPostQueryRequest, Basic) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = kTestCatalog;
+  conn_handle.SetUp(dsn_section, "name");
 
-  auto status_record_or = ConstructStringQueryParameters(named_query_params);
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_EQ(returned.project_id(), kTestCatalog);
+  EXPECT_EQ(returned.query_request().query(), query_str);
+  EXPECT_FALSE(returned.query_request().dry_run());
+  EXPECT_FALSE(returned.query_request().use_legacy_sql());
+  EXPECT_TRUE(returned.query_request().default_dataset().project_id.empty());
+  EXPECT_TRUE(returned.query_request().default_dataset().dataset_id.empty());
+  EXPECT_FALSE(returned.query_request().create_session());
+  EXPECT_TRUE(returned.query_request().connection_properties().empty());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["SQLDialect"] = "0";
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_TRUE(returned.query_request().use_legacy_sql());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = kTestCatalog;
+  dsn_section["DefaultDataset"] = kDefaultDataset;
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_EQ(returned.query_request().default_dataset().project_id,
+            kTestCatalog);
+  EXPECT_EQ(returned.query_request().default_dataset().dataset_id,
+            kDefaultDataset);
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["EnableSession"] = "1";
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_TRUE(returned.query_request().create_session());
+  EXPECT_TRUE(returned.query_request().connection_properties().empty());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_UseSession) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  conn_handle.SetSessionId("sessionId");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_FALSE(returned.query_request().create_session());
+  EXPECT_FALSE(returned.query_request().connection_properties().empty());
+  EXPECT_EQ("session_id",
+            returned.query_request().connection_properties()[0].key);
+  EXPECT_EQ(conn_handle.GetSessionId(),
+            returned.query_request().connection_properties()[0].value);
+}
+
+TEST(ConstructnamedPostQueryRequestTest, Success) {
+  PostQueryRequest expected;
+  std::string named_query =
+      "select * from test_table where test_col1 = @param1 and test_col2 = "
+      "@param2 and test_col3 = "
+      "@param3";
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
+  named_query_params.emplace_back(
+      QueryParameter{"param2", {"STRING"}, {"param-val-2"}});
+  named_query_params.emplace_back(
+      QueryParameter{"param3", {"STRING"}, {"param-val-3"}});
+
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, named_query, named_query_params);
+  ASSERT_STATUS_RECORD_OK(status_record_or);
+  // Verify results pertaining to query request.
+  PostQueryRequest actual = *status_record_or;
+  EXPECT_EQ(actual.project_id(), kTestCatalog);
+  EXPECT_EQ(actual.query_request().parameter_mode(), "NAMED");
+  EXPECT_EQ(actual.query_request().query(), named_query);
+  EXPECT_FALSE(actual.query_request().dry_run());
+  EXPECT_FALSE(actual.query_request().use_legacy_sql());
+  // Verify query params
+  auto query_params = actual.query_request().query_parameters();
+  EXPECT_FALSE(query_params.empty());
+  EXPECT_EQ(query_params.size(), 3);
+  EXPECT_EQ(query_params[0].name, "param1");
+  EXPECT_EQ(query_params[1].name, "param2");
+  EXPECT_EQ(query_params[2].name, "param3");
+
+  EXPECT_EQ(query_params[0].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[1].parameter_type.type, "STRING");
+  EXPECT_EQ(query_params[2].parameter_type.type, "STRING");
+
+  EXPECT_EQ(query_params[0].parameter_value.value, "param-val-1");
+  EXPECT_EQ(query_params[1].parameter_value.value, "param-val-2");
+  EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
+  std::string named_query = "select * from table where col = @param1";
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      "", kTestSchema, named_query, named_query_params);
   EXPECT_FALSE(status_record_or.Ok());
 
   EXPECT_THAT(status_record_or,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Invalid parameter value")));
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("catalog name is required")));
 }
 
+TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
+  std::string named_query = "select * from table where col = @param1";
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, "", named_query, named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("dataset name is required")));
+}
+
+TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
+  std::string named_query = "";
+  std::vector<QueryParameter> named_query_params;
+  named_query_params.emplace_back(
+      QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
+  auto status_record_or = ConstructNamedParametersPostQueryRequest(
+      kTestCatalog, kTestSchema, "", named_query_params);
+  EXPECT_FALSE(status_record_or.Ok());
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY090(),
+                             HasSubstr("parametrized query is required")));
+}
+
+TEST(ProcessResultSetRows, Success_Basic) {
+  TableSchema table_schema = CreateTableSchema();
+  std::vector<RowData> rows = CreateTableRows();
+  StatusRecordOr<ResultSet> results_status =
+      ProcessResultSetRows(table_schema, rows);
+  ASSERT_STATUS_RECORD_OK(results_status);
+  AssertResults(results_status);
+}
+
+TEST(GetSQLDataType, GetInvalidDataType) {
+  std::string f1 = "INT65";
+  auto res = GetSQLDataType(f1);
+  EXPECT_FALSE(res.Ok());
+  EXPECT_EQ("Invalid Data Type: " + f1, res.GetStatusRecord().message);
+}
+
+TEST(GetSQLDataType, GetValidDataType) {
+  std::string const& f1 = "FLOAT64";
+  std::string const& f2 = "DATE";
+  std::string const& f3 = "ARRAY";
+  std::string const& f4 = "TIMESTAMP";
+  std::string const& f5 = "INTEGER";
+
+  auto first_res = GetSQLDataType(f1);
+  auto second_res = GetSQLDataType(f2);
+  auto third_res = GetSQLDataType(f3);
+  auto fourth_res = GetSQLDataType(f4);
+  auto fifth_res = GetSQLDataType(f5);
+
+  EXPECT_EQ(SQL_DOUBLE, *first_res);
+  EXPECT_EQ(SQL_DATE, *second_res);
+  EXPECT_EQ(SQL_VARCHAR, *third_res);
+  EXPECT_EQ(SQL_TYPE_TIMESTAMP, *fourth_res);
+  EXPECT_EQ(SQL_BIGINT, *fifth_res);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

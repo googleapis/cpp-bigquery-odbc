@@ -17,6 +17,8 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "absl/types/variant.h"
@@ -27,24 +29,40 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+template <typename T>
+SQLRETURN LogAndReturnCode(
+    Handle& handle, odbc_internal::StatusRecordOr<T> const& status_record_or) {
+  auto status_record = status_record_or.GetStatusRecord();
+  handle.GetDiagnostics().AddStatusRecord(status_record);
+  TracePrintInternal(*(*kTraceOption), status_record.message);
+  return status_record_or.GetCalculatedReturnCode();
+}
+
+inline SQLRETURN LogAndReturnCode(
+    Handle& handle, odbc_internal::StatusRecord const& status_record) {
+  handle.GetDiagnostics().AddStatusRecord(status_record);
+  TracePrintInternal(*(*kTraceOption), status_record.message);
+  return status_record.CalculateReturnCode();
+}
+
 // Data Types as supported by the BQ DataSource.
 enum BQDataType {
   kArray,
   kBigNumeric,
-  kBool,
-  kBytes,
-  kDate,
-  kDatetime,
-  kFloat64,
-  kGeography,
-  kInt64,
-  kInterval,
-  kJson,
   kNumeric,
-  kRange,
-  kString,
-  kStruct,
+  kBytes,
+  kInt64,
+  kDate,
+  kFloat64,
+  kInterval,
+  kGeography,
+  kDatetime,
   kTime,
+  kBool,
+  kString,
+  kRange,
+  kStruct,
+  kJson,
   kTimeStamp,
   kNull
 };
@@ -62,7 +80,7 @@ using DSValue = std::vector<char>;
 // Data Source Row.
 using DSRow = std::vector<DSValue>;
 
-// ResultSet rowa containing data source rows.
+// ResultSet rows containing data source rows.
 using ResultSetRows = std::vector<DSRow>;
 
 // Row schema representing the column schema of the
@@ -73,14 +91,22 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
+  mutable int cursor{0};  // points to the next row that can be fetched
 };
 
-inline void StringToDSValue(std::string& str, DSValue& value) {
+DSValue const kNullValue{0};
+
+inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());
 }
 
-inline void DSValueToString(DSValue& value, std::string& str) {
+inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
+  std::string str = reinterpret_cast<char const*>(c_str);
+  StringToDSValue(str, value);
+}
+
+inline void DSValueToString(DSValue const& value, std::string& str) {
   str.assign(value.begin(), value.end());
 }
 
@@ -93,6 +119,13 @@ template <typename SrcType>
 inline void ArithmeticToDSValue(SrcType arithmetic_val, DSValue& ds_value) {
   ds_value.resize(sizeof(SrcType));
   std::memcpy(ds_value.data(), &arithmetic_val, sizeof(SrcType));
+}
+
+template <typename SrcType>
+inline SrcType DSValueToArithmetic(DSValue& ds_value) {
+  SrcType val;
+  std::memcpy(&val, ds_value.data(), sizeof(val));
+  return val;
 }
 
 inline int64_t DSValueToInt(DSValue& ds_value) {
@@ -125,7 +158,7 @@ struct DSResults {
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        postQueryResults);
+        post_query_request);
 
 ////////////////////////////////////////////////////////////////////////
 // Common Helper functions for processing data results from BQ data source and
@@ -139,14 +172,18 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessResultSetRows(
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(
     google::cloud::bigquery_v2_minimal_internal::PostQueryResults const&
-        postQueryResults);
+        post_query_results);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
     google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
-        getQueryResults);
+        get_query_results);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
-    DSResults const& queryResults);
+    DSResults const& query_results);
+
+odbc_internal::StatusRecordOr<
+    std::vector<google::cloud::bigquery_v2_minimal_internal::RowData>>
+GetRowsResults(DSResults const& query_results);
 
 ///////////////////////////////////////////////////////
 // Common helper functions.
@@ -154,10 +191,37 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
 odbc_internal::StatusRecordOr<BQDataType> ConvertDSType(
     std::string const& type);
 
+odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
+    std::string const& type);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+ConstructStringArrayQueryParameter(
+    std::string const& parameter_name,
+    std::vector<std::string> const& parameter_values);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+ConstructStringQueryParameter(std::string const& parameter_name,
+                              std::string const& parameter_value);
+
 odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>>
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
+
+google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
+ConstructBasicPostQueryRequest(ConnectionHandle const& conn_handle,
+                               std::string const& query_str);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>
+ConstructNamedParametersPostQueryRequest(
+    std::string const& catalog, std::string const& dataset,
+    std::string const& named_query,
+    std::vector<
+        google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
+        named_query_params);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

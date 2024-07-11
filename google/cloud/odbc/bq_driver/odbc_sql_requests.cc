@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -22,11 +23,18 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -70,14 +78,12 @@ SQLRETURN SQLBindParameterInternal(
   if (parameter_number < 1) {
     StatusRecord status_record = {SQLStates::k_07009(),
                                   "Invalid descriptor index"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   if (buffer_length < 0) {
     StatusRecord status_record = {SQLStates::k_HY090(),
                                   "Invalid buffer length"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
@@ -97,20 +103,17 @@ SQLRETURN SQLBindParameterInternal(
   StatusRecord status_record =
       temp_ipd_record.SetParameterType(input_output_type);
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = temp_apd_record.SetConciseType(value_type, apd.GetType());
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = temp_ipd_record.SetConciseType(parameter_type, ipd.GetType());
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   if (parameter_type == SQL_CHAR || parameter_type == SQL_VARCHAR ||
@@ -165,8 +168,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   if (parameter_number < 1) {
@@ -181,8 +183,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no parameter for such value"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   DescriptorRecord& desc_record = ipd.GetDescriptorRecord(parameter_number);
@@ -238,8 +239,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle, status_record);
   }
 
   return IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
@@ -261,17 +261,83 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
-    handle_ref.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status_record);
   }
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
 
   if (!status.ok()) {
-    handle_ref.GetDiagnostics().AddStatusRecord(status);
-    return status.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status);
   }
 
   return SQL_SUCCESS;
 }
+
+SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not prepared"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is still executing"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
+      stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithRs) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement has already executed"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  std::string query_str = stmt_handle.GetQueryString();
+  PostQueryRequest post_request =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+  if (!ds_status_record_or) {
+    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    return LogAndReturnCode(stmt_handle, ds_status_record_or);
+  }
+
+  // Process the DSResults and convert to ResultSet.
+  StatusRecordOr<ResultSet> rs_status_record_or =
+      ProcessQueryResults(*ds_status_record_or);
+  if (!rs_status_record_or) {
+    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    return LogAndReturnCode(stmt_handle, rs_status_record_or);
+  }
+
+  Job prepared_job = stmt_handle.GetPreparedJob();
+  std::string statement_type =
+      prepared_job.statistics.job_query_stats.statement_type;
+  if (statement_type != "SELECT") {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  } else {
+    // Store the resultset in statement handle.
+    stmt_handle.SetResultSet(*rs_status_record_or);
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  }
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

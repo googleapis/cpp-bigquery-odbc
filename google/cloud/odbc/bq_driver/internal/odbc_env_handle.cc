@@ -280,4 +280,46 @@ EnvironmentHandle::EnvironmentHandle() {
   odbc_ver_ = std::make_shared<EnvAttrOdbcVersion>(EnvAttrOdbcVersVal::kOdbc3);
   output_nts_ = std::make_shared<EnvAttrOutputNTS>();
 }
+
+EnvironmentHandle::EnvironmentHandle(EnvironmentHandle const& environmentHandle)
+    : Handle(environmentHandle) {
+  // TODO(b/349757194): Convert shallow copy to deep copy
+  connection_pool_ = environmentHandle.connection_pool_;
+  connection_pool_match_ = environmentHandle.connection_pool_match_;
+  odbc_ver_ = environmentHandle.odbc_ver_;
+  output_nts_ = environmentHandle.output_nts_;
+  kType = environmentHandle.kType;
+}
+
+EnvironmentHandle& EnvironmentHandle::operator=(
+    EnvironmentHandle const& environmentHandle) {
+  if (this != &environmentHandle) {
+    // TODO(b/349757194): Convert shallow copy to deep copy
+    connection_pool_ = environmentHandle.connection_pool_;
+    connection_pool_match_ = environmentHandle.connection_pool_match_;
+    odbc_ver_ = environmentHandle.odbc_ver_;
+    output_nts_ = environmentHandle.output_nts_;
+    kType = environmentHandle.kType;
+  }
+  return *this;
+}
+
+EnvironmentHandle::EnvironmentHandle(
+    EnvironmentHandle&& environmentHandle) noexcept {
+  connection_pool_ = std::move(environmentHandle.connection_pool_);
+  connection_pool_match_ = std::move(environmentHandle.connection_pool_match_);
+  odbc_ver_ = std::move(environmentHandle.odbc_ver_);
+  output_nts_ = std::move(environmentHandle.output_nts_);
+  kType = std::move(environmentHandle.kType);
+}
+
+EnvironmentHandle& EnvironmentHandle::operator=(
+    EnvironmentHandle&& environmentHandle) noexcept {
+  connection_pool_ = std::move(environmentHandle.connection_pool_);
+  connection_pool_match_ = std::move(environmentHandle.connection_pool_match_);
+  odbc_ver_ = std::move(environmentHandle.odbc_ver_);
+  output_nts_ = std::move(environmentHandle.output_nts_);
+  kType = std::move(environmentHandle.kType);
+  return *this;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

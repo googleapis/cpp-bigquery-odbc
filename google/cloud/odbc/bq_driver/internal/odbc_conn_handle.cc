@@ -68,7 +68,76 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.description = dsn_section["Description"];
   dsn_.driver = dsn_section["Driver"];
   dsn_.catalog = dsn_section["Catalog"];
+  dsn_.default_dataset = dsn_section["DefaultDataset"];
   dsn_.dsn_name = dsn_name;
+
+  std::string sql_dialect = dsn_section["SQLDialect"];
+  dsn_.is_bq_legacy_sql = (sql_dialect == "0");
+  std::string sessions_enabled = dsn_section["EnableSession"];
+  dsn_.sessions_enabled =
+      (!sessions_enabled.empty() && sessions_enabled != "0");
+
+  if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {
+    attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
+  }
+}
+
+ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle)
+    : Handle(connectionHandle) {
+  client_ = connectionHandle.client_;
+  dsn_ = connectionHandle.dsn_;
+  auth_ = connectionHandle.auth_;
+  kType = connectionHandle.kType;
+  attribute_str_values_ = connectionHandle.attribute_str_values_;
+  is_connected_ = connectionHandle.is_connected_;
+  // TODO(b/349757194): Convert shallow copy to deep copy
+  attribute_values_ = connectionHandle.attribute_values_;
+  stmt_handles_ = connectionHandle.stmt_handles_;
+  desc_handles_ = connectionHandle.desc_handles_;
+}
+
+ConnectionHandle& ConnectionHandle::operator=(
+    ConnectionHandle const& connectionHandle) {
+  if (this != &connectionHandle) {
+    client_ = connectionHandle.client_;
+    dsn_ = connectionHandle.dsn_;
+    auth_ = connectionHandle.auth_;
+    kType = connectionHandle.kType;
+    attribute_str_values_ = connectionHandle.attribute_str_values_;
+    is_connected_ = connectionHandle.is_connected_;
+    // TODO(b/349757194): Convert shallow copy to deep copy
+    attribute_values_ = connectionHandle.attribute_values_;
+    stmt_handles_ = connectionHandle.stmt_handles_;
+    desc_handles_ = connectionHandle.desc_handles_;
+    return *this;
+  }
+}
+
+ConnectionHandle::ConnectionHandle(
+    ConnectionHandle&& connectionHandle) noexcept {
+  client_ = std::move(connectionHandle.client_);
+  dsn_ = std::move(connectionHandle.dsn_);
+  auth_ = std::move(connectionHandle.auth_);
+  kType = std::move(connectionHandle.kType);
+  attribute_str_values_ = std::move(connectionHandle.attribute_str_values_);
+  attribute_values_ = std::move(connectionHandle.attribute_values_);
+  stmt_handles_ = std::move(connectionHandle.stmt_handles_);
+  desc_handles_ = std::move(connectionHandle.desc_handles_);
+  is_connected_ = std::move(connectionHandle.is_connected_);
+}
+
+ConnectionHandle& ConnectionHandle::operator=(
+    ConnectionHandle&& connectionHandle) noexcept {
+  client_ = std::move(connectionHandle.client_);
+  dsn_ = std::move(connectionHandle.dsn_);
+  auth_ = std::move(connectionHandle.auth_);
+  kType = std::move(connectionHandle.kType);
+  attribute_str_values_ = std::move(connectionHandle.attribute_str_values_);
+  attribute_values_ = std::move(connectionHandle.attribute_values_);
+  stmt_handles_ = std::move(connectionHandle.stmt_handles_);
+  desc_handles_ = std::move(connectionHandle.desc_handles_);
+  is_connected_ = std::move(connectionHandle.is_connected_);
+  return *this;
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {
@@ -192,8 +261,12 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         err_msg.append("Invalid attribute value.");
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
+      if (attribute == SQL_ATTR_TXN_ISOLATION) {
+        // BigQuery supports only one level of isolation
+        value = reinterpret_cast<SQLPOINTER>(SQL_TXN_SERIALIZABLE);
+      }
       // Store non char attributes.
-      attribute_values_.insert({attribute, value});
+      attribute_values_.insert_or_assign(attribute, value);
       break;
     }
     case ConnectionValueType::kSqlChr: {
@@ -213,7 +286,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
         return StatusRecord{SQLStates::k_HY090(), err_msg};
       }
       // Store char attributes.
-      attribute_str_values_.insert({attribute, val});
+      attribute_str_values_.insert_or_assign(attribute, val);
       break;
     }
     default: {

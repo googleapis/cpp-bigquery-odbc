@@ -51,6 +51,12 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      ConnectionHandle* conn_handle = *handle_result;
+      // Dissociate itself from an environment handle
+      if (conn_handle->GetEnvironmentHandle()) {
+        conn_handle->GetEnvironmentHandle()->GetConnectionHandles().erase(
+            conn_handle);
+      }
       (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
       break;

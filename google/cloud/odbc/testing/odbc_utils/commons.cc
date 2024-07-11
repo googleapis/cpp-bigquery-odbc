@@ -126,6 +126,11 @@ void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
+void Table::CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                              std::string schema_str) {
+  CreateTableWithPrepare(conn, table_name_, schema_str);
+}
+
 void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
@@ -138,35 +143,14 @@ void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
-void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
-                       std::string create_table_schema, bool use_ansi) {
-  char create_table_stmt[kBufferLength];
-  StrToChar(create_table_stmt, create_table_schema);
-
-  SQLRETURN status;
-  if (use_ansi) {
-    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
-  } else {
-    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
-  }
-  CheckError(status, "SQLExecDirect", conn, use_ansi);
-}
-
-void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
-                      bool use_ansi) {
-  SQLRETURN status;
-  if (use_ansi) {
-    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
-  } else {
-    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
-  }
-  CheckError(status, "SQLExecDirect", conn, use_ansi);
+void Table::DropWithPrepare(std::shared_ptr<ODBCHandles> conn) {
+  DropTableWithPrepare(conn, table_name_);
 }
 
 // TODO(#11): Generic implementation of InsertIntoTable function from
 // testing/commons.*
 void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
-                       bool use_ansi) {
+                       bool use_ansi, bool use_sqlprepare) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -206,13 +190,27 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
   }
 
   SQLRETURN status;
-  if (use_ansi) {
-    status =
-        SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  if (use_sqlprepare) {
+    if (use_ansi) {
+      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                           insert_stmt.size());
+    } else {
+      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                          insert_stmt.size());
+    }
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn, use_ansi);
   } else {
-    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    if (use_ansi) {
+      status =
+          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    } else {
+      status =
+          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    }
+    CheckError(status, "SQLExecDirect", conn, use_ansi);
   }
-  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
 void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
@@ -273,6 +271,88 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
+}
+
+void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+                            std::vector<SQLBIGINT> rows, bool insert_index) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    SQLBIGINT numeric_field = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+    row_str.append(std::to_string(numeric_field));
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+}
+
+void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
+                       std::string create_table_schema, bool use_ansi) {
+  char create_table_stmt[kBufferLength];
+  StrToChar(create_table_stmt, create_table_schema);
+
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
+}
+
+void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                            std::string table_name, std::string schema) {
+  char create_table_stmt[kBufferLength];
+  StrToChar(create_table_stmt,
+            "CREATE TABLE IF NOT EXISTS " + table_name + " " + schema);
+
+  SQLRETURN status;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_table_stmt,
+                      strlen(create_table_stmt));
+  CheckError(status, "SQLPrepare", conn, false);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn, false);
+}
+
+void DropTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
+                          std::string table_name) {
+  char drop_table_stmt[kBufferLength];
+  StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name);
+
+  SQLRETURN status;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)drop_table_stmt,
+                      strlen(drop_table_stmt));
+  CheckError(status, "SQLPrepare", conn, false);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn, false);
+}
+
+void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
+                      bool use_ansi) {
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
@@ -367,6 +447,29 @@ void BindColManually(std::shared_ptr<ODBCHandles> conn,
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_OCTET_LENGTH_PTR,
                            col_ptr->data_len_ptr, SQL_IS_INTEGER);
   CheckError(status, "SQLSetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
+}
+
+void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
+                    TestingDataBuffer* columns) {
+  SQLRETURN status;
+
+  columns[0].target_type = SQL_C_CHAR;
+  status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)1, columns[0].target_type,
+                      columns[0].target_value, columns[0].buffer_length,
+                      &(columns[0].str_len));
+  CheckError(status, "SQLBindCol", conn);
+
+  columns[1].target_type = SQL_C_SBIGINT;
+  status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)2, columns[1].target_type,
+                      columns[1].target_value, columns[1].buffer_length,
+                      &(columns[1].str_len));
+  CheckError(status, "SQLBindCol", conn);
+
+  columns[2].target_type = SQL_C_DOUBLE;
+  status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)3, columns[2].target_type,
+                      columns[2].target_value, columns[2].buffer_length,
+                      &(columns[2].str_len));
+  CheckError(status, "SQLBindCol", conn);
 }
 
 }  // namespace google::cloud::odbc_tests

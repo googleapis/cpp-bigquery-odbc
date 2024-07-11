@@ -29,6 +29,7 @@ inline std::string const GetDefaultDSN() {
 std::string const kDefaultDataSource = GetDefaultDSN();
 
 auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
+auto const kSessionEnabledConnectionString = "DSN=ODBCTransactionsTestsDSN";
 
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,

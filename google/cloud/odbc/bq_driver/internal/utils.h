@@ -33,6 +33,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -119,6 +120,16 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
 
 std::string GetPathToOdbcIni();
+
+inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
+  auto percent_filter_out =
+      std::regex_replace(str, std::regex("^%|([^\\\\])%"), "$1.*");
+  auto underscore_filter_out = std::regex_replace(
+      percent_filter_out, std::regex("^_|([^\\\\])_"), "$1.");
+  return std::regex_replace(underscore_filter_out, std::regex("\\\\"), "");
+}
+
+std::vector<std::string> SplitTableTypes(std::string const& table_types);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

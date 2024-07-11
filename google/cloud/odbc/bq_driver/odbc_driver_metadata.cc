@@ -14,35 +14,45 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
-using ::google::cloud::odbc_bq_driver_internal::DSResults;
-using ::google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
-using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
-using ::google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
-using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
-using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
-using ::google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
-using ::google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
-using ::google::cloud::odbc_bq_driver_internal::ResultSet;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
-using ::google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
-using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::StmtStates;
-using ::google::cloud::odbc_bq_driver_internal::SupportedInfoType;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
-using ::google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
+using google::cloud::odbc_bq_driver_internal::DSResults;
+using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
+using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
+using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
+using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
+using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
+using google::cloud::odbc_bq_driver_internal::kMatchAll;
+using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
+using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
+using google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
+using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::TraceOptions;
+using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::ValidateInputParameters;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -87,8 +97,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
     default: {
       auto status_record = InvalidType(
           "HandleConnectionInformationTypes - Invalid infoType: ", info_type);
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
   }
 
@@ -103,10 +112,6 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                                  in_buffer_len, str_len_ptr);
   delete[] info_val_char.info_val;
   return rc;
-}
-
-char* to_char_str(SQLCHAR const* sql_str) {
-  return reinterpret_cast<char*>(const_cast<SQLCHAR*>(sql_str));
 }
 
 }  // namespace
@@ -126,9 +131,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   if (!supported_fn) {
     auto status_record = StatusRecord{SQLStates::k_HY024(),
                                       "Argument supported_fn cannot be null"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   switch (function_id) {
@@ -136,9 +139,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC3Functions(supported_fn);
       if (!status_record.ok()) {
-        handle->GetDiagnostics().AddStatusRecord(status_record);
-        TracePrintInternal(opts, status_record.message);
-        return status_record.CalculateReturnCode();
+        return LogAndReturnCode(*handle, status_record);
       }
       return rc;
     }
@@ -146,9 +147,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
       StatusRecord status_record =
           PopulateSupportedODBC2Functions(supported_fn);
       if (!status_record.ok()) {
-        handle->GetDiagnostics().AddStatusRecord(status_record);
-        TracePrintInternal(opts, status_record.message);
-        return status_record.CalculateReturnCode();
+        return LogAndReturnCode(*handle, status_record);
       }
       return rc;
     }
@@ -159,18 +158,14 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
     StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
     if (!status_record.ok()) {
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      TracePrintInternal(opts, status_record.message);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
   } else if (IsFunctionIdOdbc2(function_id)) {
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
     StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
     if (!status_record.ok()) {
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      TracePrintInternal(opts, status_record.message);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = odbc2_fns[function_id];
   }
@@ -192,9 +187,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   if (in_buffer_len < 0) {
     std::string mesg = "Invalid Input BufferLength";
     auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(opts, status_record.message);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   // Handle information types dependent on connection handle.
@@ -234,13 +227,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 
   auto status_record =
       InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
-  handle->GetDiagnostics().AddStatusRecord(status_record);
-  return status_record.CalculateReturnCode();
-}
-
-SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT /* stmt_handle */,
-                                 SQLSMALLINT /* data_type */) {
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*handle, status_record);
 }
 
 SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
@@ -262,24 +249,18 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
 
   // First fetch the primary keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
-      FetchPrimaryKeysFromDataSource(handle, to_char_str(catalog_name),
-                                     catalog_name_len, to_char_str(schema_name),
-                                     schema_name_len, to_char_str(table_name),
+      FetchPrimaryKeysFromDataSource(handle, ToCharStr(catalog_name),
+                                     catalog_name_len, ToCharStr(schema_name),
+                                     schema_name_len, ToCharStr(table_name),
                                      table_name_len);
   if (!ds_status_record_or) {
-    auto status_record = ds_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return ds_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, ds_status_record_or);
   }
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
-    auto status_record = rs_status_record_or.GetStatusRecord();
-    TracePrintInternal(opts, status_record.message);
-    handle.GetDiagnostics().AddStatusRecord(status_record);
-    return rs_status_record_or.GetCalculatedReturnCode();
+    return LogAndReturnCode(handle, rs_status_record_or);
   }
 
   if (!rs_status_record_or->rows.empty()) {
@@ -290,6 +271,131 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
   return rc;
+}
+
+SQLRETURN SQLForeignKeysInternal(
+    SQLHSTMT stmt_handle, SQLCHAR const* pk_catalog_name,
+    SQLSMALLINT pk_catalog_name_len, SQLCHAR const* pk_schema_name,
+    SQLSMALLINT pk_schema_name_len, SQLCHAR const* pk_table_name,
+    SQLSMALLINT pk_table_name_len, SQLCHAR const* fk_catalog_name,
+    SQLSMALLINT fk_catalog_name_len, SQLCHAR const* fk_schema_name,
+    SQLSMALLINT fk_schema_name_len, SQLCHAR const* fk_table_name,
+    SQLSMALLINT fk_table_name_len) {
+  SQLRETURN rc = SQL_SUCCESS;
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  // First fetch the foreign keys from data source.
+  StatusRecordOr<DSResults> ds_status_record_or =
+      FetchForeignKeysFromDataSource(
+          handle, ToCharStr(pk_catalog_name), pk_catalog_name_len,
+          ToCharStr(pk_schema_name), pk_schema_name_len,
+          ToCharStr(pk_table_name), pk_table_name_len,
+          ToCharStr(fk_catalog_name), fk_catalog_name_len,
+          ToCharStr(fk_schema_name), fk_schema_name_len,
+          ToCharStr(fk_table_name), fk_table_name_len);
+  if (!ds_status_record_or) {
+    return LogAndReturnCode(handle, ds_status_record_or);
+  }
+  // Process the DSResults and convert to ResultSet.
+  StatusRecordOr<ResultSet> rs_status_record_or =
+      ProcessQueryResults(*ds_status_record_or);
+  if (!rs_status_record_or) {
+    return LogAndReturnCode(handle, rs_status_record_or);
+  }
+
+  if (!rs_status_record_or->rows.empty()) {
+    // Store the resultset in statement handle.
+    handle.SetResultSet(*rs_status_record_or);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
+  return rc;
+}
+
+SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
+                            SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+                            SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+                            SQLSMALLINT table_name_len, SQLCHAR* table_type,
+                            SQLSMALLINT table_type_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  StatusRecordOr<SQLULEN> attr_status =
+      handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  if (!attr_status) {
+    return LogAndReturnCode(handle, attr_status);
+  }
+  SQLULEN metadata_id = *attr_status;
+
+  auto input_param_status = ValidateInputParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
+      table_name_len, table_type_len, metadata_id);
+  if (!input_param_status.ok()) {
+    return LogAndReturnCode(handle, input_param_status);
+  }
+
+  std::string project_filter = ToCharStr(catalog_name, kMatchAll);
+  std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
+  std::string table_filter = ToCharStr(table_name, kMatchAll);
+  std::string table_type_filter = ToCharStr(table_type, kMatchAll);
+
+  if (handle.GetConnectionHandle() == nullptr) {
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
+  }
+  std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
+  if (!bq_client_ptr) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_HY000(),
+                             "Error establishing Datasource connection"});
+  }
+  ODBCBQClient& bq_client = *bq_client_ptr;
+  StatusRecordOr<ResultSet> result_set_status;
+
+  if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
+      dataset_filter.empty() && table_filter.empty()) {
+    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+  } else if (!metadata_id && project_filter.empty() &&
+             dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
+    result_set_status = GetResultSetForDatasets(bq_client, metadata_id);
+  } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
+             table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
+    result_set_status = CreateResultSetForTableTypes();
+  } else {
+    result_set_status = GetResultSetForTables(
+        conn_handle, bq_client, project_filter, dataset_filter, table_filter,
+        table_type_filter, metadata_id);
+  }
+  if (!result_set_status) {
+    return LogAndReturnCode(handle, result_set_status);
+  }
+
+  if (!result_set_status->rows.empty()) {
+    handle.SetResultSet(*result_set_status);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

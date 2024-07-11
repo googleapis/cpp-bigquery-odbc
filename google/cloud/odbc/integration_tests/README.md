@@ -71,3 +71,19 @@ Running some of the tests can be done by adding a filter flag, for example
 ```
 -R ListAllDatasets.*
 ```
+
+# Building examples using CMake
+
+"Examples" are standalone executables which are supposed to serve an example of
+a user journey. These are typically not run during our PR checks.
+
+```
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_UNIT_TESTING=OFF -DODBC_INTEGRATION_TESTING=ON -DBQ_DRIVER_INTEGRATION_TESTS=ON -DODBC_DEMO_TESTING=OFF -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF -DODBC_EXAMPLES=ON
+cmake --build build -j $(nproc)
+```
+
+BQ_DRIVER_INTEGRATION_TESTS can be set ON or OFF based on which driver should be
+used to build this.
+
+You will find the executables for the built examples in
+`./build/google/cloud/odbc/integration_tests/example_*`

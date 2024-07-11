@@ -27,16 +27,16 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Executes a BQ query and fetches the primary key results and
-// populates the DSPrimaryKeysResults in accordance with the semantics
-// mentioned above.
+// populates the DSResults, as mentioned below:
+//
 // 1) First makes a call to ODBCBQClient::Query()
 // 2) If Query() finishes within the timeout and returns all results then no
 //    further action is needed and the function returns. In this case,
-//    the PostQueryResults will be populated in DSPrimaryKeysResults structure.
+//    the PostQueryResults will be populated in DSResults structure.
 // 3) If Query() does not finish in specified timeout then a subsequent call is
 // made to
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
-//    the GetQueryResults will be populated in DSPrimaryKeysResults structure.
+//    the GetQueryResults will be populated in DSResults structure.
 //
 odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     StatementHandle& stmt_handle, std::string const& catalog_name,

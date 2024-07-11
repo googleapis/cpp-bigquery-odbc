@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -193,6 +194,104 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
 
   EXPECT_EQ(actual, "");
   google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
+}
+
+TEST(FilterUsingOdbcRegex, UseBaseRegex) {
+  auto regex = CastOdbcRegexToCppRegex("abcde");
+
+  EXPECT_EQ("abcde", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("abcde", odbc_regex));
+  EXPECT_FALSE(std::regex_match("abcd", odbc_regex));
+  EXPECT_FALSE(std::regex_match("abcd1", odbc_regex));
+}
+
+TEST(FilterUsingOdbcRegex, UsePercent) {
+  auto regex = CastOdbcRegexToCppRegex("%abc%");
+
+  EXPECT_EQ(".*abc.*", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("abcde", odbc_regex));
+  EXPECT_TRUE(std::regex_match("abc", odbc_regex));
+  EXPECT_TRUE(std::regex_match("00abc", odbc_regex));
+  EXPECT_FALSE(std::regex_match("ab1c", odbc_regex));
+}
+
+TEST(FilterUsingOdbcRegex, UsePercentWithEscapeCharacter) {
+  auto regex = CastOdbcRegexToCppRegex("%a%b\\%c%");
+
+  EXPECT_EQ(".*a.*b%c.*", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("ab%cde", odbc_regex));
+  EXPECT_TRUE(std::regex_match("ab%c", odbc_regex));
+  EXPECT_FALSE(std::regex_match("00abc", odbc_regex));
+  EXPECT_FALSE(std::regex_match("ab1c", odbc_regex));
+}
+
+TEST(FilterUsingOdbcRegex, UseUnderscore) {
+  auto regex = CastOdbcRegexToCppRegex("_ab_c_");
+
+  EXPECT_EQ(".ab.c.", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("0ab1c2", odbc_regex));
+  EXPECT_TRUE(std::regex_match("_ab_c_", odbc_regex));
+  EXPECT_FALSE(std::regex_match("abc", odbc_regex));
+  EXPECT_FALSE(std::regex_match("ab0c", odbc_regex));
+}
+
+TEST(FilterUsingOdbcRegex, UseUnderscoreWithEscapeCharacter) {
+  auto regex = CastOdbcRegexToCppRegex("_ab\\_c_");
+
+  EXPECT_EQ(".ab_c.", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("0ab_c2", odbc_regex));
+  EXPECT_TRUE(std::regex_match("_ab_c_", odbc_regex));
+  EXPECT_FALSE(std::regex_match("0ab1c2", odbc_regex));
+  EXPECT_FALSE(std::regex_match("ab_c", odbc_regex));
+}
+
+TEST(FilterUsingOdbcRegex, UseComplexPattern) {
+  auto regex = CastOdbcRegexToCppRegex("\\%abc\\_def_ghi%");
+
+  EXPECT_EQ("%abc_def.ghi.*", regex);
+  std::regex odbc_regex(regex);
+  EXPECT_TRUE(std::regex_match("%abc_def0ghi", odbc_regex));
+  EXPECT_TRUE(std::regex_match("%abc_def0ghi11111", odbc_regex));
+  EXPECT_TRUE(std::regex_match("%abc_def_ghi___", odbc_regex));
+  EXPECT_FALSE(std::regex_match("abc_def0ghi", odbc_regex));
+  EXPECT_FALSE(std::regex_match("%abc_defghi", odbc_regex));
+  EXPECT_FALSE(std::regex_match("%abc_def00ghi", odbc_regex));
+}
+
+TEST(SplitTableTypes, SplitZeroTypes) {
+  std::vector<std::string> types = SplitTableTypes("  ");
+
+  EXPECT_EQ(1, types.size());
+  EXPECT_EQ("", types[0]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithSpaces) {
+  std::vector<std::string> types = SplitTableTypes(" TABLE , VIEW ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("TABLE", types[0]);
+  EXPECT_EQ("VIEW", types[1]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithQuotes) {
+  std::vector<std::string> types = SplitTableTypes(" ' TABLE ' , ' VIEW ' ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("TABLE", types[0]);
+  EXPECT_EQ("VIEW", types[1]);
+}
+
+TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
+  std::vector<std::string> types = SplitTableTypes(" ' TABLE  ,  VIEW ' ");
+
+  EXPECT_EQ(2, types.size());
+  EXPECT_EQ("' TABLE", types[0]);
+  EXPECT_EQ("VIEW '", types[1]);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

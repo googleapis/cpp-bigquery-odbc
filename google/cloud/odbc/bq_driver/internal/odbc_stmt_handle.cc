@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <regex>
 
@@ -23,7 +24,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::Job;
+using google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -44,6 +47,62 @@ DescriptorHandle& StatementHandle::GetDescriptorHandle(
     case DescriptorType::kIPD:
       return *descriptors_.ipd_;
   }
+}
+
+StatementHandle ::StatementHandle(StatementHandle const& statementHandle)
+    : Handle(statementHandle) {
+  kType = statementHandle.kType;
+  stmt_state_ = statementHandle.stmt_state_;
+  result_set_ = statementHandle.result_set_;
+  query_str_ = statementHandle.query_str_;
+  descriptors_ = statementHandle.descriptors_;
+  query_ = statementHandle.query_;
+  attributes_ = statementHandle.attributes_;
+  // TODO(b/349757194): Convert shallow copy to deep copy
+  conn_handle_ = statementHandle.conn_handle_;
+  query_parameters_ = statementHandle.query_parameters_;
+};
+
+StatementHandle& StatementHandle::operator=(
+    StatementHandle const& statementHandle) {
+  if (this != &statementHandle) {
+    kType = statementHandle.kType;
+    stmt_state_ = statementHandle.stmt_state_;
+    result_set_ = statementHandle.result_set_;
+    query_str_ = statementHandle.query_str_;
+    descriptors_ = statementHandle.descriptors_;
+    query_ = statementHandle.query_;
+    attributes_ = statementHandle.attributes_;
+    // TODO(b/349757194): Convert shallow copy to deep copy
+    conn_handle_ = statementHandle.conn_handle_;
+    query_parameters_ = statementHandle.query_parameters_;
+  }
+  return *this;
+}
+
+StatementHandle::StatementHandle(StatementHandle&& statementHandle) noexcept {
+  kType = std::move(statementHandle.kType);
+  stmt_state_ = std::move(statementHandle.stmt_state_);
+  result_set_ = std::move(statementHandle.result_set_);
+  query_str_ = std::move(statementHandle.query_str_);
+  descriptors_ = std::move(statementHandle.descriptors_);
+  query_ = std::move(statementHandle.query_);
+  attributes_ = std::move(statementHandle.attributes_);
+  conn_handle_ = std::move(statementHandle.conn_handle_);
+  query_parameters_ = std::move(statementHandle.query_parameters_);
+}
+StatementHandle& StatementHandle::operator=(
+    StatementHandle&& statementHandle) noexcept {
+  kType = std::move(statementHandle.kType);
+  stmt_state_ = std::move(statementHandle.stmt_state_);
+  result_set_ = std::move(statementHandle.result_set_);
+  query_str_ = std::move(statementHandle.query_str_);
+  descriptors_ = std::move(statementHandle.descriptors_);
+  query_ = std::move(statementHandle.query_);
+  attributes_ = std::move(statementHandle.attributes_);
+  conn_handle_ = std::move(statementHandle.conn_handle_);
+  query_parameters_ = std::move(statementHandle.query_parameters_);
+  return *this;
 }
 
 void DissociateDescriptorHandle(DescriptorHandle* descriptor_handle,
@@ -122,12 +181,26 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
   }
 
+  StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
+  if (!transaction_status.ok()) {
+    return transaction_status;
+  }
+
   Job req;
   std::string query(reinterpret_cast<char const*>(query_text));
   req.configuration.query.query = query;
   req.configuration.query.use_query_cache = true;
   req.configuration.dry_run = true;
   req.configuration.query.use_legacy_sql = false;
+
+  // Add default dataset from the config
+  ConnectionHandle& conn_handle = *GetConnectionHandle();
+  std::string catalog_name = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  if (!default_dataset.empty()) {
+    req.configuration.query.default_dataset.project_id = catalog_name;
+    req.configuration.query.default_dataset.dataset_id = default_dataset;
+  }
 
   std::regex positional_pattern(R"(\?)");
   std::regex named_pattern(R"([:@]\w+)");
@@ -141,18 +214,27 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   if (std::regex_search(query, named_pattern)) {
     req.configuration.query.parameter_mode = "NAMED";
   }
+  if (conn_handle.IsSessionStarted()) {
+    req.configuration.query.connection_properties.push_back(
+        {"session_id", conn_handle.GetSessionId()});
+  } else if (conn_handle.GetDsn().sessions_enabled) {
+    req.configuration.query.create_session = true;
+  }
 
   Options opt;
 
-  auto response = this->GetConnectionHandle()->GetClient()->InsertJob(
-      GetConnectionHandle()->GetDsn().catalog, req, opt);
+  auto response = conn_handle.GetClient()->InsertJob(
+      conn_handle.GetDsn().catalog, req, opt);
 
   if (!response.Ok()) {
     return response.GetStatusRecord();
   }
-  auto& schema = response.GetValue().statistics.job_query_stats.schema;
 
+  auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
+  if (!pop_response.ok()) {
+    return pop_response;
+  }
 
   SetQueryParameters(
       response.GetValue()
@@ -162,8 +244,60 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return pop_response;
   }
 
+  DescriptorHandle& desc_handle =
+      this->GetDescriptorHandle(DescriptorType::kIRD);
+  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+  if (!ird_response.ok()) {
+    return ird_response;
+  }
+
+  DescriptorHandle& ipd_desc_handle =
+      this->GetDescriptorHandle(DescriptorType::kIPD);
+  auto job_statistics = (*response).statistics;
+  StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
+  if (!ipd_response.ok()) {
+    return ipd_response;
+  }
+  if (!conn_handle.IsSessionStarted() &&
+      !response->statistics.session_info.session_id.empty()) {
+    conn_handle.SetSessionId(response->statistics.session_info.session_id);
+  }
+
   query_str_ = query;
+  prepared_job_ = *response;
   stmt_state_ = StmtStates::kStatementPrepared;
+
+  return StatusRecord::Ok();
+}
+
+StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
+                                          TableSchema const& schema) {
+  if (&descriptor_handle == nullptr ||
+      descriptor_handle.GetType() != DescriptorType::kIRD) {
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Invalid attribute value (invalid descriptor handle)"};
+  }
+  std::string const nullable = "NULLABLE";
+  for (int i = 0; i < schema.fields.size(); ++i) {
+    auto const& res = schema.fields[i];
+    DescriptorRecord descriptor_record;
+    descriptor_record.SetName(res.name, res.name.length());
+    descriptor_record.length = res.max_length;
+    StatusRecordOr<SQLSMALLINT> type_status_record = GetSQLDataType(res.type);
+
+    if (!type_status_record.Ok()) {
+      return type_status_record.GetStatusRecord();
+    }
+    StatusRecord status_record = descriptor_record.SetConciseType(
+        *type_status_record, DescriptorType::kIRD);
+    if (!status_record.ok()) {
+      return status_record;
+    }
+    descriptor_record.scale = res.scale;
+    descriptor_record.nullable =
+        res.mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
+    descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
+  }
   return StatusRecord::Ok();
 }
 
@@ -172,6 +306,37 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   return attributes_[attribute];
+}
+
+StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
+                                          JobStatistics const& job_statistics) {
+  if (handle.GetType() != DescriptorType::kIPD) {
+    return StatusRecord(
+        {SQLStates::k_HY024(),
+         "Invalid attribute value (invalid descriptor handle)"});
+  }
+  DescriptorRecord descriptor_record;
+  std::string const nullable = "NULLABLE";
+  auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
+  TableSchema schema = job_statistics.job_query_stats.schema;
+  if (stmt_params.empty()) {
+    return StatusRecord::Ok();
+  }
+
+  for (int i = 0; i < stmt_params.size(); i++) {
+    StatusRecordOr<SQLSMALLINT> record_type =
+        GetSQLDataType(stmt_params[i].parameter_type.type);
+    descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
+    descriptor_record.SetName(stmt_params[i].name, stmt_params[i].name.size());
+    descriptor_record.type_name = stmt_params[i].parameter_type.type;
+
+    descriptor_record.nullable =
+        schema.fields[i].mode == nullable ? SQL_NULLABLE : SQL_NO_NULLS;
+
+    handle.BindNewDescriptorRecord(i + 1, descriptor_record);
+  }
+
+  return StatusRecord::Ok();
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

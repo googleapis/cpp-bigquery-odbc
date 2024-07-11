@@ -43,18 +43,26 @@ add_library(
     bq_driver/internal/odbc_internal_commons.h
     bq_driver/internal/odbc_query.cc
     bq_driver/internal/odbc_query.h
+    bq_driver/internal/odbc_sql_fetch.cc
+    bq_driver/internal/odbc_sql_fetch.h
     bq_driver/internal/odbc_sql_fns.cc
     bq_driver/internal/odbc_sql_fns.h
+    bq_driver/internal/odbc_sql_foreign_keys.cc
+    bq_driver/internal/odbc_sql_foreign_keys.h
     bq_driver/internal/odbc_sql_info.cc
     bq_driver/internal/odbc_sql_info.h
     bq_driver/internal/odbc_sql_primary_keys.cc
     bq_driver/internal/odbc_sql_primary_keys.h
+    bq_driver/internal/odbc_sql_tables.cc
+    bq_driver/internal/odbc_sql_tables.h
     bq_driver/internal/odbc_sql_type_info.cc
     bq_driver/internal/odbc_sql_type_info.h
     bq_driver/internal/odbc_stmt_attr.cc
     bq_driver/internal/odbc_stmt_attr.h
     bq_driver/internal/odbc_stmt_handle.cc
     bq_driver/internal/odbc_stmt_handle.h
+    bq_driver/internal/odbc_transactions.cc
+    bq_driver/internal/odbc_transactions.h
     bq_driver/internal/odbc_type_utils.cc
     bq_driver/internal/odbc_type_utils.h
     bq_driver/internal/trace_utils.cc
@@ -144,11 +152,16 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_desc_handle_test.cc
         bq_driver/internal/odbc_env_handle_test.cc
         bq_driver/internal/odbc_internal_commons_test.cc
+        bq_driver/internal/odbc_sql_fetch_test.cc
         bq_driver/internal/odbc_sql_fns_test.cc
+        bq_driver/internal/odbc_sql_foreign_keys_test.cc
         bq_driver/internal/odbc_sql_info_test.cc
         bq_driver/internal/odbc_sql_primary_keys_test.cc
+        bq_driver/internal/odbc_sql_tables_test.cc
+        bq_driver/internal/odbc_sql_type_info_test.cc
         bq_driver/internal/odbc_stmt_attr_test.cc
         bq_driver/internal/odbc_stmt_handle_test.cc
+        bq_driver/internal/odbc_transactions_test.cc
         bq_driver/internal/odbc_type_utils_test.cc
         bq_driver/internal/trace_utils_test.cc
         bq_driver/internal/utils_test.cc
@@ -158,6 +171,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/odbc_diagnostics_test.cc
         bq_driver/odbc_driver_metadata_test.cc
         bq_driver/odbc_environment_test.cc
+        bq_driver/odbc_lock_test.cc
         bq_driver/odbc_sql_requests_test.cc
         bq_driver/odbc_sql_results_test.cc
         bq_driver/odbc_statement_test.cc

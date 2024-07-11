@@ -91,11 +91,14 @@ function (odbc_define_demo_tests)
     enable_testing()
 
     add_executable(
-        all_demo_tests odbc_driver_tests/demo/catalog_demo_test.cc
-                       odbc_driver_tests/demo/connection_demo_test.cc)
+        all_demo_tests
+        odbc_driver_tests/demo/connection_demo_test.cc
+        odbc_driver_tests/demo/foreign_keys_demo_test.cc
+        odbc_driver_tests/demo/primary_keys_demo_test.cc
+        odbc_driver_tests/demo/query_execution_demo_test.cc)
 
-    target_link_libraries(all_demo_tests google_cloud_odbc_bq_driver
-                          GTest::gtest_main)
+    target_link_libraries(all_demo_tests google_cloud_odbc_testing_odbc_utils
+                          google_cloud_odbc_bq_driver GTest::gtest_main)
 
     target_include_directories(all_demo_tests PUBLIC ${CMAKE_SOURCE_DIR})
     target_include_directories(all_demo_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
@@ -106,7 +109,38 @@ function (odbc_define_demo_tests)
     gtest_discover_tests(all_demo_tests)
 endfunction ()
 
+function (odbc_define_examples)
+    if (NOT ODBC_EXAMPLES)
+        return()
+    endif ()
+
+    include(CppBigqueryOdbcCommon)
+
+    file(
+        GLOB examples_cc
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "odbc_driver_tests/examples/*.cc")
+    foreach (fname IN LISTS examples_cc)
+        cpp_bigquery_odbc_add_executable(target "example" "${fname}")
+        target_link_libraries(${target} google_cloud_odbc_testing_odbc_utils
+                              GTest::gtest)
+        # Setting BQ_DRIVER_INTEGRATION_TESTS should use
+        # google_cloud_odbc_bq_driver target
+        if (BQ_DRIVER_INTEGRATION_TESTS)
+            add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+            target_link_libraries(${target} google_cloud_odbc_bq_driver)
+        else ()
+            target_link_libraries(${target} odbc)
+        endif ()
+        target_include_directories(${target} PUBLIC ${CMAKE_SOURCE_DIR})
+        target_include_directories(${target} PRIVATE $ENV{ODBC_INCLUDE_PATH})
+        target_compile_features(${target} PUBLIC cxx_std_17)
+    endforeach ()
+endfunction ()
+
 odbc_define_demo_tests()
+
+odbc_define_examples()
 
 odbc_define_tests()
 

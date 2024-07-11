@@ -48,17 +48,17 @@ class StatementHandle : public Handle {
   explicit StatementHandle(ConnectionHandle* conn_handle = nullptr)
       : conn_handle_(conn_handle){};
   explicit StatementHandle(ConnectionHandle* conn_handle,
-                           Descriptors descriptors)
+                           Descriptors const& descriptors)
       : conn_handle_(conn_handle),
         descriptors_(std::move(descriptors)),
         attributes_(kDefaultAttributes){};
 
   ~StatementHandle() = default;
 
-  StatementHandle(StatementHandle const&) = default;
-  StatementHandle& operator=(StatementHandle const&) = default;
-  StatementHandle(StatementHandle&&) = default;
-  StatementHandle& operator=(StatementHandle&&) = default;
+  StatementHandle(StatementHandle const& statementHandle);
+  StatementHandle& operator=(StatementHandle const& statementHandle);
+  StatementHandle(StatementHandle&& statementHandle) noexcept;
+  StatementHandle& operator=(StatementHandle&& statementHandle) noexcept;
 
   [[nodiscard]] DescriptorHandle& GetDescriptorHandle(
       DescriptorType type) const;
@@ -68,6 +68,15 @@ class StatementHandle : public Handle {
 
   odbc_internal::StatusRecord SetAttribute(int attribute, SQLULEN value);
   odbc_internal::StatusRecordOr<SQLULEN> GetAttribute(int attribute);
+
+  static odbc_internal::StatusRecord PopulateIrd(
+      DescriptorHandle& descriptor_handle,
+      google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
+
+  static odbc_internal::StatusRecord PopulateIpd(
+      DescriptorHandle& handle,
+      google::cloud::bigquery_v2_minimal_internal::JobStatistics const&
+          job_statistics);
 
   odbc_internal::StatusRecord PrepareQuery(const SQLCHAR* query_text);
   HandleType kType = HandleType::kStmtHandle;
@@ -103,7 +112,17 @@ class StatementHandle : public Handle {
     query_parameters_ = query_parameters;
   }
 
+
+
+  [[nodiscard]] inline std::string GetQueryString() const { return query_str_; }
+
+  [[nodiscard]] inline ::google::cloud::bigquery_v2_minimal_internal::Job&
+  GetPreparedJob() {
+    return prepared_job_;
+  }
   inline std::string GetQueryStr() { return query_str_; }
+
+  std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
@@ -115,9 +134,10 @@ class StatementHandle : public Handle {
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
+  mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
-
+  google::cloud::bigquery_v2_minimal_internal::Job prepared_job_;
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

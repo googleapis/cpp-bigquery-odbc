@@ -40,11 +40,14 @@ TEST(SQLFreeHandleInternal, InvalidType) {
 }
 
 TEST(SQLFreeHandleInternal, ConnectionHandle_Basic) {
-  auto* conn_handle = new ConnectionHandle();
+  EnvironmentHandle env_handle;
+  auto* conn_handle = new ConnectionHandle(&env_handle);
+  env_handle.GetConnectionHandles().emplace(conn_handle);
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, conn_handle);
 
   EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_TRUE(env_handle.GetConnectionHandles().empty());
 }
 
 TEST(SQLFreeHandleInternal, ConnectionHandle_IncorrectHandleType) {

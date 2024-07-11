@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <map>
+#include <mutex>
 #include <set>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -35,10 +36,10 @@ class DescriptorHandle : public Handle {
 
   ~DescriptorHandle() = default;
 
-  DescriptorHandle(DescriptorHandle const&) = default;
-  DescriptorHandle& operator=(DescriptorHandle const&) = default;
-  DescriptorHandle(DescriptorHandle&&) = default;
-  DescriptorHandle& operator=(DescriptorHandle&&) = default;
+  DescriptorHandle(DescriptorHandle const& descriptorHandle);
+  DescriptorHandle& operator=(DescriptorHandle const& descriptorHandle);
+  DescriptorHandle(DescriptorHandle&& descriptorHandle) noexcept;
+  DescriptorHandle& operator=(DescriptorHandle&& descriptorHandle) noexcept;
 
   DescriptorType GetType() { return type_; }
 
@@ -76,6 +77,8 @@ class DescriptorHandle : public Handle {
     return associated_stmt_handles_;
   };
 
+  std::mutex& GetMutex() const { return descriptor_handle_mutex_; }
+
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
   inline void SetConnectionHandle(ConnectionHandle* conn_handle) {
     conn_handle_ = conn_handle;
@@ -88,6 +91,7 @@ class DescriptorHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::set<std::pair<StatementHandle*, DescriptorType>>
       associated_stmt_handles_;
+  mutable std::mutex descriptor_handle_mutex_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -26,9 +27,12 @@ using google::cloud::odbc_bq_driver_internal::AddressToPointer;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::FinishTransactionIfNeeded;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
+using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -57,6 +61,13 @@ StatusRecord SetConnectionAttributes(ConnectionHandle* conn_handle,
   return stmt_handle->SetAttribute(SQL_ATTR_ASYNC_ENABLE, async_enable);
 }
 
+void AssociateDescriptorHandle(StatementHandle* stmt_handle,
+                               DescriptorType type) {
+  stmt_handle->GetDescriptorHandle(type)
+      .GetAssociatedStatementHandles()
+      .emplace(stmt_handle, type);
+}
+
 SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
@@ -76,10 +87,13 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecord status_record =
       SetConnectionAttributes(*handle_result, stmt_handle);
   if (!status_record.ok()) {
-    (*handle_result)->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*(*handle_result), status_record);
   }
   conn_handle->GetStatementHandles().insert(stmt_handle);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kARD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kAPD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kIRD);
+  AssociateDescriptorHandle(stmt_handle, DescriptorType::kIPD);
 
   *out_conn_handle = stmt_handle;
   return SQL_SUCCESS;
@@ -91,8 +105,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       attribute == SQL_ATTR_IMP_ROW_DESC) {
     StatusRecord status_record{SQLStates::k_HY017(),
                                "Invalid try to set implementation descriptor"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
   auto* desc_handle =
       reinterpret_cast<odbc_bq_driver_internal::DescriptorHandle*>(value);
@@ -101,8 +114,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
     StatusRecord status_record{
         SQLStates::k_HY024(),
         "Invalid attribute value (invalid descriptor handle)"};
-    handle->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status_record);
   }
 
   StatusRecord status = StatusRecord::Ok();
@@ -115,8 +127,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       break;
   }
   if (!status.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status);
-    return status.CalculateReturnCode();
+    return LogAndReturnCode(*handle, status);
   }
   return SQL_SUCCESS;
 }
@@ -140,8 +151,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
       StatusRecord status_record{
           SQLStates::k_HY011(),
           "Attribute cannot be set now - statement was prepared"};
-      handle->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(*handle, status_record);
     }
   }
   if (attribute == SQL_ATTR_CONCURRENCY || attribute == SQL_ATTR_CURSOR_TYPE ||
@@ -230,9 +240,9 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   StatusRecord status_record =
       handle->SetAttribute(attribute, reinterpret_cast<SQLULEN>(value));
   if (!status_record.ok()) {
-    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return LogAndReturnCode(*handle, status_record);
   }
-  return status_record.CalculateReturnCode();
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
@@ -336,10 +346,50 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 
   StatusRecordOr<SQLULEN> status = handle->GetAttribute(attribute);
   if (!status) {
-    handle->GetDiagnostics().AddStatusRecord(status.GetStatusRecord());
-    return status.GetCalculatedReturnCode();
+    return LogAndReturnCode(*handle, status);
   }
   return IntValueToOutputBufferResponse(*status, value, value_string_len);
+}
+
+SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
+                             SQLSMALLINT completion_type) {
+  if (handle_type == SQL_HANDLE_DBC) {
+    StatusRecordOr<ConnectionHandle*> handle_result =
+        ValidateConnectionHandle(handle);
+    if (!handle_result) {
+      TracePrintInternal(*(*kTraceOption),
+                         handle_result.GetStatusRecord().message);
+      return handle_result.GetCalculatedReturnCode();
+    }
+    ConnectionHandle& conn_handle = *(*handle_result);
+
+    StatusRecord status_record =
+        FinishTransactionIfNeeded(conn_handle, completion_type);
+    if (!status_record.ok()) {
+      return LogAndReturnCode(conn_handle, status_record);
+    }
+  } else if (handle_type == SQL_HANDLE_ENV) {
+    StatusRecordOr<EnvironmentHandle*> handle_result =
+        ValidateEnvironmentHandle(handle);
+    if (!handle_result) {
+      TracePrintInternal(*(*kTraceOption),
+                         handle_result.GetStatusRecord().message);
+      return handle_result.GetCalculatedReturnCode();
+    }
+    EnvironmentHandle& env_handle = *(*handle_result);
+
+    for (auto* conn_handle : env_handle.GetConnectionHandles()) {
+      StatusRecord status_record =
+          FinishTransactionIfNeeded(*conn_handle, completion_type);
+      if (!status_record.ok()) {
+        return LogAndReturnCode(*conn_handle, status_record);
+      }
+    }
+  } else {
+    TracePrintInternal(*(*kTraceOption), "HandleType is undefined");
+    return SQL_INVALID_HANDLE;
+  }
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

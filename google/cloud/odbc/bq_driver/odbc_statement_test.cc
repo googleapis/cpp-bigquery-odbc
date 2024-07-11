@@ -42,6 +42,18 @@ TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
   std::set<StatementHandle*>& stmt_handles = conn_handle.GetStatementHandles();
   EXPECT_FALSE(stmt_handles.empty());
   EXPECT_TRUE(stmt_handles.find(stmt_handle) != stmt_handles.end());
+  DescriptorHandle& ard =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kARD);
+  EXPECT_FALSE(ard.GetAssociatedStatementHandles().empty());
+  DescriptorHandle& apd =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kAPD);
+  EXPECT_FALSE(apd.GetAssociatedStatementHandles().empty());
+  DescriptorHandle& ird =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kIRD);
+  EXPECT_FALSE(ird.GetAssociatedStatementHandles().empty());
+  DescriptorHandle& ipd =
+      stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
+  EXPECT_FALSE(ipd.GetAssociatedStatementHandles().empty());
   delete stmt_handle;
 }
 

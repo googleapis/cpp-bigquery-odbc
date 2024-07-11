@@ -49,6 +49,10 @@ struct Descriptors {
         ird_(std::make_unique<DescriptorHandle>(ird)),
         ipd_(std::make_unique<DescriptorHandle>(ipd)){};
 
+  Descriptors(Descriptors const& descriptors);
+
+  Descriptors& operator=(Descriptors const& descriptors);
+
   std::unique_ptr<DescriptorHandle> ard_;
   DescriptorHandle* ard_expl_ = nullptr;
   std::unique_ptr<DescriptorHandle> apd_;

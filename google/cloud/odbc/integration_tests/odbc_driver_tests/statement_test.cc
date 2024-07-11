@@ -13,12 +13,11 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#endif
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 
@@ -27,10 +26,13 @@ namespace google::cloud::odbc_tests {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::ColumnSchema;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
@@ -638,6 +640,61 @@ TEST(StatementTest, FetchDirectRowWise) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, RollBackTransaction) {
+  std::string const table_name =
+      kDatasetWithTablePrefix + "_RollBackTransaction";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  // Insert some data to the table
+  StdRow row = {"a1", 0, 0};
+  table.InsertData(conn, {row}, false, true);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
+  SQLUINTEGER autocommit = SQL_AUTOCOMMIT_OFF;
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                                  (SQLPOINTER)autocommit, 0);
+
+  // Try to update data in the table
+  std::string update_stmt = "UPDATE " + table_name +
+                            " SET StringField='b1' WHERE StringField = 'a1';";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare(update)", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(update)", conn);
+
+  // Check that the data was updated
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"b1", 0, 0}}, results, std::vector<std::string>());
+
+  // ROLLBACK TRANSACTION
+  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_ROLLBACK);
+  CheckError(status, "SQLEndTran(after select)", conn);
+
+  // Check that transaction was rolled back and the data has initial value
+  results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"a1", 0, 0}}, results, std::vector<std::string>());
+
+  // COMMIT TRANSACTION
+  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_COMMIT);
+  CheckError(status, "SQLEndTran(after select)", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void PrepareAndCheckQuery(std::string const& query,
@@ -1232,6 +1289,218 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   EXPECT_EQ(stmt_handle->GetQueryStr(), query);
 
 #endif
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ValidateIrdDescriptor) {
+
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT id from INTEGRATION_TESTS.Test_Table";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
+
+  SQLINTEGER str_len = 0;
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(1, count);
+
+  SQLSMALLINT out_nullable;
+  status =
+      SQLGetDescField(conn->ird, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
+  EXPECT_EQ(SQL_NULLABLE, out_nullable);
+
+  SQLSMALLINT out_concise_type;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
+                           &out_concise_type, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(SQL_BIGINT, out_concise_type);
+
+  SQLCHAR out_column_Name[20];
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_NAME, &out_column_Name,
+                           kBufferLength, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+  EXPECT_STREQ((char const*)out_column_Name, "id");
+
+  SQLULEN length = 0;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
+  EXPECT_EQ(19, length);
+
+  // TODO(b/345692856) Validate Precision
+  /*SQLSMALLINT out_desc_precision;
+  status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
+                           &out_desc_precision, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
+  EXPECT_EQ(0, out_desc_precision);*/
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select 1";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(0, count);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
+                       conn, 1, "INT64");
+
+  auto status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(1, count);
+
+  SQLINTEGER str_len = 0;
+  SQLSMALLINT out_concise_c_Type;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
+                           &out_concise_c_Type, 0, &str_len);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
+
+  SQLSMALLINT out_nullable;
+  status =
+      SQLGetDescField(conn->ipd, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
+  EXPECT_EQ(SQL_NULLABLE, out_nullable);
+
+  SQLCHAR out_param_name;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_NAME, &out_param_name, 0, 0);
+  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
+  EXPECT_EQ(0, out_param_name);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(SQLNumResultCols, ValidStatementWithResultSet) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "SELECT 1";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  SQLSMALLINT columnCount;
+  status = SQLNumResultCols(conn->hstmt, &columnCount);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(columnCount, 1);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLNumResultCols, ValidateStatement) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "SELECT id,name from INTEGRATION_TESTS.Test_Table";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  SQLSMALLINT columnCount;
+  status = SQLNumResultCols(conn->hstmt, &columnCount);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(columnCount, 2);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLNumResultCols, CheckColumns) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "SELECT * from INTEGRATION_TESTS.Test_Table";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  SQLSMALLINT columnCount;
+  status = SQLNumResultCols(conn->hstmt, &columnCount);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(columnCount, 3);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLDescribeColumn, ValidateColumnDetails) {
+  auto const table_name = "INTEGRATION_TESTS.Test_Table";
+  Table table(table_name);
+
+  Schema schema{{"id", SQL_BIGINT}, {"name", SQL_VARCHAR}, {"age", SQL_BIGINT}};
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, "SELECT * FROM INTEGRATION_TESTS.Test_Table");
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+
+  CheckError(status, "SQLPrepare", conn);
+
+  // Check if the number of columns returned is correct
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, schema.size());
+
+  // Loop through columns and verify descriptions
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1);
+
+    // Verify returned column descriptions with the table schema
+    EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
+    EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
+    EXPECT_EQ(col_ptr->data_type, schema[i].type);
+    EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

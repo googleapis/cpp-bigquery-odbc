@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/status_utils.h"
@@ -21,13 +22,59 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::JobQueryStatistics;
+using ::google::cloud::bigquery_v2_minimal_internal::JobStatistics;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
+using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
+
+TableSchema CreateTableSchema() {
+  TableSchema schema;
+  TableFieldSchema f1, f2, f3;
+
+  f1.type = "STRING";
+  f2.type = "INTEGER";
+  f3.type = "STRING";
+
+  f1.precision = 1;
+  f2.precision = 19;
+  f3.precision = 1;
+
+  f1.max_length = 1;
+  f2.max_length = 19;
+  f3.max_length = 1;
+
+  f1.mode = "NULLABLE";
+  f2.mode = "NULLABLE";
+  f3.mode = "NOTNull";
+
+  f1.name = "Name";
+  f2.name = "Id";
+  f3.name = "Address";
+
+  schema.fields.emplace_back(f1);
+  schema.fields.emplace_back(f2);
+  schema.fields.emplace_back(f3);
+
+  return schema;
+}
+
+PostQueryResults CreatePostQueryResults() {
+  PostQueryResults results;
+  results.job_complete = true;
+  results.schema = CreateTableSchema();
+  return results;
+}
 
 TEST(GetDescriptorHandle, GetARD_impl) {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
@@ -220,6 +267,108 @@ TEST(GetAttribute, GetDefaultAttribute) {
   StatusRecordOr<SQLULEN> val = handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
 
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
+}
+
+TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
+  StatementHandle handle = CreateStatementHandle();
+
+  DescriptorHandle& desc_handle =
+      handle.GetDescriptorHandle(DescriptorType::kIPD);
+
+  PostQueryResults post_results = CreatePostQueryResults();
+
+  StatusRecord ird_response =
+      handle.PopulateIrd(desc_handle, post_results.schema);
+  EXPECT_TRUE(!ird_response.ok());
+  EXPECT_EQ(ird_response.sql_state, SQLStates::k_HY024());
+}
+
+TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
+  StatementHandle handle = CreateStatementHandle();
+
+  DescriptorHandle& desc_handle =
+      handle.GetDescriptorHandle(DescriptorType::kIRD);
+
+  PostQueryResults post_results = CreatePostQueryResults();
+
+  StatusRecord ird_response =
+      handle.PopulateIrd(desc_handle, post_results.schema);
+  EXPECT_TRUE(ird_response.ok());
+
+  DescriptorRecord descriptor_record;
+  for (int i = 0; i < post_results.schema.fields.size(); ++i) {
+    auto const& res = post_results.schema.fields[i];
+
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).name, res.name);
+    StatusRecordOr<SQLSMALLINT> type_status_record = GetSQLDataType(res.type);
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).concise_type,
+              *type_status_record);
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).length, res.max_length);
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).precision, res.precision);
+    SQLSMALLINT nullable = res.mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).nullable, nullable);
+  }
+}
+
+TEST(PopulateIpd, InvalidDescHandle) {
+  StatementHandle handle = CreateStatementHandle();
+
+  DescriptorHandle& desc_handle =
+      handle.GetDescriptorHandle(DescriptorType::kARD);
+
+  JobStatistics job_statistics;
+  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
+  EXPECT_TRUE(!ipd_res.ok());
+  EXPECT_EQ(ipd_res.sql_state, SQLStates::k_HY024());
+}
+
+TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
+  StatementHandle handle = CreateStatementHandle();
+
+  DescriptorHandle& desc_handle =
+      handle.GetDescriptorHandle(DescriptorType::kIPD);
+
+  JobStatistics job_statistics;
+  JobQueryStatistics job_qry_statistics;
+  std::vector<QueryParameter> query_params;
+  TableSchema schema;
+  TableFieldSchema f1;
+  f1.type = "STRING";
+  f1.precision = 20;
+  f1.name = "param-name-1";
+  f1.mode = "NULLABLE";
+
+  schema.fields.emplace_back(f1);
+
+  std::map<std::string, std::string> named_query_params;
+  named_query_params.insert({"param-name-1", "param-val-1"});
+  auto status_record_or = ConstructStringQueryParameters(named_query_params);
+
+  query_params = *status_record_or;
+
+  job_qry_statistics.undeclared_query_parameters = query_params;
+  job_statistics.job_query_stats = job_qry_statistics;
+  job_statistics.job_query_stats.schema = schema;
+
+  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
+  EXPECT_TRUE(ipd_res.ok());
+
+  auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
+  for (int i = 0; i < stmt_params.size(); i++) {
+    auto const& res = stmt_params[i];
+    TableSchema res_schema = job_statistics.job_query_stats.schema;
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).type_name,
+              res.parameter_type.type);
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).name, res.name);
+
+    StatusRecordOr<SQLSMALLINT> type_status_record =
+        GetSQLDataType(res.parameter_type.type);
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).concise_type,
+              *type_status_record);
+    SQLSMALLINT nullable =
+        res_schema.fields[i].mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
+    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).nullable, nullable);
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
