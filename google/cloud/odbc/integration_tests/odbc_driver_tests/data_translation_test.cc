@@ -57,8 +57,9 @@ struct Int64BasicTestStruct {
   SQLRETURN status;
 };
 StdDateRows const kDateSampleData{
-    {5, {2000, 1, 1}},
-    {2, {2024, 3, 20}},
+    {2, {2024, 03, 20}},
+    {5, {2000, 01, 01}},
+
 };
 std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
