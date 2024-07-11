@@ -112,8 +112,6 @@ class StatementHandle : public Handle {
     query_parameters_ = query_parameters;
   }
 
-
-
   [[nodiscard]] inline std::string GetQueryString() const { return query_str_; }
 
   [[nodiscard]] inline ::google::cloud::bigquery_v2_minimal_internal::Job&
