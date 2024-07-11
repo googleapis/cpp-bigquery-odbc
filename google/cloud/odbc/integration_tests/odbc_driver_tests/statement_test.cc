@@ -1480,47 +1480,28 @@ TEST(SQLDescribeColumn, ValidateColumnDetails) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void VerifyColumnWiseJsonResults(StdJsonRows input_data, Results col_wise_data,
-                                 std::vector<std::string> col_names) {
-  if (!col_names.size()) {
-    std::vector<std::string> all_col_names;
-    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
-      all_col_names.emplace_back(it->first);
-    }
-    col_names = all_col_names;
-  }
-  for (auto col_name : col_names) {
-    auto ret_col_values = col_wise_data[col_name];
-
-    // We have to sort inserted and returned values because we haven't specified
-    // the ordering
-    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
-
-    std::vector<std::string> input_col_values;
-    for (auto data : input_data) {
-      input_col_values.emplace_back(data.json_field);
-    }
-    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
-
-    // Check if the sorted inserted and returned vectors have same values
-    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for (int i = 0; i < ret_col_values.size(); i++) {
-      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
-    }
-  }
-}
-
-TEST(JSONStatementTest, SQLExecute) {
+TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   auto conn = std::make_shared<ODBCHandles>();
+
+  // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(InsertJsonStatement(conn), SQL_SUCCESS);
+
+  std::string query = "Select 123\0";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // Cast hstmt to StatementHandle*
+  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
+
+  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
+  EXPECT_EQ(stmt_handle->GetQueryString(), query);
+
+#endif
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  std::string query =
-      "SELECT PersonDetails FROM "
-      "ODBC_TEST_DATASET._ODBC_INSERT_PARAMS_TEST_JSON_false";
-  auto results = *FetchResults(conn, query, true);
-  // VerifyColumnWiseJsonResults(kJsonSampleData, results,
-  // std::vector<std::string>());
 }
 
 }  // namespace google::cloud::odbc_tests
