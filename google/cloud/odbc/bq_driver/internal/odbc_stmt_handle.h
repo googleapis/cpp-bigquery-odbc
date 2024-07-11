@@ -118,6 +118,7 @@ class StatementHandle : public Handle {
   GetPreparedJob() {
     return prepared_job_;
   }
+    
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
  protected:
