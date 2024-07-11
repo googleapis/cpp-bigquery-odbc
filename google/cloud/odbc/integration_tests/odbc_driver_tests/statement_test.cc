@@ -1286,7 +1286,7 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
 
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-  EXPECT_EQ(stmt_handle->GetQueryStr(), query);
+  EXPECT_EQ(stmt_handle->GetQueryString(), query);
 
 #endif
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
