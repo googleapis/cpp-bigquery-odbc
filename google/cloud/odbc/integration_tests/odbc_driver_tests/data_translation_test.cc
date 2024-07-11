@@ -56,7 +56,9 @@ struct Int64BasicTestStruct {
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
-
+StdDateRows const kDateSampleData{
+    {5, {2000, 1, 1}},
+};
 std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
     {SQL_C_FLOAT, "19.1", SQL_SUCCESS},
@@ -84,7 +86,8 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
 };
 std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
     // Conversions to SQL_C_CHAR
-    {SQL_C_CHAR, "2024-06-26", SQL_SUCCESS},
+    {SQL_C_CHAR, "2000/01/01", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024/03/20", SQL_SUCCESS},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
@@ -403,29 +406,25 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 }
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-date?view=sql-server-ver16
-TEST(DataTranslationTest, From_SQL_DATE_to_all) {
+TEST(DataTranslationTest, From_Date_to_all) {
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_DATE";
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE";
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(index INT64, DateField DATE)");
+  table.Create(conn, "(index INTEGER, DateField DATE)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> date_data_to_insert;
-  for (auto elem : kConversionFromDateTestData) {
-    date_data_to_insert.push_back(elem.value);
-  }
-  table.InsertDateData(conn, date_data_to_insert, true);
+  table.InsertDateData(conn, kDateSampleData, true, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string query = "SELECT DateField FROM " + table_name + " ORDER BY index";
+  std::string query = "SELECT DateField FROM " + table_name;
   TestTranslationsFromDate(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 

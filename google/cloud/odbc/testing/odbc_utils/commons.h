@@ -130,6 +130,11 @@ struct StdRow {
 };
 
 using StdRows = std::vector<StdRow>;
+struct StdDateRow {
+  SQLBIGINT int_field;
+  SQL_DATE_STRUCT date_field;
+};
+using StdDateRows = std::vector<StdDateRow>;
 
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
@@ -297,8 +302,8 @@ class Table {
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
-  void InsertDateData(std::shared_ptr<ODBCHandles> conn,
-                      std::vector<std::string> rows, bool insert_index = false);
+  void InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
+                      bool use_ansi, bool use_sqlprepare);
 
  private:
   std::string table_name_;
