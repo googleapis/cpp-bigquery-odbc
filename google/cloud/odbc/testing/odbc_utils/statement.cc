@@ -692,4 +692,49 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   }
 }
 
+SQLRETURN InsertJsonStatement(std::shared_ptr<ODBCHandles> conn,
+                              bool use_ansi) {
+  SQLRETURN status;
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_TEST_JSON_" +
+                          (use_ansi ? "true" : "false");
+  char insert_stmt[kBufferLength];
+  StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
+
+  Table table(table_name);
+
+  // Create Table
+  table.Create(conn, "(Id INTEGER, PersonDetails JSON)"), use_ansi;
+
+  // Prepare statement with insert query string
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLPrepare", conn, use_ansi);
+
+  // Add param 1(string) to insert query string
+
+  int int_field = 1;
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SSHORT,
+                            SQL_INTEGER, 0, 0, &int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+
+  constexpr char* json_field = "{\"name\": \"Sita\", \"age\": 30}";
+  SQLLEN len_json_field = strlen(json_field);
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                            SQL_CHAR, len_json_field, 0,
+                            (SQLPOINTER*)json_field, len_json_field, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+
+  // Execute insertion
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // Drop Table
+ // table.Drop(conn, use_ansi);
+
+  return status;
+}
 }  // namespace google::cloud::odbc_tests

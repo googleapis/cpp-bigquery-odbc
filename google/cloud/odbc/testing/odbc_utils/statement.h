@@ -27,6 +27,9 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
                           bool use_ansi = false);
 
+SQLRETURN InsertJsonStatement(std::shared_ptr<ODBCHandles> conn,
+                          bool use_ansi = false);
+
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                                            bool use_ansi = false);
 SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
