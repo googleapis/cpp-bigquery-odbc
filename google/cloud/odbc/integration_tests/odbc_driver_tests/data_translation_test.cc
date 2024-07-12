@@ -356,9 +356,11 @@ void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn,
             } else if (expected.target_c_type == SQL_C_TYPE_DATE ||
                        expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
               SQL_DATE_STRUCT* date_val = (SQL_DATE_STRUCT*)data;
-              std::string returned_val = std::to_string(date_val->year) + "-" +
-                                         std::to_string(date_val->month) + "-" +
-                                         std::to_string(date_val->day);
+              std::ostringstream oss;
+              oss << date_val->year << "-"
+             << std::setw(2) << std::setfill('0') << date_val->month << "-"
+             << std::setw(2) << std::setfill('0') << date_val->day;
+              std::string returned_val = oss.str();
               EXPECT_EQ(returned_val, expected.value);
             }
             row_count++;
