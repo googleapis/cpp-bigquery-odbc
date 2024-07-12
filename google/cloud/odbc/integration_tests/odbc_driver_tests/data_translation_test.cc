@@ -87,11 +87,11 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_BIT, "2", SQL_ERROR},
 };
 std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
-    {SQL_C_CHAR, "2000-01-01", SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, "2024-03-20", SQL_SUCCESS},
-    {SQL_DATE, "2024-04-20", SQL_SUCCESS},
-    {SQL_C_USHORT, "2024-05-20", SQL_ERROR},
-    {SQL_C_SLONG, "2024-06-20", SQL_ERROR},
+    {SQL_C_CHAR, "2024-01-20", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS},
+    {SQL_DATE, "2024-01-20", SQL_SUCCESS},
+    {SQL_C_USHORT, "2024-01-20", SQL_ERROR},
+    {SQL_C_SLONG, "2024-01-20", SQL_ERROR},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
