@@ -337,20 +337,28 @@ SQLRETURN SQLDescribeColInternal(
       IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
           desc_record.length, column_size, nullptr);
   }
+
   switch (desc_record.concise_type) {
     case SQL_TYPE_DATE:
     case SQL_TYPE_TIME:
     case SQL_TYPE_TIMESTAMP:
-    case SQL_CODE_SECOND:
-    case SQL_CODE_DAY_TO_SECOND:
-    case SQL_CODE_HOUR_TO_SECOND:
-    case SQL_CODE_MINUTE_TO_SECOND:
+    case SQL_INTERVAL_SECOND:
+    case SQL_INTERVAL_DAY_TO_SECOND:
+    case SQL_INTERVAL_HOUR_TO_SECOND:
+    case SQL_INTERVAL_MINUTE_TO_SECOND:
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.precision, decimal_digits, nullptr);
       break;
-    default:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT:
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.scale, decimal_digits, nullptr);
+      break;
+    default:
+      *decimal_digits = 0;
   }
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       desc_record.nullable, column_nullable, nullptr);

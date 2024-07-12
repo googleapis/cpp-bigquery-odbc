@@ -19,8 +19,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 struct ExpectedResults {
   std::string bq_type;
   SQLSMALLINT column_size_source = 0;
@@ -28,25 +26,27 @@ struct ExpectedResults {
 };
 
 static std::vector<ExpectedResults> const kExpectedResults = {
-    {"BIGNUMERIC", SQL_DESC_PRECISION, SQL_DESC_SCALE},
+    {"STRING", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"BOOL", SQL_DESC_PRECISION, SQL_DESC_SCALE},
-    {"BYTES", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"DATE", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"DATETIME", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
     {"FLOAT64", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"GEOGRAPHY", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"INT64", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"INTERVAL", SQL_DESC_LENGTH, SQL_DESC_SCALE},
+    {"TIMESTAMP", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
+    {"BYTES", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"JSON", SQL_DESC_LENGTH, SQL_DESC_SCALE},
+    {"GEOGRAPHY", SQL_DESC_LENGTH, SQL_DESC_SCALE},
+    {"DATETIME", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+    {"DATE", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
+    {"INTERVAL", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"NUMERIC", SQL_DESC_LENGTH, SQL_DESC_SCALE},
+    {"BIGNUMERIC", SQL_DESC_PRECISION, SQL_DESC_SCALE},
     {"RANGE<DATE>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"RANGE<DATETIME>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"RANGE<TIMESTAMP>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"STRING", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"TIME", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"TIMESTAMP", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
     {"STRUCT<x INT64, y STRING>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
     {"ARRAY<INT64>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
+#endif
 };
 
 void ValidatePrecision(std::shared_ptr<ODBCHandles> conn,
@@ -139,7 +139,8 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
     params.append(", ?");
   }
   table_schema.append(")");
-  table.Create(conn, table_schema);
+  table.DropWithPrepare(conn);
+  table.CreateWithPrepare(conn, table_schema);
 
   auto select_stmt = "SELECT * FROM " + table_name;
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
@@ -173,7 +174,5 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

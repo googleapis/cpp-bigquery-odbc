@@ -461,10 +461,12 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
     kSqlToBqDataTypes = {{SQL_BIGINT,
                           {
                               {"INT64", kBqInt64TypeInfoRow},
+                              {"INTEGER", kBqInt64TypeInfoRow},
                           }},
                          {SQL_BIT,
                           {
                               {"BOOL", kBqBoolTypeInfoRow},
+                              {"BOOLEAN", kBqBoolTypeInfoRow},
                           }},
                          {SQL_TYPE_DATE,
                           {
@@ -473,6 +475,7 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
                          {SQL_DOUBLE,
                           {
                               {"FLOAT64", kBqFloat64TypeInfoRow},
+                              {"FLOAT", kBqFloat64TypeInfoRow},
                           }},
                          {SQL_TYPE_TIME,
                           {

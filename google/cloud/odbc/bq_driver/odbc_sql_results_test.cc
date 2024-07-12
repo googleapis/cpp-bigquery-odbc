@@ -349,15 +349,23 @@ void AssertDescribeColumnResults(
     case SQL_TYPE_DATE:
     case SQL_TYPE_TIME:
     case SQL_TYPE_TIMESTAMP:
-    case SQL_CODE_SECOND:
-    case SQL_CODE_DAY_TO_SECOND:
-    case SQL_CODE_HOUR_TO_SECOND:
-    case SQL_CODE_MINUTE_TO_SECOND:
+    case SQL_INTERVAL_SECOND:
+    case SQL_INTERVAL_DAY_TO_SECOND:
+    case SQL_INTERVAL_HOUR_TO_SECOND:
+    case SQL_INTERVAL_MINUTE_TO_SECOND:
       EXPECT_EQ(record.precision, decimal_digits);
       break;
-    default:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT:
       EXPECT_EQ(record.scale, decimal_digits);
+      break;
+    default:
+      EXPECT_EQ(0, decimal_digits);
   }
+
   EXPECT_EQ(record.nullable, nullable);
   EXPECT_EQ(record.name, std::string(reinterpret_cast<char*>(column_name)));
   EXPECT_EQ(record.name.size(), column_name_Le);

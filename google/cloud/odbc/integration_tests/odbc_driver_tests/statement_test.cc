@@ -1314,12 +1314,11 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(19, length);
 
-  // TODO(b/345692856) Validate Precision
-  /*SQLSMALLINT out_desc_precision;
+  SQLSMALLINT out_desc_precision;
   status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
                            &out_desc_precision, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(0, out_desc_precision);*/
+  EXPECT_EQ(19, out_desc_precision);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

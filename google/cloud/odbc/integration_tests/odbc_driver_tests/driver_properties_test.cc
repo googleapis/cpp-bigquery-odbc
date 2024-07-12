@@ -455,10 +455,12 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
     kSqlToBqDataTypes = {{SQL_BIGINT,
                           {
                               {"INT64", kBqInt64TypeInfoRow},
+                              {"INTEGER", kBqInt64TypeInfoRow},
                           }},
                          {SQL_BIT,
                           {
                               {"BOOL", kBqBoolTypeInfoRow},
+                              {"BOOLEAN", kBqBoolTypeInfoRow},
                           }},
                          {SQL_TYPE_DATE,
                           {
@@ -467,6 +469,7 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
                          {SQL_DOUBLE,
                           {
                               {"FLOAT64", kBqFloat64TypeInfoRow},
+                              {"FLOAT", kBqFloat64TypeInfoRow},
                           }},
                          {SQL_TYPE_TIME,
                           {
@@ -654,7 +657,6 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
     ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type));
     TypeInfoRow validationData =
         kSqlToBqDataTypes.at(data_type).at(bq_data_type);
-
     EXPECT_STREQ((char const*)type_name, (char const*)validationData.type_name);
     EXPECT_EQ(data_type, validationData.data_type);
     EXPECT_EQ(col_size, validationData.col_size);
