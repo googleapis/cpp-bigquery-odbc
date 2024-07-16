@@ -41,8 +41,6 @@ INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
     {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
@@ -85,6 +83,8 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
@@ -1269,59 +1269,80 @@ TEST(SQLPrepare, ParametrizedQuery) {
 }
 
 TEST(SQLPrepare, ValidateIrdDescriptor) {
+  auto const table_name = kDatasetWithTablePrefix + "ValidateIrdDescriptor_TEST";
+  Table table(table_name);
+
+  Schema schema{{"StringField", SQL_VARCHAR},
+                {"IntegerField", SQL_BIGINT},
+                {"FloatField", SQL_DOUBLE}};
+
+  // Create Table and insert data
   auto conn = std::make_shared<ODBCHandles>();
-
-  // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query = "SELECT id from INTEGRATION_TESTS.Test_Table";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-
-  status =
-      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
+  table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.InsertData(conn, kSampleData, false, true);
+  
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CheckColumnData(conn, table_name, schema);
+  
+  auto status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &conn->ird, 0, NULL);
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_ROW_DESC)", conn);
 
   SQLINTEGER str_len = 0;
   SQLSMALLINT count = 0;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  status = SQLGetDescField(conn->ird, 0, SQL_DESC_COUNT, &count, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
-  EXPECT_EQ(1, count);
+  EXPECT_EQ(3, count);  // Expecting 3 columns
 
-  SQLSMALLINT out_nullable;
-  status =
-      SQLGetDescField(conn->ird, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
-  EXPECT_EQ(SQL_NULLABLE, out_nullable);
+  // Check each column
+  for (SQLSMALLINT i = 1; i <= 3; i++) {
+    SQLSMALLINT out_nullable;
+    status = SQLGetDescField(conn->ird, i, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
+    EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
-  SQLSMALLINT out_concise_type;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_type, 0, &str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(SQL_BIGINT, out_concise_type);
+    SQLSMALLINT out_concise_type;
+    status = SQLGetDescField(conn->ird, i, SQL_DESC_CONCISE_TYPE, &out_concise_type, 0, &str_len);
+    CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
 
-  SQLCHAR out_column_Name[20];
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_NAME, &out_column_Name,
-                           kBufferLength, &str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
-  EXPECT_STREQ((char const*)out_column_Name, "id");
+    SQLCHAR out_column_Name[20];
+    status = SQLGetDescField(conn->ird, i, SQL_DESC_NAME, &out_column_Name, sizeof(out_column_Name), &str_len);
+    CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
 
-  SQLULEN length = 0;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_LENGTH, &length, 0, NULL);
-  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(19, length);
+    SQLULEN length = 0;
+    status = SQLGetDescField(conn->ird, i, SQL_DESC_LENGTH, &length, 0, NULL);
+    CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
 
-  SQLSMALLINT out_desc_precision;
-  status = SQLGetDescField(conn->ird, 1, SQL_DESC_PRECISION,
-                           &out_desc_precision, 0, &str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(19, out_desc_precision);
+    SQLSMALLINT out_desc_precision;
+    status = SQLGetDescField(conn->ird, i, SQL_DESC_PRECISION, &out_desc_precision, 0, &str_len);
+    CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
 
+    switch (i) {
+      case 1:  // StringField
+        EXPECT_EQ(SQL_VARCHAR, out_concise_type);
+        EXPECT_STREQ("StringField", (char const*)out_column_Name);
+        EXPECT_EQ(16384, length);
+        EXPECT_EQ(16384, out_desc_precision);
+        break;
+      case 2:  // IntegerField
+        EXPECT_EQ(SQL_BIGINT, out_concise_type);
+        EXPECT_STREQ("IntegerField", (char const*)out_column_Name);
+        EXPECT_EQ(19, length);
+        EXPECT_EQ(19, out_desc_precision);
+        break;
+      case 3:  // FloatField
+        EXPECT_EQ(SQL_DOUBLE, out_concise_type);
+        EXPECT_STREQ("FloatField", (char const*)out_column_Name);
+        EXPECT_EQ(15, length);  // Typical length for DOUBLE
+        EXPECT_EQ(53, out_desc_precision);  // Typical precision for DOUBLE
+        break;
+    }
+  }
+
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
   auto conn = std::make_shared<ODBCHandles>();
 

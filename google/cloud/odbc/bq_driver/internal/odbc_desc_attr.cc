@@ -168,9 +168,8 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
   switch (value) {
     case SQL_C_CHAR:
     case SQL_C_BINARY:
-      // case SQL_C_VARBOOKMARK: (this macro has same value as SQL_C_BINARY)
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 1;
+      datetime_interval_precision = precision = length = 16384;
       break;
     case SQL_C_NUMERIC:
       type = concise_type = value;
@@ -178,28 +177,51 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
       break;
     case SQL_C_FLOAT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 24;
+      length = 15;
+      datetime_interval_precision = precision = 53;
       break;
     case SQL_C_DOUBLE:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 53;
+      length = 15;
+      datetime_interval_precision = precision = 53;
       break;
     case SQL_C_BIT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 1;
+      break;
     case SQL_C_WCHAR:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 16384;
+      break;
     case SQL_C_SSHORT:
     case SQL_C_USHORT:
     case SQL_C_SLONG:
     case SQL_C_ULONG:
     case SQL_C_STINYINT:
     case SQL_C_UTINYINT:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 19;
+      break;
     case SQL_C_SBIGINT:
     case SQL_C_UBIGINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 0;
+      datetime_interval_precision = precision = length = 19;
       break;
     case SQL_C_GUID:
       type = concise_type = value;
       datetime_interval_precision = precision = length = 16;
+      break;
+    case SQL_C_TYPE_DATE:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 10;
+      break;
+    case SQL_C_TYPE_TIME:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 15;
+      break;
+    case SQL_C_TYPE_TIMESTAMP:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 26;
       break;
     default:
       return StatusRecord{SQLStates::k_HY021(), error_message};
@@ -213,66 +235,61 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
   switch (value) {
     case SQL_CHAR:
     case SQL_VARCHAR:
-    case SQL_BINARY:
-    case SQL_VARBINARY:
-    case SQL_LONGVARBINARY:
-      type = concise_type = value;
-      datetime_interval_precision = precision = length = 1;
-      break;
     case SQL_LONGVARCHAR:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 16384;
+      break;
     case SQL_WCHAR:
     case SQL_WVARCHAR:
     case SQL_WLONGVARCHAR:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = precision = length = 16384;
+      break;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 16384;
       break;
     case SQL_NUMERIC:
     case SQL_DECIMAL:
       type = concise_type = value;
       datetime_interval_precision = precision = length = 38;
-      scale = 0;
-      break;
-    case SQL_SMALLINT:
-      type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 5;
+      scale = 9;
       break;
     case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 10;
+      datetime_interval_precision = precision = length = 19;
       break;
     case SQL_REAL:
-      type = concise_type = value;
-      datetime_interval_precision = 14;
-      precision = 24;
-      length = 7;
-      break;
     case SQL_FLOAT:
     case SQL_DOUBLE:
       type = concise_type = value;
-      datetime_interval_precision = 24;
-      precision = 53;
       length = 15;
+      datetime_interval_precision = precision = 53;
       break;
     case SQL_BIT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 1;
+      datetime_interval_precision = precision = length = 1;
       break;
-    case SQL_TINYINT:
+    case SQL_TYPE_DATE:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 3;
+      datetime_interval_precision = precision = length = 10;
       break;
-    case SQL_BIGINT:
+    case SQL_TYPE_TIME:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
-      length = 19;
+      datetime_interval_precision = precision = length = 15;
+      break;
+    case SQL_TYPE_TIMESTAMP:
+      type = concise_type = value;
+      datetime_interval_precision = precision = length = 26;
       break;
     case SQL_GUID:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 36;
+      datetime_interval_precision = precision = length = 16;
       break;
     default:
       return StatusRecord{SQLStates::k_HY021(), error_message};
