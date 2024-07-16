@@ -301,63 +301,79 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+std::string FormatDate(const SQL_DATE_STRUCT& date) {
+  std::ostringstream ss;
+  ss << std::setw(4) << std::setfill('0') << date.year << "-"
+     << std::setw(2) << std::setfill('0') << date.month << "-"
+     << std::setw(2) << std::setfill('0') << date.day;
+  return ss.str();
+}
+
 void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
                            bool use_ansi, bool use_sqlprepare) {
-  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
-  int num_rows = rows.size();
-  if (!num_rows) {
+  if (rows.empty()) {
     return;
   }
 
-  for (int i = 0; i < num_rows; i++) {
-    auto row = rows[i];
-    std::string row_str = "( ";
+  std::string insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
 
+  for (size_t i = 0; i < rows.size(); ++i) {
+    const auto& row = rows[i];
+    std::ostringstream row_str;
+
+    row_str << "(";
     if (row.int_field != NULL) {
-      row_str.append(std::to_string(row.int_field) + ", ");
+      row_str << row.int_field << ", ";
     } else {
-      row_str.append("NULL, ");
+      row_str << "NULL, ";
     }
 
     if (row.date_field.year != 0) {
-      row_str.append("DATE '");
-      row_str.append(std::to_string(row.date_field.year) + "-");
-      row_str.append(std::to_string(row.date_field.month) + "-");
-      row_str.append(std::to_string(row.date_field.day) + "'");
+      row_str <<"'"<< FormatDate(row.date_field) << "'";
     } else {
-      row_str.append("NULL");
+      row_str << "NULL";
     }
 
-    row_str.append(")");
-    if (i != (num_rows - 1)) {
-      row_str.append(", ");
+    row_str << ")";
+    if (i != rows.size() - 1) {
+      row_str << ", ";
     }
-    insert_stmt.append(row_str);
+    insert_stmt += row_str.str();
   }
+
+  std::cout << "Executing SQL: " << insert_stmt << std::endl; // Debug logging
+
   SQLRETURN status;
   if (use_sqlprepare) {
     if (use_ansi) {
-      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
-                           insert_stmt.size());
+      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     } else {
-      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
-                          insert_stmt.size());
+      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     }
-    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
+      std::cerr << "SQLPrepare failed with status: " << status << std::endl;
+      CheckError(status, "SQLPrepare", conn, use_ansi);
+      return;
+    }
     status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn, use_ansi);
+    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
+      std::cerr << "SQLExecute failed with status: " << status << std::endl;
+      CheckError(status, "SQLExecute", conn, use_ansi);
+      return;
+    }
   } else {
     if (use_ansi) {
-      status =
-          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     } else {
-      status =
-          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     }
-    CheckError(status, "SQLExecDirect", conn, use_ansi);
+    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
+      std::cerr << "SQLExecDirect failed with status: " << status << std::endl;
+      CheckError(status, "SQLExecDirect", conn, use_ansi);
+      return;
+    }
   }
 }
-
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];
