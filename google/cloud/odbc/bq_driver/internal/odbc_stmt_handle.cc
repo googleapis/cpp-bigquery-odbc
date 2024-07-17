@@ -230,6 +230,10 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return response.GetStatusRecord();
   }
 
+  nlohmann::json j;
+  to_json(j, *response);
+  std::cout << "insert job response:" << j.dump(4) << std::endl;
+
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {

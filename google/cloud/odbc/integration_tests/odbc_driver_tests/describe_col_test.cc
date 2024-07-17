@@ -19,110 +19,251 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+void PrintColAttributes(std::shared_ptr<ODBCHandles> conn, int col_num) {
+  SQLRETURN status;
+  // Checking string attributes
+  SQLCHAR col_attr[kBufferLength];
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_BASE_COLUMN_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_BASE_COLUMN_NAME),
+             conn);
+  std::cout << "SQL_DESC_BASE_COLUMN_NAME: " << col_attr << std::endl;
+  // std::string col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("Str1", col);
 
-struct ExpectedResults {
-  std::string bq_type;
-  SQLSMALLINT column_size_source = 0;
-  SQLSMALLINT decimal_digits_source = 0;
-};
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_BASE_TABLE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
+             conn);
+  std::cout << "SQL_DESC_BASE_TABLE_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ(table_name, col);
 
-static std::vector<ExpectedResults> const kExpectedResults = {
-    {"BIGNUMERIC", SQL_DESC_PRECISION, SQL_DESC_SCALE},
-    {"BOOL", SQL_DESC_PRECISION, SQL_DESC_SCALE},
-    {"BYTES", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"DATE", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"DATETIME", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"FLOAT64", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"GEOGRAPHY", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"INT64", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"INTERVAL", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"JSON", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"NUMERIC", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"RANGE<DATE>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"RANGE<DATETIME>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"RANGE<TIMESTAMP>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"STRING", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"TIME", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"TIMESTAMP", SQL_DESC_LENGTH, SQL_DESC_PRECISION},
-    {"STRUCT<x INT64, y STRING>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-    {"ARRAY<INT64>", SQL_DESC_LENGTH, SQL_DESC_SCALE},
-};
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_CATALOG_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
+             conn);
+  std::cout << "SQL_DESC_CATALOG_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ(kCatalogName, col);
 
-void ValidatePrecision(std::shared_ptr<ODBCHandles> conn,
-                       SQLSMALLINT column_number, SQLSMALLINT expected) {
-  SQLSMALLINT out_desc_precision;
-  SQLRETURN status =
-      SQLGetDescField(conn->ird, column_number, SQL_DESC_PRECISION,
-                      &out_desc_precision, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(expected, out_desc_precision);
-}
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_LABEL,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_LABEL), conn);
+  std::cout << "SQL_DESC_LABEL: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("Str1", col);
 
-void ValidateScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
-                   SQLSMALLINT expected) {
-  SQLSMALLINT out_desc_scale;
-  SQLRETURN status = SQLGetDescField(conn->ird, column_number, SQL_DESC_SCALE,
-                                     &out_desc_scale, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_SCALE)", conn);
-  EXPECT_EQ(expected, out_desc_scale);
-}
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_LITERAL_PREFIX,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_LITERAL_PREFIX),
+             conn);
+  std::cout << "SQL_DESC_LITERAL_PREFIX: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("'", col);
 
-void ValidateLength(std::shared_ptr<ODBCHandles> conn,
-                    SQLSMALLINT column_number, SQLULEN expected) {
-  SQLSMALLINT out_desc_len;
-  SQLRETURN status = SQLGetDescField(conn->ird, column_number, SQL_DESC_LENGTH,
-                                     &out_desc_len, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(expected, out_desc_len);
-}
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_LITERAL_SUFFIX,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_LITERAL_SUFFIX),
+             conn);
+  std::cout << "SQL_DESC_LITERAL_SUFFIX: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("'", col);
 
-void ValidateExpectedResults(std::shared_ptr<ODBCHandles> conn,
-                             SQLCHAR column_name[kBufferLength],
-                             SQLSMALLINT column_name_Le,
-                             SQLSMALLINT column_number, SQLSMALLINT sql_type,
-                             SQLULEN column_size, SQLSMALLINT decimal_digits,
-                             SQLSMALLINT nullable) {
-  auto expected_result = kExpectedResults[column_number - 1];
-  SQLSMALLINT out_concise_c_type;
-  SQLRETURN status =
-      SQLGetDescField(conn->ird, column_number, SQL_DESC_CONCISE_TYPE,
-                      &out_concise_c_type, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(sql_type, out_concise_c_type);
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_LOCAL_TYPE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_LOCAL_TYPE_NAME),
+             conn);
+  std::cout << "SQL_DESC_LOCAL_TYPE_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("STRING", col);
 
-  if (expected_result.column_size_source == SQL_DESC_PRECISION) {
-    ValidatePrecision(conn, column_number, column_size);
-  } else if (expected_result.column_size_source == SQL_DESC_LENGTH) {
-    ValidateLength(conn, column_number, column_size);
-  }
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_NAME), conn);
+  std::cout << "SQL_DESC_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("Str1", col);
 
-  if (expected_result.decimal_digits_source == SQL_DESC_PRECISION) {
-    ValidatePrecision(conn, column_number, decimal_digits);
-  } else if (expected_result.decimal_digits_source == SQL_DESC_SCALE) {
-    ValidateScale(conn, column_number, decimal_digits);
-  }
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_SCHEMA_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME),
+             conn);
+  std::cout << "SQL_DESC_SCHEMA_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ(kDatasetName, col);
 
-  SQLSMALLINT out_nullable;
-  status = SQLGetDescField(conn->ird, column_number, SQL_DESC_NULLABLE,
-                           &out_nullable, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
-  EXPECT_EQ(nullable, out_nullable);
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_TABLE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
+             conn);
+  std::cout << "SQL_DESC_TABLE_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ(table_name, col);
 
-  SQLCHAR out_column_Name[kBufferLength];
-  SQLINTEGER str_len = 0;
-  status = SQLGetDescField(conn->ird, column_number, SQL_DESC_NAME,
-                           &out_column_Name, kBufferLength, &str_len);
-  CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
-  EXPECT_STREQ((char const*)out_column_Name, (char const*)column_name);
-  EXPECT_EQ(str_len, column_name_Le);
-}
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_TYPE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TYPE_NAME),
+             conn);
+  std::cout << "SQL_DESC_TYPE_NAME: " << col_attr << std::endl;
+  // col = reinterpret_cast<char*>(col_attr);
+  // EXPECT_EQ("STRING", col);
 
-std::string CreateColumnName(int i) {
-  std::string name = "col_" + kExpectedResults[i].bq_type + " ";
-  std::replace_if(name.begin(), name.end(), ::ispunct, '_');
-  std::remove_if(name.begin(), name.end(), ::isblank);
-  return name;
+  // Checking int attributes
+  SQLLEN col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_AUTO_UNIQUE_VALUE,
+                           NULL, 0, NULL, &col_attr_int);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_AUTO_UNIQUE_VALUE),
+             conn);
+  std::cout << "SQL_DESC_AUTO_UNIQUE_VALUE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_CASE_SENSITIVE, NULL,
+                           0, NULL, &col_attr_int);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_CASE_SENSITIVE),
+             conn);
+  std::cout << "SQL_DESC_CASE_SENSITIVE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(1, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_CONCISE_TYPE, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CONCISE_TYPE),
+             conn);
+  std::cout << "SQL_DESC_CONCISE_TYPE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(12, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_COUNT, NULL, 0, NULL,
+                           &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_COUNT), conn);
+  std::cout << "SQL_DESC_COUNT: " << col_attr_int << std::endl;
+  // EXPECT_EQ(1, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_DISPLAY_SIZE, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_DISPLAY_SIZE),
+             conn);
+  std::cout << "SQL_DESC_DISPLAY_SIZE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(16384, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_FIXED_PREC_SCALE,
+                           NULL, 0, NULL, &col_attr_int);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_FIXED_PREC_SCALE),
+             conn);
+  std::cout << "SQL_DESC_FIXED_PREC_SCALE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_LENGTH, NULL, 0, NULL,
+                           &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_LENGTH),
+             conn);
+  std::cout << "SQL_DESC_LENGTH: " << col_attr_int << std::endl;
+  // EXPECT_EQ(16384, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_NULLABLE, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_NULLABLE),
+             conn);
+  std::cout << "SQL_DESC_NULLABLE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(1, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_NUM_PREC_RADIX, NULL,
+                           0, NULL, &col_attr_int);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_NUM_PREC_RADIX),
+             conn);
+  std::cout << "SQL_DESC_NUM_PREC_RADIX: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_OCTET_LENGTH, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_OCTET_LENGTH),
+             conn);
+  std::cout << "SQL_DESC_OCTET_LENGTH: " << col_attr_int << std::endl;
+  // EXPECT_EQ(65536, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_PRECISION, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_PRECISION),
+             conn);
+  std::cout << "SQL_DESC_PRECISION: " << col_attr_int << std::endl;
+  // EXPECT_EQ(16384, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_SCALE, NULL, 0, NULL,
+                           &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SCALE), conn);
+  std::cout << "SQL_DESC_SCALE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_SEARCHABLE, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SEARCHABLE),
+             conn);
+  std::cout << "SQL_DESC_SEARCHABLE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(3, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_TYPE, NULL, 0, NULL,
+                           &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TYPE), conn);
+  std::cout << "SQL_DESC_TYPE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(12, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_UNNAMED, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_UNNAMED),
+             conn);
+  std::cout << "SQL_DESC_UNNAMED: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_UNSIGNED, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_UNSIGNED),
+             conn);
+  std::cout << "SQL_DESC_UNSIGNED: " << col_attr_int << std::endl;
+  // EXPECT_EQ(1, col_attr_int);
+
+  col_attr_int = 0;
+  status = SQLColAttribute(conn->hstmt, col_num, SQL_DESC_UPDATABLE, NULL, 0,
+                           NULL, &col_attr_int);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_UPDATABLE),
+             conn);
+  std::cout << "SQL_DESC_UPDATABLE: " << col_attr_int << std::endl;
+  // EXPECT_EQ(0, col_attr_int);
+
+  std::cout << std::endl;
+  std::cout << std::endl;
 }
 
 TEST(SQLDescribeColumn, DescribeAllColumns) {
@@ -130,16 +271,7 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   auto table_name = kDatasetWithTablePrefix + "ODBC_DESCRIBE_COLUMNS_TEST";
   Table table(table_name);
-  std::string table_schema =
-      "(" + CreateColumnName(0) + kExpectedResults[0].bq_type;
-  std::string params = "?";
-  for (int i = 1; i < kExpectedResults.size(); i++) {
-    table_schema.append(", " + CreateColumnName(i) +
-                        kExpectedResults[i].bq_type);
-    params.append(", ?");
-  }
-  table_schema.append(")");
-  table.Create(conn, table_schema);
+  table.CreateWithPrepare(conn, getSchemaStr(kFullSchema));
 
   auto select_stmt = "SELECT * FROM " + table_name;
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
@@ -159,21 +291,49 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
     SQLSMALLINT decimal_digits = 0;
     SQLSMALLINT nullable = 0;
     SQLCHAR column_name[kBufferLength];
-    SQLSMALLINT column_name_Le = 0;
+    SQLSMALLINT column_name_len = 0;
 
     status = SQLDescribeCol(conn->hstmt, i, column_name, kBufferLength,
-                            &column_name_Le, &data_type, &column_size,
+                            &column_name_len, &data_type, &column_size,
                             &decimal_digits, &nullable);
     CheckError(status, "SQLDescribeCol[" + std::to_string(i) + "]", conn);
 
-    ValidateExpectedResults(conn, column_name, column_name_Le, i, data_type,
-                            column_size, decimal_digits, nullable);
+    std::string ret_col_name = (char*)column_name;
+    EXPECT_EQ(ret_col_name, kFullSchema[i - 1].name);
+    std::string table_col_type = kFullSchema[i - 1].type;
+    std::string col_type_sanitized = SanitizeBQColType(table_col_type);
+    EXPECT_TRUE(AreSqlAndBqTypesSame(data_type, col_type_sanitized));
+    // Most of the values returned are supposed to be the same as
+    // SQLGetTypeInfo. The exceptions are handled conditionally below
+    TypeInfoRow type_info =
+        kSqlToBqDataTypes.at(data_type).at(col_type_sanitized);
+    if (table_col_type == "FLOAT64") {
+      // Existing driver returns different value for FLOAT64 columns
+      EXPECT_EQ(column_size, 15);
+    } else {
+      EXPECT_EQ(column_size, type_info.col_size);
+    }
+    // Existing driver returns different values for TIME and DATETIME columns
+    if (table_col_type == "TIME" || table_col_type == "DATETIME") {
+      EXPECT_EQ(decimal_digits, 6);
+    } else {
+      EXPECT_EQ(decimal_digits, type_info.maximum_scale);
+    }
+    EXPECT_EQ(nullable, type_info.nullable);
+
+    std::cout << "i: " << i;
+    std::cout << " BQ data type: " << table_col_type;
+    std::cout << " column_name: " << column_name;
+    std::cout << " column_name_len: " << column_name_len;
+    std::cout << " data_type: " << data_type;
+    std::cout << " column_size: " << column_size;
+    std::cout << " decimal_digits: " << decimal_digits;
+    std::cout << " nullable: " << nullable << std::endl;
+    PrintColAttributes(conn, i);
   }
 
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // table.Drop(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

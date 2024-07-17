@@ -233,7 +233,7 @@ StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   if (type == "RANGE") {
     return BQDataType::kRange;
   }
-  if (type == "STRUCT") {
+  if (type == "STRUCT" || type == "RECORD") {
     return BQDataType::kStruct;
   }
   if (type == "JSON") {
@@ -404,32 +404,32 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   if (type == "FLOAT64" || type == "FLOAT") {
     return SQL_DOUBLE;
   }
-  if (type == "DECIMAL" || type == "NUMERIC") {
+  if (type == "DECIMAL" || type == "NUMERIC" || type == "BIGNUMERIC") {
     return SQL_NUMERIC;
   }
   if (type == "BYTES") {
     return SQL_VARBINARY;
   }
   if (type == "DATE") {
-    return SQL_DATE;
+    return SQL_TYPE_DATE;
   }
   if (type == "DATETIME") {
     return SQL_TYPE_TIMESTAMP;
   }
   if (type == "TIME") {
-    return SQL_TIME;
+    return SQL_TYPE_TIME;
   }
   if (type == "TIMESTAMP") {
     return SQL_TYPE_TIMESTAMP;
   }
-  if (type == "STRUCT") {
+  if (type == "STRUCT" || type == "RECORD") {
     return SQL_VARCHAR;
   }
   if (type == "JSON") {
     return SQL_VARCHAR;
   }
   if (type == "INTERVAL") {
-    return SQL_INTERVAL;
+    return SQL_VARCHAR;
   }
   if (type == "GEOGRAPHY") {
     return SQL_VARCHAR;

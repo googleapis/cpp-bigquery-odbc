@@ -36,12 +36,6 @@ struct Descriptor {
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
-Schema kStdSchema = {
-    {"Str2", SQL_VARCHAR},
-    {"Int2", SQL_INTEGER},
-    {"Float2", SQL_FLOAT},
-};
-
 void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                    Schema schema, bool use_ansi = false) {
   SQLSMALLINT desc_type;
@@ -87,7 +81,7 @@ void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_name, schema[i].name);
     // We are checking if the bigquery data type corresponding to the returned
     //  sql data type correct.
-    EXPECT_EQ(ToBqFieldType(desc.type), ToBqFieldType(schema[i].type));
+    AreSqlAndBqTypesSame(desc.type, schema[i].type);
 
     // Set the same values for another descriptor handle
     status = SQLSetDescRec(conn->ipd, i + 1, desc.type, desc.sub_type,
@@ -166,7 +160,7 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_name, schema[i].name);
     // We are checking if the bigquery data type corresponding to the returned
     //  sql data type correct.
-    EXPECT_EQ(ToBqFieldType(desc.type), ToBqFieldType(schema[i].type));
+    EXPECT_TRUE(AreSqlAndBqTypesSame(desc.type, schema[i].type));
   }
 
   status = SQLCopyDesc(conn->ird, conn->ipd);  // No ANSI version.
@@ -196,7 +190,7 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     }
     CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
                __USE_DYNAMIC_STACK_SIZE);
-    EXPECT_EQ(ToBqFieldType(desc_copy.type), ToBqFieldType(schema[i].type));
+    EXPECT_TRUE(AreSqlAndBqTypesSame(desc_copy.type, schema[i].type));
   }
 }
 

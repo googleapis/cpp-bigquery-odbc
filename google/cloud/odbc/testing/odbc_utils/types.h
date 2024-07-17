@@ -15,8 +15,12 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_TYPES_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_TYPES_H
 
+#include <gtest/gtest.h>
+#include <map>
 #include <sql.h>
 #include <sqlext.h>
+#include <sqlucode.h>
+#include <string>
 
 namespace google::cloud::odbc_tests {
 
@@ -453,6 +457,63 @@ TypeInfoRow const kBqBignumericTypeInfoRow = {
     10,                                                   // num_prec_radix
     NULL,                                                 // interval_precision
 };
+
+std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
+    kSqlToBqDataTypes = {{SQL_BIGINT,
+                          {
+                              {"INT64", kBqInt64TypeInfoRow},
+                          }},
+                         {SQL_BIT,
+                          {
+                              {"BOOL", kBqBoolTypeInfoRow},
+                          }},
+                         {SQL_TYPE_DATE,
+                          {
+                              {"DATE", kBqDateTypeInfoRow},
+                          }},
+                         {SQL_DOUBLE,
+                          {
+                              {"FLOAT64", kBqFloat64TypeInfoRow},
+                          }},
+                         {SQL_TYPE_TIME,
+                          {
+                              {"TIME", kBqTimeTypeInfoRow},
+                          }},
+                         {SQL_TYPE_TIMESTAMP,
+                          {
+                              {"TIMESTAMP", kBqTimestampTypeInfoRow},
+                              {"DATETIME", kBqDatetimeTypeInfoRow},
+                          }},
+                         {SQL_VARBINARY,
+                          {
+                              {"BYTES", kBqBytesTypeInfoRow},
+                          }},
+                         {SQL_VARCHAR,
+                          {
+                              {"STRING", kBqStringTypeInfoRow},
+                              {"ARRAY", kBqArrayTypeInfoRow},
+                              {"STRUCT", kBqStructTypeInfoRow},
+                              {"INTERVAL", kBqIntervalTypeInfoRow},
+                              {"JSON", kBqJsonTypeInfoRow},
+                              {"GEOGRAPHY", kBqGeographyTypeInfoRow},
+                          }},
+                         {SQL_NUMERIC,
+                          {
+                              {"NUMERIC", kBqNumericTypeInfoRow},
+                              {"BIGNUMERIC", kBqBignumericTypeInfoRow},
+                          }}};
+
+inline std::string SanitizeBQColType(std::string col_type) {
+  int special_char_ind = col_type.find_first_of("(<[");
+  return (special_char_ind == std::string::npos)
+             ? col_type
+             : col_type.substr(0, special_char_ind);
+}
+
+inline bool AreSqlAndBqTypesSame(SQLSMALLINT sql_type, std::string bq_type) {
+  return kSqlToBqDataTypes.count(sql_type) &&
+         kSqlToBqDataTypes.at(sql_type).count(bq_type);
+}
 
 }  // namespace google::cloud::odbc_tests
 

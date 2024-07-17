@@ -685,7 +685,7 @@ TEST(GetSQLDataType, GetValidDataType) {
   auto fifth_res = GetSQLDataType(f5);
 
   EXPECT_EQ(SQL_DOUBLE, *first_res);
-  EXPECT_EQ(SQL_DATE, *second_res);
+  EXPECT_EQ(SQL_TYPE_DATE, *second_res);
   EXPECT_EQ(SQL_VARCHAR, *third_res);
   EXPECT_EQ(SQL_TYPE_TIMESTAMP, *fourth_res);
   EXPECT_EQ(SQL_BIGINT, *fifth_res);

@@ -81,7 +81,7 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     // Verify returned column descriptions with the table schema
     EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
     EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
-    EXPECT_EQ(col_ptr->data_type, schema[i].type);
+    EXPECT_TRUE(AreSqlAndBqTypesSame(col_ptr->data_type, schema[i].type));
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
@@ -306,9 +306,9 @@ TEST(StatementTest, SQLDescribeCol) {
       kDatasetWithTablePrefix + "ODBC_COLUMN_DESCRIPTION_TEST";
   Table table(table_name);
 
-  Schema schema{{"StringField", SQL_VARCHAR},
-                {"IntegerField", SQL_BIGINT},
-                {"FloatField", SQL_DOUBLE}};
+  Schema schema{{"StringField", "STRING"},
+                {"IntegerField", "INT64"},
+                {"FloatField", "FLOAT64"}};
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
@@ -536,9 +536,9 @@ TEST(StatementTest, DISABLED_SQLPutData) {
 
   // TODO(#14): Add integer and floating point fields too
   // Schema returned by the query
-  Schema schema{{"StringField1", SQL_VARCHAR},
-                {"StringField2", SQL_VARCHAR},
-                {"StringField3", SQL_VARCHAR}};
+  Schema schema{{"StringField1", "STRING"},
+                {"StringField2", "STRING"},
+                {"StringField3", "STRING"}};
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
@@ -1445,7 +1445,7 @@ TEST(SQLDescribeColumn, ValidateColumnDetails) {
   auto const table_name = "INTEGRATION_TESTS.Test_Table";
   Table table(table_name);
 
-  Schema schema{{"id", SQL_BIGINT}, {"name", SQL_VARCHAR}, {"age", SQL_BIGINT}};
+  Schema schema{{"id", "INT64"}, {"name", "STRING"}, {"age", "INT64"}};
 
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1474,7 +1474,7 @@ TEST(SQLDescribeColumn, ValidateColumnDetails) {
     // Verify returned column descriptions with the table schema
     EXPECT_STREQ((char const*)col_ptr->name, schema[i].name.c_str());
     EXPECT_EQ(col_ptr->name_len, schema[i].name.length());
-    EXPECT_EQ(col_ptr->data_type, schema[i].type);
+    EXPECT_TRUE(AreSqlAndBqTypesSame(col_ptr->data_type, schema[i].type));
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

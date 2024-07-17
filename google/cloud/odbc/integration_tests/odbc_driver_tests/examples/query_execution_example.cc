@@ -115,7 +115,7 @@ TEST(SQLExecute, BasicWriteAndRead) {
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
 
-  std::string table_name = "ODBC_TEST_DATASET_SACHIN.TestTable";
+  std::string table_name = "ODBC_DEMO_DATASET.QUERY_EXECUTION_EXAMPLE";
 
   // (2) Creating Tables for reading data
   std::string schema =

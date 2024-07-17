@@ -70,13 +70,13 @@ RowWiseResults const kCatalogForeignKeysExpected{
 };
 
 std::string const kTableWithPKSchema =
-    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
+    "CREATE OR REPLACE TABLE " + kCatalogDatasetTableWithPKFull +
     " "
     "(StringField STRING, IntField INT64, FloatField FLOAT64, "
     "PRIMARY KEY (StringField, IntField) NOT ENFORCED)";
 
 std::string const kTableWithOutPKSchema =
-    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithoutPKFull +
+    "CREATE OR REPLACE TABLE " + kCatalogDatasetTableWithoutPKFull +
     " "
     "(StringField STRING, IntField INT64, FloatField FLOAT64)";
 
@@ -87,13 +87,13 @@ std::string const kTableCustomerFull =
     kCatalogFnsDataset + "." + kTableCustomer;
 
 std::string const kTableCustomerSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableCustomerFull +
+    "CREATE OR REPLACE TABLE " + kTableCustomerFull +
     " "
     "(CustId STRING, CustName STRING, CustAddress STRING, "
     "PRIMARY KEY (CustId) NOT ENFORCED)";
 
 std::string const kTableOrdersSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableOrdersFull +
+    "CREATE OR REPLACE TABLE " + kTableOrdersFull +
     " "
     "(OrderId STRING, CustId STRING, OrderName STRING, OrderStatus STRING, "
     "PRIMARY KEY (OrderId) NOT ENFORCED, "
@@ -104,7 +104,7 @@ std::string const kTableOrdersSchema =
     "NOT ENFORCED)";
 
 std::string const kTableLinesSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableLinesFull +
+    "CREATE OR REPLACE TABLE " + kTableLinesFull +
     " "
     "(LineItemId STRING, OrderId STRING, Quantity INT64, "
     "PRIMARY KEY (LineItemId) NOT ENFORCED, "

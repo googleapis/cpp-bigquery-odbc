@@ -473,7 +473,7 @@ TEST(InsertJob, CreateTableAndInsertRow) {
   JobConfigurationQuery job_configuration_query;
   std::string table_name = absl::StrCat(dataset_id, ".Test_Table_Runtime");
   job_configuration_query.query =
-      absl::StrCat("CREATE TABLE IF NOT EXISTS ", table_name, " (id INT) ");
+      absl::StrCat("CREATE OR REPLACE TABLE ", table_name, " (id INT) ");
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
   InsertJobRequest request;

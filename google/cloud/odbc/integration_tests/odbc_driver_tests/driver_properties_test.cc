@@ -18,51 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
-    kSqlToBqDataTypes = {{SQL_BIGINT,
-                          {
-                              {"INT64", kBqInt64TypeInfoRow},
-                          }},
-                         {SQL_BIT,
-                          {
-                              {"BOOL", kBqBoolTypeInfoRow},
-                          }},
-                         {SQL_TYPE_DATE,
-                          {
-                              {"DATE", kBqDateTypeInfoRow},
-                          }},
-                         {SQL_DOUBLE,
-                          {
-                              {"FLOAT64", kBqFloat64TypeInfoRow},
-                          }},
-                         {SQL_TYPE_TIME,
-                          {
-                              {"TIME", kBqTimeTypeInfoRow},
-                          }},
-                         {SQL_TYPE_TIMESTAMP,
-                          {
-                              {"TIMESTAMP", kBqTimestampTypeInfoRow},
-                              {"DATETIME", kBqDatetimeTypeInfoRow},
-                          }},
-                         {SQL_VARBINARY,
-                          {
-                              {"BYTES", kBqBytesTypeInfoRow},
-                          }},
-                         {SQL_VARCHAR,
-                          {
-                              {"STRING", kBqStringTypeInfoRow},
-                              {"ARRAY", kBqArrayTypeInfoRow},
-                              {"STRUCT", kBqStructTypeInfoRow},
-                              {"INTERVAL", kBqIntervalTypeInfoRow},
-                              {"JSON", kBqJsonTypeInfoRow},
-                              {"GEOGRAPHY", kBqGeographyTypeInfoRow},
-                          }},
-                         {SQL_NUMERIC,
-                          {
-                              {"NUMERIC", kBqNumericTypeInfoRow},
-                              {"BIGNUMERIC", kBqBignumericTypeInfoRow},
-                          }}};
-
 void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
                     SQLSMALLINT in_data_type = SQL_ALL_TYPES,
                     bool is_supported = true, bool use_ansi = false) {

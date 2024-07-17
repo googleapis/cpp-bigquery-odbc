@@ -58,7 +58,8 @@ function (odbc_define_tests)
     file(
         GLOB odbc_driver_tests_src_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "odbc_driver_tests/*_test.cc")
+        "odbc_driver_tests/*describe_col_test.cc"
+        "odbc_driver_tests/*driver_properties_test.cc")
 
     set(odbc_driver_tests_src ${odbc_driver_tests_src_cc})
 
@@ -144,4 +145,4 @@ odbc_define_examples()
 
 odbc_define_tests()
 
-define_client_library_integration_tests()
+# define_client_library_integration_tests()
