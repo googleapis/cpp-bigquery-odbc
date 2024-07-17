@@ -195,7 +195,7 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                                SQL_IS_SMALLINT, NULL);
     }
 #ifdef _WIN32
-    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, 1);
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, use_ansi);
 #else
     CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
                __USE_DYNAMIC_STACK_SIZE);

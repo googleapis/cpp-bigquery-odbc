@@ -13,16 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
-#ifdef _WIN32
-#undef SQLDriverConnect
-#undef SQLConnect
-#undef SQLGetInfo
-#undef SQLSetConnectAttr
-#undef SQLGetConnectAttr
-#undef SQLGetStmtAttr
-#undef SQLGetDescField
-#undef SQLColAttribute
-#endif
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+
 namespace google::cloud::odbc_tests {
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS

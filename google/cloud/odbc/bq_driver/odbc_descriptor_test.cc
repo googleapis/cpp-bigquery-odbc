@@ -17,10 +17,9 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <gtest/gtest.h>
-#ifdef _WIN32
-#include <cstdint>
-#endif
+
 
 namespace google::cloud::odbc_bq_driver {
 

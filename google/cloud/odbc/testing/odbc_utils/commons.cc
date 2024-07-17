@@ -15,16 +15,7 @@
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
 namespace google::cloud::odbc_tests {
-#ifdef _WIN32
-#undef SQLDescribeCol
-#undef SQLExecDirect
-#undef SQLGetDiagRec
-#undef SQLGetStmtAttr
-#undef SQLSetDescField
-#undef SQLGetDescField
-#undef SQLGetDiagField
-#undef SQLPrepare
-#endif
+
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 
 std::string GetRandomString(int len) {

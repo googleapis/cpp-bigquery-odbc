@@ -26,6 +26,32 @@
 #ifdef _WIN32
 #include <windows.h>
 #undef GetJob
+#undef SQLGetStmtAttr
+#undef SQLSetStmtAttr
+#undef SQLGetDescField
+#undef SQLDriverConnect
+#undef SQLConnect
+#undef SQLGetInfo
+#undef SQLSetConnectAttr
+#undef SQLGetConnectAttr
+#undef SQLColAttribute
+#undef SQLGetDiagField
+#undef SQLExecDirect
+#undef SQLDescribeCol
+#undef SQLPrepare
+#undef SQLGetTypeInfo
+
+#undef SQLGetDiagRec
+
+#undef SQLTables
+#undef SQLPrimaryKeys
+#undef SQLForeignKeys
+#undef SQLSetCursorName
+#undef SQLGetCursorName
+#undef SQLSetDescField
+
+
+
 #endif
 #include <sql.h>
 #include <sqlext.h>

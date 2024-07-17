@@ -14,16 +14,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include <chrono>
-
-#ifdef _WIN32
-#include <algorithm>
-#undef SQLSetStmtAttr
-#undef SQLExecDirect
-#undef SQLGetDiagField
-#undef SQLPrepare
-#undef SQLGetStmtAttr
-#endif
 
 namespace google::cloud::odbc_tests {
 
@@ -44,11 +36,8 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
-#ifdef WIN32
-  SQLRETURN status = SQL_SUCCESS;  // Initialize the status variable
-#else
-  SQLRETURN status;
-#endif
+  SQLRETURN status = SQL_SUCCESS; 
+
   auto const table_name = kDatasetWithTablePrefix +
                           "ODBC_INSERT_DIRECT_TEST_ANSI_" +
                           (use_ansi ? "true" : "false");
@@ -94,11 +83,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
 // Add param 1(string) to insert query string
-#ifdef _WIN32
   constexpr char const* str_field = "Test String 1";
-#else
-  constexpr char* str_field = "Test String 1";
-#endif
   SQLLEN len_string_field = strlen(str_field);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                             SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
@@ -154,11 +139,7 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLSetStmtAttr", conn);
 
 // Add param 1(string) to insert query string
-#ifdef _WIN32
   constexpr char const* str_field = "Test String 1";
-#else
-  constexpr char* str_field = "Test String 1";
-#endif
 
   SQLLEN len_string_field = strlen(str_field);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
@@ -320,19 +301,11 @@ std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
-#ifdef _WIN32
   int const rs_size = 3;
-#else
-  int rs_size = 3;
-#endif
 
   StdOdbcRow row_set[rs_size];
   SQLUSMALLINT row_status[rs_size];
-#ifdef WIN32
   SQLULEN num_rows_fetched = 0;
-#else
-  SQLUINTEGER num_rows_fetched = 0;
-#endif
 
   // Attributes for row-wise binding
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
@@ -494,11 +467,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                                        std::string query, int rs_size,
                                        bool use_ansi) {
   SQLRETURN status;
-#ifdef WIN32
   SQLULEN num_rows_fetched = 0;
-#else
-  int num_rows_fetched = 0;
-#endif
 
   status =
       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
@@ -719,12 +688,8 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   }
   while (status == SQL_NEED_DATA) {
     while (bytes_left > 0) {
-#ifdef _WIN32
       SQLLEN bytes_to_put =
           min(static_cast<int>(batch_size), static_cast<int>(bytes_left));
-#else
-      SQLLEN bytes_to_put = std::min((int)batch_size, (int)bytes_left);
-#endif
       status =
           SQLPutData(conn->hstmt, data_ptr, bytes_to_put);  // No ANSI version.
       CheckError(status, "SQLPutData", conn);

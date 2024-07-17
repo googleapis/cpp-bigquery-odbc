@@ -13,12 +13,8 @@
 // limitations under the License.
 
 #include "connection.h"
-#ifdef _WIN32
-#undef SQLDriverConnect
-#undef SQLConnect
-#undef SQLGetInfo
-#undef SQLSetConnectAttr
-#endif
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+
 namespace google::cloud::odbc_tests {
 
 void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,

@@ -31,40 +31,6 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
 
-#ifdef _WIN32
-#undef SQLDriverConnect
-#undef SQLDescribeCol
-#undef SQLGetDiagField
-#undef SQLGetDiagRec
-#undef SQLColumns
-#undef SQLTables
-#undef SQLPrimaryKeys
-#undef SQLProcedureColumns
-#undef SQLProcedures
-#undef SQLSpecialColumns
-#undef SQLStatistics
-#undef SQLTablePrivileges
-#undef SQLForeignKeys
-#undef SQLColumnPrivileges
-#undef SQLBrowseConnect
-#undef SQLConnect
-#undef SQLGetInfo
-#undef SQLGetTypeInfo
-#undef SQLSetConnectAttr
-#undef SQLGetConnectAttr
-#undef SQLSetStmtAttr
-#undef SQLGetStmtAttr
-#undef SQLGetDescField
-#undef SQLGetDescRec
-#undef SQLSetDescField
-#undef SQLPrepare
-#undef SQLGetCursorName
-#undef SQLSetCursorName
-#undef SQLExecDirect
-#undef SQLColAttribute
-#undef SQLColAttributes
-#undef SQLNativeSql
-#endif
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // ODBC APIs supported in initial driver release.

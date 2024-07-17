@@ -15,12 +15,9 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
 namespace google::cloud::odbc_tests {
-#ifdef _WIN32
-#undef SQLGetDiagField
-#undef SQLExecDirect
-#endif
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 

@@ -21,8 +21,40 @@
 
 #define _WINSOCKAPI_
 #include <Windows.h>
+#include <cstdint>
 #undef GetJob
-
+#undef SQLDriverConnect
+#undef SQLDescribeCol
+#undef SQLGetDiagField
+#undef SQLGetDiagRec
+#undef SQLColumns
+#undef SQLTables
+#undef SQLPrimaryKeys
+#undef SQLProcedureColumns
+#undef SQLProcedures
+#undef SQLSpecialColumns
+#undef SQLStatistics
+#undef SQLTablePrivileges
+#undef SQLForeignKeys
+#undef SQLColumnPrivileges
+#undef SQLBrowseConnect
+#undef SQLConnect
+#undef SQLGetInfo
+#undef SQLGetTypeInfo
+#undef SQLSetConnectAttr
+#undef SQLGetConnectAttr
+#undef SQLSetStmtAttr
+#undef SQLGetStmtAttr
+#undef SQLGetDescField
+#undef SQLGetDescRec
+#undef SQLSetDescField
+#undef SQLPrepare
+#undef SQLGetCursorName
+#undef SQLSetCursorName
+#undef SQLExecDirect
+#undef SQLColAttribute
+#undef SQLColAttributes
+#undef SQLNativeSql
 #endif  //_WIN32
 
 #include <odbcinst.h>

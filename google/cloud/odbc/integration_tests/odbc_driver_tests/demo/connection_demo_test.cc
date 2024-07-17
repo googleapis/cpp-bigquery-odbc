@@ -16,10 +16,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#ifdef _WIN32
-#undef SQLDriverConnect
-#endif
-
 namespace google::cloud::odbc_tests {
 
 // Helper functions for this test only.

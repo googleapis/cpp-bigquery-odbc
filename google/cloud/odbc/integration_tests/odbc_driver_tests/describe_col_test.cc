@@ -18,12 +18,6 @@
 #include <regex>
 
 namespace google::cloud::odbc_tests {
-#ifdef _WIN32
-#undef SQLGetStmtAttr
-#undef SQLDescribeCol
-#undef SQLPrepare
-#undef SQLGetDescField
-#endif
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
@@ -76,7 +70,7 @@ void ValidateScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT column_number,
 
 void ValidateLength(std::shared_ptr<ODBCHandles> conn,
                     SQLSMALLINT column_number, SQLULEN expected) {
-#ifdef WIN32
+#ifdef _WIN32
   SQLSMALLINT out_desc_len = 0;
   SQLLEN buffer_length = sizeof(out_desc_len);
   SQLRETURN status = SQLGetDescField(conn->ird, column_number, SQL_DESC_LENGTH,
