@@ -515,6 +515,7 @@ TEST(SQLColAttributeInternal, Fail_InvalidFieldIdentifier) {
                                              nullptr, nullptr);
 
   EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
   EXPECT_EQ(SQLStates::k_HY091(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }

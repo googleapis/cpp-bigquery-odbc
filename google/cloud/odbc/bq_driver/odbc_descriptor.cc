@@ -297,12 +297,12 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   return SQL_SUCCESS;
 }
 
-StatusRecordOr<int> GetDescField(DescriptorHandle* handle,
-                                 SQLSMALLINT rec_number,
-                                 SQLSMALLINT field_identifier,
-                                 SQLPOINTER out_value,
-                                 SQLINTEGER value_buffer_len,
-                                 SQLINTEGER* value_string_len) {
+StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
+                                       SQLSMALLINT rec_number,
+                                       SQLSMALLINT field_identifier,
+                                       SQLPOINTER out_value,
+                                       SQLINTEGER value_buffer_len,
+                                       SQLINTEGER* value_string_len) {
   std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     return StatusRecord{SQLStates::k_HY091(),
@@ -351,7 +351,7 @@ StatusRecordOr<int> GetDescField(DescriptorHandle* handle,
     StatusRecord status_record{
         SQLStates::k_07009(),
         "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
-    return StatusRecordOr<int>{status_record, SQL_NO_DATA};
+    return StatusRecordOr<SQLRETURN>{status_record, SQL_NO_DATA};
   }
 
   if (handle->GetType() == DescriptorType::kIRD &&
@@ -545,7 +545,7 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
     return handle_result.GetCalculatedReturnCode();
   }
 
-  StatusRecordOr<int> status_record_or =
+  StatusRecordOr<SQLRETURN> status_record_or =
       GetDescField(*handle_result, rec_number, field_identifier, out_value,
                    value_buffer_len, value_string_len);
   if (!status_record_or) {

@@ -375,7 +375,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
 
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  StatusRecordOr<int> result;
+  StatusRecordOr<SQLRETURN> result;
   switch (field_identifier) {
     case SQL_DESC_BASE_COLUMN_NAME:
     case SQL_DESC_BASE_TABLE_NAME:
