@@ -87,6 +87,7 @@ using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeCol;
@@ -123,6 +124,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
@@ -1861,13 +1863,25 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLSMALLINT* characterAttributeStringLen,
                                   SQLLEN* numericAttribute) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLColAttribute");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLColAttribute(
+        statementHandle, columnNumber, fieldIdentifier, characterAttribute,
+        characterAttributeBufferLen, characterAttributeStringLen,
+        numericAttribute, *(*kTraceOption));
 
   // Call to common internal function for SQLColAttribute and SQLColAttributeW
   // in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLColAttributeInternal(
+      statementHandle, columnNumber, fieldIdentifier, characterAttribute,
+      characterAttributeBufferLen, characterAttributeStringLen,
+      numericAttribute);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLDescribeParam(rc, *(*kTraceOption));
 
   return rc;
 }

@@ -91,6 +91,14 @@ SQLRETURN SQLDescribeColInternal(
     SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
     SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable);
 
+SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
+                                  SQLUSMALLINT column_number,
+                                  SQLUSMALLINT field_identifier,
+                                  SQLPOINTER char_attr,
+                                  SQLSMALLINT char_attr_buffer_len,
+                                  SQLSMALLINT* char_attr_string_len,
+                                  SQLLEN* numeric_attribute);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H

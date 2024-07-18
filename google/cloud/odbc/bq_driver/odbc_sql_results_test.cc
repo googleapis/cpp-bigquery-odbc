@@ -498,4 +498,26 @@ TEST(SQLDescribeColumn, Describe_SQL_DATE) {
   AssertDescribeColumnResults(status, record, column_name, column_name_Le,
                               data_type, column_size, decimal_digits, nullable);
 }
+
+TEST(SQLColAttributeInternal, Fail_InvalidHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+
+  SQLRETURN status =
+      SQLColAttributeInternal(&conn_handle, 0, 0, nullptr, 0, nullptr, nullptr);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLColAttributeInternal, Fail_InvalidFieldIdentifier) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLColAttributeInternal(&stmt_handle, 1, 111, nullptr, 0,
+                                             nullptr, nullptr);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_HY091(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

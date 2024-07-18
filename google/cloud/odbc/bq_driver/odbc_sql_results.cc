@@ -358,4 +358,51 @@ SQLRETURN SQLDescribeColInternal(
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
+                                  SQLUSMALLINT column_number,
+                                  SQLUSMALLINT field_identifier,
+                                  SQLPOINTER char_attr,
+                                  SQLSMALLINT char_attr_buffer_len,
+                                  SQLSMALLINT* char_attr_string_len,
+                                  SQLLEN* numeric_attribute) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+
+  StatusRecordOr<SQLRETURN> result;
+  switch (field_identifier) {
+    case SQL_DESC_BASE_COLUMN_NAME:
+    case SQL_DESC_BASE_TABLE_NAME:
+    case SQL_DESC_CATALOG_NAME:
+    case SQL_DESC_LABEL:
+    case SQL_DESC_LITERAL_PREFIX:
+    case SQL_DESC_LITERAL_SUFFIX:
+    case SQL_DESC_LOCAL_TYPE_NAME:
+    case SQL_DESC_NAME:
+    case SQL_DESC_SCHEMA_NAME:
+    case SQL_DESC_TABLE_NAME:
+    case SQL_DESC_TYPE_NAME:
+      result =
+          GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
+                       static_cast<SQLSMALLINT>(field_identifier), char_attr,
+                       static_cast<SQLINTEGER>(char_attr_buffer_len),
+                       reinterpret_cast<SQLINTEGER*>(char_attr_string_len));
+      break;
+    default:
+      result = GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
+                            static_cast<SQLSMALLINT>(field_identifier),
+                            numeric_attribute, 0, nullptr);
+  }
+  if (!result) {
+    return LogAndReturnCode(stmt_handle, result);
+  }
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver
