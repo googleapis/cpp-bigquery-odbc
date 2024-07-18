@@ -24,11 +24,12 @@ using google::cloud::odbc_bq_driver::SQLBindColInternal;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-
+using SQLDATE = std::string;
 struct TestingResultSetRow {
   SQLBIGINT int_field;
   SQLDOUBLE double_field;
   std::string str_field;
+  SQLDATE date_field;
 };
 
 std::vector<TestingResultSetRow> const kTestingResultSetValues = {
