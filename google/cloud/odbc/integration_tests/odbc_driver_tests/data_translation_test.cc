@@ -139,7 +139,7 @@ std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
     {SQL_C_BINARY, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
     {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS},
     {SQL_C_TYPE_TIME, "01:02:03", SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, "2024-01-20", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2024-2-20 1:2:3.123456000", SQL_SUCCESS},
     {SQL_C_SLONG, "2024-01-20 00:00:00.000000", SQL_ERROR},
 };
 template <typename TestStruct>
@@ -379,7 +379,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               std::string returned_val = oss.str();
               std::cout<<"returned value timestamp "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_TIME) {
+            } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
               std::ostringstream oss;
               oss << date_val->year << "-"<< date_val->month << "-"
