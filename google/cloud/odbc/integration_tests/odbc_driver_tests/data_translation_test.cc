@@ -411,7 +411,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 }
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-date?view=sql-server-ver16
-TEST(DataTranslationTest, From_Date_to_all) {
+TEST(DataTranslationTest, From_SQL_Date_to_all) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE";
   Table table(table_name);
