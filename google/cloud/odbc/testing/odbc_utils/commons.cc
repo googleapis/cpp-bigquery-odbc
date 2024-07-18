@@ -314,8 +314,8 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
   if (rows.empty()) {
     return;
   }
-  
-  std::string insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+
+  std::string insert_stmt = "INSERT INTO " + table_name_ + " VALUES";
 
   for (size_t i = 0; i < rows.size(); ++i) {
     auto const& row = rows[i];

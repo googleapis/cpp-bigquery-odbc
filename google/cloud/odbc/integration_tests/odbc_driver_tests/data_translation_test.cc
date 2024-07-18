@@ -20,7 +20,6 @@ namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
-using SQLDATE = std::string;
 struct StrBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
