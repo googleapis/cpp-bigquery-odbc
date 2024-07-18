@@ -40,9 +40,7 @@
 #undef SQLDescribeCol
 #undef SQLPrepare
 #undef SQLGetTypeInfo
-
 #undef SQLGetDiagRec
-
 #undef SQLTables
 #undef SQLPrimaryKeys
 #undef SQLForeignKeys

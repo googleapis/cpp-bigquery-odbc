@@ -401,7 +401,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
   EnvironmentHandle handle;
-  SQLPOINTER buff;
+  SQLPOINTER buff= nullptr;
 
   auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE, buff,
                                         0, nullptr);
@@ -412,7 +412,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
 TEST(SQLGetDescFieldInternal,
      Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
   DescriptorHandle handle;
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
                                         buff, 0, nullptr);
@@ -424,7 +424,7 @@ TEST(SQLGetDescFieldInternal,
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status =
       SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);
@@ -436,7 +436,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status =
       SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);
