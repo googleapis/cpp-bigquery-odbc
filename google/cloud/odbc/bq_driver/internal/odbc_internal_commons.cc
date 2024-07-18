@@ -74,6 +74,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
             break;
           }
+          case BQDataType::kDate: {
+            DateToDSValue(data, row_val);
+            break;
+          }
           default: {
             return StatusRecord{SQLStates::k_HY000(),
                                 "Invalid or unsupported col BQ data type"};
@@ -411,7 +415,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     return SQL_VARBINARY;
   }
   if (type == "DATE") {
-    return SQL_DATE;
+    return SQL_TYPE_DATE;
   }
   if (type == "DATETIME") {
     return SQL_TYPE_TIMESTAMP;
