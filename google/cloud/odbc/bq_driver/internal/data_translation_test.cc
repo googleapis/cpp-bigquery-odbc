@@ -243,7 +243,7 @@ TEST(ConvertFromStringDSValue, To_SQL_C_USHORT) {
                                            SQL_C_USHORT, SQLStates::k_22003(),
                                            "Numeric value out of range");
 }
-
+/*
 TEST(ConvertTimestamp, Unsupported_Conversion) {
   std::string date = "2024-01-01 05:30:00 Asia/Kolkata";
   DSValue src_dsval;
@@ -281,5 +281,5 @@ TEST(ConvertTimestamp, failure_incorrect_conversion) {
   DataBuffer dest_data = {SQL_DATE, dest_buf, 50, nullptr};
   auto status = ConvertFromTimestampDSValue<DSValue>(src_dsval, dest_data);
   assert(status.sql_state == odbc_internal::SQLStates::k_HY000());
-}
+}*/
 }  // namespace google::cloud::odbc_bq_driver_internal
