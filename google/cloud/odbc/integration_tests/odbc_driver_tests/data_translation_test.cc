@@ -363,13 +363,27 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               std::string returned_val((char*)data, strlen_or_ind);
               std::cout<<"returned value wchar "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_TYPE_DATE ||
-                       expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
-              SQL_DATE_STRUCT* date_val = (SQL_DATE_STRUCT*)data;
+            } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
               std::ostringstream oss;
-              oss << date_val->year << "-"
-             << std::setw(2) << std::setfill('0') << date_val->month << "-"
-             << std::setw(2) << std::setfill('0') << date_val->day;
+              oss << date_val->year << "-"<< date_val->month << "-"
+             << date_val->day<<" "<<date_val->hour<<":"<<date_val->minute<<":"<<date_val->second<<"."<<date_val->fraction;
+              std::string returned_val = oss.str();
+              std::cout<<"returned value Date "<<returned_val<<std::endl;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if ( expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+              std::ostringstream oss;
+              oss << date_val->year << "-"<< date_val->month << "-"
+             << date_val->day<<" "<<date_val->hour<<":"<<date_val->minute<<":"<<date_val->second<<"."<<date_val->fraction;
+              std::string returned_val = oss.str();
+              std::cout<<"returned value timestamp "<<returned_val<<std::endl;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TIME) {
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+              std::ostringstream oss;
+              oss << date_val->year << "-"<< date_val->month << "-"
+             << date_val->day<<" "<<date_val->hour<<":"<<date_val->minute<<":"<<date_val->second<<"."<<date_val->fraction;
               std::string returned_val = oss.str();
               std::cout<<"returned value time "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
