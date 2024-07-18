@@ -301,6 +301,67 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
+                           bool use_ansi, bool use_sqlprepare) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::string row_str = "( ";
+
+    if (row.int_field != NULL) {
+      row_str.append(std::to_string(row.int_field) + ", ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    if (row.timestamp_field.year != 0) {
+      row_str.append("TIMESTAMP('");
+      row_str.append(std::to_string(row.timestamp_field.year) + "-");
+      row_str.append(std::to_string(row.timestamp_field.month) + "-");
+      row_str.append(std::to_string(row.timestamp_field.day) + " ");
+      row_str.append(std::to_string(row.timestamp_field.hour) + ":");
+      row_str.append(std::to_string(row.timestamp_field.minute) + ":");
+      row_str.append(std::to_string(row.timestamp_field.second) + ".");
+      row_str.append(std::to_string(row.timestamp_field.fraction) + "')");
+    } else {
+      row_str.append("NULL");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+  SQLRETURN status;
+  if (use_sqlprepare) {
+    if (use_ansi) {
+      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                           insert_stmt.size());
+    } else {
+      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                          insert_stmt.size());
+    }
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn, use_ansi);
+  } else {
+    if (use_ansi) {
+      status =
+          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    } else {
+      status =
+          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    }
+    CheckError(status, "SQLExecDirect", conn, use_ansi);
+  }
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];

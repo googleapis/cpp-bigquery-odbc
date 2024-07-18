@@ -244,4 +244,42 @@ TEST(ConvertFromStringDSValue, To_SQL_C_USHORT) {
                                            "Numeric value out of range");
 }
 
+TEST(ConvertTimestamp, Unsupported_Conversion) {
+  std::string date = "2024-01-01 05:30:00 Asia/Kolkata";
+  DSValue src_dsval;
+  TimestampToDSValue(date, src_dsval);
+  char dest_buf[11];  // Allocate buffer
+  DataBuffer dest_data{SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromTimestampDSValue<DSValue>(src_dsval, dest_data);
+  assert(status.sql_state == odbc_internal::SQLStates::k_HY000());
+}
+TEST(ConvertTimestamp, insufficient_bufferlength) {
+  std::string date = "2024-01-01 05:30:00 Asia/Kolkata";
+  DSValue src_dsval;
+  TimestampToDSValue(date, src_dsval);
+  char dest_buf[5];  // Allocate buffer
+  DataBuffer dest_data{SQL_C_BINARY, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromTimestampDSValue<DSValue>(src_dsval, dest_data);
+  assert(status.sql_state == odbc_internal::SQLStates::k_22003());
+}
+
+TEST(ConvertTimestamp, success) {
+  std::string date = "2024-01-01 05:30:00 Asia/Kolkata";
+  DSValue src_dsval;
+  TimestampToDSValue(date, src_dsval);
+  wchar_t dest_buf[11];
+  DataBuffer dest_data = {SQL_C_TYPE_DATE, dest_buf, 50, nullptr};
+  auto status = ConvertFromTimestampDSValue<DSValue>(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertTimestamp, failure_incorrect_conversion) {
+  std::string date = "2024-01-01 05:30:00 Asia/Kolkata";
+  DSValue src_dsval;
+  TimestampToDSValue(date, src_dsval);
+  wchar_t dest_buf[11];
+  DataBuffer dest_data = {SQL_DATE, dest_buf, 50, nullptr};
+  auto status = ConvertFromTimestampDSValue<DSValue>(src_dsval, dest_data);
+  assert(status.sql_state == odbc_internal::SQLStates::k_HY000());
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

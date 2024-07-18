@@ -16,6 +16,10 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 
+#include <codecvt>
+#include <locale>
+#include <stdexcept>
+
 namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -25,6 +29,16 @@ struct StrBasicTestStruct {
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
   std::string value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+using SQLTIMESTAMP = std::string;
+struct TimestampBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQLTIMESTAMP value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
@@ -115,6 +129,22 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
     {SQL_C_BIT, 2, SQL_ERROR},
 };
 
+StdTimestampRows const kTimestampSampleData{
+    {1, {2024, 01, 20, 01, 02, 03, 123456}},{2, {2024, 02, 20, 01, 02, 03, 123456}},
+    {3, {2024, 03, 20, 01, 02, 03, 123456}}, {4, {2024, 04, 20, 01, 02, 03, 123456}},
+    {5, {2024, 05, 20, 01, 02, 03, 123456}}, {6, {2024, 06, 20, 01, 02, 03, 123456}},
+    {7, {2024, 07, 20, 01, 02, 03, 123456}},
+};
+
+std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
+    {SQL_C_CHAR, "2024-01-20 01:02:03.123456", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2024-01-20 01:02:03.123456", SQL_SUCCESS},
+    {SQL_C_BINARY, "2024-03-20 01:02:03.123456", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024-04-20", SQL_SUCCESS},
+    {SQL_C_TYPE_TIME, "01:02:03", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2024-06-20 01:02:03", SQL_SUCCESS},
+    {SQL_C_SLONG, "2024-05-20 00:00:00.123456", SQL_ERROR},
+};
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
                                     std::string query,
@@ -285,6 +315,110 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
   }
   EXPECT_EQ(row_count, kConversionFromStrTestData.size());
 }
+
+void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
+                              std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  int row_count = 0;
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    while (1) {
+      TimestampBasicTestStruct expected = kConversionFromTimestampTestData[row_count];
+      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                          kBufferLength, &strlen_or_ind);
+      std::cout << "Testing row: " << expected.target_c_type << ", "
+                << expected.value << ", " << expected.status << std::endl;
+      
+      EXPECT_EQ(status, expected.status);
+      if (status != SQL_SUCCESS) {
+        row_count++;
+        break;
+      }
+      CheckError(status,
+                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+                 conn);
+      if (SQL_SUCCEEDED(status)) {
+        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        if (status == SQL_NO_DATA) {
+          if (strlen_or_ind >= 0) {
+            if (expected.target_c_type == SQL_C_CHAR ||
+                expected.target_c_type == SQL_C_WCHAR) {
+              std::string returned_val = (char*)data;
+              std::cout<<"returned value char "<<returned_val<<std::endl;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_BINARY) {
+              std::string returned_val((char*)data, strlen_or_ind);
+              std::cout<<"returned value char "<<returned_val<<std::endl;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TYPE_DATE ||
+                       expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+              SQL_DATE_STRUCT* date_val = (SQL_DATE_STRUCT*)data;
+              std::ostringstream oss;
+              oss << date_val->year << "-"
+             << std::setw(2) << std::setfill('0') << date_val->month << "-"
+             << std::setw(2) << std::setfill('0') << date_val->day;
+              std::string returned_val = oss.str();
+              std::cout<<"returned value char "<<returned_val<<std::endl;
+              EXPECT_EQ(returned_val, expected.value);
+            }
+            row_count++;
+          }
+          break;
+        }
+        CheckError(status, "SQLGetDiagField", conn);
+      } else {
+        break;
+      }
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromTimestampTestData.size());
+}
+
+// This test should follow translations according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-timestamp?view=sql-server-ver16
+TEST(DataTranslationTest, From_Date_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIMESTAMP";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(index INTEGER, TimestampField TIMESTAMP)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertTimestampData(conn, kTimestampSampleData, true, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT TimestampField FROM " + table_name;
+  TestTranslationsFromTimestamp(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+} 
 
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16

@@ -131,6 +131,13 @@ struct StdRow {
 
 using StdRows = std::vector<StdRow>;
 
+struct StdTimestampRow {
+  SQLBIGINT int_field;
+  SQL_TIMESTAMP_STRUCT timestamp_field;
+};
+
+using StdTimestampRows = std::vector<StdTimestampRow>;
+
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
@@ -296,6 +303,9 @@ class Table {
   // be populated to order the values
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
+
+   void InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
+                      bool use_ansi, bool use_sqlprepare);
 
  private:
   std::string table_name_;
