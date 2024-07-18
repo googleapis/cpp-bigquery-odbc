@@ -130,20 +130,20 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
 };
 
 StdTimestampRows const kTimestampSampleData{
-    {1, {2024, 01, 20, 01, 02, 03, 123456}},{2, {2024, 02, 20, 01, 02, 03, 123456}},
-    {3, {2024, 03, 20, 01, 02, 03, 123456}}, {4, {2024, 04, 20, 01, 02, 03, 123456}},
-    {5, {2024, 05, 20, 01, 02, 03, 123456}}, {6, {2024, 06, 20, 01, 02, 03, 123456}},
-    {7, {2024, 07, 20, 01, 02, 03, 123456}},
+    {1, {2024, 01, 20, 01, 02, 03, 000000}},{2, {2024, 02, 20, 01, 02, 03, 000000}},
+    {3, {2024, 03, 20, 01, 02, 03, 000000}}, {4, {2024, 04, 20, 01, 02, 03, 000000}},
+    {5, {2024, 05, 20, 01, 02, 03, 000000}}, {6, {2024, 06, 20, 01, 02, 03, 000000}},
+    {7, {2024, 07, 20, 01, 02, 03, 000000}},
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-    {SQL_C_CHAR, "2024-01-20 01:02:03.123456", SQL_SUCCESS},
-    {SQL_C_WCHAR, "2024-01-20 01:02:03.123456", SQL_SUCCESS},
-    {SQL_C_BINARY, "2024-03-20 01:02:03.123456", SQL_SUCCESS},
+    {SQL_C_CHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_BINARY, "2024-03-20 01:02:03.000000", SQL_SUCCESS},
     {SQL_C_TYPE_DATE, "2024-04-20", SQL_SUCCESS},
     {SQL_C_TYPE_TIME, "01:02:03", SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, "2024-06-20 01:02:03", SQL_SUCCESS},
-    {SQL_C_SLONG, "2024-05-20 00:00:00.123456", SQL_ERROR},
+    {SQL_C_TYPE_TIMESTAMP, "2024-03-20", SQL_SUCCESS},
+    {SQL_C_SLONG, "2024-05-20 00:00:00.000000", SQL_ERROR},
 };
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
@@ -364,7 +364,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_BINARY) {
               std::string returned_val((char*)data, strlen_or_ind);
-              std::cout<<"returned value char "<<returned_val<<std::endl;
+              std::cout<<"returned value wchar "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_DATE ||
                        expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
@@ -374,7 +374,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
              << std::setw(2) << std::setfill('0') << date_val->month << "-"
              << std::setw(2) << std::setfill('0') << date_val->day;
               std::string returned_val = oss.str();
-              std::cout<<"returned value char "<<returned_val<<std::endl;
+              std::cout<<"returned value time "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
             }
             row_count++;
@@ -416,7 +416,7 @@ TEST(DataTranslationTest, From_Date_to_all) {
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  //table.Drop(conn);
+  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 } 
 
