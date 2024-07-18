@@ -340,7 +340,7 @@ inline odbc_internal::StatusRecord ConvertDate(DSValue const& src_dsval,
   using odbc_internal::StatusRecord;
 
   std::string con_src_str;
-  convertDateToAndFro(src_dsval, con_src_str);
+  DateDSValueToString(src_dsval, con_src_str);
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;

@@ -303,9 +303,9 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
 
 std::string FormatDate(const SQL_DATE_STRUCT& date) {
   std::ostringstream ss;
-  ss << std::setw(4) << std::setfill('0') << date.year << "-"
-     << std::setw(2) << std::setfill('0') << date.month << "-"
-     << std::setw(2) << std::setfill('0') << date.day;
+  ss << std::setw(4) << std::setfill('0') << date.year << "-" << std::setw(2)
+     << std::setfill('0') << date.month << "-" << std::setw(2)
+     << std::setfill('0') << date.day;
   return ss.str();
 }
 
@@ -314,11 +314,11 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
   if (rows.empty()) {
     return;
   }
-
+  
   std::string insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
 
   for (size_t i = 0; i < rows.size(); ++i) {
-    const auto& row = rows[i];
+    auto const& row = rows[i];
     std::ostringstream row_str;
 
     row_str << "(";
@@ -329,7 +329,7 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
     }
 
     if (row.date_field.year != 0) {
-      row_str <<"'"<< FormatDate(row.date_field) << "'";
+      row_str << "'" << FormatDate(row.date_field) << "'";
     } else {
       row_str << "NULL";
     }
@@ -341,7 +341,7 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
     insert_stmt += row_str.str();
   }
 
-  std::cout << "Executing SQL: " << insert_stmt << std::endl; // Debug logging
+  std::cout << "Executing SQL: " << insert_stmt << std::endl;  // Debug logging
 
   SQLRETURN status;
   if (use_sqlprepare) {
@@ -363,9 +363,11 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
     }
   } else {
     if (use_ansi) {
-      status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status =
+          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     } else {
-      status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status =
+          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
     }
     if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
       std::cerr << "SQLExecDirect failed with status: " << status << std::endl;
@@ -374,6 +376,7 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
     }
   }
 }
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];

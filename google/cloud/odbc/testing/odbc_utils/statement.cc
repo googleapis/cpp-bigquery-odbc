@@ -380,14 +380,15 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       bool use_ansi) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
+  StrToChar(read_stmt, query.c_str());
+
+  std::cout << "Executing query: " << query << std::endl;
 
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   } else {
     status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   }
-
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
   SQLSMALLINT num_cols;
@@ -412,8 +413,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     // Allocating space for column data
     col_ptr->data_size = 5000;
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];  // Allocate memory
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -422,11 +422,11 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
 
-  SQLExecute(conn->hstmt);  // No ansi version.
+  status = SQLExecute(conn->hstmt);  // No ansi version.
   CheckError(status, "SQLExecute", conn);
 
   // Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);  // No ansi version.
     if (status == SQL_NO_DATA) {
       break;
@@ -441,13 +441,26 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
       SQLPOINTER data = cols[i_c]->data;
       SQLLEN data_len = cols[i_c]->data_len;
 
-      if (data_len == -1) {
+      if (data_len == SQL_NULL_DATA) {
         results[col_name].emplace_back(std::string());
         continue;
       }
       std::string val = (char*)data;
       results[col_name].push_back(val);
     }
+  }
+
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;  // Free allocated memory
+  }
+
+  std::cout << "Fetched results:" << std::endl;
+  for (auto const& [col_name, col_data] : results) {
+    std::cout << col_name << ": ";
+    for (auto const& val : col_data) {
+      std::cout << val << " ";
+    }
+    std::cout << std::endl;
   }
 
   return std::make_shared<Results>(results);

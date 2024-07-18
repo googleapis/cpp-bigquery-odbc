@@ -415,7 +415,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     return SQL_VARBINARY;
   }
   if (type == "DATE") {
-    return SQL_DATE;
+    return SQL_TYPE_DATE;
   }
   if (type == "DATETIME") {
     return SQL_TYPE_TIMESTAMP;

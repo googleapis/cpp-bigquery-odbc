@@ -262,7 +262,7 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
       col_ptr->data_type = SQL_C_CHAR;
       break;
     case SQL_DATE:
-      col_ptr->data_type = SQL_C_DATE;
+      col_ptr->data_type = SQL_C_TYPE_DATE;
       break;
     default:
       throw std::runtime_error("Invalid column data type: " +

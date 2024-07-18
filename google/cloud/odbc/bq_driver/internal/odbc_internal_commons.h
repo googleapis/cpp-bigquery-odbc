@@ -133,7 +133,7 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
 }
-inline std::string convertDateToAndFro(DSValue const& value, std::string& str) {
+inline std::string DateDSValueToString(DSValue const& value, std::string& str) {
   str.assign(value.begin(), value.end());
   std::regex date_pattern(R"(\d{4}-\d{2}-\d{2})");
   if (std::regex_match(str, date_pattern)) {

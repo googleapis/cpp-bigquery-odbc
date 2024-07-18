@@ -1505,13 +1505,15 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
 }
 
 StdDateRows const kDateSampleData{
-     {1, {2024, 01, 20}}, {2, {2024, 10, 20}},};
+    {1, {2024, 01, 20}},
+    {2, {2024, 10, 20}},
+};
 
 std::string DateToString(const SQL_DATE_STRUCT& date) {
   std::ostringstream ss;
-  ss << std::setw(4) << std::setfill('0') << date.year << '-'
-     << std::setw(2) << std::setfill('0') << date.month << '-'
-     << std::setw(2) << std::setfill('0') << date.day;
+  ss << std::setw(4) << std::setfill('0') << date.year << '-' << std::setw(2)
+     << std::setfill('0') << date.month << '-' << std::setw(2)
+     << std::setfill('0') << date.day;
   return ss.str();
 }
 
@@ -1531,42 +1533,38 @@ void VerifyColumnWiseDateResults(StdDateRows input_data, Results col_wise_data,
 
     std::vector<std::string> input_col_values;
     for (auto data : input_data) {
-      input_col_values.emplace_back(DateToString(data.date_field)); 
+      input_col_values.emplace_back(DateToString(data.date_field));
     }
     sort(input_col_values.begin(), input_col_values.end());
 
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for (int i = 0; i < ret_col_values.size(); i++) {
-      ret_col_values[i].erase(remove(ret_col_values[i].begin(), ret_col_values[i].end(), '\\'), ret_col_values[i].end());
-      if (ret_col_values[i].front() == '"' && ret_col_values[i].back() == '"') {
-          ret_col_values[i] = ret_col_values[i].substr(1, ret_col_values[i].size() - 2); 
-      }
-      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
-    }
+    EXPECT_EQ(ret_col_values, input_col_values);
+    
   }
 }
 TEST(DATEStatementTest, FETCH_DATA) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLRETURN status;
-  auto const table_name = kDatasetWithTablePrefix +
-                          "ODBC_INSERT_PARAMS_TEST_Date";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_Date";
   char insert_stmt[kBufferLength];
   Table table(table_name);
   table.CreateWithPrepare(conn, "(Id INTEGER, DOB DATE)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertDateData(conn, kDateSampleData, false, true);
-  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
       "SELECT * FROM ODBC_TEST_DATASET._ODBC_INSERT_PARAMS_TEST_Date";
-   auto results = *FetchResults(conn, query, true);
-   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-   VerifyColumnWiseDateResults(kDateSampleData, results,
-      std::vector<std::string>());
-   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);    
-   table.DropWithPrepare(conn);
-   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);     
+  auto results = *FetchResults(conn, query, false,false);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  VerifyColumnWiseDateResults(kDateSampleData, results,
+                              std::vector<std::string>());
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 
 }  // namespace google::cloud::odbc_tests
