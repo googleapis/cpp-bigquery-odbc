@@ -367,7 +367,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
               std::ostringstream oss;
               oss << date_val->year << "-"<< date_val->month << "-"
-             << date_val->day<<" "<<date_val->hour<<":"<<date_val->minute<<":"<<date_val->second<<"."<<date_val->fraction;
+             << date_val->day;
               std::string returned_val = oss.str();
               std::cout<<"returned value Date "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
@@ -382,8 +382,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
             } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
               std::ostringstream oss;
-              oss << date_val->year << "-"<< date_val->month << "-"
-             << date_val->day<<" "<<date_val->hour<<":"<<date_val->minute<<":"<<date_val->second<<"."<<date_val->fraction;
+              oss << date_val->hour<<":"<<date_val->minute<<":"<<date_val->second;
               std::string returned_val = oss.str();
               std::cout<<"returned value time "<<returned_val<<std::endl;
               EXPECT_EQ(returned_val, expected.value);
@@ -412,22 +411,26 @@ TEST(DataTranslationTest, From_Date_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Create(conn, "(index INTEGER, TimestampField TIMESTAMP)");
+  std::cout<<"Table created "<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertTimestampData(conn, kTimestampSampleData, true, true);
+  std::cout<<"Data inserted "<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query = "SELECT TimestampField FROM " + table_name;
   TestTranslationsFromTimestamp(conn, query);
+  std::cout<<"Validated "<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
+  std::cout<<"Table deleted "<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 } 
 
