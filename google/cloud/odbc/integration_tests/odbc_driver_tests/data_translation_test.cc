@@ -130,14 +130,14 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
 };
 
 StdTimestampRows const kTimestampSampleData{
-    {1, {2024, 01, 20, 01, 02, 03, 000000}}, {2, {2024, 02, 20, 01, 02, 03, 000000}},
-    {3, {2024, 03, 20, 01, 02, 03, 000000}}, {4, {2024, 04, 20, 00, 00, 00, 000000}},
+    {1, {2024, 01, 20, 00, 00, 00, 000000}}, {2, {2024, 02, 20, 01, 02, 03, 000000}},
+    {3, {2024, 03, 20, 01, 02, 03, 000000}}, {4, {2024, 04, 20, 01, 02, 03, 000000}},
     {5, {2024, 05, 20, 01, 02, 03, 000000}}, {6, {2024, 06, 20, 01, 02, 03, 000000}},
     {7, {2024, 07, 20, 01, 02, 03, 000000}},
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-    {SQL_C_CHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_CHAR, "2024-04-20 01:02:03.000000", SQL_SUCCESS},
     {SQL_C_WCHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
     {SQL_C_BINARY, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
     {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS},
