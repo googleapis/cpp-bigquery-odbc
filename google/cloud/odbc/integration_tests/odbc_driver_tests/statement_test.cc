@@ -1545,7 +1545,7 @@ TEST(DATEStatementTest, FETCH_DATA) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLRETURN status;
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_Date";
+      kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_DATE";
   char insert_stmt[kBufferLength];
   Table table(table_name);
   table.CreateWithPrepare(conn, "(Id INTEGER, DOB DATE)");
