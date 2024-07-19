@@ -14,7 +14,7 @@ on:
   # "safe", as the workflow files are already committed. These types of builds
   # have access to the secrets in the build, which we need to use the remote
   # caches (Bazel and sccache).
-  pull_request_target:
+  pull_request:
     types:
     - opened
     - synchronize
