@@ -1554,8 +1554,7 @@ TEST(DATEStatementTest, FETCH_DATA) {
   table.InsertDateData(conn, kDateSampleData, false, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string query =
-      "SELECT * FROM ODBC_TEST_DATASET._ODBC_INSERT_PARAMS_TEST_Date";
+  std::string query = "SELECT * FROM " + table_name;
   auto results = *FetchResults(conn, query, true, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   VerifyColumnWiseDateResults(kDateSampleData, results,
