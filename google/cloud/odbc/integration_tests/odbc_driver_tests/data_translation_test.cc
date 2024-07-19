@@ -130,7 +130,7 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
 };
 
 StdTimestampRows const kTimestampSampleData{
-    {1, {2024, 01, 20, 00, 00, 00, 000000}},
+    {1, {2024, 01, 20, 11, 22, 33, 000000}},
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
