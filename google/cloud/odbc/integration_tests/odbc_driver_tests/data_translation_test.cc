@@ -397,7 +397,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
       }
     }
   }
-  //EXPECT_EQ(row_count, kConversionFromTimestampTestData.size());
+  EXPECT_EQ(row_count, kConversionFromTimestampTestData.size());
 }
 
 // This test should follow translations according to
