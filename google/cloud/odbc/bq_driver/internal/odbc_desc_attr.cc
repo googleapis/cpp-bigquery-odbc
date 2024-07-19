@@ -362,7 +362,7 @@ StatusRecord DescriptorRecord::ConsistencyCheck() const {
       return StatusRecord::Ok();
     }
   }
-  if (IsTypeValid(SQL_DATETIME, SQL_DATE, SQL_CODE_DATE)) {
+  if (IsTypeValid(SQL_DATETIME, SQL_TYPE_DATE, SQL_CODE_DATE)) {
     return StatusRecord::Ok();
   }
   if (IsTypeValid(SQL_DATETIME, SQL_TIME, SQL_CODE_TIME)) {
