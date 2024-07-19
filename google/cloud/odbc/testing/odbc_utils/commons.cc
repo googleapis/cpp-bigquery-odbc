@@ -307,47 +307,52 @@ std::string FormatDate(const SQL_DATE_STRUCT& date) {
      << std::setfill('0') << date.day;
   return ss.str();
 }
-
 void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
                            bool use_ansi, bool use_sqlprepare) {
   if (rows.empty()) {
     return;
   }
 
-  std::string insert_stmt = "INSERT INTO " + table_name_ + " VALUES";
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
 
   for (size_t i = 0; i < rows.size(); ++i) {
     auto const& row = rows[i];
-    std::ostringstream row_str;
+    insert_stmt << "(";
 
-    row_str << "(";
-    if (row.int_field != NULL) {
-      row_str << row.int_field << ", ";
+    if (row.int_field != 0) {
+      insert_stmt << row.int_field;
     } else {
-      row_str << "NULL, ";
+      insert_stmt << "NULL";
     }
+
+    insert_stmt << ", ";
 
     if (row.date_field.year != 0) {
-      row_str << "'" << FormatDate(row.date_field) << "'";
+      insert_stmt << "'" << FormatDate(row.date_field) << "'";
     } else {
-      row_str << "NULL";
+      insert_stmt << "NULL";
     }
 
-    row_str << ")";
+    insert_stmt << ")";
+
     if (i != rows.size() - 1) {
-      row_str << ", ";
+      insert_stmt << ", ";
     }
-    insert_stmt += row_str.str();
   }
 
-  std::cout << "Executing SQL: " << insert_stmt << std::endl;  // Debug logging
+  std::string insert_stmt_str = insert_stmt.str();
+  std::cout << "Executing SQL: " << insert_stmt_str
+            << std::endl;  // Debug logging
 
   SQLRETURN status;
   if (use_sqlprepare) {
     if (use_ansi) {
-      status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status =
+          SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
     } else {
-      status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status =
+          SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
     }
     if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
       std::cerr << "SQLPrepare failed with status: " << status << std::endl;
@@ -362,11 +367,11 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
     }
   } else {
     if (use_ansi) {
-      status =
-          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(),
+                              SQL_NTS);
     } else {
-      status =
-          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(),
+                             SQL_NTS);
     }
     if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
       std::cerr << "SQLExecDirect failed with status: " << status << std::endl;

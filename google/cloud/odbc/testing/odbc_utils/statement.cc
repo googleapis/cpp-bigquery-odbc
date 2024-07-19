@@ -411,6 +411,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     SqlToCdataTypes(col_ptr);
 
     // Allocating space for column data
+    col_ptr->data_size = 5000;
     SQLCHAR col_data[col_ptr->data_size + 1];
     col_ptr->data = col_data;
 
