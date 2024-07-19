@@ -134,13 +134,13 @@ StdTimestampRows const kTimestampSampleData{
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-    {SQL_C_CHAR, "2024-01-20 00:00:00.000000", SQL_SUCCESS},
-    {SQL_C_WCHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
-    {SQL_C_BINARY, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_CHAR, "2024-01-20 11:22:33.000000", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2024-01-20 11:22:33.000000", SQL_SUCCESS},
+    {SQL_C_BINARY, "2024-01-20 11:22:33.000000", SQL_SUCCESS},
     {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS},
-    {SQL_C_TYPE_TIME, "01:02:03", SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
-    {SQL_C_SLONG, "2024-01-20 00:00:00.000000", SQL_ERROR},
+    {SQL_C_TYPE_TIME, "11:22:33", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2024-01-20 11:22:33.000000", SQL_SUCCESS},
+    {SQL_C_SLONG, "2024-01-20 11:22:33.000000", SQL_ERROR},
 };
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
