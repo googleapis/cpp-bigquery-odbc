@@ -38,7 +38,8 @@ add_library(
     properties.cc
     properties.h
     statement.cc
-    statement.h)
+    statement.h
+    types.h)
 
 target_include_directories(google_cloud_odbc_testing_odbc_utils
                            PUBLIC ${CMAKE_SOURCE_DIR})

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/properties.h"
+#include "google/cloud/odbc/testing/odbc_utils/types.h"
 
 namespace google::cloud::odbc_tests {
 
