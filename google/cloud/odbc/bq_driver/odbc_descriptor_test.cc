@@ -105,11 +105,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_ARRAY_SIZE) {
   DescriptorHandle handle;
-#ifdef _WIN32
-  uint64_t arr_size = 18446744073709551615UL;  // long long max
-#else
-  u_long arr_size = 18446744073709551615UL;  // long long max
-#endif
+  unsigned long long arr_size = 18446744073709551615UL;  // long long max
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
                                         (SQLPOINTER)arr_size, 0);
 

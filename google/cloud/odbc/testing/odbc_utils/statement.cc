@@ -252,13 +252,9 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
     SqlToCdataTypes(col_ptr);
 
-// Allocating space for column data
-#ifdef _WIN32
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
-#else
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
-#endif
+    // Allocate space for column data using std::unique_ptr
+    auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->data = col_data.get();
 
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
@@ -417,13 +413,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     SqlToCdataTypes(col_ptr);
 
-// Allocating space for column data
-#ifdef _WIN32
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
-#else
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
-#endif
+  // Allocate space for column data using std::unique_ptr
+  auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+  col_ptr->data = col_data.get();
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -506,12 +498,8 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, 1, use_ansi);
-#ifdef _WIN32
-    col_ptr->result_set = new SQLCHAR[rs_size * col_ptr->data_size];
-#else
-    SQLCHAR result_set[rs_size * col_ptr->data_size];
-    col_ptr->result_set = result_set;
-#endif
+    auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
+    col_ptr->result_set = result_set.get();
 
     std::string col_name = (char*)col_ptr->name;
 
