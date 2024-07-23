@@ -476,7 +476,8 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              conn);
   EXPECT_EQ(0, col_attr_int);
 }
-
+// SQLColAttribute api isn't working correctly with the Simba driver on Windows.
+#ifndef _WIN32
 TEST(SQLColAttribute, CheckAllAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -503,6 +504,7 @@ TEST(SQLColAttribute, CheckAllAttributes) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

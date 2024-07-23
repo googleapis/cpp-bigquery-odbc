@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -288,6 +289,8 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
 
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16
+// SQLGetDiagField function isn't working correctly with the Simba driver on Windows.
+#ifndef _WIN32
 TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_CHAR";
@@ -391,6 +394,7 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
