@@ -15,6 +15,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <chrono>
+#include <regex>
 
 namespace google::cloud::odbc_tests {
 
@@ -450,6 +451,108 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
 
+  return std::make_shared<Results>(results);
+}
+std::shared_ptr<Results> FetchResultsDate(std::shared_ptr<ODBCHandles> conn,
+                                      std::string query, bool use_bind_col,
+                                      bool use_ansi) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  }
+
+  CheckError(status, "SQLPrepare", conn, use_ansi);
+
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
+  CheckError(status, "SQLNumResultCols", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  Results results;
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i + 1, use_ansi);
+
+    std::string col_name = (char*)col_ptr->name;
+
+    // Initializing results
+    std::vector<std::string> cols_data;
+    results[col_name] = cols_data;
+
+    SqlToCdataTypes(col_ptr);
+
+    // Allocating space for column data
+    col_ptr->data_size = 5000;
+    SQLCHAR col_data[col_ptr->data_size + 1];
+    col_ptr->data = col_data;
+
+    if (use_bind_col) {
+      BindCol(conn, col_ptr, i + 1);  // No ansi version.
+    } else {
+      BindColManually(conn, col_ptr, i + 1, use_ansi);
+    }
+  }
+
+  SQLExecute(conn->hstmt);  // No ansi version.
+  CheckError(status, "SQLExecute", conn);
+
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);  // No ansi version.
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+
+    for (int i_c = 0; i_c < num_cols; i_c++) {
+      auto col_name = (char*)cols[i_c]->name;
+      SQLPOINTER data = cols[i_c]->data;
+      SQLLEN data_len = cols[i_c]->data_len;
+
+      if (data_len == -1) {
+        results[col_name].emplace_back(std::string());
+        continue;
+      }
+      std::string val = (char*)data;
+            switch (cols[i_c]->data_type) {
+                case SQL_TYPE_DATE: {
+                  std::regex date_pattern(R"(\d{4}-\d{2}-\d{2})");
+                  if (std::regex_match(val, date_pattern)){
+                  break;
+                  }
+                    SQL_DATE_STRUCT* date = (SQL_DATE_STRUCT*)data;
+                    char buffer[20];
+                    snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", date->year, date->month, date->day);
+                    val = buffer;
+                    break;
+                }
+                case SQL_TYPE_TIMESTAMP: {
+                    SQL_TIMESTAMP_STRUCT* timestamp = (SQL_TIMESTAMP_STRUCT*)data;
+                    char buffer[30];
+                    snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+                             timestamp->year, timestamp->month, timestamp->day,
+                             timestamp->hour, timestamp->minute, timestamp->second);
+                    val = buffer;
+                    break;
+                }
+                default: {
+                    val = (char*)data;
+                    break;
+                }
+            }
+  results[col_name].push_back(val);
+    }
+  }
   return std::make_shared<Results>(results);
 }
 

@@ -333,8 +333,6 @@ void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn,
       DateBasicTestStruct expected = kConversionFromDateTestData[row_count];
       status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
                           kBufferLength, &strlen_or_ind);
-      std::cout << "Testing row: " << expected.target_c_type << ", "
-                << expected.value << ", " << expected.status << std::endl;
       EXPECT_EQ(status, expected.status);
       if (status != SQL_SUCCESS) {
         row_count++;

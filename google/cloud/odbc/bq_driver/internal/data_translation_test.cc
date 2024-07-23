@@ -247,7 +247,7 @@ TEST(ConvertDate, Unsupported_Conversion) {
   std::string date = "2024-02-27";
   DSValue src_dsval;
   DateToDSValue(date, src_dsval);
-  char dest_buf[11];  // Allocate buffer
+  char dest_buf[11]; 
   DataBuffer dest_data{SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf)};
   auto status = ConvertDate<DSValue>(src_dsval, dest_data);
   assert(status.sql_state == odbc_internal::SQLStates::k_HY000());
@@ -256,7 +256,7 @@ TEST(ConvertDate, insufficient_bufferlength) {
   std::string date = "2024-02-27";
   DSValue src_dsval;
   DateToDSValue(date, src_dsval);
-  char dest_buf[5];  // Allocate buffer
+  char dest_buf[5]; 
   DataBuffer dest_data{SQL_C_BINARY, dest_buf, sizeof(dest_buf)};
   auto status = ConvertDate<DSValue>(src_dsval, dest_data);
   assert(status.sql_state == odbc_internal::SQLStates::k_22003());

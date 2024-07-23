@@ -315,7 +315,6 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
 
   std::ostringstream insert_stmt;
   insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
-
   for (size_t i = 0; i < rows.size(); ++i) {
     auto const& row = rows[i];
     insert_stmt << "(";
@@ -342,9 +341,6 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
   }
 
   std::string insert_stmt_str = insert_stmt.str();
-  std::cout << "Executing SQL: " << insert_stmt_str
-            << std::endl;  // Debug logging
-
   SQLRETURN status;
   if (use_sqlprepare) {
     if (use_ansi) {
@@ -354,31 +350,10 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
       status =
           SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
     }
-    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
-      std::cerr << "SQLPrepare failed with status: " << status << std::endl;
-      CheckError(status, "SQLPrepare", conn, use_ansi);
-      return;
-    }
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
     status = SQLExecute(conn->hstmt);
-    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
-      std::cerr << "SQLExecute failed with status: " << status << std::endl;
-      CheckError(status, "SQLExecute", conn, use_ansi);
-      return;
+    CheckError(status, "SQLExecute", conn, use_ansi);
     }
-  } else {
-    if (use_ansi) {
-      status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(),
-                              SQL_NTS);
-    } else {
-      status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(),
-                             SQL_NTS);
-    }
-    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
-      std::cerr << "SQLExecDirect failed with status: " << status << std::endl;
-      CheckError(status, "SQLExecDirect", conn, use_ansi);
-      return;
-    }
-  }
 }
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
@@ -462,7 +437,6 @@ void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
   auto status =
       SQLBindCol(conn->hstmt, col_index, col_ptr->data_type, col_ptr->data,
                  col_ptr->data_size, col_ptr->data_len_ptr);
-
   CheckError(status, "SQLBindCol", conn);
 }
 

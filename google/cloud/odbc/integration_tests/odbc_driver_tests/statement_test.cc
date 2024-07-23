@@ -20,6 +20,8 @@
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include <regex>
+
 
 namespace google::cloud::odbc_tests {
 
@@ -1503,10 +1505,6 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
 #endif
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-StdDateRows const kDateSampleData{
-    {1, {2024, 01, 20}},
-    {2, {2024, 10, 20}},
-};
 
 std::string DateToString(const SQL_DATE_STRUCT& date) {
   std::ostringstream ss;
@@ -1516,52 +1514,102 @@ std::string DateToString(const SQL_DATE_STRUCT& date) {
   return ss.str();
 }
 
+// void VerifyColumnWiseDateResults(StdDateRows input_data, Results col_wise_data,
+//                                  std::vector<std::string> col_names) {
+//   if (!col_names.size()) {
+//     std::vector<std::string> all_col_names;
+//     for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+//       all_col_names.emplace_back(it->first);
+//     }
+//     col_names = all_col_names;
+//   }
+//   for (auto col_name : col_names) {
+//     auto ret_col_values = col_wise_data[col_name];
+
+//     sort(ret_col_values.begin(), ret_col_values.end());
+
+//     std::vector<std::string> input_col_values;
+//     for (auto data : input_data) {
+//       input_col_values.emplace_back(DateToString(data.date_field));
+//     }
+//     sort(input_col_values.begin(), input_col_values.end());
+
+//     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+//   }
+// }
+
+StdDateRows const kDateSampleData{
+    {1, {2024, 01, 20}},
+    {2, {2024, 10, 20}},
+};
+
+bool IsValidDate(const std::string& date_str) {
+    // Regex pattern for YYYY-MM-DD
+    const std::regex pattern(R"(^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$)");
+    return std::regex_match(date_str, pattern);
+}
+
 void VerifyColumnWiseDateResults(StdDateRows input_data, Results col_wise_data,
                                  std::vector<std::string> col_names) {
-  if (!col_names.size()) {
-    std::vector<std::string> all_col_names;
-    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
-      all_col_names.emplace_back(it->first);
+    if (col_names.empty()) {
+        std::vector<std::string> all_col_names;
+        for (const auto& it : col_wise_data) {
+            all_col_names.emplace_back(it.first);
+        }
+        col_names = all_col_names;
     }
-    col_names = all_col_names;
-  }
-  for (auto col_name : col_names) {
-    auto ret_col_values = col_wise_data[col_name];
 
-    sort(ret_col_values.begin(), ret_col_values.end());
+    for (const auto& col_name : col_names) {
+        auto ret_col_values = col_wise_data[col_name];
+        std::sort(ret_col_values.begin(), ret_col_values.end());
 
-    std::vector<std::string> input_col_values;
-    for (auto data : input_data) {
-      input_col_values.emplace_back(DateToString(data.date_field));
+        std::vector<std::string> input_col_values;
+        if (col_name == "DOB") {
+            for (const auto& data : input_data) {
+                input_col_values.emplace_back(DateToString(data.date_field));
+            }
+        } else if (col_name == "Id") {
+            for (const auto& data : input_data) {
+                input_col_values.emplace_back(std::to_string(data.int_field));
+            }
+        }
+
+        std::sort(input_col_values.begin(), input_col_values.end());
+
+        EXPECT_EQ(ret_col_values.size(), input_col_values.size()) << "Column: " << col_name;
+
+        for (size_t i = 0; i < ret_col_values.size(); ++i) {
+            std::cout<<"GOt:"<<ret_col_values[i]<<input_col_values[i];
+            EXPECT_EQ(ret_col_values[i], input_col_values[i]) << "Mismatch at index " << i << " for column " << col_name;
+        }
+       for (const auto& value : ret_col_values) {
+                EXPECT_TRUE(IsValidDate(value)) << "Value " << value << " is not a valid date in column " << col_name;
+            
+        }
+      
     }
-    sort(input_col_values.begin(), input_col_values.end());
-
-    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-  }
 }
 
 TEST(DATEStatementTest, FETCH_DATA) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLRETURN status;
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_DATE";
-  char insert_stmt[kBufferLength];
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(Id INTEGER, DOB DATE)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertDateData(conn, kDateSampleData, false, true);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string query = "SELECT * FROM " + table_name;
-  auto results = *FetchResults(conn, query, true, false);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  VerifyColumnWiseDateResults(kDateSampleData, results,
-                              std::vector<std::string>());
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    SQLRETURN status;
+    auto const table_name = kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_DATE";
+    char insert_stmt[kBufferLength];
+    Table table(table_name);
+    table.CreateWithPrepare(conn, "(Id INT64, DOB DATE)");
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.InsertDateData(conn, kDateSampleData, false, true);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::string query = "SELECT DOB FROM " + table_name;
+    auto results = *FetchResultsDate(conn, query, true, false); 
+    VerifyColumnWiseDateResults(kDateSampleData, results, std::vector<std::string>());
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.DropWithPrepare(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests

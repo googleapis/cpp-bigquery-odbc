@@ -41,6 +41,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
                                       std::string query, bool use_bind_col,
                                       bool use_ansi = false);
 
+std::shared_ptr<Results> FetchResultsDate(std::shared_ptr<ODBCHandles> conn,
+                                      std::string query, bool use_bind_col,
+                                      bool use_ansi = false);
 // Fetches results of a read query with row-wise binding and returns them as a
 // map with the column as keys
 std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,

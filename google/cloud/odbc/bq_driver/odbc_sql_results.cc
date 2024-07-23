@@ -53,6 +53,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_str_len) {
+  
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
