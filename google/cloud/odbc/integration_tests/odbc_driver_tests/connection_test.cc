@@ -16,6 +16,58 @@
 
 namespace google::cloud::odbc_tests {
 
+TEST(SQLGetInfo, CheckPositionalUpdate) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Check SQL_DYNAMIC_CURSOR_ATTRIBUTES1
+  SQLUINTEGER sql_bitmask_buf = 0;
+  SQLRETURN status;
+  status = SQLGetInfo(conn->hdbc, SQL_DYNAMIC_CURSOR_ATTRIBUTES1,
+                      &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_DYNAMIC_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfo(conn->hdbc, SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1,
+                      &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_KEYSET_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfo(conn->hdbc, SQL_KEYSET_CURSOR_ATTRIBUTES1,
+                      &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_KEYSET_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_STATIC_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfo(conn->hdbc, SQL_STATIC_CURSOR_ATTRIBUTES1,
+                      &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_KEYSET_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 namespace {
 // Constants for GetBQDriverInfo
