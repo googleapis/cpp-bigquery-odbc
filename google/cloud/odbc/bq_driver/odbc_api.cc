@@ -3058,10 +3058,6 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLFreeHandle(rc, *(*kTraceOption));
   // Call to Release mutex in odbc_lock.h, as applicable for the handle type
-  status = ReleaseHandleMutex(handle, handleType);
-  if (status != SQL_SUCCESS) {
-    return status;
-  }
   // passed in.
 
   return rc;
