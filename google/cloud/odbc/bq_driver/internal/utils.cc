@@ -77,12 +77,13 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
   status = RegQueryInfoKey(key_handle, NULL, NULL, NULL, NULL, NULL, NULL,
                            &num_values, NULL, &longest_data_len, NULL, NULL);
 
-  BYTE buffer[1024];
+  BYTE buffer[kMaxValueNameLen];
   TCHAR property_name[kMaxValueNameLen];
   DWORD buffer_len = kMaxValueNameLen;
 
   for (int i = 0, status = ERROR_SUCCESS; i < num_values; i++) {
     buffer_len = kMaxValueNameLen;
+    DWORD data_len = sizeof(buffer);
     property_name[0] = '\0';
     status = RegEnumValue(key_handle, i, property_name, &buffer_len, NULL, NULL,
                           NULL, NULL);
@@ -90,9 +91,11 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
       buffer_len = longest_data_len;
       buffer[0] = '\0';
       LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL,
-                                          buffer, &buffer_len);
-      std::string value((char*)buffer);
-      section[property_name] = value;
+                                          buffer, &data_len);
+      if (query_status == ERROR_SUCCESS) {
+        std::string value(reinterpret_cast<char*>(buffer), data_len);
+        section[std::string(property_name)] = value;
+      }
     }
   }
   RegCloseKey(key_handle);
@@ -214,14 +217,21 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
 }
 
 std::string GetPathToOdbcIni() {
-  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
-  if (path) {
-    return *path;
-  }
-  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
-  if (home) {
-    return *home + "/.odbc.ini";
-  }
+  #ifdef _WIN32
+    absl::optional<std::string> path = "Software\\ODBC\\ODBC.INI";
+    if (path) {
+      return *path;
+    }
+  #else
+    absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+    if (path) {
+      return *path;
+    }
+    absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+    if (home) {
+      return *home + "/.odbc.ini";
+    }
+  #endif
   return "";
 }
 

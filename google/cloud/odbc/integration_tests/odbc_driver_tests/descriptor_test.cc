@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -194,8 +195,12 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
       status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
                                SQL_IS_SMALLINT, NULL);
     }
+#ifdef _WIN32
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, use_ansi);
+#else
     CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
                __USE_DYNAMIC_STACK_SIZE);
+#endif
     EXPECT_EQ(ToBqFieldType(desc_copy.type), ToBqFieldType(schema[i].type));
   }
 }

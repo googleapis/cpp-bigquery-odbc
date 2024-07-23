@@ -64,7 +64,7 @@ function (client_interface_define_unit_tests)
 
     target_link_libraries(
         odbc_bq_client_interface_unit_tests odbc_bq_client_interface
-        google_cloud_odbc_testing_utils GTest::gtest_main)
+        google_cloud_odbc_testing_utils GTest::gtest_main GTest::gtest GTest::gmock)
 
     include(GoogleTest)
     gtest_discover_tests(odbc_bq_client_interface_unit_tests)
