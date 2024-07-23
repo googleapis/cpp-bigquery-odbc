@@ -21,44 +21,44 @@ namespace google::cloud::odbc_tests {
 
 enum class DescriptorType { kAPD, kIPD };
 
-static constexpr SQLULEN col_size = 10;
-static constexpr SQLSMALLINT decimal_digits = 3;
+static constexpr SQLULEN kColSize = 10;
+static constexpr SQLSMALLINT kDecimalDigits = 3;
 
 static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
     {SQL_CHAR,
-     {SQL_CHAR, SQL_CHAR, 0, col_size, col_size, kScaleUnchanged, col_size}},
+     {SQL_CHAR, SQL_CHAR, 0, kColSize, kColSize, kScaleUnchanged, kColSize}},
     {SQL_VARCHAR,
-     {SQL_VARCHAR, SQL_VARCHAR, 0, col_size, col_size, kScaleUnchanged,
-      col_size}},
+     {SQL_VARCHAR, SQL_VARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
+      kColSize}},
     {SQL_LONGVARCHAR,
-     {SQL_LONGVARCHAR, SQL_LONGVARCHAR, 0, col_size, col_size, kScaleUnchanged,
-      col_size}},
+     {SQL_LONGVARCHAR, SQL_LONGVARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
+      kColSize}},
     {SQL_BINARY,
-     {SQL_BINARY, SQL_BINARY, 0, col_size, col_size, kScaleUnchanged,
-      col_size}},
+     {SQL_BINARY, SQL_BINARY, 0, kColSize, kColSize, kScaleUnchanged,
+      kColSize}},
     {SQL_VARBINARY,
-     {SQL_VARBINARY, SQL_VARBINARY, 0, col_size, col_size, kScaleUnchanged,
-      col_size}},
+     {SQL_VARBINARY, SQL_VARBINARY, 0, kColSize, kColSize, kScaleUnchanged,
+      kColSize}},
     {SQL_LONGVARBINARY,
-     {SQL_LONGVARBINARY, SQL_LONGVARBINARY, 0, col_size, col_size,
-      kScaleUnchanged, col_size}},
+     {SQL_LONGVARBINARY, SQL_LONGVARBINARY, 0, kColSize, kColSize,
+      kScaleUnchanged, kColSize}},
     {SQL_DECIMAL,
-     {SQL_DECIMAL, SQL_DECIMAL, 0, col_size, col_size, decimal_digits,
-      col_size}},
+     {SQL_DECIMAL, SQL_DECIMAL, 0, kColSize, kColSize, kDecimalDigits,
+      kColSize}},
     {SQL_NUMERIC,
-     {SQL_NUMERIC, SQL_NUMERIC, 0, col_size, col_size, decimal_digits,
-      col_size}},
+     {SQL_NUMERIC, SQL_NUMERIC, 0, kColSize, kColSize, kDecimalDigits,
+      kColSize}},
     {SQL_REAL, {SQL_REAL, SQL_REAL, 0, 7, 24, kScaleUnchanged, 14}},
     {SQL_FLOAT, {SQL_FLOAT, SQL_FLOAT, 0, 15, 53, kScaleUnchanged, 24}},
     {SQL_DOUBLE, {SQL_DOUBLE, SQL_DOUBLE, 0, 15, 53, kScaleUnchanged, 24}},
     {SQL_WCHAR,
-     {SQL_WCHAR, SQL_WCHAR, 0, col_size, col_size, kScaleUnchanged, col_size}},
+     {SQL_WCHAR, SQL_WCHAR, 0, kColSize, kColSize, kScaleUnchanged, kColSize}},
     {SQL_WVARCHAR,
-     {SQL_WVARCHAR, SQL_WVARCHAR, 0, col_size, col_size, kScaleUnchanged,
-      col_size}},
+     {SQL_WVARCHAR, SQL_WVARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
+      kColSize}},
     {SQL_WLONGVARCHAR,
-     {SQL_WLONGVARCHAR, SQL_WLONGVARCHAR, 0, col_size, col_size,
-      kScaleUnchanged, col_size}},
+     {SQL_WLONGVARCHAR, SQL_WLONGVARCHAR, 0, kColSize, kColSize,
+      kScaleUnchanged, kColSize}},
     {SQL_BIT,
      {SQL_BIT, SQL_BIT, 0, 1, kLengthUnchanged, kScaleUnchanged,
       kLengthUnchanged}},
@@ -79,11 +79,11 @@ static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
     {SQL_TYPE_DATE,
      {SQL_DATETIME, SQL_TYPE_DATE, SQL_CODE_DATE, 10, 0, 0, kLengthUnchanged}},
     {SQL_TYPE_TIME,
-     {SQL_DATETIME, SQL_TYPE_TIME, SQL_CODE_TIME, 12, decimal_digits,
-      decimal_digits, kLengthUnchanged}},
+     {SQL_DATETIME, SQL_TYPE_TIME, SQL_CODE_TIME, 12, kDecimalDigits,
+      kDecimalDigits, kLengthUnchanged}},
     {SQL_TYPE_TIMESTAMP,
-     {SQL_DATETIME, SQL_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP, 23, decimal_digits,
-      decimal_digits, kLengthUnchanged}},
+     {SQL_DATETIME, SQL_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP, 23, kDecimalDigits,
+      kDecimalDigits, kLengthUnchanged}},
 
     {SQL_INTERVAL_MONTH,
      {SQL_INTERVAL, SQL_INTERVAL_MONTH, SQL_CODE_MONTH, 2, 0, 0, 2}},
@@ -99,8 +99,8 @@ static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
     {SQL_INTERVAL_MINUTE,
      {SQL_INTERVAL, SQL_INTERVAL_MINUTE, SQL_CODE_MINUTE, 2, 0, 0, 2}},
     {SQL_INTERVAL_SECOND,
-     {SQL_INTERVAL, SQL_INTERVAL_SECOND, SQL_CODE_SECOND, 6, decimal_digits,
-      decimal_digits, 2}},
+     {SQL_INTERVAL, SQL_INTERVAL_SECOND, SQL_CODE_SECOND, 6, kDecimalDigits,
+      kDecimalDigits, 2}},
     {SQL_INTERVAL_DAY_TO_HOUR,
      {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_HOUR, SQL_CODE_DAY_TO_HOUR, 5, 0, 0,
       2}},
@@ -109,16 +109,16 @@ static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
       2}},
     {SQL_INTERVAL_DAY_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_SECOND, SQL_CODE_DAY_TO_SECOND, 15,
-      decimal_digits, decimal_digits, 2}},
+      kDecimalDigits, kDecimalDigits, 2}},
     {SQL_INTERVAL_HOUR_TO_MINUTE,
      {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_MINUTE, SQL_CODE_HOUR_TO_MINUTE, 5, 0,
       0, 2}},
     {SQL_INTERVAL_HOUR_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_SECOND, SQL_CODE_HOUR_TO_SECOND, 12,
-      decimal_digits, decimal_digits, 2}},
+      kDecimalDigits, kDecimalDigits, 2}},
     {SQL_INTERVAL_MINUTE_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_MINUTE_TO_SECOND, SQL_CODE_MINUTE_TO_SECOND, 9,
-      decimal_digits, decimal_digits, 2}},
+      kDecimalDigits, kDecimalDigits, 2}},
 };
 
 void RandomiseDescriptorAttributes(std::shared_ptr<ODBCHandles> conn) {
@@ -198,7 +198,7 @@ void BindParameterAndTest(std::shared_ptr<ODBCHandles> conn,
   RandomiseDescriptorAttributes(conn);
 
   SQLRETURN status = SQLBindParameter(conn->hstmt, 1, in_out_type, value_type,
-                                      param_type, col_size, decimal_digits,
+                                      param_type, kColSize, kDecimalDigits,
                                       &param_val, buff_len, &str_len);
   CheckError(status, "SQLBindParameter", conn);
 
@@ -246,7 +246,7 @@ void BindParameterForLength(std::shared_ptr<ODBCHandles> conn,
   SQLLEN str_len = 50;
 
   SQLRETURN status = SQLBindParameter(conn->hstmt, param_number, in_out_type,
-                                      value_type, param_type, col_size, digits,
+                                      value_type, param_type, kColSize, digits,
                                       &param_val, buff_len, &str_len);
   CheckError(status, "SQLBindParameter", conn);
 

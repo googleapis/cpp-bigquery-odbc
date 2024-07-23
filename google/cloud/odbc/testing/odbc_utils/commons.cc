@@ -35,7 +35,7 @@ std::string getSchemaStr(Schema schema) {
   std::string schema_str = "(";
   for (int i = 0; i < schema.size(); i++) {
     ColumnMinimal col = schema[i];
-    schema_str.append(col.name + " " + ToBqFieldType(col.type));
+    schema_str.append(col.name + " " + col.type);
     if (i < schema.size() - 1) {
       schema_str.append(", ");
     }

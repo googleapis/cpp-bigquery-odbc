@@ -15,20 +15,16 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 
-// We need sorting functions
+#include "google/cloud/odbc/testing/odbc_utils/types.h"
 #include "google/cloud/internal/backoff_policy.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+// We need sorting functions
 #include <algorithm>
 #include <locale.h>
-#include <map>
 #include <memory>
-#include <sql.h>
-#include <sqlext.h>
-#include <sqlucode.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include <thread>
 
 namespace google::cloud::odbc_tests {
@@ -117,8 +113,8 @@ struct Column {
 };
 
 struct ColumnMinimal {
-  std::string name;
-  SQLSMALLINT type;
+  std::string name;  // Name of the column
+  std::string type;  // The BQ Data Type
 };
 
 using Schema = std::vector<ColumnMinimal>;
@@ -206,6 +202,40 @@ static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kAppDescTestMap = {
       2, 6, 6, 2}},
 };
 
+static Schema const kStdSchema = {
+    {"Str2", "STRING"},
+    {"Int2", "INT64"},
+    {"Float2", "FLOAT64"},
+};
+
+static Schema const kFullSchema = {
+    {"IntField", "INT64"},
+    {"BoolField", "BOOL"},
+    {"DateField", "DATE"},
+    {"FloatField", "FLOAT64"},
+    {"TimeField", "TIME"},
+    {"TimeStampField", "TIMESTAMP"},
+    {"DatetimeField", "DATETIME"},
+    {"BytesField", "BYTES"},
+    {"Bytes7Field", "BYTES(7)"},
+    {"StrField", "STRING"},
+    {"Str7Field", "STRING(7)"},
+    {"ArrayField", "ARRAY<INT64>"},
+    {"StructField", "STRUCT<x STRING(10)>"},
+    {"IntervalField", "INTERVAL"},
+    {"JsonField", "JSON"},
+    {"GeoField", "GEOGRAPHY"},
+    {"NumericField", "NUMERIC"},
+    {"BignumericField", "BIGNUMERIC"},
+    /*
+    TODO(b/353804301): See if we should add range columns here:
+    example:
+      {"RangeDate", "RANGE<DATE>"},
+      {"RangeDateTime", "RANGE<DATETIME>"},
+      {"RangeTimestamp", "RANGE<TIMESTAMP>"},
+    */
+};
+
 inline bool str_comparison(std::string a, std::string b) { return a < b; }
 
 inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
@@ -215,25 +245,6 @@ inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
 // Copies a source <string> to a destination <char *>
 inline void StrToChar(char* dest, std::string src) {
   strcpy(dest, src.c_str());
-}
-
-inline std::string ToBqFieldType(SQLSMALLINT odbc_data_type) {
-  switch (odbc_data_type) {
-    case SQL_VARCHAR:
-      return "STRING";
-    case SQL_NUMERIC:
-      return "BIGNUMERIC";
-    case SQL_BIGINT:
-    case SQL_INTEGER:
-      return "INT64";
-    case SQL_FLOAT:
-    case SQL_DOUBLE:
-      return "FLOAT64";
-    case SQL_DATETIME:
-      return "DATETIME";
-    default:
-      throw std::runtime_error("Invalid odbc data type: " + odbc_data_type);
-  }
 }
 
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
