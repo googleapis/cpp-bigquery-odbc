@@ -23,6 +23,7 @@ google_cloud_odbc_testing_odbc_utils_hdrs = [
     "descriptor.h",
     "properties.h",
     "statement.h",
+    "types.h",
 ]
 
 google_cloud_odbc_testing_odbc_utils_srcs = [
