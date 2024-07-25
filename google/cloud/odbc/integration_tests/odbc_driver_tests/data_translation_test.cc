@@ -394,29 +394,31 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+using SQLTIMESTAMP = std::string;
 struct TimestampBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
-  SQL_TIMESTAMP_STRUCT value;
+  SQLTIMESTAMP value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
 
 StdTimestampRows const kTimestampSampleData{
-    {1, {2024, 01, 20, 01, 02, 03, 000000}}, {2, {2024, 01, 20, 01, 02, 03, 000000}}, {3, {2024, 01, 20, 01, 02, 03, 000000}},
-    {4, {2024, 01, 20, 01, 02, 03, 000000}}, {5, {2024, 01, 20, 01, 02, 03, 000000}},
+    {1, {2024, 01, 20, 01, 02, 03, 000000}}, {2, {2024, 01, 20, 01, 02, 03, 000000}},
+    {3, {2024, 01, 20, 01, 02, 03, 000000}}, {4, {2024, 01, 20, 01, 02, 03, 000000}},
+    {5, {2024, 01, 20, 01, 02, 03, 000000}}, {6, {2024, 01, 20, 01, 02, 03, 000000}},
+    {7, {2024, 01, 20, 01, 02, 03, 000000}},
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-    {SQL_C_CHAR, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
-    {SQL_C_WCHAR, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
-    {SQL_C_TIME, {1, 2, 3}, SQL_SUCCESS},
-    {SQL_C_TIMESTAMP, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, {2024, 1, 20}, SQL_SUCCESS},
-    {SQL_DATE, {2024, 1, 20}, SQL_ERROR},
-    {SQL_C_USHORT, {2024, 1, 20}, SQL_ERROR},
-    {SQL_C_SLONG, {2024, 1, 20}, SQL_ERROR},
+   {SQL_C_CHAR, "2024-04-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_WCHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_BINARY, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS_WITH_INFO},
+    {SQL_C_TYPE_TIME, "1:2:3", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2024-1-20 1:2:3.0", SQL_SUCCESS},
+    {SQL_C_SLONG, "2024-01-20 01:02:03.000000", SQL_ERROR},
 };
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                               std::string query) {
