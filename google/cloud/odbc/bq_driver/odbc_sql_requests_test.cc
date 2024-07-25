@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
@@ -377,6 +378,84 @@ TEST(SQLExecuteInternal, Fail_ExecutionInProgress) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_EQ("Function sequence error - statement is still executing",
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLSetCursorNameInternal, Fail_NullHandle) {
+  SQLRETURN status = SQLSetCursorNameInternal(nullptr, nullptr, 0);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQLCUR) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "SQLCUR_1";
+
+  SQLRETURN status = SQLSetCursorNameInternal(
+      &stmt_handle, ToSqlChar(cursor_name.c_str()), SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_34000(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid cursor name",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQL_CUR) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "SQL_CUR_1";
+
+  SQLRETURN status = SQLSetCursorNameInternal(
+      &stmt_handle, ToSqlChar(cursor_name.c_str()), SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_34000(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid cursor name",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLSetCursorNameInternal, Fail_InvalidLength) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "name_1";
+
+  SQLRETURN status = SQLSetCursorNameInternal(
+      &stmt_handle, ToSqlChar(cursor_name.c_str()), -2);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY090(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid string length",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLSetCursorNameInternal, Fail_InvalidState) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  std::string cursor_name = "name_1";
+
+  SQLRETURN status = SQLSetCursorNameInternal(
+      &stmt_handle, ToSqlChar(cursor_name.c_str()), SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_24000(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid cursor state",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLSetCursorNameInternal, SetCursorName) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "name_1";
+
+  SQLRETURN status = SQLSetCursorNameInternal(
+      &stmt_handle, ToSqlChar(cursor_name.c_str()), SQL_NTS);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(cursor_name, stmt_handle.GetCursorName());
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -60,6 +60,10 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle);
 
+SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
+                                   SQLCHAR const* cursor_name,
+                                   SQLSMALLINT name_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_REQUESTS_H

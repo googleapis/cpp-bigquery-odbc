@@ -340,4 +340,38 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
+                                   SQLCHAR const* cursor_name,
+                                   SQLSMALLINT name_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  std::string name = ToCharStr(cursor_name);
+
+  if (absl::StartsWith(name, "SQLCUR") || absl::StartsWith(name, "SQL_CUR")) {
+    StatusRecord status_record = {SQLStates::k_34000(), "Invalid cursor name"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  if (name_len < 0 && name_len != SQL_NTS) {
+    StatusRecord status_record = {SQLStates::k_HY090(),
+                                  "Invalid string length"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  if (stmt_handle.GetStmtState() != StmtStates::kStatementNotPrepared &&
+      stmt_handle.GetStmtState() != StmtStates::kStatementPrepared) {
+    StatusRecord status_record = {SQLStates::k_24000(), "Invalid cursor state"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  stmt_handle.SetCursorName(name);
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

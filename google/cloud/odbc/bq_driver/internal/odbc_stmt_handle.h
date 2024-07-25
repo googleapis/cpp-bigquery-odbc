@@ -83,6 +83,12 @@ class StatementHandle : public Handle {
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
 
+  inline void SetCursorName(std::string& cursor_name) {
+    cursor_name_ = cursor_name;
+  };
+
+  [[nodiscard]] inline std::string GetCursorName() { return cursor_name_; };
+
   inline void SetStmtState(StmtStates stmt_state) { stmt_state_ = stmt_state; }
 
   [[nodiscard]] inline StmtStates GetStmtState() const { return stmt_state_; }
@@ -131,6 +137,7 @@ class StatementHandle : public Handle {
   Descriptors descriptors_;
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
+  std::string cursor_name_;
   mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;

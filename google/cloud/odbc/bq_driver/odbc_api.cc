@@ -77,6 +77,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumResultCols;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetCursorName;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
@@ -112,6 +113,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetCursorName;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
@@ -1411,13 +1413,21 @@ SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
                                    SQLCHAR* cursorName,
                                    SQLSMALLINT cursorNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLSetCursorName");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLSetCursorName(statementHandle, cursorName,
+                                        cursorNameLen, *(*kTraceOption));
 
   // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
   // in odbc_sql_requests.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLSetCursorNameInternal(
+      statementHandle, cursorName, cursorNameLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLSetCursorName(rc, *(*kTraceOption));
 
   return rc;
 }
