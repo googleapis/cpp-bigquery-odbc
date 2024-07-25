@@ -212,6 +212,63 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
     CheckError(status, "SQLExecDirect", conn, use_ansi);
   }
 }
+std::string FormatDate(const SQL_DATE_STRUCT& date) {
+  std::ostringstream ss;
+  ss << std::setw(4) << std::setfill('0') << date.year << "-" << std::setw(2)
+     << std::setfill('0') << date.month << "-" << std::setw(2)
+     << std::setfill('0') << date.day;
+  return ss.str();
+}
+
+void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
+                           bool use_ansi, bool use_sqlprepare) {
+  if (rows.empty()) {
+    return;
+  }
+
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+  for (size_t i = 0; i < rows.size(); ++i) {
+    auto const& row = rows[i];
+    insert_stmt << "(";
+
+    if (row.int_field != 0) {
+      insert_stmt << row.int_field;
+    } else {
+      insert_stmt << "NULL";
+    }
+
+    insert_stmt << ", ";
+
+    if (row.date_field.year != 0) {
+      insert_stmt << "'" << FormatDate(row.date_field) << "'";
+    } else {
+      insert_stmt << "NULL";
+    }
+
+    insert_stmt << ")";
+
+    if (i != rows.size() - 1) {
+      insert_stmt << ", ";
+    }
+  }
+
+  std::string insert_stmt_str = insert_stmt.str();
+  SQLRETURN status;
+  if (use_sqlprepare) {
+    if (use_ansi) {
+      status =
+          SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+    } else {
+      status =
+          SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+    }
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn, use_ansi);
+  }
+}
+
 
 void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
                           std::vector<std::string> rows, bool insert_index) {

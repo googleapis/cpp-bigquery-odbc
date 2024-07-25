@@ -131,6 +131,13 @@ struct StdRow {
 
 using StdRows = std::vector<StdRow>;
 
+struct StdDateRow {
+  SQLBIGINT int_field;
+  SQL_DATE_STRUCT date_field;
+};
+
+using StdDateRows = std::vector<StdDateRow>;
+
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
@@ -265,7 +272,9 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
 class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
-
+  
+  void InsertDateData(std::shared_ptr<ODBCHandles> conn, StdDateRows rows,
+                      bool use_ansi, bool use_sqlprepare);
   void Create(std::shared_ptr<ODBCHandles> conn,
               std::string schema_str = "(Column INT64)", bool use_ansi = false);
 

@@ -15,7 +15,56 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include <string>
+#include <vector>
+#include <iostream>
+#include <cwchar>
+#include <locale>
+#include <codecvt>
 
+// Function to convert UTF-16 to UTF-8
+std::string Utf16ToUtf8(const std::wstring& utf16_str) {
+    std::string utf8_str;
+    for (wchar_t wc : utf16_str) {
+        if (wc <= 0x7F) {
+            utf8_str.push_back(static_cast<char>(wc));
+        } else if (wc <= 0x7FF) {
+            utf8_str.push_back(static_cast<char>(0xC0 | (wc >> 6)));
+            utf8_str.push_back(static_cast<char>(0x80 | (wc & 0x3F)));
+        } else if (wc <= 0xFFFF) {
+            utf8_str.push_back(static_cast<char>(0xE0 | (wc >> 12)));
+            utf8_str.push_back(static_cast<char>(0x80 | ((wc >> 6) & 0x3F)));
+            utf8_str.push_back(static_cast<char>(0x80 | (wc & 0x3F)));
+        } else if (wc <= 0x10FFFF) {
+            utf8_str.push_back(static_cast<char>(0xF0 | (wc >> 18)));
+            utf8_str.push_back(static_cast<char>(0x80 | ((wc >> 12) & 0x3F)));
+            utf8_str.push_back(static_cast<char>(0x80 | ((wc >> 6) & 0x3F)));
+            utf8_str.push_back(static_cast<char>(0x80 | (wc & 0x3F)));
+        }
+    }
+    return utf8_str;
+}
+
+// Function to convert wide string to UTF-8 using deprecated codecvt
+
+// Converts a wide character to UTF-8 encoding manually
+std::wstring hexToWideString(const std::wstring& hex) {
+    std::wstring result;
+    for (size_t i = 0; i < hex.length(); i += 4) {
+        unsigned int code;
+        std::wstringstream ss;
+        ss << std::hex << hex.substr(i, 4);
+        ss >> code;
+        result.push_back(static_cast<wchar_t>(code));
+    }
+    return result;
+}
+std::string wideStringToUtf8(const std::wstring& wideStr) {
+    // Create a wstring_convert object
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    // Convert to UTF-8
+    return converter.to_bytes(wideStr);
+}
 namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -384,6 +433,160 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   std::string query = "SELECT IntField FROM " + table_name + " ORDER BY index";
   TestTranslationsFromArithmetic<Int64BasicTestStruct>(
       conn, query, kConversionFromInt64TestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+struct DateBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQL_DATE_STRUCT value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+StdDateRows const kDateSampleData{
+    {1, {2024, 01, 20}}, {2, {2024, 01, 20}}, {3, {2024, 01, 20}},
+    {4, {2024, 01, 20}}, {5, {2024, 01, 20}}, {6, {2024, 01, 20}},
+    {7, {2024, 01, 20}},
+};
+
+std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
+    {SQL_C_CHAR, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_C_WCHAR, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_C_BINARY, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_C_USHORT, {2024, 1, 20}, SQL_ERROR},
+    {SQL_C_SLONG, {2024, 1, 20}, SQL_ERROR},
+};
+void PrintRawData(const SQLCHAR* data, SQLLEN length) {
+    std::cout << "Raw data: ";
+    for (SQLLEN i = 0; i < length; ++i) {
+        std::cout << std::hex << static_cast<int>(data[i]) << " ";
+    }
+    std::cout << std::dec << std::endl;
+}
+void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn, std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  int row_count = 0;
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    DateBasicTestStruct expected = kConversionFromDateTestData[row_count];
+    status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data, kBufferLength, &strlen_or_ind);
+    EXPECT_EQ(status, expected.status);
+    if (status != SQL_SUCCESS) {
+      row_count++;
+      continue;
+    }
+    CheckError(status, "SQLGetData(" + std::to_string(expected.target_c_type) + ")", conn);
+
+    if (SQL_SUCCEEDED(status)) {
+      switch (expected.target_c_type) {
+        case SQL_C_CHAR: {
+          std::string returned_val = reinterpret_cast<char*>(data);
+          char expected_val[11];
+          snprintf(expected_val, sizeof(expected_val), "%04d-%02d-%02d",
+                   expected.value.year, expected.value.month, expected.value.day);
+          EXPECT_EQ(returned_val, expected_val);
+          break;
+        }
+         case SQL_C_WCHAR: {
+                    wchar_t* w_data = reinterpret_cast<wchar_t*>(data);
+                    std::wstring returned_val(w_data, strlen_or_ind / sizeof(wchar_t));
+                    
+                    // Convert std::wstring to UTF-8 manually
+                    std::string returned_val_utf8 = wideStringToUtf8(returned_val);
+                    std::string expected_val = "2024-01-20";
+                    
+                    std::cout << "Wide char data: ";
+                    for (wchar_t wc : returned_val) {
+                        std::cout << std::hex << static_cast<int>(wc) << " ";
+                    }
+                    std::cout << std::dec << std::endl;
+                    
+                    std::cout << "Returned UTF-8: " << returned_val_utf8 << std::endl; // Debug output
+                    EXPECT_EQ(returned_val_utf8, expected_val);
+                    break;
+                }
+        case SQL_C_BINARY: {
+          // Interpret the binary data correctly according to how the date was stored
+          // This example assumes the binary data is storing a SQL_DATE_STRUCT
+          if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
+            SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+            char expected_val[11];
+            snprintf(expected_val, sizeof(expected_val), "%04d-%02d-%02d",
+                     expected.value.year, expected.value.month, expected.value.day);
+            char returned_val[11];
+            snprintf(returned_val, sizeof(returned_val), "%04d-%02d-%02d",
+                     date->year, date->month, date->day);
+            EXPECT_EQ(std::string(returned_val), std::string(expected_val));
+          } else {
+            // Handle other binary formats if necessary
+          }
+          break;
+        }
+        case SQL_C_TYPE_DATE:
+        case SQL_C_TYPE_TIMESTAMP: {
+          SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+          char returned_val[11];
+          snprintf(returned_val, sizeof(returned_val), "%04d-%02d-%02d",
+                   date->year, date->month, date->day);
+          char expected_val[11];
+          snprintf(expected_val, sizeof(expected_val), "%04d-%02d-%02d",
+                   expected.value.year, expected.value.month, expected.value.day);
+          EXPECT_EQ(std::string(returned_val), std::string(expected_val));
+          break;
+        }
+        default:
+          // Handle unsupported C types if necessary
+          break;
+      }
+      row_count++;
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromDateTestData.size());
+}
+
+TEST(DataTranslationTest, From_SQL_Date_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(index INTEGER, DateField DATE)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertDateData(conn, kDateSampleData, true, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT DateField FROM " + table_name;
+  TestTranslationsFromDate(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
