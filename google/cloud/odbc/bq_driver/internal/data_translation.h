@@ -334,6 +334,104 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+template <typename SrcType>
+inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(DSValue const& src_dsval,
+                                               DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+
+  std::string timestamp_src_str;
+  convertTimestampToString(src_dsval, timestamp_src_str);
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+  SQLLEN buffer_length = dest_data.buflen;
+
+  // Define length variables
+  int k_timestamp_char_length = timestamp_src_str.length();
+  int k_timestamp_wchar_length = k_timestamp_char_length;
+  constexpr int kTimestampBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
+
+  switch (dest_type) {
+    case SQL_C_CHAR:
+      if (buffer_length > k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     k_timestamp_char_length);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else if (20 <= buffer_length && buffer_length <= k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        return StatusRecord{SQLStates::k_22003(),
+                            "Buffer length is insufficient"};
+      }
+
+    case SQL_C_WCHAR:
+      if (buffer_length > k_timestamp_wchar_length) {
+        std::wcsncpy(
+            static_cast<wchar_t*>(dest_buf),
+            std::wstring(timestamp_src_str.begin(), timestamp_src_str.end()).c_str(),
+            k_timestamp_wchar_length);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else if (20 <= buffer_length && buffer_length <= k_timestamp_wchar_length) {
+        std::wcsncpy(
+            static_cast<wchar_t*>(dest_buf),
+            std::wstring(timestamp_src_str.begin(), timestamp_src_str.end()).c_str(),
+            buffer_length);
+        return StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        return StatusRecord{SQLStates::k_22003(),
+                            "Buffer length is insufficient"};
+      }
+
+    case SQL_C_BINARY:
+      if (kTimestampBinaryLength <= buffer_length) {
+        std::memcpy(dest_buf, timestamp_src_str.c_str(), kTimestampBinaryLength);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else {
+        return StatusRecord{SQLStates::k_22003(),
+                            "Buffer length is insufficient"};
+      }
+
+    case SQL_C_TYPE_DATE:
+      if (buffer_length > k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else if (buffer_length <= k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQLStates::k_01S07(), "Data truncated"};
+      }
+
+    case SQL_C_TYPE_TIME:
+      if (buffer_length > k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else if (buffer_length <= k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQLStates::k_01S07(), "Data truncated"};
+      }
+
+    case SQL_C_TYPE_TIMESTAMP:
+      if (buffer_length > k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQL_SUCCESS, "Success"};
+      } else if (buffer_length <= k_timestamp_char_length) {
+        std::strncpy(static_cast<char*>(dest_buf), timestamp_src_str.c_str(),
+                     buffer_length);
+        return StatusRecord{SQLStates::k_01S07(), "Data truncated"};
+      }
+
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H
