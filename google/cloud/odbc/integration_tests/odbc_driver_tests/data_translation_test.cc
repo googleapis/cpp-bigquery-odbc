@@ -516,15 +516,9 @@ void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn, std::string que
                     
                     // Convert std::wstring to UTF-8 manually
                     std::string returned_val_utf8 = wideStringToUtf8(returned_val);
-                    std::string expected_val = "2024-01-20";
-                    
-                    std::cout << "Wide char data: ";
-                    for (wchar_t wc : returned_val) {
-                        std::cout << std::hex << static_cast<int>(wc) << " ";
-                    }
-                    std::cout << std::dec << std::endl;
-                    
-                    std::cout << "Returned UTF-8: " << returned_val_utf8 << std::endl; // Debug output
+                     char expected_val[11];
+                     snprintf(expected_val, sizeof(expected_val), "%04d-%02d-%02d",
+                     expected.value.year, expected.value.month, expected.value.day);
                     EXPECT_EQ(returned_val_utf8, expected_val);
                     break;
                 }
