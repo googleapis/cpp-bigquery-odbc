@@ -420,6 +420,14 @@ std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
     {SQL_C_TYPE_TIMESTAMP, "2024-1-20 1:2:3.0", SQL_SUCCESS},
     {SQL_C_SLONG, "2024-01-20 01:02:03.000000", SQL_ERROR},
 };
+
+std::string FormatTimestamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
+  std::ostringstream ss;
+  ss << timestamp.year << "-"<< timestamp.month << "-"
+             << timestamp.day<<" "<<timestamp.hour<<":"<<timestamp.minute<<":"<<timestamp.second<<"."<<timestamp.fraction;
+  return ss.str();
+}
+
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                               std::string query) {
   SQLRETURN status;
@@ -486,16 +494,20 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               std::string returned_val = (char*)data;
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_BINARY) {
-              std::string returned_val = (char*)data;
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+              std::string returned_val = FormatTimestamp(*date_val);
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
-              std::string returned_val = (char*)data;
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+              std::string returned_val = FormatTimestamp(*date_val);
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
-              std::string returned_val = (char*)data;
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+              std::string returned_val = FormatTimestamp(*date_val);
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
-              std::string returned_val = (char*)data;
+              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+                            std::string returned_val = FormatTimestamp(*date_val);
               EXPECT_EQ(returned_val, expected.value);
             } 
             row_count++;

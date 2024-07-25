@@ -301,16 +301,6 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
-std::string FormatTimestamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
-  std::ostringstream ss;
-  ss << std::setw(4) << std::setfill('0') << timestamp.year << "-" << std::setw(2)
-     << std::setfill('0') << timestamp.month << "-" << std::setw(2)
-     << std::setfill('0') << timestamp.day << " " << std::setw(2) << std::setfill('0') << timestamp.hour << ":" << std::setw(2)
-     << std::setfill('0') << timestamp.minute << ":" << std::setw(2)
-     << std::setfill('0') << timestamp.second << "." <<std::setw(6) << std::setfill('0') << timestamp.fraction;
-  return ss.str();
-}
-
 void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
                            bool use_ansi, bool use_sqlprepare) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
