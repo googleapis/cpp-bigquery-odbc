@@ -16,6 +16,8 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 
+#include <regex>
+
 namespace google::cloud::odbc_tests {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -392,6 +394,143 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+struct TimestampBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQL_TIMESTAMP_STRUCT value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
 
+StdTimestampRows const kTimestampSampleData{
+    {1, {2024, 01, 20, 01, 02, 03, 000000}}, {2, {2024, 01, 20, 01, 02, 03, 000000}}, {3, {2024, 01, 20, 01, 02, 03, 000000}},
+    {4, {2024, 01, 20, 01, 02, 03, 000000}}, {5, {2024, 01, 20, 01, 02, 03, 000000}},
+};
+
+std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
+    {SQL_C_CHAR, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
+    {SQL_C_WCHAR, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
+    {SQL_C_TIME, {1, 2, 3}, SQL_SUCCESS},
+    {SQL_C_TIMESTAMP, {2024, 1, 20, 1, 2, 3, 000000}, SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, {2024, 1, 20}, SQL_SUCCESS},
+    {SQL_DATE, {2024, 1, 20}, SQL_ERROR},
+    {SQL_C_USHORT, {2024, 1, 20}, SQL_ERROR},
+    {SQL_C_SLONG, {2024, 1, 20}, SQL_ERROR},
+};
+void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
+                              std::string query) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  StrToChar(read_stmt, query);
+
+ 
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  int row_count = 0;
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // Read all the rows using SQLFetch
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+
+    if (row_count >= kConversionFromTimestampTestData.size()) {
+      break;
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    while (1) {
+      StrBasicTestStruct expected = kConversionFromStrTestData[row_count];
+      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                          kBufferLength, &strlen_or_ind);
+      std::cout << "Testing row: " << expected.target_c_type << ", "
+                << expected.value << ", " << expected.status << std::endl;
+      EXPECT_EQ(status, expected.status);
+      if (status != SQL_SUCCESS) {
+        row_count++;
+        break;
+      }
+      CheckError(status,
+                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+                 conn);
+      if (SQL_SUCCEEDED(status)) {
+        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        if (status == SQL_NO_DATA) {
+          if (strlen_or_ind >= 0) {
+            // Refer
+            // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+            // to understand the expectations regarding typecasting applications
+            // buffers.
+            if (expected.target_c_type == SQL_C_CHAR) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_WCHAR) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_BINARY) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+              std::string returned_val = (char*)data;
+              EXPECT_EQ(returned_val, expected.value);
+            } 
+            row_count++;
+          }
+          break;
+        }
+        CheckError(status, "SQLGetDiagField", conn);
+      } else {
+        break;
+      }
+    }
+  }
+
+  EXPECT_EQ(row_count, kConversionFromTimestampTestData.size())
+      << "Number of rows fetched does not match expected test cases.";
+}
+
+TEST(DataTranslationTest, From_SQL_Date_to_all) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(Id INT64, DOB timestamp)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertTimestampData(conn, kTimestampSampleData, false, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT DOB FROM " + table_name;
+  TestTranslationsFromTimestamp(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }  // namespace google::cloud::odbc_tests

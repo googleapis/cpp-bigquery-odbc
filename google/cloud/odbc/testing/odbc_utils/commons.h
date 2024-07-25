@@ -127,6 +127,13 @@ struct StdRow {
 
 using StdRows = std::vector<StdRow>;
 
+struct StdTimestampRow {
+  SQLBIGINT int_field;
+  SQL_TIMESTAMP_STRUCT timestamp_field;
+};
+
+using StdTimestampRows = std::vector<StdTimestampRow>;
+
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
@@ -267,6 +274,9 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
     case SQL_CHAR:
       col_ptr->data_type = SQL_C_CHAR;
       break;
+    case SQL_TYPE_TIMESTAMP:
+      col_ptr->data_type = SQL_C_TYPE_TIMESTAMP;
+      break;
     default:
       throw std::runtime_error("Invalid column data type: " +
                                col_ptr->data_type);
@@ -307,6 +317,9 @@ class Table {
   // be populated to order the values
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
+
+  void InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
+                      bool use_ansi, bool use_sqlprepare);
 
  private:
   std::string table_name_;
