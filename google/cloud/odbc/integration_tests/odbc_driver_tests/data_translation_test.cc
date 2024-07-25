@@ -455,11 +455,11 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
 
     SQLSMALLINT resp_status, resp_status_len;
     while (1) {
-      StrBasicTestStruct expected = kConversionFromStrTestData[row_count];
+      TimestampBasicTestStruct expected = kConversionFromTimestampTestData[row_count];
       status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
                           kBufferLength, &strlen_or_ind);
       std::cout << "Testing row: " << expected.target_c_type << ", "
-                << expected.value << ", " << expected.status << std::endl;
+               << ", " << expected.status << std::endl;
       EXPECT_EQ(status, expected.status);
       if (status != SQL_SUCCESS) {
         row_count++;
