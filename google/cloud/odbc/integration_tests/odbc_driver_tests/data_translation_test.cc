@@ -503,7 +503,9 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
-              std::string returned_val = FormatTimestamp(*date_val);
+              std::ostringstream ss;
+              ss << date_val->hour<<":"<<date_val->minute<<":"<<date_val->second;
+              std::string returned_val = ss.str();;
               EXPECT_EQ(returned_val, expected.value);
             } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;

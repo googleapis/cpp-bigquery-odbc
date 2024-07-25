@@ -134,6 +134,26 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   return int_val;
 }
 
+inline std::string convertTimestampToString(DSValue const& value, std::string& str) {
+  str.assign(value.begin(), value.end());
+  std::regex timestamp_pattern(R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})");
+  if (std::regex_match(str, timestamp_pattern)) {
+    return str;
+  }
+  throw std::invalid_argument(
+      "Invalid date format. Expected format: YYYY-MM-DD");
+}
+inline void TimestampToDSValue(std::string const& str, DSValue& value) {
+  // Validate the date string format
+  std::regex timestamp_pattern(R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{6})");
+  if (!std::regex_match(str, timestamp_pattern)) {
+    throw std::invalid_argument(
+        "Invalid date format. Expected format: YYYY-MM-DD");
+  }
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
+}
+
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:

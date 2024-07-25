@@ -333,7 +333,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   }
   return StatusRecord::Ok();
 }
-/*
+
 template <typename SrcType>
 inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(DSValue const& src_dsval,
                                                DataBuffer& dest_data) {
@@ -430,7 +430,7 @@ inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(DSValue const& sr
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
-}*/
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
