@@ -71,20 +71,12 @@ void CheckScale(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT param_number,
 
 void CheckLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT param_number,
                  SQLULEN expected) {
-#ifdef _WIN32
   SQLSMALLINT out_desc_len = 0;
   SQLLEN buffer_length = sizeof(out_desc_len);
   SQLRETURN status = SQLGetDescField(conn->ipd, param_number, SQL_DESC_LENGTH,
                                      &buffer_length, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(expected, buffer_length);
-#else
-  SQLSMALLINT out_desc_len;
-  SQLRETURN status = SQLGetDescField(conn->ipd, param_number, SQL_DESC_LENGTH,
-                                     &out_desc_len, 0, nullptr);
-  CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(expected, out_desc_len);
-#endif
 }
 
 void CheckExpectedResults(std::shared_ptr<ODBCHandles> conn,

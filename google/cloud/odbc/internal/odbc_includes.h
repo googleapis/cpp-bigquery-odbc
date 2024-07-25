@@ -21,6 +21,13 @@
 
 #define _WINSOCKAPI_
 #include <Windows.h>
+#endif  //_WIN32
+
+#include <odbcinst.h>
+#include <sql.h>
+#include <sqlext.h>
+
+#ifdef _WIN32
 #include <algorithm>
 #include <cstdint>
 #undef min
@@ -57,11 +64,7 @@
 #undef SQLTablePrivileges
 #undef SQLProcedureColumns
 #undef SQLColumnPrivileges
-#endif  //_WIN32
-
-#include <odbcinst.h>
-#include <sql.h>
-#include <sqlext.h>
+#endif
 
 #define SQL_ODBC3_API_START SQL_API_SQLALLOCHANDLE
 #define SQL_ODBC3_API_LAST SQL_API_SQLFETCHSCROLL
