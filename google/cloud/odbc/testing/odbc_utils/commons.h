@@ -273,6 +273,7 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   }
 }
 
+
 class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
