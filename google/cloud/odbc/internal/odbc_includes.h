@@ -57,6 +57,8 @@
 #undef SQLTablePrivileges
 #undef SQLProcedureColumns
 #undef SQLColumnPrivileges
+#undef SQLSetPos
+#undef SQLCancelHandle
 #endif  //_WIN32
 
 #include <odbcinst.h>
