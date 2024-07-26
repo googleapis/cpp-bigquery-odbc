@@ -21,6 +21,13 @@
 
 #define _WINSOCKAPI_
 #include <Windows.h>
+#endif
+
+#include <odbcinst.h>
+#include <sql.h>
+#include <sqlext.h>
+
+#ifdef _WIN32
 #include <algorithm>
 #include <cstdint>
 #undef min
@@ -60,10 +67,6 @@
 #undef SQLSetPos
 #undef SQLCancelHandle
 #endif  //_WIN32
-
-#include <odbcinst.h>
-#include <sql.h>
-#include <sqlext.h>
 
 #define SQL_ODBC3_API_START SQL_API_SQLALLOCHANDLE
 #define SQL_ODBC3_API_LAST SQL_API_SQLFETCHSCROLL
