@@ -319,7 +319,7 @@ class Table {
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
   void InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
-                      bool use_ansi, bool use_sqlprepare);
+                      bool use_ansi);
 
  private:
   std::string table_name_;

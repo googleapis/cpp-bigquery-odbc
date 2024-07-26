@@ -302,7 +302,7 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
 }
 
 void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampRows rows,
-                           bool use_ansi, bool use_sqlprepare) {
+                           bool use_ansi) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -339,7 +339,6 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampR
     insert_stmt.append(row_str);
   }
   SQLRETURN status;
-  if (use_sqlprepare) {
     if (use_ansi) {
       status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
                            insert_stmt.size());
@@ -350,16 +349,7 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn, StdTimestampR
     CheckError(status, "SQLPrepareA", conn, use_ansi);
     status = SQLExecute(conn->hstmt);
     CheckError(status, "SQLExecute", conn, use_ansi);
-  } else {
-    if (use_ansi) {
-      status =
-          SQLExecDirectA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-    } else {
-      status =
-          SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-    }
-    CheckError(status, "SQLExecDirect", conn, use_ansi);
-  }
+  
 }
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,

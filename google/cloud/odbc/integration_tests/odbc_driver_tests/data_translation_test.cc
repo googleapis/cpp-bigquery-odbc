@@ -466,7 +466,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
     SQLSMALLINT resp_status, resp_status_len;
     while (1) {
       TimestampBasicTestStruct expected = kConversionFromTimestampTestData[row_count];
-      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+      status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
                           kBufferLength, &strlen_or_ind);
       std::cout << "Testing row: " << expected.target_c_type << ", "
                << ", " << expected.status << std::endl;
@@ -537,7 +537,7 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertTimestampData(conn, kTimestampSampleData, false, true);
+  table.InsertTimestampData(conn, kTimestampSampleData, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
