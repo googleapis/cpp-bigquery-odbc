@@ -37,6 +37,7 @@ using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -377,6 +378,28 @@ SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
   }
 
   stmt_handle.SetCursorName(name);
+
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
+                                   SQLCHAR* cursor_name, SQLSMALLINT buffer_len,
+                                   SQLSMALLINT* name_string_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  StatusRecord status = StringValueToOutputBufferResponse(
+      stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
+      name_string_len);
+  if (!status.ok()) {
+    return LogAndReturnCode(stmt_handle, status);
+  }
 
   return SQL_SUCCESS;
 }

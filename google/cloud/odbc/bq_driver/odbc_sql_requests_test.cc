@@ -465,4 +465,41 @@ TEST(SQLSetCursorNameInternal, SetCursorName) {
   EXPECT_EQ(cursor_name, stmt_handle.GetCursorName());
 }
 
+TEST(SQLGetCursorNameInternal, Fail_NullHandle) {
+  SQLRETURN status = SQLGetCursorNameInternal(nullptr, nullptr, 0, nullptr);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLGSetCursorNameInternal, GetCursorName) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "name_1";
+  stmt_handle.SetCursorName(cursor_name);
+
+  SQLCHAR buf[20];
+  SQLRETURN status = SQLGetCursorNameInternal(&stmt_handle, buf, 20, nullptr);
+
+  std::string actual = reinterpret_cast<char*>(buf);
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(cursor_name, actual);
+}
+
+TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  std::string cursor_name = "name_1";
+  stmt_handle.SetCursorName(cursor_name);
+
+  SQLCHAR buf[20];
+  SQLRETURN status = SQLGetCursorNameInternal(&stmt_handle, buf, 5, nullptr);
+
+  std::string actual = reinterpret_cast<char*>(buf);
+  EXPECT_EQ(SQL_SUCCESS_WITH_INFO, status);
+  EXPECT_EQ("name", actual);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_01004(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("String data, right truncated",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
