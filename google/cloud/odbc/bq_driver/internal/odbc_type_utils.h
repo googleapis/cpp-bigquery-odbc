@@ -21,6 +21,7 @@
 #include <map>
 #include <vector>
 
+
 namespace google::cloud::odbc_bq_driver_internal {
 
 struct DataBuffer {
