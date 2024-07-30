@@ -17,8 +17,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 struct ColAttributeRow {
   std::string literal_prefix;
   std::string literal_suffix;
@@ -257,21 +255,19 @@ std::string const kTableName =
 
 void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   SQLRETURN status;
-  std::string col;
-  std::string col_expected;
+  SQLCHAR col_attr[kBufferLength];
+  SQLSMALLINT actual_len;
   TypeInfoRow info_row = kDataTypesColumns[i - 1].info_row;
   ColAttributeRow col_attr_row = kDataTypesColumns[i - 1].col_attribute_row;
-
-  // Checking string attributes
-  SQLCHAR col_attr[kBufferLength];
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_COLUMN_NAME,
-                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-  CheckError(status,
-             "SQLColAttribute " + std::to_string(SQL_DESC_BASE_COLUMN_NAME),
-             conn);
-  col = reinterpret_cast<char*>(col_attr);
-  EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
+                           (SQLPOINTER)col_attr, kBufferLength, &actual_len, NULL);
+  
+  int length_to_use = (actual_len < kBufferLength - 1) ? actual_len : kBufferLength - 1;
+  col_attr[length_to_use] = '\0';
 
+  std::string col(reinterpret_cast<char*>(col_attr));
+  EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
+  
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_TABLE_NAME,
                            (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
@@ -289,7 +285,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(kCatalogName, col);
 
-  memset(col_attr, 0, kBufferLength);
+    memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_LABEL, (SQLPOINTER)col_attr,
                            kBufferLength, NULL, NULL);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_LABEL), conn);
@@ -305,7 +301,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(col_attr_row.literal_prefix, col);
 
-  memset(col_attr, 0, kBufferLength);
+   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_LITERAL_SUFFIX,
                            (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
   CheckError(status,
@@ -475,6 +471,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_UPDATABLE),
              conn);
   EXPECT_EQ(0, col_attr_int);
+
 }
 
 TEST(SQLColAttribute, CheckAllAttributes) {
@@ -489,7 +486,7 @@ TEST(SQLColAttribute, CheckAllAttributes) {
                         kDataTypesColumns[i].bq_type);
   }
   table_schema.append(")");
-  table.Create(conn, table_schema);
+  table.CreateWithPrepare(conn, table_schema);
 
   std::string select_stmt = "SELECT * FROM " + qualified_table_name;
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(),
@@ -500,10 +497,8 @@ TEST(SQLColAttribute, CheckAllAttributes) {
     CheckAttributes(i, conn);
   }
 
-  table.Drop(conn);
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
