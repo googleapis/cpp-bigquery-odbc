@@ -95,6 +95,10 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   AssociateDescriptorHandle(stmt_handle, DescriptorType::kIRD);
   AssociateDescriptorHandle(stmt_handle, DescriptorType::kIPD);
 
+  std::string cursor_name =
+      "SQL_CUR" + std::to_string(reinterpret_cast<std::uintptr_t>(stmt_handle));
+  stmt_handle->SetCursorName(cursor_name);
+
   *out_conn_handle = stmt_handle;
   return SQL_SUCCESS;
 }

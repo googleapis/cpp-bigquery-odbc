@@ -14,9 +14,8 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
-#include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -30,6 +29,7 @@ using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using ::testing::StartsWith;
 
 TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
@@ -54,6 +54,7 @@ TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
   DescriptorHandle& ipd =
       stmt_handle->GetDescriptorHandle(DescriptorType::kIPD);
   EXPECT_FALSE(ipd.GetAssociatedStatementHandles().empty());
+  EXPECT_THAT(stmt_handle->GetCursorName(), StartsWith("SQL_CUR"));
   delete stmt_handle;
 }
 

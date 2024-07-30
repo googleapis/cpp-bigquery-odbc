@@ -20,6 +20,7 @@
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
 
@@ -33,6 +34,7 @@ using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+using ::testing::StartsWith;
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 
@@ -574,6 +576,8 @@ TEST(StatementTest, DISABLED_SQLPutData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -608,6 +612,28 @@ TEST(StatementTest, SQLSetCursorName) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(StatementTest, SQLGetCursorName) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLCHAR cursor_name_ret[kBufferLength];
+
+  std::string query = "SELECT 1;";
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  status = SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorName", conn);
+
+  std::string actual = reinterpret_cast<char*>(cursor_name_ret);
+  EXPECT_THAT(actual, StartsWith("SQL_CUR"));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, FetchDirectRowWise) {
   std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
