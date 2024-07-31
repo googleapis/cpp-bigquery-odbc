@@ -658,6 +658,7 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
                          0, &chunk_size);  // No ANSI version.
     CheckError(status, "SQLBindParameter", conn);
   }
+  
 
   SQLPOINTER bounded_data_ptr;
   status = SQLExecute(conn->hstmt);  // No ANSI version.
