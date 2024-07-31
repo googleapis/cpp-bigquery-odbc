@@ -20,6 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 // We need sorting functions
+#include <nlohmann/json.hpp>
 #include <algorithm>
 #include <locale.h>
 #include <memory>
@@ -295,6 +296,12 @@ class Table {
   // populated to order the values
   void InsertStrData(std::shared_ptr<ODBCHandles> conn,
                      std::vector<std::string> rows, bool insert_index = false);
+
+  // This is used to insert json darainto a table which only has a string
+  // column.
+  void InsertJsonData(std::shared_ptr<ODBCHandles> conn,
+                      std::vector<nlohmann::json> rows,
+                      bool insert_index = false);
 
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will

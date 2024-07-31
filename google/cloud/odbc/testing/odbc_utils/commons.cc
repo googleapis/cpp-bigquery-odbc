@@ -301,6 +301,46 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+void Table::InsertJsonData(std::shared_ptr<ODBCHandles> conn,
+                           std::vector<nlohmann::json> rows,
+                           bool insert_index) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    nlohmann::json json_field = rows[i];
+    auto row = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+
+    if (json_field != NULL) {
+      row_str.append("JSON '");
+      row_str.append(to_string(json_field));
+      row_str.append("'");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+
+  SQLRETURN status;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                      insert_stmt.size());
+
+  CheckError(status, "SQLPrepareA", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];

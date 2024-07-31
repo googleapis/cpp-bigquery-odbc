@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include <nlohmann/json.hpp>
 
 namespace google::cloud::odbc_tests {
 
@@ -393,5 +395,83 @@ TEST(DataTranslationTest, From_INT64_to_all) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+struct JsonBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  nlohmann::json value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<JsonBasicTestStruct> const kConversionFromJsonTestData{
+    {SQL_C_CHAR, nlohmann::json({{"age", 30}, {"name", "Sita"}}), SQL_SUCCESS},
+    {SQL_C_CHAR, nlohmann::json({{"age", 30}, {"name", "Alice"}}), SQL_SUCCESS},
+    {SQL_C_CHAR, nlohmann::json({{"age", 90}, {"name", "Ram"}}), SQL_SUCCESS},
+    {SQL_C_CHAR, nlohmann::json({{"age", 26}, {"name", "Bob"}}), SQL_SUCCESS},
+};
+
+void VerifyColumnWiseJsonStringResults(
+    std::vector<JsonBasicTestStruct> input_data, Results col_wise_data,
+    std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    std::vector<std::string> ret_col_values = col_wise_data[col_name];
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      input_col_values.emplace_back(to_string(data.value));
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
+    }
+  }
+}
+
+void TestTranslationsFromJsonToCHAR(std::shared_ptr<ODBCHandles> conn,
+                                    std::string query) {
+  auto results = *FetchResults(conn, query, true);
+  VerifyColumnWiseJsonStringResults(kConversionFromJsonTestData, results,
+                                    std::vector<std::string>());
+}
+
+TEST(DataTranslationTest, From_Json_to_CHAR) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_INSERT_PARAMS_TEST_JSON_STRING";
+  std::cout << "table_name ==" << table_name << std::endl;
+  char insert_stmt[kBufferLength];
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(Id INTEGER, PersonDetails JSON)");
+  std::vector<nlohmann::json> json_data_to_insert;
+  for (auto elem : kConversionFromJsonTestData) {
+    json_data_to_insert.push_back(elem.value);
+  }
+  table.InsertJsonData(conn, json_data_to_insert, true);
+  auto const query = "SELECT PersonDetails FROM " + table_name + " Order by Id";
+  TestTranslationsFromJsonToCHAR(conn, query);
+  // Delete table
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests

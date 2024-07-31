@@ -55,6 +55,7 @@ class DescriptorHandle : public Handle {
     return descriptor_records_[index];
   }
 
+  inline void ClearDescriptorRecordsMap() { descriptor_records_.clear(); }
   void BindNewDescriptorRecord(SQLSMALLINT index,
                                DescriptorRecord descriptor_record);
 

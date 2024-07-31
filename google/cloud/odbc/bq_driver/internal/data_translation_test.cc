@@ -14,11 +14,13 @@
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
+using json = nlohmann::json;
 
 TEST(CheckLimitsArithmetic, Basic) {
   StatusRecord status_record;
@@ -242,6 +244,39 @@ TEST(ConvertFromStringDSValue, To_SQL_C_USHORT) {
   FromStringToArithmeticTest<SQLUSMALLINT>("-17.1", 11111 /* doesn't matter */,
                                            SQL_C_USHORT, SQLStates::k_22003(),
                                            "Numeric value out of range");
+}
+
+template <typename SrcType, typename DestType>
+void ConvertFromJsonDSValueTest(SrcType src_val, DestType const& expected_val,
+                                SQLSMALLINT dest_type,
+                                std::string expected_state = "",
+                                std::string expected_message = "") {
+  SQLPOINTER buf = malloc(50);
+  DataBuffer data = {dest_type, buf, 50, nullptr};
+  DSValue ds_value;
+  JsonToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
+  DestType* returned_val = (DestType*)data.buf;
+  if (expected_state.empty() || expected_state == SQLStates::k_HY000()) {
+    EXPECT_EQ(expected_message, status_record.message);
+  } else {
+    EXPECT_EQ(*returned_val, expected_val);
+  }
+  free(buf);
+}
+
+TEST(ConvertFromJsonDSValue, To_SQL_C_CHAR_success) {
+  SQLPOINTER buf = malloc(100);
+  DataBuffer data = {SQL_C_CHAR, buf, 100, nullptr};
+  DSValue ds_value;
+  json src_val = nlohmann::json({{"age", 30}, {"name", "Sita"}});
+  std::string expected_val = "{\"age\":30,\"name\":\"Sita\"}";
+  JsonToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
+  ASSERT_TRUE(status_record.ok());
+  std::string returned_val = (char*)(SQLCHAR*)data.buf;
+  EXPECT_EQ(returned_val, expected_val);
+  free(buf);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

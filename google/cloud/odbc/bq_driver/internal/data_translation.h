@@ -334,6 +334,31 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+inline odbc_internal::StatusRecord ConvertFromJsonDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+  using odbc_internal::StatusRecordOr;
+
+  std::string src_str;
+  JsonDSValueToString(src_dsval, src_str);
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+
+  switch (dest_type) {
+    case SQL_C_CHAR: {
+      StatusRecord status_record =
+          StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return status_record;
+    }  // TODO(unknown): FOR SQL_C_WCHAR, SQL_C_BINARY to be done later
+    default: {
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H
