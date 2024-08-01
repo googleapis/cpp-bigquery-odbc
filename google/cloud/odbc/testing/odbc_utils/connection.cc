@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "connection.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 

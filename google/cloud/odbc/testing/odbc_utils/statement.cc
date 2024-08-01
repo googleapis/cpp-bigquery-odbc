@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <chrono>
 
 namespace google::cloud::odbc_tests {

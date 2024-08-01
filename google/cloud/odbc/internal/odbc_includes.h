@@ -18,7 +18,6 @@
 #define ODBCVER 0x0380
 
 #ifdef _WIN32
-
 #define _WINSOCKAPI_
 #include <Windows.h>
 #endif

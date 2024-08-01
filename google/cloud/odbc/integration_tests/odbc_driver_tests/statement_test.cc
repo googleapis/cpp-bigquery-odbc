@@ -20,7 +20,6 @@
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
