@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -289,8 +288,7 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
 
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16
-// SQLGetDiagField function isn't working correctly with the Simba driver on Windows.
-#ifndef _WIN32
+
 TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_CHAR";
@@ -315,7 +313,11 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
       "SELECT StringField FROM " + table_name + " ORDER BY index";
+#ifndef _WIN32
+  // TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+  // SIMBA(WIN).
   TestTranslationsFromString(conn, query);
+#endif /* WIN32 */
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -350,8 +352,13 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
       "SELECT NumericField FROM " + table_name + " ORDER BY index";
+
+#ifndef _WIN32
+  // TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+  // SIMBA(WIN).
   TestTranslationsFromArithmetic<NumericBasicTestStruct>(
       conn, query, kConversionFromNumericTestData);
+#endif /* WIN32 */
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -385,8 +392,13 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query = "SELECT IntField FROM " + table_name + " ORDER BY index";
+
+#ifndef _WIN32
+  // TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+  // SIMBA(WIN).
   TestTranslationsFromArithmetic<Int64BasicTestStruct>(
       conn, query, kConversionFromInt64TestData);
+#endif /* WIN32 */
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -394,7 +406,6 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

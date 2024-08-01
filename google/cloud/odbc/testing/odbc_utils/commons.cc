@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -117,7 +116,7 @@ void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
                    bool use_ansi) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
-            "CREATE TABLE IF NOT EXISTS " + table_name_ + " " + schema_str);
+            "CREATE OR REPLACE TABLE " + table_name_ + " " + schema_str);
   SQLRETURN status;
   if (use_ansi) {
     status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)create_table_stmt, SQL_NTS);
@@ -320,7 +319,7 @@ void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
                             std::string table_name, std::string schema) {
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
-            "CREATE TABLE IF NOT EXISTS " + table_name + " " + schema);
+            "CREATE OR REPLACE TABLE " + table_name + " " + schema);
 
   SQLRETURN status;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_table_stmt,

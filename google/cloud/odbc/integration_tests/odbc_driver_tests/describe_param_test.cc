@@ -14,7 +14,6 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <gtest/gtest.h>
 #include <regex>
 
@@ -84,7 +83,7 @@ void CheckLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT param_number,
                                      &out_desc_len, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(expected, out_desc_len);
-#endif
+#endif /* WIN32 */
 }
 
 void CheckExpectedResults(std::shared_ptr<ODBCHandles> conn,

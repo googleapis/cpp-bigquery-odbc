@@ -16,10 +16,9 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
-
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -397,7 +396,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
   EnvironmentHandle handle;
-  SQLPOINTER buff= nullptr;
+  SQLPOINTER buff = nullptr;
 
   auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE, buff,
                                         0, nullptr);

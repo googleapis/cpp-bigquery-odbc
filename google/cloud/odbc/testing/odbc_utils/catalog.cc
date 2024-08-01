@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "catalog.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
