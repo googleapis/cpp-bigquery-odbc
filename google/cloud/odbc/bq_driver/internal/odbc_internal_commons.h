@@ -143,17 +143,25 @@ inline std::string convertTimestampToString(DSValue const& value, std::string& s
   throw std::invalid_argument(
       "Invalid date format. Expected format: YYYY-MM-DD");
 }
-inline void TimestampToDSValue(std::string const& str, DSValue& value) {
-  // Validate the date string format
-  std::regex timestamp_pattern(R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{6})");
-  if (!std::regex_match(str, timestamp_pattern)) {
-    throw std::invalid_argument(
-        "Invalid date format. Expected format: YYYY-MM-DD");
-  }
-  value.resize(str.size());
-  std::copy(str.begin(), str.end(), value.begin());
+// inline void TimestampToDSValue(std::string const& str, DSValue& value) {
+//   // Validate the date string format
+//   std::regex timestamp_pattern(R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{6})");
+//   if (!std::regex_match(str, timestamp_pattern)) {
+//     throw std::invalid_argument(
+//         "Invalid date format. Expected format: YYYY-MM-DD");
+//   }
+//   value.resize(str.size());
+//   std::copy(str.begin(), str.end(), value.begin());
+// }
+inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp, DSValue& value) {
+    value.resize(sizeof(SQL_TIMESTAMP_STRUCT));
+    std::memcpy(value.data(), &timestamp, sizeof(SQL_TIMESTAMP_STRUCT));
 }
 
+inline SQL_TIMESTAMP_STRUCT DSValueToTimestamp(const DSValue& value, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
+    std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
+    return timestamp_struct;
+}
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:

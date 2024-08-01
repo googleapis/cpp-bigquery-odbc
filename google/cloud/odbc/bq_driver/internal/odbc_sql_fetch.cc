@@ -43,7 +43,8 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kString:
       return ConvertFromStringDSValue(ds_val, data);
     case BQDataType::kTimeStamp:
-      return ConvertFromTimestampDSValue<SQLTIMESTAMP>(ds_val, data);
+    std::cout<<"hello"<<std::endl;
+      return ConvertFromTimestampDSValue(ds_val, data);
   }
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }

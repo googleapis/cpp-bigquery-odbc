@@ -13,6 +13,11 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include <iostream>
+#include <ctime>
+#include <iomanip>
+#include <string>
+#include <sstream>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -31,6 +36,110 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+// SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(const std::string& timestamp_str) {
+//   std::cout<<"Tmestamp:"<<timestamp_str<<std::endl;
+//     if (timestamp_str.size() < 19) { // Length of "YYYY-MM-DD HH:MM:SS" is 19
+//         throw std::invalid_argument("Invalid timestamp format");
+//     }
+
+//     int year = std::stoi(timestamp_str.substr(0, 4));
+//     int month = std::stoi(timestamp_str.substr(5, 2));
+//     int day = std::stoi(timestamp_str.substr(8, 2));
+//     int hour = std::stoi(timestamp_str.substr(11, 2));
+//     int minute = std::stoi(timestamp_str.substr(14, 2));
+//     int second = std::stoi(timestamp_str.substr(17, 2));
+
+//     SQL_TIMESTAMP_STRUCT timestamp_struct;
+//     timestamp_struct.year = static_cast<SQLSMALLINT>(year);
+//     timestamp_struct.month = static_cast<SQLUSMALLINT>(month);
+//     timestamp_struct.day = static_cast<SQLUSMALLINT>(day);
+//     timestamp_struct.hour = static_cast<SQLUSMALLINT>(hour);
+//     timestamp_struct.minute = static_cast<SQLUSMALLINT>(minute);
+//     timestamp_struct.second = static_cast<SQLUSMALLINT>(second);
+
+//     // Handle fractional seconds if present
+//     size_t dot_position = timestamp_str.find('.');
+//     if (dot_position != std::string::npos) {
+//         std::string fraction_str = timestamp_str.substr(dot_position + 1);
+//         int fraction = std::stoi(fraction_str);
+        
+//         // Ensure the fraction has at least 3 digits (milliseconds)
+//         while (fraction_str.length() < 3) {
+//             fraction *= 10;
+//             fraction_str += "0";
+//         }
+        
+//         timestamp_struct.fraction = fraction;
+//     } else {
+//         timestamp_struct.fraction = 0;
+//     }
+
+//     return timestamp_struct;
+// }
+
+// Constants for Unix timestamp calculations
+const int SECONDS_PER_DAY = 86400;
+const int SECONDS_PER_YEAR = 31536000;
+const int SECONDS_PER_LEAP_YEAR = 31622400; // 366 days
+const int SECONDS_PER_HOUR = 3600;
+const int SECONDS_PER_MINUTE = 60;
+
+bool IsLeapYear(int year) {
+    return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
+}
+
+int DaysInMonth(int year, int month) {
+    static const int days_in_month[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (month == 2 && IsLeapYear(year)) {
+        return 29;
+    }
+    return days_in_month[month - 1];
+}
+
+SQL_TIMESTAMP_STRUCT ConvertUnixTimestampToTimestampStruct(double unix_timestamp) {
+    SQL_TIMESTAMP_STRUCT timestamp_struct;
+
+    // Calculate whole seconds and fractional part
+    time_t total_seconds = static_cast<time_t>(unix_timestamp);
+    int fractional_part = static_cast<int>((unix_timestamp - total_seconds) * 1000000); // Microseconds
+
+    // Calculate the date and time components
+    int year = 1970;
+    while (total_seconds >= (IsLeapYear(year) ? SECONDS_PER_LEAP_YEAR : SECONDS_PER_YEAR)) {
+        total_seconds -= (IsLeapYear(year) ? SECONDS_PER_LEAP_YEAR : SECONDS_PER_YEAR);
+        ++year;
+    }
+
+    int month = 1;
+    while (total_seconds >= (DaysInMonth(year, month) * SECONDS_PER_DAY)) {
+        total_seconds -= (DaysInMonth(year, month) * SECONDS_PER_DAY);
+        ++month;
+    }
+
+    int day = total_seconds / SECONDS_PER_DAY + 1;
+    total_seconds %= SECONDS_PER_DAY;
+
+    int hour = total_seconds / SECONDS_PER_HOUR;
+    total_seconds %= SECONDS_PER_HOUR;
+
+    int minute = total_seconds / SECONDS_PER_MINUTE;
+    total_seconds %= SECONDS_PER_MINUTE;
+
+    int second = total_seconds;
+
+    // Fill SQL_TIMESTAMP_STRUCT
+    timestamp_struct.year = static_cast<short>(year);
+    timestamp_struct.month = static_cast<unsigned char>(month);
+    timestamp_struct.day = static_cast<unsigned char>(day);
+    timestamp_struct.hour = static_cast<unsigned char>(hour);
+    timestamp_struct.minute = static_cast<unsigned char>(minute);
+    timestamp_struct.second = static_cast<unsigned char>(second);
+    timestamp_struct.fraction = fractional_part;
+
+    return timestamp_struct;
+}
+
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
     TableSchema const& schema, std::vector<RowData> const& rows) {
@@ -75,7 +184,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kTimeStamp: {
-            TimestampToDSValue(data, row_val);
+            std::cout<<"dtaa:"<<data<<std::endl;
+            double unix_timestamp = std::stod(data);
+            SQL_TIMESTAMP_STRUCT time_struct = ConvertUnixTimestampToTimestampStruct(unix_timestamp);
+            TimestampToDSValue(time_struct, row_val);
             break;
           }
           default: {

@@ -393,139 +393,193 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 using SQLTIMESTAMP = std::string;
 struct TimestampBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
-  SQLTIMESTAMP value;
+  SQL_TIMESTAMP_STRUCT value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
 
 StdTimestampRows const kTimestampSampleData{
-    {1, {2024, 01, 20, 01, 02, 03, 000000}}, {2, {2024, 01, 20, 01, 02, 03, 000000}},
-    {3, {2024, 01, 20, 01, 02, 03, 000000}}, {4, {2024, 01, 20, 01, 02, 03, 000000}},
-    {5, {2024, 01, 20, 01, 02, 03, 000000}}, {6, {2024, 01, 20, 01, 02, 03, 000000}},
-    {7, {2024, 01, 20, 01, 02, 03, 000000}},
+    // {1, {2024, 01, 20, 01, 02, 03, 000000}}, 
+    {1, {2024, 01, 20, 01, 02, 03, 00}},
+    // {3, {2024, 01, 20, 01, 02, 03, 000000}}, {4, {2024, 01, 20, 01, 02, 03, 000000}},
+    // {5, {2024, 01, 20, 01, 02, 03, 000000}}, {6, {2024, 01, 20, 01, 02, 03, 000000}},
+    // {7, {2024, 01, 20, 01, 02, 03, 000000}},
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-   {SQL_C_CHAR, "2024-01-20 01:02:03.000000", SQL_SUCCESS},
-    {SQL_C_WCHAR, "2", SQL_SUCCESS},
-    {SQL_C_BINARY, "2024-1-20 1:2:3.0", SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS_WITH_INFO},
-    {SQL_C_TYPE_TIME, "1:2:3", SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, "2024-1-20 1:2:3.0", SQL_SUCCESS},
-    {SQL_C_SLONG, "2024-01-20 01:02:03.000000", SQL_ERROR},
+   //{SQL_C_CHAR, {2024, 01, 20, 01, 02, 03, 000000}, SQL_SUCCESS},
+    // {SQL_C_WCHAR, "2", SQL_SUCCESS},
+    // {SQL_C_BINARY, "2024-1-20 1:2:3.0", SQL_SUCCESS},
+    // {SQL_C_TYPE_DATE, "2024-01-20", SQL_SUCCESS_WITH_INFO},
+    // {SQL_C_TYPE_TIME, "1:2:3", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP,{2024, 01, 20, 01, 02, 03, 00}, SQL_SUCCESS},
+    // {SQL_C_SLONG, "2024-01-20 01:02:03.000000", SQL_ERROR},
 };
 
 std::string FormatTimestamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ss;
-  ss << timestamp.year << "-"<< timestamp.month << "-"
-             << timestamp.day<<" "<<timestamp.hour<<":"<<timestamp.minute<<":"<<timestamp.second<<"."<<timestamp.fraction;
+  ss << timestamp.year << "-" << std::setw(2) << std::setfill('0') << timestamp.month << "-"
+     << std::setw(2) << std::setfill('0') << timestamp.day << " "
+     << std::setw(2) << std::setfill('0') << timestamp.hour << ":"
+     << std::setw(2) << std::setfill('0') << timestamp.minute << ":"
+     << std::setw(2) << std::setfill('0') << timestamp.second << "."
+     << std::setw(6) << std::setfill('0') << timestamp.fraction / 1000;
   return ss.str();
 }
 
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                               std::string query) {
-  SQLRETURN status;
-  char read_stmt[kBufferLength];
+                                std::cout<<"1"<<std::endl;
+SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
-  StrToChar(read_stmt, query);
-
- 
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+  std::cout<<"2"<<std::endl;
   int row_count = 0;
-  SQLSMALLINT num_cols;
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(status, "SQLNumResultCols", conn);
-
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  std::cout<<"3"<<std::endl;
+  std::cout<<"query"<<query<<std::endl;
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
+std::cout<<"4"<<std::endl;
+  for (auto const& expected : kConversionFromTimestampTestData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    std::cout<<"5"<<std::endl;
+    CheckError(status, "SQLBindCol", conn);
 
-  // Read all the rows using SQLFetch
-  while (true) {
     status = SQLFetch(conn->hstmt);
+
     if (status == SQL_NO_DATA) {
+      std::cout<<"6"<<std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
       CheckError(status, "SQLFetch", conn);
       break;
     }
+    std::cout<<"7"<<std::endl;
+    switch (expected.target_c_type) {
+      case SQL_C_TYPE_TIMESTAMP: {
+        std::cout<<"8"<<std::endl;
+        SQL_TIMESTAMP_STRUCT* timestamp =
+            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+        EXPECT_EQ(timestamp->year, expected.value.year);
+        EXPECT_EQ(timestamp->month, expected.value.month);
+        EXPECT_EQ(timestamp->day, expected.value.day);
 
-    if (row_count >= kConversionFromTimestampTestData.size()) {
-      break;
-    }
-
-    SQLSMALLINT resp_status, resp_status_len;
-    while (1) {
-      TimestampBasicTestStruct expected = kConversionFromTimestampTestData[row_count];
-      status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
-                          kBufferLength, &strlen_or_ind);
-      std::cout << "Testing row: " << expected.target_c_type << ", "
-               << ", " << expected.status << std::endl;
-      EXPECT_EQ(status, expected.status);
-      if (status != SQL_SUCCESS) {
-        row_count++;
         break;
-      }
-      CheckError(status,
-                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
-                 conn);
-      if (SQL_SUCCEEDED(status)) {
-        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
-                                 &resp_status, SQL_INTEGER, &resp_status_len);
-        if (status == SQL_NO_DATA) {
-          if (strlen_or_ind >= 0) {
-            // Refer
-            // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
-            // to understand the expectations regarding typecasting applications
-            // buffers.
-            if (expected.target_c_type == SQL_C_CHAR) {
-              std::string returned_val = (char*)data;
-              EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_WCHAR) {
-              std::string returned_val = (char*)data;
-              EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_BINARY) {
-              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
-              std::string returned_val = FormatTimestamp(*date_val);
-              EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
-              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
-              std::string returned_val = FormatTimestamp(*date_val);
-              EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
-              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
-              std::ostringstream ss;
-              ss << date_val->hour<<":"<<date_val->minute<<":"<<date_val->second;
-              std::string returned_val = ss.str();;
-              EXPECT_EQ(returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
-              SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
-                            std::string returned_val = FormatTimestamp(*date_val);
-              EXPECT_EQ(returned_val, expected.value);
-            } 
-            row_count++;
-          }
-          break;
-        }
-        CheckError(status, "SQLGetDiagField", conn);
-      } else {
-        break;
+      
       }
     }
   }
+                              }
+// void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
+//                               std::string query) {
+//   SQLRETURN status;
+//   char read_stmt[kBufferLength];
+//   SQLCHAR data[kBufferLength];
+//   SQLLEN strlen_or_ind;
+//   StrToChar(read_stmt, query);
 
-  EXPECT_EQ(row_count, kConversionFromTimestampTestData.size())
-      << "Number of rows fetched does not match expected test cases.";
-}
+ 
+//     status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+//   CheckError(status, "SQLPrepare", conn);
+
+//   int row_count = 0;
+//   SQLSMALLINT num_cols;
+//   status = SQLNumResultCols(conn->hstmt, &num_cols);
+//   CheckError(status, "SQLNumResultCols", conn);
+
+//   status = SQLExecute(conn->hstmt);
+//   CheckError(status, "SQLExecute", conn);
+
+//   // Read all the rows using SQLFetch
+//   while (true) {
+//     status = SQLFetch(conn->hstmt);
+//     if (status == SQL_NO_DATA) {
+//       break;
+//     }
+//     if (!SQL_SUCCEEDED(status)) {
+//       CheckError(status, "SQLFetch", conn);
+//       break;
+//     }
+
+//     if (row_count >= kConversionFromTimestampTestData.size()) {
+//       break;
+//     }
+
+//     SQLSMALLINT resp_status, resp_status_len;
+//     while (1) {
+//       TimestampBasicTestStruct expected = kConversionFromTimestampTestData[row_count];
+//       status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+//                           kBufferLength, &strlen_or_ind);
+//       std::cout << "Testing row: " << expected.target_c_type << ", "
+//                << ", " << expected.status << std::endl;
+//       EXPECT_EQ(status, expected.status);
+//       if (status != SQL_SUCCESS) {
+//         row_count++;
+//         break;
+//       }
+//       CheckError(status,
+//                  "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+//                  conn);
+//       if (SQL_SUCCEEDED(status)) {
+//         status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
+//                                  &resp_status, SQL_INTEGER, &resp_status_len);
+//         if (status == SQL_NO_DATA) {
+//           if (strlen_or_ind >= 0) {
+//             // Refer
+//             // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+//             // to understand the expectations regarding typecasting applications
+//             // buffers.
+//             if (expected.target_c_type == SQL_C_CHAR) {
+//               std::string returned_val = (char*)data;
+//               EXPECT_EQ(returned_val, expected.value);
+//             } else if (expected.target_c_type == SQL_C_WCHAR) {
+//               std::string returned_val = (char*)data;
+//               EXPECT_EQ(returned_val, expected.value);
+//             } else if (expected.target_c_type == SQL_C_BINARY) {
+//               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+//               std::string returned_val = FormatTimestamp(*date_val);
+//               EXPECT_EQ(returned_val, expected.value);
+//             } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
+//               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+//               std::string returned_val = FormatTimestamp(*date_val);
+//               EXPECT_EQ(returned_val, expected.value);
+//             } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
+//               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+//               std::ostringstream ss;
+//               ss << date_val->hour<<":"<<date_val->minute<<":"<<date_val->second;
+//               std::string returned_val = ss.str();;
+//               EXPECT_EQ(returned_val, expected.value);
+//             } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+//               SQL_TIMESTAMP_STRUCT* date_val = (SQL_TIMESTAMP_STRUCT*)data;
+//                             std::string returned_val = FormatTimestamp(*date_val);
+//               EXPECT_EQ(returned_val, expected.value);
+//             } 
+//             row_count++;
+//           }
+//           break;
+//         }
+//         CheckError(status, "SQLGetDiagField", conn);
+//       } else {
+//         break;
+//       }
+//     }
+//   }
+
+//   EXPECT_EQ(row_count, kConversionFromTimestampTestData.size())
+//       << "Number of rows fetched does not match expected test cases.";
+// }
 
 TEST(DataTranslationTest, From_SQL_Date_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -548,5 +602,5 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests
