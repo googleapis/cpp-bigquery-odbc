@@ -20,7 +20,6 @@
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
@@ -143,8 +142,11 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
+#ifndef _WIN32
+  // TODO(b/357795885):Handle SQLDescribeCol Api Invalid Output WRT SIMBA(WIN).
   auto results = *FetchDirect(conn, query, 1, is_async, use_ansi);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+#endif /* _WIN32 */
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -408,7 +410,12 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during FetchResults
+#ifndef _WIN32
 TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
+#endif /* _WIN32 */
+
 TEST(StatementTest, SQLFetch_Ansi) { FetchDataTest(true, true); }
 
 TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
@@ -424,6 +431,13 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirect_Ansi) {
                           true);
 }
 
+TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync) {
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_3", true);
+}
+TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
+  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_4", true,
+                          true);
+}
 
 // No ANSI version.
 TEST(StatementTest, SQLFetchScroll) {
@@ -457,70 +471,9 @@ TEST(StatementTest, SQLFetchScroll) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// SQLDescribeCol and SQLGetDiagField apis isn't working correctly with the Simba driver on Windows.
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during FetchResultsWithSqlGetData
 #ifndef _WIN32
-TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_3", true);
-}
-TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
-  ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_4", true,
-                          true);
-}
-
-TEST(StatementTest, RollBackTransaction) {
-  std::string const table_name =
-      kDatasetWithTablePrefix + "_RollBackTransaction";
-  Table table(table_name);
-
-  // Create Table
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-
-  // Insert some data to the table
-  StdRow row = {"a1", 0, 0};
-  table.InsertData(conn, {row}, false, true);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
-  SQLUINTEGER autocommit = SQL_AUTOCOMMIT_OFF;
-  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
-                                  (SQLPOINTER)autocommit, 0);
-
-  // Try to update data in the table
-  std::string update_stmt = "UPDATE " + table_name +
-                            " SET StringField='b1' WHERE StringField = 'a1';";
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare(update)", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute(update)", conn);
-
-  // Check that the data was updated
-  auto const query = "SELECT StringField FROM " + table_name;
-  auto results = *FetchResults(conn, query, true);
-  VerifyColumnWiseResults({{"b1", 0, 0}}, results, std::vector<std::string>());
-
-  // ROLLBACK TRANSACTION
-  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_ROLLBACK);
-  CheckError(status, "SQLEndTran(after select)", conn);
-
-  // Check that transaction was rolled back and the data has initial value
-  results = *FetchResults(conn, query, true);
-  VerifyColumnWiseResults({{"a1", 0, 0}}, results, std::vector<std::string>());
-
-  // COMMIT TRANSACTION
-  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_COMMIT);
-  CheckError(status, "SQLEndTran(after select)", conn);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
 
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
@@ -542,6 +495,7 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   std::string query = "SELECT StringField FROM " + table_name;
+
   auto results = *FetchResultsWithSqlGetData(conn, query);
 
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
@@ -577,6 +531,7 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   query = "SELECT StringField FROM " + table_name_ansi;
+
   results = *FetchResultsWithSqlGetData(conn, query);
 
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
@@ -588,7 +543,7 @@ TEST(StatementTest, SQLGetData) {
   table_ansi.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
+#endif /* _WIN32 */
 
 // This test is temporarily disabled till we are able to debug this with help
 // from the vendor
@@ -725,6 +680,65 @@ TEST(StatementTest, FetchDirectRowWise) {
   table.Drop(conn, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+// TODO(b/357794952): Issues with FetchResults need to be fixed for windows
+#ifndef _WIN32
+
+TEST(StatementTest, RollBackTransaction) {
+  std::string const table_name =
+      kDatasetWithTablePrefix + "_RollBackTransaction";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  // Insert some data to the table
+  StdRow row = {"a1", 0, 0};
+  table.InsertData(conn, {row}, false, true);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
+  SQLUINTEGER autocommit = SQL_AUTOCOMMIT_OFF;
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                                  (SQLPOINTER)autocommit, 0);
+
+  // Try to update data in the table
+  std::string update_stmt = "UPDATE " + table_name +
+                            " SET StringField='b1' WHERE StringField = 'a1';";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare(update)", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute(update)", conn);
+
+  // Check that the data was updated
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"b1", 0, 0}}, results, std::vector<std::string>());
+
+  // ROLLBACK TRANSACTION
+  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_ROLLBACK);
+  CheckError(status, "SQLEndTran(after select)", conn);
+
+  // Check that transaction was rolled back and the data has initial value
+  results = *FetchResults(conn, query, true);
+  VerifyColumnWiseResults({{"a1", 0, 0}}, results, std::vector<std::string>());
+
+  // COMMIT TRANSACTION
+  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_COMMIT);
+  CheckError(status, "SQLEndTran(after select)", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif /* _WIN32 */
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
@@ -1323,8 +1337,6 @@ TEST(SQLPrepare, ValidateIpdDescForSimpleStatement) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// SQL_DESC_NULLABLE not providing nullable value for Simba Driver on Windows. 
-#ifndef _WIN32
 TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -1354,14 +1366,16 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
+// TODO(b/357798825):Handle SQL_DESC_NAME Invalid Value WRT SIMBA(WIN).
+#ifndef _WIN32
   SQLCHAR out_param_name;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_NAME, &out_param_name, 0, 0);
   CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
   EXPECT_EQ(0, out_param_name);
+#endif /* _WIN32 */
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
 
 TEST(SQLNumResultCols, ValidStatementWithResultSet) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -1611,6 +1625,9 @@ TEST(SQLCloseCursor, CloseCursorAndExecuteAgain) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during SQLFetch
+#ifndef _WIN32
 TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
@@ -1634,6 +1651,7 @@ TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif /* _WIN32 */
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

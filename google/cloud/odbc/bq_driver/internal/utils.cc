@@ -217,21 +217,21 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
 }
 
 std::string GetPathToOdbcIni() {
-  #ifdef _WIN32
-    absl::optional<std::string> path = "Software\\ODBC\\ODBC.INI";
-    if (path) {
-      return *path;
-    }
-  #else
-    absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
-    if (path) {
-      return *path;
-    }
-    absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
-    if (home) {
-      return *home + "/.odbc.ini";
-    }
-  #endif
+#ifdef _WIN32
+  absl::optional<std::string> path = "Software\\ODBC\\ODBC.INI";
+  if (path) {
+    return *path;
+  }
+#else
+  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+  if (path) {
+    return *path;
+  }
+  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  if (home) {
+    return *home + "/.odbc.ini";
+  }
+#endif /* WIN32 */
   return "";
 }
 

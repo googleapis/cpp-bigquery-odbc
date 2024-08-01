@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
-#include "google/cloud/odbc/testing/odbc_utils/types.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -476,8 +475,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              conn);
   EXPECT_EQ(0, col_attr_int);
 }
-// SQLColAttribute api isn't working correctly with the Simba driver on Windows.
-#ifndef _WIN32
+
 TEST(SQLColAttribute, CheckAllAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -497,14 +495,16 @@ TEST(SQLColAttribute, CheckAllAttributes) {
                            select_stmt.size());
   CheckError(status, "SQLPrepare", conn);
 
+#ifndef _WIN32
   for (int i = 1; i <= kDataTypesColumns.size(); i++) {
+    // TODO(b/357794946): Handle SQLColAttribute Api Null Values WRT SIMBA(WIN).
     CheckAttributes(i, conn);
   }
+#endif /* WIN32 */
 
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

@@ -27,7 +27,9 @@ endif ()
 add_library(google_cloud_odbc_testing_utils # cmake-format: sort
             env_vars.cc env_vars.h status_matchers.cc status_matchers.h)
 
-target_link_libraries(google_cloud_odbc_testing_utils
-                      google-cloud-cpp::experimental-bigquery_rest GTest::gtest_main GTest::gtest GTest::gmock)
+target_link_libraries(
+    google_cloud_odbc_testing_utils
+    google-cloud-cpp::experimental-bigquery_rest GTest::gtest_main GTest::gtest
+    GTest::gmock)
 
 create_bazel_config(google_cloud_odbc_testing_utils YEAR 2024)

@@ -163,7 +163,7 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
   EXPECT_EQ(actual, "");
   google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
 }
-#endif
+#endif /* WIN32 */
 
 TEST(Parsing, ParseConnectionString) {
   Section testing_section = kDsnSection;

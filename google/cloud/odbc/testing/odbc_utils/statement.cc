@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <chrono>
 
 namespace google::cloud::odbc_tests {
@@ -36,7 +35,7 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
-  SQLRETURN status = SQL_SUCCESS; 
+  SQLRETURN status = SQL_SUCCESS;
 
   auto const table_name = kDatasetWithTablePrefix +
                           "ODBC_INSERT_DIRECT_TEST_ANSI_" +
@@ -82,7 +81,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
-// Add param 1(string) to insert query string
+  // Add param 1(string) to insert query string
   constexpr char const* str_field = "Test String 1";
   SQLLEN len_string_field = strlen(str_field);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
@@ -138,7 +137,7 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-// Add param 1(string) to insert query string
+  // Add param 1(string) to insert query string
   constexpr char const* str_field = "Test String 1";
 
   SQLLEN len_string_field = strlen(str_field);
@@ -413,9 +412,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     SqlToCdataTypes(col_ptr);
 
-  // Allocate space for column data using std::unique_ptr
-  auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
-  col_ptr->data = col_data.get();
+    // Allocate space for column data using std::unique_ptr
+    auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->data = col_data.get();
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include <gtest/gtest.h>
 #include <iostream>
 
