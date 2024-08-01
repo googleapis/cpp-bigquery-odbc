@@ -1577,4 +1577,55 @@ TEST(SQLPrepare, ValidateIrdDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(SQLCloseCursor, CloseCursorAndExecuteAgain) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select 1";
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute_1", conn);
+
+  status = SQLCloseCursor(conn->hstmt);
+  CheckError(status, "SQLCloseCursor_1", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute_2", conn);
+
+  status = SQLCloseCursor(conn->hstmt);
+  CheckError(status, "SQLCloseCursor_2", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
+  SQLUINTEGER autocommit = SQL_AUTOCOMMIT_OFF;
+  auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                                  (SQLPOINTER)autocommit, 0);
+
+  std::string query = "Select 1";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute_1", conn);
+
+  status = SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, SQL_ROLLBACK);
+  CheckError(status, "SQLEndTran", conn);
+
+  // Check that there is no result set after transaction is ended
+  status = SQLFetch(conn->hstmt);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests
