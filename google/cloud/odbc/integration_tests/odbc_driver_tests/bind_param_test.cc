@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
-#include "google/cloud/odbc/internal/odbc_includes.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_tests {

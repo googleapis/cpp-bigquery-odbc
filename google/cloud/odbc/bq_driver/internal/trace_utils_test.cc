@@ -126,7 +126,7 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLogFileIsNotEmpty) {
   file.close();
 }
 
-#endif
+#endif /* WIN32 */
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections2);
@@ -579,7 +579,8 @@ TEST(TraceLoggingConsole, FormatIntervalStructNegative) {
 
   EXPECT_EQ(exp, FormatIntervalStruct(t));
 }
-#endif
+
+#endif // (ODBCVER >= 0x0300)
 
 #ifdef WIN32
 TEST(TraceLoggingConsole, WindowHandles) {
