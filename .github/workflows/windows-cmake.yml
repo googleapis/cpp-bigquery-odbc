@@ -25,8 +25,17 @@ jobs:
       fail-fast: false
       matrix:
         msvc: [ msvc-2022, msvc-2019 ]
-        arch: [ x64 ]
+        # msvc: [ msvc-2022 ]
+        arch: [ x64, x86 ]
         shard: [ Core ]
+    env:
+      DRIVER_ARCH: ${{ matrix.arch }}
+      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
+      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
+      SCCACHE_GCS_RW_MODE: READ_WRITE
+      SCCACHE_IGNORE_SERVER_IO_ERROR: 1
+      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
+      VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@v3
       with:
@@ -42,6 +51,10 @@ jobs:
     - uses: google-github-actions/setup-gcloud@v1
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
+    - name: Download and Install ODBC Driver
+      shell: powershell
+      run: |
+        .\ci\gha\builds\lib\odbc-driver-install.ps1
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -84,11 +97,10 @@ jobs:
         # Put the CMake output in a directory with more space and keep it short
         # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
-        ci/gha/builds/windows-cmake.sh
-    env:
-      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
-      SCCACHE_GCS_RW_MODE: READ_WRITE
-      SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
-      VCPKG_TRIPLET: ${{ matrix.arch }}-windows
+        export MSVC_VERSION="${{ matrix.msvc }}"
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_${{ matrix.shard}}"
+        if [ "${{ matrix.msvc }}" == "msvc-2022" && [ "${{ matrix.arch }}" == "x64" ]; then
+          ci/gha/builds/windows-cmake-integration.sh
+        else
+          ci/gha/builds/windows-cmake.sh
+        fi
