@@ -267,6 +267,9 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
     case SQL_CHAR:
       col_ptr->data_type = SQL_C_CHAR;
       break;
+    case SQL_TYPE_TIME:
+      col_ptr->data_type = SQL_C_TYPE_TIME;
+      break;
     default:
       throw std::runtime_error("Invalid column data type: " +
                                col_ptr->data_type);
@@ -307,6 +310,9 @@ class Table {
   // be populated to order the values
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
+
+  void InsertTimeData(std::shared_ptr<ODBCHandles> conn,
+                      std::vector<SQL_TIME_STRUCT> rows, bool insert_index);
 
  private:
   std::string table_name_;

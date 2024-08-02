@@ -301,6 +301,54 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
+void Table::InsertTimeData(std::shared_ptr<ODBCHandles> conn,
+                           std::vector<SQL_TIME_STRUCT> rows,
+                           bool insert_index) {
+  if (rows.empty()) {
+    return;
+  }
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+  for (size_t i = 0; i < num_rows; ++i) {
+    SQL_TIME_STRUCT time_data = rows[i];
+    std::string row_str = "( ";
+    if (insert_index) {
+      row_str.append(std::to_string(i) + ", ");
+    }
+
+    // Insert the time
+    row_str.append("\"");
+    if ((time_data.hour >= 0) && (time_data.hour <= 24)) {
+      row_str.append(std::to_string(time_data.hour) + ":");
+    }
+    if ((time_data.minute >= 0) && (time_data.minute <= 59)) {
+      row_str.append(std::to_string(time_data.minute) + ":");
+    }
+    if ((time_data.second >= 0) && (time_data.second <= 59)) {
+      row_str.append(std::to_string(time_data.second));
+    }
+    row_str.append("\"");
+    row_str.append(" )");
+
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+  std::cout << "Insert statement=" << insert_stmt << std::endl;
+  SQLRETURN status;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                      insert_stmt.size());
+
+  CheckError(status, "SQLPrepareA", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];

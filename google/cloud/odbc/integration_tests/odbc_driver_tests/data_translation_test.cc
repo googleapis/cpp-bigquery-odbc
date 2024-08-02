@@ -407,6 +407,127 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+// BQ_DRIVER_INTEGRATION_TESTS
+struct TimeBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned
+  SQL_TIME_STRUCT value;
+  // The status that should be returned for this C Type
+  SQLRETURN status;
+};
+
+std::vector<TimeBasicTestStruct> const kConversionFromTimeTestData{
+
+    {SQL_C_CHAR, {11, 20, 20}, SQL_SUCCESS},
+    {SQL_C_TYPE_TIME, {22, 45, 54}, SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, {2, 36, 29}, SQL_SUCCESS},
+    //{SQL_C_WCHAR, {19, 07, 20}, SQL_SUCCESS}, // TODO(b/356564958): Handle
+    // W_CHAR conversion for different datatypes conversion
+    {SQL_C_BINARY, {04, 06, 07}, SQL_SUCCESS},
+
+};
+
+void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
+                              std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  int row_count = 0;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  for (auto const& expected : kConversionFromTimeTestData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR: {
+        std::string returned_val = reinterpret_cast<char*>(data);
+        char expected_val[16];
+        snprintf(expected_val, sizeof(expected_val), "%02d:%02d:%02d.000000",
+                 expected.value.hour, expected.value.minute,
+                 expected.value.second);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_WCHAR: {
+        // TO Be done later
+      }
+      case SQL_C_BINARY: {
+        if (strlen_or_ind == sizeof(SQL_TIME_STRUCT)) {
+          SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+          char expected_val[8];
+          snprintf(expected_val, sizeof(expected_val), "%02d:%02d:%02d",
+                   expected.value.hour, expected.value.minute,
+                   expected.value.second);
+          char returned_val[8];
+          snprintf(returned_val, sizeof(returned_val), "%02d:%02d:%02d",
+                   time->hour, time->minute, time->second);
+          EXPECT_EQ(std::string(returned_val), std::string(expected_val));
+        }
+        break;
+      }
+      case SQL_C_TYPE_TIME: {
+        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+        EXPECT_EQ(time->hour, expected.value.hour);
+        EXPECT_EQ(time->minute, expected.value.minute);
+        EXPECT_EQ(time->second, expected.value.second);
+        break;
+      }
+
+      case SQL_C_TYPE_TIMESTAMP: {
+        SQL_TIMESTAMP_STRUCT* timestamp =
+            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+        EXPECT_EQ(timestamp->hour, expected.value.hour);
+        EXPECT_EQ(timestamp->minute, expected.value.minute);
+        EXPECT_EQ(timestamp->second, expected.value.second);
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    ++row_count;
+  }
+}
+
+TEST(DataTranslationTest, From_SQL_Time_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIME";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, TimeField TIME)");
+  std::vector<SQL_TIME_STRUCT> time_data_to_insert;
+  for (auto const& time_data : kConversionFromTimeTestData) {
+    time_data_to_insert.push_back(time_data.value);
+  }
+  table.InsertTimeData(conn, time_data_to_insert, true);
+  std::string query = "SELECT TimeField FROM " + table_name + " ORDER BY index";
+  TestTranslationsFromTime(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#endif
 
 }  // namespace google::cloud::odbc_tests
