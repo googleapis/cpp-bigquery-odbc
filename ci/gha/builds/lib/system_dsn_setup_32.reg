@@ -1,0 +1,33 @@
+REGEDIT4
+;
+; Copyright 2024 Google LLC
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;     https://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources]
+"SampleDSN"="Simba ODBC Driver for Google BigQuery"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\SampleDSN]
+"Description"="ODBC Driver for Google BigQuery 1"
+"Catalog"="bigquery-devtools-drivers"
+"Driver"="C:\\Program Files (x86)\\Simba Technologies\\Simba ODBC Driver for Google BigQuery\\SimbaODBCDriverforGoogleBigQuery32.dll"
+"SQLDialect"="1"
+"OAuthMechanism"="0"
+"Email"="bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam.gserviceaccount.com"
+"KeyFilePath"="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
+
+"AllowLargeResults"="0"
+"LargeResultsDataSetId"="_odbc_temp_tables"
+"LargeResultsTempTableExpirationTime"="3600000"
