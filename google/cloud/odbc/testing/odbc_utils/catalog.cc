@@ -30,6 +30,8 @@ std::vector<SQLTableResult> Catalog::GetTables(
   std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
+    SQLCHAR val[512];
+
     status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
                         SQL_C_CHAR, columns[i].target_value,
                         columns[i].buffer_length, &(columns[i].str_len));
@@ -83,6 +85,167 @@ std::vector<SQLTableResult> Catalog::GetTables(
 
     results.push_back(
         {project_name, dataset_name, table_name, table_type_name, description});
+  }
+
+  return results;
+}
+
+std::vector<SQLColumnsResult> Catalog::GetColumns(
+    std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
+    char const* dataset, char const* table, char const* column, bool use_ansi) {
+  SQLRETURN status;
+  // For details on the columns returned, please see the spec
+  // for SQLColumns API.
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
+  int res_cols = 18;
+  TestingDataBuffer columns[res_cols];
+
+  std::vector<SQLColumnsResult> results;
+
+  for (int i = 0; i < res_cols; i++) {
+    switch (i) {
+      // VARCHAR
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 5:
+      case 11:
+      case 12:
+      case 17: {
+        status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                            SQL_C_CHAR, columns[i].target_value,
+                            columns[i].buffer_length, &(columns[i].str_len));
+        break;
+      }
+      // SMALLINT
+      case 4:
+      case 8:
+      case 9:
+      case 10:
+      case 13:
+      case 14: {
+        status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                            SQL_C_SSHORT, columns[i].target_value,
+                            sizeof(SQLSMALLINT), &(columns[i].str_len));
+        break;
+      }
+      default:
+        // INTEGER
+        {
+          status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                              SQL_C_SLONG, columns[i].target_value,
+                              sizeof(SQLINTEGER), &(columns[i].str_len));
+          break;
+        }
+    }
+    CheckError(status, "SQLBindCol", conn);
+  }
+
+  SQLSMALLINT dataset_length = dataset ? strlen(dataset) : 0;
+  SQLSMALLINT table_length = table ? strlen(table) : 0;
+  SQLSMALLINT column_length = column ? strlen(column) : 0;
+  if (use_ansi) {
+    status = SQLColumnsA(conn->hstmt, (SQLCHAR*)project_id.c_str(),
+                         project_id.length(), (SQLCHAR*)dataset, dataset_length,
+                         (SQLCHAR*)table, table_length, (SQLCHAR*)column,
+                         column_length);
+  } else {
+    status = SQLColumns(conn->hstmt, (SQLCHAR*)project_id.c_str(),
+                        project_id.length(), (SQLCHAR*)dataset, dataset_length,
+                        (SQLCHAR*)table, table_length, (SQLCHAR*)column,
+                        column_length);
+  }
+  CheckError(status, "SQLColumns", conn, use_ansi);
+
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      std::cout << " SQLFetch returned SQL_NO_DATA! Exiting" << std::endl;
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+    std::string project_name =
+        (columns[0].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[0].target_value)
+            : "";
+    std::string dataset_name =
+        (columns[1].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[1].target_value)
+            : "";
+    std::string table_name =
+        (columns[2].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[2].target_value)
+            : "";
+    std::string column_name =
+        (columns[3].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[3].target_value)
+            : "";
+    SQLSMALLINT data_type =
+        (columns[4].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[4].target_value))
+            : -1;
+
+    std::string col_type_name =
+        (columns[5].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[5].target_value)
+            : "";
+    SQLINTEGER col_size =
+        (columns[6].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLINTEGER*>(columns[6].target_value))
+            : SQL_NULL_DATA;
+    SQLINTEGER buf_len =
+        (columns[7].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLINTEGER*>(columns[7].target_value))
+            : SQL_NULL_DATA;
+    SQLSMALLINT dec_digits =
+        (columns[8].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[8].target_value))
+            : SQL_NULL_DATA;
+    SQLSMALLINT radix =
+        (columns[9].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[9].target_value))
+            : SQL_NULL_DATA;
+    SQLSMALLINT nullable =
+        (columns[10].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[10].target_value))
+            : SQL_NULL_DATA;
+    std::string description =
+        (columns[11].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[11].target_value)
+            : "";
+    std::string column_default =
+        (columns[12].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[12].target_value)
+            : "";
+    SQLSMALLINT sql_data_type =
+        (columns[13].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[13].target_value))
+            : SQL_NULL_DATA;
+    SQLSMALLINT sql_dt_sub =
+        (columns[14].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLSMALLINT*>(columns[14].target_value))
+            : SQL_NULL_DATA;
+    SQLINTEGER octet_len =
+        (columns[15].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLINTEGER*>(columns[15].target_value))
+            : SQL_NULL_DATA;
+    SQLINTEGER ord_pos =
+        (columns[16].str_len != SQL_NULL_DATA)
+            ? *(reinterpret_cast<SQLINTEGER*>(columns[16].target_value))
+            : SQL_NULL_DATA;
+    std::string is_nullable =
+        (columns[17].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[17].target_value)
+            : "";
+
+    results.push_back({project_name, dataset_name, table_name, column_name,
+                       description, col_type_name, column_default, is_nullable,
+                       data_type, sql_data_type, sql_dt_sub, dec_digits, radix,
+                       nullable, col_size, buf_len, octet_len, ord_pos});
   }
 
   return results;

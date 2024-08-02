@@ -29,6 +29,30 @@ struct SQLTableResult {
   std::string description;
 };
 
+// Holds result set data from SQLColumns API.
+struct SQLColumnsResult {
+  std::string project_name;
+  std::string dataset_name;
+  std::string table_name;
+  std::string column_name;
+  std::string description;
+  std::string col_type_name;
+  std::string col_default;
+  std::string is_nullable;
+
+  SQLSMALLINT data_type;
+  SQLSMALLINT sql_data_type;
+  SQLSMALLINT sql_date_time_sub;
+  SQLSMALLINT decimal_digits;
+  SQLSMALLINT radix;
+  SQLSMALLINT nullable;
+
+  SQLINTEGER col_size;
+  SQLINTEGER buffer_len;
+  SQLINTEGER char_octet_len;
+  SQLINTEGER ord_pos;
+};
+
 // Dataset for catalogn functions.
 std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
 // Tables for SQLPrimaryKeys.
@@ -40,6 +64,7 @@ std::string const kCatalogDatasetTableWithoutPK =
 std::string const kTableOrders = "ODBC_SQLForeignKeys_TABLE_ORDERS";
 std::string const kTableLines = "ODBC_SQLForeignKeys_TABLE_LINES";
 std::string const kTableCustomer = "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
+
 class Catalog {
  public:
   ~Catalog();
@@ -54,6 +79,12 @@ class Catalog {
       std::shared_ptr<ODBCHandles> conn, std::string const& project_id = "",
       char const* dataset = nullptr, char const* table = nullptr,
       char const* table_type = nullptr, bool use_ansi = false);
+
+  // Uses the SQLColumns API to fetch columns in a dataset.
+  static std::vector<SQLColumnsResult> GetColumns(
+      std::shared_ptr<ODBCHandles> conn, std::string const& project_id = "",
+      char const* dataset = NULL, char const* table = NULL,
+      char const* column = NULL, bool use_ansi = false);
 
   // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
   static RowWiseResults GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
