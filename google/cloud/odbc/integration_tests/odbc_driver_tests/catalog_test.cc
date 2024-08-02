@@ -135,32 +135,6 @@ std::string const kSQLColumnsTableSchema = "CREATE TABLE IF NOT EXISTS " +
                                            " DecimalField DECIMAL,"
                                            " BigDecimalField DECIMAL"
                                            ")";
-
-// Helper test function for executing SQLColumns test
-void TestSQLColumns(std::string const column) {
-  auto conn = std::make_shared<ODBCHandles>();
-  // Create table for SQLColumns.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  CreateTableDirect(conn, kSQLColumnsTableSchema);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Set statement attribute so the parameters are passed as literal values.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                               (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                          kSqlColumnsTableFull.c_str(), column.c_str());
-
-  // Simba has not implemented SQLColumns. It returns no data
-  EXPECT_TRUE(results.empty());
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // For avoiding quota issues with table creation (jobRateLimitExceeded)
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-}
 }  // namespace
 
 bool FindTableInVector(std::string const& table_name,
@@ -464,40 +438,6 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLColumns_StringColumn) { TestSQLColumns("StringField"); }
-
-TEST(CatalogTest, SQLColumns_IntColumn) { TestSQLColumns("IntField"); }
-
-TEST(CatalogTest, SQLColumns_BoolColumn) { TestSQLColumns("BoolField"); }
-
-TEST(CatalogTest, SQLColumns_TimeColumn) { TestSQLColumns("TimeField"); }
-
-TEST(CatalogTest, SQLColumns_TimestampColumn) {
-  TestSQLColumns("TimestampField");
-}
-
-TEST(CatalogTest, SQLColumns_DecimalColumn) { TestSQLColumns("DecimalField"); }
-
-TEST(CatalogTest, SQLColumns_BigDecimalColumn) {
-  TestSQLColumns("BigDecimalField");
-}
-
-TEST(CatalogTest, SQLColumns_BytesColumn) { TestSQLColumns("BytesField"); }
-
-TEST(CatalogTest, SQLColumns_DateColumn) { TestSQLColumns("DateField"); }
-
-TEST(CatalogTest, SQLColumns_DateTimeColumn) {
-  TestSQLColumns("DateTimeField");
-}
-
-TEST(CatalogTest, SQLColumns_IntervalColumn) {
-  TestSQLColumns("IntervalField");
-}
-
-TEST(CatalogTest, SQLColumns_AllColumns) { TestSQLColumns(""); }
-
-TEST(CatalogTest, SQLColumns_InvalidColumn) { TestSQLColumns("INVALID"); }
-
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
@@ -727,6 +667,72 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#else
+////////////////////////////////////////////////////////////
+// Move SQLColumns test cases to BQ_DRIVER_INTEGRATION_TESTS
+// once the API is implemented for BQ
+////////////////////////////////////////////////////////////
+
+// Driver. Helper test function for executing SQLColumns test
+void TestSQLColumns(std::string const column) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table for SQLColumns.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kSQLColumnsTableSchema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Set statement attribute so the parameters are passed as literal values.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLColumnsResult> results =
+      Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                          kSqlColumnsTableFull.c_str(), column.c_str());
+
+  // Simba has not implemented SQLColumns. It returns no data
+  EXPECT_TRUE(results.empty());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // For avoiding quota issues with table creation (jobRateLimitExceeded)
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+}
+
+TEST(CatalogTest, SQLColumns_StringColumn) { TestSQLColumns("StringField"); }
+
+TEST(CatalogTest, SQLColumns_IntColumn) { TestSQLColumns("IntField"); }
+
+TEST(CatalogTest, SQLColumns_BoolColumn) { TestSQLColumns("BoolField"); }
+
+TEST(CatalogTest, SQLColumns_TimeColumn) { TestSQLColumns("TimeField"); }
+
+TEST(CatalogTest, SQLColumns_TimestampColumn) {
+  TestSQLColumns("TimestampField");
+}
+
+TEST(CatalogTest, SQLColumns_DecimalColumn) { TestSQLColumns("DecimalField"); }
+
+TEST(CatalogTest, SQLColumns_BigDecimalColumn) {
+  TestSQLColumns("BigDecimalField");
+}
+
+TEST(CatalogTest, SQLColumns_BytesColumn) { TestSQLColumns("BytesField"); }
+
+TEST(CatalogTest, SQLColumns_DateColumn) { TestSQLColumns("DateField"); }
+
+TEST(CatalogTest, SQLColumns_DateTimeColumn) {
+  TestSQLColumns("DateTimeField");
+}
+
+TEST(CatalogTest, SQLColumns_IntervalColumn) {
+  TestSQLColumns("IntervalField");
+}
+
+TEST(CatalogTest, SQLColumns_AllColumns) { TestSQLColumns(""); }
+
+TEST(CatalogTest, SQLColumns_InvalidColumn) { TestSQLColumns("INVALID"); }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
