@@ -17,6 +17,10 @@
 
 #include <gtest/gtest.h>
 #include <map>
+#ifdef _WIN32
+#include <windows.h>
+#undef SQLDriverConnect
+#endif
 #include <sql.h>
 #include <sqlext.h>
 #include <sqlucode.h>

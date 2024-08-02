@@ -30,7 +30,6 @@
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
-
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // ODBC APIs supported in initial driver release.

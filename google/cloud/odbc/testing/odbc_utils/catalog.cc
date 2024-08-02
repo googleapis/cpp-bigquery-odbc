@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "catalog.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
@@ -25,7 +26,8 @@ std::vector<SQLTableResult> Catalog::GetTables(
     char const* dataset, char const* table, char const* table_type,
     bool use_ansi) {
   SQLRETURN status;
-  int res_cols = 5;
+  int const res_cols = 5;
+
   TestingDataBuffer columns[res_cols];
   std::vector<SQLTableResult> results;
 
@@ -252,7 +254,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string dataset, std::string table,
                                        bool use_ansi) {
   SQLRETURN status;
-  int res_cols = 6;
+  int const res_cols = 6;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
   RowWiseResults results;
@@ -357,7 +359,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
                                        std::string pk_table,
                                        std::string fk_table, bool use_ansi) {
   SQLRETURN status;
-  int res_cols = 11;
+  int const res_cols = 11;
   int col_idx = 0;
   Catalog catalog_result[res_cols];
   RowWiseResults results;

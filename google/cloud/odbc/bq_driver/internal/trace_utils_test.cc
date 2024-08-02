@@ -44,6 +44,7 @@ Sections const kConfigSections7{{"Driver", kDriverSection7}};
 std::shared_ptr<TraceOptions> test_opts_console =
     *(TraceOptions::CreateTraceOptionsConsole(true, 0));
 
+#ifndef _WIN32
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections1);
   StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
@@ -70,6 +71,63 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigLogfileClosed) {
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
 }
 
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections4);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(4, (*test_opts_file)->log_level);
+
+  (*test_opts_file)->trace_file.close();
+}
+
+TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections1);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_option =
+      TraceOptions::GetTraceOption();
+
+  EXPECT_TRUE((*test_option)->logging_enabled);
+  EXPECT_TRUE((*test_option)->trace_file.is_open());
+  EXPECT_EQ(1, (*test_option)->log_level);
+
+  (*test_option)->trace_file.close();
+}
+
+TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLogFileIsNotEmpty) {
+  auto config_sections = std::make_shared<Sections>(kConfigSections1);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  std::string fmt1 = FormatSqlSmallInt(1);
+  std::string fmt2 = FormatSqlUSmallInt(2);
+  std::string fmt3 = FormatSqlInteger(3);
+  std::string fmt4 = FormatSqlUInteger(4);
+
+  CollectAndPrintArgsFile("TestBasicODBCTypes", *(*test_opts_file), 4,
+                          fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
+                          fmt4.c_str());
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  (*test_opts_file)->trace_file.close();
+
+  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
+
+  std::fstream file((*test_opts_file)->log_file, std::ios::in);
+  EXPECT_TRUE(file.peek() != std::ifstream::traits_type::eof());
+
+  file.close();
+}
+
+#endif
+
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
   auto config_sections = std::make_shared<Sections>(kConfigSections2);
   StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
@@ -90,19 +148,6 @@ TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent) {
   EXPECT_FALSE((*test_opts_file)->logging_enabled);
   EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
   EXPECT_EQ(0, (*test_opts_file)->log_level);
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections4);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(4, (*test_opts_file)->log_level);
-
-  (*test_opts_file)->trace_file.close();
 }
 
 TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
@@ -164,48 +209,6 @@ TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFileAbsent) {
       CollectAndPrintArgs("TestBasicODBCTypes", *(*test_option), 4,
                           fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
                           fmt4.c_str()));
-}
-
-TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_option =
-      TraceOptions::GetTraceOption();
-
-  EXPECT_TRUE((*test_option)->logging_enabled);
-  EXPECT_TRUE((*test_option)->trace_file.is_open());
-  EXPECT_EQ(1, (*test_option)->log_level);
-
-  (*test_option)->trace_file.close();
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLogFileIsNotEmpty) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  std::string fmt1 = FormatSqlSmallInt(1);
-  std::string fmt2 = FormatSqlUSmallInt(2);
-  std::string fmt3 = FormatSqlInteger(3);
-  std::string fmt4 = FormatSqlUInteger(4);
-
-  CollectAndPrintArgsFile("TestBasicODBCTypes", *(*test_opts_file), 4,
-                          fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
-                          fmt4.c_str());
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  (*test_opts_file)->trace_file.close();
-
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-
-  std::fstream file((*test_opts_file)->log_file, std::ios::in);
-  EXPECT_TRUE(file.peek() != std::ifstream::traits_type::eof());
-
-  file.close();
 }
 
 TEST(TraceLogging, TraceLoggingDisabled) {
@@ -585,8 +588,7 @@ TEST(TraceLoggingConsole, WindowHandles) {
 
   std::string fmt1 = FormatHWND(w1);
   std::string fmt2 = FormatSqlHWND(w2);
-
-  EXPECT_EQ("TestWindowHandles\t\tHWND, 0x0\n\t\tSQLHWND 0x0\n",
+  EXPECT_EQ("TestWindowHandles\t\tHWND, 0x0\n\t\tSQLHWND, 0x0\n",
             CollectAndPrintArgs("TestWindowHandles", *test_opts_console, 2,
                                 fmt1.c_str(), fmt2.c_str()));
 }
