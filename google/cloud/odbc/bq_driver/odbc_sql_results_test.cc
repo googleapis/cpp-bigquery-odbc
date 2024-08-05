@@ -23,10 +23,12 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -526,6 +528,51 @@ TEST(SQLColAttributeInternal, Fail_InvalidFieldIdentifier) {
   ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
   EXPECT_EQ(SQLStates::k_HY091(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLCloseCursorInternal, Fail_InvalidHandle) {
+  SQLRETURN status = SQLCloseCursorInternal(nullptr);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_24000(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLCloseCursorInternal, CloseNotPreparedStatement) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  ResultSet result_set;
+  stmt_handle.SetResultSet(result_set);
+
+  SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, stmt_handle.GetStmtState());
+  EXPECT_FALSE(stmt_handle.IsCursorOpen());
+}
+
+TEST(SQLCloseCursorInternal, ClosePreparedStatement) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  ResultSet result_set;
+  stmt_handle.SetResultSet(result_set);
+  Job job;
+  stmt_handle.SetPreparedJob(job);
+
+  SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(StmtStates::kStatementPrepared, stmt_handle.GetStmtState());
+  EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 
 }  // namespace google::cloud::odbc_bq_driver

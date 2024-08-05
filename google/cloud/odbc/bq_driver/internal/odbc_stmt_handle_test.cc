@@ -22,6 +22,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobQueryStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
@@ -369,6 +370,41 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
         res_schema.fields[i].mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).nullable, nullable);
   }
+}
+
+TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
+  StatementHandle handle = CreateStatementHandle();
+
+  handle.CloseCursor();
+
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
+}
+
+TEST(CloseCursor, CloseCursor_NoPreparedJob) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  ResultSet result_set;
+  handle.SetResultSet(result_set);
+
+  handle.CloseCursor();
+
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
+}
+
+TEST(CloseCursor, CloseCursor_PreparedJob) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  ResultSet result_set;
+  handle.SetResultSet(result_set);
+  Job job;
+  handle.SetPreparedJob(job);
+
+  handle.CloseCursor();
+
+  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -413,4 +413,24 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  if (!stmt_handle.IsCursorOpen()) {
+    StatusRecord status_record = {
+        SQLStates::k_24000(), "Invalid cursor state - cursor was not opened"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  stmt_handle.CloseCursor();
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

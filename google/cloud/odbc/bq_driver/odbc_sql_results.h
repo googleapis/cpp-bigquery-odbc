@@ -99,6 +99,8 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                                   SQLSMALLINT* char_attr_string_len,
                                   SQLLEN* numeric_attribute);
 
+SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H

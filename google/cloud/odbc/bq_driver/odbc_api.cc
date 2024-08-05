@@ -50,6 +50,7 @@ using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
@@ -89,6 +90,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
@@ -2970,12 +2972,18 @@ SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLCloseCursor");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLCloseCursor(statementHandle, *(*kTraceOption));
 
   // Call to internal function for SQLCloseCursor in odbc_sql_results.h.
+  rc = google::cloud::odbc_bq_driver::SQLCloseCursorInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLCloseCursor(rc, *(*kTraceOption));
 
   return rc;
 }

@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -67,6 +68,9 @@ StatusRecord FinishTransactionIfNeeded(ConnectionHandle& conn_handle,
     return ds_status_record_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(false);
+  for (auto* stmt_handle : conn_handle.GetStatementHandles()) {
+    stmt_handle->CloseCursor();
+  }
   return StatusRecord::Ok();
 }
 

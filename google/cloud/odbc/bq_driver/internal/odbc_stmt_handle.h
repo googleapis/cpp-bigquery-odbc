@@ -102,8 +102,14 @@ class StatementHandle : public Handle {
   }
 
   [[nodiscard]] inline ResultSet const& GetResultSet() const {
-    return result_set_;
+    return result_set_.value();
   }
+
+  inline bool IsCursorOpen() const { return result_set_.has_value(); }
+
+  void CloseCursor();
+
+  inline void FreeResultSet() { result_set_.reset(); }
 
   [[nodiscard]] inline std::vector<
       google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
@@ -122,14 +128,22 @@ class StatementHandle : public Handle {
 
   [[nodiscard]] inline ::google::cloud::bigquery_v2_minimal_internal::Job&
   GetPreparedJob() {
-    return prepared_job_;
+    return prepared_job_.value();
   }
+
+  // Used only for tests
+  inline void SetPreparedJob(
+      ::google::cloud::bigquery_v2_minimal_internal::Job& job) {
+    prepared_job_ = job;
+  }
+
+  inline bool WasJobPrepared() { return prepared_job_.has_value(); }
 
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
-  ResultSet result_set_;
+  std::optional<ResultSet> result_set_;
   std::string query_str_;
 
  private:
@@ -141,7 +155,7 @@ class StatementHandle : public Handle {
   mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
-  google::cloud::bigquery_v2_minimal_internal::Job prepared_job_;
+  std::optional<google::cloud::bigquery_v2_minimal_internal::Job> prepared_job_;
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

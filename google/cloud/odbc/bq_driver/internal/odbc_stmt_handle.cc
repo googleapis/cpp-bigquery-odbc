@@ -169,7 +169,10 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
     }
 
     column.col_type = *type_status_record;
-    result_set_.row_schema.emplace_back(column);
+    if (!result_set_.has_value()) {
+      result_set_.emplace();  // Set an empty object to the optional
+    }
+    (*result_set_).row_schema.emplace_back(column);
   }
 
   return StatusRecord::Ok();
@@ -398,6 +401,15 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
   }
 
   return StatusRecord::Ok();
+}
+
+void StatementHandle::CloseCursor() {
+  FreeResultSet();
+  if (WasJobPrepared()) {
+    SetStmtState(StmtStates::kStatementPrepared);
+  } else {
+    SetStmtState(StmtStates::kStatementNotPrepared);
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
