@@ -161,7 +161,6 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
-      std::cout << " SQLFetch returned SQL_NO_DATA! Exiting" << std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
