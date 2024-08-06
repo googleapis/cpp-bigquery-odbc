@@ -38,6 +38,7 @@ using google::cloud::odbc_testing_bq_driver_utils::
 using google::cloud::odbc_testing_bq_driver_utils::
     CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::MockStatementHandle;
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   SQLUSMALLINT out_desc_count;
@@ -561,7 +562,7 @@ TEST(SQLCloseCursorInternal, CloseNotPreparedStatement) {
 }
 
 TEST(SQLCloseCursorInternal, ClosePreparedStatement) {
-  StatementHandle stmt_handle = CreateStatementHandle();
+  MockStatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   ResultSet result_set;
   stmt_handle.SetResultSet(result_set);

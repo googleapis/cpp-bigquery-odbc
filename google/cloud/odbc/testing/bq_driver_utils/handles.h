@@ -21,6 +21,22 @@
 
 namespace google::cloud::odbc_testing_bq_driver_utils {
 
+class MockConnectionHandle
+    : public google::cloud::odbc_bq_driver_internal::ConnectionHandle {
+ public:
+  explicit MockConnectionHandle() = default;
+  void SetConnected() { is_connected_ = true; }
+};
+
+class MockStatementHandle
+    : public google::cloud::odbc_bq_driver_internal::StatementHandle {
+ public:
+  explicit MockStatementHandle() = default;
+  void SetPreparedJob(::google::cloud::bigquery_v2_minimal_internal::Job& job) {
+    prepared_job_ = job;
+  }
+};
+
 SQLRETURN AllocateHandles(SQLHENV* env_handle_ref, SQLHDBC* conn_handle_ref);
 
 SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle);

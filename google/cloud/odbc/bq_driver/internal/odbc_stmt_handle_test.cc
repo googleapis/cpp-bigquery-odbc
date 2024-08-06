@@ -36,6 +36,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
+using google::cloud::odbc_testing_bq_driver_utils::MockStatementHandle;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -394,7 +395,7 @@ TEST(CloseCursor, CloseCursor_NoPreparedJob) {
 }
 
 TEST(CloseCursor, CloseCursor_PreparedJob) {
-  StatementHandle handle = CreateStatementHandle();
+  MockStatementHandle handle;
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   ResultSet result_set;
   handle.SetResultSet(result_set);

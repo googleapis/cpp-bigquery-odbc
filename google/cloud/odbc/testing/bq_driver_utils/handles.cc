@@ -50,12 +50,6 @@ SQLRETURN FreeHandles(SQLHENV env_handle, SQLHDBC conn_handle) {
   // return SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-class MockConnectionHandle : public ConnectionHandle {
- public:
-  explicit MockConnectionHandle() = default;
-  void SetConnected() { is_connected_ = true; }
-};
-
 ConnectionHandle CreateConnectionHandle(bool is_connected) {
   MockConnectionHandle conn_handle;
   if (is_connected) {
