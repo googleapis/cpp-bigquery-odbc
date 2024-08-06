@@ -169,10 +169,7 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
     }
 
     column.col_type = *type_status_record;
-    if (!result_set_.has_value()) {
-      result_set_.emplace();  // Set an empty object to the optional
-    }
-    (*result_set_).row_schema.emplace_back(column);
+    result_set_.row_schema.emplace_back(column);
   }
 
   return StatusRecord::Ok();
@@ -404,7 +401,8 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
 }
 
 void StatementHandle::CloseCursor() {
-  FreeResultSet();
+  ResultSet result_set;
+  result_set_ = result_set;
   if (WasJobPrepared()) {
     SetStmtState(StmtStates::kStatementPrepared);
   } else {

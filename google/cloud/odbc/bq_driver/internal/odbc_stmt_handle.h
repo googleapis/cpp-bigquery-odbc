@@ -102,14 +102,14 @@ class StatementHandle : public Handle {
   }
 
   [[nodiscard]] inline ResultSet const& GetResultSet() const {
-    return result_set_.value();
+    return result_set_;
   }
 
-  inline bool IsCursorOpen() const { return result_set_.has_value(); }
+  inline bool IsCursorOpen() const {
+    return stmt_state_ == StmtStates::kStatementExecutedWithRs;
+  }
 
   void CloseCursor();
-
-  inline void FreeResultSet() { result_set_.reset(); }
 
   [[nodiscard]] inline std::vector<
       google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
@@ -137,7 +137,7 @@ class StatementHandle : public Handle {
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
-  std::optional<ResultSet> result_set_;
+  ResultSet result_set_;
   std::string query_str_;
   std::optional<google::cloud::bigquery_v2_minimal_internal::Job> prepared_job_;
 
