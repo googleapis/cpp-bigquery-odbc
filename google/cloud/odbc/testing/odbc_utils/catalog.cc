@@ -30,8 +30,6 @@ std::vector<SQLTableResult> Catalog::GetTables(
   std::vector<SQLTableResult> results;
 
   for (int i = 0; i < res_cols; i++) {
-    SQLCHAR val[512];
-
     status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
                         SQL_C_CHAR, columns[i].target_value,
                         columns[i].buffer_length, &(columns[i].str_len));
