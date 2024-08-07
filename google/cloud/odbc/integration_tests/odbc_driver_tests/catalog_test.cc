@@ -807,7 +807,7 @@ TEST(CatalogTest, SQLColumns_StringColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "StringField", "STRING", "STRING", "", "YES",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "", "YES",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
        16384, 16384, 16384, 1});
   TestSQLColumns("StringField", expected_results);
@@ -817,7 +817,7 @@ TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "StringField", "STRING", "STRING", "", "YES",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "", "YES",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
        16384, 16384, 16384, 1});
   TestSQLColumns("StringField", expected_results, true);
@@ -827,29 +827,28 @@ TEST(CatalogTest, SQLColumns_IntColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "IntField", "INTEGER", "INT64", "", "YES",
-       SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA,
-       1});
+       kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
+       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 1});
   TestSQLColumns("IntField", expected_results);
 }
 
 TEST(CatalogTest, SQLColumns_BoolColumn) {
   std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "BoolField", "BOOLEAN", "BOOL", "", "YES",
-       SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1, 1, 1,
-       SQL_NULL_DATA, 2});
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "BoolField", "BOOLEAN", "BOOL", "", "YES",
+                              SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA,
+                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 2});
   TestSQLColumns("BoolField", expected_results);
 }
 
 TEST(CatalogTest, SQLColumns_TimeColumn) {
   std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "TimeField", "TIME", "TIME", "", "YES",
-       SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6, SQL_NULL_DATA, 1, 15, 6,
-       SQL_NULL_DATA, 4});
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "TimeField", "TIME", "TIME", "", "YES",
+                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
+                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 4});
   TestSQLColumns("TimeField", expected_results);
 }
 
@@ -857,19 +856,19 @@ TEST(CatalogTest, SQLColumns_TimestampColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "TimestampField", "TIMESTAMP", "TIMESTAMP", "",
-       "YES", SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6,
-       SQL_NULL_DATA, 1, 26, 16, SQL_NULL_DATA, 5});
+       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
+       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
+       1, 26, 16, SQL_NULL_DATA, 5});
   TestSQLColumns("TimestampField", expected_results);
 }
 
 TEST(CatalogTest, SQLColumns_DecimalColumn) {
   std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
-       SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 9, 10, 1, 38, 40, SQL_NULL_DATA,
-       5});
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
+                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 9, 10, 1,
+                              38, 40, SQL_NULL_DATA, 5});
   TestSQLColumns("DecimalField", expected_results);
 }
 
@@ -907,9 +906,9 @@ TEST(CatalogTest, SQLColumns_DateTimeColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "DateTimeField", "DATETIME", "DATETIME", "",
-       "YES", SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6,
-       SQL_NULL_DATA, 1, 26, 16, SQL_NULL_DATA, 3});
+       kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
+       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
+       1, 26, 16, SQL_NULL_DATA, 3});
   TestSQLColumns("DateTimeField", expected_results);
 }
 
@@ -917,9 +916,9 @@ TEST(CatalogTest, SQLColumns_IntervalColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "IntervalField", "INTERVAL", "INTERVAL", "",
-       "YES", SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
-       SQL_NULL_DATA, 1, 16384, 16384, 16384, 4});
+       kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
+       16384, 16384, 16384, 4});
   TestSQLColumns("IntervalField", expected_results);
 }
 
