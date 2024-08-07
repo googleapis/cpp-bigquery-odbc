@@ -117,7 +117,7 @@ std::string const kTableLinesSchema =
     "NOT ENFORCED)";
 
 // Table and Schema used to test SQLColumns API
-std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE";
+std::string const kSqlColumnsTable = kTableNamePrefix + "ODBC_SQLColumns_TABLE";
 std::string const kSqlColumnsTableFull =
     kCatalogFnsDataset + "." + kSqlColumnsTable;
 std::string const kSQLColumnsTableSchema = "CREATE TABLE IF NOT EXISTS " +
@@ -801,8 +801,6 @@ void TestSQLColumns(std::string const column,
 
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // For avoiding quota issues with table creation (jobRateLimitExceeded)
-  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 }
 
 TEST(CatalogTest, SQLColumns_StringColumn) {
@@ -824,9 +822,7 @@ TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
        16384, 16384, 16384, 1});
   TestSQLColumns("StringField", expected_results, true);
 }
-// Uncomment these once we figure out how to address the
-// jobRateLimitExceededException
-/*
+
 TEST(CatalogTest, SQLColumns_IntColumn) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
@@ -926,7 +922,7 @@ TEST(CatalogTest, SQLColumns_IntervalColumn) {
        SQL_NULL_DATA, 1, 16384, 16384, 16384, 4});
   TestSQLColumns("IntervalField", expected_results);
 }
-*/
+
 TEST(CatalogTest, SQLColumns_InvalidColumn) { TestSQLColumns("INVALID", {}); }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
