@@ -403,7 +403,7 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
 void StatementHandle::CloseCursor() {
   ResultSet result_set;
   result_set_ = result_set;
-  if (WasJobPrepared()) {
+  if (WasStatementPrepared()) {
     SetStmtState(StmtStates::kStatementPrepared);
   } else {
     SetStmtState(StmtStates::kStatementNotPrepared);

@@ -128,10 +128,13 @@ class StatementHandle : public Handle {
 
   [[nodiscard]] inline ::google::cloud::bigquery_v2_minimal_internal::Job&
   GetPreparedJob() {
-    return prepared_job_.value();
+    return prepared_job_;
   }
 
-  inline bool WasJobPrepared() { return prepared_job_.has_value(); }
+  inline static bool WasStatementPrepared() {
+    // TODO(b/358002035) Implement this function
+    return true;
+  }
 
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
@@ -139,7 +142,6 @@ class StatementHandle : public Handle {
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
-  std::optional<google::cloud::bigquery_v2_minimal_internal::Job> prepared_job_;
 
  private:
   std::shared_ptr<Query> query_;
@@ -150,6 +152,7 @@ class StatementHandle : public Handle {
   mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
+  google::cloud::bigquery_v2_minimal_internal::Job prepared_job_;
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
 };

@@ -1624,4 +1624,24 @@ TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+// TODO(b/358002035) Remove BQ_DRIVER_INTEGRATION_TESTS flag
+TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query = "Select 1";
+  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLCloseCursor(conn->hstmt);
+  CheckError(status, "SQLCloseCursor_1", conn);
+
+  status = SQLExecute(conn->hstmt);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests

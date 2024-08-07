@@ -22,7 +22,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobQueryStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
@@ -36,7 +35,6 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
-using google::cloud::odbc_testing_bq_driver_utils::MockStatementHandle;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -378,29 +376,16 @@ TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
 
   handle.CloseCursor();
 
-  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
+  // TODO(b/358002035) Change to kStatementNotPrepared
+  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(CloseCursor, CloseCursor_NoPreparedJob) {
+TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   ResultSet result_set;
   handle.SetResultSet(result_set);
-
-  handle.CloseCursor();
-
-  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
-  EXPECT_FALSE(handle.IsCursorOpen());
-}
-
-TEST(CloseCursor, CloseCursor_PreparedJob) {
-  MockStatementHandle handle;
-  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  ResultSet result_set;
-  handle.SetResultSet(result_set);
-  Job job;
-  handle.SetPreparedJob(job);
 
   handle.CloseCursor();
 

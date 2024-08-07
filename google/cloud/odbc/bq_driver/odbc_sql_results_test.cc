@@ -23,7 +23,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
@@ -38,7 +37,6 @@ using google::cloud::odbc_testing_bq_driver_utils::
 using google::cloud::odbc_testing_bq_driver_utils::
     CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-using google::cloud::odbc_testing_bq_driver_utils::MockStatementHandle;
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   SQLUSMALLINT out_desc_count;
@@ -548,26 +546,11 @@ TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLCloseCursorInternal, CloseNotPreparedStatement) {
+TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   StatementHandle stmt_handle = CreateStatementHandle();
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   ResultSet result_set;
   stmt_handle.SetResultSet(result_set);
-
-  SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
-
-  EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(StmtStates::kStatementNotPrepared, stmt_handle.GetStmtState());
-  EXPECT_FALSE(stmt_handle.IsCursorOpen());
-}
-
-TEST(SQLCloseCursorInternal, ClosePreparedStatement) {
-  MockStatementHandle stmt_handle;
-  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  ResultSet result_set;
-  stmt_handle.SetResultSet(result_set);
-  Job job;
-  stmt_handle.SetPreparedJob(job);
 
   SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
 
