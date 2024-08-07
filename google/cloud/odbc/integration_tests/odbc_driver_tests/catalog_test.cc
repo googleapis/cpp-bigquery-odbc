@@ -802,7 +802,7 @@ void TestSQLColumns(std::string const column,
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // For avoiding quota issues with table creation (jobRateLimitExceeded)
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 }
 
 TEST(CatalogTest, SQLColumns_StringColumn) {
