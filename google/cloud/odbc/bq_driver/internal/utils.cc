@@ -213,6 +213,7 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
+
 std::string GetPathToOdbcIni() {
   absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
