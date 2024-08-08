@@ -30,6 +30,7 @@ odbc_bq_driver_internal::ConnectionHandle CreateConnectionHandle(
 
 odbc_bq_driver_internal::StatementHandle CreateStatementHandle();
 odbc_bq_driver_internal::StatementHandle CreatePreparedStatementHandle();
+odbc_bq_driver_internal::StatementHandle CreateExecutedStatementHandle();
 
 odbc_bq_driver_internal::DescriptorHandle CreateExplicitDescriptor();
 

@@ -27,13 +27,14 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreateExecutedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
@@ -547,10 +548,7 @@ TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
 }
 
 TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  ResultSet result_set;
-  stmt_handle.SetResultSet(result_set);
+  StatementHandle stmt_handle = CreateExecutedStatementHandle();
 
   SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
 

@@ -78,6 +78,12 @@ StatementHandle CreatePreparedStatementHandle() {
   return stmt_handle;
 }
 
+StatementHandle CreateExecutedStatementHandle() {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return stmt_handle;
+}
+
 DescriptorHandle CreateExplicitDescriptor() {
   return DescriptorHandle(DescriptorType::kApplication, SQL_DESC_ALLOC_USER);
 }

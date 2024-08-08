@@ -23,8 +23,11 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
+using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
+using google::cloud::odbc_testing_bq_driver_utils::
+    CreateExecutedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreatePreparedStatementHandle;
@@ -586,6 +589,19 @@ TEST(SQLSetStmtAttrInternal, Fails_InvalidAttribute) {
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLSetStmtAttrInternal, Fails_OpenCursor) {
+  StatementHandle handle = CreateExecutedStatementHandle();
+
+  SQLULEN expected = SQL_CONCUR_READ_ONLY;
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
+                                       (SQLPOINTER)expected, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_24000(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
