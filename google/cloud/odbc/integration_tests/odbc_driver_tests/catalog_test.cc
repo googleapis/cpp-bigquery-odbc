@@ -122,8 +122,7 @@ std::string const kSqlColumnsTableFull =
     kCatalogFnsDataset + "." + kSqlColumnsTable;
 std::string const kSQLColumnsTableSchema =
     "CREATE TABLE IF NOT EXISTS " + kSqlColumnsTableFull +
-    " "
-    "(StringField STRING(5000) DEFAULT 'TEST' NOT NULL,"
+    " (StringField STRING(5000) DEFAULT 'TEST' NOT NULL,"
     " IntField INT64,"
     " BoolField BOOL,"
     " BytesField BYTES(5000),"
@@ -810,7 +809,7 @@ void TestSQLColumns(std::string const column,
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLColumns_AllColumns) {
+TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
   std::vector<SQLColumnsResult> expected_results;
   // StringField.
   expected_results.push_back(
@@ -877,9 +876,18 @@ TEST(CatalogTest, SQLColumns_AllColumns) {
        "ODBC_SQLColumns_TABLE", "BigDecimalField", "NUMERIC", "NUMERIC", "",
        "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5, 10, 1, 10, 12,
        SQL_NULL_DATA, 11});
-
   // Fetch all columns
   TestSQLColumns("%", expected_results);
+}
+
+TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
+  std::vector<SQLColumnsResult> expected_results;
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
+       5000, 5000, 5000, 1});
+  TestSQLColumns("StringField", expected_results, true);
 }
 
 TEST(CatalogTest, SQLColumns_InvalidColumn) {
