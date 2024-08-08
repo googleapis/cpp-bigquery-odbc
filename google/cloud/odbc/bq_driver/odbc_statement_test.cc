@@ -990,7 +990,8 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_RETRIEVE_DATA) {
 }
 
 TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_NUMBER) {
-  StatementHandle handle = CreateStatementHandle();
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   SQLULEN actual = 0;
 
   auto status =
@@ -998,6 +999,18 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_NUMBER) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(0, actual);
+}
+
+TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsNotOpen) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLULEN actual = 0;
+
+  auto status =
+      SQLGetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER, &actual, 0, nullptr);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_24000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
 TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_USE_BOOKMARKS) {

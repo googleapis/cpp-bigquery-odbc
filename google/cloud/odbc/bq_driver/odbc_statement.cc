@@ -264,97 +264,99 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  auto* handle = *handle_result;
+  StatementHandle& handle = *(*handle_result);
 
-  if (attribute == SQL_ATTR_ROW_NUMBER) {
-    // TODO(b/336713277) Check if cursor was open
+  if (attribute == SQL_ATTR_ROW_NUMBER && !handle.IsCursorOpen()) {
+    StatusRecord status_record{SQLStates::k_24000(),
+                               "Invalid cursor state - cursor is not open"};
+    return LogAndReturnCode(handle, status_record);
   }
 
   switch (attribute) {
     case SQL_ATTR_APP_ROW_DESC: {
-      DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
+      DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
       return AddressToPointer(&ard, value, value_string_len);
     }
     case SQL_ATTR_APP_PARAM_DESC: {
-      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return AddressToPointer(&apd, value, value_string_len);
     }
     case SQL_ATTR_IMP_ROW_DESC: {
-      DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+      DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
       return AddressToPointer(&ird, value, value_string_len);
     }
     case SQL_ATTR_IMP_PARAM_DESC: {
-      DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+      DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
       return AddressToPointer(&ipd, value, value_string_len);
     }
   }
 
   switch (attribute) {
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR: {
-      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return AddressToPointer(apd.GetHeaderRecord().bind_offset_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_PARAM_BIND_TYPE: {
-      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return IntValueToOutputBufferResponse(apd.GetHeaderRecord().bind_type,
                                             value, value_string_len);
     }
     case SQL_ATTR_PARAM_OPERATION_PTR: {
-      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return AddressToPointer(apd.GetHeaderRecord().array_status_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_PARAM_STATUS_PTR: {
-      DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+      DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
       return AddressToPointer(ipd.GetHeaderRecord().array_status_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_PARAMS_PROCESSED_PTR: {
-      DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+      DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
       return AddressToPointer(ipd.GetHeaderRecord().rows_processed_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_PARAMSET_SIZE: {
-      DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+      DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return IntValueToOutputBufferResponse(apd.GetHeaderRecord().array_size,
                                             value, value_string_len);
     }
     case SQL_ATTR_ROW_ARRAY_SIZE: {
-      DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
+      DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
       return IntValueToOutputBufferResponse(ard.GetHeaderRecord().array_size,
                                             value, value_string_len);
     }
     case SQL_ATTR_ROW_BIND_OFFSET_PTR: {
-      DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
+      DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
       return AddressToPointer(ard.GetHeaderRecord().bind_offset_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_ROW_BIND_TYPE: {
-      DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
+      DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
       return IntValueToOutputBufferResponse(ard.GetHeaderRecord().bind_type,
                                             value, value_string_len);
     }
     case SQL_ATTR_ROW_OPERATION_PTR: {
-      DescriptorHandle& ard = handle->GetDescriptorHandle(DescriptorType::kARD);
+      DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
       return AddressToPointer(ard.GetHeaderRecord().array_status_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_ROW_STATUS_PTR: {
-      DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+      DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
       return AddressToPointer(ird.GetHeaderRecord().array_status_ptr, value,
                               value_string_len);
     }
     case SQL_ATTR_ROWS_FETCHED_PTR: {
-      DescriptorHandle& ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
+      DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
       return AddressToPointer(ird.GetHeaderRecord().rows_processed_ptr, value,
                               value_string_len);
     }
   }
 
-  StatusRecordOr<SQLULEN> status = handle->GetAttribute(attribute);
+  StatusRecordOr<SQLULEN> status = handle.GetAttribute(attribute);
   if (!status) {
-    return LogAndReturnCode(*handle, status);
+    return LogAndReturnCode(handle, status);
   }
   return IntValueToOutputBufferResponse(*status, value, value_string_len);
 }
