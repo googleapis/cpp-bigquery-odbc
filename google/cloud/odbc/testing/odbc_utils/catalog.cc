@@ -510,4 +510,73 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
+/*
+  std::string project_name;
+  std::string dataset_name;
+  std::string table_name;
+  std::string column_name;
+  std::string description;
+  std::string col_type_name;
+  std::string col_default;
+  std::string is_nullable;
+
+  SQLSMALLINT data_type;
+  SQLSMALLINT sql_data_type;
+  SQLSMALLINT sql_date_time_sub;
+  SQLSMALLINT decimal_digits;
+  SQLSMALLINT radix;
+  SQLSMALLINT nullable;
+
+  SQLINTEGER col_size;
+  SQLINTEGER buffer_len;
+  SQLINTEGER char_octet_len;
+  SQLINTEGER ord_pos;
+*/
+bool operator==(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
+  return (
+      lhs.project_name == rhs.project_name &&
+      lhs.dataset_name == rhs.dataset_name &&
+      lhs.table_name == rhs.table_name && lhs.column_name == rhs.column_name &&
+      lhs.description == rhs.description &&
+      lhs.col_type_name == rhs.col_type_name &&
+      lhs.col_default == rhs.col_default &&
+      lhs.is_nullable == rhs.is_nullable &&
+      lhs.sql_data_type == rhs.sql_data_type &&
+      lhs.data_type == rhs.data_type &&
+      lhs.sql_date_time_sub == rhs.sql_date_time_sub &&
+      lhs.decimal_digits == rhs.decimal_digits && lhs.radix == rhs.radix &&
+      lhs.nullable == rhs.nullable && lhs.col_size == rhs.col_size &&
+      lhs.buffer_len == rhs.buffer_len &&
+      lhs.char_octet_len == rhs.char_octet_len && lhs.ord_pos == rhs.ord_pos);
+}
+
+bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
+  return (
+      lhs.project_name > rhs.project_name &&
+      lhs.dataset_name > rhs.dataset_name && lhs.table_name > rhs.table_name &&
+      lhs.column_name > rhs.column_name && lhs.description > rhs.description &&
+      lhs.col_type_name > rhs.col_type_name &&
+      lhs.col_default > rhs.col_default && lhs.is_nullable > rhs.is_nullable &&
+      lhs.sql_data_type > rhs.sql_data_type && lhs.data_type > rhs.data_type &&
+      lhs.sql_date_time_sub > rhs.sql_date_time_sub &&
+      lhs.decimal_digits > rhs.decimal_digits && lhs.radix > rhs.radix &&
+      lhs.nullable > rhs.nullable && lhs.col_size > rhs.col_size &&
+      lhs.buffer_len > rhs.buffer_len &&
+      lhs.char_octet_len > rhs.char_octet_len && lhs.ord_pos > rhs.ord_pos);
+}
+
+bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
+  return (
+      lhs.project_name < rhs.project_name &&
+      lhs.dataset_name < rhs.dataset_name && lhs.table_name < rhs.table_name &&
+      lhs.column_name < rhs.column_name && lhs.description < rhs.description &&
+      lhs.col_type_name < rhs.col_type_name &&
+      lhs.col_default < rhs.col_default && lhs.is_nullable < rhs.is_nullable &&
+      lhs.sql_data_type < rhs.sql_data_type && lhs.data_type < rhs.data_type &&
+      lhs.sql_date_time_sub < rhs.sql_date_time_sub &&
+      lhs.decimal_digits < rhs.decimal_digits && lhs.radix < rhs.radix &&
+      lhs.nullable < rhs.nullable && lhs.col_size < rhs.col_size &&
+      lhs.buffer_len < rhs.buffer_len &&
+      lhs.char_octet_len < rhs.char_octet_len && lhs.ord_pos < rhs.ord_pos);
+}
 }  // namespace google::cloud::odbc_tests

@@ -52,6 +52,10 @@ struct SQLColumnsResult {
   SQLINTEGER char_octet_len;
   SQLINTEGER ord_pos;
 };
+// provided mainly for sorting.
+bool operator==(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
+bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
+bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 
 // Dataset for catalogn functions.
 std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";

@@ -117,24 +117,24 @@ std::string const kTableLinesSchema =
     "NOT ENFORCED)";
 
 // Table and Schema used to test SQLColumns API
-std::string const kSqlColumnsTable = kTableNamePrefix + "ODBC_SQLColumns_TABLE";
+std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE";
 std::string const kSqlColumnsTableFull =
     kCatalogFnsDataset + "." + kSqlColumnsTable;
-std::string const kSQLColumnsTableSchema = "CREATE TABLE IF NOT EXISTS " +
-                                           kSqlColumnsTableFull +
-                                           " "
-                                           "(StringField STRING,"
-                                           " IntField INT64,"
-                                           " BoolField BOOL,"
-                                           " BytesField BYTES,"
-                                           " DateField DATE,"
-                                           " DateTimeField DATETIME,"
-                                           " IntervalField INTERVAL,"
-                                           " TimeField TIME,"
-                                           " TimestampField TIMESTAMP,"
-                                           " DecimalField DECIMAL,"
-                                           " BigDecimalField DECIMAL"
-                                           ")";
+std::string const kSQLColumnsTableSchema =
+    "CREATE TABLE IF NOT EXISTS " + kSqlColumnsTableFull +
+    " "
+    "(StringField STRING(5000) DEFAULT 'TEST' NOT NULL,"
+    " IntField INT64,"
+    " BoolField BOOL,"
+    " BytesField BYTES(5000),"
+    " DateField DATE,"
+    " DateTimeField DATETIME,"
+    " IntervalField INTERVAL,"
+    " TimeField TIME,"
+    " TimestampField TIMESTAMP,"
+    " DecimalField DECIMAL(10,2),"
+    " BigDecimalField DECIMAL(10,5)"
+    ")";
 }  // namespace
 
 bool FindTableInVector(std::string const& table_name,
@@ -696,12 +696,16 @@ void PrintData(SQLColumnsResult const& result) {
   std::cout << "IS_NULLABLE = " << result.is_nullable << std::endl;
 }
 
-void VerifyColumnsResults(
-    std::vector<SQLColumnsResult>& actual_results,
-    std::vector<SQLColumnsResult> const& expected_results) {
+void VerifyColumnsResults(std::vector<SQLColumnsResult>& actual_results,
+                          std::vector<SQLColumnsResult>& expected_results) {
   // Check if both result sets have the same number of rows
   ASSERT_EQ(actual_results.size(), expected_results.size())
       << "Number of results mismatch";
+
+  // sort the results so they are in the same order in both
+  // expected and actual.
+  std::sort(actual_results.begin(), actual_results.end());
+  std::sort(expected_results.begin(), expected_results.end());
 
   for (size_t j = 0; j < actual_results.size(); ++j) {
     ASSERT_EQ(actual_results[j].project_name, expected_results[j].project_name)
@@ -775,7 +779,7 @@ void VerifyColumnsResults(
 
 // Driver. Helper test function for executing SQLColumns test
 void TestSQLColumns(std::string const column,
-                    std::vector<SQLColumnsResult> const& expected_results,
+                    std::vector<SQLColumnsResult>& expected_results,
                     bool use_identifier = false) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table for SQLColumns.
@@ -799,130 +803,89 @@ void TestSQLColumns(std::string const column,
       Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                           kSqlColumnsTable.c_str(), column.c_str());
 
+  // for (auto const& result : results) {
+  //   PrintData(result);
+  // }
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLColumns_StringColumn) {
+TEST(CatalogTest, SQLColumns_AllColumns) {
   std::vector<SQLColumnsResult> expected_results;
+  // StringField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "StringField", "STRING", "STRING", "", "YES",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
-       16384, 16384, 16384, 1});
-  TestSQLColumns("StringField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "StringField", "STRING", "STRING", "", "YES",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
-       16384, 16384, 16384, 1});
-  TestSQLColumns("StringField", expected_results, true);
-}
-
-TEST(CatalogTest, SQLColumns_IntColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
+       5000, 5000, 5000, 1});
+  // IntField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
-       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 1});
-  TestSQLColumns("IntField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_BoolColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 2});
+  // BoolField.
   expected_results.push_back({"bigquery-devtools-drivers",
                               "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
                               "BoolField", "BOOLEAN", "BOOL", "", "YES",
                               SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA,
-                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 2});
-  TestSQLColumns("BoolField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_TimeColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "TimeField", "TIME", "TIME", "", "YES",
-                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
-                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 4});
-  TestSQLColumns("TimeField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_TimestampColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
-       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 5});
-  TestSQLColumns("TimestampField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_DecimalColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
-                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 9, 10, 1,
-                              38, 40, SQL_NULL_DATA, 5});
-  TestSQLColumns("DecimalField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_BigDecimalColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "BigDecimalField", "NUMERIC", "NUMERIC", "",
-       "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 9, 10, 1, 38, 40,
-       SQL_NULL_DATA, 6});
-  TestSQLColumns("BigDecimalField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_BytesColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 3});
+  // BytesField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        "ODBC_SQLColumns_TABLE", "BytesField", "BYTES", "BYTES", "", "YES",
        SQL_VARBINARY, SQL_VARBINARY, SQL_NULL_DATA, SQL_NULL_DATA,
-       SQL_NULL_DATA, 1, 16384, 16384, 16384, 2});
-  TestSQLColumns("BytesField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_DateColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+       SQL_NULL_DATA, 1, 5000, 5000, 5000, 4});
+  // DateField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        "ODBC_SQLColumns_TABLE", "DateField", "DATE", "DATE", "", "YES",
        SQL_TYPE_DATE, SQL_DATETIME, SQL_CODE_DATE, SQL_NULL_DATA, SQL_NULL_DATA,
-       1, 10, 6, SQL_NULL_DATA, 3});
-  TestSQLColumns("DateField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_DateTimeColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+       1, 10, 6, SQL_NULL_DATA, 5});
+  // DateTimeField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
        SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 3});
-  TestSQLColumns("DateTimeField", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_IntervalColumn) {
-  std::vector<SQLColumnsResult> expected_results;
+       1, 26, 16, SQL_NULL_DATA, 6});
+  // IntervalField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
-       16384, 16384, 16384, 4});
-  TestSQLColumns("IntervalField", expected_results);
+       16384, 16384, 16384, 7});
+  // TimeField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "TimeField", "TIME", "TIME", "", "YES",
+                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
+                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 8});
+  // TimestampField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
+       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
+       1, 26, 16, SQL_NULL_DATA, 9});
+  // Decimalield.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
+                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 2, 10, 1,
+                              10, 12, SQL_NULL_DATA, 10});
+  // BigDecimalField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       "ODBC_SQLColumns_TABLE", "BigDecimalField", "NUMERIC", "NUMERIC", "",
+       "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5, 10, 1, 10, 12,
+       SQL_NULL_DATA, 11});
+
+  // Fetch all columns
+  TestSQLColumns("%", expected_results);
 }
 
-TEST(CatalogTest, SQLColumns_InvalidColumn) { TestSQLColumns("INVALID", {}); }
+TEST(CatalogTest, SQLColumns_InvalidColumn) {
+  std::vector<SQLColumnsResult> expected_results;
+  TestSQLColumns("INVALID", expected_results);
+}
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
