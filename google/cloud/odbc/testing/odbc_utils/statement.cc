@@ -236,8 +236,6 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
-  // Vector to hold unique pointers to column data buffers
-  std::vector<std::unique_ptr<SQLCHAR[]>> col_data_buffers;
 
   for (int i = 0; i < num_cols; i++) {
     auto col_ptr = std::make_shared<Column>();
@@ -252,13 +250,8 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-    // Allocate memory for column data and ensure it stays in scope
-    col_data_buffers.push_back(
-        std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1));
-    col_ptr->data =
-        col_data_buffers.back()
-            .get();  // Set the column's data pointer to the allocated buffer
-
+    // Allocating space for column data using dynamic memory
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
 
@@ -290,6 +283,11 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
       std::string val = (char*)data;
       results[col_name].push_back(val);
     }
+  }
+
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
   }
 
   return std::make_shared<Results>(results);
@@ -402,9 +400,6 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
-
-  // Vector to hold unique pointers to column data buffers
-  std::vector<std::unique_ptr<SQLCHAR[]>> col_data_buffers;
   for (int i = 0; i < num_cols; i++) {
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
@@ -418,12 +413,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-    // Allocate memory for column data and ensure it stays in scope
-    col_data_buffers.push_back(
-        std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1));
-    col_ptr->data =
-        col_data_buffers.back()
-            .get();  // Set the column's data pointer to the allocated buffer
+    // Allocate memory for column data using dynamic memory.
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -460,6 +451,10 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
 
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
+  }
   return std::make_shared<Results>(results);
 }
 
