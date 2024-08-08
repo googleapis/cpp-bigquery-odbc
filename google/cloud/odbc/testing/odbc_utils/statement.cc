@@ -252,8 +252,9 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     SqlToCdataTypes(col_ptr);
 
     // Allocating space for column data
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
+    // SQLCHAR col_data[col_ptr->data_size + 1];
+    // col_ptr->data = col_data;
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
 
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
@@ -287,7 +288,10 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
       results[col_name].push_back(val);
     }
   }
-
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
+  }
   return std::make_shared<Results>(results);
 }
 
@@ -413,8 +417,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     SqlToCdataTypes(col_ptr);
 
     // Allocating space for column data
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
+    // SQLCHAR col_data[col_ptr->data_size + 1];
+    // col_ptr->data = col_data;
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -450,7 +455,10 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
       results[col_name].push_back(val);
     }
   }
-
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
+  }
   return std::make_shared<Results>(results);
 }
 
