@@ -26,12 +26,9 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreateExecutedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
 using ::testing::StartsWith;
 
 TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
@@ -97,7 +94,8 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
 
 TEST(SQLSetStmtAttrInternal,
      FailsToSet_SQL_ATTR_CONCURRENCY_PreparedStatement) {
-  StatementHandle handle = CreatePreparedStatementHandle();
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLULEN concurrency = 0;
 
   auto status =
@@ -593,7 +591,8 @@ TEST(SQLSetStmtAttrInternal, Fails_InvalidAttribute) {
 }
 
 TEST(SQLSetStmtAttrInternal, Fails_OpenCursor) {
-  StatementHandle handle = CreateExecutedStatementHandle();
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 

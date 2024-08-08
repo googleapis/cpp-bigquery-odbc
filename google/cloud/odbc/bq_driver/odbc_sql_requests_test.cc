@@ -32,9 +32,8 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
 
 TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
   DescriptorHandle desc_handle;
@@ -202,7 +201,8 @@ TEST(SQLDescribeParam, Fail_InvalidHandle) {
 }
 
 TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -217,7 +217,8 @@ TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
 }
 
 TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -252,7 +253,8 @@ TEST(SQLDescribeParam, Fail_StatementIsNotPrepared) {
 }
 
 TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -271,7 +273,8 @@ TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
 }
 
 TEST(SQLDescribeParam, Describe_SQL_CHAR) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -290,7 +293,8 @@ TEST(SQLDescribeParam, Describe_SQL_CHAR) {
 }
 
 TEST(SQLDescribeParam, Describe_SQL_DATE) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT param_number = 1;
@@ -328,7 +332,8 @@ TEST(SQLNumParamsInternal, Fail_StatementIsNotPrepared) {
 }
 
 TEST(SQLNumParamsInternal, ReturnsParamCount) {
-  StatementHandle handle = CreatePreparedStatementHandle();
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   ::google::cloud::bigquery_v2_minimal_internal::QueryParameter
       query_parameter = {"min_age", {"INTEGER"}, {"30"}};
   handle.SetQueryParameters({query_parameter});

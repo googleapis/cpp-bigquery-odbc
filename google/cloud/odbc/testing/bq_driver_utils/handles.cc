@@ -72,15 +72,9 @@ StatementHandle CreateStatementHandle() {
   return StatementHandle(nullptr, {ard, apd, ird, ipd});
 }
 
-StatementHandle CreatePreparedStatementHandle() {
+StatementHandle CreateStmtHandleWithState(StmtStates stmt_state) {
   StatementHandle stmt_handle = CreateStatementHandle();
-  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-  return stmt_handle;
-}
-
-StatementHandle CreateExecutedStatementHandle() {
-  StatementHandle stmt_handle = CreateStatementHandle();
-  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  stmt_handle.SetStmtState(stmt_state);
   return stmt_handle;
 }
 

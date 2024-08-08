@@ -33,11 +33,8 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreateExecutedStatementHandle;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreatePreparedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   SQLUSMALLINT out_desc_count;
@@ -389,7 +386,8 @@ TEST(SQLDescribeColumn, Fail_InvalidHandle) {
 }
 
 TEST(SQLDescribeColumn, Fail_ColumnNumberIsZero) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
   SQLULEN column_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -407,7 +405,8 @@ TEST(SQLDescribeColumn, Fail_ColumnNumberIsZero) {
 }
 
 TEST(SQLDescribeColumn, Fail_InvalidColumnNumber) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
   SQLULEN column_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -447,7 +446,8 @@ TEST(SQLDescribeColumn, Fail_StatementIsNotPrepared) {
 }
 
 TEST(SQLDescribeColumn, Describe_SQL_NUMERIC) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLUSMALLINT column_number = 1;
@@ -468,7 +468,8 @@ TEST(SQLDescribeColumn, Describe_SQL_NUMERIC) {
 }
 
 TEST(SQLDescribeColumn, Describe_SQL_CHAR) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLUSMALLINT column_number = 1;
@@ -489,7 +490,8 @@ TEST(SQLDescribeColumn, Describe_SQL_CHAR) {
 }
 
 TEST(SQLDescribeColumn, Describe_SQL_DATE) {
-  StatementHandle stmt_handle = CreatePreparedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLUSMALLINT column_number = 1;
@@ -548,7 +550,8 @@ TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
 }
 
 TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
-  StatementHandle stmt_handle = CreateExecutedStatementHandle();
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
   SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
 

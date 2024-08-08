@@ -32,10 +32,9 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_testing_bq_driver_utils::
-    CreateExecutedStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
@@ -384,7 +383,8 @@ TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
 }
 
 TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
-  StatementHandle handle = CreateExecutedStatementHandle();
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
   handle.CloseCursor();
 
