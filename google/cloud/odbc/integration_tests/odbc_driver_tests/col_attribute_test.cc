@@ -504,8 +504,6 @@ TEST(SQLColAttribute, CheckAllAttributes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-
 std::string const kTableNameWide =
     kTableNamePrefix + "ODBC_SQLColAttribute_Wide";
 
