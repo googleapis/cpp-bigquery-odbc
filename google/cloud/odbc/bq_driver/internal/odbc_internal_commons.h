@@ -91,7 +91,7 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
-  mutable int cursor{0};  // points to the next row that can be fetched
+  mutable int cursor{-1};  // points before the next row to fetch
 };
 
 DSValue const kNullValue{0};

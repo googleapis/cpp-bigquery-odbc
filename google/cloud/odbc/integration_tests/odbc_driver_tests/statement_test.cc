@@ -1112,6 +1112,52 @@ TEST(StatementTest, FailsToSet_SQL_ATTR_ROW_NUMBER) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, Get_SQL_ATTR_ROW_NUMBER) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Returns 1 column with 2 rows
+  std::string query =
+      "SELECT  1 AS col1\n"
+      "UNION ALL\n"
+      "SELECT  2 AS col1";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.length());
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  SQLULEN row_number = 0;
+  // Returns error if fetching wasn't started
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, &row_number, 0, nullptr);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  // Fetching rows
+  for (int i = 1; i <= 2; i++) {
+    status = SQLFetch(conn->hstmt);
+    CheckError(status, "SQLFetch", conn);
+
+    row_number = 0;
+    status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, &row_number, 0,
+                            nullptr);
+    CheckError(status, "SQLGetStmtAttr", conn);
+    EXPECT_EQ(i, row_number);
+  }
+
+  status = SQLFetch(conn->hstmt);
+  EXPECT_EQ(SQL_NO_DATA, status);
+
+  row_number = 0;
+  // Returns error after fetching is over
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_ROW_NUMBER, &row_number, 0, nullptr);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);

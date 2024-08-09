@@ -265,11 +265,24 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
-
-  if (attribute == SQL_ATTR_ROW_NUMBER && !handle.IsCursorOpen()) {
-    StatusRecord status_record{SQLStates::k_24000(),
-                               "Invalid cursor state - cursor is not open"};
-    return LogAndReturnCode(handle, status_record);
+  if (attribute == SQL_ATTR_ROW_NUMBER) {
+    if (!handle.IsCursorOpen()) {
+      StatusRecord status_record{SQLStates::k_24000(),
+                                 "Invalid cursor state - cursor is not open"};
+      return LogAndReturnCode(handle, status_record);
+    }
+    if (handle.GetResultSet().cursor == -1) {
+      StatusRecord status_record{
+          SQLStates::k_24000(),
+          "Invalid cursor state - cursor is positioned before the start"};
+      return LogAndReturnCode(handle, status_record);
+    }
+    if (handle.GetResultSet().cursor >= handle.GetResultSet().rows.size()) {
+      StatusRecord status_record{
+          SQLStates::k_24000(),
+          "Invalid cursor state - cursor is positioned after the end"};
+      return LogAndReturnCode(handle, status_record);
+    }
   }
 
   switch (attribute) {
@@ -292,6 +305,11 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
   }
 
   switch (attribute) {
+    case SQL_ATTR_ROW_NUMBER: {
+      int row_number = handle.GetResultSet().cursor + 1;
+      return IntValueToOutputBufferResponse(row_number, value,
+                                            value_string_len);
+    }
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR: {
       DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
       return AddressToPointer(apd.GetHeaderRecord().bind_offset_ptr, value,

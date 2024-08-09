@@ -79,10 +79,10 @@ StatusRecord WriteRowset(ResultSet const& result_set, int rowset_size,
        i++) {
     StatusRecord status_record =
         WriteDSRow(result_set.rows[i], result_set.row_schema, ard);
-    result_set.cursor++;
     if (!status_record.ok()) {
       return status_record;
     }
+    result_set.cursor = i;
   }
   return StatusRecord::Ok();
 }

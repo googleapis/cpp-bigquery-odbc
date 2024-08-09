@@ -164,6 +164,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
   ResultSet const& result_set = handle.GetResultSet();
+  result_set.cursor++;
   if (result_set.cursor >= result_set.rows.size()) {
     return SQL_NO_DATA;
   }

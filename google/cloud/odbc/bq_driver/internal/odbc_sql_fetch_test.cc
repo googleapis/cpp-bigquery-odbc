@@ -82,6 +82,7 @@ TEST(WriteRowset, Success_Basic) {
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
 
   // Writing first row
+  result_set.cursor++;
   StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_TRUE(status_record.ok());
   SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
@@ -92,6 +93,7 @@ TEST(WriteRowset, Success_Basic) {
   EXPECT_EQ(str_populated, kTestingResultSetValues[0].str_field);
 
   // Writing second row
+  result_set.cursor++;
   status_record = WriteRowset(result_set, 1, ard);
   EXPECT_TRUE(status_record.ok());
   EXPECT_EQ(*int_populated, kTestingResultSetValues[1].int_field);
@@ -112,11 +114,12 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  result_set.cursor++;
   StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
   EXPECT_EQ("Numeric value out of range", status_record.message);
-  EXPECT_EQ(result_set.cursor, 1);
+  EXPECT_EQ(result_set.cursor, 0);
 }
 
 TEST(WriteRowset, Failure_FractionalTruncation) {
@@ -134,11 +137,12 @@ TEST(WriteRowset, Failure_FractionalTruncation) {
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  result_set.cursor++;
   StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
-  EXPECT_EQ(result_set.cursor, 1);
+  EXPECT_EQ(result_set.cursor, 0);
   SQLINTEGER* double_populated = (SQLINTEGER*)double_buf;
   EXPECT_EQ(*double_populated, floor(kTestingResultSetValues[0].double_field));
 }

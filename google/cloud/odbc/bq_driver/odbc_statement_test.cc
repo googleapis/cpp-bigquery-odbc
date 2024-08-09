@@ -22,6 +22,9 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::DSRow;
+using google::cloud::odbc_bq_driver_internal::kNullValue;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
@@ -29,6 +32,7 @@ using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
+using ::testing::HasSubstr;
 using ::testing::StartsWith;
 
 TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
@@ -992,13 +996,18 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_RETRIEVE_DATA) {
 TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_NUMBER) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  ResultSet result_set;
+  DSRow row = {kNullValue};
+  result_set.rows.push_back(row);
+  handle.SetResultSet(result_set);
+  handle.GetResultSet().cursor++;
   SQLULEN actual = 0;
 
   auto status =
       SQLGetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER, &actual, 0, nullptr);
 
   EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(0, actual);
+  EXPECT_EQ(1, actual);
 }
 
 TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsNotOpen) {
@@ -1011,6 +1020,39 @@ TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsNotOpen) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_24000(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("cursor is not open"));
+}
+
+TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsBeforeStart) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  SQLULEN actual = 0;
+
+  auto status =
+      SQLGetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER, &actual, 0, nullptr);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_24000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("cursor is positioned before the start"));
+}
+
+TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsAfterEnd) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  handle.GetResultSet().cursor++;
+  SQLULEN actual = 0;
+
+  auto status =
+      SQLGetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER, &actual, 0, nullptr);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_24000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("cursor is positioned after the end"));
 }
 
 TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_USE_BOOKMARKS) {
