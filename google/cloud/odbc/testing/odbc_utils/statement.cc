@@ -250,11 +250,9 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-
-    // Allocate space for column data using std::unique_ptr
-    auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
-    col_ptr->data = col_data.get();
-
+    // Allocating space for column data using dynamic memory
+    auto result_set = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->data = result_set.get();
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
 
@@ -411,10 +409,9 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-
-    // Allocate space for column data using std::unique_ptr
-    auto col_data = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
-    col_ptr->data = col_data.get();
+    // Allocate memory for column data using dynamic memory.
+    auto result_set = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->data = result_set.get();
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
