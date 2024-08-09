@@ -16,8 +16,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 struct ColAttributeRow {
   std::string literal_prefix;
   std::string literal_suffix;
@@ -488,7 +486,7 @@ TEST(SQLColAttribute, CheckAllAttributes) {
                         kDataTypesColumns[i].bq_type);
   }
   table_schema.append(")");
-  table.Create(conn, table_schema);
+  table.CreateWithPrepare(conn, table_schema);
 
   std::string select_stmt = "SELECT * FROM " + qualified_table_name;
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(),
@@ -502,7 +500,7 @@ TEST(SQLColAttribute, CheckAllAttributes) {
   }
 #endif /* WIN32 */
 
-  table.Drop(conn);
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
