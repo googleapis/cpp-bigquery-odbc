@@ -127,6 +127,13 @@ struct StdRow {
 
 using StdRows = std::vector<StdRow>;
 
+struct StdIntervalRow {
+  SQLBIGINT int_field;
+  SQL_INTERVAL_STRUCT interval_field;
+};
+
+using StdIntervalRows = std::vector<StdIntervalRow>;
+
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
@@ -308,6 +315,8 @@ class Table {
   void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
+  void InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
+                          StdIntervalRows rows, bool use_ansi = false);
  private:
   std::string table_name_;
 };
@@ -316,6 +325,7 @@ std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
 
+std::string getIntervalTypeStr(const SQLINTERVAL type);
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
 
