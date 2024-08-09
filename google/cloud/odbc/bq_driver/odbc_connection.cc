@@ -150,6 +150,92 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
+                             SQLSMALLINT server_name_len, SQLCHAR* user_name,
+                             SQLSMALLINT user_name_len, SQLCHAR* auth_string,
+                             SQLSMALLINT auth_string_len) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  auto* handle_ref = *handle_result;
+  if (server_name_len < 0 && server_name_len != SQL_NTS) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid server name length"};
+    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  if (user_name_len < 0 && user_name_len != SQL_NTS) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid user name length"};
+    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+  if (auth_string_len < 0 && auth_string_len != SQL_NTS) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid auth string length"};
+    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+    return status_record.CalculateReturnCode();
+  }
+
+  std::string dsn_name =
+      (server_name ? reinterpret_cast<char*>(server_name) : "");
+  std::string user_name_str =
+      (user_name ? reinterpret_cast<char*>(user_name) : "");
+  std::string auth_string_str =
+      (auth_string ? reinterpret_cast<char*>(auth_string) : "");
+
+  Section dsn_section;
+  if (!dsn_name.empty()) {
+    auto status_record = OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+    if (!status_record.ok()) {
+      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+      status_record.CalculateReturnCode();
+    }
+  } else {
+    // DSN is not provided. Use the optional username and auth string which in
+    // our case is email and a credentials file path. For security reasons,
+    // refresh_token as auth string is not supported.
+    if (user_name_str.empty()) {
+      auto status_record =
+          StatusRecord{SQLStates::k_HY090(),
+                       "Username cannot be empty for DSN-less usecase"};
+      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
+    }
+    if (auth_string_str.empty()) {
+      auto status_record =
+          StatusRecord{SQLStates::k_HY090(),
+                       "Auth String cannot be empty for DSN-less usecase"};
+      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
+    }
+    if (user_name_str.find("@") == std::string::npos) {
+      auto status_record = StatusRecord{
+          SQLStates::k_HY090(), "Username needs to be an email address"};
+      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
+      return status_record.CalculateReturnCode();
+    }
+    dsn_section["OAuthMechanism"] =
+        static_cast<int>(OauthMechanism::kServiceAccount);
+    dsn_section["Email"] = user_name_str;
+    dsn_section["KeyFilePath"] = auth_string_str;
+  }
+  // Populate the DSN info inside the handle.
+  // This wasn't being called before.
+  handle_ref->SetUp(dsn_section, dsn_name);
+
+  Authentication auth = CreateAuth(dsn_section);
+  StatusRecord status = handle_ref->Connect(auth);
+  if (!status.ok()) {
+    return LogAndReturnCode(*handle_ref, status);
+  }
+  return SQL_SUCCESS;
+}
+
 SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER buf_len, SQLINTEGER* str_len) {

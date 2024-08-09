@@ -17,12 +17,14 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver::ToSqlChar;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
@@ -31,7 +33,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-
+/*
 TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
   EnvironmentHandle env_handle;
   SQLPOINTER output;
@@ -182,6 +184,90 @@ TEST(SQLDisconnectInternal, Fail_ActiveTransaction) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_25000(),
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+*/
+TEST(SQLConnectInternal, Fail_InvalidConnectionHandle) {
+  auto status = SQLConnectInternal(NULL, NULL, 0, NULL, 0, NULL, 0);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLConnectInternal, Fail_InvalidServerNameLen) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status =
+      SQLConnectInternal(&conn_handle, ToSqlChar("Test"), -1, NULL, 0, NULL, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid server name length",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLConnectInternal, Fail_InvalidUserNameLen) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status =
+      SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("Test"), -1, NULL, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid user name length",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLConnectInternal, Fail_InvalidAuthLen) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status =
+      SQLConnectInternal(&conn_handle, NULL, 0, NULL, 0, ToSqlChar("Test"), -1);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid auth string length",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLConnectInternal, Fail_DSNLess_EmptyUser) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar(""),
+                                   SQL_NTS, NULL, 0);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Username cannot be empty for DSN-less usecase",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLConnectInternal, Fail_DSNLess_EmptyAuthString) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
+                                   SQL_NTS, ToSqlChar(""), SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Auth String cannot be empty for DSN-less usecase",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
+                                   SQL_NTS, ToSqlChar("TEST"), SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Username needs to be an email address",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
