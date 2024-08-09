@@ -220,7 +220,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
       return status_record.CalculateReturnCode();
     }
     dsn_section["OAuthMechanism"] =
-        static_cast<int>(OauthMechanism::kServiceAccount);
+        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
     dsn_section["Email"] = user_name_str;
     dsn_section["KeyFilePath"] = auth_string_str;
   }
