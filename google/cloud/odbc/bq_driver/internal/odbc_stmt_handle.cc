@@ -230,7 +230,6 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   if (!response.Ok()) {
     return response.GetStatusRecord();
   }
-
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {
@@ -245,9 +244,20 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return pop_response;
   }
 
+  google::cloud::bigquery_v2_minimal_internal::TableReference table_fields;
+
+  if (!response.GetValue()
+           .statistics.job_query_stats.referenced_tables.empty()) {
+    auto table_ref_ptr =
+        response.GetValue().statistics.job_query_stats.referenced_tables.data();
+    table_fields = *table_ref_ptr;
+  } else {
+    table_fields = response.GetValue().configuration.query.destination_table;
+  }
+
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+  StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
   if (!ird_response.ok()) {
     return ird_response;
   }
@@ -255,7 +265,8 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
   DescriptorHandle& ipd_desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIPD);
   auto job_statistics = (*response).statistics;
-  StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
+  StatusRecord ipd_response =
+      PopulateIpd(ipd_desc_handle, job_statistics, table_fields);
   if (!ipd_response.ok()) {
     return ipd_response;
   }
@@ -266,13 +277,16 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   query_str_ = query;
   prepared_job_ = *response;
+
   stmt_state_ = StmtStates::kStatementPrepared;
 
   return StatusRecord::Ok();
 }
 
-StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
-                                          TableSchema const& schema) {
+StatusRecord StatementHandle::PopulateIrd(
+    DescriptorHandle& descriptor_handle, TableSchema const& schema,
+    google::cloud::bigquery_v2_minimal_internal::TableReference const&
+        table_fields) {
   if (&descriptor_handle == nullptr ||
       descriptor_handle.GetType() != DescriptorType::kIRD) {
     return StatusRecord{SQLStates::k_HY024(),
@@ -292,6 +306,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (!type_status_record.Ok()) {
       return type_status_record.GetStatusRecord();
     }
+
     StatusRecord status_record = descriptor_record.SetConciseType(
         *type_status_record, DescriptorType::kIRD);
     if (!status_record.ok()) {
@@ -299,33 +314,92 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     }
 
     TypeInfoRow type_info;
+
     GetTypeInfoFromBQType(type_status_record.GetValue(), res.type,
                           res.mode == array_field, type_info);
 
-    if (res.type == "TIME" || res.type == "DATETIME") {
+    descriptor_record.length = type_info.col_size;
+    descriptor_record.base_column_name = res.name;
+    descriptor_record.base_table_name = table_fields.table_id;
+    descriptor_record.schema_name = table_fields.dataset_id;
+    descriptor_record.catalog_name = table_fields.project_id;
+    descriptor_record.table_name = table_fields.table_id;
+    descriptor_record.label = res.name;
+    descriptor_record.type = type_info.sql_data_type;
+    descriptor_record.concise_type = type_status_record.GetValue();
+    descriptor_record.local_type_name =
+        type_info.local_type_name ? std::string(reinterpret_cast<char const*>(
+                                        type_info.local_type_name))
+                                  : "";
+
+    descriptor_record.type_name =
+        type_info.type_name
+            ? std::string(reinterpret_cast<char const*>(type_info.type_name))
+            : "";
+
+    descriptor_record.auto_unique_value = type_info.auto_unique_value;
+    descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
+                                 : (res.mode == nullable_required)
+                                     ? SQL_NULLABLE
+                                     : SQL_NO_NULLS;
+    std::string local_type_name(
+        reinterpret_cast<char const*>(type_info.local_type_name));
+    if (local_type_name == "BIGNUMERIC" || local_type_name == "NUMERIC" ||
+        local_type_name == "INT64") {
+      descriptor_record.SetNumPrecRadix(10);
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+    } else if (local_type_name == "FLOAT64") {
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+      descriptor_record.SetNumPrecRadix(2);
+    } else {
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_FALSE : SQL_TRUE;
+      descriptor_record.SetNumPrecRadix(0);
+    }
+
+    descriptor_record.case_sensitive = type_info.case_sensitive;
+
+    if (local_type_name == "TIME" || local_type_name == "DATETIME" ||
+        local_type_name == "TIMESTAMP") {
       descriptor_record.precision = 6;
       descriptor_record.scale = 6;
-    } else if (res.type == "TIMESTAMP" || res.type == "DATE") {
+      if (local_type_name == "TIME") {
+        descriptor_record.octet_length = 6;
+      } else {
+        descriptor_record.octet_length = 16;
+      }
+    } else if (local_type_name == "DATE") {
       descriptor_record.precision;
       descriptor_record.scale = type_info.maximum_scale;
+      descriptor_record.octet_length = 6;
     } else {
       descriptor_record.precision = type_info.interval_precision == NULL
                                         ? type_info.col_size
                                         : type_info.interval_precision;
       descriptor_record.scale = type_info.maximum_scale;
-    }
-    if (type_status_record.GetValue() == SQL_DOUBLE) {
-      // hard-coding to 15 to have the same behaviour as internal driver
-      descriptor_record.length = 15;
-    } else {
-      descriptor_record.length = type_info.col_size;
+      descriptor_record.SetOctetLength(type_status_record.GetValue(),
+                                       type_info.col_size,
+                                       descriptor_record.precision);
     }
 
-    descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
-                                 : (res.mode == nullable_required)
-                                     ? SQL_NULLABLE
-                                     : SQL_NO_NULLS;
+    descriptor_record.length = type_info.col_size;
+    descriptor_record.literal_prefix =
+        type_info.literal_prefix == nullptr
+            ? ""
+            : std::string(
+                  reinterpret_cast<char const*>(type_info.literal_prefix));
 
+    descriptor_record.literal_suffix =
+        type_info.literal_suffix == nullptr
+            ? ""
+            : std::string(
+                  reinterpret_cast<char const*>(type_info.literal_suffix));
+
+    descriptor_record.SetDisplaySize(type_status_record.GetValue(),
+                                     type_info.col_size,
+                                     descriptor_record.precision);
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();
@@ -338,8 +412,10 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   return attributes_[attribute];
 }
 
-StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
-                                          JobStatistics const& job_statistics) {
+StatusRecord StatementHandle::PopulateIpd(
+    DescriptorHandle& handle, JobStatistics const& job_statistics,
+    google::cloud::bigquery_v2_minimal_internal::TableReference const&
+        table_fields) {
   if (handle.GetType() != DescriptorType::kIPD) {
     return StatusRecord(
         {SQLStates::k_HY024(),

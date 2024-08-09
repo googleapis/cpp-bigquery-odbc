@@ -55,6 +55,10 @@ struct HeaderRecord {
 struct DescriptorRecord {
   void SetName(std::string const& val, SQLINTEGER buffer_len);
   odbc_internal::StatusRecord SetNumPrecRadix(SQLINTEGER value);
+  odbc_internal::StatusRecord SetOctetLength(SQLSMALLINT type, SQLINTEGER value,
+                                             SQLINTEGER precision);
+  odbc_internal::StatusRecord SetDisplaySize(SQLSMALLINT type, SQLINTEGER value,
+                                             SQLINTEGER precision);
   odbc_internal::StatusRecord SetParameterType(SQLSMALLINT value);
   odbc_internal::StatusRecord SetUnnamed(SQLSMALLINT value);
   odbc_internal::StatusRecord SetType(SQLSMALLINT value,
