@@ -213,7 +213,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
       handle_ref->GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }
-    if (user_name_str.find("@") == std::string::npos) {
+    if (!absl::StrContains(user_name_str, "@")) {
       auto status_record = StatusRecord{
           SQLStates::k_HY090(), "Username needs to be an email address"};
       handle_ref->GetDiagnostics().AddStatusRecord(status_record);
