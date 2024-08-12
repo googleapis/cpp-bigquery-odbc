@@ -387,7 +387,7 @@ StatusRecord StatementHandle::PopulateIrd(
       descriptor_record.length = 15;
     } else {
       descriptor_record.length = type_info.col_size;
-   }
+    }
    
     descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
                                  : (res.mode == nullable_required)
