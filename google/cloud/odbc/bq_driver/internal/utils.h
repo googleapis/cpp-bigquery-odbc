@@ -23,6 +23,7 @@
 #include <limits>
 #include <windows.h>
 #undef max
+#undef GetJob
 #include <winreg.h>
 #endif  //_WIN32
 

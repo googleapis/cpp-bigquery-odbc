@@ -35,7 +35,8 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
-  SQLRETURN status;
+  SQLRETURN status = SQL_SUCCESS;
+
   auto const table_name = kDatasetWithTablePrefix +
                           "ODBC_INSERT_DIRECT_TEST_ANSI_" +
                           (use_ansi ? "true" : "false");
@@ -81,7 +82,7 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
   // Add param 1(string) to insert query string
-  constexpr char* str_field = "Test String 1";
+  constexpr char const* str_field = "Test String 1";
   SQLLEN len_string_field = strlen(str_field);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                             SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
@@ -137,7 +138,8 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // Add param 1(string) to insert query string
-  constexpr char* str_field = "Test String 1";
+  constexpr char const* str_field = "Test String 1";
+
   SQLLEN len_string_field = strlen(str_field);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                             SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
@@ -248,11 +250,8 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-
-    // Allocating space for column data
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
-
+    // Allocating space for column data using dynamic memory
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
 
@@ -286,6 +285,11 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     }
   }
 
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
+  }
+
   return std::make_shared<Results>(results);
 }
 
@@ -294,11 +298,11 @@ std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
-  int rs_size = 3;
+  int const rs_size = 3;
 
   StdOdbcRow row_set[rs_size];
   SQLUSMALLINT row_status[rs_size];
-  SQLUINTEGER num_rows_fetched = 0;
+  SQLULEN num_rows_fetched = 0;
 
   // Attributes for row-wise binding
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
@@ -409,10 +413,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
-
-    // Allocating space for column data
-    SQLCHAR col_data[col_ptr->data_size + 1];
-    col_ptr->data = col_data;
+    // Allocate memory for column data using dynamic memory.
+    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -449,6 +451,10 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
 
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->data;
+  }
   return std::make_shared<Results>(results);
 }
 
@@ -456,7 +462,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                                        std::string query, int rs_size,
                                        bool use_ansi) {
   SQLRETURN status;
-  int num_rows_fetched = 0;
+  SQLULEN num_rows_fetched = 0;
 
   status =
       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
@@ -495,9 +501,8 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, 1, use_ansi);
-
-    SQLCHAR result_set[rs_size * col_ptr->data_size];
-    col_ptr->result_set = result_set;
+    auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
+    col_ptr->result_set = result_set.get();
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -674,7 +679,8 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   }
   while (status == SQL_NEED_DATA) {
     while (bytes_left > 0) {
-      SQLLEN bytes_to_put = std::min((int)batch_size, (int)bytes_left);
+      SQLLEN bytes_to_put =
+          std::min(static_cast<int>(batch_size), static_cast<int>(bytes_left));
       status =
           SQLPutData(conn->hstmt, data_ptr, bytes_to_put);  // No ANSI version.
       CheckError(status, "SQLPutData", conn);

@@ -44,7 +44,7 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
   }
 
   bool status = (value >= std::numeric_limits<DestType>::lowest() &&
-                 value <= (std::numeric_limits<DestType>::max)());
+                 value <= (std::numeric_limits<DestType>::max()));
   if (!status) {
     return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
   }

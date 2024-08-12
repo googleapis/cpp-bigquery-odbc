@@ -30,7 +30,6 @@
 #include "google/cloud/odbc/bq_driver/odbc_trace.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
-
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // ODBC APIs supported in initial driver release.
@@ -3061,6 +3060,8 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
 //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+#if !defined(_WIN32) || defined(_WIN64)
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Cancels the processing on a connection or statement.
 //
@@ -3110,6 +3111,8 @@ SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
 
   return rc;
 }
+
+#endif  //_WIN32
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Performs bulk insertions and bulk bookmark operations, including update,
