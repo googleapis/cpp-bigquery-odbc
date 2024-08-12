@@ -281,4 +281,43 @@ TEST(BindColTest, Basic_SQL_C_TYPE_TIMESTAMP) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+/*
+Test to verify that errors in SQLBindCol do not unbind previously bound
+descriptors
+
+1) Call SQLGetStmtAttr to get a pointer to ARD.
+2) Call SQLBindCol with valid types.
+3) Call SQLGetDescField to check that SQL_DESC_COUNT of ARD was updated.
+4) Call SQLBindCol with invalid type.
+5) Call SQLGetDescField to check SQL_DESC_COUNT value of ARD. It should return 1
+
+*/
+TEST(BindColTest, ErrorInRebindingBoundDesc) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  SQLRETURN status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_FLOAT, buf, 20, &target_str_len);
+  CheckError(status, "SQLBindCol", conn);
+
+  SQLSMALLINT count = -1;
+  status = SQLGetDescField(conn->ard, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(count, 1);
+
+  status =
+      SQLBindCol(conn->hstmt, 1, SQL_UNKNOWN_TYPE, buf, 20, &target_str_len);
+  count = -1;
+  status = SQLGetDescField(conn->ard, 0, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(count, 1);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

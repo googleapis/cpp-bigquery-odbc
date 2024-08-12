@@ -98,12 +98,14 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(*handle, status_record);
   }
 
+  bool no_desc_bound_previously = !ard.HasDescriptorRecord(column_number);
+
   // Setting DESC_CONCISE_TYPE will also set  DESC_TYPE and
   // DESC_DATETIME_INTERVAL_CODE
   status_record = SetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE,
                                ToSqlPointer<SQLSMALLINT>(target_c_type), 0);
   if (!status_record.ok()) {
-    ard.UnbindDescriptorRecord(column_number);
+    no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -113,14 +115,14 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
       SetDescField(&ard, column_number, SQL_DESC_OCTET_LENGTH,
                    ToSqlPointer<SQLLEN>(target_value_buffer_len), 0);
   if (!status_record.ok()) {
-    ard.UnbindDescriptorRecord(column_number);
+    no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
     return LogAndReturnCode(*handle, status_record);
   }
 
   status_record =
       SetDescField(&ard, column_number, SQL_DESC_DATA_PTR, target_value, 0);
   if (!status_record.ok()) {
-    ard.UnbindDescriptorRecord(column_number);
+    no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -129,14 +131,14 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   status_record = SetDescField(&ard, column_number, SQL_DESC_INDICATOR_PTR,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
-    ard.UnbindDescriptorRecord(column_number);
+    no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
     return LogAndReturnCode(*handle, status_record);
   }
 
   status_record = SetDescField(&ard, column_number, SQL_DESC_OCTET_LENGTH_PTR,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
-    ard.UnbindDescriptorRecord(column_number);
+    no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
     return LogAndReturnCode(*handle, status_record);
   }
   return SQL_SUCCESS;
