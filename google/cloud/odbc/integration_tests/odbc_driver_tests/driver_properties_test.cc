@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/properties.h"
+#include "google/cloud/odbc/testing/odbc_utils/types.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -168,67 +169,65 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
       // if the input to SQLGetTypeInfo is not SQL_ALL_TYPES
       ASSERT_EQ(data_type, in_data_type);
     }
-    if (bq_data_type != "RANGE") {
-      // Check if the SQL data_type exists in validation data
-      ASSERT_TRUE(kSqlToBqDataTypes.count(data_type));
-      // Check if the BQ data_type exists in validation data
-      ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type));
-      TypeInfoRow validationData =
-          kSqlToBqDataTypes.at(data_type).at(bq_data_type);
 
-      EXPECT_STREQ((char const*)type_name,
-                   (char const*)validationData.type_name);
-      EXPECT_EQ(data_type, validationData.data_type);
-      EXPECT_EQ(col_size, validationData.col_size);
+    // Check if the SQL data_type exists in validation data
+    ASSERT_TRUE(kSqlToBqDataTypes.count(data_type));
+    // Check if the BQ data_type exists in validation data
+    ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type));
+    TypeInfoRow validationData =
+        kSqlToBqDataTypes.at(data_type).at(bq_data_type);
 
-      if (validationData.literal_prefix &&
-          // The Simba driver doesn't return some fields when the application
-          // fetches info for a specific SQL data type. In that case, we want to
-          // test only for the Google Driver
-          (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_STREQ((char const*)literal_prefix,
-                     (char const*)validationData.literal_prefix);
-      }
-      if (validationData.literal_suffix &&
-          (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_STREQ((char const*)literal_suffix,
-                     (char const*)validationData.literal_suffix);
-      }
-      if (validationData.create_params) {
-        EXPECT_STREQ((char const*)create_params,
-                     (char const*)validationData.create_params);
-      }
-      EXPECT_EQ(nullable, validationData.nullable);
-      EXPECT_EQ(case_sensitive, validationData.case_sensitive);
-      EXPECT_EQ(searchable, validationData.searchable);
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(unsigned_attribute, validationData.unsigned_attribute);
-      }
-      EXPECT_EQ(fixed_prec_scale, validationData.fixed_prec_scale);
-      if (validationData.auto_unique_value) {
-        EXPECT_STREQ((char const*)auto_unique_value,
-                     (char const*)validationData.auto_unique_value);
-      }
-      EXPECT_STREQ((char const*)local_type_name,
-                   (char const*)validationData.local_type_name);
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(minimum_scale, validationData.minimum_scale);
-      }
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(maximum_scale, validationData.maximum_scale);
-      }
-      EXPECT_EQ(sql_data_type, validationData.sql_data_type);
-      if (validationData.sql_datetime_sub &&
-          (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_EQ(sql_datetime_sub, validationData.sql_datetime_sub);
-      }
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(num_prec_radix, validationData.num_prec_radix);
-      }
-      if (validationData.interval_precision) {
-        EXPECT_STREQ((char const*)interval_precision,
-                     (char const*)validationData.interval_precision);
-      }
+    EXPECT_STREQ((char const*)type_name, (char const*)validationData.type_name);
+    EXPECT_EQ(data_type, validationData.data_type);
+    EXPECT_EQ(col_size, validationData.col_size);
+
+    if (validationData.literal_prefix &&
+        // The Simba driver doesn't return some fields when the application
+        // fetches info for a specific SQL data type. In that case, we want to
+        // test only for the Google Driver
+        (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
+      EXPECT_STREQ((char const*)literal_prefix,
+                   (char const*)validationData.literal_prefix);
+    }
+    if (validationData.literal_suffix &&
+        (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
+      EXPECT_STREQ((char const*)literal_suffix,
+                   (char const*)validationData.literal_suffix);
+    }
+    if (validationData.create_params) {
+      EXPECT_STREQ((char const*)create_params,
+                   (char const*)validationData.create_params);
+    }
+    EXPECT_EQ(nullable, validationData.nullable);
+    EXPECT_EQ(case_sensitive, validationData.case_sensitive);
+    EXPECT_EQ(searchable, validationData.searchable);
+    if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
+      EXPECT_EQ(unsigned_attribute, validationData.unsigned_attribute);
+    }
+    EXPECT_EQ(fixed_prec_scale, validationData.fixed_prec_scale);
+    if (validationData.auto_unique_value) {
+      EXPECT_STREQ((char const*)auto_unique_value,
+                   (char const*)validationData.auto_unique_value);
+    }
+    EXPECT_STREQ((char const*)local_type_name,
+                 (char const*)validationData.local_type_name);
+    if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
+      EXPECT_EQ(minimum_scale, validationData.minimum_scale);
+    }
+    if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
+      EXPECT_EQ(maximum_scale, validationData.maximum_scale);
+    }
+    EXPECT_EQ(sql_data_type, validationData.sql_data_type);
+    if (validationData.sql_datetime_sub &&
+        (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
+      EXPECT_EQ(sql_datetime_sub, validationData.sql_datetime_sub);
+    }
+    if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
+      EXPECT_EQ(num_prec_radix, validationData.num_prec_radix);
+    }
+    if (validationData.interval_precision) {
+      EXPECT_STREQ((char const*)interval_precision,
+                   (char const*)validationData.interval_precision);
     }
   }
   // SQLFetch should return some rows for the SQL data types that can be mapped

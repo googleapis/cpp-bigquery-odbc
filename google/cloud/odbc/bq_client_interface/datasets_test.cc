@@ -205,7 +205,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
-  DatasetFilter dataset_filter{"filtering", true};
+  DatasetFilter dataset_filter{.filter = "filtering", .all = true};
   ListFormatDataset expected{"d-kind", "dataset_id"};
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, ListDatasets)

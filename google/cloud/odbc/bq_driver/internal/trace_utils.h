@@ -233,8 +233,6 @@ std::string FormatBool(bool b);
 /////////////////////////////////////////////
 #ifdef WIN32
 std::string FormatWindowHandle(HWND handle);
-std::string FormatHWND(HWND handle);
-std::string FormatSqlHWND(SQLHWND handle);
 std::string FormatWindowHandle(SQLHWND handle);
 #endif /* WIN32 */
 

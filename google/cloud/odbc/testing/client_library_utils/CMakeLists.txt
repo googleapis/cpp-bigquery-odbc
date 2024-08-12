@@ -27,9 +27,7 @@ add_library(
     authentication.cc authentication.h common_functions.cc common_functions.h
     util_constants.cc util_constants.h)
 
-target_link_libraries(
-    google_cloud_odbc_testing_client_library_utils
-    google-cloud-cpp::experimental-bigquery_rest GTest::gtest_main GTest::gtest
-    GTest::gmock)
+target_link_libraries(google_cloud_odbc_testing_client_library_utils
+                      google-cloud-cpp::experimental-bigquery_rest GTest::gmock)
 
 create_bazel_config(google_cloud_odbc_testing_client_library_utils YEAR 2024)

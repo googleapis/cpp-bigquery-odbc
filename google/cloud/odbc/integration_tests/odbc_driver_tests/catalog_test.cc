@@ -21,6 +21,7 @@
 namespace google::cloud::odbc_tests {
 
 using ::testing::StartsWith;
+
 namespace {
 
 std::string const kTable = kIsBqDriver ? "BASE TABLE" : "TABLE";

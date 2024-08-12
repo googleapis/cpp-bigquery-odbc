@@ -188,7 +188,8 @@ void CopyDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
       status = SQLGetDescField(conn->ipd, i + 1, SQL_DESC_TYPE, &desc_copy.type,
                                SQL_IS_SMALLINT, NULL);
     }
-    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn, use_ansi);
+    CheckError(status, "SQLGetDescField(SQL_DESC_TYPE)", conn,
+               __USE_DYNAMIC_STACK_SIZE);
     EXPECT_TRUE(AreSqlAndBqTypesSame(desc_copy.type, schema[i].type));
   }
 }

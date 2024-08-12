@@ -54,11 +54,7 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     target_link_libraries(google_cloud_odbc_testing_odbc_utils
                           google_cloud_odbc_bq_driver)
 else ()
-    if (WIN32)
-        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32)
-    else ()
-        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc)
-    endif ()
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc)
 endif ()
 
 create_bazel_config(google_cloud_odbc_testing_odbc_utils YEAR 2024)
