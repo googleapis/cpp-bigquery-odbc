@@ -15,6 +15,14 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_TYPES_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_TYPES_H
 
+#ifdef _WIN32
+#define _WINSOCKAPI_
+#include <Windows.h>
+#include <algorithm>
+#include <cstdint>
+#undef min
+#endif
+
 #include <gtest/gtest.h>
 #include <map>
 #include <sql.h>

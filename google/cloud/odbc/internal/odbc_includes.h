@@ -18,15 +18,54 @@
 #define ODBCVER 0x0380
 
 #ifdef _WIN32
-
 #define _WINSOCKAPI_
 #include <Windows.h>
-
-#endif  //_WIN32
+#endif
 
 #include <odbcinst.h>
 #include <sql.h>
 #include <sqlext.h>
+
+#ifdef _WIN32
+#include <algorithm>
+#include <cstdint>
+#undef min
+#undef GetJob
+#undef SQLTables
+#undef SQLColumns
+#undef SQLConnect
+#undef SQLPrepare
+#undef SQLGetInfo
+#undef SQLNativeSql
+#undef SQLProcedures
+#undef SQLGetDescRec
+#undef SQLExecDirect
+#undef SQLStatistics
+#undef SQLGetDiagRec
+#undef SQLDescribeCol
+#undef SQLGetStmtAttr
+#undef SQLGetTypeInfo
+#undef SQLPrimaryKeys
+#undef SQLSetStmtAttr
+#undef SQLForeignKeys
+#undef SQLSetDescField
+#undef SQLGetDescField
+#undef SQLColAttribute
+#undef SQLGetDiagField
+#undef SQLColAttributes
+#undef SQLGetCursorName
+#undef SQLSetCursorName
+#undef SQLDriverConnect
+#undef SQLBrowseConnect
+#undef SQLGetConnectAttr
+#undef SQLSetConnectAttr
+#undef SQLSpecialColumns
+#undef SQLTablePrivileges
+#undef SQLProcedureColumns
+#undef SQLColumnPrivileges
+#undef SQLSetPos
+#undef SQLCancelHandle
+#endif  //_WIN32
 
 #define SQL_ODBC3_API_START SQL_API_SQLALLOCHANDLE
 #define SQL_ODBC3_API_LAST SQL_API_SQLFETCHSCROLL

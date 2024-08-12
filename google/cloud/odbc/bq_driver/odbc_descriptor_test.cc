@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
 
@@ -103,8 +104,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
 
 TEST(SQLSetDescFieldInternal, Set_SQL_DESC_ARRAY_SIZE) {
   DescriptorHandle handle;
-  u_long arr_size = 18446744073709551615UL;  // long long max
-
+  unsigned long long arr_size = 18446744073709551615UL;  // long long max
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
                                         (SQLPOINTER)arr_size, 0);
 
@@ -396,7 +396,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
   EnvironmentHandle handle;
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE, buff,
                                         0, nullptr);
@@ -407,7 +407,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
 TEST(SQLGetDescFieldInternal,
      Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
   DescriptorHandle handle;
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status = SQLGetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
                                         buff, 0, nullptr);
@@ -419,7 +419,7 @@ TEST(SQLGetDescFieldInternal,
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
   DescriptorHandle handle(DescriptorType::kIRD);
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status =
       SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);
@@ -431,7 +431,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
 
 TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
   DescriptorHandle handle(DescriptorType::kIPD);
-  SQLPOINTER buff;
+  SQLPOINTER buff = nullptr;
 
   auto status =
       SQLGetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE, buff, 0, nullptr);

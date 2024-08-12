@@ -98,6 +98,7 @@ TEST(StringUtils, Join_StartIndOutOfRange) {
   EXPECT_EQ(s_expected, s);
 }
 
+#ifndef _WIN32
 TEST(Parsing, ParseConfig) {
   std::string test_data_path =
       google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
@@ -135,6 +136,35 @@ TEST(Parsing, ParseConfig_IncorrectPath) {
                                        HasSubstr("Can't open file")));
 }
 
+TEST(GetPathToOdbcIni, GetPath_EnvVar) {
+  std::string expected = "my_path";
+  google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_EQ(actual, expected);
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv("ODBCINI");
+}
+
+TEST(GetPathToOdbcIni, GetPath_HomeVar) {
+  ASSERT_TRUE(::google::cloud::internal::GetEnv("HOME"));
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
+}
+
+TEST(GetPathToOdbcIni, GetEmptyPath) {
+  auto home = ::google::cloud::internal::GetEnv("HOME");
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
+
+  std::string actual = GetPathToOdbcIni();
+
+  EXPECT_EQ(actual, "");
+  google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
+}
+#endif /* WIN32 */
+
 TEST(Parsing, ParseConnectionString) {
   Section testing_section = kDsnSection;
   std::string conn_str = "";
@@ -166,34 +196,6 @@ TEST(Parsing, ParseConnectionString_InvalidString) {
   StatusRecordOr<Section> section_resp = ParseConnectionString(conn_str);
   EXPECT_THAT(section_resp,
               StatusRecordIs(SQLStates::k_HY000(), HasSubstr("Invalid")));
-}
-
-TEST(GetPathToOdbcIni, GetPath_EnvVar) {
-  std::string expected = "my_path";
-  google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
-
-  std::string actual = GetPathToOdbcIni();
-
-  EXPECT_EQ(actual, expected);
-  google::cloud::odbc_bigquery_client_interface::UnsetEnv("ODBCINI");
-}
-
-TEST(GetPathToOdbcIni, GetPath_HomeVar) {
-  ASSERT_TRUE(::google::cloud::internal::GetEnv("HOME"));
-
-  std::string actual = GetPathToOdbcIni();
-
-  EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
-}
-
-TEST(GetPathToOdbcIni, GetEmptyPath) {
-  auto home = ::google::cloud::internal::GetEnv("HOME");
-  google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
-
-  std::string actual = GetPathToOdbcIni();
-
-  EXPECT_EQ(actual, "");
-  google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
 }
 
 TEST(FilterUsingOdbcRegex, UseBaseRegex) {

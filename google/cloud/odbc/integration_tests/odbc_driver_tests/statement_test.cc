@@ -142,8 +142,11 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
+#ifndef _WIN32
+  // TODO(b/357795885):Handle SQLDescribeCol Api Invalid Output WRT SIMBA(WIN).
   auto results = *FetchDirect(conn, query, 1, is_async, use_ansi);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+#endif /* _WIN32 */
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -407,7 +410,12 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during FetchResults
+#ifndef _WIN32
 TEST(StatementTest, SQLFetch) { FetchDataTest(true); }
+#endif /* _WIN32 */
+
 TEST(StatementTest, SQLFetch_Ansi) { FetchDataTest(true, true); }
 
 TEST(StatementTest, SQLFetch_WithoutSQLBindCol) { FetchDataTest(false); }
@@ -463,6 +471,10 @@ TEST(StatementTest, SQLFetchScroll) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during FetchResultsWithSqlGetData
+#ifndef _WIN32
+
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
   Table table(table_name);
@@ -483,6 +495,7 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   std::string query = "SELECT StringField FROM " + table_name;
+
   auto results = *FetchResultsWithSqlGetData(conn, query);
 
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
@@ -518,6 +531,7 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   query = "SELECT StringField FROM " + table_name_ansi;
+
   results = *FetchResultsWithSqlGetData(conn, query);
 
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
@@ -529,6 +543,7 @@ TEST(StatementTest, SQLGetData) {
   table_ansi.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif /* _WIN32 */
 
 // This test is temporarily disabled till we are able to debug this with help
 // from the vendor
@@ -666,6 +681,9 @@ TEST(StatementTest, FetchDirectRowWise) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Issues with FetchResults need to be fixed for windows
+#ifndef _WIN32
+
 TEST(StatementTest, RollBackTransaction) {
   std::string const table_name =
       kDatasetWithTablePrefix + "_RollBackTransaction";
@@ -720,6 +738,7 @@ TEST(StatementTest, RollBackTransaction) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif /* _WIN32 */
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
@@ -1347,13 +1366,17 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
+// TODO(b/357798825):Handle SQL_DESC_NAME Invalid Value WRT SIMBA(WIN).
+#ifndef _WIN32
   SQLCHAR out_param_name;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_NAME, &out_param_name, 0, 0);
   CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
   EXPECT_EQ(0, out_param_name);
+#endif /* _WIN32 */
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 TEST(SQLNumResultCols, ValidStatementWithResultSet) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -1602,6 +1625,9 @@ TEST(SQLCloseCursor, CloseCursorAndExecuteAgain) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
+// SIMBA(WIN) during SQLFetch
+#ifndef _WIN32
 TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kSessionEnabledConnectionString, conn), SQL_SUCCESS);
@@ -1625,6 +1651,7 @@ TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif /* _WIN32 */
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

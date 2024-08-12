@@ -44,15 +44,17 @@ jobs:
       with:
         create_credentials_file: true
         credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       id: py311
       with:
         python-version: '3.11'
-    - uses: google-github-actions/setup-gcloud@v1
+    - uses: google-github-actions/setup-gcloud@v2
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
     - name: Download and Install ODBC Driver
       shell: powershell
+      # TODO(b/357810060): Enable msvc-2019 arch
+      if: matrix.msvc == 'msvc-2022'
       run: |
         .\ci\gha\builds\lib\odbc-driver-install.ps1
     - name: Dynamic Configuration
