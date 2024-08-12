@@ -132,6 +132,7 @@ void RandomiseDescriptorAttributes(std::shared_ptr<ODBCHandles> conn) {
   RandomizeDefaultValues(conn->ipd, 1);
 }
 
+
 void CheckAttributes(std::shared_ptr<ODBCHandles> conn, SQLHDESC desc,
                      DescriptorType desc_type, SQLSMALLINT type) {
   auto expected = (desc_type == DescriptorType::kAPD)
