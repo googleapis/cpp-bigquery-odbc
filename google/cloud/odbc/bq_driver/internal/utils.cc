@@ -212,7 +212,9 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
     if (field.empty() || value.empty()) {
       continue;
     }
-    section[field] = value;
+    if (!section.count(field)) {
+      section[field] = value;
+    }
   }
   return section;
 }

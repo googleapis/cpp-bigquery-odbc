@@ -168,6 +168,15 @@ TEST(Parsing, ParseConnectionString_InvalidString) {
               StatusRecordIs(SQLStates::k_HY000(), HasSubstr("Invalid")));
 }
 
+TEST(Parsing, ParseConnectionString_DuplicateFields) {
+  Section testing_section = kDsnSection;
+  std::string conn_str = "a=3;a=4;";
+  StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
+  ASSERT_STATUS_RECORD_OK(section_resp_status);
+  Section section_resp = *section_resp_status;
+  EXPECT_EQ(section_resp["a"], "3");
+}
+
 TEST(GetPathToOdbcIni, GetPath_EnvVar) {
   std::string expected = "my_path";
   google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
