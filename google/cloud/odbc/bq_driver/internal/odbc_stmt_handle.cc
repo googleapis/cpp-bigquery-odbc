@@ -338,10 +338,7 @@ StatusRecord StatementHandle::PopulateIrd(
             : "";
 
     descriptor_record.auto_unique_value = type_info.auto_unique_value;
-    descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
-                                 : (res.mode == nullable_required)
-                                     ? SQL_NULLABLE
-                                     : SQL_NO_NULLS;
+
     std::string local_type_name(
         reinterpret_cast<char const*>(type_info.local_type_name));
     if (local_type_name == "BIGNUMERIC" || local_type_name == "NUMERIC" ||
@@ -359,12 +356,13 @@ StatusRecord StatementHandle::PopulateIrd(
       descriptor_record.SetNumPrecRadix(0);
     }
 
-    descriptor_record.case_sensitive = type_info.case_sensitive;
 
     if (local_type_name == "TIME" || local_type_name == "DATETIME" ||
         local_type_name == "TIMESTAMP") {
       descriptor_record.precision = 6;
       descriptor_record.scale = 6;
+      descriptor_record.literal_prefix="'";
+      descriptor_record.literal_suffix="'";
       if (local_type_name == "TIME") {
         descriptor_record.octet_length = 6;
       } else {
@@ -374,7 +372,33 @@ StatusRecord StatementHandle::PopulateIrd(
       descriptor_record.precision;
       descriptor_record.scale = type_info.maximum_scale;
       descriptor_record.octet_length = 6;
+      descriptor_record.literal_prefix="'";
+      descriptor_record.literal_suffix="'";
     } else {
+        descriptor_record.literal_prefix =
+        type_info.literal_prefix == nullptr
+            ? ""
+            : std::string(
+                  reinterpret_cast<char const*>(type_info.literal_prefix));
+
+    
+     if (type_status_record.GetValue() == SQL_DOUBLE) {
+      // hard-coding to 15 to have the same behaviour as internal driver
+      descriptor_record.length = 15;
+    } else {
+      descriptor_record.length = type_info.col_size;
+   }
+   
+    descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
+                                 : (res.mode == nullable_required)
+                                     ? SQL_NULLABLE
+                                     : SQL_NO_NULLS;
+    
+    descriptor_record.literal_suffix =
+        type_info.literal_suffix == nullptr
+            ? ""
+            : std::string(
+                  reinterpret_cast<char const*>(type_info.literal_suffix));
       descriptor_record.precision = type_info.interval_precision == NULL
                                         ? type_info.col_size
                                         : type_info.interval_precision;
@@ -383,19 +407,20 @@ StatusRecord StatementHandle::PopulateIrd(
                                        type_info.col_size,
                                        descriptor_record.precision);
     }
-
-    descriptor_record.length = type_info.col_size;
-    descriptor_record.literal_prefix =
-        type_info.literal_prefix == nullptr
-            ? ""
-            : std::string(
-                  reinterpret_cast<char const*>(type_info.literal_prefix));
-
-    descriptor_record.literal_suffix =
-        type_info.literal_suffix == nullptr
-            ? ""
-            : std::string(
-                  reinterpret_cast<char const*>(type_info.literal_suffix));
+    if(local_type_name=="JSON" || local_type_name=="INTERVAL")
+    {
+     descriptor_record.case_sensitive =1;
+    }else{
+    descriptor_record.case_sensitive = type_info.case_sensitive;
+    if(local_type_name=="BYTES"||local_type_name=="BOOL"||local_type_name=="BIGNUMERIC"||local_type_name=="NUMERIC"|| local_type_name=="FLOAT64")
+     {
+      descriptor_record.literal_prefix="";
+      descriptor_record.literal_suffix="";
+      if(local_type_name=="BYTES"){
+        descriptor_record.literal_prefix="0x";
+      }
+    }
+    }
 
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
