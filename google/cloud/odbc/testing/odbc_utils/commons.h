@@ -274,6 +274,45 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
     case SQL_CHAR:
       col_ptr->data_type = SQL_C_CHAR;
       break;
+    case SQL_INTERVAL_YEAR:
+      col_ptr->data_type = SQL_C_INTERVAL_YEAR;
+      break;
+    case SQL_INTERVAL_MONTH:
+      col_ptr->data_type = SQL_C_INTERVAL_MONTH;
+      break;
+    case SQL_INTERVAL_DAY:
+      col_ptr->data_type = SQL_C_INTERVAL_DAY;
+      break;
+    case SQL_INTERVAL_HOUR:
+      col_ptr->data_type = SQL_C_INTERVAL_HOUR;
+      break;
+    case SQL_INTERVAL_MINUTE:
+      col_ptr->data_type = SQL_C_INTERVAL_MINUTE;
+      break;
+    case SQL_INTERVAL_SECOND:
+      col_ptr->data_type = SQL_C_INTERVAL_SECOND;
+      break;
+    case SQL_INTERVAL_YEAR_TO_MONTH:
+      col_ptr->data_type = SQL_C_INTERVAL_YEAR_TO_MONTH;
+      break;
+    case SQL_INTERVAL_DAY_TO_HOUR:
+      col_ptr->data_type = SQL_C_INTERVAL_DAY_TO_HOUR;
+      break;
+    case SQL_INTERVAL_DAY_TO_MINUTE:
+      col_ptr->data_type = SQL_C_INTERVAL_DAY_TO_MINUTE;
+      break;
+    case SQL_INTERVAL_DAY_TO_SECOND:
+      col_ptr->data_type = SQL_C_INTERVAL_DAY_TO_SECOND;
+      break;
+    case SQL_INTERVAL_HOUR_TO_MINUTE:
+      col_ptr->data_type = SQL_C_INTERVAL_HOUR_TO_MINUTE;
+      break;
+    case SQL_INTERVAL_HOUR_TO_SECOND:
+      col_ptr->data_type = SQL_C_INTERVAL_HOUR_TO_SECOND;
+      break;
+    case SQL_INTERVAL_MINUTE_TO_SECOND:
+      col_ptr->data_type = SQL_C_INTERVAL_MINUTE_TO_SECOND;
+      break;
     default:
       throw std::runtime_error("Invalid column data type: " +
                                col_ptr->data_type);
@@ -317,6 +356,7 @@ class Table {
 
   void InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
                           StdIntervalRows rows, bool use_ansi = false);
+
  private:
   std::string table_name_;
 };
@@ -326,6 +366,7 @@ std::string GetRandomString(int len);
 std::string getSchemaStr(Schema schema);
 
 std::string getIntervalTypeStr(const SQLINTERVAL type);
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
 
