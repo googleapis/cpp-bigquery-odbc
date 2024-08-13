@@ -51,7 +51,7 @@ inline SQLCHAR* ToSqlChar(char const* str) {
 
 inline bool IsValidEmail(std::string const& email) {
   // define a regular expression
-  std::regex const pattern("(\\w+)(\\.|_)?(\\w*)@(\\w+)(\\.(\\w+))+");
+  std::regex const pattern(R"((\w+)(\.|_)?(\w*)@(\w+)(\.(\w+))+)");
 
   // try to match the string with the regular expression
   return std::regex_match(email, pattern);
