@@ -54,12 +54,3 @@ Start-Process msiexec.exe -ArgumentList "/i `"$installerPath`" /qn /l*v `"$logFi
 
 Write-Output "Installation completed. Log contents:"
 Get-Content $logFilePath | Write-Output
-
-# Download from Google Cloud Storage (gsutil equivalent)
-Write-Output "Downloading service account key from Secret Manager..."
-gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="service_account_auth_keys.json"
-Write-Output "Downloaded service account key"
-
-Write-Output "Running DSN creation script from $($PWD.Path)\system_dsn_setup.reg ..."
-reg import .\ci\gha\builds\lib\system_dsn_setup_${arch}.reg
-Write-Output "DSN creation completed."
