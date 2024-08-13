@@ -96,7 +96,7 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   // For details on the columns returned, please see the spec
   // for SQLColumns API.
   // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
-  int res_cols = 18;
+  int const res_cols = 18;
   TestingDataBuffer columns[res_cols];
 
   std::vector<SQLColumnsResult> results;

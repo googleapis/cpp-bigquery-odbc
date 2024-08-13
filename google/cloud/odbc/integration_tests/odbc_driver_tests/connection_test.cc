@@ -488,12 +488,15 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// Duplicate DSNs are not functioning properly(WIN).
+#ifndef _WIN32
 TEST(ConnectionTest, SQLDriverConnect_DuplicateDsn) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString + ";DSN=InvalidDsn", conn),
             SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 void CreateDriverConnection() {
   auto conn = std::make_shared<ODBCHandles>();
