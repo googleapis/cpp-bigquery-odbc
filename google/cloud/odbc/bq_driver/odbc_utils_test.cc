@@ -170,4 +170,19 @@ TEST(ValidateDescriptorHandle, InvalidHandleType) {
                                      StrEq("Invalid handle type")));
 }
 
+TEST(IsValidEmail, Success1) {
+  auto success = IsValidEmail("abc@d.com");
+  EXPECT_TRUE(success);
+}
+
+TEST(IsValidEmail, Success2) {
+  auto success = IsValidEmail("a-b-c@d-e-f.g.h.com");
+  EXPECT_TRUE(success);
+}
+
+TEST(IsValidEmail, Failure1) {
+  auto success = IsValidEmail("abc");
+  EXPECT_FALSE(success);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
