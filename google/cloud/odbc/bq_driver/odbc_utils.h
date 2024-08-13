@@ -28,6 +28,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,14 @@ inline SQLCHAR* ToSqlChar(char const* str) {
     return reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
   }
   return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
+}
+
+inline bool IsValidEmail(std::string const& email) {
+  // define a regular expression
+  std::regex const pattern("(\\w+)(\\.|_)?(\\w*)@(\\w+)(\\.(\\w+))+");
+
+  // try to match the string with the regular expression
+  return std::regex_match(email, pattern);
 }
 
 odbc_internal::StatusRecordOr<

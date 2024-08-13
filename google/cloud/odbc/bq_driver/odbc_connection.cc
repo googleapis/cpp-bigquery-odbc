@@ -27,6 +27,8 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bq_driver::IsValidEmail;
+using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -161,39 +163,32 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  auto* handle_ref = *handle_result;
+  auto& handle_ref = *(*handle_result);
   if (server_name_len < 0 && server_name_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid server name length"};
-    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status_record);
   }
   if (user_name_len < 0 && user_name_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid user name length"};
-    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status_record);
   }
   if (auth_string_len < 0 && auth_string_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid auth string length"};
-    handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-    return status_record.CalculateReturnCode();
+    return LogAndReturnCode(handle_ref, status_record);
   }
 
-  std::string dsn_name =
-      (server_name ? reinterpret_cast<char*>(server_name) : "");
-  std::string user_name_str =
-      (user_name ? reinterpret_cast<char*>(user_name) : "");
-  std::string auth_string_str =
-      (auth_string ? reinterpret_cast<char*>(auth_string) : "");
+  std::string dsn_name = ToCharStr(server_name);
+  std::string user_name_str = ToCharStr(user_name);
+  std::string auth_string_str = ToCharStr(auth_string);
 
   Section dsn_section;
   if (!dsn_name.empty()) {
     auto status_record = OverrideDsnSectionFromEnv(dsn_section, dsn_name);
     if (!status_record.ok()) {
-      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-      status_record.CalculateReturnCode();
+      return LogAndReturnCode(handle_ref, status_record);
     }
   } else {
     // DSN is not provided. Use the optional username and auth string which in
@@ -203,21 +198,18 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
       auto status_record =
           StatusRecord{SQLStates::k_HY090(),
                        "Username cannot be empty for DSN-less usecase"};
-      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(handle_ref, status_record);
     }
     if (auth_string_str.empty()) {
       auto status_record =
           StatusRecord{SQLStates::k_HY090(),
                        "Auth String cannot be empty for DSN-less usecase"};
-      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(handle_ref, status_record);
     }
-    if (!absl::StrContains(user_name_str, "@")) {
+    if (!IsValidEmail(user_name_str)) {
       auto status_record = StatusRecord{
           SQLStates::k_HY090(), "Username needs to be an email address"};
-      handle_ref->GetDiagnostics().AddStatusRecord(status_record);
-      return status_record.CalculateReturnCode();
+      return LogAndReturnCode(handle_ref, status_record);
     }
     dsn_section["OAuthMechanism"] =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
@@ -226,12 +218,12 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
-  handle_ref->SetUp(dsn_section, dsn_name);
+  handle_ref.SetUp(dsn_section, dsn_name);
 
   Authentication auth = CreateAuth(dsn_section);
-  StatusRecord status = handle_ref->Connect(auth);
+  StatusRecord status = handle_ref.Connect(auth);
   if (!status.ok()) {
-    return LogAndReturnCode(*handle_ref, status);
+    return LogAndReturnCode(handle_ref, status);
   }
   return SQL_SUCCESS;
 }

@@ -33,7 +33,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-/*
+
 TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
   EnvironmentHandle env_handle;
   SQLPOINTER output;
@@ -185,7 +185,7 @@ TEST(SQLDisconnectInternal, Fail_ActiveTransaction) {
   EXPECT_EQ(SQLStates::k_25000(),
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
-*/
+
 TEST(SQLConnectInternal, Fail_InvalidConnectionHandle) {
   auto status = SQLConnectInternal(NULL, NULL, 0, NULL, 0, NULL, 0);
 
