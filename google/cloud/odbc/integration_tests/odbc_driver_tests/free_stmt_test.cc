@@ -41,6 +41,29 @@ TEST(SQLFreeStmt, CloseCursor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLFreeStmt, CloseCursorAlwaysReturnSuccess) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status = SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  CheckError(status, "SQLFreeStmt_0", conn);
+
+  std::string query = "Select 1";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  status = SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  CheckError(status, "SQLFreeStmt_1", conn);
+
+  status = SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  CheckError(status, "SQLFreeStmt_2", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLFreeStmt, UnbindColumns) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
