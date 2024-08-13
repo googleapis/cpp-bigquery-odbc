@@ -26,6 +26,9 @@
 #include <sql.h>
 #include <sqlext.h>
 
+// This removes the definitions from Windows.h which conflict with the APIs our
+// driver creates. Since odbc_includes.h is included before we define our APIs,
+// this doesn't impact our driver.
 #ifdef _WIN32
 #include <algorithm>
 #include <cstdint>
