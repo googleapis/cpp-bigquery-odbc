@@ -171,17 +171,47 @@ TEST(ValidateDescriptorHandle, InvalidHandleType) {
 }
 
 TEST(IsValidEmail, Success1) {
-  auto success = IsValidEmail("abc@d.com");
+  auto success = IsValidEmail("a@b.com");
   EXPECT_TRUE(success);
 }
 
 TEST(IsValidEmail, Success2) {
+  auto success = IsValidEmail("abc@d.com");
+  EXPECT_TRUE(success);
+}
+
+TEST(IsValidEmail, Success3) {
+  auto success = IsValidEmail("abc-def-ghi@def-ghi.com");
+  EXPECT_TRUE(success);
+}
+
+TEST(IsValidEmail, Success4) {
   auto success = IsValidEmail("a-b-c@d-e-f.g.h.com");
   EXPECT_TRUE(success);
 }
 
 TEST(IsValidEmail, Failure1) {
   auto success = IsValidEmail("abc");
+  EXPECT_FALSE(success);
+}
+
+TEST(IsValidEmail, Failure2) {
+  auto success = IsValidEmail("abc@");
+  EXPECT_FALSE(success);
+}
+
+TEST(IsValidEmail, Failure3) {
+  auto success = IsValidEmail("abc.com");
+  EXPECT_FALSE(success);
+}
+
+TEST(IsValidEmail, Failure4) {
+  auto success = IsValidEmail("@com");
+  EXPECT_FALSE(success);
+}
+
+TEST(IsValidEmail, Failure5) {
+  auto success = IsValidEmail("");
   EXPECT_FALSE(success);
 }
 

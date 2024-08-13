@@ -49,12 +49,13 @@ inline SQLCHAR* ToSqlChar(char const* str) {
   return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
 }
 
+// Very simple client side check for email. We want all validations to be
+// done on the BQ server hence keeping the client side check simple. Otherwise
+// client can reject emails that server accepts or vice-versa. It is not
+// possible to keep email rules in sync between odbc client and BQ server.
 inline bool IsValidEmail(std::string const& email) {
-  // define a regular expression
-  std::regex const pattern(R"(^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$)");
-
-  // try to match the string with the regular expression
-  return std::regex_match(email, pattern);
+  return (!email.empty() && absl::StrContains(email, "@") &&
+          absl::StrContains(email, "."));
 }
 
 odbc_internal::StatusRecordOr<
