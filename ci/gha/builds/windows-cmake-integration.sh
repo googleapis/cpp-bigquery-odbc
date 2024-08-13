@@ -46,9 +46,14 @@ fi
 args+=("-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:NO")
 
 args+=("-DODBC_INTEGRATION_TESTING=ON")
-args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
 args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
 args+=("-DODBC_UNIT_TESTING=ON")
+# We use our driver or the existing one based on BUILD_SHARD env
+if [ "$BUILD_SHARD" == "Core" ]; then
+  args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
+else
+  args+=("-DBQ_DRIVER_INTEGRATION_TESTS=ON")
+fi
 
 io::log_h1 "Starting Build"
 TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
