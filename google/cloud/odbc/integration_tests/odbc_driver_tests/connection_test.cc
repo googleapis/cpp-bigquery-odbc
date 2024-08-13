@@ -759,21 +759,21 @@ TEST(ConnectionTest, GetDefaultValueForAutocommit) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
-TEST(ConnectionTest, SQLConnect) {
+TEST(ConnectionTest, SQLConnect_WithDSN) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, SQLConnectA) {
+TEST(ConnectionTest, SQLConnectA_WithDSN) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(DriverInfoTest, SQLGetInfo) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -809,6 +809,30 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
 }
 
 #else
+
+// Simba Driver doesn't support DSNLess SQLConnect API with credentials file
+// path
+TEST(BQDriverConnectionTest, SQLConnect_DSNLess) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  EXPECT_EQ(
+      ConnectDsnLess(kServiceAccountEmail, path_to_file_with_credentials, conn),
+      SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// Simba Driver doesn't support DSNLess SQLConnect API with credentials file
+// path.
+TEST(BQDriverConnectionTest, SQLConnectA_DSNLess) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  EXPECT_EQ(ConnectDsnLess(kServiceAccountEmail, path_to_file_with_credentials,
+                           conn, true),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();

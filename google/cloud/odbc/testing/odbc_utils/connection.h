@@ -31,13 +31,24 @@ std::string const kDefaultDataSource = GetDefaultDSN();
 auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
 auto const kSessionEnabledConnectionString = "DSN=ODBCTransactionsTestsDSN";
 
+// used for DSNLess SQLConnect. If we change BQ service account credentials
+// email it will need to be changed here as well other DSNLess connect tests
+// would fail.
+std::string const kServiceAccountEmail =
+    "bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam."
+    "gserviceaccount.com";
+
 // Connect using a <conn_str> and populate the ODBCHandles
-SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
-                  int timeout = 30, bool use_ansi = false);
+SQLRETURN
+Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
+        int timeout = 30, bool use_ansi = false);
 
 // Connect using a datasource name directly and populate the ODBCHandles
 SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
                      int timeout = 30, bool use_ansi = false);
+SQLRETURN ConnectDsnLess(std::string username, std::string auth,
+                         std::shared_ptr<ODBCHandles> conn, int timeout = 30,
+                         bool use_ansi = false);
 
 SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn);
 

@@ -79,6 +79,35 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
+SQLRETURN ConnectDsnLess(std::string username, std::string auth,
+                         std::shared_ptr<ODBCHandles> conn, int timeout,
+                         bool use_ansi) {
+  SQLSMALLINT buflen;
+  SQLSMALLINT out_len;
+  SQLRETURN status;
+
+  SetAttributes(conn, timeout, use_ansi);
+  if (use_ansi) {
+    status =
+        SQLConnectA(conn->hdbc, NULL, 0, (SQLCHAR*)username.c_str(),
+                    username.length(), (SQLCHAR*)auth.c_str(), auth.length());
+  } else {
+    status =
+        SQLConnect(conn->hdbc, NULL, 0, (SQLCHAR*)username.c_str(),
+                   username.length(), (SQLCHAR*)auth.c_str(), auth.length());
+  }
+
+  CheckError(status, "SQLConnect-DSNLess", conn, use_ansi);
+  conn->connected = true;
+
+  PrintDriverVerName(conn, use_ansi);
+
+  // Allocate statement handle
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+  return status;
+}
+
 SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
                      int timeout, bool use_ansi) {
   SQLSMALLINT buflen;

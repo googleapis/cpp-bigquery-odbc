@@ -438,6 +438,9 @@ SQLRETURN SQL_API SQLConnect(SQLHDBC connectionHandle, SQLCHAR* serverName,
 
   // Call to internal common function for SQLConnect and SQLConnectW
   // in odbc_connection.h.
+  rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
+      connectionHandle, serverName, serverNameLen, userName, userNameLen,
+      authString, authStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLConnect(rc, *(*kTraceOption));
