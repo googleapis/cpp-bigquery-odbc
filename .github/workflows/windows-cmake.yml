@@ -55,9 +55,21 @@ jobs:
     - name: Download and Install ODBC Driver
       shell: powershell
       # TODO(b/357810060): Enable msvc-2019 arch
-      if: matrix.msvc == 'msvc-2022'
+      if: matrix.msvc == 'msvc-2022' && matrix.shard == 'Core'
       run: |
         .\ci\gha\builds\lib\odbc-driver-install.ps1
+    - name: Run DSN Creation Script
+      shell: powershell
+      run: |
+        Write-Output "Downloading service account key from Secret Manager..."
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="service_account_auth_keys.json"
+        Write-Output "Downloaded service account key"
+
+        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
+        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
+        Write-Output "Running DSN creation script from $regFilePath ..."
+        reg import $regFilePath
+        Write-Output "DSN creation completed."
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -103,7 +115,6 @@ jobs:
         export MSVC_VERSION="${{ matrix.msvc }}"
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         # TODO(b/357810060): Enable x86 arch
-        # Temporarily disabled testing on windows
         if [ "${{ matrix.msvc }}" == "msvc-2022" ] && [ "${{ matrix.arch }}" == "x64" ]; then
           ci/gha/builds/windows-cmake-integration.sh
         else
