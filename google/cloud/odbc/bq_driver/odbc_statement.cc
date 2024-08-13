@@ -420,4 +420,41 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  switch (option) {
+    case SQL_CLOSE:
+      stmt_handle.CloseCursor();
+      return SQL_SUCCESS;
+    case SQL_UNBIND: {
+      DescriptorHandle& ard =
+          stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+      StatusRecord status = ard.UnbindAllDescriptorRecordsFrom(0);
+      if (!status.ok()) {
+        return LogAndReturnCode(stmt_handle, status);
+      }
+      return SQL_SUCCESS;
+    }
+    case SQL_RESET_PARAMS: {
+      DescriptorHandle& apd =
+          stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+      StatusRecord status = apd.UnbindAllDescriptorRecordsFrom(0);
+      if (!status.ok()) {
+        return LogAndReturnCode(stmt_handle, status);
+      }
+      return SQL_SUCCESS;
+    }
+  }
+  StatusRecord status{SQLStates::k_HY092(), "Option type out of range"};
+  return LogAndReturnCode(stmt_handle, status);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

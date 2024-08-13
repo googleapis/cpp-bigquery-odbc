@@ -21,6 +21,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::kNullValue;
@@ -1075,6 +1076,82 @@ TEST(SQLGetStmtAttrInternal, Fails_InvalidAttribute) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLFreeStmtInternal, Fail_InvalidHandle) {
+  SQLRETURN status = SQLFreeStmtInternal(nullptr, SQL_CLOSE);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLFreeStmtInternal, Fail_InvalidOption) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, 111);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY092(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLFreeStmtInternal, CloseCursor) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_CLOSE);
+
+  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
+}
+
+TEST(SQLFreeStmtInternal, CloseCursor_CursorNotOpen) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_CLOSE);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+}
+
+TEST(SQLFreeStmtInternal, UnbindBuffers) {
+  StatementHandle handle = CreateStatementHandle();
+  auto& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
+  DescriptorRecord record;
+  ard.BindNewDescriptorRecord(1, record);
+  EXPECT_EQ(1, ard.GetHeaderRecord().count);
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_UNBIND);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(0, ard.GetHeaderRecord().count);
+}
+
+TEST(SQLFreeStmtInternal, UnbindBuffers_NoBoundBuffers) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_UNBIND);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+}
+
+TEST(SQLFreeStmtInternal, UnbindParameters) {
+  StatementHandle handle = CreateStatementHandle();
+  auto& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorRecord record;
+  apd.BindNewDescriptorRecord(1, record);
+  EXPECT_EQ(1, apd.GetHeaderRecord().count);
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_RESET_PARAMS);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(0, apd.GetHeaderRecord().count);
+}
+
+TEST(SQLFreeStmtInternal, UnbindParameters_NoBoundBuffers) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_RESET_PARAMS);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

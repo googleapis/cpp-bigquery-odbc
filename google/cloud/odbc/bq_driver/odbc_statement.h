@@ -45,6 +45,8 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                              SQLSMALLINT completion_type);
 
+SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_STATEMENT_H
