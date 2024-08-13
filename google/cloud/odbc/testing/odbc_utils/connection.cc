@@ -49,6 +49,7 @@ void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
 
 SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
                   int timeout, bool use_ansi) {
+  std::cout << "kDefaultDataSource:: " << kDefaultDataSource << std::endl;
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;

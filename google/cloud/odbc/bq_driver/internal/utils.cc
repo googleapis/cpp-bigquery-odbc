@@ -67,7 +67,7 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     std::string const& registry_key) {
   Section section;
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0,
+  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()), 0,
                              KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
@@ -109,7 +109,7 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     std::string const& registry_key) {
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_CURRENT_USER, LPCSTR(registry_key.c_str()), 0,
+  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()), 0,
                              KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
@@ -224,7 +224,7 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
 
 std::string GetPathToOdbcIni() {
 #ifdef _WIN32
-  absl::optional<std::string> path = "Software\\ODBC\\ODBC.INI";
+  absl::optional<std::string> path = "SOFTWARE\\ODBC\\ODBC.INI";
   if (path) {
     return *path;
   }
