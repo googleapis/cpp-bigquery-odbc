@@ -146,10 +146,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
   Authentication auth = CreateAuth(dsn_section);
   StatusRecord status = handle_ref->Connect(auth);
-  if (!status.ok()) {
-    return LogAndReturnCode(*handle_ref, status);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*handle_ref, status);
 }
 
 SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
@@ -222,10 +219,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
 
   Authentication auth = CreateAuth(dsn_section);
   StatusRecord status = handle_ref.Connect(auth);
-  if (!status.ok()) {
-    return LogAndReturnCode(handle_ref, status);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(handle_ref, status);
 }
 
 SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
@@ -242,10 +236,7 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
   auto* conn_handle = *handle_result;
   auto status_record =
       conn_handle->GetAttribute(attribute, value, buf_len, str_len);
-  if (!status_record.ok()) {
-    return LogAndReturnCode(*conn_handle, status_record);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*conn_handle, status_record);
 }
 
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,

@@ -176,12 +176,9 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   StatusRecord status_record = WriteRowset(result_set, rowset_size, ard);
-  if (!status_record.ok()) {
-    return LogAndReturnCode(handle, status_record);
-  }
-
-  return status_record.CalculateReturnCode();
+  return LogAndReturnCode(handle, status_record);
 }
+
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
                                    SQLSMALLINT* column_count_ptr) {
   StatusRecordOr<StatementHandle*> handle_result =
@@ -410,10 +407,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                             static_cast<SQLSMALLINT>(field_identifier),
                             numeric_attribute, 0, nullptr);
   }
-  if (!result) {
-    return LogAndReturnCode(stmt_handle, result);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(stmt_handle, result);
 }
 
 SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {

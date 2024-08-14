@@ -119,7 +119,6 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
-  SQLRETURN rc = SQL_SUCCESS;
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
@@ -138,18 +137,12 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     case SQL_API_ODBC3_ALL_FUNCTIONS: {
       StatusRecord status_record =
           PopulateSupportedODBC3Functions(supported_fn);
-      if (!status_record.ok()) {
-        return LogAndReturnCode(*handle, status_record);
-      }
-      return rc;
+      return LogAndReturnCode(*handle, status_record);
     }
     case SQL_API_ALL_FUNCTIONS: {
       StatusRecord status_record =
           PopulateSupportedODBC2Functions(supported_fn);
-      if (!status_record.ok()) {
-        return LogAndReturnCode(*handle, status_record);
-      }
-      return rc;
+      return LogAndReturnCode(*handle, status_record);
     }
     default:
       break;
@@ -169,7 +162,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     }
     *supported_fn = odbc2_fns[function_id];
   }
-  return rc;
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,

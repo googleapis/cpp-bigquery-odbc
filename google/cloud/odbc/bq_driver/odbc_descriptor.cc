@@ -291,10 +291,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecord status_record =
       SetDescField(*handle_result, rec_number, field_identifier, desc_value,
                    desc_value_buffer_len);
-  if (!status_record.ok()) {
-    return LogAndReturnCode(*(*handle_result), status_record);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*(*handle_result), status_record);
 }
 
 StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
@@ -548,10 +545,7 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<SQLRETURN> status_record_or =
       GetDescField(*handle_result, rec_number, field_identifier, out_value,
                    value_buffer_len, value_string_len);
-  if (!status_record_or) {
-    return LogAndReturnCode(*(*handle_result), status_record_or);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*(*handle_result), status_record_or);
 }
 
 SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
@@ -710,11 +704,7 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
 
   StatusRecord status_record =
       target_handle->SetDescriptorRecords(src_handle->GetDescriptorRecords());
-  if (!status_record.ok()) {
-    return LogAndReturnCode(*target_handle, status_record);
-  }
-
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*target_handle, status_record);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

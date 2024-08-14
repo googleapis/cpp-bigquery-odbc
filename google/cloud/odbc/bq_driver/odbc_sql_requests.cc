@@ -273,12 +273,7 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   }
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
-
-  if (!status.ok()) {
-    return LogAndReturnCode(handle_ref, status);
-  }
-
-  return SQL_SUCCESS;
+  return LogAndReturnCode(handle_ref, status);
 }
 
 SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
@@ -397,11 +392,7 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   StatusRecord status = StringValueToOutputBufferResponse(
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
-  if (!status.ok()) {
-    return LogAndReturnCode(stmt_handle, status);
-  }
-
-  return SQL_SUCCESS;
+  return LogAndReturnCode(stmt_handle, status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -130,10 +130,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       status = handle->SetDescriptorHandle(DescriptorType::kAPD, desc_handle);
       break;
   }
-  if (!status.ok()) {
-    return LogAndReturnCode(*handle, status);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(*handle, status);
 }
 
 SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
@@ -247,10 +244,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
 
   StatusRecord status_record =
       handle.SetAttribute(attribute, reinterpret_cast<SQLULEN>(value));
-  if (!status_record.ok()) {
-    return LogAndReturnCode(handle, status_record);
-  }
-  return SQL_SUCCESS;
+  return LogAndReturnCode(handle, status_record);
 }
 
 SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
@@ -393,10 +387,9 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
 
     StatusRecord status_record =
         FinishTransactionIfNeeded(conn_handle, completion_type);
-    if (!status_record.ok()) {
-      return LogAndReturnCode(conn_handle, status_record);
-    }
-  } else if (handle_type == SQL_HANDLE_ENV) {
+    return LogAndReturnCode(conn_handle, status_record);
+  }
+  if (handle_type == SQL_HANDLE_ENV) {
     StatusRecordOr<EnvironmentHandle*> handle_result =
         ValidateEnvironmentHandle(handle);
     if (!handle_result) {
@@ -438,19 +431,13 @@ SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
       DescriptorHandle& ard =
           stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
       StatusRecord status = ard.UnbindAllDescriptorRecordsFrom(0);
-      if (!status.ok()) {
-        return LogAndReturnCode(stmt_handle, status);
-      }
-      return SQL_SUCCESS;
+      return LogAndReturnCode(stmt_handle, status);
     }
     case SQL_RESET_PARAMS: {
       DescriptorHandle& apd =
           stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
       StatusRecord status = apd.UnbindAllDescriptorRecordsFrom(0);
-      if (!status.ok()) {
-        return LogAndReturnCode(stmt_handle, status);
-      }
-      return SQL_SUCCESS;
+      return LogAndReturnCode(stmt_handle, status);
     }
   }
   StatusRecord status{SQLStates::k_HY092(), "Option type out of range"};
