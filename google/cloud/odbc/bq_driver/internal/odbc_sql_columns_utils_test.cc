@@ -1,0 +1,467 @@
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include <gtest/gtest.h>
+
+namespace google::cloud::odbc_bq_driver_internal {
+
+using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
+using ::google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::HasSubstr;
+using ::testing::StrEq;
+
+TEST(GetSQLDataType, Date) {
+  auto date_status = GetSQLDataType(SQL_TYPE_DATE);
+  ASSERT_STATUS_RECORD_OK(date_status);
+  EXPECT_EQ(SQL_DATETIME, *date_status);
+}
+
+TEST(GetSQLDataType, Time) {
+  auto time_status = GetSQLDataType(SQL_TYPE_TIME);
+  ASSERT_STATUS_RECORD_OK(time_status);
+  EXPECT_EQ(SQL_DATETIME, *time_status);
+}
+
+TEST(GetSQLDataType, Timestamp) {
+  auto timestamp_status = GetSQLDataType(SQL_TYPE_TIMESTAMP);
+  ASSERT_STATUS_RECORD_OK(timestamp_status);
+  EXPECT_EQ(SQL_DATETIME, *timestamp_status);
+}
+
+TEST(GetSQLDataType, String) {
+  auto string_status = GetSQLDataType(SQL_VARCHAR);
+  ASSERT_STATUS_RECORD_OK(string_status);
+  EXPECT_EQ(SQL_VARCHAR, *string_status);
+}
+
+TEST(GetSQLDateTimeSub, Date) {
+  auto date_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_DATE);
+  ASSERT_STATUS_RECORD_OK(date_status);
+  EXPECT_EQ(SQL_CODE_DATE, *date_status);
+}
+
+TEST(GetSQLDateTimeSub, Time) {
+  auto time_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_TIME);
+  ASSERT_STATUS_RECORD_OK(time_status);
+  EXPECT_EQ(SQL_CODE_TIME, *time_status);
+}
+
+TEST(GetSQLDateTimeSub, TIMESTAMP) {
+  auto timestamp_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_TIMESTAMP);
+  ASSERT_STATUS_RECORD_OK(timestamp_status);
+  EXPECT_EQ(SQL_CODE_TIMESTAMP, *timestamp_status);
+}
+
+TEST(GetSQLDateTimeSub, InvalidDateTimeSub) {
+  auto invalid_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_VARCHAR);
+  EXPECT_THAT(invalid_status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid data_type for SQL_DATETIME")));
+}
+
+TEST(GetSQLDateTimeSub, Other) {
+  auto other_status = GetSQLDateTimeSub(SQL_VARCHAR, SQL_VARCHAR);
+  ASSERT_STATUS_RECORD_OK(other_status);
+  EXPECT_EQ(SQL_NULL_DATA, *other_status);
+}
+
+TEST(GetRadix, Decimal) {
+  TableFieldSchema schema;
+  schema.precision = 0;
+  schema.scale = 0;
+  auto radix_status = GetRadix(schema);
+  ASSERT_STATUS_RECORD_OK(radix_status);
+  EXPECT_EQ(10, *radix_status);
+}
+
+TEST(GetRadix, Binary) {
+  TableFieldSchema schema;
+  schema.precision = 53;
+  schema.scale = SQL_NULL_DATA;
+  auto radix_status = GetRadix(schema);
+  ASSERT_STATUS_RECORD_OK(radix_status);
+  EXPECT_EQ(2, *radix_status);
+}
+
+TEST(GetRadix, Null) {
+  TableFieldSchema schema;
+  schema.precision = SQL_NULL_DATA;
+  schema.scale = SQL_NULL_DATA;
+  auto radix_status = GetRadix(schema);
+  ASSERT_STATUS_RECORD_OK(radix_status);
+  EXPECT_EQ(SQL_NULL_DATA, *radix_status);
+}
+
+TEST(GetDecimalDigits, ScaleFromDS) {
+  TableFieldSchema schema;
+  schema.scale = 5;
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(5, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleString) {
+  TableFieldSchema schema;
+  schema.type = "STRING";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleInt) {
+  TableFieldSchema schema;
+  schema.type = "INT64";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(0, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleBool) {
+  TableFieldSchema schema;
+  schema.type = "BOOL";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleTime) {
+  TableFieldSchema schema;
+  schema.type = "TIME";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(6, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleDate) {
+  TableFieldSchema schema;
+  schema.type = "DATE";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleDateTime) {
+  TableFieldSchema schema;
+  schema.type = "DATETIME";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(6, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleTimeStamp) {
+  TableFieldSchema schema;
+  schema.type = "TIMESTAMP";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(6, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleNumeric) {
+  TableFieldSchema schema;
+  schema.type = "NUMERIC";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(9, *scale_status);
+}
+
+TEST(GetDecimalDigits, FixedScaleBigNumeric) {
+  TableFieldSchema schema;
+  schema.type = "BIGNUMERIC";
+  auto scale_status = GetDecimalDigits(schema);
+  ASSERT_STATUS_RECORD_OK(scale_status);
+  EXPECT_EQ(9, *scale_status);
+}
+
+TEST(GetDecimalDigits, InvalidType) {
+  TableFieldSchema schema;
+  schema.type = "Invalid";
+  auto invalid_status = GetDecimalDigits(schema);
+  EXPECT_THAT(invalid_status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             StrEq("Invalid Data Type: Invalid")));
+}
+
+TEST(GetColSize, PrecisionFromDS) {
+  TableFieldSchema schema;
+  schema.precision = 5;
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(5, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionString) {
+  TableFieldSchema schema;
+  schema.type = "STRING";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(16384, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionInt) {
+  TableFieldSchema schema;
+  schema.type = "INT64";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(19, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionBool) {
+  TableFieldSchema schema;
+  schema.type = "BOOL";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(1, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionTime) {
+  TableFieldSchema schema;
+  schema.type = "TIME";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(15, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionDate) {
+  TableFieldSchema schema;
+  schema.type = "DATE";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(10, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionDateTime) {
+  TableFieldSchema schema;
+  schema.type = "DATETIME";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(26, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionTimeStamp) {
+  TableFieldSchema schema;
+  schema.type = "TIMESTAMP";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(26, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionNumeric) {
+  TableFieldSchema schema;
+  schema.type = "NUMERIC";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(38, *precision_status);
+}
+
+TEST(GetColSize, FixedPrecisionBigNumeric) {
+  TableFieldSchema schema;
+  schema.type = "BIGNUMERIC";
+  auto precision_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(precision_status);
+  EXPECT_EQ(38, *precision_status);
+}
+
+TEST(GetColSize, InvalidType) {
+  TableFieldSchema schema;
+  schema.type = "Invalid";
+  auto invalid_status = GetColSize(schema);
+  EXPECT_THAT(invalid_status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             StrEq("Invalid Data Type: Invalid")));
+}
+
+TEST(GetBufferLen, BufferLenFromDS) {
+  TableFieldSchema schema;
+  schema.max_length = 5000;
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(5000, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenString) {
+  TableFieldSchema schema;
+  schema.type = "STRING";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(16384, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenInt) {
+  TableFieldSchema schema;
+  schema.type = "INT64";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(20, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenBool) {
+  TableFieldSchema schema;
+  schema.type = "BOOL";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(1, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenTime) {
+  TableFieldSchema schema;
+  schema.type = "TIME";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(6, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenDate) {
+  TableFieldSchema schema;
+  schema.type = "DATE";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(6, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenDateTime) {
+  TableFieldSchema schema;
+  schema.type = "DATETIME";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(16, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenTimeStamp) {
+  TableFieldSchema schema;
+  schema.type = "TIMESTAMP";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(16, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenNumeric) {
+  TableFieldSchema schema;
+  schema.type = "NUMERIC";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(40, *buf_len_status);
+}
+
+TEST(GetBufferLen, FixedBufferLenBigNumeric) {
+  TableFieldSchema schema;
+  schema.type = "BIGNUMERIC";
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(40, *buf_len_status);
+}
+
+TEST(GetBufferLen, InvalidType) {
+  TableFieldSchema schema;
+  schema.type = "Invalid";
+  auto invalid_status = GetBufferLen(schema);
+  EXPECT_THAT(invalid_status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             StrEq("Invalid Data Type: Invalid")));
+}
+
+TEST(GetCharOctetLen, CharOctetLenFromDS) {
+  TableFieldSchema schema;
+  schema.max_length = 5000;
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(5000, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenString) {
+  TableFieldSchema schema;
+  schema.type = "STRING";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(16384, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenInt) {
+  TableFieldSchema schema;
+  schema.type = "INT64";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenBool) {
+  TableFieldSchema schema;
+  schema.type = "BOOL";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenTime) {
+  TableFieldSchema schema;
+  schema.type = "TIME";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenDate) {
+  TableFieldSchema schema;
+  schema.type = "DATE";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenDateTime) {
+  TableFieldSchema schema;
+  schema.type = "DATETIME";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenTimeStamp) {
+  TableFieldSchema schema;
+  schema.type = "TIMESTAMP";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenNumeric) {
+  TableFieldSchema schema;
+  schema.type = "NUMERIC";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, FixedCharOctetLenBigNumeric) {
+  TableFieldSchema schema;
+  schema.type = "BIGNUMERIC";
+  auto char_octet_len_status = GetCharOctetLen(schema);
+  ASSERT_STATUS_RECORD_OK(char_octet_len_status);
+  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+}
+
+TEST(GetCharOctetLen, InvalidType) {
+  TableFieldSchema schema;
+  schema.type = "Invalid";
+  auto invalid_status = GetCharOctetLen(schema);
+  EXPECT_THAT(invalid_status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             StrEq("Invalid Data Type: Invalid")));
+}
+
+}  // namespace google::cloud::odbc_bq_driver_internal
