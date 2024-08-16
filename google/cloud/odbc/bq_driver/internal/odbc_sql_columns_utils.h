@@ -32,27 +32,27 @@ struct FixedColumnMetadata {
 
 // Internal Helper functions used in SQLColumns API implementation.
 odbc_internal::StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLINTEGER> GetColSize(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLINTEGER> GetBufferLen(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLINTEGER> GetCharOctetLen(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetRadix(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema
+    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(

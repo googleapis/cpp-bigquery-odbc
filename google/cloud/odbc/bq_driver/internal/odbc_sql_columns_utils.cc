@@ -23,7 +23,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
-    TableFieldSchema field_schema) {
+    TableFieldSchema const& field_schema) {
   FixedColumnMetadata fixed_column_metadata;
   auto ds_type_status = ConvertDSType(field_schema.type);
   if (!ds_type_status) {
@@ -91,7 +91,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
   return fixed_column_metadata;
 }
 
-StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema field_schema) {
+StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema const& field_schema) {
   SQLINTEGER result;
   if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision);
@@ -106,7 +106,7 @@ StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema field_schema) {
   return result;
 }
 
-StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema field_schema) {
+StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema const& field_schema) {
   SQLINTEGER result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
@@ -121,7 +121,8 @@ StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema field_schema) {
   return result;
 }
 
-StatusRecordOr<SQLINTEGER> GetCharOctetLen(TableFieldSchema field_schema) {
+StatusRecordOr<SQLINTEGER> GetCharOctetLen(
+    TableFieldSchema const& field_schema) {
   SQLINTEGER result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
@@ -136,7 +137,8 @@ StatusRecordOr<SQLINTEGER> GetCharOctetLen(TableFieldSchema field_schema) {
   return result;
 }
 
-StatusRecordOr<SQLSMALLINT> GetDecimalDigits(TableFieldSchema field_schema) {
+StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
+    TableFieldSchema const& field_schema) {
   SQLSMALLINT result;
   if (field_schema.scale > 0) {
     result = static_cast<SQLSMALLINT>(field_schema.scale);
@@ -151,7 +153,7 @@ StatusRecordOr<SQLSMALLINT> GetDecimalDigits(TableFieldSchema field_schema) {
   return result;
 }
 
-StatusRecordOr<SQLSMALLINT> GetRadix(TableFieldSchema field_schema) {
+StatusRecordOr<SQLSMALLINT> GetRadix(TableFieldSchema const& field_schema) {
   SQLSMALLINT radix = (field_schema.scale >= 0 && field_schema.precision >= 0)
                           ? 10
                           : ((field_schema.precision >= 0) ? 2 : SQL_NULL_DATA);
