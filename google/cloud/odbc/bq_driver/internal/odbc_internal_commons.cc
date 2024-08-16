@@ -445,4 +445,14 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
+bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs) {
+  return (lhs.col_index == rhs.col_index && lhs.col_type == rhs.col_type);
+}
+bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs) {
+  return (lhs.col_index > rhs.col_index);
+}
+bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs) {
+  return (lhs.col_index < rhs.col_index);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

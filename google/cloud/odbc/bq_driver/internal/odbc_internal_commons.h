@@ -77,6 +77,9 @@ struct ColumnSchema {
   int col_index;
   BQDataType col_type;
 };
+bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
+bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
+bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs);
 
 // Data Source Value.
 using DSValue = std::vector<char>;
