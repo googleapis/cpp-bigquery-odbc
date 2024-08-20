@@ -333,13 +333,23 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
     // Col4: column name, Col5: key sequence , Col6: primary key
     // Note: ODBC coumns typically start from 1, but catalog_result
     // will be populated starting from index 0
-    std::string table_cat = (char*)catalog_result[0].target_value;
-    std::string table_schema = (char*)catalog_result[1].target_value;
-    std::string table_name = (char*)catalog_result[2].target_value;
-    std::string col_name = (char*)catalog_result[3].target_value;
+    std::string table_cat = (catalog_result[0].str_len != SQL_NULL_DATA)
+                                ? (char*)catalog_result[0].target_value
+                                : "";
+    std::string table_schema = (catalog_result[1].str_len != SQL_NULL_DATA)
+                                   ? (char*)catalog_result[1].target_value
+                                   : "";
+    std::string table_name = (catalog_result[2].str_len != SQL_NULL_DATA)
+                                 ? (char*)catalog_result[2].target_value
+                                 : "";
+    std::string col_name = (catalog_result[3].str_len != SQL_NULL_DATA)
+                               ? (char*)catalog_result[3].target_value
+                               : "";
     SQLSMALLINT* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[4].target_value);
-    std::string pk_name = (char*)catalog_result[5].target_value;
+    std::string pk_name = (catalog_result[5].str_len != SQL_NULL_DATA)
+                              ? (char*)catalog_result[5].target_value
+                              : "";
 
     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
@@ -475,18 +485,38 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
     // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
     // Col10: fk name, Col11: pk name.
-    std::string pk_table_cat = (char*)catalog_result[0].target_value;
-    std::string pk_table_schema = (char*)catalog_result[1].target_value;
-    std::string pk_table_name = (char*)catalog_result[2].target_value;
-    std::string pk_col_name = (char*)catalog_result[3].target_value;
-    std::string fk_table_cat = (char*)catalog_result[4].target_value;
-    std::string fk_table_schema = (char*)catalog_result[5].target_value;
-    std::string fk_table_name = (char*)catalog_result[6].target_value;
-    std::string fk_col_name = (char*)catalog_result[7].target_value;
+    std::string pk_table_cat = (catalog_result[0].str_len != SQL_NULL_DATA)
+                                   ? (char*)catalog_result[0].target_value
+                                   : "";
+    std::string pk_table_schema = (catalog_result[1].str_len != SQL_NULL_DATA)
+                                      ? (char*)catalog_result[1].target_value
+                                      : "";
+    std::string pk_table_name = (catalog_result[2].str_len != SQL_NULL_DATA)
+                                    ? (char*)catalog_result[2].target_value
+                                    : "";
+    std::string pk_col_name = (catalog_result[3].str_len != SQL_NULL_DATA)
+                                  ? (char*)catalog_result[3].target_value
+                                  : "";
+    std::string fk_table_cat = (catalog_result[4].str_len != SQL_NULL_DATA)
+                                   ? (char*)catalog_result[4].target_value
+                                   : "";
+    std::string fk_table_schema = (catalog_result[5].str_len != SQL_NULL_DATA)
+                                      ? (char*)catalog_result[5].target_value
+                                      : "";
+    std::string fk_table_name = (catalog_result[6].str_len != SQL_NULL_DATA)
+                                    ? (char*)catalog_result[6].target_value
+                                    : "";
+    std::string fk_col_name = (catalog_result[7].str_len != SQL_NULL_DATA)
+                                  ? (char*)catalog_result[7].target_value
+                                  : "";
     SQLSMALLINT* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
-    std::string fk_name = (char*)catalog_result[9].target_value;
-    std::string pk_name = (char*)catalog_result[10].target_value;
+    std::string fk_name = (catalog_result[9].str_len != SQL_NULL_DATA)
+                              ? (char*)catalog_result[9].target_value
+                              : "";
+    std::string pk_name = (catalog_result[10].str_len != SQL_NULL_DATA)
+                              ? (char*)catalog_result[10].target_value
+                              : "";
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
@@ -511,28 +541,6 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
-/*
-  std::string project_name;
-  std::string dataset_name;
-  std::string table_name;
-  std::string column_name;
-  std::string description;
-  std::string col_type_name;
-  std::string col_default;
-  std::string is_nullable;
-
-  SQLSMALLINT data_type;
-  SQLSMALLINT sql_data_type;
-  SQLSMALLINT sql_date_time_sub;
-  SQLSMALLINT decimal_digits;
-  SQLSMALLINT radix;
-  SQLSMALLINT nullable;
-
-  SQLINTEGER col_size;
-  SQLINTEGER buffer_len;
-  SQLINTEGER char_octet_len;
-  SQLINTEGER ord_pos;
-*/
 bool operator==(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
   return (
       lhs.project_name == rhs.project_name &&
