@@ -528,6 +528,6 @@ TEST(DataTranslationTest, From_SQL_Time_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
