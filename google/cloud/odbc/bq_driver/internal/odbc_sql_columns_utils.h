@@ -16,6 +16,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_COLUMNS_UTILS_H
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -60,6 +61,12 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     SQLSMALLINT data_type);
+
+odbc_internal::StatusRecord ValidateColumnParameters(
+    const SQLCHAR* catalog_name, const SQLSMALLINT catalog_name_len,
+    SQLCHAR* schema_name, const SQLSMALLINT schema_name_len,
+    SQLCHAR* table_name, const SQLSMALLINT table_name_len, SQLCHAR* column_name,
+    const SQLSMALLINT column_name_len, SQLULEN metadata_id);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

@@ -131,6 +131,12 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 
 odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
 
+// Common validation used by both SQLTables and SQLColumns
+odbc_internal::StatusRecord ValidateTableParameters(
+    const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
+    const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
+
 std::string GetPathToOdbcIni();
 
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
@@ -142,6 +148,36 @@ inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
 }
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types);
+
+std::regex BuildRegex(std::string filter_pattern, SQLULEN metadata_id);
+
+inline bool IsSearchPatternArgument(std::string const& arg) {
+  return (absl::StrContains(arg, "_") || absl::StrContains(arg, "%") ||
+          absl::StrContains(arg, "\\"));
+}
+
+inline bool IsQuotedIDArgument(std::string const& arg) {
+  return (absl::StrContains(arg, "'") || absl::StrContains(arg, "\""));
+}
+
+inline void RemoveQuotes(std::string& str) {
+  str.erase(std::remove(str.begin(), str.end(), '\''), str.end());
+  str.erase(std::remove(str.begin(), str.end(), '\"'), str.end());
+}
+
+inline void SanitizeIdentifierArgument(std::string& id_arg) {
+  if (IsQuotedIDArgument(id_arg)) {
+    // For quotes arguments, remove leading and trailing blanks and remove
+    // quotes
+    Trim(id_arg);
+    RemoveQuotes(id_arg);
+  } else {
+    // For non-quoted args, remove trailing blanks and convert the string to
+    // upper case.
+    RTrim(id_arg);
+    std::transform(id_arg.begin(), id_arg.end(), id_arg.begin(), ::toupper);
+  }
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

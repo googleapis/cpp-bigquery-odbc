@@ -387,4 +387,49 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   }
   return Utf16ToUtf8(stmt_txt_wstr);
 }
+
+std::regex BuildRegex(std::string filter_pattern, SQLULEN metadata_id) {
+  if (metadata_id == SQL_TRUE) {
+    RTrim(filter_pattern);
+    return std::regex(filter_pattern, std::regex_constants::icase);
+  }
+  return std::regex(CastOdbcRegexToCppRegex(filter_pattern));
+}
+
+StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
+                                     SQLSMALLINT catalog_name_len,
+                                     const SQLCHAR* schema_name,
+                                     SQLSMALLINT schema_name_len,
+                                     const SQLCHAR* table_name,
+                                     SQLSMALLINT table_name_len,
+                                     SQLULEN metadata_id) {
+  if (catalog_name_len < 0 && catalog_name_len != SQL_NTS) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid buffer length - catalog length is invalid"};
+  }
+  if (schema_name_len < 0 && schema_name_len != SQL_NTS) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid buffer length - schema length is invalid"};
+  }
+  if (table_name_len < 0 && table_name_len != SQL_NTS) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid buffer length - table name length is invalid"};
+  }
+  if (metadata_id == SQL_TRUE) {
+    if (!catalog_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for catalog name"};
+    }
+    if (!schema_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for schema name"};
+    }
+    if (!table_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for table name"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

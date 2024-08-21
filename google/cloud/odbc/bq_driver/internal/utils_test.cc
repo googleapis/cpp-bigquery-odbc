@@ -355,4 +355,70 @@ TEST(UnicodeConversion, EmptyData_Utf16ToUtf8) {
   EXPECT_THAT(result_str, StatusRecordIs(SQLStates::k_HY000(),
                                          HasSubstr("string is empty/Null")));
 }
+
+TEST(IsSearchPatternArgument, SearchPattern_Percent) {
+  EXPECT_TRUE(IsSearchPatternArgument("%"));
+}
+
+TEST(IsSearchPatternArgument, SearchPattern_Underscore) {
+  EXPECT_TRUE(IsSearchPatternArgument("_"));
+}
+
+TEST(IsSearchPatternArgument, SearchPattern_Escape) {
+  EXPECT_TRUE(IsSearchPatternArgument("\\"));
+}
+
+TEST(IsSearchPatternArgument, OrdinaryArgument) {
+  EXPECT_FALSE(IsSearchPatternArgument("ordinary"));
+}
+
+TEST(IsQuotedIDArgument, SingleQuote) {
+  EXPECT_TRUE(IsQuotedIDArgument("'arg'"));
+}
+
+TEST(IsQuotedIDArgument, DoubleQuotes) {
+  EXPECT_TRUE(IsQuotedIDArgument("\"arg\""));
+}
+
+TEST(IsQuotedIDArgument, NoQuotes) { EXPECT_FALSE(IsQuotedIDArgument("arg")); }
+
+TEST(RemoveQuotes, SingleQuote) {
+  std::string in("'test'");
+  RemoveQuotes(in);
+  EXPECT_EQ(in, "test");
+}
+
+TEST(RemoveQuotes, DoubleQuotes) {
+  std::string in("\"test\"");
+  RemoveQuotes(in);
+  EXPECT_EQ(in, "test");
+}
+
+TEST(RemoveQuotes, NoQuotes) {
+  std::string in("test");
+  RemoveQuotes(in);
+  EXPECT_EQ(in, "test");
+
+  RemoveQuotes(in);
+  EXPECT_EQ(in, "test");
+}
+
+TEST(SanitizeIdentifierArgument, QuotedArgument_SingleQuote) {
+  std::string arg("      'test'     ");
+  SanitizeIdentifierArgument(arg);
+  EXPECT_EQ(arg, "test");
+}
+
+TEST(SanitizeIdentifierArgument, QuotedArgument_DoubleQuotes) {
+  std::string arg("      \"test\"     ");
+  SanitizeIdentifierArgument(arg);
+  EXPECT_EQ(arg, "test");
+}
+
+TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
+  std::string arg(" test     ");
+  SanitizeIdentifierArgument(arg);
+  EXPECT_EQ(arg, " TEST");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

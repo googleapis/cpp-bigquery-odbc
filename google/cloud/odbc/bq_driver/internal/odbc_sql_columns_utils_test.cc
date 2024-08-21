@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -22,6 +23,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
+using ::google::cloud::odbc_internal::StatusRecord;
+using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_bq_driver_utils::CastToSQLCHAR;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 using ::testing::StrEq;
@@ -462,6 +466,61 @@ TEST(GetCharOctetLen, InvalidType) {
   EXPECT_THAT(invalid_status,
               StatusRecordIs(SQLStates::k_HY000(),
                              StrEq("Invalid Data Type: Invalid")));
+}
+
+TEST(ValidateColumnParameters, Success_MetadataId_TRUE) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_TRUE);
+
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ValidateColumnParameters, Success_MetadataId_FALSE) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_FALSE);
+
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ValidateColumnParameters, Success_EmptyColumn) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR(""), 0, SQL_FALSE);
+
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ValidateColumnParameters, Failure_ColumnNameLengthNegative) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), -6, SQL_TRUE);
+
+  EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
+  EXPECT_THAT(status.message, HasSubstr("column length is invalid"));
+}
+
+TEST(ValidateColumnParameters,
+     Failure_CatalogNameIsSearchPattern_MetadataId_TRUE) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_TRUE);
+
+  EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
+  EXPECT_THAT(status.message,
+              HasSubstr("Catalog name cannot be a search pattern"));
+}
+
+TEST(ValidateColumnParameters,
+     Failure_CatalogNameIsSearchPattern_MetadataId_FALSE) {
+  StatusRecord status = ValidateColumnParameters(
+      CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
+      CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_FALSE);
+
+  EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
+  EXPECT_THAT(status.message,
+              HasSubstr("Catalog name cannot be a search pattern"));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
