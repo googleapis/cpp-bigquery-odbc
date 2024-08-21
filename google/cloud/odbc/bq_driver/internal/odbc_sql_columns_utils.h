@@ -63,10 +63,11 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     SQLSMALLINT data_type);
 
 odbc_internal::StatusRecord ValidateColumnParameters(
-    const SQLCHAR* catalog_name, const SQLSMALLINT catalog_name_len,
-    SQLCHAR* schema_name, const SQLSMALLINT schema_name_len,
-    SQLCHAR* table_name, const SQLSMALLINT table_name_len, SQLCHAR* column_name,
-    const SQLSMALLINT column_name_len, SQLULEN metadata_id);
+    const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
+    const SQLCHAR* table_name, SQLSMALLINT table_name_len,
+    const SQLCHAR* column_name, SQLSMALLINT column_name_len,
+    SQLULEN metadata_id);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
