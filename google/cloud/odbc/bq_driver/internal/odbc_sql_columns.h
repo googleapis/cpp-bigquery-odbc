@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <map>
+#include <regex>
 #include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -72,7 +73,7 @@ FetchBQTableData(ConnectionHandle& conn_handle, std::string const& catalog,
 // resultset would include metadata information for all columns in the table.
 odbc_internal::StatusRecordOr<ResultSet> ProcessTableResults(
     ::google::cloud::bigquery_v2_minimal_internal::Table const& bq_table,
-    std::string const& bq_table_column = "");
+    std::string const& bq_table_column, SQLULEN metadata_id = SQL_FALSE);
 
 // Helper functions
 odbc_internal::StatusRecord CreateResultSetRowSchema(ResultSet& result_set);

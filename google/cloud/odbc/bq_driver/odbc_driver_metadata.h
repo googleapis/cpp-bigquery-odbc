@@ -123,6 +123,21 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             SQLSMALLINT table_name_len, SQLCHAR* table_type,
                             SQLSMALLINT table_type_len);
 
+// Implements the semantics for SQLColumns ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// Design Doc: http://goto.google.com/odbc_sql_columns_design
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function?view=sql-server-ver16
+SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
+                             SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+                             SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+                             SQLSMALLINT table_name_len, SQLCHAR* column_name,
+                             SQLSMALLINT column_name_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

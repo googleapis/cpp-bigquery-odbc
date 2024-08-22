@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
@@ -27,8 +29,8 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DSResults;
+using google::cloud::odbc_bq_driver_internal::FetchBQTableData;
 using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
-using google::cloud::odbc_bq_driver_internal::FetchPrimaryKeysFromDataSource;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
@@ -41,7 +43,9 @@ using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
 using google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
+using google::cloud::odbc_bq_driver_internal::ProcessTableResults;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
+using google::cloud::odbc_bq_driver_internal::SanitizeIdentifierArgument;
 using google::cloud::odbc_bq_driver_internal::SQLGetInfoBitmask;
 using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlChar;
 using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUInt;
@@ -52,6 +56,7 @@ using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::ValidateColumnParameters;
 using google::cloud::odbc_bq_driver_internal::ValidateInputParameters;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -389,6 +394,89 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
+                             SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+                             SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+                             SQLSMALLINT table_name_len, SQLCHAR* column_name,
+                             SQLSMALLINT column_name_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  StatusRecordOr<SQLULEN> attr_status =
+      handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  if (!attr_status) {
+    return LogAndReturnCode(handle, attr_status);
+  }
+  SQLULEN metadata_id = *attr_status;
+
+  auto input_param_status = ValidateColumnParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
+      table_name_len, column_name, column_name_len, metadata_id);
+  if (!input_param_status.ok()) {
+    return LogAndReturnCode(handle, input_param_status);
+  }
+  // catalog_name cannot be search pattern.
+  std::string s_catalog_name = ToCharStr(catalog_name);
+  // Rest of the arguments can have search pattern characters.
+  std::string s_dataset_name = ToCharStr(schema_name, kMatchAll);
+  std::string s_table_name = ToCharStr(table_name, kMatchAll);
+  std::string s_column_name = ToCharStr(column_name, kMatchAll);
+
+  // For metadata_id == SQL_TRUE, all parameters are ID Arguments.
+  // Sanitize the ID arguments before fetching data from BQ.
+  // For sanitization rules see:
+  // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/identifier-arguments?view=sql-server-ver16
+  if (metadata_id == SQL_TRUE) {
+    SanitizeIdentifierArgument(s_catalog_name);
+    SanitizeIdentifierArgument(s_dataset_name);
+    SanitizeIdentifierArgument(s_table_name);
+    SanitizeIdentifierArgument(s_column_name);
+  }
+
+  if (handle.GetConnectionHandle() == nullptr) {
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
+  }
+
+  // Fetch BQ Table
+  // TODO: Add Filtering Logic to FetchBQTableData() similar to
+  // ProcessTableResults.
+  auto table_data_status = FetchBQTableData(conn_handle, s_catalog_name,
+                                            s_dataset_name, s_table_name);
+  if (!table_data_status) {
+    return LogAndReturnCode(handle, table_data_status);
+  }
+
+  // Process Table Results
+  StatusRecordOr<ResultSet> result_set_status =
+      ProcessTableResults(*table_data_status, s_column_name, metadata_id);
+
+  if (!result_set_status) {
+    return LogAndReturnCode(handle, result_set_status);
+  }
+
+  if (!result_set_status->rows.empty()) {
+    handle.SetResultSet(*result_set_status);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  } else {
+    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  }
+
+  return LogAndReturnCode(handle, result_set_status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

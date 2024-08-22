@@ -498,7 +498,7 @@ TEST(ValidateColumnParameters, Failure_ColumnNameLengthNegative) {
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), -6, SQL_TRUE);
 
   EXPECT_EQ(SQLStates::k_HY090(), status.sql_state);
-  EXPECT_THAT(status.message, HasSubstr("column length is invalid"));
+  EXPECT_THAT(status.message, HasSubstr("column name length is invalid"));
 }
 
 TEST(ValidateColumnParameters,

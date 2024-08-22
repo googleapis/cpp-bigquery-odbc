@@ -49,22 +49,21 @@ std::string const kDsnName = "SampleDSN";
 
 std::string const kCatalog = "test-catalog";
 std::string const kDataset = "test-schema";
+std::string const kColumn = "test-column";
 std::string const kPKTable = "pk-test-table";
 std::string const kFKTable = "fk-test-table";
 
-SQLCHAR* const kSqlCatalog =
-    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kCatalog.c_str()));
-SQLCHAR* const kSqlDataset =
-    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kDataset.c_str()));
-SQLCHAR* const kSqlPKTable =
-    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kPKTable.c_str()));
-SQLCHAR* const kSqlFKTable =
-    reinterpret_cast<SQLCHAR*>(const_cast<char*>(kFKTable.c_str()));
+SQLCHAR* const kSqlCatalog = ToSqlChar(kCatalog.c_str());
+SQLCHAR* const kSqlDataset = ToSqlChar(kDataset.c_str());
+SQLCHAR* const kSqlColumn = ToSqlChar(kColumn.c_str());
+SQLCHAR* const kSqlPKTable = ToSqlChar(kPKTable.c_str());
+SQLCHAR* const kSqlFKTable = ToSqlChar(kFKTable.c_str());
 
 SQLCHAR const kSqlEmpty[256] = "";
 
 SQLSMALLINT const kSqlCatalogLen = kCatalog.length();
 SQLSMALLINT const kSqlDatasetLen = kDataset.length();
+SQLSMALLINT const kSqlColumnLen = kColumn.length();
 SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 SQLSMALLINT const kSqlFKTableLen = kFKTable.length();
 
@@ -881,6 +880,102 @@ TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
                                        kSqlPKTable, 7, kSqlFKTable, 7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+}
+
+TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, -7, kSqlDataset, kSqlDatasetLen, kSqlPKTable,
+      kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - catalog length is invalid");
+}
+
+TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, -7, kSqlPKTable,
+      kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - schema length is invalid");
+}
+
+TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlPKTable, -7, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - table name length is invalid");
+}
+
+TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlPKTable, kSqlPKTableLen, kSqlColumn, -7);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message,
+            "Invalid buffer length - column name length is invalid");
+}
+
+TEST(SQLColumnsInternal, Failure_CatalogNameIsSearchPattern) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Catalog name cannot be a search pattern");
+}
+
+TEST(SQLColumnsInternal, Failure_NullConnectionHandle) {
+  StatementHandle handle;
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlPKTable, kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY013());
+  EXPECT_EQ(status_record.message, "Internal connection handle is null");
+}
+
+TEST(SQLColumnsInternal, Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlPKTable, kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
 
   ASSERT_EQ(SQL_ERROR, status);
   StatusRecord status_record = GetLastStatusRecord(handle);

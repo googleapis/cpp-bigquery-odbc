@@ -211,8 +211,9 @@ odbc_internal::StatusRecord ValidateColumnParameters(
     return status_record;
   }
   if (column_name_len < 0 && column_name_len != SQL_NTS) {
-    return StatusRecord{SQLStates::k_HY090(),
-                        "Invalid buffer length - column length is invalid"};
+    return StatusRecord{
+        SQLStates::k_HY090(),
+        "Invalid buffer length - column name length is invalid"};
   }
   // Validate SQLColumns specific parameters.
 

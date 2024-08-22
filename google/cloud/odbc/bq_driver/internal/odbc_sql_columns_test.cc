@@ -171,7 +171,8 @@ std::vector<ColumnSchema> CreateExpectedRowSchema() {
   return expected;
 }
 
-void ProcessTableResultsHelper(std::string column) {
+void ProcessTableResultsHelper(std::string column,
+                               SQLULEN metadata_id = SQL_FALSE) {
   TableFieldSchema field_schema1;
   field_schema1.name = "StringField";
   field_schema1.type = "STRING";
@@ -194,7 +195,7 @@ void ProcessTableResultsHelper(std::string column) {
   table.schema.fields.emplace_back(field_schema1);
   table.schema.fields.emplace_back(field_schema2);
 
-  auto result_set_status = ProcessTableResults(table, column);
+  auto result_set_status = ProcessTableResults(table, column, metadata_id);
   ASSERT_STATUS_RECORD_OK(result_set_status);
 
   ResultSet result_set = *result_set_status;
@@ -229,18 +230,23 @@ void ProcessTableResultsHelper(std::string column) {
   expected_sql_int_row.ord_pos = 2;
   expected_sql_int_row.is_nullable = "NO";
 
-  if (column == "" || column == "%") {
+  std::regex column_pattern = BuildRegex(column, metadata_id);
+
+  if (!metadata_id && (column == "" || column == "%")) {
     ASSERT_EQ(result_set.rows.size(), 2);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
     VerifyDSRow(result_set.rows[1], expected_sql_int_row);
-  } else if (column == field_schema1.name) {
+  } else if (std::regex_match(field_schema1.name, column_pattern)) {
     ASSERT_EQ(result_set.rows.size(), 1);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
-  } else if (column == field_schema2.name) {
+  } else if (std::regex_match(field_schema2.name, column_pattern)) {
     ASSERT_EQ(result_set.rows.size(), 1);
     VerifyDSRow(result_set.rows[0], expected_sql_int_row);
+  } else {
+    ASSERT_TRUE(result_set.rows.empty());
   }
 }
+
 }  // namespace
 
 TEST(CreateResultSetRowSchema, Success) {
@@ -581,20 +587,84 @@ TEST(FetchBQTableData, failure_invalid_connection_handle) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName) {
+TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName_FALSE) {
   ProcessTableResultsHelper("");
 }
 
-TEST(ProcessTableResults, AllColumns_UsingSearchPattern) {
+TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName_TRUE) {
+  ProcessTableResultsHelper("", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, AllColumns_UsingSearchPattern_FALSE) {
   ProcessTableResultsHelper("%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn) {
+TEST(ProcessTableResults, AllColumns_UsingSearchPattern_TRUE) {
+  ProcessTableResultsHelper("%", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_FALSE) {
   ProcessTableResultsHelper("StringField");
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_TRUE) {
+  ProcessTableResultsHelper("StringField", SQL_TRUE);
 }
 
 TEST(ProcessTableResults, SpecificColumn_SecondColumn) {
   ProcessTableResultsHelper("IntField");
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_TRUE) {
+  ProcessTableResultsHelper("IntField", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1) {
+  ProcessTableResultsHelper("%StringField");
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1_TRUE) {
+  ProcessTableResultsHelper("%StringField", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1) {
+  ProcessTableResultsHelper("%IntField");
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1_TRUE) {
+  ProcessTableResultsHelper("%IntField", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2) {
+  ProcessTableResultsHelper("StringField%");
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2_TRUE) {
+  ProcessTableResultsHelper("StringField%", SQL_TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2) {
+  ProcessTableResultsHelper("IntField%");
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2_TRUE) {
+  ProcessTableResultsHelper("IntField%", TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3) {
+  ProcessTableResultsHelper("%StringField%");
+}
+
+TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3_TRUE) {
+  ProcessTableResultsHelper("%StringField%", TRUE);
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3) {
+  ProcessTableResultsHelper("%IntField%");
+}
+
+TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3_TRUE) {
+  ProcessTableResultsHelper("%IntField%", TRUE);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

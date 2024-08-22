@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -217,7 +218,8 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<ResultSet> ProcessTableResults(
-    Table const& bq_table, std::string const& bq_table_column) {
+    Table const& bq_table, std::string const& bq_table_column,
+    SQLULEN metadata_id) {
   ResultSet result_set;
   // Populate Row Schema for the ResultSet.
   auto row_schema_status = CreateResultSetRowSchema(result_set);
@@ -225,7 +227,7 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     return row_schema_status;
   }
   // Now populate data for the resultset from the BQ Table.
-  if (bq_table_column.empty() || bq_table_column == "%") {
+  if (!metadata_id && (bq_table_column.empty() || bq_table_column == "%")) {
     // Puts all columns in the result set.
     // Each table_field_schema entry below represents
     // a ResultSetRow that has all the ODBC fields as mentioned in
@@ -247,7 +249,10 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     // usecase, number of rows in the resultset = 1.
     int ord_pos = 1;
     for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
-      if (bq_table_column == table_field_schema.name) {
+      // bq_table_column could contain a search pattern character so do a regex
+      // match.
+      std::regex column_pattern = BuildRegex(bq_table_column, metadata_id);
+      if (std::regex_match(table_field_schema.name, column_pattern)) {
         auto ds_row_status = CreateResultSetDSRow(
             bq_table.table_reference.project_id,
             bq_table.table_reference.dataset_id,
