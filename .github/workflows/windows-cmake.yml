@@ -114,7 +114,7 @@ jobs:
         export CMAKE_OUT='c:\b'
         export MSVC_VERSION="${{ matrix.msvc }}"
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="cpp-bigquery-odbc/ci/gha/builds/lib/system_dsn_setup_64.reg"
+        CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=$GITHUB_WORKSPACE/service_account_auth_keys.json
         # TODO(b/357810060): Enable x86 arch
         if [ "${{ matrix.msvc }}" == "msvc-2022" ] && [ "${{ matrix.arch }}" == "x64" ]; then
           ci/gha/builds/windows-cmake-integration.sh
