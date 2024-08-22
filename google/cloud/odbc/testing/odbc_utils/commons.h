@@ -151,6 +151,16 @@ struct ExpectedDescriptorConfig {
   SQLINTEGER desc_datetime_precision;
 };
 
+struct SQL_DATETIME_STRUCT {
+  SQLSMALLINT year;
+  SQLUSMALLINT month;
+  SQLUSMALLINT day;
+  SQLUSMALLINT hour;
+  SQLUSMALLINT minute;
+  SQLUSMALLINT second;
+  SQLUINTEGER fraction;
+};
+
 static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kAppDescTestMap = {
     {SQL_C_CHAR, {SQL_C_CHAR, SQL_C_CHAR, 0, 1, 1, 0, 1}},
     {SQL_C_BINARY, {SQL_C_BINARY, SQL_C_BINARY, 0, 1, 1, 0, 1}},
@@ -327,10 +337,6 @@ class Table {
 std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
-
-std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
-
-std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
