@@ -453,7 +453,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   // Fetch BQ Table
-  // TODO: Add Filtering Logic to FetchBQTableData() similar to
+  // TODO(jsrinnn): Add Filtering Logic to FetchBQTableData() similar to
   // ProcessTableResults.
   auto table_data_status = FetchBQTableData(conn_handle, s_catalog_name,
                                             s_dataset_name, s_table_name);
