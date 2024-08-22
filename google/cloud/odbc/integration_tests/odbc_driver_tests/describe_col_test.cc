@@ -30,7 +30,7 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
-  SQLSMALLINT num_columns;
+  SQLSMALLINT num_columns = NULL;
   status = SQLNumResultCols(conn->hstmt, &num_columns);
   CheckError(status, "SQLNumResultCols", conn);
   status =
@@ -43,7 +43,7 @@ TEST(SQLDescribeColumn, DescribeAllColumns) {
     SQLULEN column_size = 0;
     SQLSMALLINT decimal_digits = 0;
     SQLSMALLINT nullable = 0;
-    SQLCHAR column_name[kBufferLength];
+    SQLCHAR column_name[kBufferLength] = "";
     SQLSMALLINT column_name_len = 0;
 
     status = SQLDescribeCol(conn->hstmt, i, column_name, kBufferLength,

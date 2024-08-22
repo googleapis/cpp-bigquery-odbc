@@ -597,7 +597,7 @@ TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLCHAR cursor_name[kBufferLength] = "INSERT_CURSOR",
-          cursor_name_ret[kBufferLength];
+          cursor_name_ret[kBufferLength] = "";
 
   auto status = SQLSetCursorName(conn->hstmt, cursor_name, kBufferLength);
   CheckError(status, "SQLSetCursorName", conn);
@@ -614,7 +614,7 @@ TEST(StatementTest, SQLSetCursorName) {
   ////////////////
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   SQLCHAR cursor_name_ansi[kBufferLength] = "INSERT_CURSOR_ANSI",
-          cursor_name_ret_ansi[kBufferLength];
+          cursor_name_ret_ansi[kBufferLength] = "";
 
   status = SQLSetCursorNameA(conn->hstmt, cursor_name_ansi, kBufferLength);
   CheckError(status, "SQLSetCursorName", conn, true);
@@ -631,7 +631,7 @@ TEST(StatementTest, SQLSetCursorName) {
 TEST(StatementTest, SQLGetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLCHAR cursor_name_ret[kBufferLength];
+  SQLCHAR cursor_name_ret[kBufferLength] = "";
 
   std::string query = "SELECT 1;";
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
@@ -1292,7 +1292,7 @@ TEST(SQLPrepare, StatementFailure) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string query = "Select * from NON_EXISTENT_TABLE";
+  std::string query = "Select * from NON_EXISTENT_DATASET.NON_EXISTENT_TABLE";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 

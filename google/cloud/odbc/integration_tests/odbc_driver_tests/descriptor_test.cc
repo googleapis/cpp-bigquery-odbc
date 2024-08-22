@@ -19,17 +19,17 @@ namespace google::cloud::odbc_tests {
 // Defines the idiomatic ODBC descriptors
 // These fields can populated by a call to SQLGetDescRec
 struct Descriptor {
-  SQLSMALLINT string_len;
-  SQLSMALLINT type;
-  SQLSMALLINT sub_type;
-  SQLLEN length;
-  SQLSMALLINT precision;
-  SQLSMALLINT scale;
-  SQLSMALLINT nullable;
-  SQLCHAR name[kBufferLength];
-  SQLPOINTER data_ptr;
-  SQLLEN* string_length_ptr;
-  SQLLEN* indicator_ptr;
+  SQLSMALLINT string_len = NULL;
+  SQLSMALLINT type = NULL;
+  SQLSMALLINT sub_type = NULL;
+  SQLLEN length = NULL;
+  SQLSMALLINT precision = NULL;
+  SQLSMALLINT scale = NULL;
+  SQLSMALLINT nullable = NULL;
+  SQLCHAR name[kBufferLength] = "";
+  SQLPOINTER data_ptr = nullptr;
+  SQLLEN* string_length_ptr = NULL;
+  SQLLEN* indicator_ptr = NULL;
 };
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver

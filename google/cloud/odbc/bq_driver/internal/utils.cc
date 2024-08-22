@@ -98,6 +98,7 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
                                           buffer, &data_len);
       if (query_status == ERROR_SUCCESS) {
         std::string value(reinterpret_cast<char*>(buffer), data_len);
+        value.erase(std::find(value.begin(), value.end(), '\0'), value.end());
         section[std::string(property_name)] = value;
       }
     }

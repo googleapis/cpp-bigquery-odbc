@@ -27,10 +27,10 @@ TEST(DiagnosticsTest, SQLGetDiagRec) {
   EXPECT_EQ(status, SQL_ERROR);
 
   // Get Diagnostics info
-  SQLCHAR buf[kBufferLength];
-  SQLCHAR sqlstate[6];
-  SQLINTEGER native_error;
-  SQLSMALLINT string_length_ptr;
+  SQLCHAR buf[kBufferLength] = "";
+  SQLCHAR sqlstate[6] = "";
+  SQLINTEGER native_error = NULL;
+  SQLSMALLINT string_length_ptr = NULL;
 
   status = SQLGetDiagRec(SQL_HANDLE_DBC, conn->hdbc, 1, sqlstate, &native_error,
                          buf, kBufferLength, &string_length_ptr);
@@ -63,10 +63,10 @@ TEST(DiagnosticsTest, SQLGetDiagRec_ANSI) {
   EXPECT_EQ(status, SQL_ERROR);
 
   // Get Diagnostics info
-  SQLCHAR buf[kBufferLength];
-  SQLCHAR sqlstate[6];
-  SQLINTEGER native_error;
-  SQLSMALLINT string_length_ptr;
+  SQLCHAR buf[kBufferLength] = "";
+  SQLCHAR sqlstate[6] = "";
+  SQLINTEGER native_error = NULL;
+  SQLSMALLINT string_length_ptr = NULL;
 
   status =
       SQLGetDiagRecA(SQL_HANDLE_DBC, conn->hdbc, 1, sqlstate, &native_error,
