@@ -648,7 +648,7 @@ TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2) {
 }
 
 TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2_TRUE) {
-  ProcessTableResultsHelper("IntField%", TRUE);
+  ProcessTableResultsHelper("IntField%", SQL_TRUE);
 }
 
 TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3) {
@@ -656,7 +656,7 @@ TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3) {
 }
 
 TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3_TRUE) {
-  ProcessTableResultsHelper("%StringField%", TRUE);
+  ProcessTableResultsHelper("%StringField%", SQL_TRUE);
 }
 
 TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3) {
@@ -664,7 +664,7 @@ TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3) {
 }
 
 TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3_TRUE) {
-  ProcessTableResultsHelper("%IntField%", TRUE);
+  ProcessTableResultsHelper("%IntField%", SQL_TRUE);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
