@@ -29,7 +29,7 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DSResults;
-using google::cloud::odbc_bq_driver_internal::FetchBQTableData;
+using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
 using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
