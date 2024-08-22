@@ -452,9 +452,9 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                              "Connection to the data source is broken"});
   }
 
-  // Fetch BQ Table
-  // TODO(jsrinnn): Add Filtering Logic to FetchBQTableData() similar to
-  // ProcessTableResults.
+  // Fetch BQ Table. This particular call fetches a single table.
+  // TODO(jsrinnn): Add separate API to support search pattern in dataset and
+  // table name. This
   auto table_data_status = FetchBQTableData(conn_handle, s_catalog_name,
                                             s_dataset_name, s_table_name);
   if (!table_data_status) {
