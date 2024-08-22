@@ -151,6 +151,16 @@ struct ExpectedDescriptorConfig {
   SQLINTEGER desc_datetime_precision;
 };
 
+struct SQL_DATETIME_STRUCT {
+  SQLSMALLINT year;
+  SQLUSMALLINT month;
+  SQLUSMALLINT day;
+  SQLUSMALLINT hour;
+  SQLUSMALLINT minute;
+  SQLUSMALLINT second;
+  SQLUINTEGER fraction;
+};
+
 static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kAppDescTestMap = {
     {SQL_C_CHAR, {SQL_C_CHAR, SQL_C_CHAR, 0, 1, 1, 0, 1}},
     {SQL_C_BINARY, {SQL_C_BINARY, SQL_C_BINARY, 0, 1, 1, 0, 1}},
