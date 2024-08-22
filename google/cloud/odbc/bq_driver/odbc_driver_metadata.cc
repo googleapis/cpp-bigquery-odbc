@@ -453,30 +453,39 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   // Fetch BQ Table. This particular call fetches a single table.
-  // TODO(jsrinnn): Add separate API to support search pattern in dataset and
-  // table name. This
-  auto table_data_status = FetchBQTableData(conn_handle, s_catalog_name,
-                                            s_dataset_name, s_table_name);
-  if (!table_data_status) {
-    return LogAndReturnCode(handle, table_data_status);
+  auto filtered_tables_data_status = FetchBQTablesData(
+      conn_handle, s_catalog_name, s_dataset_name, s_table_name, metadata_id);
+  if (!filtered_tables_data_status) {
+    return LogAndReturnCode(handle, filtered_tables_data_status);
   }
 
-  // Process Table Results
-  StatusRecordOr<ResultSet> result_set_status =
-      ProcessTableResults(*table_data_status, s_column_name, metadata_id);
+  StatusRecordOr<ResultSet> final_result_set_status;
 
-  if (!result_set_status) {
-    return LogAndReturnCode(handle, result_set_status);
+  // Process Table Results for each table returned from the list above.
+  for (auto const& bq_table : *filtered_tables_data_status) {
+    StatusRecordOr<ResultSet> table_result_set_status =
+        ProcessTableResults(bq_table, s_column_name, metadata_id);
+
+    if (!table_result_set_status) {
+      return LogAndReturnCode(handle, table_result_set_status);
+    }
+    if (!table_result_set_status->rows.empty()) {
+      // Append the result set rows to the final results.
+      final_result_set_status->rows.insert(
+          final_result_set_status->rows.end(),
+          table_result_set_status->rows.begin(),
+          table_result_set_status->rows.end());
+    }
   }
 
-  if (!result_set_status->rows.empty()) {
-    handle.SetResultSet(*result_set_status);
+  if (!final_result_set_status->rows.empty()) {
+    handle.SetResultSet(*final_result_set_status);
     handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   } else {
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
-  return LogAndReturnCode(handle, result_set_status);
+  return LogAndReturnCode(handle, final_result_set_status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

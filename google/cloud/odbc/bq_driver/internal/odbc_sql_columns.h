@@ -65,6 +65,15 @@ odbc_internal::StatusRecordOr<
 FetchBQTableData(ConnectionHandle& conn_handle, std::string const& catalog,
                  std::string const& dataset, std::string const& table);
 
+// Similar to the above except handles cases where dataset name and table names
+// can have search pattern. In this case multiple tables matching the search
+// pattern would be returned.
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Table>>
+FetchBQTablesData(ConnectionHandle& conn_handle, std::string const& catalog,
+                  std::string const& dataset_pattern,
+                  std::string const& table_pattern, SQLULEN metadata_id);
+
 // Filters out the table column metadata information based on the column
 // supplied.
 // 1) If a bq_table_column is supplied, then only the specified column metadata

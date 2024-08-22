@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -26,6 +27,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -587,7 +589,127 @@ TEST(FetchBQTableData, failure_invalid_connection_handle) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName_FALSE) {
+TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_false) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_FALSE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_HY000(),
+                     HasSubstr("Catalog cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_true) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_TRUE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_HY000(),
+                     HasSubstr("Catalog cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_false) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_FALSE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_true) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_TRUE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_false) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_FALSE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Table pattern cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_true) {
+  ConnectionHandle handle;
+  auto status_record_or =
+      FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_TRUE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Table pattern cannot be empty for BQ Data source")));
+}
+
+TEST(FetchBQTablesData,
+     failure_invalid_connection_handle_with_metadata_id_false) {
+  ConnectionHandle handle;
+  auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
+                                            kTestTable, SQL_FALSE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_08S01(),
+                     HasSubstr("Connection to the data source is broken")));
+}
+
+TEST(FetchBQTablesData,
+     failure_invalid_connection_handle_with_metadata_id_true) {
+  ConnectionHandle handle;
+  auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
+                                            kTestTable, SQL_TRUE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_08S01(),
+                     HasSubstr("Connection to the data source is broken")));
+}
+
+TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_false) {
+  auto conn_handle = CreateConnectionHandle();
+
+  auto status_record_or = FetchBQTablesData(
+      conn_handle, kTestCatalog, kTestDataset, kTestTable, SQL_FALSE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Invalid or null BQ Client within the connection handle")));
+}
+
+TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_true) {
+  auto conn_handle = CreateConnectionHandle();
+
+  auto status_record_or = FetchBQTablesData(conn_handle, kTestCatalog,
+                                            kTestDataset, kTestTable, SQL_TRUE);
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Invalid or null BQ Client within the connection handle")));
+}
+
+TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName) {
   ProcessTableResultsHelper("");
 }
 

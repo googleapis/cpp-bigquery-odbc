@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -26,6 +27,8 @@ using ::google::cloud::odbc_bigquery_client_interface::TableFilter;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+std::string const kBaseTableType = "BASE TABLE";
 
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
@@ -267,5 +270,59 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     }
   }
   return result_set;
+}
+
+StatusRecordOr<std::vector<Table>> FetchBQTablesData(
+    ConnectionHandle& conn_handle, std::string const& catalog,
+    std::string const& dataset_pattern, std::string const& table_pattern,
+    SQLULEN metadata_id) {
+  std::vector<Table> result;
+  if (catalog.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Catalog cannot be empty for BQ Data source"};
+  }
+  if (dataset_pattern.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Dataset pattern cannot be empty for BQ Data source"};
+  }
+  if (table_pattern.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Table pattern cannot be empty for BQ Data source"};
+  }
+  if (!conn_handle.IsConnected()) {
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+  // Get Datasets based on search pattern in the dataset argument
+  StatusRecordOr<std::vector<std::string>> datasets_status =
+      GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern, metadata_id);
+  if (!datasets_status) {
+    return datasets_status.GetStatusRecord();
+  }
+  for (auto const& dataset : *datasets_status) {
+    // Get all tables matching the table pattern and dataset.
+    StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
+        GetFilteredTables(conn_handle, catalog, dataset, table_pattern,
+                          kBaseTableType, metadata_id);
+    if (!tables_status) {
+      return tables_status.GetStatusRecord();
+    }
+    // Get detailed information from BQ for each table returned.
+    for (auto const& filtered_table : *tables_status) {
+      StatusRecordOr<Table> bq_table_status = FetchBQTableData(
+          conn_handle, catalog, dataset, filtered_table.table_name);
+      if (!bq_table_status) {
+        return bq_table_status.GetStatusRecord();
+      }
+      result.push_back(*bq_table_status);
+    }
+  }
+  return result;
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
