@@ -417,7 +417,7 @@ struct DateTimeBasicTestStruct {
 };
 
 std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
-    //{SQL_C_WCHAR, {2024, 02, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
+    {SQL_C_WCHAR, {2024, 02, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
     {SQL_C_BINARY, {2024, 03, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, {2024, 04, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
     {SQL_C_TYPE_TIME, {2024, 05, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
@@ -469,13 +469,13 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        // std::wstring wstr(reinterpret_cast<wchar_t*>(data),
-        //                   strlen_or_ind / sizeof(wchar_t));
-        // std::string returned_val =
-        //     ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
-        //                             strlen_or_ind / sizeof(SQLWCHAR));
-        // EXPECT_EQ(returned_val, expected_val);
-        // break;
+        std::wstring wstr(reinterpret_cast<wchar_t*>(data),
+                          strlen_or_ind / sizeof(wchar_t));
+        std::string returned_val =
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
+                                    strlen_or_ind / sizeof(SQLWCHAR));
+        EXPECT_STREQ(returned_val.data(), expected_val.data());
+        break;
       }
       case SQL_C_BINARY: {
         if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
