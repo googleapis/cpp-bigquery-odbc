@@ -464,9 +464,11 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
+        std::wstring wstr(reinterpret_cast<wchar_t*>(data),
+                          strlen_or_ind / sizeof(wchar_t));
         std::string returned_val =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
+                                    strlen_or_ind / sizeof(SQLWCHAR));
         EXPECT_STREQ(returned_val.data(), expected_val.data());
         break;
       }
