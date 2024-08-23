@@ -16,7 +16,6 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -248,7 +247,6 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
-  desc_handle.ClearDescriptorRecordsMap();
   StatusRecord ird_response = PopulateIrd(desc_handle, schema);
   if (!ird_response.ok()) {
     return ird_response;
@@ -256,7 +254,6 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   DescriptorHandle& ipd_desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIPD);
-  ipd_desc_handle.ClearDescriptorRecordsMap();
   auto job_statistics = (*response).statistics;
   StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
   if (!ipd_response.ok()) {

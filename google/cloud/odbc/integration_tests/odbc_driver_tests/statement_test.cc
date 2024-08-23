@@ -1481,60 +1481,6 @@ TEST(SQLNumResultCols, CheckColumns) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void GetColumnCount(std::shared_ptr<ODBCHandles> conn, std::string query,
-                    SQLSMALLINT* colCount) {
-  SQLRETURN status;
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-  SQLSMALLINT numCols;
-  status = SQLNumResultCols(conn->hstmt, &numCols);
-  CheckError(status, "SQLNumResultCols", conn);
-  *colCount = numCols;
-}
-
-TEST(SQLNumResultCols, CheckColumnCount) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLRETURN status;
-  auto const table_name =
-      kDatasetWithTablePrefix +
-      "ODBC_INSERT_PARAMS_TEST_SQL_SQLNumResultCols_ColumnCount";
-  char insert_stmt[kBufferLength];
-  Table table(table_name);
-  table.CreateWithPrepare(conn,
-                          "(Index INTEGER, StringField STRING, IntegerField "
-                          "INTEGER, FloatField FLOAT64)");
-  SQLSMALLINT colCount = 0;
-
-  auto query = "SELECT Index FROM " + table_name;
-  GetColumnCount(conn, query, &colCount);
-  EXPECT_EQ(colCount, 1);
-
-  query = "SELECT Index,StringField  FROM " + table_name;
-  GetColumnCount(conn, query, &colCount);
-  EXPECT_EQ(colCount, 2);
-
-  query = "SELECT Index,FloatField  FROM " + table_name;
-  GetColumnCount(conn, query, &colCount);
-  EXPECT_EQ(colCount, 2);
-
-  query = "SELECT StringField,FloatField,IntegerField  FROM " + table_name;
-  GetColumnCount(conn, query, &colCount);
-  EXPECT_EQ(colCount, 3);
-
-  query = "SELECT * FROM " + table_name;
-  GetColumnCount(conn, query, &colCount);
-  EXPECT_EQ(colCount, 4);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLDescribeColumn, ValidateColumnDetails) {
   auto const table_name = "INTEGRATION_TESTS.Test_Table";
   Table table(table_name);
