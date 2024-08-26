@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <codecvt>
 #include <locale>
 #include <memory>
 #include <optional>
@@ -131,7 +132,14 @@ struct StdRow {
   SQLDOUBLE float_field;
 };
 
+struct StdUnicodeRow {
+  SQLBIGINT int_field;
+  std::wstring str_field1;
+  std::wstring str_field2;
+};
+
 using StdRows = std::vector<StdRow>;
+using StdUnicodeRows = std::vector<StdUnicodeRow>;
 
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
@@ -337,6 +345,9 @@ class Table {
 
   void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
                   bool use_ansi = false, bool use_sqlprepare = false);
+
+  void InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+                         StdUnicodeRows rows);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be
