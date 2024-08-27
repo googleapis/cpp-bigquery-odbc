@@ -269,10 +269,6 @@ void TestSQLColumns(std::string const column,
   std::vector<SQLColumnsResult> results =
       Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                           kSqlColumnsTable.c_str(), column.c_str());
-
-  //   for (auto const& result : results) {
-  //     PrintData(result);
-  //   }
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
