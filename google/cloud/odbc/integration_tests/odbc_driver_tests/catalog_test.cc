@@ -195,10 +195,9 @@ void VerifyColumnsResults(std::vector<SQLColumnsResult>& actual_results,
               expected_results[j].col_type_name)
         << "Mismatch type name: Actual = " << actual_results[j].col_type_name
         << ", expected = " << expected_results[j].col_type_name;
-    // TODO(b/361713695): Uncomment after the bug is fixed in SQLFetch
-    // ASSERT_EQ(actual_results[j].col_default, expected_results[j].col_default)
-    //     << "Mismatch col default: Actual = " << actual_results[j].col_default
-    //     << ", expected = " << expected_results[j].col_default;
+    ASSERT_EQ(actual_results[j].col_default, expected_results[j].col_default)
+        << "Mismatch col default: Actual = " << actual_results[j].col_default
+        << ", expected = " << expected_results[j].col_default;
     ASSERT_EQ(actual_results[j].is_nullable, expected_results[j].is_nullable)
         << "Mismatch nullable: Actual = " << actual_results[j].is_nullable
         << ", expected = " << expected_results[j].is_nullable;

@@ -103,6 +103,10 @@ struct ResultSet {
 
 DSValue const kNullValue{0};
 
+inline bool IsDSValueNull(DSValue const& value) {
+  return value.size() == 1 && value[0] == 0;
+}
+
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());

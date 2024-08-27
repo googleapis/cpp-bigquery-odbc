@@ -23,9 +23,6 @@ using google::cloud::odbc_internal::StatusRecord;
 StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
                                       BQDataType bq_data_type,
                                       DescriptorRecord& app_desc_rec) {
-  if (ds_val.empty()) {
-    return StatusRecord::Ok();
-  }
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
   SQLPOINTER app_buffer = app_desc_rec.data_ptr;
   SQLLEN app_buffer_len = app_desc_rec.octet_length;
@@ -33,6 +30,14 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
                      octet_length_ptr};
+  if (IsDSValueNull(ds_val)) {
+    if (indicator_ptr == nullptr) {
+      return {SQLStates::k_22002(),
+              "Indicator variable required but not supplied"};
+    }
+    *indicator_ptr = SQL_NULL_DATA;
+    return StatusRecord::Ok();
+  }
 
   StatusRecord status_record;
   switch (bq_data_type) {

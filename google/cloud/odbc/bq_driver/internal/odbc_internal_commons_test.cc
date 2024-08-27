@@ -147,6 +147,18 @@ void AssertResults(StatusRecordOr<ResultSet> status_record_or) {
 
 }  // namespace
 
+TEST(IsDSValueNull, Basic) { EXPECT_TRUE(IsDSValueNull(kNullValue)); }
+
+TEST(IsDSValueNull, NotEmpty) {
+  DSValue val{1};
+  EXPECT_FALSE(IsDSValueNull(val));
+}
+
+TEST(IsDSValueNull, Empty) {
+  DSValue empty_val;
+  EXPECT_FALSE(IsDSValueNull(empty_val));
+}
+
 TEST(DSValue, Basic_String) {
   std::string expected = "Some string which should be converted to DSValue";
   DSValue value;
@@ -156,6 +168,13 @@ TEST(DSValue, Basic_String) {
 
   DSValueToString(value, returned);
   EXPECT_EQ(expected, returned);
+}
+
+TEST(DSValue, EmptyString) {
+  std::string str;
+  DSValue ds_val;
+  StringToDSValue(str, ds_val);
+  EXPECT_EQ(ds_val.size(), 0);
 }
 
 TEST(DSValue, Basic_ComplexStruct) {
