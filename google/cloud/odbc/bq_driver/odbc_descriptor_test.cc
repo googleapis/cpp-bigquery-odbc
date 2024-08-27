@@ -929,7 +929,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("suffix", std::string(reinterpret_cast<char*>(out_buf)));
-  EXPECT_EQ(5, str_len);
+  EXPECT_EQ(6, str_len);
 }
 
 TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
