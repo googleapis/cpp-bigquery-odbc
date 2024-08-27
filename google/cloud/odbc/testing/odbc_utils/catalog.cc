@@ -61,26 +61,31 @@ std::vector<SQLTableResult> Catalog::GetTables(
       CheckError(status, "SQLFetch", conn);
       break;
     }
-    std::string project_name =
+    std::optional<std::string> project_name =
         (columns[0].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[0].target_value)
-            : "";
-    std::string dataset_name =
+            ? std::optional<std::string>{reinterpret_cast<char*>(
+                  columns[0].target_value)}
+            : std::nullopt;
+    std::optional<std::string> dataset_name =
         (columns[1].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[1].target_value)
-            : "";
-    std::string table_name =
+            ? std::optional<std::string>{reinterpret_cast<char*>(
+                  columns[1].target_value)}
+            : std::nullopt;
+    std::optional<std::string> table_name =
         (columns[2].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[2].target_value)
-            : "";
-    std::string table_type_name =
+            ? std::optional<std::string>{reinterpret_cast<char*>(
+                  columns[2].target_value)}
+            : std::nullopt;
+    std::optional<std::string> table_type_name =
         (columns[3].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[3].target_value)
-            : "";
-    std::string description =
+            ? std::optional<std::string>{reinterpret_cast<char*>(
+                  columns[3].target_value)}
+            : std::nullopt;
+    std::optional<std::string> description =
         (columns[4].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[4].target_value)
-            : "";
+            ? std::optional<std::string>{reinterpret_cast<char*>(
+                  columns[4].target_value)}
+            : std::nullopt;
 
     results.push_back(
         {project_name, dataset_name, table_name, table_type_name, description});

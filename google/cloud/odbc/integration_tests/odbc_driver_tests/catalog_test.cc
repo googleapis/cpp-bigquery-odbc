@@ -304,12 +304,12 @@ TEST(CatalogTest, SQLTables) {
       Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str());
   int count_tables = 0;
   for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
-    if (FindTableInVector(result.table_name, table_names)) {
+    EXPECT_EQ(kCatalogName, result.project_name.value());
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kCatalogName, result.description);
+    EXPECT_EQ(kCatalogName, result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
 
@@ -340,12 +340,12 @@ TEST(CatalogTest, SQLTablesA) {
       conn, kCatalogName, kCatalogFnsDataset.c_str(), nullptr, nullptr, true);
   int count_tables = 0;
   for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
-    if (FindTableInVector(result.table_name, table_names)) {
+    EXPECT_EQ(kCatalogName, result.project_name.value());
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kCatalogName, result.description);
+    EXPECT_EQ(kCatalogName, result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
 
@@ -364,12 +364,13 @@ TEST(CatalogTest, SQLTables_AllProjects) {
 
   bool project_found = false;
   for (auto const& result : results) {
-    project_found = project_found || (kCatalogName == result.project_name);
-    EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_TRUE(result.dataset_name.empty());
-    EXPECT_TRUE(result.table_name.empty());
-    EXPECT_TRUE(result.table_type.empty());
-    EXPECT_TRUE(result.description.empty());
+    project_found =
+        project_found || (kCatalogName == result.project_name.value());
+    EXPECT_EQ(kCatalogName, result.project_name.value());
+    EXPECT_FALSE(result.dataset_name.has_value());
+    EXPECT_FALSE(result.table_name.has_value());
+    EXPECT_FALSE(result.table_type.has_value());
+    EXPECT_FALSE(result.description.has_value());
   }
   EXPECT_TRUE(project_found);
 
@@ -388,11 +389,12 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
 
   bool catalog_found = false;
   for (auto const& result : results) {
-    EXPECT_TRUE(result.project_name.empty());
-    catalog_found = catalog_found || kCatalogFnsDataset == result.dataset_name;
-    EXPECT_TRUE(result.table_name.empty());
-    EXPECT_TRUE(result.table_type.empty());
-    EXPECT_TRUE(result.description.empty());
+    EXPECT_FALSE(result.project_name.has_value());
+    catalog_found =
+        catalog_found || kCatalogFnsDataset == result.dataset_name.value();
+    EXPECT_FALSE(result.table_name.has_value());
+    EXPECT_FALSE(result.table_type.has_value());
+    EXPECT_FALSE(result.description.has_value());
   }
   EXPECT_TRUE(catalog_found);
 
@@ -413,13 +415,13 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
                                              kMaterializedView, kSnapshot};
   EXPECT_EQ(expected_types.size(), results.size());
   for (auto const& result : results) {
-    EXPECT_TRUE(result.project_name.empty());
-    EXPECT_TRUE(result.dataset_name.empty());
-    EXPECT_TRUE(result.table_name.empty());
+    EXPECT_FALSE(result.project_name.has_value());
+    EXPECT_FALSE(result.dataset_name.has_value());
+    EXPECT_FALSE(result.table_name.has_value());
     EXPECT_NE(std::find(expected_types.begin(), expected_types.end(),
                         result.table_type),
               expected_types.end());
-    EXPECT_TRUE(result.description.empty());
+    EXPECT_FALSE(result.description.has_value());
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -452,13 +454,13 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 
   int count_tables = 0;
   for (auto const& result : results) {
-    EXPECT_THAT(result.project_name, StartsWith(project_to_filter));
-    EXPECT_THAT(result.dataset_name, StartsWith(dataset_to_filter));
-    if (FindTableInVector(result.table_name, table_names)) {
+    EXPECT_THAT(result.project_name.value(), StartsWith(project_to_filter));
+    EXPECT_THAT(result.dataset_name.value(), StartsWith(dataset_to_filter));
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kTable, result.table_type);
-    EXPECT_EQ(result.project_name, result.description);
+    EXPECT_EQ(kTable, result.table_type.value());
+    EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
 
@@ -497,15 +499,16 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   int count_tables = 0;
   bool view_found = false;
   for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
-    if (FindTableInVector(result.table_name, table_names)) {
+    EXPECT_EQ(kCatalogName, result.project_name.value());
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    view_found = view_found || (view_name == result.table_name);
-    EXPECT_TRUE(result.table_type == kTable || result.table_type == kView)
-        << "Actual type is " << result.table_type;
-    EXPECT_EQ(result.project_name, result.description);
+    view_found = view_found || (view_name == result.table_name.value());
+    EXPECT_TRUE(result.table_type.value() == kTable ||
+                result.table_type.value() == kView)
+        << "Actual type is " << result.table_type.value();
+    EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
   EXPECT_TRUE(view_found);
@@ -537,13 +540,13 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
 
   int count_tables = 0;
   for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name);
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name);
-    if (FindTableInVector(result.table_name, table_names)) {
+    EXPECT_EQ(kCatalogName, result.project_name.value());
+    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kTable, result.table_type);
-    EXPECT_EQ(result.project_name, result.description);
+    EXPECT_EQ(kTable, result.table_type.value());
+    EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
 

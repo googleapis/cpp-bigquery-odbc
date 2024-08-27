@@ -22,11 +22,11 @@
 namespace google::cloud::odbc_tests {
 
 struct SQLTableResult {
-  std::string project_name;
-  std::string dataset_name;
-  std::string table_name;
-  std::string table_type;
-  std::string description;
+  std::optional<std::string> project_name;
+  std::optional<std::string> dataset_name;
+  std::optional<std::string> table_name;
+  std::optional<std::string> table_type;
+  std::optional<std::string> description;
 };
 
 // Holds result set data from SQLColumns API.

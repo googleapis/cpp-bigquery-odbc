@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <locale.h>
 #include <memory>
+#include <optional>
 #include <stdio.h>
 #include <stdlib.h>
 #include <thread>
