@@ -918,7 +918,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
   handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
                                                  DescriptorType::kIRD);
   DescriptorRecord descriptor_record;
-  descriptor_record.literal_suffix = "sufix";
+  descriptor_record.literal_suffix = "suffix";
   SQLSMALLINT rec_number = 1;
   handle.BindNewDescriptorRecord(rec_number, descriptor_record);
   SQLCHAR out_buf[10];
@@ -928,7 +928,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
       &handle, rec_number, SQL_DESC_LITERAL_SUFFIX, out_buf, 10, &str_len);
 
   EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ("sufix", std::string(reinterpret_cast<char*>(out_buf)));
+  EXPECT_EQ("suffix", std::string(reinterpret_cast<char*>(out_buf)));
   EXPECT_EQ(5, str_len);
 }
 
