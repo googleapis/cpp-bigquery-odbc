@@ -434,7 +434,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   // For sanitization rules see:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/identifier-arguments?view=sql-server-ver16
   if (metadata_id == SQL_TRUE) {
-    SanitizeIdentifierArgument(s_catalog_name);
+    // We don't sanitize catalog name to uppercase because BigQquery doesn't
+    // allow it.
     SanitizeIdentifierArgument(s_dataset_name);
     SanitizeIdentifierArgument(s_table_name);
     SanitizeIdentifierArgument(s_column_name);
@@ -459,9 +460,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, filtered_tables_data_status);
   }
 
-  StatusRecordOr<ResultSet> final_result_set_status;
-
   // Process Table Results for each table returned from the list above.
+  ResultSet final_result_set;
   for (auto const& bq_table : *filtered_tables_data_status) {
     StatusRecordOr<ResultSet> table_result_set_status =
         ProcessTableResults(bq_table, s_column_name, metadata_id);
@@ -470,22 +470,23 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       return LogAndReturnCode(handle, table_result_set_status);
     }
     if (!table_result_set_status->rows.empty()) {
+      // Set the row schema
+      final_result_set.row_schema = table_result_set_status->row_schema;
       // Append the result set rows to the final results.
-      final_result_set_status->rows.insert(
-          final_result_set_status->rows.end(),
-          table_result_set_status->rows.begin(),
-          table_result_set_status->rows.end());
+      final_result_set.rows.insert(final_result_set.rows.end(),
+                                   table_result_set_status->rows.begin(),
+                                   table_result_set_status->rows.end());
     }
   }
 
-  if (!final_result_set_status->rows.empty()) {
-    handle.SetResultSet(*final_result_set_status);
+  if (!final_result_set.rows.empty()) {
+    handle.SetResultSet(final_result_set);
     handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   } else {
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
-  return LogAndReturnCode(handle, final_result_set_status);
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

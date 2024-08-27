@@ -54,6 +54,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttribute;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColumns;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeCol;
@@ -159,6 +160,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttribute;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColumns;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCopyDesc;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
@@ -2906,13 +2908,23 @@ SQLRETURN SQL_API SQLColumns(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                              SQLSMALLINT tableNameLen, SQLCHAR* columnName,
                              SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLColumns");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLColumns(
+        statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+        tableName, tableNameLen, columnName, columnNameLen, *(*kTraceOption));
 
   // Call to common internal function for SQLColumns and SQLColumnsW
   // in odbc_driver_metadata.h.
+  rc = google::cloud::odbc_bq_driver::SQLColumnsInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      tableName, tableNameLen, columnName, columnNameLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLColumns(rc, *(*kTraceOption));
 
   return rc;
 }
@@ -2971,6 +2983,12 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   // Call to common internal function for SQLColumns and SQLColumnsW
   // in odbc_driver_metadata.h.
   // Handle Unicode conversion of output parameters.
+  rc = google::cloud::odbc_bq_driver::SQLColumnsInternal(
+      statementHandle, ToSqlChar(utf8_catalog_name->c_str()), catalogNameLen,
+      ToSqlChar(utf8_schema_name->c_str()), schemaNameLen,
+      ToSqlChar(utf8_table_name->c_str()), tableNameLen,
+      ToSqlChar(utf8_col_name->c_str()), columnNameLen);
+
   StatusRecordOr<std::wstring> utf16_catalog_name =
       Utf8ToUtf16(*utf8_catalog_name);
   if (!utf16_catalog_name) {

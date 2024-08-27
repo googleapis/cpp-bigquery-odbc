@@ -81,7 +81,11 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // TYPE_NAME
   DSValue ds_type_name;
-  StringToDSValue(field_schema.type, ds_type_name);
+  auto type_status = GetTypeDescription(field_schema.type);
+  if (!type_status) {
+    return type_status.GetStatusRecord();
+  }
+  StringToDSValue(*type_status, ds_type_name);
   ds_row.emplace_back(ds_type_name);
 
   // COLUMN_SIZE
@@ -133,7 +137,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // REMARKS
   DSValue ds_description;
-  StringToDSValue(field_schema.description, ds_description);
+  StringToDSValue(field_schema.type, ds_description);
   ds_row.emplace_back(ds_description);
 
   // COLUMN_DEF

@@ -38,6 +38,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 16384;
       fixed_column_metadata.scale = SQL_NULL_DATA;
       fixed_column_metadata.char_octet_len = 16384;
+      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kInt64: {
@@ -45,6 +46,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 20;
       fixed_column_metadata.scale = 0;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = 10;
       break;
     }
     case BQDataType::kBool: {
@@ -52,6 +54,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 1;
       fixed_column_metadata.scale = SQL_NULL_DATA;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kTime: {
@@ -59,6 +62,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 6;
       fixed_column_metadata.scale = 6;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kDate: {
@@ -66,6 +70,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 6;
       fixed_column_metadata.scale = SQL_NULL_DATA;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kTimeStamp:
@@ -74,14 +79,23 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 16;
       fixed_column_metadata.scale = 6;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
-    case BQDataType::kNumeric:
-    case BQDataType::kBigNumeric: {
+    case BQDataType::kNumeric: {
       fixed_column_metadata.precision = 38;
       fixed_column_metadata.buf_len = 40;
       fixed_column_metadata.scale = 9;
       fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = 10;
+      break;
+    }
+    case BQDataType::kBigNumeric: {
+      fixed_column_metadata.precision = 77;
+      fixed_column_metadata.buf_len = 79;
+      fixed_column_metadata.scale = 38;
+      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
+      fixed_column_metadata.radix = 10;
       break;
     }
     default: {
@@ -96,6 +110,8 @@ StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema const& field_schema) {
   SQLINTEGER result;
   if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision);
+  } else if (field_schema.max_length > 0) {
+    result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
     auto fixed_col_status = GetFixedColumnMetadata(field_schema);
     if (!fixed_col_status) {
@@ -111,6 +127,8 @@ StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema const& field_schema) {
   SQLINTEGER result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
+  } else if (field_schema.precision > 0) {
+    result = static_cast<SQLINTEGER>(field_schema.precision + 2);
   } else {
     auto fixed_col_status = GetFixedColumnMetadata(field_schema);
     if (!fixed_col_status) {
@@ -155,9 +173,15 @@ StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
 }
 
 StatusRecordOr<SQLSMALLINT> GetRadix(TableFieldSchema const& field_schema) {
+  auto fixed_metadata_status = GetFixedColumnMetadata(field_schema);
+  if (!fixed_metadata_status) {
+    return fixed_metadata_status.GetStatusRecord();
+  }
   SQLSMALLINT radix = (field_schema.scale >= 0 && field_schema.precision >= 0)
                           ? 10
-                          : ((field_schema.precision >= 0) ? 2 : SQL_NULL_DATA);
+                      : (field_schema.scale < 0 && field_schema.precision >= 0)
+                          ? 2
+                          : fixed_metadata_status->radix;
   return static_cast<SQLSMALLINT>(radix);
 }
 
@@ -222,6 +246,25 @@ odbc_internal::StatusRecord ValidateColumnParameters(
                         "Catalog name cannot be a search pattern"};
   }
   return StatusRecord::Ok();
+}
+
+StatusRecordOr<std::string> GetTypeDescription(
+    std::string const& field_schema_type) {
+  auto type_status = ConvertDSType(field_schema_type);
+  if (!type_status) {
+    return type_status.GetStatusRecord();
+  }
+  switch (*type_status) {
+    case BQDataType::kInt64: {
+      return std::string("INT64");
+    }
+    case BQDataType::kBool: {
+      return std::string("BOOL");
+    }
+    default: {
+      return field_schema_type;
+    }
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

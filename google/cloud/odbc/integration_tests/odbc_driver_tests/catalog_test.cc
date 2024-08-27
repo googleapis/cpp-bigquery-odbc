@@ -116,7 +116,7 @@ std::string const kTableLinesSchema =
     "NOT ENFORCED)";
 
 // Table and Schema used to test SQLColumns API
-std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE";
+std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE_LATEST_2";
 std::string const kSqlColumnsTableFull =
     kCatalogFnsDataset + "." + kSqlColumnsTable;
 std::string const kSQLColumnsTableSchema =
@@ -131,8 +131,152 @@ std::string const kSQLColumnsTableSchema =
     " TimeField TIME,"
     " TimestampField TIMESTAMP,"
     " DecimalField DECIMAL(10,2),"
-    " BigDecimalField DECIMAL(10,5)"
+    " BigDecimalField BIGDECIMAL(10,5)"
     ")";
+
+/// Test Helper functions for SQLColumns API
+
+// Prints the SQLColumns results output. Used for debugging.
+void PrintData(SQLColumnsResult const& result) {
+  std::cout << "***************************************************"
+            << std::endl;
+  std::cout << "TABLE_CAT = " << result.project_name << std::endl;
+  std::cout << "TABLE_SCHEMA = " << result.dataset_name << std::endl;
+  std::cout << "TABLE_NAME = " << result.table_name << std::endl;
+  std::cout << "COLUMN_NAME = " << result.column_name << std::endl;
+  std::cout << "DATA_TYPE = " << result.data_type << std::endl;
+  std::cout << "TYPE_NAME = " << result.col_type_name << std::endl;
+  std::cout << "COLUMN_SIZE = " << result.col_size << std::endl;
+  std::cout << "BUFFER_LENGTH = " << result.buffer_len << std::endl;
+  std::cout << "DECIMAL_DIGITS = " << result.decimal_digits << std::endl;
+  std::cout << "NUM_PREC_RADIX = " << result.radix << std::endl;
+  std::cout << "NULLABLE = " << result.nullable << std::endl;
+  std::cout << "REMARKS = " << result.description << std::endl;
+  std::cout << "COLUMN_DEF = " << result.col_default << std::endl;
+  std::cout << "SQL_DATA_TYPE = " << result.sql_data_type << std::endl;
+  std::cout << "SQL_DATETIME_SUB = " << result.sql_date_time_sub << std::endl;
+  std::cout << "CHAR_OCTET_LENGTH = " << result.char_octet_len << std::endl;
+  std::cout << "ORDINAL_POSITION = " << result.ord_pos << std::endl;
+  std::cout << "IS_NULLABLE = " << result.is_nullable << std::endl;
+
+  std::cout << "***************************************************"
+            << std::endl;
+}
+
+void VerifyColumnsResults(std::vector<SQLColumnsResult>& actual_results,
+                          std::vector<SQLColumnsResult>& expected_results) {
+  // Check if both result sets have the same number of rows
+  ASSERT_EQ(actual_results.size(), expected_results.size())
+      << "Number of results mismatch";
+
+  // sort the results so they are in the same order in both
+  // expected and actual.
+  std::sort(actual_results.begin(), actual_results.end());
+  std::sort(expected_results.begin(), expected_results.end());
+
+  for (size_t j = 0; j < actual_results.size(); ++j) {
+    ASSERT_EQ(actual_results[j].project_name, expected_results[j].project_name)
+        << "Mismatch project name: Actual = " << actual_results[j].project_name
+        << ", expected = " << expected_results[j].project_name;
+    ASSERT_EQ(actual_results[j].dataset_name, expected_results[j].dataset_name)
+        << "Mismatch dataset_name name: Actual = "
+        << actual_results[j].dataset_name
+        << ", expected = " << expected_results[j].dataset_name;
+    ASSERT_EQ(actual_results[j].table_name, expected_results[j].table_name)
+        << "Mismatch table name: Actual = " << actual_results[j].table_name
+        << ", expected = " << expected_results[j].table_name;
+    ASSERT_EQ(actual_results[j].column_name, expected_results[j].column_name)
+        << "Mismatch column name: Actual = " << actual_results[j].column_name
+        << ", expected = " << expected_results[j].column_name;
+    ASSERT_EQ(actual_results[j].description, expected_results[j].description)
+        << "Mismatch description: Actual = " << actual_results[j].description
+        << ", expected = " << expected_results[j].description;
+    ASSERT_EQ(actual_results[j].col_type_name,
+              expected_results[j].col_type_name)
+        << "Mismatch type name: Actual = " << actual_results[j].col_type_name
+        << ", expected = " << expected_results[j].col_type_name;
+    // TODO(b/361713695): Uncomment after the bug is fixed in SQLFetch
+    // ASSERT_EQ(actual_results[j].col_default, expected_results[j].col_default)
+    //     << "Mismatch col default: Actual = " << actual_results[j].col_default
+    //     << ", expected = " << expected_results[j].col_default;
+    ASSERT_EQ(actual_results[j].is_nullable, expected_results[j].is_nullable)
+        << "Mismatch nullable: Actual = " << actual_results[j].is_nullable
+        << ", expected = " << expected_results[j].is_nullable;
+
+    ASSERT_EQ(actual_results[j].data_type, expected_results[j].data_type)
+        << "Mismatch data type: Actual = " << actual_results[j].data_type
+        << ", expected = " << expected_results[j].data_type;
+    ASSERT_EQ(actual_results[j].sql_data_type,
+              expected_results[j].sql_data_type)
+        << "Mismatch sql_data_type: Actual = "
+        << actual_results[j].sql_data_type
+        << ", expected = " << expected_results[j].sql_data_type;
+    ASSERT_EQ(actual_results[j].sql_date_time_sub,
+              expected_results[j].sql_date_time_sub)
+        << "Mismatch sql data time sub: Actual = "
+        << actual_results[j].sql_date_time_sub
+        << ", expected = " << expected_results[j].sql_date_time_sub;
+    ASSERT_EQ(actual_results[j].decimal_digits,
+              expected_results[j].decimal_digits)
+        << "Mismatch decimal digits: Actual = "
+        << actual_results[j].decimal_digits
+        << ", expected = " << expected_results[j].decimal_digits;
+    ASSERT_EQ(actual_results[j].radix, expected_results[j].radix)
+        << "Mismatch radix: Actual = " << actual_results[j].radix
+        << ", expected = " << expected_results[j].radix;
+    ASSERT_EQ(actual_results[j].nullable, expected_results[j].nullable)
+        << "Mismatch nullable: Actual = " << actual_results[j].nullable
+        << ", expected = " << expected_results[j].nullable;
+
+    ASSERT_EQ(actual_results[j].col_size, expected_results[j].col_size)
+        << "Mismatch col size: Actual = " << actual_results[j].col_size
+        << ", expected = " << expected_results[j].col_size;
+    ASSERT_EQ(actual_results[j].buffer_len, expected_results[j].buffer_len)
+        << "Mismatch buffer len: Actual = " << actual_results[j].buffer_len
+        << ", expected = " << expected_results[j].buffer_len;
+    ASSERT_EQ(actual_results[j].char_octet_len,
+              expected_results[j].char_octet_len)
+        << "Mismatch char octet len: Actual = "
+        << actual_results[j].char_octet_len
+        << ", expected = " << expected_results[j].char_octet_len;
+    ASSERT_EQ(actual_results[j].ord_pos, expected_results[j].ord_pos)
+        << "Mismatch ordinal position: Actual = " << actual_results[j].ord_pos
+        << ", expected = " << expected_results[j].ord_pos;
+  }
+}
+
+void TestSQLColumns(std::string const column,
+                    std::vector<SQLColumnsResult>& expected_results,
+                    bool use_identifier = false) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table for SQLColumns.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kSQLColumnsTableSchema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Set statement attribute so the parameters are passed as literal values.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  if (use_identifier) {
+    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                            (SQLPOINTER)SQL_TRUE, 0);
+  } else {
+    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                            (SQLPOINTER)SQL_FALSE, 0);
+  }
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLColumnsResult> results =
+      Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                          kSqlColumnsTable.c_str(), column.c_str());
+
+  //   for (auto const& result : results) {
+  //     PrintData(result);
+  //   }
+  VerifyColumnsResults(results, expected_results);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace
 
 bool FindTableInVector(std::string const& table_name,
@@ -436,6 +580,107 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
+  std::vector<SQLColumnsResult> expected_results;
+  // StringField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
+       5000, 5000, 5000, 1});
+  // IntField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
+       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 2});
+  // BoolField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "BoolField", "BOOLEAN", "BOOL", "", "YES",
+                              SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA,
+                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 3});
+  // BytesField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "BytesField", "BYTES", "BYTES", "", "YES",
+       SQL_VARBINARY, SQL_VARBINARY, SQL_NULL_DATA, SQL_NULL_DATA,
+       SQL_NULL_DATA, 1, 5000, 5000, 5000, 4});
+  // DateField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "DateField", "DATE", "DATE", "", "YES", SQL_TYPE_DATE,
+       SQL_DATETIME, SQL_CODE_DATE, SQL_NULL_DATA, SQL_NULL_DATA, 1, 10, 6,
+       SQL_NULL_DATA, 5});
+  // DateTimeField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
+       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
+       1, 26, 16, SQL_NULL_DATA, 6});
+  // IntervalField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
+       16384, 16384, 16384, 7});
+  // TimeField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "TimeField", "TIME", "TIME", "", "YES",
+                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
+                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 8});
+  // TimestampField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
+       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
+       1, 26, 16, SQL_NULL_DATA, 9});
+  // Decimalield.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
+                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 2, 10, 1,
+                              10, 12, SQL_NULL_DATA, 10});
+  // BigDecimalField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "BigDecimalField", "BIGNUMERIC", "BIGNUMERIC", "",
+                              "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5,
+                              10, 1, 10, 12, SQL_NULL_DATA, 11});
+  // Fetch all columns
+  TestSQLColumns("%", expected_results);
+}
+
+TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
+  std::vector<SQLColumnsResult> expected_results;
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
+       5000, 5000, 5000, 1});
+  TestSQLColumns("StringField", expected_results, true);
+}
+
+TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
+  std::vector<SQLColumnsResult> expected_results;
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
+       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
+       5000, 5000, 5000, 1});
+  TestSQLColumns("%StringField%", expected_results, false);
+}
+
+TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_True) {
+  std::vector<SQLColumnsResult> expected_results;
+  TestSQLColumns("%StringField%", expected_results, true);
+}
+
+TEST(CatalogTest, SQLColumns_InvalidColumn) {
+  std::vector<SQLColumnsResult> expected_results;
+  TestSQLColumns("INVALID", expected_results);
+}
+
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
@@ -471,9 +716,12 @@ void VerifyRowWiseResults(RowWiseResults& actual_results,
     }
   }
 }
-/////////////////////////////////////////////////////
-// SQLPrimaryKeys is not implemented by Simba Driver.
-////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// TODO(b/360988721):SQLPrimaryKeys is not implemented correctly by Simba
+// Driver. Move thall SQLPrimaryKeys tests to common area once bug is fixed so
+// the tests can be run for both Simba and BQ drivers.
+///////////////////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
@@ -532,9 +780,12 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-/////////////////////////////////////////////////////
-// SQLForeignKeys is not implemented by Simba Driver.
-////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+// TODO(b/360994080): SQLForeignKeys is not implemented
+// correctly by Simba Driver. Move all SQLForeignKeys function
+// to common area once the bug is fixed so the tests can be run
+// for both BQ and Simba drivers.
+/////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
@@ -550,9 +801,9 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
-  auto foreign_keys =
-      Catalog::GetForeignKeys(conn, kCatalogFnsDataset, kTableCustomer,
-                              kTableOrders); /* both PK and FK table supplied*/
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kCatalogFnsDataset, kTableCustomer, kTableOrders); /* both PK and FK
+                                                table supplied*/
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -664,234 +915,6 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
       conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders, true);
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-#else
-//////////////////////////////////////////////////////////////////
-// Move SQLColumns test cases and helper functions to common area
-// once the API is implemented for BQ Driver
-/////////////////////////////////////////////////////////////////
-
-// Prints the SQLColumns results output. Used for debugging.
-void PrintData(SQLColumnsResult const& result) {
-  std::cout << "TABLE_CAT = " << result.project_name << std::endl;
-  std::cout << "TABLE_SCHEMA = " << result.dataset_name << std::endl;
-  std::cout << "TABLE_NAME = " << result.table_name << std::endl;
-  std::cout << "COLUMN_NAME = " << result.column_name << std::endl;
-  std::cout << "DATA_TYPE = " << result.data_type << std::endl;
-  std::cout << "TYPE_NAME = " << result.col_type_name << std::endl;
-  std::cout << "COLUMN_SIZE = " << result.col_size << std::endl;
-  std::cout << "BUFFER_LENGTH = " << result.buffer_len << std::endl;
-  std::cout << "DECIMAL_DIGITS = " << result.decimal_digits << std::endl;
-  std::cout << "NUM_PREC_RADIX = " << result.radix << std::endl;
-  std::cout << "NULLABLE = " << result.nullable << std::endl;
-  std::cout << "REMARKS = " << result.description << std::endl;
-  std::cout << "COLUMN_DEF = " << result.col_default << std::endl;
-  std::cout << "SQL_DATA_TYPE = " << result.sql_data_type << std::endl;
-  std::cout << "SQL_DATETIME_SUB = " << result.sql_date_time_sub << std::endl;
-  std::cout << "CHAR_OCTET_LENGTH = " << result.char_octet_len << std::endl;
-  std::cout << "ORDINAL_POSITION = " << result.ord_pos << std::endl;
-  std::cout << "IS_NULLABLE = " << result.is_nullable << std::endl;
-}
-
-void VerifyColumnsResults(std::vector<SQLColumnsResult>& actual_results,
-                          std::vector<SQLColumnsResult>& expected_results) {
-  // Check if both result sets have the same number of rows
-  ASSERT_EQ(actual_results.size(), expected_results.size())
-      << "Number of results mismatch";
-
-  // sort the results so they are in the same order in both
-  // expected and actual.
-  std::sort(actual_results.begin(), actual_results.end());
-  std::sort(expected_results.begin(), expected_results.end());
-
-  for (size_t j = 0; j < actual_results.size(); ++j) {
-    ASSERT_EQ(actual_results[j].project_name, expected_results[j].project_name)
-        << "Mismatch project name: Actual = " << actual_results[j].project_name
-        << ", expected = " << expected_results[j].project_name;
-    ASSERT_EQ(actual_results[j].dataset_name, expected_results[j].dataset_name)
-        << "Mismatch dataset_name name: Actual = "
-        << actual_results[j].dataset_name
-        << ", expected = " << expected_results[j].dataset_name;
-    ASSERT_EQ(actual_results[j].table_name, expected_results[j].table_name)
-        << "Mismatch table name: Actual = " << actual_results[j].table_name
-        << ", expected = " << expected_results[j].table_name;
-    ASSERT_EQ(actual_results[j].column_name, expected_results[j].column_name)
-        << "Mismatch column name: Actual = " << actual_results[j].column_name
-        << ", expected = " << expected_results[j].column_name;
-    ASSERT_EQ(actual_results[j].description, expected_results[j].description)
-        << "Mismatch description: Actual = " << actual_results[j].description
-        << ", expected = " << expected_results[j].description;
-    ASSERT_EQ(actual_results[j].col_type_name,
-              expected_results[j].col_type_name)
-        << "Mismatch type name: Actual = " << actual_results[j].col_type_name
-        << ", expected = " << expected_results[j].col_type_name;
-    ASSERT_EQ(actual_results[j].col_default, expected_results[j].col_default)
-        << "Mismatch col default: Actual = " << actual_results[j].col_default
-        << ", expected = " << expected_results[j].col_default;
-    ASSERT_EQ(actual_results[j].is_nullable, expected_results[j].is_nullable)
-        << "Mismatch nullable: Actual = " << actual_results[j].is_nullable
-        << ", expected = " << expected_results[j].is_nullable;
-
-    ASSERT_EQ(actual_results[j].data_type, expected_results[j].data_type)
-        << "Mismatch data type: Actual = " << actual_results[j].data_type
-        << ", expected = " << expected_results[j].data_type;
-    ASSERT_EQ(actual_results[j].sql_data_type,
-              expected_results[j].sql_data_type)
-        << "Mismatch sql_data_type: Actual = "
-        << actual_results[j].sql_data_type
-        << ", expected = " << expected_results[j].sql_data_type;
-    ASSERT_EQ(actual_results[j].sql_date_time_sub,
-              expected_results[j].sql_date_time_sub)
-        << "Mismatch sql data time sub: Actual = "
-        << actual_results[j].sql_date_time_sub
-        << ", expected = " << expected_results[j].sql_date_time_sub;
-    ASSERT_EQ(actual_results[j].decimal_digits,
-              expected_results[j].decimal_digits)
-        << "Mismatch decimal digits: Actual = "
-        << actual_results[j].decimal_digits
-        << ", expected = " << expected_results[j].decimal_digits;
-    ASSERT_EQ(actual_results[j].radix, expected_results[j].radix)
-        << "Mismatch radix: Actual = " << actual_results[j].radix
-        << ", expected = " << expected_results[j].radix;
-    ASSERT_EQ(actual_results[j].nullable, expected_results[j].nullable)
-        << "Mismatch nullable: Actual = " << actual_results[j].nullable
-        << ", expected = " << expected_results[j].nullable;
-
-    ASSERT_EQ(actual_results[j].col_size, expected_results[j].col_size)
-        << "Mismatch col size: Actual = " << actual_results[j].col_size
-        << ", expected = " << expected_results[j].col_size;
-    ASSERT_EQ(actual_results[j].buffer_len, expected_results[j].buffer_len)
-        << "Mismatch buffer len: Actual = " << actual_results[j].buffer_len
-        << ", expected = " << expected_results[j].buffer_len;
-    ASSERT_EQ(actual_results[j].char_octet_len,
-              expected_results[j].char_octet_len)
-        << "Mismatch char octet len: Actual = "
-        << actual_results[j].char_octet_len
-        << ", expected = " << expected_results[j].char_octet_len;
-    ASSERT_EQ(actual_results[j].ord_pos, expected_results[j].ord_pos)
-        << "Mismatch ordinal position: Actual = " << actual_results[j].ord_pos
-        << ", expected = " << expected_results[j].ord_pos;
-  }
-}
-
-// Driver. Helper test function for executing SQLColumns test
-void TestSQLColumns(std::string const column,
-                    std::vector<SQLColumnsResult>& expected_results,
-                    bool use_identifier = false) {
-  auto conn = std::make_shared<ODBCHandles>();
-  // Create table for SQLColumns.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  CreateTableDirect(conn, kSQLColumnsTableSchema);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Set statement attribute so the parameters are passed as literal values.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLRETURN status;
-  if (use_identifier) {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                            (SQLPOINTER)SQL_TRUE, 0);
-  } else {
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                            (SQLPOINTER)SQL_FALSE, 0);
-  }
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                          kSqlColumnsTable.c_str(), column.c_str());
-
-  // for (auto const& result : results) {
-  //   PrintData(result);
-  // }
-  VerifyColumnsResults(results, expected_results);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
-  std::vector<SQLColumnsResult> expected_results;
-  // StringField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
-       5000, 5000, 5000, 1});
-  // IntField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
-       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 2});
-  // BoolField.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "BoolField", "BOOLEAN", "BOOL", "", "YES",
-                              SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA,
-                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 3});
-  // BytesField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "BytesField", "BYTES", "BYTES", "", "YES",
-       SQL_VARBINARY, SQL_VARBINARY, SQL_NULL_DATA, SQL_NULL_DATA,
-       SQL_NULL_DATA, 1, 5000, 5000, 5000, 4});
-  // DateField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "DateField", "DATE", "DATE", "", "YES",
-       SQL_TYPE_DATE, SQL_DATETIME, SQL_CODE_DATE, SQL_NULL_DATA, SQL_NULL_DATA,
-       1, 10, 6, SQL_NULL_DATA, 5});
-  // DateTimeField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
-       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 6});
-  // IntervalField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
-       16384, 16384, 16384, 7});
-  // TimeField.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "TimeField", "TIME", "TIME", "", "YES",
-                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
-                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 8});
-  // TimestampField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
-       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 9});
-  // Decimalield.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
-                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 2, 10, 1,
-                              10, 12, SQL_NULL_DATA, 10});
-  // BigDecimalField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       "ODBC_SQLColumns_TABLE", "BigDecimalField", "NUMERIC", "NUMERIC", "",
-       "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5, 10, 1, 10, 12,
-       SQL_NULL_DATA, 11});
-  // Fetch all columns
-  TestSQLColumns("%", expected_results);
-}
-
-TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
-  std::vector<SQLColumnsResult> expected_results;
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
-       5000, 5000, 5000, 1});
-  TestSQLColumns("StringField", expected_results, true);
-}
-
-TEST(CatalogTest, SQLColumns_InvalidColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  TestSQLColumns("INVALID", expected_results);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS

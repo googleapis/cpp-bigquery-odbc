@@ -29,6 +29,7 @@ struct FixedColumnMetadata {
   std::int64_t scale;
   std::int64_t buf_len;
   std::int64_t char_octet_len;
+  std::int64_t radix;
 };
 
 // Internal Helper functions used in SQLColumns API implementation.
@@ -55,6 +56,9 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetRadix(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
+
+odbc_internal::StatusRecordOr<std::string> GetTypeDescription(
+    std::string const& field_schema_type);
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(
     SQLSMALLINT sql_data_type, SQLSMALLINT data_type);

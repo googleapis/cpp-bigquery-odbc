@@ -206,7 +206,7 @@ void ProcessTableResultsHelper(std::string column,
 
   TestSqlColumnsData expected_sql_string_row;
   expected_sql_string_row.field_schema = field_schema1;
-  expected_sql_string_row.col_size = 16384;
+  expected_sql_string_row.col_size = 5000;
   expected_sql_string_row.buf_len = 5000;
   expected_sql_string_row.octet_len = 5000;
   expected_sql_string_row.dec_digits = SQL_NULL_DATA;
@@ -275,7 +275,7 @@ TEST(CreateResultSetDSRow, StringField) {
 
   TestSqlColumnsData expected_sql_columns;
   expected_sql_columns.field_schema = field_schema;
-  expected_sql_columns.col_size = 16384;
+  expected_sql_columns.col_size = 5000;
   expected_sql_columns.buf_len = 5000;
   expected_sql_columns.octet_len = 5000;
   expected_sql_columns.dec_digits = SQL_NULL_DATA;
@@ -475,7 +475,7 @@ TEST(CreateResultSetDSRow, NumericField) {
   TestSqlColumnsData expected_sql_columns;
   expected_sql_columns.field_schema = field_schema;
   expected_sql_columns.col_size = 10;
-  expected_sql_columns.buf_len = 40;
+  expected_sql_columns.buf_len = 12;
   expected_sql_columns.dec_digits = 3;
   expected_sql_columns.octet_len = SQL_NULL_DATA;
   expected_sql_columns.radix = 10;
@@ -530,9 +530,9 @@ TEST(CreateResultSetDSRow, BigNumericField) {
 
   TestSqlColumnsData expected_sql_columns;
   expected_sql_columns.field_schema = field_schema;
-  expected_sql_columns.col_size = 38;
-  expected_sql_columns.buf_len = 40;
-  expected_sql_columns.dec_digits = 9;
+  expected_sql_columns.col_size = 77;
+  expected_sql_columns.buf_len = 79;
+  expected_sql_columns.dec_digits = 38;
   expected_sql_columns.octet_len = SQL_NULL_DATA;
   expected_sql_columns.radix = 10;
   expected_sql_columns.data_type = SQL_NUMERIC;

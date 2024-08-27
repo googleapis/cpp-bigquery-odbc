@@ -89,6 +89,7 @@ TEST(GetRadix, Decimal) {
   TableFieldSchema schema;
   schema.precision = 0;
   schema.scale = 0;
+  schema.type = "NUMERIC";
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
   EXPECT_EQ(10, *radix_status);
@@ -97,16 +98,28 @@ TEST(GetRadix, Decimal) {
 TEST(GetRadix, Binary) {
   TableFieldSchema schema;
   schema.precision = 53;
+  schema.type = "INTEGER";
   schema.scale = SQL_NULL_DATA;
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
   EXPECT_EQ(2, *radix_status);
 }
 
-TEST(GetRadix, Null) {
+TEST(GetRadix, Null_Numeric) {
   TableFieldSchema schema;
   schema.precision = SQL_NULL_DATA;
   schema.scale = SQL_NULL_DATA;
+  schema.type = "NUMERIC";
+  auto radix_status = GetRadix(schema);
+  ASSERT_STATUS_RECORD_OK(radix_status);
+  EXPECT_EQ(10, *radix_status);
+}
+
+TEST(GetRadix, Null_String) {
+  TableFieldSchema schema;
+  schema.precision = SQL_NULL_DATA;
+  schema.scale = SQL_NULL_DATA;
+  schema.type = "STRING";
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
   EXPECT_EQ(SQL_NULL_DATA, *radix_status);
@@ -189,7 +202,7 @@ TEST(GetDecimalDigits, FixedScaleBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(9, *scale_status);
+  EXPECT_EQ(38, *scale_status);
 }
 
 TEST(GetDecimalDigits, InvalidType) {
@@ -204,9 +217,17 @@ TEST(GetDecimalDigits, InvalidType) {
 TEST(GetColSize, PrecisionFromDS) {
   TableFieldSchema schema;
   schema.precision = 5;
-  auto precision_status = GetColSize(schema);
-  ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(5, *precision_status);
+  auto col_size_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(col_size_status);
+  EXPECT_EQ(5, *col_size_status);
+}
+
+TEST(GetColSize, MaxLengthFromDS) {
+  TableFieldSchema schema;
+  schema.max_length = 5;
+  auto col_size_status = GetColSize(schema);
+  ASSERT_STATUS_RECORD_OK(col_size_status);
+  EXPECT_EQ(5, *col_size_status);
 }
 
 TEST(GetColSize, FixedPrecisionString) {
@@ -278,7 +299,7 @@ TEST(GetColSize, FixedPrecisionBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(38, *precision_status);
+  EXPECT_EQ(77, *precision_status);
 }
 
 TEST(GetColSize, InvalidType) {
@@ -290,12 +311,20 @@ TEST(GetColSize, InvalidType) {
                              StrEq("Invalid Data Type: Invalid")));
 }
 
-TEST(GetBufferLen, BufferLenFromDS) {
+TEST(GetBufferLen, BufferLenFromDS_WithMaxLen) {
   TableFieldSchema schema;
   schema.max_length = 5000;
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
   EXPECT_EQ(5000, *buf_len_status);
+}
+
+TEST(GetBufferLen, BufferLenFromDS_WithPrecision) {
+  TableFieldSchema schema;
+  schema.precision = 20;
+  auto buf_len_status = GetBufferLen(schema);
+  ASSERT_STATUS_RECORD_OK(buf_len_status);
+  EXPECT_EQ(22, *buf_len_status);
 }
 
 TEST(GetBufferLen, FixedBufferLenString) {
@@ -367,7 +396,7 @@ TEST(GetBufferLen, FixedBufferLenBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(40, *buf_len_status);
+  EXPECT_EQ(79, *buf_len_status);
 }
 
 TEST(GetBufferLen, InvalidType) {
@@ -523,4 +552,21 @@ TEST(ValidateColumnParameters,
               HasSubstr("Catalog name cannot be a search pattern"));
 }
 
+TEST(GetTypeDescription, TypeDescriptionDiffThanType_Integer) {
+  auto type_status = GetTypeDescription("INTEGER");
+  ASSERT_STATUS_RECORD_OK(type_status);
+  ASSERT_EQ("INT64", *type_status);
+}
+
+TEST(GetTypeDescription, TypeDescriptionDiffThanType_Bool) {
+  auto type_status = GetTypeDescription("BOOLEAN");
+  ASSERT_STATUS_RECORD_OK(type_status);
+  ASSERT_EQ("BOOL", *type_status);
+}
+
+TEST(GetTypeDescription, TypeDescriptionSameAsType_Time) {
+  auto type_status = GetTypeDescription("TIME");
+  ASSERT_STATUS_RECORD_OK(type_status);
+  ASSERT_EQ("TIME", *type_status);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
