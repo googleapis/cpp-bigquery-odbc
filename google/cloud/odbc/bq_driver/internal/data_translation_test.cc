@@ -597,4 +597,350 @@ TEST(ConvertFromJsonDSValue, convertToWchar_Failed) {
   ASSERT_FALSE(status.ok());
 }
 
+TEST(ConvertFromTimestampDSValue, convertToDate_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 123456;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_DATE_STRUCT
+  alignas(SQL_DATE_STRUCT) char dest_buf[sizeof(SQL_DATE_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_DATE, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_DATE_STRUCT* data = reinterpret_cast<SQL_DATE_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->year, Timestamp.year);
+  EXPECT_EQ(data->month, Timestamp.month);
+  EXPECT_EQ(data->day, Timestamp.day);
+  EXPECT_EQ(status.sql_state, SQLStates::k_01S07());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToDate_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 00;
+  Timestamp.minute = 00;
+  Timestamp.second = 00;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_DATE_STRUCT
+  alignas(SQL_DATE_STRUCT) char dest_buf[sizeof(SQL_DATE_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_DATE, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_DATE_STRUCT* data = reinterpret_cast<SQL_DATE_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->year, Timestamp.year);
+  EXPECT_EQ(data->month, Timestamp.month);
+  EXPECT_EQ(data->day, Timestamp.day);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToTime_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 123456;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_TIME_STRUCT
+  alignas(SQL_TIME_STRUCT) char dest_buf[sizeof(SQL_TIME_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_TIME_STRUCT* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->hour, Timestamp.hour);
+  EXPECT_EQ(data->minute, Timestamp.minute);
+  EXPECT_EQ(data->second, Timestamp.second);
+  EXPECT_EQ(status.sql_state, SQLStates::k_01S07());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToTime_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 0;
+  Timestamp.month = 0;
+  Timestamp.day = 0;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 0;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_TIME_STRUCT
+  alignas(SQL_TIME_STRUCT) char dest_buf[sizeof(SQL_TIME_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_TIME_STRUCT* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->hour, Timestamp.hour);
+  EXPECT_EQ(data->minute, Timestamp.minute);
+  EXPECT_EQ(data->second, Timestamp.second);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToTimestamp_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 123456;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_TIMESTAMP_STRUCT
+  alignas(SQL_TIMESTAMP_STRUCT) char dest_buf[sizeof(SQL_TIMESTAMP_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf),
+                          nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_TIMESTAMP_STRUCT* data =
+      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->year, Timestamp.year);
+  EXPECT_EQ(data->month, Timestamp.month);
+  EXPECT_EQ(data->day, Timestamp.day);
+  EXPECT_EQ(data->hour, Timestamp.hour);
+  EXPECT_EQ(data->minute, Timestamp.minute);
+  EXPECT_EQ(data->second, Timestamp.second);
+  EXPECT_EQ(status.sql_state, SQLStates::k_01S07());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToTimestamp_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 0;
+  Timestamp.month = 0;
+  Timestamp.day = 0;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 0;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  // Ensure alignment for SQL_TIMESTAMP_STRUCT
+  alignas(SQL_TIMESTAMP_STRUCT) char dest_buf[sizeof(SQL_TIMESTAMP_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf),
+                          nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  SQL_TIMESTAMP_STRUCT* data =
+      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(data->year, Timestamp.year);
+  EXPECT_EQ(data->month, Timestamp.month);
+  EXPECT_EQ(data->day, Timestamp.day);
+  EXPECT_EQ(data->hour, Timestamp.hour);
+  EXPECT_EQ(data->minute, Timestamp.minute);
+  EXPECT_EQ(data->second, Timestamp.second);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToBinary_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[10];
+  DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_22003());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToBinary_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[30];
+  DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  SQL_TIMESTAMP_STRUCT* data =
+      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
+
+  EXPECT_EQ(data->year, Timestamp.year);
+  EXPECT_EQ(data->month, Timestamp.month);
+  EXPECT_EQ(data->day, Timestamp.day);
+  EXPECT_EQ(data->hour, Timestamp.hour);
+  EXPECT_EQ(data->minute, Timestamp.minute);
+  EXPECT_EQ(data->second, Timestamp.second);
+  EXPECT_EQ(data->fraction, Timestamp.fraction);
+}
+
+TEST(ConvertFromTimestampDSValue, convertToChar_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[30];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  std::string expected_date = "2024-10-20 01:59:43.112233";
+  std::string data(dest_buf);
+  EXPECT_EQ(data, expected_date);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToChar_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[24];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  std::string data(dest_buf);
+  std::string expected_date = "2024-10-20 01:59:43.112";
+  EXPECT_EQ(data, expected_date);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_01004());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToChar_Failed) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[10];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_22003());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToWchar_Success) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  wchar_t dest_buf[30];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  std::string expected_date = "2";
+  auto* dest = reinterpret_cast<char*>(dest_buf);
+  std::string data(dest);
+  EXPECT_EQ(data, expected_date);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToWchar_InsufficientBuffer) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  wchar_t dest_buf[24];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, 24, nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  std::string expected_date = "2";
+  auto* dest = reinterpret_cast<char*>(dest_buf);
+  std::string data(dest);
+  EXPECT_EQ(data, expected_date);
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToWchar_Failed) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[10];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_22003());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromTimestampDSValue, convertToInvalidType_Failed) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2024;
+  Timestamp.month = 10;
+  Timestamp.day = 20;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 112233;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+
+  char dest_buf[10];
+  DataBuffer dest_data = {SQL_C_SLONG, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
+  ASSERT_EQ(status.sql_state, odbc_internal::SQLStates::k_HY000());
+  ASSERT_FALSE(status.ok());
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

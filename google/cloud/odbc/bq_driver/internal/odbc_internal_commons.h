@@ -156,6 +156,27 @@ inline SQL_DATE_STRUCT DSValueToDate(DSValue const& value,
   return date_struct;
 }
 
+inline std::string FormatTimestampToString(
+    const SQL_TIMESTAMP_STRUCT& timestamp) {
+  char buffer[30];
+  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d.%06d",
+           timestamp.year, timestamp.month, timestamp.day, timestamp.hour,
+           timestamp.minute, timestamp.second, timestamp.fraction);
+  return buffer;
+}
+
+inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp,
+                               DSValue& value) {
+  value.resize(sizeof(SQL_TIMESTAMP_STRUCT));
+  std::memcpy(value.data(), &timestamp, sizeof(SQL_TIMESTAMP_STRUCT));
+}
+
+inline SQL_TIMESTAMP_STRUCT DSValueToTimestamp(
+    DSValue const& value, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
+  std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
+  return timestamp_struct;
+}
+
 inline void TimeToDSValue(const SQL_TIME_STRUCT& time, DSValue& value) {
   value.resize(sizeof(SQL_TIME_STRUCT));
   std::memcpy(value.data(), &time, sizeof(SQL_TIME_STRUCT));

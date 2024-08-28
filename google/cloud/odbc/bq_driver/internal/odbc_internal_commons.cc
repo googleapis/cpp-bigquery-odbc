@@ -13,6 +13,11 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -33,6 +38,72 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using json = nlohmann::json;
+
+// Constants for Unix timestamp calculations
+int const kSecondsPerDay = 86400;
+int const kSecondsPerYear = 31536000;
+int const kSecondsPerLeapYear = 31622400;  // 366 days
+int const kSecondsPerHour = 3600;
+int const kSecondsPerMinute = 60;
+
+bool IsLeapYear(int year) {
+  return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
+}
+
+int DaysInMonth(int year, int month) {
+  static int const kDaysInMonth[] = {31, 28, 31, 30, 31, 30,
+                                     31, 31, 30, 31, 30, 31};
+  if (month == 2 && IsLeapYear(year)) {
+    return 29;
+  }
+  return kDaysInMonth[month - 1];
+}
+
+SQL_TIMESTAMP_STRUCT ConvertUnixTimestampToTimestampStruct(
+    double unix_timestamp) {
+  SQL_TIMESTAMP_STRUCT timestamp_struct;
+
+  // Calculate whole seconds and fractional part
+  auto total_seconds = static_cast<time_t>(unix_timestamp);
+  int fractional_part = static_cast<int>((unix_timestamp - total_seconds) *
+                                         1000000);  // Microseconds
+
+  // Calculate the date and time components
+  int year = 1970;
+  while (total_seconds >=
+         (IsLeapYear(year) ? kSecondsPerLeapYear : kSecondsPerYear)) {
+    total_seconds -= (IsLeapYear(year) ? kSecondsPerLeapYear : kSecondsPerYear);
+    ++year;
+  }
+
+  int month = 1;
+  while (total_seconds >= (DaysInMonth(year, month) * kSecondsPerDay)) {
+    total_seconds -= (DaysInMonth(year, month) * kSecondsPerDay);
+    ++month;
+  }
+
+  int day = total_seconds / kSecondsPerDay + 1;
+  total_seconds %= kSecondsPerDay;
+
+  int hour = total_seconds / kSecondsPerHour;
+  total_seconds %= kSecondsPerHour;
+
+  int minute = total_seconds / kSecondsPerMinute;
+  total_seconds %= kSecondsPerMinute;
+
+  int second = total_seconds;
+
+  // Fill SQL_TIMESTAMP_STRUCT
+  timestamp_struct.year = static_cast<int16_t>(year);
+  timestamp_struct.month = static_cast<unsigned char>(month);
+  timestamp_struct.day = static_cast<unsigned char>(day);
+  timestamp_struct.hour = static_cast<unsigned char>(hour);
+  timestamp_struct.minute = static_cast<unsigned char>(minute);
+  timestamp_struct.second = static_cast<unsigned char>(second);
+  timestamp_struct.fraction = fractional_part;
+
+  return timestamp_struct;
+}
 
 SQL_DATE_STRUCT ConvertStringToDateStruct(std::string const& date_str) {
   if (date_str.empty() || date_str.size() < SQL_DATE_LEN) {
@@ -116,6 +187,13 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           case BQDataType::kTime: {
             SQL_TIME_STRUCT t_data = ConvertToTimeStruct(data);
             TimeToDSValue(t_data, row_val);
+            break;
+          }
+          case BQDataType::kTimeStamp: {
+            double unix_timestamp = std::stod(data);
+            SQL_TIMESTAMP_STRUCT time_struct =
+                ConvertUnixTimestampToTimestampStruct(unix_timestamp);
+            TimestampToDSValue(time_struct, row_val);
             break;
           }
           default: {

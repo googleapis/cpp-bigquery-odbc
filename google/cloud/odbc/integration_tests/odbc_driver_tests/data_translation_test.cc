@@ -943,6 +943,8 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 struct TimestampBasicTestStruct {
   // The target C type SQLBindCol will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -965,7 +967,7 @@ std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                                    std::string query) {
   SQLRETURN status;
-  SQLCHAR data[kBufferLength];
+  SQLPOINTER data[kBufferLength];
   SQLLEN strlen_or_ind;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query.c_str());

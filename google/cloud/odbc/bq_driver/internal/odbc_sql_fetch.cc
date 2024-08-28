@@ -57,6 +57,8 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
       return ConvertFromTimeDSValue(ds_val, data);
     case BQDataType::kJson:
       return ConvertFromJsonDSValue(ds_val, data);
+    case BQDataType::kTimeStamp:
+      return ConvertFromTimestampDSValue(ds_val, data);
   }
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }
