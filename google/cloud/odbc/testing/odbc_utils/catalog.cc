@@ -194,23 +194,23 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
     SQLINTEGER col_size =
         (columns[6].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLINTEGER*>(columns[6].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLINTEGER buf_len =
         (columns[7].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLINTEGER*>(columns[7].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLSMALLINT dec_digits =
         (columns[8].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLSMALLINT*>(columns[8].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLSMALLINT radix =
         (columns[9].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLSMALLINT*>(columns[9].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLSMALLINT nullable =
         (columns[10].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLSMALLINT*>(columns[10].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     std::string description =
         (columns[11].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[11].target_value)
@@ -222,19 +222,19 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
     SQLSMALLINT sql_data_type =
         (columns[13].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLSMALLINT*>(columns[13].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLSMALLINT sql_dt_sub =
         (columns[14].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLSMALLINT*>(columns[14].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLINTEGER octet_len =
         (columns[15].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLINTEGER*>(columns[15].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     SQLINTEGER ord_pos =
         (columns[16].str_len != SQL_NULL_DATA)
             ? *(reinterpret_cast<SQLINTEGER*>(columns[16].target_value))
-            : SQL_NULL_DATA;
+            : 29;
     std::string is_nullable =
         (columns[17].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[17].target_value)

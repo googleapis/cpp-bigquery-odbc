@@ -610,67 +610,59 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
-       5000, 5000, 5000, 1});
+       SQL_VARCHAR, SQL_VARCHAR, 29, 29, 29, 0, 5000, 5000, 5000, 1});
   // IntField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
-       SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 2});
+       SQL_BIGINT, 29, 0, 10, 1, 19, 20, 29, 2});
   // BoolField.
   expected_results.push_back({"bigquery-devtools-drivers",
                               "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
                               "BoolField", "BOOLEAN", "BOOL", "", "YES",
-                              SQL_BIT, SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA,
-                              SQL_NULL_DATA, 1, 1, 1, SQL_NULL_DATA, 3});
+                              SQL_BIT, SQL_BIT, 29, 29, 29, 1, 1, 1, 29, 3});
   // BytesField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "BytesField", "BYTES", "BYTES", "", "YES",
-       SQL_VARBINARY, SQL_VARBINARY, SQL_NULL_DATA, SQL_NULL_DATA,
-       SQL_NULL_DATA, 1, 5000, 5000, 5000, 4});
+       SQL_VARBINARY, SQL_VARBINARY, 29, 29, 29, 1, 5000, 5000, 5000, 4});
   // DateField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "DateField", "DATE", "DATE", "", "YES", SQL_TYPE_DATE,
-       SQL_DATETIME, SQL_CODE_DATE, SQL_NULL_DATA, SQL_NULL_DATA, 1, 10, 6,
-       SQL_NULL_DATA, 5});
+       SQL_DATETIME, SQL_CODE_DATE, 29, 29, 1, 10, 6, 29, 5});
   // DateTimeField.
-  expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
-       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 6});
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "DateTimeField", "DATETIME", "DATETIME", "",
+                              "YES", SQL_TYPE_TIMESTAMP, SQL_DATETIME,
+                              SQL_CODE_TIMESTAMP, 6, 29, 1, 26, 16, 29, 6});
   // IntervalField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1,
-       16384, 16384, 16384, 7});
+       SQL_VARCHAR, SQL_VARCHAR, 29, 29, 29, 1, 16384, 16384, 16384, 7});
   // TimeField.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "TimeField", "TIME", "TIME", "", "YES",
-                              SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
-                              SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 8});
-  // TimestampField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
-       kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
-       SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6, SQL_NULL_DATA,
-       1, 26, 16, SQL_NULL_DATA, 9});
+       kSqlColumnsTable, "TimeField", "TIME", "TIME", "", "YES", SQL_TYPE_TIME,
+       SQL_DATETIME, SQL_CODE_TIME, 6, 29, 1, 15, 6, 29, 8});
+  // TimestampField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "TimestampField", "TIMESTAMP", "TIMESTAMP", "",
+                              "YES", SQL_TYPE_TIMESTAMP, SQL_DATETIME,
+                              SQL_CODE_TIMESTAMP, 6, 29, 1, 26, 16, 29, 9});
   // Decimalield.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
-                              SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 2, 10, 1,
-                              10, 12, SQL_NULL_DATA, 10});
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
+       SQL_NUMERIC, SQL_NUMERIC, 29, 2, 10, 1, 10, 12, 29, 10});
   // BigDecimalField.
-  expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
-                              "BigDecimalField", "BIGNUMERIC", "BIGNUMERIC", "",
-                              "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5,
-                              10, 1, 10, 12, SQL_NULL_DATA, 11});
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsTable, "BigDecimalField", "BIGNUMERIC", "BIGNUMERIC", "",
+       "YES", SQL_NUMERIC, SQL_NUMERIC, 29, 5, 10, 1, 10, 12, 29, 11});
   // Fetch all columns
   TestSQLColumns("%", expected_results);
 }
@@ -680,8 +672,7 @@ TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
-       5000, 5000, 5000, 1});
+       SQL_VARCHAR, SQL_VARCHAR, 29, 29, 29, 0, 5000, 5000, 5000, 1});
   TestSQLColumns("StringField", expected_results, true);
 }
 
@@ -690,8 +681,7 @@ TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
-       SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 0,
-       5000, 5000, 5000, 1});
+       SQL_VARCHAR, SQL_VARCHAR, 29, 29, 29, 0, 5000, 5000, 5000, 1});
   TestSQLColumns("%StringField%", expected_results, false);
 }
 
