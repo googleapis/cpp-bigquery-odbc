@@ -49,23 +49,31 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   DSRow ds_row;
 
   // TABLE_CAT
-  DSValue ds_table_cat;
-  StringToDSValue(catalog, ds_table_cat);
+  DSValue ds_table_cat = kNullValue;
+  if (!catalog.empty()) {
+    StringToDSValue(catalog, ds_table_cat);
+  }
   ds_row.emplace_back(ds_table_cat);
 
   // TABLE_SCHEMA
-  DSValue ds_table_schema;
-  StringToDSValue(dataset, ds_table_schema);
+  DSValue ds_table_schema = kNullValue;
+  if (!dataset.empty()) {
+    StringToDSValue(dataset, ds_table_schema);
+  }
   ds_row.emplace_back(ds_table_schema);
 
   // TABLE_NAME
-  DSValue ds_table_name;
-  StringToDSValue(table, ds_table_name);
+  DSValue ds_table_name = kNullValue;
+  if (!table.empty()) {
+    StringToDSValue(table, ds_table_name);
+  }
   ds_row.emplace_back(ds_table_name);
 
   // COLUMN_NAME
-  DSValue ds_column_name;
-  StringToDSValue(field_schema.name, ds_column_name);
+  DSValue ds_column_name = kNullValue;
+  if (!field_schema.name.empty()) {
+    StringToDSValue(field_schema.name, ds_column_name);
+  }
   ds_row.emplace_back(ds_column_name);
 
   // DATA_TYPE
@@ -136,13 +144,17 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   ds_row.emplace_back(ds_nullable);
 
   // REMARKS
-  DSValue ds_description;
-  StringToDSValue(field_schema.type, ds_description);
+  DSValue ds_description = kNullValue;
+  if (!field_schema.type.empty()) {
+    StringToDSValue(field_schema.type, ds_description);
+  }
   ds_row.emplace_back(ds_description);
 
   // COLUMN_DEF
-  DSValue column_def;
-  StringToDSValue(field_schema.default_value_expression, column_def);
+  DSValue column_def = kNullValue;
+  if (!field_schema.default_value_expression.empty()) {
+    StringToDSValue(field_schema.default_value_expression, column_def);
+  }
   ds_row.emplace_back(column_def);
 
   // SQL_DATA_TYPE
