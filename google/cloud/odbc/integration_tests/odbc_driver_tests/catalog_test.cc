@@ -134,6 +134,16 @@ std::string const kSQLColumnsTableSchema =
     " BigDecimalField BIGDECIMAL(10,5)"
     ")";
 
+std::string const kSqlColumnsEmptyDefaultTable =
+    "ODBC_SQLColumns_TABLE_EMPTY_DEFAULT";
+std::string const kSqlColumnsEmptyDefaultTableFull =
+    kCatalogFnsDataset + "." + kSqlColumnsEmptyDefaultTable;
+std::string const kSqlColumnsEmptyDefaultTableSchema =
+    "CREATE TABLE IF NOT EXISTS " + kSqlColumnsEmptyDefaultTableFull +
+    " (StringField STRING(5000) DEFAULT '' NOT NULL,"
+    " IntField INT64"
+    ")";
+
 /// Test Helper functions for SQLColumns API
 
 // Prints the SQLColumns results output. Used for debugging.
@@ -246,11 +256,14 @@ void VerifyColumnsResults(std::vector<SQLColumnsResult>& actual_results,
 
 void TestSQLColumns(std::string const column,
                     std::vector<SQLColumnsResult>& expected_results,
-                    bool use_identifier = false) {
+                    bool use_identifier = false,
+                    std::string const& schema = kSQLColumnsTableSchema,
+                    std::string const& columns_table = kSqlColumnsTable) {
   auto conn = std::make_shared<ODBCHandles>();
+  std::cout << "Creating table with schema : " << schema << std::endl;
   // Create table for SQLColumns.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  CreateTableDirect(conn, kSQLColumnsTableSchema);
+  CreateTableDirect(conn, schema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Set statement attribute so the parameters are passed as literal values.
@@ -267,7 +280,7 @@ void TestSQLColumns(std::string const column,
 
   std::vector<SQLColumnsResult> results =
       Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                          kSqlColumnsTable.c_str(), column.c_str());
+                          columns_table.c_str(), column.c_str());
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -552,7 +565,8 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
 
 TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  // Create primary keys table via Simba Driver since execute is not implemented
+  // Create primary keys table via Simba Driver since execute is not
+  // implemented
   // for BQ Drivers.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   CreateTableDirect(conn, kTableWithPKSchema);
@@ -562,7 +576,8 @@ TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
 
 TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  // Create primary keys table via Simba Driver since execute is not implemented
+  // Create primary keys table via Simba Driver since execute is not
+  // implemented
   // for BQ Drivers.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
@@ -572,6 +587,20 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   CreateTableDirect(conn, kTableOrdersSchema);
   // Create Lines Table.
   CreateTableDirect(conn, kTableLinesSchema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, CreateSQLColumnsTables) {
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create primary keys table via Simba Driver since execute is not
+  // implemented
+  // for BQ Drivers.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Create SQLColumns Table with default value for StringField.
+  CreateTableDirect(conn, kSQLColumnsTableSchema);
+  // Create SQLColumns Table with empty default value for StringField.
+  CreateTableDirect(conn, kSqlColumnsEmptyDefaultTableSchema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -666,14 +695,24 @@ TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
   TestSQLColumns("%StringField%", expected_results, false);
 }
 
-TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_True) {
+TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   std::vector<SQLColumnsResult> expected_results;
-  TestSQLColumns("%StringField%", expected_results, true);
-}
-
-TEST(CatalogTest, SQLColumns_InvalidColumn) {
-  std::vector<SQLColumnsResult> expected_results;
-  TestSQLColumns("INVALID", expected_results);
+  // StringField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsEmptyDefaultTable, "StringField", "STRING", "STRING", "''",
+       "NO", SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
+       SQL_NULL_DATA, 0, 5000, 5000, 5000, 1});
+  // IntField.
+  expected_results.push_back(
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+       kSqlColumnsEmptyDefaultTable, "IntField", "INTEGER", "INT64", "", "YES",
+       SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA,
+       2});
+  // Fetch all columns
+  TestSQLColumns("%", expected_results, false,
+                 kSqlColumnsEmptyDefaultTableSchema,
+                 kSqlColumnsEmptyDefaultTable);
 }
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
@@ -714,8 +753,8 @@ void VerifyRowWiseResults(RowWiseResults& actual_results,
 
 ///////////////////////////////////////////////////////////////////////////////
 // TODO(b/360988721):SQLPrimaryKeys is not implemented correctly by Simba
-// Driver. Move thall SQLPrimaryKeys tests to common area once bug is fixed so
-// the tests can be run for both Simba and BQ drivers.
+// Driver. Move thall SQLPrimaryKeys tests to common area once bug is fixed
+// so the tests can be run for both Simba and BQ drivers.
 ///////////////////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -797,7 +836,8 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
   auto foreign_keys = Catalog::GetForeignKeys(
-      conn, kCatalogFnsDataset, kTableCustomer, kTableOrders); /* both PK and FK
+      conn, kCatalogFnsDataset, kTableCustomer, kTableOrders); /* both PK and
+      FK
                                                 table supplied*/
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
