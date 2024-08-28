@@ -636,8 +636,8 @@ SQLRETURN GetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
       descriptor_record.type, type_ptr, nullptr);
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       descriptor_record.datetime_interval_code, sub_type_ptr, nullptr);
-  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-      descriptor_record.octet_length, length_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLLEN, SQLLEN>(descriptor_record.octet_length,
+                                                 length_ptr, nullptr);
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       descriptor_record.precision, precision_ptr, nullptr);
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
