@@ -213,7 +213,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // ORDINAL_POSITION
   DSValue ds_ord_pos = kNullValue;
-  if (field_pos >= 0) {
+  if (field_pos != SQL_NULL_DATA) {
     ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos),
                                    ds_ord_pos);
   }
