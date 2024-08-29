@@ -411,7 +411,7 @@ struct DateTimeBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
-  google::cloud::odbc_tests::SQL_DATETIME_STRUCT value;
+  SQL_TIMESTAMP_STRUCT value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
@@ -479,8 +479,8 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_BINARY: {
         if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
-          SQL_DATETIME_STRUCT* date =
-              reinterpret_cast<SQL_DATETIME_STRUCT*>(data);
+          SQL_TIMESTAMP_STRUCT* date =
+              reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
           returned_val = FormatDateTime(*date);
           EXPECT_EQ(returned_val, expected_val);
         }
@@ -523,7 +523,7 @@ TEST(DataTranslationTest, From_SQL_DateTime_to_all) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<SQL_DATETIME_STRUCT> date_data;
+  std::vector<SQL_TIMESTAMP_STRUCT> date_data;
   for (auto const& test_case : kConversionFromDateTimeTestData) {
     date_data.push_back(test_case.value);
   }
