@@ -457,6 +457,7 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       EXPECT_EQ(SQL_ERROR, expected.status);
       break;
     }
+    EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string expected_val = FormatDateTime(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
