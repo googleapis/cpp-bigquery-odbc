@@ -77,63 +77,78 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   ds_row.emplace_back(ds_column_name);
 
   // DATA_TYPE
-  DSValue ds_data_type;
+  DSValue ds_data_type = kNullValue;
   auto data_type_status = GetSQLDataType(field_schema.type, false);
   if (!data_type_status) {
     return data_type_status.GetStatusRecord();
   }
   SQLSMALLINT data_type = *data_type_status;
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(data_type),
-                                 ds_data_type);
+  if (data_type != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(data_type),
+                                   ds_data_type);
+  }
   ds_row.emplace_back(ds_data_type);
 
   // TYPE_NAME
-  DSValue ds_type_name;
+  DSValue ds_type_name = kNullValue;
   auto type_status = GetTypeDescription(field_schema.type);
   if (!type_status) {
     return type_status.GetStatusRecord();
   }
-  StringToDSValue(*type_status, ds_type_name);
+  std::string type_name = *type_status;
+  if (!type_name.empty()) {
+    StringToDSValue(type_name, ds_type_name);
+  }
   ds_row.emplace_back(ds_type_name);
 
   // COLUMN_SIZE
-  DSValue ds_col_size;
+  DSValue ds_col_size = kNullValue;
   auto col_size_status = GetColSize(field_schema);
   if (!col_size_status) {
     return col_size_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*col_size_status),
-                                 ds_col_size);
+  SQLINTEGER col_size = *col_size_status;
+  if (col_size != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(col_size),
+                                   ds_col_size);
+  }
   ds_row.emplace_back(ds_col_size);
 
   // BUFFER_LENGTH
-  DSValue ds_buf_len;
+  DSValue ds_buf_len = kNullValue;
   auto buf_len_status = GetBufferLen(field_schema);
   if (!buf_len_status) {
     return buf_len_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*buf_len_status),
-                                 ds_buf_len);
+  SQLINTEGER buf_len = *buf_len_status;
+  if (buf_len != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(buf_len), ds_buf_len);
+  }
   ds_row.emplace_back(ds_buf_len);
 
   // DECIMAL_DIGITS
-  DSValue ds_dec_digits;
+  DSValue ds_dec_digits = kNullValue;
   auto dec_digits_status = GetDecimalDigits(field_schema);
   if (!dec_digits_status) {
     return dec_digits_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*dec_digits_status),
-                                 ds_dec_digits);
+  SQLSMALLINT dec_digits = *dec_digits_status;
+  if (dec_digits != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(dec_digits),
+                                   ds_dec_digits);
+  }
   ds_row.emplace_back(ds_dec_digits);
 
   // NUM_PREC_RADIX
-  DSValue ds_radix;
+  DSValue ds_radix = kNullValue;
   auto radix_status = GetRadix(field_schema);
   if (!radix_status) {
     return radix_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*radix_status),
-                                 ds_radix);
+  SQLSMALLINT radix = *radix_status;
+  if (radix != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(radix), ds_radix);
+  }
   ds_row.emplace_back(ds_radix);
 
   // NULLABLE
@@ -158,39 +173,50 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   ds_row.emplace_back(column_def);
 
   // SQL_DATA_TYPE
-  DSValue ds_sql_data_type;
+  DSValue ds_sql_data_type = kNullValue;
   auto sql_data_type_status = GetSQLDataType(data_type);
   if (!sql_data_type_status) {
     return sql_data_type_status.GetStatusRecord();
   }
   SQLSMALLINT sql_data_type = *sql_data_type_status;
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(sql_data_type),
-                                 ds_sql_data_type);
+  if (sql_data_type != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(sql_data_type),
+                                   ds_sql_data_type);
+  }
   ds_row.emplace_back(ds_sql_data_type);
 
   // SQL_DATETIME_SUB
-  DSValue ds_sql_datetime_sub;
+  DSValue ds_sql_datetime_sub = kNullValue;
   auto sql_data_time_sub_status = GetSQLDateTimeSub(sql_data_type, data_type);
   if (!sql_data_time_sub_status) {
     return sql_data_time_sub_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(
-      static_cast<SQLBIGINT>(*sql_data_time_sub_status), ds_sql_datetime_sub);
+  SQLSMALLINT sql_date_time_sub = *sql_data_time_sub_status;
+  if (sql_date_time_sub != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(sql_date_time_sub),
+                                   ds_sql_datetime_sub);
+  }
   ds_row.emplace_back(ds_sql_datetime_sub);
 
   // CHAR_OCTET_LENGTH
-  DSValue ds_char_octet_len;
+  DSValue ds_char_octet_len = kNullValue;
   auto char_octet_len_status = GetCharOctetLen(field_schema);
   if (!char_octet_len_status) {
     return char_octet_len_status.GetStatusRecord();
   }
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*char_octet_len_status),
-                                 ds_char_octet_len);
+  SQLINTEGER char_octet_len = *char_octet_len_status;
+  if (char_octet_len != SQL_NULL_DATA) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(char_octet_len),
+                                   ds_char_octet_len);
+  }
   ds_row.emplace_back(ds_char_octet_len);
 
   // ORDINAL_POSITION
-  DSValue ds_ord_pos;
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos), ds_ord_pos);
+  DSValue ds_ord_pos = kNullValue;
+  if (field_pos >= 0) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos),
+                                   ds_ord_pos);
+  }
   ds_row.emplace_back(ds_ord_pos);
 
   // IS_NULLABLE

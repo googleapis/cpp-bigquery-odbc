@@ -68,86 +68,158 @@ void VerifyDSRow(DSRow& ds_row,
   int i = 0;
   DSValue ds_val = ds_row[i++];
   // TABLE_CAT
-  std::string table_cat;
-  DSValueToString(ds_val, table_cat);
-  ASSERT_EQ(table_cat, kTestCatalog);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string table_cat;
+    DSValueToString(ds_val, table_cat);
+    ASSERT_EQ(table_cat, kTestCatalog);
+  }
   // TABLE_SCHEMA
   ds_val = ds_row[i++];
-  std::string table_schema;
-  DSValueToString(ds_val, table_schema);
-  ASSERT_EQ(table_schema, kTestDataset);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string table_schema;
+    DSValueToString(ds_val, table_schema);
+    ASSERT_EQ(table_schema, kTestDataset);
+  }
   // TABLE_NAME
   ds_val = ds_row[i++];
-  std::string table_name;
-  DSValueToString(ds_val, table_name);
-  ASSERT_EQ(table_name, kTestTable);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string table_name;
+    DSValueToString(ds_val, table_name);
+    ASSERT_EQ(table_name, kTestTable);
+  }
   // COLUMN_NAME
   ds_val = ds_row[i++];
-  std::string col_name;
-  DSValueToString(ds_val, col_name);
-  ASSERT_EQ(col_name, exp_sql_columns_data.field_schema.name);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string col_name;
+    DSValueToString(ds_val, col_name);
+    ASSERT_EQ(col_name, exp_sql_columns_data.field_schema.name);
+  }
   // DATA_TYPE
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(exp_sql_columns_data.data_type, actual_data_type);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(exp_sql_columns_data.data_type, actual_data_type);
+  }
   // TYPE_NAME
   ds_val = ds_row[i++];
-  std::string type_name;
-  DSValueToString(ds_val, type_name);
-  ASSERT_EQ(type_name, exp_sql_columns_data.field_schema.type);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string type_name;
+    DSValueToString(ds_val, type_name);
+    ASSERT_EQ(type_name, exp_sql_columns_data.field_schema.type);
+  }
   // COL_SIZE
   ds_val = ds_row[i++];
-  SQLINTEGER actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
-  ASSERT_EQ(actual_col_size, exp_sql_columns_data.col_size);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLINTEGER actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    ASSERT_EQ(actual_col_size, exp_sql_columns_data.col_size);
+  }
   // BUFFER_LENGTH
   ds_val = ds_row[i++];
-  SQLINTEGER actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
-  ASSERT_EQ(actual_buf_len, exp_sql_columns_data.buf_len);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLINTEGER actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    ASSERT_EQ(actual_buf_len, exp_sql_columns_data.buf_len);
+  }
   // DECIMAL_DIGITS
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_dec_digits, exp_sql_columns_data.dec_digits);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_dec_digits, exp_sql_columns_data.dec_digits);
+  }
   // NUM_PREC_RADIX
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_radix, exp_sql_columns_data.radix);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_radix, exp_sql_columns_data.radix);
+  }
   // NULLABLE
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_nullable, exp_sql_columns_data.nullable);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_nullable, exp_sql_columns_data.nullable);
+  }
   // REMARKS
   ds_val = ds_row[i++];
-  std::string remarks;
-  DSValueToString(ds_val, remarks);
-  ASSERT_EQ(remarks, exp_sql_columns_data.field_schema.description);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string remarks;
+    DSValueToString(ds_val, remarks);
+    ASSERT_EQ(remarks, exp_sql_columns_data.field_schema.description);
+  }
   // COLUMN_DEF
   ds_val = ds_row[i++];
-  std::string col_def;
-  DSValueToString(ds_val, col_def);
-  ASSERT_EQ(col_def,
-            exp_sql_columns_data.field_schema.default_value_expression);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string col_def;
+    DSValueToString(ds_val, col_def);
+    ASSERT_EQ(col_def,
+              exp_sql_columns_data.field_schema.default_value_expression);
+  }
   // SQL_DATA_TYPE
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_sql_data_type, exp_sql_columns_data.sql_data_type);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_sql_data_type, exp_sql_columns_data.sql_data_type);
+  }
   // SQL_DATETIME_SUB
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_sql_date_time_sub =
-      DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_sql_date_time_sub, exp_sql_columns_data.sql_datetime_sub);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_sql_date_time_sub =
+        DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_sql_date_time_sub, exp_sql_columns_data.sql_datetime_sub);
+  }
   // CHAR_OCTET_LENGTH
   ds_val = ds_row[i++];
-  SQLINTEGER actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
-  ASSERT_EQ(actual_octet_len, exp_sql_columns_data.octet_len);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLINTEGER actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    ASSERT_EQ(actual_octet_len, exp_sql_columns_data.octet_len);
+  }
   // ORDINAL_POSITION
   ds_val = ds_row[i++];
-  SQLSMALLINT actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
-  ASSERT_EQ(actual_pos, exp_sql_columns_data.ord_pos);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    SQLSMALLINT actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    ASSERT_EQ(actual_pos, exp_sql_columns_data.ord_pos);
+  }
   // IS_NULLABLE
   ds_val = ds_row[i++];
-  std::string is_nullable;
-  DSValueToString(ds_val, is_nullable);
-  ASSERT_EQ(is_nullable, exp_sql_columns_data.is_nullable);
+  if (IsDSValueNull(ds_val)) {
+    ASSERT_EQ(ds_val, kNullValue);
+  } else {
+    std::string is_nullable;
+    DSValueToString(ds_val, is_nullable);
+    ASSERT_EQ(is_nullable, exp_sql_columns_data.is_nullable);
+  }
 }
 
 std::vector<ColumnSchema> CreateExpectedRowSchema() {
@@ -209,12 +281,10 @@ void ProcessTableResultsHelper(std::string column,
   expected_sql_string_row.col_size = 5000;
   expected_sql_string_row.buf_len = 5000;
   expected_sql_string_row.octet_len = 5000;
-  expected_sql_string_row.dec_digits = SQL_NULL_DATA;
   expected_sql_string_row.radix = 10;
   expected_sql_string_row.data_type = SQL_VARCHAR;
   expected_sql_string_row.nullable = 0;
   expected_sql_string_row.sql_data_type = SQL_VARCHAR;
-  expected_sql_string_row.sql_datetime_sub = SQL_NULL_DATA;
   expected_sql_string_row.ord_pos = 1;
   expected_sql_string_row.is_nullable = "NO";
 
@@ -222,13 +292,11 @@ void ProcessTableResultsHelper(std::string column,
   expected_sql_int_row.field_schema = field_schema2;
   expected_sql_int_row.col_size = 19;
   expected_sql_int_row.buf_len = 20;
-  expected_sql_int_row.octet_len = SQL_NULL_DATA;
   expected_sql_int_row.dec_digits = 0;
   expected_sql_int_row.radix = 10;
   expected_sql_int_row.data_type = SQL_BIGINT;
   expected_sql_int_row.nullable = 0;
   expected_sql_int_row.sql_data_type = SQL_BIGINT;
-  expected_sql_int_row.sql_datetime_sub = SQL_NULL_DATA;
   expected_sql_int_row.ord_pos = 2;
   expected_sql_int_row.is_nullable = "NO";
 
