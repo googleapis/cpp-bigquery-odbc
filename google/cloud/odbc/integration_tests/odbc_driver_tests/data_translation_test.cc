@@ -431,23 +431,18 @@ std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
 void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
                                   std::string query) {
   SQLRETURN status;
-  SQLCHAR data[kBufferLength];
+  SQLPOINTER data[kBufferLength];
   SQLLEN strlen_or_ind;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query.c_str());
-
-  int row_count = 0;
-
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
-
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
 
   for (auto const& expected : kConversionFromDateTimeTestData) {
     status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
                         kBufferLength, &strlen_or_ind);
-
     CheckError(status, "SQLBindCol", conn);
 
     status = SQLFetch(conn->hstmt);
@@ -455,13 +450,13 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
     if (status == SQL_NO_DATA) {
       break;
     }
+
     if (!SQL_SUCCEEDED(status)) {
       EXPECT_EQ(SQL_ERROR, expected.status);
       break;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string expected_val = FormatDateTime(expected.value);
-    std::string returned_val;
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
@@ -469,21 +464,17 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        std::wstring wstr(reinterpret_cast<wchar_t*>(data),
-                          strlen_or_ind / sizeof(wchar_t));
+        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
         std::string returned_val =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
-                                    strlen_or_ind / sizeof(SQLWCHAR));
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
         EXPECT_STREQ(returned_val.data(), expected_val.data());
         break;
       }
       case SQL_C_BINARY: {
-        if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
-          SQL_TIMESTAMP_STRUCT* date =
-              reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-          returned_val = FormatDateTime(*date);
-          EXPECT_EQ(returned_val, expected_val);
-        }
+        SQL_TIMESTAMP_STRUCT* timestamp =
+            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+        std::string returned_val = FormatDateTime(*timestamp);
+        EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_TYPE_DATE: {
@@ -493,20 +484,27 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         EXPECT_EQ(date->day, expected.value.day);
         break;
       }
-
       case SQL_C_TYPE_TIMESTAMP: {
         SQL_TIMESTAMP_STRUCT* timestamp =
             reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
         EXPECT_EQ(timestamp->year, expected.value.year);
         EXPECT_EQ(timestamp->month, expected.value.month);
         EXPECT_EQ(timestamp->day, expected.value.day);
-
+        EXPECT_EQ(timestamp->hour, expected.value.hour);
+        EXPECT_EQ(timestamp->minute, expected.value.minute);
+        EXPECT_EQ(timestamp->second, expected.value.second);
+        break;
+      }
+      case SQL_C_TYPE_TIME: {
+        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+        EXPECT_EQ(time->hour, expected.value.hour);
+        EXPECT_EQ(time->minute, expected.value.minute);
+        EXPECT_EQ(time->second, expected.value.second);
         break;
       }
       default:
         break;
     }
-    ++row_count;
   }
 }
 
