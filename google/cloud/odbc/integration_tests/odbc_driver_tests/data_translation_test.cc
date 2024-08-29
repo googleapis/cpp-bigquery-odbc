@@ -407,6 +407,8 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 struct DateTimeBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -455,7 +457,6 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       EXPECT_EQ(SQL_ERROR, expected.status);
       break;
     }
-    EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string expected_val = FormatDateTime(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
@@ -464,11 +465,9 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        std::wstring wstr(reinterpret_cast<wchar_t*>(data),
-                          strlen_or_ind / sizeof(wchar_t));
+        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
         std::string returned_val =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
-                                    strlen_or_ind / sizeof(SQLWCHAR));
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
         EXPECT_STREQ(returned_val.data(), expected_val.data());
         break;
       }

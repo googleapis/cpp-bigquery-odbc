@@ -51,6 +51,8 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
       return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
     case BQDataType::kString:
       return ConvertFromStringDSValue(ds_val, data);
+    case BQDataType::kDatetime:
+      return ConvertFromTimestampDSValue(ds_val, data);
   }
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }

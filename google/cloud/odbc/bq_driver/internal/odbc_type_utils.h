@@ -154,6 +154,36 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
   return SQL_SUCCESS;
 }
 
+inline odbc_internal::StatusRecord TimestampToOutputBufferResponse(
+    const SQL_TIMESTAMP_STRUCT& conn_timestamp, SQLPOINTER dest_buf,
+    SQLLEN buffer_length, SQLLEN* result_len) {
+  auto* dest_timestamp = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
+  auto status_record = odbc_internal::StatusRecord::Ok();
+
+  if (buffer_length < 0) {
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY090(),
+                                       "Buffer length is negative"};
+  }
+
+  if (result_len) {
+    *result_len = sizeof(SQL_TIMESTAMP_STRUCT);
+  }
+
+  dest_timestamp->year = conn_timestamp.year;
+  dest_timestamp->month = conn_timestamp.month;
+  dest_timestamp->day = conn_timestamp.day;
+  dest_timestamp->hour = conn_timestamp.hour;
+  dest_timestamp->minute = conn_timestamp.minute;
+  dest_timestamp->second = conn_timestamp.second;
+
+  if (conn_timestamp.fraction != 0) {
+    status_record = odbc_internal::StatusRecord{
+        odbc_internal::SQLStates::k_01S07(), "Timestamp data, right truncated"};
+  }
+
+  return status_record;
+}
+
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLINTEGER* str_len_ptr);
 

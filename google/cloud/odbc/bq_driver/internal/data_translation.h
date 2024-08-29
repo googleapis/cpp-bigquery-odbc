@@ -334,6 +334,156 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+  using odbc_internal::StatusRecordOr;
+
+  SQL_TIMESTAMP_STRUCT timestamp_src_struct;
+  DSValueToTimestamp(src_dsval, timestamp_src_struct);
+
+  std::string timestamp_src_str;
+  timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
+  std::cout << "Timestamp string:" << timestamp_src_str << std::endl;
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+  SQLLEN buffer_length = dest_data.buflen;
+  SQLLEN* res_len = dest_data.result_len;
+
+  // Define length variables
+  int k_timestamp_src_len = timestamp_src_str.length();
+  constexpr int kTimestampBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
+
+  if (!dest_buf) {
+    return StatusRecord::Ok();
+  }
+  if (buffer_length < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  StatusRecord status_record = StatusRecord::Ok();
+
+  switch (dest_type) {
+    case SQL_C_CHAR: {
+      auto* dest = reinterpret_cast<char*>(dest_buf);
+      if (buffer_length > k_timestamp_src_len) {
+        if (res_len) {
+          *res_len = k_timestamp_src_len;
+        }
+        std::strncpy(dest, timestamp_src_str.c_str(), k_timestamp_src_len);
+        dest[k_timestamp_src_len] = '\0';
+      } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
+        if (res_len) {
+          *res_len = buffer_length;
+        }
+        std::strncpy(dest, timestamp_src_str.c_str(), buffer_length - 1);
+        dest[buffer_length - 1] = '\0';
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+      }
+      break;
+    }
+
+    case SQL_C_WCHAR: {
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(timestamp_src_str);
+      if (!wstr) {
+        status_record = StatusRecord{SQLStates::k_HY000(),
+                                     "DSValueToWchar Conversion Failed"};
+        break;
+      }
+      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
+      wstr_data.emplace_back(L'\0');
+
+      auto* dest = static_cast<SQLWCHAR*>(dest_buf);
+      if (buffer_length > k_timestamp_src_len) {
+        if (res_len) {
+          *res_len = k_timestamp_src_len * sizeof(SQLWCHAR);
+        }
+        std::memcpy(dest, wstr_data.data(),
+                    (k_timestamp_src_len) * sizeof(SQLWCHAR));
+      } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
+        if (res_len) {
+          *res_len = buffer_length * sizeof(SQLWCHAR);
+        }
+        std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+      }
+      break;
+    }
+
+    case SQL_C_BINARY: {
+      if (kTimestampBinaryLength <= buffer_length) {
+        if (res_len) {
+          *res_len = kTimestampBinaryLength;
+        }
+        std::memcpy(dest_buf, &timestamp_src_struct, kTimestampBinaryLength);
+
+      } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+      }
+      break;
+    }
+
+    case SQL_C_TYPE_DATE: {
+      auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(dest_buf);
+      if (res_len) {
+        *res_len = sizeof(SQL_DATE_STRUCT);
+      }
+      if (timestamp_src_struct.hour == 0 && timestamp_src_struct.minute == 0 &&
+          timestamp_src_struct.second == 0) {
+        date->year = timestamp_src_struct.year;
+        date->month = timestamp_src_struct.month;
+        date->day = timestamp_src_struct.day;
+      } else {
+        date->year = timestamp_src_struct.year;
+        date->month = timestamp_src_struct.month;
+        date->day = timestamp_src_struct.day;
+        status_record =
+            StatusRecord{SQLStates::k_01S07(), "Date data, right truncated"};
+      }
+      break;
+    }
+
+    case SQL_C_TYPE_TIME: {
+      auto* time = reinterpret_cast<SQL_TIME_STRUCT*>(dest_buf);
+      if (res_len) {
+        *res_len = sizeof(SQL_TIME_STRUCT);
+      }
+      if (timestamp_src_struct.fraction == 0) {
+        time->hour = timestamp_src_struct.hour;
+        time->minute = timestamp_src_struct.minute;
+        time->second = timestamp_src_struct.second;
+      } else {
+        time->hour = timestamp_src_struct.hour;
+        time->minute = timestamp_src_struct.minute;
+        time->second = timestamp_src_struct.second;
+        status_record =
+            StatusRecord{SQLStates::k_01S07(), "Time data, right truncated"};
+      }
+      break;
+    }
+
+    case SQL_C_TYPE_TIMESTAMP: {
+      return TimestampToOutputBufferResponse(
+          timestamp_src_struct, dest_buf, buffer_length,
+          reinterpret_cast<SQLLEN*>(dest_data.result_len));
+    }
+
+    default:
+      status_record =
+          StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+  return status_record;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

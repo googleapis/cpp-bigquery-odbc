@@ -145,6 +145,38 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   return int_val;
 }
 
+inline std::string convertTimestampToString(DSValue const& value,
+                                            std::string& str) {
+  str.assign(value.begin(), value.end());
+  std::regex timestamp_pattern(
+      R"(^\d{4}-(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01]) (00|[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):([0-9]|[0-5][0-9])(?:\.\d+)?(?: \S+\/\S+)?$)");
+  if (std::regex_match(str, timestamp_pattern)) {
+    return str;
+  }
+  throw std::invalid_argument("Invalid timestamp format.");
+}
+
+inline std::string FormatTimestampToString(
+    const SQL_TIMESTAMP_STRUCT& timestamp) {
+  char buffer[30];
+  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d.%06d",
+           timestamp.year, timestamp.month, timestamp.day, timestamp.hour,
+           timestamp.minute, timestamp.second, timestamp.fraction);
+  return buffer;
+}
+
+inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp,
+                               DSValue& value) {
+  value.resize(sizeof(SQL_TIMESTAMP_STRUCT));
+  std::memcpy(value.data(), &timestamp, sizeof(SQL_TIMESTAMP_STRUCT));
+}
+
+inline SQL_TIMESTAMP_STRUCT DSValueToTimestamp(
+    DSValue const& value, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
+  std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
+  return timestamp_struct;
+}
+
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:
