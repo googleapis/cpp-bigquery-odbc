@@ -57,52 +57,6 @@ int DaysInMonth(int year, int month) {
   return kDaysInMonth[month - 1];
 }
 
-SQL_TIMESTAMP_STRUCT ConvertUnixTimestampToTimestampStruct(
-    double unix_timestamp) {
-  SQL_TIMESTAMP_STRUCT timestamp_struct;
-
-  // Calculate whole seconds and fractional part
-  auto total_seconds = static_cast<time_t>(unix_timestamp);
-  int fractional_part = static_cast<int>((unix_timestamp - total_seconds) *
-                                         1000000);  // Microseconds
-
-  // Calculate the date and time components
-  int year = 1970;
-  while (total_seconds >=
-         (IsLeapYear(year) ? kSecondsPerLeapYear : kSecondsPerYear)) {
-    total_seconds -= (IsLeapYear(year) ? kSecondsPerLeapYear : kSecondsPerYear);
-    ++year;
-  }
-
-  int month = 1;
-  while (total_seconds >= (DaysInMonth(year, month) * kSecondsPerDay)) {
-    total_seconds -= (DaysInMonth(year, month) * kSecondsPerDay);
-    ++month;
-  }
-
-  int day = total_seconds / kSecondsPerDay + 1;
-  total_seconds %= kSecondsPerDay;
-
-  int hour = total_seconds / kSecondsPerHour;
-  total_seconds %= kSecondsPerHour;
-
-  int minute = total_seconds / kSecondsPerMinute;
-  total_seconds %= kSecondsPerMinute;
-
-  int second = total_seconds;
-
-  // Fill SQL_TIMESTAMP_STRUCT
-  timestamp_struct.year = static_cast<int16_t>(year);
-  timestamp_struct.month = static_cast<unsigned char>(month);
-  timestamp_struct.day = static_cast<unsigned char>(day);
-  timestamp_struct.hour = static_cast<unsigned char>(hour);
-  timestamp_struct.minute = static_cast<unsigned char>(minute);
-  timestamp_struct.second = static_cast<unsigned char>(second);
-  timestamp_struct.fraction = fractional_part;
-
-  return timestamp_struct;
-}
-
 SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
     std::string const& date_str) {
   int year = std::stoi(date_str.substr(0, 4));

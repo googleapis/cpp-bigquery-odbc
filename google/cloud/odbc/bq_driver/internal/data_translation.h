@@ -345,7 +345,6 @@ inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(
 
   std::string timestamp_src_str;
   timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
-  std::cout << "Timestamp string:" << timestamp_src_str << std::endl;
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
