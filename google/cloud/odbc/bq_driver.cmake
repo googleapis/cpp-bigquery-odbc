@@ -74,13 +74,30 @@ add_library(
     bq_driver/internal/utils.cc
     bq_driver/internal/utils.h)
 
+if(_WIN32)
+    add_library(google_cloud_odbc_bq_driver_internal
+        bq_driver/internal/second_form.cpp
+        bq_driver/internal/second_form.h
+    )
+endif()
+
 target_link_libraries(
     google_cloud_odbc_bq_driver_internal
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
     odbc_bq_client_interface
-    odbc_internal)
+    odbc_internal 
+    )
+
+if(_WIN32)
+target_link_libraries(
+    google_cloud_odbc_bq_driver_internal
+    user32 
+    gdi32
+    )
+endif()
+
 target_include_directories(google_cloud_odbc_bq_driver_internal
                            PUBLIC ${CMAKE_SOURCE_DIR})
 target_include_directories(google_cloud_odbc_bq_driver_internal
