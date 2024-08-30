@@ -30,18 +30,19 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
                      octet_length_ptr};
-
-  if (indicator_ptr == nullptr) {
-    return {SQLStates::k_22002(),
-            "Indicator variable required but not supplied"};
-  }
   if (IsDSValueNull(ds_val)) {
+    if (indicator_ptr == nullptr) {
+      return {SQLStates::k_22002(),
+              "Indicator variable required but not supplied"};
+    }
     *indicator_ptr = SQL_NULL_DATA;
     return StatusRecord::Ok();
   }
   // We need to reset the indicator_ptr once it has been set to SQL_NULL_DATA
   // for DSNullValues.
-  *indicator_ptr = ds_val.size();
+  if (indicator_ptr) {
+    *indicator_ptr = ds_val.size();
+  }
   StatusRecord status_record;
   switch (bq_data_type) {
     case BQDataType::kInt64:

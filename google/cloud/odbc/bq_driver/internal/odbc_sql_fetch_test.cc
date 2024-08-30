@@ -163,9 +163,8 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20];
-  SQLLEN str_len;
   status =
-      SQLBindColInternal(&stmt_handle, 1, SQL_C_SSHORT, int_buf, 20, &str_len);
+      SQLBindColInternal(&stmt_handle, 1, SQL_C_SSHORT, int_buf, 20, nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
 
   ResultSet result_set;
@@ -185,11 +184,10 @@ TEST(WriteRowset, Failure_FractionalTruncation) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR double_buf[20];
-  SQLLEN str_len;
 
   // Here we are trying to translate the 2nd column from double to int
-  status = SQLBindColInternal(&stmt_handle, 2, SQL_C_SLONG, double_buf, 20,
-                              &str_len);
+  status =
+      SQLBindColInternal(&stmt_handle, 2, SQL_C_SLONG, double_buf, 20, nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
 
   ResultSet result_set;
