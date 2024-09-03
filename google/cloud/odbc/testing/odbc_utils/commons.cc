@@ -48,6 +48,55 @@ std::string getSchemaStr(Schema schema) {
   return schema_str;
 }
 
+std::string getIntervalTypeStr(const SQLINTERVAL type) {
+  std::string result;
+  switch (type) {
+    case SQL_IS_YEAR_TO_MONTH:
+      result = "YEAR TO MONTH";
+      break;
+    case SQL_IS_YEAR:
+      result = "YEAR";
+      break;
+    case SQL_IS_MONTH:
+      result = "MONTH";
+      break;
+    case SQL_IS_DAY:
+      result = "DAY";
+      break;
+    case SQL_IS_HOUR:
+      result = "HOUR";
+      break;
+    case SQL_IS_MINUTE:
+      result = "MINUTE";
+      break;
+    case SQL_IS_SECOND:
+      result = "SECOND";
+      break;
+    case SQL_IS_DAY_TO_HOUR:
+      result = "DAY TO HOUR";
+      break;
+    case SQL_IS_DAY_TO_MINUTE:
+      result = "DAY TO MINUTE";
+      break;
+    case SQL_IS_DAY_TO_SECOND:
+      result = "DAY TO SECOND";
+      break;
+    case SQL_IS_HOUR_TO_MINUTE:
+      result = "HOUR TO MINUTE";
+      break;
+    case SQL_IS_HOUR_TO_SECOND:
+      result = "HOUR TO SECOND";
+      break;
+    case SQL_IS_MINUTE_TO_SECOND:
+      result = "MINUTE TO SECOND";
+      break;
+    default:
+      throw std::runtime_error("Invalid interval type: " +
+                               std::to_string(type));
+  }
+  return result;
+}
+
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi) {
   if (handle == nullptr) {
@@ -350,6 +399,149 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 }
 
+void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
+                               StdIntervalRows rows, bool use_ansi) {
+  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::string row_str = "( ";
+    if (row.int_field != NULL) {
+      row_str.append(std::to_string(row.int_field) + ", ");
+    } else {
+      row_str.append("NULL, ");
+    }
+    if (row.interval_field.interval_type != NULL) {
+      auto kIntervalTypeToStr =
+          getIntervalTypeStr(row.interval_field.interval_type);
+      std::string interval_str;
+      switch (row.interval_field.interval_type) {
+        case SQL_IS_YEAR:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.year_month.year) + "' " +
+              kIntervalTypeToStr;
+          break;
+        case SQL_IS_MONTH:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.year_month.month) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_DAY:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.day) + "' " +
+              kIntervalTypeToStr;
+          break;
+        case SQL_IS_HOUR:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.hour) + "' " +
+              kIntervalTypeToStr;
+          break;
+        case SQL_IS_MINUTE:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_SECOND:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.second) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_YEAR_TO_MONTH:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.year_month.year) + "-" +
+              std::to_string(row.interval_field.intval.year_month.month) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_DAY_TO_HOUR:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.day) + " " +
+              std::to_string(row.interval_field.intval.day_second.hour) + "' " +
+              kIntervalTypeToStr;
+          break;
+        case SQL_IS_DAY_TO_MINUTE:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.day) + " " +
+              std::to_string(row.interval_field.intval.day_second.hour) + ":" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_DAY_TO_SECOND:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.day) + " " +
+              std::to_string(row.interval_field.intval.day_second.hour) + ":" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              ":" +
+              std::to_string(row.interval_field.intval.day_second.second) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_HOUR_TO_MINUTE:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.hour) + ":" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_HOUR_TO_SECOND:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.hour) + ":" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              ":" +
+              std::to_string(row.interval_field.intval.day_second.second) +
+              "' " + kIntervalTypeToStr;
+          break;
+        case SQL_IS_MINUTE_TO_SECOND:
+          interval_str =
+              "INTERVAL '" +
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              ":" +
+              std::to_string(row.interval_field.intval.day_second.second) +
+              "' " + kIntervalTypeToStr;
+          break;
+        default:
+          throw std::runtime_error("Invalid INTERVAL value: " + interval_str);
+          break;
+      }
+      row_str.append(interval_str);
+    } else {
+      row_str.append("NULL");
+    }
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+  insert_stmt.append(";");
+  SQLRETURN status;
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                         insert_stmt.size());
+    CheckError(status, "SQLPrepareA", conn, use_ansi);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn, use_ansi);
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                        insert_stmt.size());
+    CheckError(status, "SQLPrepare", conn);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+  }
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];
@@ -374,7 +566,6 @@ void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_table_stmt,
                       strlen(create_table_stmt));
   CheckError(status, "SQLPrepare", conn, false);
-
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 }

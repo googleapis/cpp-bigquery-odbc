@@ -334,6 +334,132 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   return StatusRecord::Ok();
 }
 
+inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+
+  SQL_INTERVAL_STRUCT conn_interval;
+  DSValueToInterval(src_dsval, conn_interval);
+
+  std::string interval_src_str;
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+  SQLLEN buffer_length = dest_data.buflen;
+
+  constexpr int kIntervalCharLength = 30;
+  constexpr int kIntervalWcharLength = kIntervalCharLength;
+  constexpr int kIntervalBinaryLength = sizeof(SQL_INTERVAL_STRUCT);
+
+  if (!dest_buf) {
+    return StatusRecord::Ok();
+  }
+  if (buffer_length < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  StatusRecord status_record = StatusRecord::Ok();
+
+  switch (dest_type) {
+    case SQL_C_CHAR: {
+      auto* dest = reinterpret_cast<char*>(dest_buf);
+      if (buffer_length > kIntervalCharLength) {
+        snprintf(dest, buffer_length, "%d-%d %d %d:%d:%d",
+                 conn_interval.intval.year_month.year,
+                 conn_interval.intval.year_month.month,
+                 conn_interval.intval.day_second.day,
+                 conn_interval.intval.day_second.hour,
+                 conn_interval.intval.day_second.minute,
+                 conn_interval.intval.day_second.second);
+      } else {
+        strncpy(dest, "Y-M D H:M:S", buffer_length - 1);
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+      }
+      break;
+    }
+    case SQL_C_WCHAR: {
+      // TODO
+      break;
+    }
+    case SQL_C_BINARY: {
+      if (buffer_length > kIntervalBinaryLength) {
+        memcpy(dest_buf, &conn_interval, kIntervalBinaryLength);
+      } else {
+        memcpy(dest_buf, &conn_interval, buffer_length);
+        status_record = StatusRecord{SQLStates::k_22003(), "Undefined data."};
+      }
+      break;
+    }
+    case SQL_C_INTERVAL_YEAR:
+    case SQL_C_INTERVAL_MONTH:
+    case SQL_C_INTERVAL_DAY:
+    case SQL_C_INTERVAL_HOUR:
+    case SQL_C_INTERVAL_MINUTE:
+    case SQL_C_INTERVAL_SECOND:
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:
+    case SQL_C_INTERVAL_DAY_TO_HOUR:
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:
+    case SQL_C_INTERVAL_DAY_TO_SECOND:
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
+      if (kIntervalCharLength < buffer_length) {
+        return IntervalTOutputBufferResponse(
+            conn_interval, dest_buf, buffer_length,
+            reinterpret_cast<SQLLEN*>(dest_data.result_len));
+      } else {
+        status_record =
+            StatusRecord{SQLStates::k_01S07(), "String data, right truncated"};
+      }
+    }
+
+    case SQL_C_STINYINT: {
+      auto* dest = reinterpret_cast<int8_t*>(dest_buf);
+      if (conn_interval.interval_type == SQL_IS_YEAR ||
+          conn_interval.interval_type == SQL_IS_MONTH ||
+          conn_interval.interval_type == SQL_IS_DAY ||
+          conn_interval.interval_type == SQL_IS_HOUR ||
+          conn_interval.interval_type == SQL_IS_MINUTE ||
+          conn_interval.interval_type == SQL_IS_SECOND) {
+        SQLUINTEGER interval_value = 0;
+        switch (conn_interval.interval_type) {
+          case SQL_IS_YEAR:
+            interval_value = conn_interval.intval.year_month.year;
+            break;
+          case SQL_IS_MONTH:
+            interval_value = conn_interval.intval.year_month.month;
+            break;
+          case SQL_IS_DAY:
+            interval_value = conn_interval.intval.day_second.day;
+            break;
+          case SQL_IS_HOUR:
+            interval_value = conn_interval.intval.day_second.hour;
+            break;
+          case SQL_IS_MINUTE:
+            interval_value = conn_interval.intval.day_second.minute;
+            break;
+          case SQL_IS_SECOND:
+            interval_value = conn_interval.intval.day_second.second;
+            break;
+          default:
+            status_record =
+                odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01S07(),
+                                            "Unsupported interval type"};
+            break;
+        }
+        if (status_record.ok()) {
+          status_record = STinyIntToOutputBufferResponse(interval_value, dest,
+                                                         dest_data.result_len);
+        }
+      }
+    }
+
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+  return status_record;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

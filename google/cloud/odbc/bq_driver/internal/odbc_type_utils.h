@@ -157,6 +157,36 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLINTEGER* str_len_ptr);
 
+inline odbc_internal::StatusRecord IntervalTOutputBufferResponse(
+    const SQL_INTERVAL_STRUCT& conn_interval, SQLPOINTER dest_buf,
+    SQLLEN buffer_length, SQLLEN* result_len) {
+  auto* dest_interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+  auto status_record = odbc_internal::StatusRecord::Ok();
+  if (buffer_length >= sizeof(SQL_INTERVAL_STRUCT)) {
+    *dest_interval = conn_interval;
+    if (result_len) {
+      *result_len = sizeof(SQL_INTERVAL_STRUCT);
+    }
+    return status_record;
+  }
+  status_record = odbc_internal::StatusRecord{
+      odbc_internal::SQLStates::k_01S07(), "Interval data, right truncated"};
+  return status_record;
+}
+
+inline odbc_internal::StatusRecord STinyIntToOutputBufferResponse(
+    SQLUINTEGER value, int8_t* dest, SQLLEN* result_len) {
+  auto status_record = odbc_internal::StatusRecord::Ok();
+  if (value >= -128 && value <= 127) {
+    *dest = static_cast<int8_t>(value);
+    if (result_len) {
+      *result_len = sizeof(SQL_C_STINYINT);
+    }
+  }
+  odbc_internal::StatusRecord{odbc_internal::SQLStates::k_22003(),
+                              "Interval data, right truncated"};
+  return status_record;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TYPE_UTILS_H

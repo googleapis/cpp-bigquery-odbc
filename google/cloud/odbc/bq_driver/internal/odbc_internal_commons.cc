@@ -32,6 +32,118 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
+void ConvertStringToIntervalStruct(std::string const& interval_str,
+                                   SQL_INTERVAL_STRUCT& interval_struct) {
+  interval_struct = {};
+  if (interval_str.empty()) {
+    std::cerr << "Error: Interval string is empty." << std::endl;
+    return;
+  }
+
+  int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+  int matched_items = std::sscanf(interval_str.c_str(), "%d-%d %d %d:%d:%d",
+                                  &year, &month, &day, &hour, &minute, &second);
+  if (matched_items != 6) {
+    std::cerr << "Error: Invalid format for interval string." << std::endl;
+    return;
+  }
+  interval_struct.interval_sign =
+      (year < 0 || month < 0 || day < 0 || hour < 0 || minute < 0 || second < 0)
+          ? -1
+          : 1;
+
+  if (year != 0 || month != 0) {
+    if (day == 0 && hour == 0 && minute == 0 && second == 0) {
+      if (year != 0 && month == 0) {
+        interval_struct.interval_type = SQL_IS_YEAR;
+        interval_struct.intval.year_month.year = static_cast<SQLUINTEGER>(year);
+
+      } else if (year == 0 && month != 0) {
+        interval_struct.interval_type = SQL_IS_MONTH;
+        interval_struct.intval.year_month.month =
+            static_cast<SQLUINTEGER>(month);
+      } else if (year != 0 && month != 0) {
+        interval_struct.interval_type = SQL_IS_YEAR_TO_MONTH;
+        interval_struct.intval.year_month.year = static_cast<SQLUINTEGER>(year);
+        interval_struct.intval.year_month.month =
+            static_cast<SQLUINTEGER>(month);
+      }
+    }
+  }
+
+  else if (day != 0 || hour != 0 || minute != 0 || second != 0) {
+    if (hour == 0 && minute == 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_DAY;
+      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(day);
+    }
+
+    else if (day == 0 && minute == 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_HOUR;
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+    }
+
+    else if (day == 0 && hour == 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_MINUTE;
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+    }
+
+    else if (day == 0 && hour == 0 && minute == 0) {
+      interval_struct.interval_type = SQL_IS_SECOND;
+      interval_struct.intval.day_second.second =
+          static_cast<SQLUINTEGER>(second);
+    }
+
+    else if (day != 0 && hour != 0 && minute == 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_DAY_TO_HOUR;
+      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(day);
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+    }
+
+    else if (day != 0 && minute != 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_DAY_TO_MINUTE;
+      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(day);
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+    }
+
+    else if (day == 0 && hour != 0 && minute != 0 && second == 0) {
+      interval_struct.interval_type = SQL_IS_HOUR_TO_MINUTE;
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+    }
+
+    else if (day == 0 && hour != 0 && second != 0) {
+      interval_struct.interval_type = SQL_IS_HOUR_TO_SECOND;
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+      interval_struct.intval.day_second.second =
+          static_cast<SQLUINTEGER>(second);
+    }
+
+    else if (day == 0 && hour == 0 && minute != 0 && second != 0) {
+      interval_struct.interval_type = SQL_IS_MINUTE_TO_SECOND;
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+      interval_struct.intval.day_second.second =
+          static_cast<SQLUINTEGER>(second);
+    }
+
+    else {
+      interval_struct.interval_type = SQL_IS_DAY_TO_SECOND;
+      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(day);
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(hour);
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(minute);
+      interval_struct.intval.day_second.second =
+          static_cast<SQLUINTEGER>(second);
+    }
+  }
+}
+
 StatusRecordOr<ResultSet> ProcessResultSetRows(
     TableSchema const& schema, std::vector<RowData> const& rows) {
   ResultSet result_set;
@@ -72,6 +184,12 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           case BQDataType::kFloat64: {
             SQLDOUBLE d_data = std::stod(data);
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
+            break;
+          }
+          case BQDataType::kInterval: {
+            SQL_INTERVAL_STRUCT interval_struct;
+            ConvertStringToIntervalStruct(data, interval_struct);
+            IntervalToDSValue(interval_struct, row_val);
             break;
           }
           default: {

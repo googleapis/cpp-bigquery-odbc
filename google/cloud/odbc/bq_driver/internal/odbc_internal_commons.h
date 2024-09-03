@@ -145,6 +145,20 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   return int_val;
 }
 
+inline void IntervalToDSValue(const SQL_INTERVAL_STRUCT& interval,
+                              DSValue& value) {
+  value.resize(sizeof(SQL_INTERVAL_STRUCT));
+  std::memcpy(value.data(), &interval, sizeof(SQL_INTERVAL_STRUCT));
+}
+
+inline SQL_INTERVAL_STRUCT DSValueToInterval(
+    DSValue const& value, SQL_INTERVAL_STRUCT& interval_struct) {
+  std::memcpy(&interval_struct, value.data(), sizeof(SQL_INTERVAL_STRUCT));
+  return interval_struct;
+}
+
+inline void ConvertStringToIntervalStruct(std::string const& interval_str,
+                                          SQL_INTERVAL_STRUCT& interval_struct);
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:

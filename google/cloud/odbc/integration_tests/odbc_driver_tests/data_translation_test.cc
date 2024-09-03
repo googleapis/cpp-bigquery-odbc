@@ -544,4 +544,429 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+struct IntervalBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQL_INTERVAL_STRUCT interval_value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+StdIntervalRows const kIntervalSampleData{
+    {1, {SQL_IS_YEAR, 1, {.year_month = {3, 0}}}},              // 3 years
+    {2, {SQL_IS_MONTH, 1, {.year_month = {0, 8}}}},             // 8 months
+    {3, {SQL_IS_DAY, 1, {.day_second = {15, 0, 0, 0, 0}}}},     // 15 days
+    {4, {SQL_IS_HOUR, 1, {.day_second = {0, 20, 0, 0, 0}}}},    // 20 hours
+    {5, {SQL_IS_MINUTE, 1, {.day_second = {0, 0, 45, 0, 0}}}},  // 45 minutes
+    {6, {SQL_IS_SECOND, 1, {.day_second = {0, 0, 0, 10, 0}}}},  // 30 seconds
+    {7,
+     {SQL_IS_YEAR_TO_MONTH, 1, {.year_month = {2, 5}}}},  // 2 years, 5 months
+    {8,
+     {SQL_IS_DAY_TO_HOUR,
+      1,
+      {.day_second = {10, 14, 0, 0, 0}}}},  // 10 days, 14 hours
+    {9,
+     {SQL_IS_DAY_TO_MINUTE,
+      1,
+      {.day_second = {1, 5, 30}}}},  // 5 days, 30 minutes
+    {10,
+     {SQL_IS_DAY_TO_SECOND,
+      1,
+      {.day_second = {2, 0, 0, 20,
+                      500}}}},  // 2 days, 20 seconds, 500 milliseconds
+    {11,
+     {SQL_IS_HOUR_TO_MINUTE,
+      1,
+      {.day_second = {0, 9, 45, 0, 0}}}},  // 9 hours, 45 minutes
+    {12,
+     {SQL_IS_HOUR_TO_SECOND,
+      1,
+      {.day_second = {0, 11, 0, 25,
+                      300}}}},  // 11 hours, 25 seconds, 300 milliseconds
+    {13,
+     {SQL_IS_MINUTE_TO_SECOND,
+      1,
+      {.day_second = {0, 0, 50, 10,
+                      100}}}}  // 50 minutes, 10 seconds, 100 milliseconds
+};
+
+std::vector<IntervalBasicTestStruct> const kConversionFromIntervalTestData{
+    {SQL_C_CHAR, {SQL_IS_YEAR, 1, {.year_month = {3, 0}}}, SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR,
+     {SQL_IS_YEAR, 1, {.year_month = {3, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_MONTH,
+     {SQL_IS_MONTH, 1, {.year_month = {0, 8}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY,
+     {SQL_IS_DAY, 1, {.day_second = {15, 0, 0, 0, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_HOUR,
+     {SQL_IS_HOUR, 1, {.day_second = {0, 20, 0, 0, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_MINUTE,
+     {SQL_IS_MINUTE, 1, {.day_second = {0, 0, 45, 0, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_SECOND,
+     {SQL_IS_SECOND, 1, {.day_second = {0, 0, 0, 10, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR_TO_MONTH,
+     {SQL_IS_YEAR_TO_MONTH, 1, {.year_month = {2, 5}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY_TO_HOUR,
+     {SQL_IS_DAY_TO_HOUR, 1, {.day_second = {10, 14, 0, 0, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY_TO_MINUTE,
+     {SQL_IS_DAY_TO_MINUTE, 1, {.day_second = {1, 5, 30}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY_TO_SECOND,
+     {SQL_IS_DAY_TO_SECOND, 1, {.day_second = {2, 0, 0, 20, 500}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_HOUR_TO_MINUTE,
+     {SQL_IS_HOUR_TO_MINUTE, 1, {.day_second = {0, 9, 45, 0, 0}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_HOUR_TO_SECOND,
+     {SQL_IS_HOUR_TO_SECOND, 1, {.day_second = {0, 11, 0, 25, 300}}},
+     SQL_SUCCESS},
+    {SQL_C_INTERVAL_MINUTE_TO_SECOND,
+     {SQL_IS_MINUTE_TO_SECOND, 1, {.day_second = {0, 0, 50, 10, 100}}},
+     SQL_SUCCESS},
+    {SQL_C_STINYINT,
+     {SQL_IS_DAY, 1, {.day_second = {15, 0, 0, 0, 0}}},
+     SQL_SUCCESS}};
+
+inline std::string formatIntervalString(const SQL_INTERVAL_STRUCT interval) {
+  char buffer[50];
+
+  switch (interval.interval_type) {
+    case SQL_IS_YEAR:
+      snprintf(buffer, sizeof(buffer), "%d-0 0 0:0:0",
+               interval.intval.year_month.year);
+      break;
+    case SQL_IS_MONTH:
+      snprintf(buffer, sizeof(buffer), "0-%d 0 0:0:0",
+               interval.intval.year_month.month);
+      break;
+    case SQL_IS_YEAR_TO_MONTH:
+      snprintf(buffer, sizeof(buffer), "%d-%d 0 0:0:0",
+               interval.intval.year_month.year,
+               interval.intval.year_month.month);
+      break;
+    case SQL_IS_DAY:
+      snprintf(buffer, sizeof(buffer), "0-0 %d 0:0:0",
+               interval.intval.day_second.day);
+      break;
+    case SQL_IS_HOUR:
+      snprintf(buffer, sizeof(buffer), "0-0 0 %d:0:0",
+               interval.intval.day_second.hour);
+      break;
+    case SQL_IS_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 0 0:%d:0",
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_SECOND:
+      snprintf(buffer, sizeof(buffer), "0-0 0 0:0:%d",
+               interval.intval.day_second.second);
+      break;
+    case SQL_IS_DAY_TO_HOUR:
+      snprintf(buffer, sizeof(buffer), "0-0 %d %d:0:0",
+               interval.intval.day_second.day, interval.intval.day_second.hour);
+      break;
+    case SQL_IS_DAY_TO_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 %d %d:%d:0",
+               interval.intval.day_second.day, interval.intval.day_second.hour,
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_DAY_TO_SECOND:
+      snprintf(buffer, sizeof(buffer), "0-0 %d %d:%d:%d",
+               interval.intval.day_second.day, interval.intval.day_second.hour,
+               interval.intval.day_second.minute,
+               interval.intval.day_second.second);
+      break;
+    case SQL_IS_HOUR_TO_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 0 %d:%d:0",
+               interval.intval.day_second.hour,
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_HOUR_TO_SECOND:
+      snprintf(buffer, sizeof(buffer), "0-0 0 %d:%d:%d",
+               interval.intval.day_second.hour,
+               interval.intval.day_second.minute,
+               interval.intval.day_second.second);
+      break;
+    case SQL_IS_MINUTE_TO_SECOND:
+      snprintf(buffer, sizeof(buffer), "0-0 0 0:%d:%d",
+               interval.intval.day_second.minute,
+               interval.intval.day_second.second);
+      break;
+    default:
+      snprintf(buffer, sizeof(buffer), "Unknown interval type");
+      break;
+  }
+  return std::string(buffer);
+}
+
+inline int8_t formatSTinyIntValue(SQL_INTERVAL_STRUCT* interval_struct) {
+  if (interval_struct->interval_type == SQL_IS_YEAR ||
+      interval_struct->interval_type == SQL_IS_MONTH ||
+      interval_struct->interval_type == SQL_IS_DAY ||
+      interval_struct->interval_type == SQL_IS_HOUR ||
+      interval_struct->interval_type == SQL_IS_MINUTE ||
+      interval_struct->interval_type == SQL_IS_SECOND) {
+    SQLUINTEGER interval_value = 0;
+    if (interval_struct->interval_type == SQL_IS_YEAR) {
+      interval_value = interval_struct->intval.year_month.year;
+
+    } else if (interval_struct->interval_type == SQL_IS_MONTH) {
+      interval_value = interval_struct->intval.year_month.month;
+
+    } else if (interval_struct->interval_type == SQL_IS_DAY) {
+      interval_value = interval_struct->intval.day_second.day;
+
+    } else if (interval_struct->interval_type == SQL_IS_HOUR) {
+      interval_value = interval_struct->intval.day_second.hour;
+
+    } else if (interval_struct->interval_type == SQL_IS_MINUTE) {
+      interval_value = interval_struct->intval.day_second.minute;
+
+    } else if (interval_struct->interval_type == SQL_IS_SECOND) {
+      interval_value = interval_struct->intval.day_second.second;
+    }
+    auto* return_val = reinterpret_cast<int8_t*>(interval_value);
+    return *return_val;
+  }
+}
+
+void TestTranslationFromInterval(std::shared_ptr<ODBCHandles> conn,
+                                 std::string query) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  SQLCHAR data_char[kBufferLength];
+  SQLLEN strlen_or_ind;
+  StrToChar(read_stmt, query.c_str());
+
+  int row_count = 0;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn);
+
+  for (auto const& expected : kConversionFromIntervalTestData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data_char,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+    status = SQLFetch(conn->hstmt);
+    std::cout << "check -5" << std::endl;
+
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    if (SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR: {
+        std::string returned_val = reinterpret_cast<char*>(data_char);
+        std::string expected_val =
+            formatIntervalString(expected.interval_value);
+        EXPECT_EQ(expected_val, returned_val);
+        break;
+      }
+      case SQL_C_INTERVAL_YEAR: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.year_month.year,
+                  returned_val->intval.year_month.year);
+        break;
+      }
+      case SQL_C_INTERVAL_MONTH: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.year_month.month,
+                  returned_val->intval.year_month.month);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected.interval_value.intval.day_second.day,
+                  returned_val->intval.day_second.day);
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.minute,
+                  returned_val->intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_SECOND: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.second,
+                  returned_val->intval.day_second.second);
+        break;
+      }
+      case SQL_C_INTERVAL_YEAR_TO_MONTH: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.year_month.year,
+                  returned_val->intval.year_month.year);
+        EXPECT_EQ(expected_val.year_month.month,
+                  returned_val->intval.year_month.month);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_HOUR: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.day,
+                  returned_val->intval.day_second.day);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_MINUTE: {
+        auto* returned_val = reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.day,
+                  returned_val->intval.day_second.day);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        EXPECT_EQ(expected_val.day_second.minute,
+                  returned_val->intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_SECOND: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.day,
+                  returned_val->intval.day_second.day);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        EXPECT_EQ(expected_val.day_second.minute,
+                  returned_val->intval.day_second.minute);
+        EXPECT_EQ(expected_val.day_second.second,
+                  returned_val->intval.day_second.second);
+        break;
+      }
+
+      case SQL_C_INTERVAL_HOUR_TO_MINUTE: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        EXPECT_EQ(expected_val.day_second.minute,
+                  returned_val->intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR_TO_SECOND: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.hour,
+                  returned_val->intval.day_second.hour);
+        EXPECT_EQ(expected_val.day_second.second,
+                  returned_val->intval.day_second.second);
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
+        SQL_INTERVAL_STRUCT* returned_val =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto expected_val = expected.interval_value.intval;
+        EXPECT_EQ(expected.interval_value.interval_type,
+                  returned_val->interval_type);
+        EXPECT_EQ(expected_val.day_second.minute,
+                  returned_val->intval.day_second.minute);
+        EXPECT_EQ(expected_val.day_second.second,
+                  returned_val->intval.day_second.second);
+        break;
+      }
+
+      case SQL_C_STINYINT: {
+        auto* interval_struct =
+            reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+        auto returned_val = formatSTinyIntValue(interval_struct);
+        auto expected_val = formatSTinyIntValue(
+            const_cast<SQL_INTERVAL_STRUCT*>(&expected.interval_value));
+        EXPECT_EQ(expected_val, returned_val);
+      }
+      default:
+        break;
+    }
+    ++row_count;
+  }
+}
+
+TEST(DataTranslationTest, From_Interval_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_INTERVAL";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INT64, IntervalField INTERVAL)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertIntervalData(conn, kIntervalSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Read data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string qry =
+      "SELECT IntervalField FROM " + table_name + " ORDER BY index";
+  TestTranslationFromInterval(conn, qry);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 }  // namespace google::cloud::odbc_tests
