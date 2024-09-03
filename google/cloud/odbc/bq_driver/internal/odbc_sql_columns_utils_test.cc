@@ -89,8 +89,7 @@ TEST(GetSQLDateTimeSub, InvalidDateTimeSub) {
 TEST(GetSQLDateTimeSub, Other) {
   auto other_status = GetSQLDateTimeSub(SQL_VARCHAR, SQL_VARCHAR);
   ASSERT_STATUS_RECORD_OK(other_status);
-  optional<SQLSMALLINT> sql_date_time_sub = *other_status;
-  EXPECT_FALSE(*sql_date_time_sub);
+  EXPECT_FALSE(other_status->has_value());
 }
 
 TEST(GetRadix, Decimal) {
