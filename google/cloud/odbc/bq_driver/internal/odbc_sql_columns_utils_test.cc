@@ -21,6 +21,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::optional;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -33,19 +34,22 @@ using ::testing::StrEq;
 TEST(GetSQLDataType, Date) {
   auto date_status = GetSQLDataType(SQL_TYPE_DATE);
   ASSERT_STATUS_RECORD_OK(date_status);
-  EXPECT_EQ(SQL_DATETIME, *date_status);
+  optional<SQLSMALLINT> date_opt = *date_status;
+  EXPECT_EQ(SQL_DATETIME, *date_opt);
 }
 
 TEST(GetSQLDataType, Time) {
   auto time_status = GetSQLDataType(SQL_TYPE_TIME);
   ASSERT_STATUS_RECORD_OK(time_status);
-  EXPECT_EQ(SQL_DATETIME, *time_status);
+  optional<SQLSMALLINT> time_opt = *time_status;
+  EXPECT_EQ(SQL_DATETIME, *time_opt);
 }
 
 TEST(GetSQLDataType, Timestamp) {
   auto timestamp_status = GetSQLDataType(SQL_TYPE_TIMESTAMP);
   ASSERT_STATUS_RECORD_OK(timestamp_status);
-  EXPECT_EQ(SQL_DATETIME, *timestamp_status);
+  optional<SQLSMALLINT> time_stamp_opt = *timestamp_status;
+  EXPECT_EQ(SQL_DATETIME, *time_stamp_opt);
 }
 
 TEST(GetSQLDataType, String) {
@@ -57,19 +61,22 @@ TEST(GetSQLDataType, String) {
 TEST(GetSQLDateTimeSub, Date) {
   auto date_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_DATE);
   ASSERT_STATUS_RECORD_OK(date_status);
-  EXPECT_EQ(SQL_CODE_DATE, *date_status);
+  optional<SQLSMALLINT> date_opt = *date_status;
+  EXPECT_EQ(SQL_CODE_DATE, *date_opt);
 }
 
 TEST(GetSQLDateTimeSub, Time) {
   auto time_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_TIME);
   ASSERT_STATUS_RECORD_OK(time_status);
-  EXPECT_EQ(SQL_CODE_TIME, *time_status);
+  optional<SQLSMALLINT> time_opt = *time_status;
+  EXPECT_EQ(SQL_CODE_TIME, *time_opt);
 }
 
 TEST(GetSQLDateTimeSub, TIMESTAMP) {
   auto timestamp_status = GetSQLDateTimeSub(SQL_DATETIME, SQL_TYPE_TIMESTAMP);
   ASSERT_STATUS_RECORD_OK(timestamp_status);
-  EXPECT_EQ(SQL_CODE_TIMESTAMP, *timestamp_status);
+  optional<SQLSMALLINT> time_stamp_opt = *timestamp_status;
+  EXPECT_EQ(SQL_CODE_TIMESTAMP, *time_stamp_opt);
 }
 
 TEST(GetSQLDateTimeSub, InvalidDateTimeSub) {
@@ -82,7 +89,8 @@ TEST(GetSQLDateTimeSub, InvalidDateTimeSub) {
 TEST(GetSQLDateTimeSub, Other) {
   auto other_status = GetSQLDateTimeSub(SQL_VARCHAR, SQL_VARCHAR);
   ASSERT_STATUS_RECORD_OK(other_status);
-  EXPECT_EQ(SQL_NULL_DATA, *other_status);
+  optional<SQLSMALLINT> sql_date_time_sub = *other_status;
+  EXPECT_FALSE(*sql_date_time_sub);
 }
 
 TEST(GetRadix, Decimal) {
@@ -92,37 +100,36 @@ TEST(GetRadix, Decimal) {
   schema.type = "NUMERIC";
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
-  EXPECT_EQ(10, *radix_status);
+  optional<SQLSMALLINT> radix_opt = *radix_status;
+  EXPECT_EQ(10, *radix_opt);
 }
 
 TEST(GetRadix, Binary) {
   TableFieldSchema schema;
   schema.precision = 53;
   schema.type = "INTEGER";
-  schema.scale = SQL_NULL_DATA;
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
-  EXPECT_EQ(2, *radix_status);
+  optional<SQLSMALLINT> radix_opt = *radix_status;
+  EXPECT_EQ(2, *radix_opt);
 }
 
 TEST(GetRadix, Null_Numeric) {
   TableFieldSchema schema;
-  schema.precision = SQL_NULL_DATA;
-  schema.scale = SQL_NULL_DATA;
   schema.type = "NUMERIC";
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
-  EXPECT_EQ(10, *radix_status);
+  optional<SQLSMALLINT> radix_opt = *radix_status;
+  EXPECT_EQ(10, *radix_opt);
 }
 
 TEST(GetRadix, Null_String) {
   TableFieldSchema schema;
-  schema.precision = SQL_NULL_DATA;
-  schema.scale = SQL_NULL_DATA;
   schema.type = "STRING";
   auto radix_status = GetRadix(schema);
   ASSERT_STATUS_RECORD_OK(radix_status);
-  EXPECT_EQ(SQL_NULL_DATA, *radix_status);
+  optional<SQLSMALLINT> radix_opt = *radix_status;
+  EXPECT_FALSE(radix_opt.has_value());
 }
 
 TEST(GetDecimalDigits, ScaleFromDS) {
@@ -130,7 +137,8 @@ TEST(GetDecimalDigits, ScaleFromDS) {
   schema.scale = 5;
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(5, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(5, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleString) {
@@ -138,7 +146,8 @@ TEST(GetDecimalDigits, FixedScaleString) {
   schema.type = "STRING";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_FALSE(scale_opt.has_value());
 }
 
 TEST(GetDecimalDigits, FixedScaleInt) {
@@ -146,7 +155,8 @@ TEST(GetDecimalDigits, FixedScaleInt) {
   schema.type = "INT64";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(0, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(0, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleBool) {
@@ -154,7 +164,8 @@ TEST(GetDecimalDigits, FixedScaleBool) {
   schema.type = "BOOL";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_FALSE(scale_opt.has_value());
 }
 
 TEST(GetDecimalDigits, FixedScaleTime) {
@@ -162,7 +173,8 @@ TEST(GetDecimalDigits, FixedScaleTime) {
   schema.type = "TIME";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(6, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(6, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleDate) {
@@ -170,7 +182,8 @@ TEST(GetDecimalDigits, FixedScaleDate) {
   schema.type = "DATE";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(SQL_NULL_DATA, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_FALSE(scale_opt.has_value());
 }
 
 TEST(GetDecimalDigits, FixedScaleDateTime) {
@@ -178,7 +191,8 @@ TEST(GetDecimalDigits, FixedScaleDateTime) {
   schema.type = "DATETIME";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(6, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(6, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleTimeStamp) {
@@ -186,7 +200,8 @@ TEST(GetDecimalDigits, FixedScaleTimeStamp) {
   schema.type = "TIMESTAMP";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(6, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(6, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleNumeric) {
@@ -194,7 +209,8 @@ TEST(GetDecimalDigits, FixedScaleNumeric) {
   schema.type = "NUMERIC";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(9, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(9, *scale_opt);
 }
 
 TEST(GetDecimalDigits, FixedScaleBigNumeric) {
@@ -202,7 +218,8 @@ TEST(GetDecimalDigits, FixedScaleBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto scale_status = GetDecimalDigits(schema);
   ASSERT_STATUS_RECORD_OK(scale_status);
-  EXPECT_EQ(38, *scale_status);
+  optional<SQLSMALLINT> scale_opt = *scale_status;
+  EXPECT_EQ(38, *scale_opt);
 }
 
 TEST(GetDecimalDigits, InvalidType) {
@@ -219,7 +236,8 @@ TEST(GetColSize, PrecisionFromDS) {
   schema.precision = 5;
   auto col_size_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(col_size_status);
-  EXPECT_EQ(5, *col_size_status);
+  optional<SQLINTEGER> col_size_opt = *col_size_status;
+  EXPECT_EQ(5, *col_size_opt);
 }
 
 TEST(GetColSize, MaxLengthFromDS) {
@@ -227,7 +245,8 @@ TEST(GetColSize, MaxLengthFromDS) {
   schema.max_length = 5;
   auto col_size_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(col_size_status);
-  EXPECT_EQ(5, *col_size_status);
+  optional<SQLINTEGER> col_size_opt = *col_size_status;
+  EXPECT_EQ(5, *col_size_opt);
 }
 
 TEST(GetColSize, FixedPrecisionString) {
@@ -235,7 +254,8 @@ TEST(GetColSize, FixedPrecisionString) {
   schema.type = "STRING";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(16384, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(16384, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionInt) {
@@ -243,7 +263,8 @@ TEST(GetColSize, FixedPrecisionInt) {
   schema.type = "INT64";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(19, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(19, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionBool) {
@@ -251,7 +272,8 @@ TEST(GetColSize, FixedPrecisionBool) {
   schema.type = "BOOL";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(1, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(1, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionTime) {
@@ -259,7 +281,8 @@ TEST(GetColSize, FixedPrecisionTime) {
   schema.type = "TIME";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(15, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(15, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionDate) {
@@ -267,7 +290,8 @@ TEST(GetColSize, FixedPrecisionDate) {
   schema.type = "DATE";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(10, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(10, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionDateTime) {
@@ -275,7 +299,8 @@ TEST(GetColSize, FixedPrecisionDateTime) {
   schema.type = "DATETIME";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(26, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(26, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionTimeStamp) {
@@ -283,7 +308,8 @@ TEST(GetColSize, FixedPrecisionTimeStamp) {
   schema.type = "TIMESTAMP";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(26, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(26, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionNumeric) {
@@ -291,7 +317,8 @@ TEST(GetColSize, FixedPrecisionNumeric) {
   schema.type = "NUMERIC";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(38, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(38, *prec_opt);
 }
 
 TEST(GetColSize, FixedPrecisionBigNumeric) {
@@ -299,7 +326,8 @@ TEST(GetColSize, FixedPrecisionBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto precision_status = GetColSize(schema);
   ASSERT_STATUS_RECORD_OK(precision_status);
-  EXPECT_EQ(77, *precision_status);
+  optional<SQLINTEGER> prec_opt = *precision_status;
+  EXPECT_EQ(77, *prec_opt);
 }
 
 TEST(GetColSize, InvalidType) {
@@ -316,7 +344,8 @@ TEST(GetBufferLen, BufferLenFromDS_WithMaxLen) {
   schema.max_length = 5000;
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(5000, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(5000, *buf_len_opt);
 }
 
 TEST(GetBufferLen, BufferLenFromDS_WithPrecision) {
@@ -324,7 +353,8 @@ TEST(GetBufferLen, BufferLenFromDS_WithPrecision) {
   schema.precision = 20;
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(22, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(22, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenString) {
@@ -332,7 +362,8 @@ TEST(GetBufferLen, FixedBufferLenString) {
   schema.type = "STRING";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(16384, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(16384, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenInt) {
@@ -340,7 +371,8 @@ TEST(GetBufferLen, FixedBufferLenInt) {
   schema.type = "INT64";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(20, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(20, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenBool) {
@@ -348,7 +380,8 @@ TEST(GetBufferLen, FixedBufferLenBool) {
   schema.type = "BOOL";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(1, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(1, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenTime) {
@@ -356,7 +389,8 @@ TEST(GetBufferLen, FixedBufferLenTime) {
   schema.type = "TIME";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(6, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(6, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenDate) {
@@ -364,7 +398,8 @@ TEST(GetBufferLen, FixedBufferLenDate) {
   schema.type = "DATE";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(6, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(6, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenDateTime) {
@@ -372,7 +407,8 @@ TEST(GetBufferLen, FixedBufferLenDateTime) {
   schema.type = "DATETIME";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(16, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(16, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenTimeStamp) {
@@ -380,7 +416,8 @@ TEST(GetBufferLen, FixedBufferLenTimeStamp) {
   schema.type = "TIMESTAMP";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(16, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(16, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenNumeric) {
@@ -388,7 +425,8 @@ TEST(GetBufferLen, FixedBufferLenNumeric) {
   schema.type = "NUMERIC";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(40, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(40, *buf_len_opt);
 }
 
 TEST(GetBufferLen, FixedBufferLenBigNumeric) {
@@ -396,7 +434,8 @@ TEST(GetBufferLen, FixedBufferLenBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto buf_len_status = GetBufferLen(schema);
   ASSERT_STATUS_RECORD_OK(buf_len_status);
-  EXPECT_EQ(79, *buf_len_status);
+  optional<SQLINTEGER> buf_len_opt = *buf_len_status;
+  EXPECT_EQ(79, *buf_len_opt);
 }
 
 TEST(GetBufferLen, InvalidType) {
@@ -413,7 +452,8 @@ TEST(GetCharOctetLen, CharOctetLenFromDS) {
   schema.max_length = 5000;
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(5000, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_EQ(5000, *char_octet_len_opt);
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenString) {
@@ -421,7 +461,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenString) {
   schema.type = "STRING";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(16384, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_EQ(16384, *char_octet_len_opt);
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenInt) {
@@ -429,7 +470,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenInt) {
   schema.type = "INT64";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenBool) {
@@ -437,7 +479,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenBool) {
   schema.type = "BOOL";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenTime) {
@@ -445,7 +488,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenTime) {
   schema.type = "TIME";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenDate) {
@@ -453,7 +497,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenDate) {
   schema.type = "DATE";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenDateTime) {
@@ -461,7 +506,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenDateTime) {
   schema.type = "DATETIME";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenTimeStamp) {
@@ -469,7 +515,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenTimeStamp) {
   schema.type = "TIMESTAMP";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenNumeric) {
@@ -477,7 +524,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenNumeric) {
   schema.type = "NUMERIC";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenBigNumeric) {
@@ -485,7 +533,8 @@ TEST(GetCharOctetLen, FixedCharOctetLenBigNumeric) {
   schema.type = "BIGNUMERIC";
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
-  EXPECT_EQ(SQL_NULL_DATA, *char_octet_len_status);
+  optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, InvalidType) {

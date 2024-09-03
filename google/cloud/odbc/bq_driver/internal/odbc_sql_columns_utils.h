@@ -19,17 +19,18 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/optional.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Defines the fixed value columns for SQLColumns when no datasource value is
 // configured. The values are different based on the data type.
 struct FixedColumnMetadata {
-  std::int64_t precision;
-  std::int64_t scale;
-  std::int64_t buf_len;
-  std::int64_t char_octet_len;
-  std::int64_t radix;
+  optional<std::int64_t> precision;
+  optional<std::int64_t> scale;
+  optional<std::int64_t> buf_len;
+  optional<std::int64_t> char_octet_len;
+  optional<std::int64_t> radix;
 };
 
 // Internal Helper functions used in SQLColumns API implementation.
@@ -37,34 +38,37 @@ odbc_internal::StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
-odbc_internal::StatusRecordOr<SQLINTEGER> GetColSize(
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLINTEGER>> GetColSize(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
-odbc_internal::StatusRecordOr<SQLINTEGER> GetBufferLen(
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLINTEGER>>
+GetBufferLen(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
-odbc_internal::StatusRecordOr<SQLINTEGER> GetCharOctetLen(
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLINTEGER>>
+GetCharOctetLen(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
-odbc_internal::StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>>
+GetDecimalDigits(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
-odbc_internal::StatusRecordOr<SQLSMALLINT> GetRadix(
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>> GetRadix(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema);
 
 odbc_internal::StatusRecordOr<std::string> GetTypeDescription(
     std::string const& field_schema_type);
 
-odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(
-    SQLSMALLINT sql_data_type, SQLSMALLINT data_type);
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>>
+GetSQLDateTimeSub(SQLSMALLINT sql_data_type, SQLSMALLINT data_type);
 
-odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
-    SQLSMALLINT data_type);
+odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>>
+GetSQLDataType(SQLSMALLINT data_type);
 
 odbc_internal::StatusRecord ValidateColumnParameters(
     const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,

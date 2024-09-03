@@ -19,6 +19,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::optional;
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
@@ -82,9 +83,9 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!data_type_status) {
     return data_type_status.GetStatusRecord();
   }
-  SQLSMALLINT data_type = *data_type_status;
-  if (data_type != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(data_type),
+  optional<SQLSMALLINT> data_type = *data_type_status;
+  if (data_type.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*data_type),
                                    ds_data_type);
   }
   ds_row.emplace_back(ds_data_type);
@@ -107,9 +108,9 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!col_size_status) {
     return col_size_status.GetStatusRecord();
   }
-  SQLINTEGER col_size = *col_size_status;
-  if (col_size != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(col_size),
+  optional<SQLINTEGER> col_size = *col_size_status;
+  if (col_size.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*col_size),
                                    ds_col_size);
   }
   ds_row.emplace_back(ds_col_size);
@@ -120,9 +121,10 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!buf_len_status) {
     return buf_len_status.GetStatusRecord();
   }
-  SQLINTEGER buf_len = *buf_len_status;
-  if (buf_len != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(buf_len), ds_buf_len);
+  optional<SQLINTEGER> buf_len = *buf_len_status;
+  if (buf_len.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*buf_len),
+                                   ds_buf_len);
   }
   ds_row.emplace_back(ds_buf_len);
 
@@ -132,9 +134,9 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!dec_digits_status) {
     return dec_digits_status.GetStatusRecord();
   }
-  SQLSMALLINT dec_digits = *dec_digits_status;
-  if (dec_digits != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(dec_digits),
+  optional<SQLSMALLINT> dec_digits = *dec_digits_status;
+  if (dec_digits.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*dec_digits),
                                    ds_dec_digits);
   }
   ds_row.emplace_back(ds_dec_digits);
@@ -145,9 +147,9 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!radix_status) {
     return radix_status.GetStatusRecord();
   }
-  SQLSMALLINT radix = *radix_status;
-  if (radix != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(radix), ds_radix);
+  optional<SQLSMALLINT> radix = *radix_status;
+  if (radix.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*radix), ds_radix);
   }
   ds_row.emplace_back(ds_radix);
 
@@ -174,27 +176,33 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // SQL_DATA_TYPE
   DSValue ds_sql_data_type = kNullValue;
-  auto sql_data_type_status = GetSQLDataType(data_type);
-  if (!sql_data_type_status) {
-    return sql_data_type_status.GetStatusRecord();
-  }
-  SQLSMALLINT sql_data_type = *sql_data_type_status;
-  if (sql_data_type != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(sql_data_type),
-                                   ds_sql_data_type);
+  optional<SQLSMALLINT> sql_data_type;
+  if (data_type.has_value()) {
+    auto sql_data_type_status = GetSQLDataType(*data_type);
+    if (!sql_data_type_status) {
+      return sql_data_type_status.GetStatusRecord();
+    }
+    sql_data_type = *sql_data_type_status;
+    if (sql_data_type.has_value()) {
+      ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*sql_data_type),
+                                     ds_sql_data_type);
+    }
   }
   ds_row.emplace_back(ds_sql_data_type);
 
   // SQL_DATETIME_SUB
   DSValue ds_sql_datetime_sub = kNullValue;
-  auto sql_data_time_sub_status = GetSQLDateTimeSub(sql_data_type, data_type);
-  if (!sql_data_time_sub_status) {
-    return sql_data_time_sub_status.GetStatusRecord();
-  }
-  SQLSMALLINT sql_date_time_sub = *sql_data_time_sub_status;
-  if (sql_date_time_sub != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(sql_date_time_sub),
-                                   ds_sql_datetime_sub);
+  if (sql_data_type.has_value() && data_type.has_value()) {
+    auto sql_data_time_sub_status =
+        GetSQLDateTimeSub(*sql_data_type, *data_type);
+    if (!sql_data_time_sub_status) {
+      return sql_data_time_sub_status.GetStatusRecord();
+    }
+    optional<SQLSMALLINT> sql_date_time_sub = *sql_data_time_sub_status;
+    if (sql_date_time_sub.has_value()) {
+      ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*sql_date_time_sub),
+                                     ds_sql_datetime_sub);
+    }
   }
   ds_row.emplace_back(ds_sql_datetime_sub);
 
@@ -204,19 +212,20 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
   if (!char_octet_len_status) {
     return char_octet_len_status.GetStatusRecord();
   }
-  SQLINTEGER char_octet_len = *char_octet_len_status;
-  if (char_octet_len != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(char_octet_len),
+  optional<SQLINTEGER> char_octet_len = *char_octet_len_status;
+  if (char_octet_len.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*char_octet_len),
                                    ds_char_octet_len);
   }
   ds_row.emplace_back(ds_char_octet_len);
 
   // ORDINAL_POSITION
   DSValue ds_ord_pos = kNullValue;
-  if (field_pos != SQL_NULL_DATA) {
-    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos),
-                                   ds_ord_pos);
+  // field_pos is always >= 0 any other value is error.
+  if (field_pos < 0) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid ordinal position"};
   }
+  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos), ds_ord_pos);
   ds_row.emplace_back(ds_ord_pos);
 
   // IS_NULLABLE

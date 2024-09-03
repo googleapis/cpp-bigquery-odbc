@@ -18,6 +18,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::optional;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -36,41 +37,30 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     case BQDataType::kInterval: {
       fixed_column_metadata.precision = 16384;
       fixed_column_metadata.buf_len = 16384;
-      fixed_column_metadata.scale = SQL_NULL_DATA;
       fixed_column_metadata.char_octet_len = 16384;
-      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kInt64: {
       fixed_column_metadata.precision = 19;
       fixed_column_metadata.buf_len = 20;
       fixed_column_metadata.scale = 0;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
       fixed_column_metadata.radix = 10;
       break;
     }
     case BQDataType::kBool: {
       fixed_column_metadata.precision = 1;
       fixed_column_metadata.buf_len = 1;
-      fixed_column_metadata.scale = SQL_NULL_DATA;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
-      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kTime: {
       fixed_column_metadata.precision = 15;
       fixed_column_metadata.buf_len = 6;
       fixed_column_metadata.scale = 6;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
-      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kDate: {
       fixed_column_metadata.precision = 10;
       fixed_column_metadata.buf_len = 6;
-      fixed_column_metadata.scale = SQL_NULL_DATA;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
-      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kTimeStamp:
@@ -78,15 +68,12 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.precision = 26;
       fixed_column_metadata.buf_len = 16;
       fixed_column_metadata.scale = 6;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
-      fixed_column_metadata.radix = SQL_NULL_DATA;
       break;
     }
     case BQDataType::kNumeric: {
       fixed_column_metadata.precision = 38;
       fixed_column_metadata.buf_len = 40;
       fixed_column_metadata.scale = 9;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
       fixed_column_metadata.radix = 10;
       break;
     }
@@ -94,7 +81,6 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.precision = 77;
       fixed_column_metadata.buf_len = 79;
       fixed_column_metadata.scale = 38;
-      fixed_column_metadata.char_octet_len = SQL_NULL_DATA;
       fixed_column_metadata.radix = 10;
       break;
     }
@@ -106,8 +92,9 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
   return fixed_column_metadata;
 }
 
-StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema const& field_schema) {
-  SQLINTEGER result;
+StatusRecordOr<optional<SQLINTEGER>> GetColSize(
+    TableFieldSchema const& field_schema) {
+  optional<SQLINTEGER> result;
   if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision);
   } else if (field_schema.max_length > 0) {
@@ -118,13 +105,16 @@ StatusRecordOr<SQLINTEGER> GetColSize(TableFieldSchema const& field_schema) {
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
-    result = static_cast<SQLINTEGER>(fixed_column_metadata.precision);
+    if (fixed_column_metadata.precision.has_value()) {
+      result = static_cast<SQLINTEGER>(fixed_column_metadata.precision.value());
+    }
   }
   return result;
 }
 
-StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema const& field_schema) {
-  SQLINTEGER result;
+StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
+    TableFieldSchema const& field_schema) {
+  optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else if (field_schema.precision > 0) {
@@ -135,14 +125,16 @@ StatusRecordOr<SQLINTEGER> GetBufferLen(TableFieldSchema const& field_schema) {
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
-    result = static_cast<SQLINTEGER>(fixed_column_metadata.buf_len);
+    if (fixed_column_metadata.buf_len.has_value()) {
+      result = static_cast<SQLINTEGER>(fixed_column_metadata.buf_len.value());
+    }
   }
   return result;
 }
 
-StatusRecordOr<SQLINTEGER> GetCharOctetLen(
+StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
     TableFieldSchema const& field_schema) {
-  SQLINTEGER result;
+  optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
@@ -151,14 +143,17 @@ StatusRecordOr<SQLINTEGER> GetCharOctetLen(
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
-    result = static_cast<SQLINTEGER>(fixed_column_metadata.char_octet_len);
+    if (fixed_column_metadata.char_octet_len.has_value()) {
+      result =
+          static_cast<SQLINTEGER>(fixed_column_metadata.char_octet_len.value());
+    }
   }
   return result;
 }
 
-StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
+StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
     TableFieldSchema const& field_schema) {
-  SQLSMALLINT result;
+  optional<SQLSMALLINT> result;
   if (field_schema.scale > 0) {
     result = static_cast<SQLSMALLINT>(field_schema.scale);
   } else {
@@ -167,27 +162,33 @@ StatusRecordOr<SQLSMALLINT> GetDecimalDigits(
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
-    result = static_cast<SQLSMALLINT>(fixed_column_metadata.scale);
+    if (fixed_column_metadata.scale.has_value()) {
+      result = static_cast<SQLSMALLINT>(fixed_column_metadata.scale.value());
+    }
   }
   return result;
 }
 
-StatusRecordOr<SQLSMALLINT> GetRadix(TableFieldSchema const& field_schema) {
+StatusRecordOr<optional<SQLSMALLINT>> GetRadix(
+    TableFieldSchema const& field_schema) {
   auto fixed_metadata_status = GetFixedColumnMetadata(field_schema);
   if (!fixed_metadata_status) {
     return fixed_metadata_status.GetStatusRecord();
   }
-  SQLSMALLINT radix = (field_schema.scale >= 0 && field_schema.precision >= 0)
-                          ? 10
-                      : (field_schema.scale < 0 && field_schema.precision >= 0)
-                          ? 2
-                          : fixed_metadata_status->radix;
-  return static_cast<SQLSMALLINT>(radix);
+  optional<SQLSMALLINT> fixed_radix;
+  if (fixed_metadata_status->radix.has_value()) {
+    fixed_radix = *(fixed_metadata_status->radix);
+  }
+  optional<SQLSMALLINT> radix =
+      (field_schema.scale > 0 && field_schema.precision > 0) ? 10
+      : (field_schema.precision > 0)                         ? 2
+                                                             : fixed_radix;
+  return radix;
 }
 
-StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(SQLSMALLINT sql_data_type,
-                                              SQLSMALLINT data_type) {
-  SQLSMALLINT sql_datetime_sub = SQL_NULL_DATA;
+StatusRecordOr<optional<SQLSMALLINT>> GetSQLDateTimeSub(
+    SQLSMALLINT sql_data_type, SQLSMALLINT data_type) {
+  optional<SQLSMALLINT> sql_datetime_sub;
   if (sql_data_type == SQL_DATETIME) {
     switch (data_type) {
       case SQL_TYPE_DATE: {
@@ -212,11 +213,13 @@ StatusRecordOr<SQLSMALLINT> GetSQLDateTimeSub(SQLSMALLINT sql_data_type,
   return sql_datetime_sub;
 }
 
-StatusRecordOr<SQLSMALLINT> GetSQLDataType(SQLSMALLINT data_type) {
-  SQLSMALLINT sql_data_type = data_type;
-  if (sql_data_type == SQL_TYPE_DATE || sql_data_type == SQL_TYPE_TIME ||
-      sql_data_type == SQL_TYPE_TIMESTAMP) {
+StatusRecordOr<optional<SQLSMALLINT>> GetSQLDataType(SQLSMALLINT data_type) {
+  optional<SQLSMALLINT> sql_data_type;
+  if (data_type == SQL_TYPE_DATE || data_type == SQL_TYPE_TIME ||
+      data_type == SQL_TYPE_TIMESTAMP) {
     sql_data_type = SQL_DATETIME;
+  } else {
+    sql_data_type = data_type;
   }
   return sql_data_type;
 }
