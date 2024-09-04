@@ -63,8 +63,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 
 if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
     include(bq_driver.cmake)
-    add_library(odbc_bq_driver SHARED dummy.cc)
-    target_link_libraries(odbc_bq_driver PUBLIC google_cloud_odbc_bq_driver)
 endif ()
 
 add_subdirectory(integration_tests)
