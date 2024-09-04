@@ -955,9 +955,9 @@ struct TimestampBasicTestStruct {
 };
 
 std::vector<TimestampBasicTestStruct> const kConversionFromTimestampTestData{
-    {SQL_C_CHAR, {2024, 01, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
+    {SQL_C_CHAR, {2024, 01, 20, 10, 20, 30, 12311}, SQL_SUCCESS},
     {SQL_C_WCHAR, {2024, 01, 20, 11, 2, 33, 1212}, SQL_SUCCESS},
-    {SQL_C_BINARY, {2024, 01, 20, 2, 20, 22, 123123}, SQL_SUCCESS},
+    {SQL_C_BINARY, {2024, 01, 20, 2, 20, 22, 12312}, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, {2024, 01, 20, 12, 22, 11, 32223}, SQL_SUCCESS},
     {SQL_C_TYPE_TIME, {2024, 01, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
     {SQL_C_TYPE_TIMESTAMP, {2024, 01, 20, 12, 21, 22, 000000}, SQL_SUCCESS},
@@ -1013,7 +1013,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
         SQL_TIMESTAMP_STRUCT* timestamp =
             reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
         std::string expected_val = FormatBinaryTimeStamp(expected.value);
-        std::string returned_val = FormatTimeStamp(*timestamp);
+        std::string returned_val = FormatBinaryTimeStamp(*timestamp);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }

@@ -171,10 +171,9 @@ inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp,
   std::memcpy(value.data(), &timestamp, sizeof(SQL_TIMESTAMP_STRUCT));
 }
 
-inline SQL_TIMESTAMP_STRUCT DSValueToTimestamp(
-    DSValue const& value, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
+inline void DSValueToTimestamp(DSValue const& value,
+                               SQL_TIMESTAMP_STRUCT& timestamp_struct) {
   std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
-  return timestamp_struct;
 }
 
 inline void TimeToDSValue(const SQL_TIME_STRUCT& time, DSValue& value) {
