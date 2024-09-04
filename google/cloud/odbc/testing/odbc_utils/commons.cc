@@ -187,6 +187,7 @@ void Table::CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
 void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
+  std::cout << "drop stmt " << drop_table_stmt <<std::endl;
   SQLRETURN status;
   if (use_ansi) {
     status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
@@ -421,39 +422,44 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
       switch (row.interval_field.interval_type) {
         case SQL_IS_YEAR:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.year_month.year) + "' " +
-              kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.year_month.year) + " "
+              + kIntervalTypeToStr;
           break;
         case SQL_IS_MONTH:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.year_month.month) +
-              "' " + kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.year_month.month) + " "
+              + kIntervalTypeToStr;
           break;
         case SQL_IS_DAY:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.day_second.day) + "' " +
-              kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.day_second.day) + " "
+              + kIntervalTypeToStr;
           break;
         case SQL_IS_HOUR:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.day_second.hour) + "' " +
-              kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.day_second.hour) + " "
+              + kIntervalTypeToStr;
           break;
         case SQL_IS_MINUTE:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.day_second.minute) +
-              "' " + kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.day_second.minute) + " "
+              + kIntervalTypeToStr;
           break;
         case SQL_IS_SECOND:
           interval_str =
-              "INTERVAL '" +
-              std::to_string(row.interval_field.intval.day_second.second) +
-              "' " + kIntervalTypeToStr;
+              "INTERVAL " +
+              std::to_string(row.interval_field.intval.day_second.second);
+              if(row.interval_field.intval.day_second.fraction != 0){
+              interval_str += "." + 
+                std::to_string(row.interval_field.intval.day_second.fraction);
+              }
+               
+              interval_str += " " + kIntervalTypeToStr;
           break;
         case SQL_IS_YEAR_TO_MONTH:
           interval_str =
@@ -484,8 +490,12 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
               std::to_string(row.interval_field.intval.day_second.hour) + ":" +
               std::to_string(row.interval_field.intval.day_second.minute) +
               ":" +
-              std::to_string(row.interval_field.intval.day_second.second) +
-              "' " + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.second);
+               if (row.interval_field.intval.day_second.fraction != 0) {
+                interval_str += "." +
+                std::to_string(row.interval_field.intval.day_second.fraction);
+                }
+          interval_str += "' " + kIntervalTypeToStr;
           break;
         case SQL_IS_HOUR_TO_MINUTE:
           interval_str =
@@ -500,16 +510,24 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
               std::to_string(row.interval_field.intval.day_second.hour) + ":" +
               std::to_string(row.interval_field.intval.day_second.minute) +
               ":" +
-              std::to_string(row.interval_field.intval.day_second.second) +
-              "' " + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.second);             
+              if (row.interval_field.intval.day_second.fraction != 0) {
+                interval_str += "." +
+                  std::to_string(row.interval_field.intval.day_second.fraction);
+                }
+              interval_str += "' " + kIntervalTypeToStr;
           break;
         case SQL_IS_MINUTE_TO_SECOND:
           interval_str =
               "INTERVAL '" +
               std::to_string(row.interval_field.intval.day_second.minute) +
               ":" +
-              std::to_string(row.interval_field.intval.day_second.second) +
-              "' " + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.second);
+              if (row.interval_field.intval.day_second.fraction != 0) {
+            interval_str += "." +
+                std::to_string(row.interval_field.intval.day_second.fraction);
+        }
+        interval_str += "' " + kIntervalTypeToStr;
           break;
         default:
           throw std::runtime_error("Invalid INTERVAL value: " + interval_str);
@@ -526,6 +544,8 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
     insert_stmt.append(row_str);
   }
   insert_stmt.append(";");
+  std::cout << "insert stmt " << insert_stmt <<std::endl;
+  
   SQLRETURN status;
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
@@ -561,6 +581,7 @@ void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
             "CREATE OR REPLACE TABLE " + table_name + " " + schema);
+  std::cout << "create stmt " << create_table_stmt <<std::endl;
 
   SQLRETURN status;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_table_stmt,
