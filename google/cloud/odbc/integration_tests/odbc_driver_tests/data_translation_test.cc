@@ -541,6 +541,33 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_INSERT_TEST_DATETIME";
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(Id INT64, DateTime DATETIME)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<SQL_TIMESTAMP_STRUCT> timestamp_data;
+  for (auto const& test_data : kConversionFromTimestampTestData) {
+    timestamp_data.push_back(test_data.value);
+  }
+  table.InsertTimestampData(conn, timestamp_data, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT DateTime FROM " + table_name + " Order by Id";
+  TestTranslationsFromTimestamp(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
