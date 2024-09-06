@@ -20,10 +20,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef _WIN32
-#include <iconv.h>
-#endif  // LINUX
-
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 
 std::string GetRandomString(int len) {

@@ -326,7 +326,11 @@ class Table {
 
 std::string GetRandomString(int len);
 
-std::string getSchemaStr(Schema schema);
+std::string getSchemaStr(Schema schema);\
+
+std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+
+std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
