@@ -328,7 +328,7 @@ std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
 
-std::string FormatDateTime(const SQL_DATETIME_STRUCT& datetime);
+std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
 std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
