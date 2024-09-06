@@ -525,7 +525,7 @@ TEST(DataTranslationTest, From_SQL_DateTime_to_all) {
   for (auto const& test_case : kConversionFromDateTimeTestData) {
     date_data.push_back(test_case.value);
   }
-  table.InsertDateTimeData(conn, date_data, true);
+  table.InsertTimestampData(conn, date_data, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
