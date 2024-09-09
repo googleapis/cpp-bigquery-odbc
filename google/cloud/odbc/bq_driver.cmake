@@ -20,9 +20,7 @@ if (NOT COMMAND create_bazel_config)
     include(CreateOdbcBazelConfig)
 endif ()
 
-# BQ Driver Internal Library
-add_library(
-    google_cloud_odbc_bq_driver_internal # cmake-format: sort
+set(COMMON_SOURCES
     bq_driver/internal/data_translation.cc
     bq_driver/internal/data_translation.h
     bq_driver/internal/diagnostics.cc
@@ -74,29 +72,31 @@ add_library(
     bq_driver/internal/utils.cc
     bq_driver/internal/utils.h)
 
-if(_WIN32)
-    add_library(google_cloud_odbc_bq_driver_internal
-        bq_driver/internal/second_form.cpp
-        bq_driver/internal/second_form.h
-    )
-endif()
+# Add Windows-specific source files if compiling on Windows
+if (WIN32)
+    list(APPEND COMMON_SOURCES bq_driver/internal/driver_form.cc
+         bq_driver/internal/driver_form.h)
+else ()
+    list(APPEND COMMON_SOURCES)
+endif ()
 
-target_link_libraries(
-    google_cloud_odbc_bq_driver_internal
+# Create the library target
+add_library(google_cloud_odbc_bq_driver_internal ${COMMON_SOURCES})
+
+set(COMMON_LIBS
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
     odbc_bq_client_interface
-    odbc_internal 
-    )
+    odbc_internal)
 
-if(_WIN32)
-target_link_libraries(
-    google_cloud_odbc_bq_driver_internal
-    user32 
-    gdi32
-    )
-endif()
+# Add Windows-specific libraries only if compiling on Windows
+if (WIN32)
+    list(APPEND COMMON_LIBS user32 gdi32)
+endif ()
+
+# Link the collected libraries to the target
+target_link_libraries(google_cloud_odbc_bq_driver_internal ${COMMON_LIBS})
 
 target_include_directories(google_cloud_odbc_bq_driver_internal
                            PUBLIC ${CMAKE_SOURCE_DIR})
@@ -167,6 +167,7 @@ function (bq_driver_define_unit_tests)
         google_cloud_odbc_bq_driver_unit_tests
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
+        bq_driver/internal/driver_form_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_desc_attr_test.cc
