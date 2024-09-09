@@ -383,6 +383,9 @@ std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
 std::string getIntervalTypeStr(const SQLINTERVAL type);
 
+void FormatIntervalToBinary(const SQL_INTERVAL_STRUCT* interval,
+                            SQLPOINTER binaryBuffer, SQLINTEGER* bufferLength);
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
 

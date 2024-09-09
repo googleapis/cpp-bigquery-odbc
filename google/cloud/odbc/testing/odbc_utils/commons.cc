@@ -97,6 +97,189 @@ std::string getIntervalTypeStr(const SQLINTERVAL type) {
   return result;
 }
 
+void FormatIntervalToBinary(const SQL_INTERVAL_STRUCT* interval,
+                            SQLPOINTER binaryBuffer, SQLINTEGER* bufferLength) {
+
+  SQLUINTEGER value;
+  char* bufferPtr = (char*)binaryBuffer;
+
+  switch (interval->interval_type) {
+    case SQL_IS_YEAR: {
+      value = interval->intval.year_month.year;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+      break;
+    }
+    case SQL_IS_MONTH: {
+      value = interval->intval.year_month.month;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      *bufferLength = sizeof(SQLUINTEGER);
+      break;
+    }
+    case SQL_IS_YEAR_TO_MONTH:
+      // Serialize year and month
+      value = interval->intval.year_month.year;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.year_month.month;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+
+      *bufferLength = sizeof(SQLUINTEGER) * 2;  // Total size of year and month
+      break;
+
+    case SQL_IS_DAY:
+      // Serialize day
+      value = interval->intval.day_second.day;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      *bufferLength = sizeof(SQLUINTEGER);  // Total size of day
+      break;
+
+    case SQL_IS_HOUR:
+      // Serialize hour
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      *bufferLength = sizeof(SQLUINTEGER);  // Total size of hour
+      break;
+
+    case SQL_IS_MINUTE:
+      // Serialize minute
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      *bufferLength = sizeof(SQLUINTEGER);  // Total size of minute
+      break;
+
+    case SQL_IS_SECOND:
+      // Serialize second and fraction
+      value = interval->intval.day_second.second;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      *bufferLength = sizeof(SQLUINTEGER) * 1;
+
+      if (interval->intval.day_second.fraction != 0) {
+        value = interval->intval.day_second.fraction;
+        memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+
+        *bufferLength = sizeof(SQLUINTEGER) * 2;
+      }
+      break;
+
+    case SQL_IS_DAY_TO_HOUR:
+      // Serialize day and hour
+      value = interval->intval.day_second.day;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+
+      *bufferLength = sizeof(SQLUINTEGER) * 2;  // Total size of day and hour
+      break;
+
+    case SQL_IS_DAY_TO_MINUTE:
+      // Serialize day, hour, and minute
+      value = interval->intval.day_second.day;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+
+      *bufferLength =
+          sizeof(SQLUINTEGER) * 3;  // Total size of day, hour, and minute
+      break;
+
+    case SQL_IS_DAY_TO_SECOND:
+      // Serialize day, hour, minute, second, fraction
+      value = interval->intval.day_second.day;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.second;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+      *bufferLength = sizeof(SQLUINTEGER) * 4;
+
+      if (interval->intval.day_second.fraction != 0) {
+        value = interval->intval.day_second.fraction;
+        memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+        *bufferLength = sizeof(SQLUINTEGER) * 5;
+      }
+
+      break;
+
+    case SQL_IS_HOUR_TO_MINUTE:
+      // Serialize hour and minute
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+
+      *bufferLength = sizeof(SQLUINTEGER) * 2;  // Total size of hour and minute
+      break;
+
+    case SQL_IS_HOUR_TO_SECOND:
+      // Serialize hour, minute, second, fraction
+      value = interval->intval.day_second.hour;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.second;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      *bufferLength = sizeof(SQLUINTEGER) * 3;
+      if (interval->intval.day_second.fraction != 0) {
+        value = interval->intval.day_second.fraction;
+        memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+        *bufferLength = sizeof(SQLUINTEGER) * 4;
+      }
+      break;
+
+    case SQL_IS_MINUTE_TO_SECOND:
+      // Serialize minute, second, fraction
+      value = interval->intval.day_second.minute;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      value = interval->intval.day_second.second;
+      memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+      bufferPtr += sizeof(SQLUINTEGER);
+
+      *bufferLength = sizeof(SQLUINTEGER) * 2;
+
+      if (interval->intval.day_second.fraction != 0) {
+        value = interval->intval.day_second.fraction;
+        memcpy(bufferPtr, &value, sizeof(SQLUINTEGER));
+        *bufferLength = sizeof(SQLUINTEGER) * 3;
+      }
+
+      break;
+
+    default:
+      break;
+  }
+}
+
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi) {
   if (handle == nullptr) {
@@ -187,7 +370,7 @@ void Table::CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
 void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   char drop_table_stmt[kBufferLength];
   StrToChar(drop_table_stmt, "DROP TABLE IF EXISTS " + table_name_);
-  std::cout << "drop stmt " << drop_table_stmt <<std::endl;
+  std::cout << "drop stmt " << drop_table_stmt << std::endl;
   SQLRETURN status;
   if (use_ansi) {
     status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
@@ -423,43 +606,44 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
         case SQL_IS_YEAR:
           interval_str =
               "INTERVAL " +
-              std::to_string(row.interval_field.intval.year_month.year) + " "
-              + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.year_month.year) + " " +
+              kIntervalTypeToStr;
           break;
         case SQL_IS_MONTH:
           interval_str =
               "INTERVAL " +
-              std::to_string(row.interval_field.intval.year_month.month) + " "
-              + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.year_month.month) + " " +
+              kIntervalTypeToStr;
           break;
         case SQL_IS_DAY:
           interval_str =
               "INTERVAL " +
-              std::to_string(row.interval_field.intval.day_second.day) + " "
-              + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.day) + " " +
+              kIntervalTypeToStr;
           break;
         case SQL_IS_HOUR:
           interval_str =
               "INTERVAL " +
-              std::to_string(row.interval_field.intval.day_second.hour) + " "
-              + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.hour) + " " +
+              kIntervalTypeToStr;
           break;
         case SQL_IS_MINUTE:
           interval_str =
               "INTERVAL " +
-              std::to_string(row.interval_field.intval.day_second.minute) + " "
-              + kIntervalTypeToStr;
+              std::to_string(row.interval_field.intval.day_second.minute) +
+              " " + kIntervalTypeToStr;
           break;
         case SQL_IS_SECOND:
           interval_str =
               "INTERVAL " +
               std::to_string(row.interval_field.intval.day_second.second);
-              if(row.interval_field.intval.day_second.fraction != 0){
-              interval_str += "." + 
+          if (row.interval_field.intval.day_second.fraction != 0) {
+            interval_str +=
+                "." +
                 std::to_string(row.interval_field.intval.day_second.fraction);
-              }
-               
-              interval_str += " " + kIntervalTypeToStr;
+          }
+
+          interval_str += " " + kIntervalTypeToStr;
           break;
         case SQL_IS_YEAR_TO_MONTH:
           interval_str =
@@ -489,12 +673,12 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
               std::to_string(row.interval_field.intval.day_second.day) + " " +
               std::to_string(row.interval_field.intval.day_second.hour) + ":" +
               std::to_string(row.interval_field.intval.day_second.minute) +
-              ":" +
-              std::to_string(row.interval_field.intval.day_second.second);
-               if (row.interval_field.intval.day_second.fraction != 0) {
-                interval_str += "." +
+              ":" + std::to_string(row.interval_field.intval.day_second.second);
+          if (row.interval_field.intval.day_second.fraction != 0) {
+            interval_str +=
+                "." +
                 std::to_string(row.interval_field.intval.day_second.fraction);
-                }
+          }
           interval_str += "' " + kIntervalTypeToStr;
           break;
         case SQL_IS_HOUR_TO_MINUTE:
@@ -509,25 +693,25 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
               "INTERVAL '" +
               std::to_string(row.interval_field.intval.day_second.hour) + ":" +
               std::to_string(row.interval_field.intval.day_second.minute) +
-              ":" +
-              std::to_string(row.interval_field.intval.day_second.second);             
-              if (row.interval_field.intval.day_second.fraction != 0) {
-                interval_str += "." +
-                  std::to_string(row.interval_field.intval.day_second.fraction);
-                }
-              interval_str += "' " + kIntervalTypeToStr;
+              ":" + std::to_string(row.interval_field.intval.day_second.second);
+          if (row.interval_field.intval.day_second.fraction != 0) {
+            interval_str +=
+                "." +
+                std::to_string(row.interval_field.intval.day_second.fraction);
+          }
+          interval_str += "' " + kIntervalTypeToStr;
           break;
         case SQL_IS_MINUTE_TO_SECOND:
           interval_str =
               "INTERVAL '" +
               std::to_string(row.interval_field.intval.day_second.minute) +
-              ":" +
-              std::to_string(row.interval_field.intval.day_second.second);
-              if (row.interval_field.intval.day_second.fraction != 0) {
-            interval_str += "." +
+              ":" + std::to_string(row.interval_field.intval.day_second.second);
+          if (row.interval_field.intval.day_second.fraction != 0) {
+            interval_str +=
+                "." +
                 std::to_string(row.interval_field.intval.day_second.fraction);
-        }
-        interval_str += "' " + kIntervalTypeToStr;
+          }
+          interval_str += "' " + kIntervalTypeToStr;
           break;
         default:
           throw std::runtime_error("Invalid INTERVAL value: " + interval_str);
@@ -544,8 +728,8 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
     insert_stmt.append(row_str);
   }
   insert_stmt.append(";");
-  std::cout << "insert stmt " << insert_stmt <<std::endl;
-  
+  std::cout << "insert stmt " << insert_stmt << std::endl;
+
   SQLRETURN status;
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
@@ -581,7 +765,7 @@ void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
   char create_table_stmt[kBufferLength];
   StrToChar(create_table_stmt,
             "CREATE OR REPLACE TABLE " + table_name + " " + schema);
-  std::cout << "create stmt " << create_table_stmt <<std::endl;
+  std::cout << "create stmt " << create_table_stmt << std::endl;
 
   SQLRETURN status;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_table_stmt,

@@ -346,6 +346,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
   SQLLEN buffer_length = dest_data.buflen;
+  SQLLEN* res_len = reinterpret_cast<SQLLEN*>(dest_data.result_len);
 
   constexpr int kIntervalCharLength = 30;
   constexpr int kIntervalWcharLength = kIntervalCharLength;
@@ -383,7 +384,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
       break;
     }
     case SQL_C_BINARY: {
-      if (buffer_length > kIntervalBinaryLength) {
+      if (buffer_length >= kIntervalBinaryLength) {
         memcpy(dest_buf, &conn_interval, kIntervalBinaryLength);
       } else {
         memcpy(dest_buf, &conn_interval, buffer_length);
@@ -407,7 +408,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
       if (kIntervalCharLength < buffer_length) {
         return IntervalTOutputBufferResponse(
             conn_interval, dest_buf, buffer_length,
-            reinterpret_cast<SQLLEN*>(dest_data.result_len));
+           res_len);
       } else {
         status_record =
             StatusRecord{SQLStates::k_01S07(), "String data, right truncated"};
@@ -415,44 +416,45 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     }
 
     case SQL_C_STINYINT: {
-      auto* dest = reinterpret_cast<int8_t*>(dest_buf);
-      if (conn_interval.interval_type == SQL_IS_YEAR ||
-          conn_interval.interval_type == SQL_IS_MONTH ||
-          conn_interval.interval_type == SQL_IS_DAY ||
-          conn_interval.interval_type == SQL_IS_HOUR ||
-          conn_interval.interval_type == SQL_IS_MINUTE ||
-          conn_interval.interval_type == SQL_IS_SECOND) {
-        SQLUINTEGER interval_value = 0;
-        switch (conn_interval.interval_type) {
-          case SQL_IS_YEAR:
-            interval_value = conn_interval.intval.year_month.year;
-            break;
-          case SQL_IS_MONTH:
-            interval_value = conn_interval.intval.year_month.month;
-            break;
-          case SQL_IS_DAY:
-            interval_value = conn_interval.intval.day_second.day;
-            break;
-          case SQL_IS_HOUR:
-            interval_value = conn_interval.intval.day_second.hour;
-            break;
-          case SQL_IS_MINUTE:
-            interval_value = conn_interval.intval.day_second.minute;
-            break;
-          case SQL_IS_SECOND:
-            interval_value = conn_interval.intval.day_second.second;
-            break;
-          default:
-            status_record =
-                odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01S07(),
-                                            "Unsupported interval type"};
-            break;
-        }
-        if (status_record.ok()) {
-          status_record = STinyIntToOutputBufferResponse(interval_value, dest,
-                                                         dest_data.result_len);
-        }
-      }
+      signed char* dest = static_cast<signed char*>(dest_buf);
+
+      // if (conn_interval.interval_type == SQL_IS_YEAR ||
+      //     conn_interval.interval_type == SQL_IS_MONTH ||
+      //     conn_interval.interval_type == SQL_IS_DAY ||
+      //     conn_interval.interval_type == SQL_IS_HOUR ||
+      //     conn_interval.interval_type == SQL_IS_MINUTE ||
+      //     conn_interval.interval_type == SQL_IS_SECOND) {
+      //   SQLUINTEGER interval_value = 0;
+      //   switch (conn_interval.interval_type) {
+      //     case SQL_IS_YEAR:
+      //       interval_value = conn_interval.intval.year_month.year;
+      //       break;
+      //     case SQL_IS_MONTH:
+      //       interval_value = conn_interval.intval.year_month.month;
+      //       break;
+      //     case SQL_IS_DAY:
+      //       interval_value = conn_interval.intval.day_second.day;
+      //       break;
+      //     case SQL_IS_HOUR:
+      //       interval_value = conn_interval.intval.day_second.hour;
+      //       break;
+      //     case SQL_IS_MINUTE:
+      //       interval_value = conn_interval.intval.day_second.minute;
+      //       break;
+      //     case SQL_IS_SECOND:
+      //       interval_value = conn_interval.intval.day_second.second;
+      //       break;
+      //     default:
+      //       status_record =
+      //           odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01S07(),
+      //                                       "Unsupported interval type"};
+      //       break;
+      //   }
+        // if (status_record.ok()) {
+        //   status_record = STinyIntToOutputBufferResponse(interval_value, dest,
+        //                                                  dest_data.result_len);
+        // }
+      // }
     }
 
     default:
