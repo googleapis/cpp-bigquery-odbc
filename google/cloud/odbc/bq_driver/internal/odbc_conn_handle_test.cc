@@ -81,8 +81,32 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.description, kDsnDescription);
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
+  // `is_job_creation_required` is supposed to be false by default
+  EXPECT_FALSE(actual.is_job_creation_required);
   EXPECT_FALSE(actual.sessions_enabled);
   EXPECT_FALSE(conn_handle.IsConnected());
+}
+
+TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["JobCreationMode"] = "1";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.is_job_creation_required);
+}
+
+TEST(ConnectionHandle, DsnSetup_JobCreationDefault) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["JobCreationMode"] = "9";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_FALSE(actual.is_job_creation_required);
 }
 
 TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {

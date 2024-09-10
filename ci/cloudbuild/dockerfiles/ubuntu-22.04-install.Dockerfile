@@ -203,7 +203,8 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     chmod +x /usr/local/bin/sccache
 
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.26.0.tar.gz | \
+# TODO(b/367594649): This should use a version tag
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \

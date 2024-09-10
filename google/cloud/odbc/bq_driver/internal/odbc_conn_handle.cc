@@ -77,6 +77,11 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.sessions_enabled =
       (!sessions_enabled.empty() && sessions_enabled != "0");
 
+  // As with the existing driver, the default value of JobCreationMode is
+  // '2'(JOB_CREATION_OPTIONAL)
+  std::string job_creation_mode = dsn_section["JobCreationMode"];
+  dsn_.is_job_creation_required = (job_creation_mode == "1");
+
   if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {
     attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
   }

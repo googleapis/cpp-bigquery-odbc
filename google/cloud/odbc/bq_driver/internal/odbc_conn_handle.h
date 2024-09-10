@@ -48,6 +48,7 @@ struct Dsn {
   std::string default_dataset;
   std::string dsn_name;
   bool is_bq_legacy_sql = false;
+  bool is_job_creation_required = false;
   bool sessions_enabled = false;
 };
 

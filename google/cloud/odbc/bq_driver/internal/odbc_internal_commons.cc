@@ -19,6 +19,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::JobCreationMode;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
@@ -325,12 +326,16 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   std::string catalog = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
+  bool is_job_creation_required = conn_handle.GetDsn().is_job_creation_required;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
   query_request.set_dry_run(false);
   query_request.set_query(query_str);
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  if (is_job_creation_required) {
+    query_request.set_job_creation_mode(JobCreationMode::Required());
+  }
   if (!default_dataset.empty()) {
     DatasetReference ds_ref;
     // Set dataset info.
@@ -344,6 +349,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   } else if (conn_handle.GetDsn().sessions_enabled) {
     query_request.set_create_session(true);
   }
+
   // Set billing info and query request.
   post_request.set_project_id(catalog);
   post_request.set_query_request(query_request);

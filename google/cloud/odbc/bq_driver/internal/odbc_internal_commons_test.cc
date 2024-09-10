@@ -21,6 +21,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::bigquery_v2_minimal_internal::ColumnData;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::JobCreationMode;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
@@ -529,6 +530,7 @@ TEST(ConstructBasicPostQueryRequest, Basic) {
   EXPECT_TRUE(returned.query_request().default_dataset().dataset_id.empty());
   EXPECT_FALSE(returned.query_request().create_session());
   EXPECT_TRUE(returned.query_request().connection_properties().empty());
+  EXPECT_TRUE(returned.query_request().job_creation_mode().value.empty());
 }
 
 TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
@@ -542,6 +544,20 @@ TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
       ConstructBasicPostQueryRequest(conn_handle, query_str);
 
   EXPECT_TRUE(returned.query_request().use_legacy_sql());
+}
+
+TEST(ConstructBasicPostQueryRequest, Basic_withJobCreationModeRequired) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["JobCreationMode"] = "1";
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  EXPECT_EQ(returned.query_request().job_creation_mode().value,
+            JobCreationMode::Required().value);
 }
 
 TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
