@@ -208,6 +208,59 @@ TEST(DSValue, Basic_Int) {
   EXPECT_EQ(expected, actual);
 }
 
+TEST(DSValue, Timestamp) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 123456;
+  DSValue src_dsval;
+  TimestampToDSValue(Timestamp, src_dsval);
+  SQL_TIMESTAMP_STRUCT actual;
+  DSValueToTimestamp(src_dsval, actual);
+  EXPECT_EQ(actual.year, Timestamp.year);
+  EXPECT_EQ(actual.month, Timestamp.month);
+  EXPECT_EQ(actual.day, Timestamp.day);
+  EXPECT_EQ(actual.hour, Timestamp.hour);
+  EXPECT_EQ(actual.minute, Timestamp.minute);
+  EXPECT_EQ(actual.second, Timestamp.second);
+}
+
+TEST(FormatTimestampToString, Timestamp_String) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 01;
+  Timestamp.minute = 59;
+  Timestamp.second = 43;
+  Timestamp.fraction = 123456;
+
+  std::string timestampString = FormatTimestampToString(Timestamp);
+
+  std::string expectedString = "2020-01-10 01:59:43.123456";
+  EXPECT_EQ(timestampString, expectedString);
+}
+
+TEST(FormatTimestampToString, Timestamp_String_with_zeros) {
+  SQL_TIMESTAMP_STRUCT Timestamp;
+  Timestamp.year = 2020;
+  Timestamp.month = 1;
+  Timestamp.day = 10;
+  Timestamp.hour = 0;
+  Timestamp.minute = 5;
+  Timestamp.second = 3;
+  Timestamp.fraction = 0;
+
+  std::string timestampString = FormatTimestampToString(Timestamp);
+
+  std::string expectedString = "2020-01-10 00:05:03.000000";
+  EXPECT_EQ(timestampString, expectedString);
+}
+
 TEST(StringToDSValue, SQLCHAR_String) {
   const SQLCHAR expected[10] = "Hello";
   DSValue value;
