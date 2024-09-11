@@ -76,8 +76,6 @@ set(COMMON_SOURCES
 if (WIN32)
     list(APPEND COMMON_SOURCES bq_driver/internal/driver_form.cc
          bq_driver/internal/driver_form.h)
-else ()
-    list(APPEND COMMON_SOURCES)
 endif ()
 
 # Create the library target
@@ -162,9 +160,7 @@ function (bq_driver_define_unit_tests)
     endif ()
 
     enable_testing()
-
-    add_executable(
-        google_cloud_odbc_bq_driver_unit_tests
+    set(TEST_SOURCES
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
         bq_driver/internal/driver_form_test.cc
@@ -200,6 +196,12 @@ function (bq_driver_define_unit_tests)
         bq_driver/odbc_sql_results_test.cc
         bq_driver/odbc_statement_test.cc
         bq_driver/odbc_utils_test.cc)
+
+    if (WIN32)
+        list(APPEND TEST_SOURCES bq_driver/internal/driver_form_test.cc)
+    endif ()
+
+    add_executable(google_cloud_odbc_bq_driver_unit_tests ${TEST_SOURCES})
 
     target_link_libraries(
         google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils

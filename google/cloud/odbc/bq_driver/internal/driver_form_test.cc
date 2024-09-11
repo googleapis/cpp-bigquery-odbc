@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,19 +18,6 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
-#define IDC_CHECKBOX 101
-#define IDC_COMBOBOX 102
-#define IDC_BUTTON_OK 103
-#define IDC_HEADER_LABEL 104
-#define IDC_LABEL 105
-#define IDC_BUTTON_CANCEL 106
-#define IDC_EMAIL_EDIT 107
-#define IDC_KEYFILE_EDIT 108
-#define IDC_BROWSE_BUTTON 109
-#define IDC_Catalog_LABEL 110
-#define IDC_Dataset_LABEL 111
-#define IDC_Catlog_BOX 112
-#define IDC_Dataset_BOX 113
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -57,7 +44,6 @@ class DriverFormTest : public ::testing::Test {
     }
   }
 
-  // Helper function to simulate button click
   void ClickButton(HWND hwnd, int buttonId) {
     HWND button = GetDlgItem(hwnd, buttonId);
     ASSERT_NE(button, nullptr) << "Button should be created.";
@@ -173,28 +159,5 @@ TEST_F(DriverFormTest, TestEmailField) {
       << "Email edit control should contain the correct text.";
 }
 
-// Disabled this test as it require user interaction to complete.
-// TEST_F(DriverFormTest, TestFileDialogButton) {
-//     HWND hBrowseButton = GetDlgItem(form->GetHwnd(), IDC_BROWSE_BUTTON);
-//     ASSERT_NE(hBrowseButton, nullptr) << "Browse button should be created.";
-
-//     HWND hKeyFileEdit = GetDlgItem(form->GetHwnd(), IDC_KEYFILE_EDIT);
-//     ASSERT_NE(hKeyFileEdit, nullptr) << "Key file path edit control should be
-//     created.";
-
-//     SendMessage(form->GetHwnd(), WM_COMMAND, MAKEWPARAM(IDC_BROWSE_BUTTON,
-//     BN_CLICKED), (LPARAM)hBrowseButton);
-
-//      // Use MockOpenFileDialog to simulate file selection without user
-//      interaction
-//     const char* simulatedFilePath = "C:\\path\\to\\selected\\file.json";
-//     MockOpenFileDialog(form->GetHwnd(), hKeyFileEdit, simulatedFilePath);
-
-//     char buffer[256];
-//     SendMessage(hKeyFileEdit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-//     ASSERT_STREQ(buffer, simulatedFilePath) << "Key file path edit control
-//     should have the correct file path after browsing.";
-// }
-
-#endif /* _WIN32*/
+#endif /* WIN32*/
 }  // namespace google::cloud::odbc_bq_driver_internal

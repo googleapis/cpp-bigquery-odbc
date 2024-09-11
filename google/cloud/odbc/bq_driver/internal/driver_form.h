@@ -20,6 +20,18 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
+static int const IDC_COMBOBOX = 102;
+static int const IDC_BUTTON_OK = 103;
+static int const IDC_HEADER_LABEL = 104;
+static int const IDC_LABEL = 105;
+static int const IDC_BUTTON_CANCEL = 106;
+static int const IDC_EMAIL_EDIT = 107;
+static int const IDC_KEYFILE_EDIT = 108;
+static int const IDC_BROWSE_BUTTON = 109;
+static int const IDC_Catalog_LABEL = 110;
+static int const IDC_Dataset_LABEL = 111;
+static int const IDC_Catlog_BOX = 112;
+static int const IDC_Dataset_BOX = 113;
 
 class DriverForm {
  public:
@@ -37,7 +49,7 @@ class DriverForm {
 
 void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
 
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H

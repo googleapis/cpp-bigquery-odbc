@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,20 +17,6 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
-
-#define IDC_CHECKBOX 101
-#define IDC_COMBOBOX 102
-#define IDC_BUTTON_OK 103
-#define IDC_HEADER_LABEL 104
-#define IDC_LABEL 105
-#define IDC_BUTTON_CANCEL 106
-#define IDC_EMAIL_EDIT 107
-#define IDC_KEYFILE_EDIT 108
-#define IDC_BROWSE_BUTTON 109
-#define IDC_Catalog_LABEL 110
-#define IDC_Dataset_LABEL 111
-#define IDC_Catlog_BOX 112
-#define IDC_Dataset_BOX 113
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 
@@ -293,5 +279,5 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-#endif /* _WIN32*/
+#endif /* WIN32*/
 }  // namespace google::cloud::odbc_bq_driver_internal
