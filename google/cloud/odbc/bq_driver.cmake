@@ -132,15 +132,39 @@ add_library(
     bq_driver/odbc_utils.cc
     bq_driver/odbc_utils.h)
 
-target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
+target_include_directories(
+    google_cloud_odbc_bq_driver PUBLIC ./
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>)
 target_include_directories(google_cloud_odbc_bq_driver
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
-target_link_libraries(google_cloud_odbc_bq_driver
-                      google_cloud_odbc_bq_driver_internal)
 
 # target_link_libraries(google_cloud_odbc_bq_driver )
 add_subdirectory(bq_client_interface)
 add_subdirectory(internal)
+
+if (NOT TARGET google_cloud_cpp_bigquery_rest)
+   add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)
+endif ()
+if (NOT TARGET google_cloud_cpp_bigquery)
+   add_library(google_cloud_cpp_bigquery OBJECT IMPORTED)
+endif ()
+if (NOT TARGET google_cloud_cpp_bigquery_protos)
+   add_library(google_cloud_cpp_bigquery_protos OBJECT IMPORTED)
+endif ()
+if (NOT TARGET google_cloud_cpp_oauth2)
+   add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED)
+endif ()
+target_link_libraries(
+    google_cloud_odbc_bq_driver
+    PUBLIC google_cloud_odbc_bq_driver_internal
+           $<TARGET_OBJECTS:google_cloud_odbc_bq_driver_internal>
+           $<TARGET_OBJECTS:google_cloud_cpp_bigquery_rest>
+           $<TARGET_OBJECTS:google_cloud_cpp_bigquery>
+           $<TARGET_OBJECTS:google_cloud_cpp_bigquery_protos>
+           $<TARGET_OBJECTS:google_cloud_cpp_oauth2>
+           $<TARGET_OBJECTS:odbc_bq_client_interface>
+           $<TARGET_OBJECTS:odbc_internal>)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(

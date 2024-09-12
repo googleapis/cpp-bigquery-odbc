@@ -60,11 +60,11 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
 
   if (use_ansi) {
     status = SQLDriverConnectA(conn->hdbc, 0, (SQLCHAR*)data_source, SQL_NTS,
-                               (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn),
+                               (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
                                &buflen, SQL_DRIVER_COMPLETE);
   } else {
     status = SQLDriverConnect(conn->hdbc, 0, (SQLCHAR*)data_source, SQL_NTS,
-                              (SQLCHAR*)conn->outdsn, NumSqlChar(conn->outdsn),
+                              (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
                               &buflen, SQL_DRIVER_COMPLETE);
   }
   CheckError(status, "SQLDriverConnect", conn, use_ansi);
