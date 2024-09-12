@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-
-#ifdef _WIN32
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 
@@ -279,5 +278,5 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-#endif /* WIN32*/
 }  // namespace google::cloud::odbc_bq_driver_internal
+#endif /* WIN32*/

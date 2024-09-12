@@ -42,7 +42,6 @@ google_cloud_odbc_bq_driver_internal_hdrs = [
     "bq_driver/internal/odbc_type_utils.h",
     "bq_driver/internal/trace_utils.h",
     "bq_driver/internal/utils.h",
-    "bq_driver/internal/driver_form.h",
 ]
 
 google_cloud_odbc_bq_driver_internal_srcs = [
@@ -71,5 +70,4 @@ google_cloud_odbc_bq_driver_internal_srcs = [
     "bq_driver/internal/odbc_type_utils.cc",
     "bq_driver/internal/trace_utils.cc",
     "bq_driver/internal/utils.cc",
-    "bq_driver/internal/driver_form.cc",
 ]

@@ -16,13 +16,25 @@ licenses(["notice"])  # Apache v2
 
 package(default_visibility = ["//visibility:private"])
 
+# Define a config_setting for Windows
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 # Library and tests for Driver internal
 load(":google_cloud_odbc_bq_driver_internal.bzl", "google_cloud_odbc_bq_driver_internal_hdrs", "google_cloud_odbc_bq_driver_internal_srcs")
 
 cc_library(
     name = "google_cloud_odbc_bq_driver_internal",
-    srcs = google_cloud_odbc_bq_driver_internal_srcs,
-    hdrs = google_cloud_odbc_bq_driver_internal_hdrs,
+    srcs = google_cloud_odbc_bq_driver_internal_srcs + select({
+        ":windows": ["bq_driver/internal/driver_form.cc"],
+        "//conditions:default": [],
+    }),
+    hdrs = google_cloud_odbc_bq_driver_internal_hdrs + select({
+        ":windows": ["bq_driver/internal/driver_form.h"],
+        "//conditions:default": [],
+    }),
     visibility = ["//:__pkg__"],
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",

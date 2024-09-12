@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
-
-#ifdef _WIN32
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -159,5 +158,5 @@ TEST_F(DriverFormTest, TestEmailField) {
       << "Email edit control should contain the correct text.";
 }
 
-#endif /* WIN32*/
 }  // namespace google::cloud::odbc_bq_driver_internal
+#endif /* WIN32*/
