@@ -525,6 +525,244 @@ inline odbc_internal::StatusRecord ConvertFromDateDSValue(
 
   return status_record;
 }
+
+inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+  using odbc_internal::StatusRecordOr;
+
+  SQL_INTERVAL_STRUCT conn_interval;
+  DSValueToInterval(src_dsval, conn_interval);
+
+  std::string interval_src_str;
+  interval_src_str = FormatIntervalToString(conn_interval);
+
+  SQLSMALLINT dest_type = dest_data.type;
+  SQLPOINTER dest_buf = dest_data.buf;
+  SQLLEN buffer_length = dest_data.buflen;
+  SQLLEN* res_len = reinterpret_cast<SQLLEN*>(dest_data.result_len);
+
+  constexpr int kIntervalCharLength = 30;
+  int k_whole_digits_count = 0;
+  int k_interval_src_len = interval_src_str.length();
+
+  if (!dest_buf) {
+    return StatusRecord::Ok();
+  }
+  if (buffer_length < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  for (char ch : interval_src_str) {
+    if (std::isdigit(ch)) {
+      ++k_whole_digits_count;
+    }
+  }
+  StatusRecord status_record = StatusRecord::Ok();
+  switch (dest_type) {
+    case SQL_C_CHAR: {
+      char* dest = reinterpret_cast<char*>(dest_buf);
+      if (buffer_length > kIntervalCharLength) {
+        if (res_len) {
+          *res_len = interval_src_str.length();
+        }
+        std::strncpy(dest, interval_src_str.c_str(), k_interval_src_len);
+        dest[k_interval_src_len] = '\0';
+      } else if (buffer_length > k_whole_digits_count) {
+        if (res_len) {
+          *res_len = interval_src_str.length();
+        }
+        std::strncpy(dest, interval_src_str.c_str(), k_interval_src_len);
+        dest[k_interval_src_len] = '\0';
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        strncpy(dest, "Y-M D H:M:S", buffer_length - 1);
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+      }
+      break;
+    }
+    case SQL_C_WCHAR: {
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(interval_src_str);
+      if (!wstr) {
+        status_record = StatusRecord{SQLStates::k_HY000(),
+                                     "DSValueToWchar Conversion Failed"};
+        break;
+      }
+      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
+      wstr_data.emplace_back(L'\0');
+      auto* dest = static_cast<SQLWCHAR*>(dest_buf);
+      if (buffer_length > k_interval_src_len) {
+        if (res_len) {
+          *res_len = k_interval_src_len * sizeof(SQLWCHAR);
+        }
+        std::memcpy(dest, wstr_data.data(),
+                    (k_interval_src_len) * sizeof(SQLWCHAR));
+      } else if (buffer_length > k_whole_digits_count) {
+        if (res_len) {
+          *res_len = buffer_length * sizeof(SQLWCHAR);
+        }
+        std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+      } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+      }
+      break;
+    }
+
+    case SQL_C_STINYINT: {
+      auto* dest = reinterpret_cast<int8_t*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <=
+          static_cast<SQLUINTEGER>(std::numeric_limits<int8_t>::max())) {
+        *dest = static_cast<int8_t>(value);
+        if (res_len) {
+          *res_len = sizeof(int8_t);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+    case SQL_C_UTINYINT: {
+      auto* dest = reinterpret_cast<uint8_t*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <= std::numeric_limits<uint8_t>::max()) {
+        *dest = static_cast<uint8_t>(value);
+        if (res_len) {
+          *res_len = sizeof(int8_t);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+
+    case SQL_C_SSHORT: {
+      auto* dest = reinterpret_cast<SQLSMALLINT*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <=
+          static_cast<SQLUINTEGER>(std::numeric_limits<SQLSMALLINT>::max())) {
+        *dest = static_cast<SQLSMALLINT>(value);
+        if (res_len) {
+          *res_len = sizeof(SQLSMALLINT);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+    case SQL_C_USHORT: {
+      auto* dest = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <= std::numeric_limits<SQLUSMALLINT>::max()) {
+        *dest = static_cast<SQLUSMALLINT>(value);
+        if (res_len) {
+          *res_len = sizeof(SQLUSMALLINT);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+    case SQL_C_ULONG: {
+      auto* dest = reinterpret_cast<SQLUINTEGER*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <= std::numeric_limits<SQLUINTEGER>::max()) {
+        *dest = static_cast<SQLUINTEGER>(value);
+        if (res_len) {
+          *res_len = sizeof(SQLUINTEGER);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+    case SQL_C_SBIGINT: {
+      auto* dest = reinterpret_cast<SQLBIGINT*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      if (value <=
+          static_cast<SQLUINTEGER>(std::numeric_limits<SQLBIGINT>::max())) {
+        *dest = static_cast<SQLBIGINT>(value);
+        if (res_len) {
+          *res_len = sizeof(SQLBIGINT);
+        }
+      } else {
+        status_record = odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_22003(), "Data truncated"};
+      }
+      break;
+    }
+
+    case SQL_C_NUMERIC: {
+      auto* dest = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_buf);
+      SQLUINTEGER value;
+      GetSinglePrecisionInterval(conn_interval, value);
+      std::memset(dest, 0, sizeof(SQL_NUMERIC_STRUCT));
+      dest->sign = 1;
+
+      int byte_index = 0;
+      while (value > 0 && byte_index < SQL_MAX_NUMERIC_LEN) {
+        dest->val[byte_index++] = static_cast<SQLCHAR>(value & 0xFF);
+        value >>=
+            8;  // Shift the value right by 8 bits to process the next byte
+      }
+
+      if (value > 0) {
+        status_record =
+            odbc_internal::StatusRecord{odbc_internal::SQLStates::k_22003(),
+                                        "Value out of range for SQL_C_NUMERIC"};
+      } else {
+        // Set precision and scale according to the data type specifics
+        dest->precision = 10;
+        dest->scale = 0;
+
+        // If result length pointer is provided, set it to the size of
+        // SQL_NUMERIC_STRUCT
+        if (res_len) {
+          *res_len = sizeof(SQL_NUMERIC_STRUCT);
+        }
+      }
+      break;
+    }
+    case SQL_C_INTERVAL_YEAR:
+    case SQL_C_INTERVAL_MONTH:
+    case SQL_C_INTERVAL_DAY:
+    case SQL_C_INTERVAL_HOUR:
+    case SQL_C_INTERVAL_MINUTE:
+    case SQL_C_INTERVAL_SECOND:
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:
+    case SQL_C_INTERVAL_DAY_TO_HOUR:
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:
+    case SQL_C_INTERVAL_DAY_TO_SECOND:
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
+      if (kIntervalCharLength < buffer_length) {
+        return IntervalTOutputBufferResponse(conn_interval, dest_buf,
+                                             buffer_length, res_len);
+      }
+      status_record = StatusRecord{SQLStates::k_01S07(), "Data truncated"};
+      break;
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+  return status_record;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

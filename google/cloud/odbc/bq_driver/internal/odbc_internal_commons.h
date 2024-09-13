@@ -173,6 +173,152 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
            time.second);
   return buffer;
 }
+inline void IntervalToDSValue(const SQL_INTERVAL_STRUCT& interval,
+                              DSValue& value) {
+  value.resize(sizeof(SQL_INTERVAL_STRUCT));
+  std::memcpy(value.data(), &interval, sizeof(SQL_INTERVAL_STRUCT));
+}
+
+inline SQL_INTERVAL_STRUCT DSValueToInterval(
+    DSValue const& value, SQL_INTERVAL_STRUCT& interval_struct) {
+  std::memcpy(&interval_struct, value.data(), sizeof(SQL_INTERVAL_STRUCT));
+  return interval_struct;
+}
+
+inline std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
+  char buffer[80];
+
+  switch (interval.interval_type) {
+    case SQL_IS_YEAR:
+      snprintf(buffer, sizeof(buffer), "%d-0 0 0:0:0",
+               interval.intval.year_month.year);
+      break;
+    case SQL_IS_MONTH:
+      snprintf(buffer, sizeof(buffer), "0-%d 0 0:0:0",
+               interval.intval.year_month.month);
+      break;
+    case SQL_IS_YEAR_TO_MONTH:
+      snprintf(buffer, sizeof(buffer), "%d-%d 0 0:0:0",
+               interval.intval.year_month.year,
+               interval.intval.year_month.month);
+      break;
+    case SQL_IS_DAY:
+      snprintf(buffer, sizeof(buffer), "0-0 %d 0:0:0",
+               interval.intval.day_second.day);
+      break;
+    case SQL_IS_HOUR:
+      snprintf(buffer, sizeof(buffer), "0-0 0 %d:0:0",
+               interval.intval.day_second.hour);
+      break;
+    case SQL_IS_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 0 0:%d:0",
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_SECOND:
+      if (interval.intval.day_second.fraction != 0) {
+        snprintf(buffer, sizeof(buffer), "0-0 0 0:0:%d.%09d",
+                 interval.intval.day_second.second,
+                 interval.intval.day_second.fraction);
+      } else {
+        snprintf(buffer, sizeof(buffer), "0-0 0 0:0:%d",
+                 interval.intval.day_second.second);
+      }
+      break;
+    case SQL_IS_DAY_TO_HOUR:
+      snprintf(buffer, sizeof(buffer), "0-0 %d %d:0:0",
+               interval.intval.day_second.day, interval.intval.day_second.hour);
+      break;
+    case SQL_IS_DAY_TO_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 %d %d:%d:0",
+               interval.intval.day_second.day, interval.intval.day_second.hour,
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_DAY_TO_SECOND:
+      if (interval.intval.day_second.fraction != 0) {
+        snprintf(buffer, sizeof(buffer), "0-0 %d %d:%d:%d.%09d",
+                 interval.intval.day_second.day,
+                 interval.intval.day_second.hour,
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second,
+                 interval.intval.day_second.fraction);
+      } else {
+        snprintf(buffer, sizeof(buffer), "0-0 %d %d:%d:%d",
+                 interval.intval.day_second.day,
+                 interval.intval.day_second.hour,
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second);
+      }
+      break;
+    case SQL_IS_HOUR_TO_MINUTE:
+      snprintf(buffer, sizeof(buffer), "0-0 0 %d:%d:0",
+               interval.intval.day_second.hour,
+               interval.intval.day_second.minute);
+      break;
+    case SQL_IS_HOUR_TO_SECOND:
+      if (interval.intval.day_second.fraction != 0) {
+        snprintf(buffer, sizeof(buffer), "0-0 0 %d:%d:%d.%09d",
+                 interval.intval.day_second.hour,
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second,
+                 interval.intval.day_second.fraction);
+      } else {
+        snprintf(buffer, sizeof(buffer), "0-0 0 %d:%d:%d",
+                 interval.intval.day_second.hour,
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second);
+      }
+      break;
+    case SQL_IS_MINUTE_TO_SECOND:
+      if (interval.intval.day_second.fraction != 0) {
+        snprintf(buffer, sizeof(buffer), "0-0 0 0:%d:%d.%09d",
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second,
+                 interval.intval.day_second.fraction);
+      } else {
+        snprintf(buffer, sizeof(buffer), "0-0 0 0:%d:%d",
+                 interval.intval.day_second.minute,
+                 interval.intval.day_second.second);
+      }
+      break;
+    default:
+      snprintf(buffer, sizeof(buffer), "Unknown interval type");
+      break;
+  }
+  return std::string(buffer);
+}
+
+inline void GetSinglePrecisionInterval(
+    const SQL_INTERVAL_STRUCT interval_struct, SQLUINTEGER& value) {
+  using odbc_internal::StatusRecord;
+  StatusRecord status_record = StatusRecord::Ok();
+
+  switch (interval_struct.interval_type) {
+    case SQL_IS_YEAR:
+      value = interval_struct.intval.year_month.year;
+      break;
+    case SQL_IS_MONTH:
+      value = interval_struct.intval.year_month.month;
+      break;
+    case SQL_IS_DAY:
+      value = interval_struct.intval.day_second.day;
+      break;
+    case SQL_IS_HOUR:
+      value = interval_struct.intval.day_second.hour;
+      break;
+    case SQL_IS_MINUTE:
+      value = interval_struct.intval.day_second.minute;
+      break;
+    default:
+      status_record = odbc_internal::StatusRecord{
+          odbc_internal::SQLStates::k_07006(),
+          "Interval precision was not a single field"};
+      break;
+  }
+}
+
+void ConvertStringToIntervalStruct(std::string const& interval_str,
+                                   SQL_INTERVAL_STRUCT& interval_struct);
+
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:
