@@ -158,6 +158,10 @@ endif ()
 target_link_libraries(
     google_cloud_odbc_bq_driver
     PUBLIC google_cloud_odbc_bq_driver_internal
+           google_cloud_cpp_bigquery_rest
+           google_cloud_cpp_bigquery
+           google_cloud_cpp_bigquery_protos
+           google_cloud_cpp_oauth2
            $<TARGET_OBJECTS:google_cloud_odbc_bq_driver_internal>
            $<TARGET_OBJECTS:google_cloud_cpp_bigquery_rest>
            $<TARGET_OBJECTS:google_cloud_cpp_bigquery>
