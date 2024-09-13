@@ -132,28 +132,27 @@ add_library(
     bq_driver/odbc_utils.cc
     bq_driver/odbc_utils.h)
 
-target_include_directories(
-    google_cloud_odbc_bq_driver PUBLIC ./
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>)
+target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
+target_include_directories(google_cloud_odbc_bq_driver
+                           PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 
-# target_link_libraries(google_cloud_odbc_bq_driver )
 add_subdirectory(bq_client_interface)
 add_subdirectory(internal)
 
+# Combine all OBJ dependencies and add it to the Shared Object.
 if (NOT TARGET google_cloud_cpp_bigquery_rest)
-   add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)
+    add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)
 endif ()
 if (NOT TARGET google_cloud_cpp_bigquery)
-   add_library(google_cloud_cpp_bigquery OBJECT IMPORTED)
+    add_library(google_cloud_cpp_bigquery OBJECT IMPORTED)
 endif ()
 if (NOT TARGET google_cloud_cpp_bigquery_protos)
-   add_library(google_cloud_cpp_bigquery_protos OBJECT IMPORTED)
+    add_library(google_cloud_cpp_bigquery_protos OBJECT IMPORTED)
 endif ()
 if (NOT TARGET google_cloud_cpp_oauth2)
-   add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED)
+    add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED)
 endif ()
 target_link_libraries(
     google_cloud_odbc_bq_driver

@@ -27,7 +27,6 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
-using ::google::cloud::bigquery_storage_v1::BigQueryReadConnection;
 using ::google::cloud::bigquery_storage_v1::MakeBigQueryReadConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
