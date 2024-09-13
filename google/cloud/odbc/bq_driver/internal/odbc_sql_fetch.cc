@@ -53,6 +53,8 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
       return ConvertFromStringDSValue(ds_val, data);
     case BQDataType::kDate:
       return ConvertFromDateDSValue(ds_val, data);
+    case BQDataType::kInterval:
+      return ConvertFromIntervalDSValue(ds_val, data);
   }
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }
