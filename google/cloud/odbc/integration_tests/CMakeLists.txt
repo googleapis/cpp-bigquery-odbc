@@ -80,7 +80,15 @@ function (odbc_define_tests)
     target_compile_features(all_tests PUBLIC cxx_std_17)
 
     include(GoogleTest)
-    gtest_discover_tests(all_tests)
+    # For shared libraries it might take a lot longer for GTest discovery than
+    # default of 5 seconds depending on the size of the shared lib. PRE_TEST
+    # mode has been added for efficiency so the tests are discovered quickly.
+    if (BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
+        gtest_discover_tests(all_tests DISCOVERY_MODE PRE_TEST
+                             DISCOVERY_TIMEOUT 300)
+    else ()
+        gtest_discover_tests(all_tests)
+    endif ()
 endfunction ()
 
 function (odbc_define_demo_tests)
