@@ -26,7 +26,7 @@ jobs:
       matrix:
         msvc: [ msvc-2022, msvc-2019 ]
         # TODO(b/357810060): Add x86 arch
-        arch: [ x64 ]
+        arch: [ x64 , x86 ]
         shard: [ Core, BqDriver ]
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
@@ -116,7 +116,7 @@ jobs:
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
         # TODO(b/357810060): Enable x86 arch
-        if [ "${{ matrix.msvc }}" == "msvc-2022" ] && [ "${{ matrix.arch }}" == "x64" ]; then
+        if [ "${{ matrix.msvc }}" == "msvc-2022" ] && ([ "${{ matrix.arch }}" == "x86" ] || [ "${{ matrix.arch }}" == "x64" ]); then
           ci/gha/builds/windows-cmake-integration.sh
         else
           ci/gha/builds/windows-cmake.sh
