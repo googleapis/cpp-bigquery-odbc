@@ -17,10 +17,9 @@
 
 #define ODBCVER 0x0380
 
-#ifdef _WIN32
+
 #define _WINSOCKAPI_
 #include <Windows.h>
-#endif
 
 #include <odbcinst.h>
 #include <sql.h>
@@ -29,7 +28,7 @@
 // This removes the definitions from Windows.h which conflict with the APIs our
 // driver creates. Since odbc_includes.h is included before we define our APIs,
 // this doesn't impact our driver.
-#ifdef _WIN32
+
 #include <algorithm>
 #include <cstdint>
 #undef min
@@ -68,7 +67,6 @@
 #undef SQLColumnPrivileges
 #undef SQLSetPos
 #undef SQLCancelHandle
-#endif  //_WIN32
 
 #define SQL_ODBC3_API_START SQL_API_SQLALLOCHANDLE
 #define SQL_ODBC3_API_LAST SQL_API_SQLFETCHSCROLL
