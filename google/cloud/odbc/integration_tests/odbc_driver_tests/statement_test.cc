@@ -1772,3 +1772,5 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
+
+

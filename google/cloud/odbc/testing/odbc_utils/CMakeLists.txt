@@ -47,13 +47,31 @@ target_include_directories(google_cloud_odbc_testing_odbc_utils
 target_link_libraries(google_cloud_odbc_testing_odbc_utils
                       google_cloud_cpp_common GTest::gtest)
 
-# Setting BQ_DRIVER_INTEGRATION_TESTS should use google_cloud_odbc_bq_driver
-# target
+# Setting BQ_DRIVER_INTEGRATION_TESTS for google_cloud_odbc_bq_driver
+# definitions.
 if (BQ_DRIVER_INTEGRATION_TESTS)
     add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+endif ()
+
+# Linking works as follows for shared and static BQ ODBC Driver library.
+if (NOT BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
+    # Use google_cloud_odbc_bq_driver with static target if we are building
+    # static BQ Driver target
     target_link_libraries(google_cloud_odbc_testing_odbc_utils
                           google_cloud_odbc_bq_driver)
+elseif (BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
+    # Use google_cloud_odbc_bq_driver with shared target if we are building
+    # shared BQ Driver target.
+    if (WIN32)
+        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32
+                              google_cloud_odbc_bq_driver)
+    else ()
+        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc
+                              google_cloud_odbc_bq_driver)
+    endif ()
 else ()
+    # Do not use google_cloud_odbc_bq_driver if we are not building BQ Driver
+    # target
     if (WIN32)
         target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32)
     else ()
