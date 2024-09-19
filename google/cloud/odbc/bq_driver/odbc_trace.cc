@@ -126,7 +126,9 @@ void TraceFunctionEntry_SQLDriverConnectW(
     return;
   }
   in_connection_str_len = utf8_in_connection_str->length();
-  auto out_len = std::wcslen(out_conn_str);
+
+  std::wstring wstr(reinterpret_cast<wchar_t const*>(out_conn_str));
+  auto out_len = wstr.length();
   StatusRecordOr<std::string> utf8_out_conn_str;
   if (out_len > 0) {
     utf8_out_conn_str =
