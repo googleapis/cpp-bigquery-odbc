@@ -754,26 +754,6 @@ TEST(DSValueToDate, EmptyDateString) {
   EXPECT_EQ(returned.day, 0);
 }
 
-TEST(IntervalToDSValue, CheckInterval) {
-  SQL_INTERVAL_STRUCT interval = {};
-  interval.interval_sign = 1;
-  interval.interval_type = SQL_IS_DAY;
-  interval.intval.day_second.day = 3;
-
-  DSValue val;
-  IntervalToDSValue(interval, val);
-
-  SQL_INTERVAL_STRUCT returned_val = DSValueToInterval(val, returned_val);
-
-  EXPECT_EQ(interval.interval_sign, returned_val.interval_sign);
-  EXPECT_EQ(interval.interval_type, returned_val.interval_type);
-  EXPECT_EQ(interval.intval.day_second.day, returned_val.intval.day_second.day);
-  EXPECT_EQ(interval.intval.day_second.minute,
-            returned_val.intval.day_second.minute);
-  EXPECT_EQ(interval.intval.year_month.year,
-            returned_val.intval.year_month.year);
-}
-
 TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "1-0 0 0:0:0";
@@ -912,11 +892,19 @@ TEST(ConvertStringToIntervalStruct, neg_interval_str) {
   EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
 }
 
-// TODO: Need to add test cases for invalid interval string.
-// TEST(ConvertStringToIntervalStruct, Invalid_interval_str){
-// SQL_INTERVAL_STRUCT interval_struct;
-//   std::string interval_str = "0-1";
-//   ConvertStringToIntervalStruct(interval_str, interval_struct);
-// }
+TEST(ConvertStringToIntervalStruct, Invalid_interval_str) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_invalid_str = "0-1";
+  EXPECT_THROW(
+      ConvertStringToIntervalStruct(interval_invalid_str, interval_struct),
+      std::invalid_argument);
+}
+
+TEST(ConvertStringToIntervalStruct, Empty_str) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string empty_str = "";
+  EXPECT_THROW(ConvertStringToIntervalStruct(empty_str, interval_struct),
+               std::invalid_argument);
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal

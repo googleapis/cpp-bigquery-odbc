@@ -634,8 +634,7 @@ void Table::InsertTimeData(std::shared_ptr<ODBCHandles> conn,
 }
 
 void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
-                               std::vector<SQL_INTERVAL_STRUCT> rows,
-                               bool use_ansi) {
+                               std::vector<SQL_INTERVAL_STRUCT> rows) {
   if (rows.empty()) {
     return;
   }
@@ -763,19 +762,11 @@ void Table::InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
   insert_stmt.append(";");
 
   SQLRETURN status;
-  if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
-                         insert_stmt.size());
-    CheckError(status, "SQLPrepareA", conn, use_ansi);
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn, use_ansi);
-  } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
-                        insert_stmt.size());
-    CheckError(status, "SQLPrepare", conn);
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn);
-  }
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
+                      insert_stmt.size());
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
 }
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,

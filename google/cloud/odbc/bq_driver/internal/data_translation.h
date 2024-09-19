@@ -526,26 +526,26 @@ inline odbc_internal::StatusRecord ConvertFromDateDSValue(
   return status_record;
 }
 
+// TODO(b/365915498): Data translation Utilities
 inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
-  using odbc_internal::StatusRecordOr;
 
-  SQL_INTERVAL_STRUCT conn_interval;
-  DSValueToInterval(src_dsval, conn_interval);
-
+  SQL_INTERVAL_STRUCT conn_interval = {};
   std::string interval_src_str;
-  interval_src_str = FormatIntervalToString(conn_interval);
+
+  DSValueToString(src_dsval, interval_src_str);
+  ConvertStringToIntervalStruct(interval_src_str, conn_interval);
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
   SQLLEN buffer_length = dest_data.buflen;
-  SQLLEN* res_len = reinterpret_cast<SQLLEN*>(dest_data.result_len);
+  auto* res_len = reinterpret_cast<SQLLEN*>(dest_data.result_len);
 
   constexpr int kIntervalCharLength = 30;
-  int k_whole_digits_count = 0;
-  int k_interval_src_len = interval_src_str.length();
+  int whole_digits_count = 0;
+  int interval_src_len = interval_src_str.length();
 
   if (!dest_buf) {
     return StatusRecord::Ok();
@@ -556,7 +556,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
 
   for (char ch : interval_src_str) {
     if (std::isdigit(ch)) {
-      ++k_whole_digits_count;
+      ++whole_digits_count;
     }
   }
   StatusRecord status_record = StatusRecord::Ok();
@@ -567,14 +567,14 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
         if (res_len) {
           *res_len = interval_src_str.length();
         }
-        std::strncpy(dest, interval_src_str.c_str(), k_interval_src_len);
-        dest[k_interval_src_len] = '\0';
-      } else if (buffer_length > k_whole_digits_count) {
+        std::strncpy(dest, interval_src_str.c_str(), interval_src_len);
+        dest[interval_src_len] = '\0';
+      } else if (buffer_length > whole_digits_count) {
         if (res_len) {
           *res_len = interval_src_str.length();
         }
-        std::strncpy(dest, interval_src_str.c_str(), k_interval_src_len);
-        dest[k_interval_src_len] = '\0';
+        std::strncpy(dest, interval_src_str.c_str(), interval_src_len);
+        dest[interval_src_len] = '\0';
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
         strncpy(dest, "Y-M D H:M:S", buffer_length - 1);
@@ -586,35 +586,18 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(interval_src_str);
       if (!wstr) {
-        status_record = StatusRecord{SQLStates::k_HY000(),
-                                     "DSValueToWchar Conversion Failed"};
+        status_record =
+            StatusRecord{SQLStates::k_HY000(), wstr.GetStatusRecord().message};
         break;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-      auto* dest = static_cast<SQLWCHAR*>(dest_buf);
-      if (buffer_length > k_interval_src_len) {
-        if (res_len) {
-          *res_len = k_interval_src_len * sizeof(SQLWCHAR);
-        }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_interval_src_len) * sizeof(SQLWCHAR));
-      } else if (buffer_length > k_whole_digits_count) {
-        if (res_len) {
-          *res_len = buffer_length * sizeof(SQLWCHAR);
-        }
-        std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
-        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
-      } else {
-        status_record =
-            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
-      }
+      return WStrToOutputBufferResponse(
+          wstr.GetValue(), dest_buf, buffer_length, interval_src_len,
+          buffer_length, reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
-
     case SQL_C_STINYINT: {
       auto* dest = reinterpret_cast<int8_t*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <=
           static_cast<SQLUINTEGER>(std::numeric_limits<int8_t>::max())) {
@@ -630,7 +613,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     }
     case SQL_C_UTINYINT: {
       auto* dest = reinterpret_cast<uint8_t*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <= std::numeric_limits<uint8_t>::max()) {
         *dest = static_cast<uint8_t>(value);
@@ -643,10 +626,9 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
       }
       break;
     }
-
     case SQL_C_SSHORT: {
       auto* dest = reinterpret_cast<SQLSMALLINT*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <=
           static_cast<SQLUINTEGER>(std::numeric_limits<SQLSMALLINT>::max())) {
@@ -662,7 +644,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     }
     case SQL_C_USHORT: {
       auto* dest = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <= std::numeric_limits<SQLUSMALLINT>::max()) {
         *dest = static_cast<SQLUSMALLINT>(value);
@@ -677,7 +659,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     }
     case SQL_C_ULONG: {
       auto* dest = reinterpret_cast<SQLUINTEGER*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <= std::numeric_limits<SQLUINTEGER>::max()) {
         *dest = static_cast<SQLUINTEGER>(value);
@@ -692,7 +674,7 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
     }
     case SQL_C_SBIGINT: {
       auto* dest = reinterpret_cast<SQLBIGINT*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       if (value <=
           static_cast<SQLUINTEGER>(std::numeric_limits<SQLBIGINT>::max())) {
@@ -706,10 +688,9 @@ inline odbc_internal::StatusRecord ConvertFromIntervalDSValue(
       }
       break;
     }
-
     case SQL_C_NUMERIC: {
       auto* dest = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_buf);
-      SQLUINTEGER value;
+      SQLUINTEGER value = 0;
       GetSinglePrecisionInterval(conn_interval, value);
       std::memset(dest, 0, sizeof(SQL_NUMERIC_STRUCT));
       dest->sign = 1;
