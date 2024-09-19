@@ -4,6 +4,7 @@
   "homepage": "https://github.com/googleapis/cpp-bigquery-odbc",
   "license": "Apache-2.0",
   "supports": "!uwp",
+  "builtin-baseline": "37630acd98740f98d7e51da78c9630758835037f",
   "dependencies": [
     "abseil",
     "crc32c",
@@ -28,5 +29,8 @@
     "nlohmann-json",
     "benchmark",
     "gtest"
+  ],
+  "overrides": [
+    { "name": "protobuf", "version": "3.21.12" }
   ]
 }
