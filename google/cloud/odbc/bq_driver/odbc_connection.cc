@@ -146,6 +146,13 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
   Authentication auth = CreateAuth(dsn_section);
   StatusRecord status = handle_ref->Connect(auth);
+  if (status.ok() && out_conn_str != nullptr) {
+    // Populate the output parameters as per the spec.
+    std::string out_tmp_str(ToCharStr(in_conn_str));
+    out_tmp_str.append(";");
+    strncpy((char*)out_conn_str, out_tmp_str.c_str(), out_tmp_str.length());
+    *out_conn_str_len = out_tmp_str.length();
+  }
   return LogAndReturnCode(*handle_ref, status);
 }
 
