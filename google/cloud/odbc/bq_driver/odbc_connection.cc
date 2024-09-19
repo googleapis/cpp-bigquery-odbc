@@ -150,7 +150,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     // Populate the output parameters as per the spec.
     std::string out_tmp_str(ToCharStr(in_conn_str));
     out_tmp_str.append(";");
-    strncpy((char*)out_conn_str, out_tmp_str.c_str(), out_tmp_str.length());
+    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+            out_tmp_str.length());
     *out_conn_str_len = out_tmp_str.length();
   }
   return LogAndReturnCode(*handle_ref, status);
