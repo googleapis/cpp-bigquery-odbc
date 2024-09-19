@@ -34,6 +34,13 @@ SQLCHAR* const kSqlDataset =
 SQLCHAR* const kSqlPKTable =
     reinterpret_cast<SQLCHAR*>(const_cast<char*>(kPKTable.c_str()));
 
+SQLWCHAR* const kSqlCatalogw =
+    reinterpret_cast<SQLWCHAR*>(const_cast<char*>(kCatalog.c_str()));
+SQLWCHAR* const kSqlDatasetw =
+    reinterpret_cast<SQLWCHAR*>(const_cast<char*>(kDataset.c_str()));
+SQLWCHAR* const kSqlPKTablew =
+    reinterpret_cast<SQLWCHAR*>(const_cast<char*>(kPKTable.c_str()));
+
 SQLSMALLINT const kSqlCatalogLen = kCatalog.length();
 SQLSMALLINT const kSqlDatasetLen = kDataset.length();
 SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
@@ -79,6 +86,70 @@ TEST(CatalogDemoTest, SQLPrimaryKeys) {
   status = SQLPrimaryKeys(conn->hstmt, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                           kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen);
   CheckError(status, "SQLPrimaryKeys", conn);
+  std::cout << "Successfully fetched primary Keys for Catalog: " << kCatalog
+            << ", and Dataset: " << kDataset << std::endl
+            << std::endl;
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    std::string table_cat = (char*)columns[0].target_value;
+    std::string table_schema = (char*)columns[1].target_value;
+    std::string table_name = (char*)columns[2].target_value;
+    std::string col_name = (char*)columns[3].target_value;
+    SQLSMALLINT* key_seq =
+        reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
+    std::string pk_name = (char*)columns[5].target_value;
+    std::cout << "*******************************************************"
+              << std::endl;
+    std::cout << "Table Catalog: " << table_cat << ", " << std::endl;
+    std::cout << "Table Schema: " << table_schema << ", " << std::endl;
+    std::cout << "Table Name: " << table_name << ", " << std::endl;
+    std::cout << "Column Name: " << col_name << ", " << std::endl;
+    if (key_seq) {
+      std::cout << "Key Sequence: " << *key_seq << ", " << std::endl;
+    }
+    std::cout << "PrimaryKey Name: " << pk_name << std::endl << std::endl;
+    std::cout << "*******************************************************"
+              << std::endl;
+  }
+
+  std::cout << "Freeing ODBC handles..." << std::endl << std::endl;
+  status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+  CheckError(status, "SQLFreeHandle", conn);
+  status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+  CheckError(status, "SQLFreeHandle", conn);
+  status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
+  CheckError(status, "SQLFreeHandle", conn);
+  std::cout << "Successfully freed all handles!" << std::endl;
+}
+
+TEST(CatalogDemoTest, SQLPrimaryKeysW) {
+  int res_cols = 6;
+
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+  // 1) Connect to the data source.
+  std::cout << "Connecting to the data source..." << std::endl << std::endl;
+  ASSERT_EQ(Connect("DSN=SampleDSN", conn, true), SQL_SUCCESS);
+  std::cout << "Successfully connected to the data source!" << std::endl
+            << std::endl;
+  // (2) Bind Columns
+  TestingDataBuffer columns[res_cols];
+  std::cout << "Binding Columns..." << std::endl << std::endl;
+  BindColumns(conn, columns, res_cols);
+  // (3) Fetching Primary Keys.
+  std::cout << "Fetching Primary Keys from the data source..." << std::endl
+            << std::endl;
+
+  status =
+      SQLPrimaryKeysW(conn->hstmt, kSqlCatalogw, kSqlCatalogLen, kSqlDatasetw,
+                      kSqlDatasetLen, kSqlPKTablew, kSqlPKTableLen);
+  CheckError(status, "SQLPrimaryKeysW", conn);
   std::cout << "Successfully fetched primary Keys for Catalog: " << kCatalog
             << ", and Dataset: " << kDataset << std::endl
             << std::endl;

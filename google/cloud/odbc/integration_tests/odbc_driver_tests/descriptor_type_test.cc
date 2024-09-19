@@ -80,6 +80,32 @@ void CheckScale(SQLHDESC desc, SQLSMALLINT scale_expected, bool use_ansi) {
 //  Set SQL_DESC_TYPE for C types except datetime and interval types
 ///////////////////////////////////////////////////////////////////////
 
+TEST_P(DescriptorTypeParameterizedTest, SetTypeW_SQL_C_CHAR) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, &conn->apd, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_PARAM_DESC)", conn);
+
+  // Setting Field
+  RandomizeDefaultValues(conn->apd, 1);
+  status = SQLSetDescFieldW(conn->apd, 1, SQL_DESC_TYPE, (SQLPOINTER)SQL_C_CHAR,
+                            NULL);
+  CheckError(status, "SQLSetDescField", conn);
+
+  // Checking fields
+  CheckType(conn->apd, SQL_C_CHAR, GetParam());
+  CheckConciseType(conn->apd, SQL_C_CHAR, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
+  CheckPrecision(conn->apd, 1, GetParam());
+  CheckLength(conn->apd, 1, GetParam());
+  CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
+  CheckScale(conn->apd, 0, GetParam());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_CHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

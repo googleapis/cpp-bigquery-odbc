@@ -318,7 +318,8 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
 
 StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
   if (utf_8_str.empty()) {
-    return StatusRecord{SQLStates::k_HY000(), "utf_8_str string isempty/Null"};
+    std::wstring wstr;
+    return wstr;
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
@@ -379,13 +380,17 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
 
 StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
                                                     SQLINTEGER in_str_len) {
-  if (((in_str != nullptr) && (in_str[0] == '\0'))) {
-    return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
+  if (((in_str == nullptr))) {
+    return StatusRecord{SQLStates::k_HY000(), "in_str.. string is Null"};
+  }
+  if (in_str[0] == '\0') {
+    std::string emptystr;
+    return emptystr;
   }
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
-    in_str_len = wstr.size();
+    in_str_len = wstr.size() * sizeof(SQLWCHAR);
   }
   stmt_txt_wstr.reserve(in_str_len);
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {

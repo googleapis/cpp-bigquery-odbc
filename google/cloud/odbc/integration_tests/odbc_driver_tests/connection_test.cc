@@ -68,6 +68,58 @@ TEST(SQLGetInfo, CheckPositionalUpdate) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetInfoW, CheckPositionalUpdate) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Check SQL_DYNAMIC_CURSOR_ATTRIBUTES1
+  SQLUINTEGER sql_bitmask_buf = 0;
+  SQLRETURN status;
+  status = SQLGetInfoW(conn->hdbc, SQL_DYNAMIC_CURSOR_ATTRIBUTES1,
+                       &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_DYNAMIC_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfoW(conn->hdbc, SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1,
+                       &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_FORWARD_ONLY_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_KEYSET_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfoW(conn->hdbc, SQL_KEYSET_CURSOR_ATTRIBUTES1,
+                       &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_KEYSET_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  // Check SQL_STATIC_CURSOR_ATTRIBUTES1
+  sql_bitmask_buf = 0;
+  status = SQLGetInfoW(conn->hdbc, SQL_STATIC_CURSOR_ATTRIBUTES1,
+                       &sql_bitmask_buf, 0, nullptr);
+  CheckError(status, "SQLGetInfo(SQL_KEYSET_CURSOR_ATTRIBUTES1)", conn);
+
+  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
+  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
+            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 namespace {
 // Constants for GetBQDriverInfo
@@ -488,6 +540,13 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, SQLDriverConnectW) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::wstring defaultConnectionWstring = Utf8ToUtf16(kDefaultConnectionString);
+  EXPECT_EQ(DriverConnectW(defaultConnectionWstring, conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // Duplicate DSNs are not functioning properly(WIN).
 #ifndef _WIN32
 TEST(ConnectionTest, SQLDriverConnect_DuplicateDsn) {
@@ -634,6 +693,40 @@ TEST(ConnectionTest, SQLSetConnectAttrA_UpdateString) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
+  SQLCHAR buf[256] = "test";
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // As per the spec if valuePtr is a character string data, string length
+  // should either the length of the string or SQL_NTS
+  // Simba is not following the spec and accepts incorrect lengths,
+  // Google driver will follow the spec and accept correct lengths.
+  auto status = SQLSetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                                   (SQLPOINTER)buf, 4);
+  CheckError(status, "SQLSetConnectAttr", conn);
+
+  std::string expected = "test";
+
+  buf[0] = '0';
+  std::string buffer = reinterpret_cast<char*>(buf);
+  EXPECT_EQ("0est", buffer);
+
+  SQLCHAR output[256];
+  SQLINTEGER length;
+  status = SQLGetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
+                              (SQLPOINTER)output, 256, &length);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  std::string actual = reinterpret_cast<char*>(output);
+  // Parity with Simba Driver - Original value is retained even though
+  // input buf has been modified by the caller.
+  EXPECT_EQ(expected, actual);
+  EXPECT_EQ(expected.size(), length);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(ConnectionTest, SQLSetConnectAttr_DeleteString) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -768,6 +861,13 @@ TEST(ConnectionTest, SQLConnect_WithDSN) {
 TEST(ConnectionTest, SQLConnectA_WithDSN) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectDsn(kDefaultDataSource, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLConnectW_WithDSN) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::wstring defaultConnectionWstring = Utf8ToUtf16(kDefaultDataSource);
+  EXPECT_EQ(ConnectW(defaultConnectionWstring, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

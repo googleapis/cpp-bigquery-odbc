@@ -506,6 +506,49 @@ TEST(SQLColAttribute, CheckAllAttributes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLColAttributeW, CheckBaseColumnName) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  std::string qualified_table_name = kDatasetName + "." + kTableName;
+  Table table(qualified_table_name);
+  std::string table_schema =
+      "(" + kDataTypesColumns[0].col_name + " " + kDataTypesColumns[0].bq_type;
+  for (int i = 1; i < kDataTypesColumns.size(); i++) {
+    table_schema.append(", " + kDataTypesColumns[i].col_name + " " +
+                        kDataTypesColumns[i].bq_type);
+  }
+  table_schema.append(")");
+  table.Create(conn, table_schema);
+
+  std::string select_stmt = "SELECT * FROM " + qualified_table_name;
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(),
+                           select_stmt.size());
+  CheckError(status, "SQLPrepare", conn);
+
+#ifndef _WIN32
+  for (int i = 1; i <= kDataTypesColumns.size(); i++) {
+    // TODO(b/357794946): Handle SQLColAttribute Api Null Values WRT SIMBA(WIN).
+    SQLRETURN status;
+    std::string col;
+
+    // Checking string attributes
+    SQLCHAR col_attr[kBufferLength];
+    status = SQLColAttributeW(conn->hstmt, i, SQL_DESC_BASE_COLUMN_NAME,
+                              (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+    CheckError(status,
+               "SQLColAttribute " + std::to_string(SQL_DESC_BASE_COLUMN_NAME),
+               conn);
+
+    col = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(col_attr),
+                                  kDataTypesColumns[i - 1].col_name.size());
+    EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
+  }
+#endif /* WIN32 */
+
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

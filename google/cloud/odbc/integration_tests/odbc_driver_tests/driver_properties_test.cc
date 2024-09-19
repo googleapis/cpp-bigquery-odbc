@@ -249,6 +249,21 @@ TEST(SQLGetTypeInfoTestAnsi, all_datatypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetTypeInfoTestWide, all_datatypes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status = SQLGetTypeInfoW(conn->hstmt, SQL_ALL_TYPES);
+  CheckError(status, "SQLGetTypeInfo", conn);
+
+  SQLCHAR type_name[kBufferLength];
+  SQLLEN type_name_len;
+
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, (SQLPOINTER)type_name,
+                      (SQLLEN)sizeof(type_name), &type_name_len);
+  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 TEST(SQLGetTypeInfoTest, Supported_SQL_BIGINT) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

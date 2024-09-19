@@ -697,6 +697,30 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLSetCursorNameW) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  std::wstring cursor_name = L"INSERT_CURSOR_WIDE";
+  SQLCHAR cursor_name_ret[kBufferLength];
+
+  std::vector<SQLWCHAR> sqlWStr(cursor_name.begin(), cursor_name.end());
+  sqlWStr.emplace_back(L'\0');
+
+  auto status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), sqlWStr.size());
+  CheckError(status, "SQLSetCursorNameW", conn, true);
+
+  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret,
+                             kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorNameW", conn, true);
+
+  std::string expected = "INSERT_CURSOR_WIDE";
+  std::string actual = ConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), expected.size());
+  EXPECT_EQ(actual, expected);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLGetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -712,6 +736,30 @@ TEST(StatementTest, SQLGetCursorName) {
   CheckError(status, "SQLGetCursorName", conn);
 
   std::string actual = reinterpret_cast<char*>(cursor_name_ret);
+  EXPECT_THAT(actual, StartsWith("SQL_CUR"));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLGetCursorNameW) {
+  SQLSMALLINT curNameLen;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLCHAR cursor_name_ret[kBufferLength];
+
+  std::string query = "SELECT 1;";
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret,
+                             kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorNameW", conn);
+
+  std::string actual = ConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), NULL);
   EXPECT_THAT(actual, StartsWith("SQL_CUR"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -907,6 +955,57 @@ TEST(StatementTest, SetAndGet_SQL_ATTR_METADATA_ID) {
   SQLULEN metadata_id_stmt_new = 0;
   status = SQLGetStmtAttr(new_hstmt, SQL_ATTR_METADATA_ID,
                           &metadata_id_stmt_new, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt_new);
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_STMT, new_hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SetAndGetW_SQL_ATTR_METADATA_ID) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+
+  // Set Connection Attr and then retrieve Statement attr
+  SQLULEN metadata_id_dbc = SQL_TRUE;
+  status = SQLSetConnectAttrW(conn->hdbc, SQL_ATTR_METADATA_ID,
+                              (SQLPOINTER)metadata_id_dbc, 0);
+  CheckError(status, "SQLSetConnectAttr", conn);
+  SQLULEN metadata_id_stmt;
+  status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
+                          0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+
+  EXPECT_EQ(metadata_id_dbc, metadata_id_stmt);
+
+  // Set Statement Attr and then retrieve it from both Statement and Connection
+  // attrs
+  SQLULEN metadata_id_stmt_set = SQL_FALSE;
+  status = SQLSetStmtAttrW(conn->hstmt, SQL_ATTR_METADATA_ID,
+                           (SQLPOINTER)metadata_id_stmt_set, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+  SQLULEN metadata_id_stmt_get = 0;
+  status = SQLGetStmtAttrW(conn->hstmt, SQL_ATTR_METADATA_ID,
+                           &metadata_id_stmt_get, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr", conn);
+  metadata_id_dbc = 0;
+  status = SQLGetConnectAttr(conn->hdbc, SQL_ATTR_METADATA_ID, &metadata_id_dbc,
+                             0, NULL);
+  CheckError(status, "SQLGetConnectAttr", conn);
+
+  EXPECT_EQ(metadata_id_stmt_set, metadata_id_stmt_get);
+  EXPECT_NE(metadata_id_dbc, metadata_id_stmt_set);
+
+  // Create a new statement handle and check this attribute there
+  HSTMT new_hstmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &new_hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+
+  SQLULEN metadata_id_stmt_new = 0;
+  status = SQLGetStmtAttrW(new_hstmt, SQL_ATTR_METADATA_ID,
+                           &metadata_id_stmt_new, 0, NULL);
   CheckError(status, "SQLGetStmtAttr", conn);
 
   EXPECT_EQ(metadata_id_dbc, metadata_id_stmt_new);
@@ -1866,6 +1965,25 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
   std::string query = "Select 1";
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLCloseCursor(conn->hstmt);
+  CheckError(status, "SQLCloseCursor_1", conn);
+
+  status = SQLExecute(conn->hstmt);
+  EXPECT_EQ(SQL_ERROR, status);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirectW) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring query = L"Select 1";
+  std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
+  sqlWStr.emplace_back(L'\0');
+  auto status = SQLExecDirectW(conn->hstmt, sqlWStr.data(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
   status = SQLCloseCursor(conn->hstmt);

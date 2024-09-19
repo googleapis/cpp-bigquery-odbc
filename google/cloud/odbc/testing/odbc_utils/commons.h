@@ -22,9 +22,9 @@
 #include <nlohmann/json.hpp>
 // We need sorting functions
 #include <algorithm>
+#include <codecvt>
 #include <fstream>
 #include <iomanip>
-#include <codecvt>
 #include <locale>
 #include <memory>
 #include <optional>

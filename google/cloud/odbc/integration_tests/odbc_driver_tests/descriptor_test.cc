@@ -354,6 +354,24 @@ TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetDescFieldW, Field_SQL_DESC_ALLOC_TYPE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Getting fields
+  SQLSMALLINT alloc_type;
+  status =
+      SQLGetDescFieldW(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_ALLOC_TYPE)", conn);
+  EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLGetDescField, Fail_StatementIsNotPrepared) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -520,6 +538,75 @@ TEST(SQLSetDescRec, Success_SQL_DATETIME) {
       conn->ard, 1, desc_to_get.name, kBufferLength, &desc_to_get.string_len,
       &desc_to_get.type, &desc_to_get.sub_type, &desc_to_get.length,
       &desc_to_get.precision, &desc_to_get.scale, &desc_to_get.nullable);
+  CheckError(status, "SQLGetDescRec", conn);
+
+  EXPECT_EQ(desc_to_set.type, desc_to_get.type);
+  EXPECT_EQ(desc_to_set.sub_type, desc_to_get.sub_type);
+  EXPECT_EQ(desc_to_set.length, desc_to_get.length);
+  EXPECT_EQ(desc_to_set.precision, desc_to_get.precision);
+  EXPECT_EQ(desc_to_set.scale, desc_to_get.scale);
+
+  // Checking fields which were set by SQLSetDescRec, but were not retrieved by
+  // SQLGetDescRec
+  SQLSMALLINT concise_type;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_CONCISE_TYPE, &concise_type,
+                           0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_PARAMETER_TYPE)", conn);
+  EXPECT_EQ(SQL_TYPE_DATE, concise_type);
+
+  SQLPOINTER* data_ptr = nullptr;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_DATA_PTR, &data_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_DATA_PTR)", conn);
+  EXPECT_EQ(desc_to_set.data_ptr, data_ptr);
+
+  SQLLEN* octet_length_ptr = nullptr;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_OCTET_LENGTH_PTR,
+                           &octet_length_ptr, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_OCTET_LENGTH_PTR)", conn);
+  EXPECT_EQ(desc_to_set.string_length_ptr, octet_length_ptr);
+
+  SQLLEN* indicator_ptr = nullptr;
+  status = SQLGetDescField(conn->ard, 1, SQL_DESC_INDICATOR_PTR, &indicator_ptr,
+                           0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_INDICATOR_PTR)", conn);
+  EXPECT_EQ(desc_to_set.indicator_ptr, indicator_ptr);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetDescRecW, Success_SQL_DATETIME) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  // Getting fields
+  Descriptor desc_to_set;
+  desc_to_set.type = SQL_DATETIME;
+  desc_to_set.sub_type = SQL_CODE_DATE;
+  desc_to_set.precision = 0;
+  desc_to_set.scale = 0;
+  int data = 10;
+  desc_to_set.data_ptr = &data;
+  SQLLEN octet_length = 0;
+  desc_to_set.length = 3;
+  desc_to_set.string_length_ptr = &octet_length;
+  SQLLEN indicator[3];
+  desc_to_set.indicator_ptr = indicator;
+  status = SQLSetDescRec(
+      conn->ard, 1, desc_to_set.type, desc_to_set.sub_type, desc_to_set.length,
+      desc_to_set.precision, desc_to_set.scale, desc_to_set.data_ptr,
+      desc_to_set.string_length_ptr, desc_to_set.indicator_ptr);
+  CheckError(status, "SQLSetDescRec", conn);
+
+  Descriptor desc_to_get;
+  status = SQLGetDescRecW(conn->ard, 1, (SQLWCHAR*)desc_to_get.name,
+                          kBufferLength, &desc_to_get.string_len,
+                          &desc_to_get.type, &desc_to_get.sub_type,
+                          &desc_to_get.length, &desc_to_get.precision,
+                          &desc_to_get.scale, &desc_to_get.nullable);
   CheckError(status, "SQLGetDescRec", conn);
 
   EXPECT_EQ(desc_to_set.type, desc_to_get.type);
