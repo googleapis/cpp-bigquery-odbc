@@ -91,10 +91,10 @@ jobs:
       shell: bash
       run: |
         cd "${TEMP}"
-        mkdir .build
-        cd .build
-        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        mkdir -p .build/vcpkg
+        curl -fsSL "https://github.com/microsoft/vcpkg/archive/${{ steps.dynamic.outputs.vcpkg-version }}.tar.gz" |
+            tar -C .build/vcpkg --strip-components=1 -zxf -
+        .build/vcpkg/bootstrap-vcpkg.sh -disableMetrics
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:

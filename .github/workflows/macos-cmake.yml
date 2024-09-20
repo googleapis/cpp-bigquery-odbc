@@ -57,7 +57,9 @@ jobs:
     - name: Download and Install vcpkg
       working-directory: "${{runner.temp}}"
       run: |
-        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
+        mkdir -p vcpkg
+        curl -fsSL "https://github.com/microsoft/vcpkg/archive/${{ steps.dynamic.outputs.vcpkg-version }}.tar.gz" |
+            tar -C vcpkg --strip-components=1 -zxf -
         vcpkg/bootstrap-vcpkg.sh -disableMetrics
     - name: Install iODBC
       run: |
