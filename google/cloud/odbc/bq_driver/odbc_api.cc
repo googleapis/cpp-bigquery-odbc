@@ -440,7 +440,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // outConnectionString is an output value that is not populated by the user.
   // This should not be unicode converted if it is empty. Instead we send a
   // SQLCHAR empty value directly to the internal function.
-  SQLCHAR out_conn_str[outConnectionStringBufferLen];
+  SQLCHAR out_conn_str[kBufferLength];
   StatusRecordOr<std::string> utf8_out_conn_str;
 
   std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
