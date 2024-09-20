@@ -131,8 +131,7 @@ void TraceFunctionEntry_SQLDriverConnectW(
   auto out_len = wstr.length();
   StatusRecordOr<std::string> utf8_out_conn_str;
   if (out_len > 0) {
-    utf8_out_conn_str =
-        ConvertSQLWCHARToString(out_conn_str, *out_conn_str_len);
+    utf8_out_conn_str = ConvertSQLWCHARToString(out_conn_str, out_len);
     if (!utf8_out_conn_str) {
       TracePrintInternal(opts, utf8_out_conn_str.GetStatusRecord().message);
       return;
@@ -159,6 +158,7 @@ void TraceFunctionEntry_SQLDriverConnectW(
     return;
   }
   in_connection_str = ToSqlWChar(utf16_in_connection_str->data());
+  in_connection_str_len = utf16_in_connection_str->length();
   StatusRecordOr<std::wstring> utf16_out_conn_str;
   if (out_len > 0) {
     utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);

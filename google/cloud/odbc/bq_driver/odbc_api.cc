@@ -234,8 +234,8 @@ bool IsTracingEnabled(std::string const& name) {
 
 // Converts input pointer value which is SQLWCHAR* to SQLCHAR*
 // and returns the converted value.
-StatusRecordOr<std::string> ConvertWCHARInputPointerParam(
-    SQLPOINTER in_val, SQLINTEGER in_val_len) {
+StatusRecordOr<std::string> ConvertSQLPointerToSQLChar(SQLPOINTER in_val,
+                                                       SQLINTEGER in_val_len) {
   SQLWCHAR* in_wchar_val = reinterpret_cast<SQLWCHAR*>(in_val);
   StatusRecordOr<std::string> utf8_in_val =
       ConvertSQLWCHARToString(in_wchar_val, in_val_len);
@@ -247,7 +247,7 @@ StatusRecordOr<std::string> ConvertWCHARInputPointerParam(
 
 // Converts input pointer value which is a SQLCHAR* to SQLWCHAR*
 // and returns the converted value.
-StatusRecordOr<std::wstring> ConvertWCHAROutputPointerParam(
+StatusRecordOr<std::wstring> ConvertSQLPointerToSQLWChar(
     SQLPOINTER in_val, SQLINTEGER in_val_len) {
   SQLCHAR* in_sqlchar_val = reinterpret_cast<SQLCHAR*>(in_val);
   std::string in_str_val(ToCharStr(in_sqlchar_val));
@@ -440,14 +440,13 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // outConnectionString is an output value that is not populated by the user.
   // This should not be unicode converted if it is empty. Instead we send a
   // SQLCHAR empty value directly to the internal function.
-  SQLCHAR out_conn_str[kBufferLength];
+  SQLCHAR out_conn_str[outConnectionStringBufferLen];
   StatusRecordOr<std::string> utf8_out_conn_str;
 
   std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
   auto out_len = wstr.length();
   if (out_len > 0) {
-    utf8_out_conn_str =
-        ConvertSQLWCHARToString(outConnectionString, *outConnectionStringLen);
+    utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString, out_len);
     if (!utf8_out_conn_str) {
       TracePrintInternal(*(*kTraceOption),
                          utf8_out_conn_str.GetStatusRecord().message);
@@ -467,7 +466,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
         connectionHandle, windowHandle,
         ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
-        out_conn_str, kBufferLength, outConnectionStringLen, driverCompletion);
+        out_conn_str, outConnectionStringBufferLen, outConnectionStringLen,
+        driverCompletion);
   }
   // Handle Unicode conversion of output parameters.
   StatusRecordOr<std::wstring> utf16_in_connection_str =
@@ -478,6 +478,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     return utf16_in_connection_str.GetCalculatedReturnCode();
   }
   inConnectionString = ToSqlWChar(utf16_in_connection_str->data());
+  inConnectionStringLen = utf16_in_connection_str->length();
+
   StatusRecordOr<std::wstring> utf16_out_conn_str;
   if (out_len > 0) {
     utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
@@ -1045,8 +1047,7 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
   ConnectionAttr conn_attr;
   if (conn_attr.GetAttributeValueType(attribute) ==
       ConnectionValueType::kSqlChr) {
-    updated_attrib_status =
-        ConvertWCHARInputPointerParam(value, valueStringLen);
+    updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen);
     if (!updated_attrib_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_attrib_status.GetStatusRecord().message);
@@ -1152,47 +1153,42 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
   // They need to be handled separately.
   ConnectionAttr conn_attr;
   SQLPOINTER updated_attrib_val;
-  SQLINTEGER updated_value_buffer_len;
   SQLCHAR attrib_val[kBufferLength] = "Not Set";
   StatusRecordOr<std::wstring> updated_out_attr_status;
   if (conn_attr.GetAttributeValueType(attribute) ==
       ConnectionValueType::kSqlChr) {
     updated_attrib_val = (SQLPOINTER)attrib_val;
-    updated_value_buffer_len = sizeof(attrib_val);
   } else {
     updated_attrib_val = value;
-    updated_value_buffer_len = valueBufferLen;
   }
-
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionEntry_SQLGetConnectAttrW(
-        connectionHandle, attribute, updated_attrib_val,
-        updated_value_buffer_len, valueStringLen, *(*kTraceOption));
+    TraceFunctionEntry_SQLGetConnectAttrW(connectionHandle, attribute,
+                                          updated_attrib_val, valueBufferLen,
+                                          valueStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
   // Call to internal common function for SQLGetConnectAttr and
   // SQLGetConnectAttrW in odbc_connection.h.
-
   rc = ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
-      connectionHandle, attribute, updated_attrib_val, updated_value_buffer_len,
+      connectionHandle, attribute, updated_attrib_val, valueBufferLen,
       valueStringLen);
-
   // Handle unicode conversion for attribute string values for output
   // parameters.
   if (conn_attr.GetAttributeValueType(attribute) ==
       ConnectionValueType::kSqlChr) {
     updated_out_attr_status =
-        ConvertWCHAROutputPointerParam(updated_attrib_val, *valueStringLen);
+        ConvertSQLPointerToSQLWChar(updated_attrib_val, valueBufferLen);
     if (!updated_out_attr_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_out_attr_status.GetStatusRecord().message);
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
-    value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
+    std::memcpy(value, (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data()),
+                valueBufferLen);
+    // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
     *valueStringLen = updated_out_attr_status->length();
   }
-
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionExit_SQLGetConnectAttrW(rc, *(*kTraceOption));
@@ -1201,7 +1197,6 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
   if (status != SQL_SUCCESS) {
     return status;
   }
-
   return rc;
 }
 
