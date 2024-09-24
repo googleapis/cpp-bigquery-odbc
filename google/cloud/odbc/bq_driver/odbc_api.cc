@@ -90,6 +90,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTables;
+using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBrowseConnectW;
@@ -699,37 +700,87 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                                    authStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
+
+  // For this API, DriverManager requires serverName or DSN string
+  // to be non-empty hence we need to validate it before proceeding further.
+  size_t w_server_name_len = 0;
+  if (serverName) {
+    std::wstring w_server_str(reinterpret_cast<wchar_t const*>(serverName));
+    w_server_name_len = w_server_str.length();
+    if (w_server_name_len == 0) {
+      auto status =
+          StatusRecord{SQLStates::k_HY000(),
+                       "serverName or datasource name cannot be null/empty"};
+      return status.CalculateReturnCode();
+    }
+  } else {
+    auto status =
+        StatusRecord{SQLStates::k_HY000(),
+                     "serverName or datasource name cannot be null/empty"};
+    return status.CalculateReturnCode();
+  }
+
   StatusRecordOr<std::string> utf8_server_name =
-      ConvertSQLWCHARToString(serverName, serverNameLen);
+      ConvertSQLWCHARToString(serverName, w_server_name_len);
   if (!utf8_server_name) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_server_name.GetStatusRecord().message);
     return utf8_server_name.GetCalculatedReturnCode();
   }
   serverNameLen = utf8_server_name->length();
-  StatusRecordOr<std::string> utf8_user_name =
-      ConvertSQLWCHARToString(userName, userNameLen);
-  if (!utf8_user_name) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf8_user_name.GetStatusRecord().message);
-    return utf8_user_name.GetCalculatedReturnCode();
+
+  // User name and Auth strings are optional. Make sure they are non-empty
+  // before converting to unicode.
+  size_t w_user_name_len = 0;
+  StatusRecordOr<std::string> utf8_user_name;
+  if (userName) {
+    std::wstring w_user_name_str(reinterpret_cast<wchar_t const*>(userName));
+    w_user_name_len = w_user_name_str.length();
   }
-  userNameLen = utf8_user_name->length();
-  StatusRecordOr<std::string> utf8_auth_str =
-      ConvertSQLWCHARToString(authString, authStringLen);
-  if (!utf8_auth_str) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf8_auth_str.GetStatusRecord().message);
-    return utf8_auth_str.GetCalculatedReturnCode();
+  if (w_user_name_len > 0) {
+    utf8_user_name = ConvertSQLWCHARToString(userName, w_user_name_len);
+    if (!utf8_user_name) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf8_user_name.GetStatusRecord().message);
+      return utf8_user_name.GetCalculatedReturnCode();
+    }
+    userNameLen = utf8_user_name->length();
   }
-  authStringLen = utf8_auth_str->length();
+
+  size_t w_auth_str_len = 0;
+  StatusRecordOr<std::string> utf8_auth_str;
+  if (authString) {
+    std::wstring w_auth_str(reinterpret_cast<wchar_t const*>(authString));
+    w_auth_str_len = w_auth_str.length();
+  }
+  if (w_auth_str_len > 0) {
+    utf8_auth_str = ConvertSQLWCHARToString(authString, w_auth_str_len);
+    if (!utf8_auth_str) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf8_auth_str.GetStatusRecord().message);
+      return utf8_auth_str.GetCalculatedReturnCode();
+    }
+    authStringLen = utf8_auth_str->length();
+  } else if (w_user_name_len > 0) {
+    // It is an error to supply a username without a auth string.
+    auto status = StatusRecord{
+        SQLStates::k_HY000(),
+        "authString cannot be empty or null of non-empty userName"};
+    return status.CalculateReturnCode();
+  }
 
   // Call to internal common function for SQLConnect and SQLConnectW
   // in odbc_connection.h.
-  rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
-      connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
-      ToSqlChar(utf8_user_name->data()), userNameLen,
-      ToSqlChar(utf8_auth_str->data()), authStringLen);
+  if (w_user_name_len > 0) {
+    rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
+        connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
+        ToSqlChar(utf8_user_name->data()), userNameLen,
+        ToSqlChar(utf8_auth_str->data()), authStringLen);
+  } else {
+    rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
+        connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
+        ToSqlChar(""), w_user_name_len, ToSqlChar(""), w_auth_str_len);
+  }
 
   // Handle Unicode conversion of output parameters.
   StatusRecordOr<std::wstring> utf16_server_name =
@@ -739,21 +790,30 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                        utf16_server_name.GetStatusRecord().message);
     return utf16_server_name.GetCalculatedReturnCode();
   }
-  serverName = ToSqlWChar(utf16_server_name->data());
-  StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(*utf8_user_name);
-  if (!utf16_user_name) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf16_user_name.GetStatusRecord().message);
-    return utf16_user_name.GetCalculatedReturnCode();
+  serverNameLen = utf16_server_name->length();
+  std::memcpy(serverName, ToSqlWChar(utf16_server_name->data()), serverNameLen);
+
+  if (w_user_name_len > 0) {
+    StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(*utf8_user_name);
+    if (!utf16_user_name) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf16_user_name.GetStatusRecord().message);
+      return utf16_user_name.GetCalculatedReturnCode();
+    }
+    userNameLen = utf16_user_name->length();
+    std::memcpy(userName, ToSqlWChar(utf16_user_name->data()), userNameLen);
   }
-  userName = ToSqlWChar(utf16_user_name->data());
-  StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(*utf8_auth_str);
-  if (!utf16_auth_str) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf16_auth_str.GetStatusRecord().message);
-    return utf16_auth_str.GetCalculatedReturnCode();
+
+  if (w_auth_str_len > 0) {
+    StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(*utf8_auth_str);
+    if (!utf16_auth_str) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf16_auth_str.GetStatusRecord().message);
+      return utf16_auth_str.GetCalculatedReturnCode();
+    }
+    authStringLen = utf16_auth_str->length();
+    std::memcpy(authString, ToSqlWChar(utf16_auth_str->data()), authStringLen);
   }
-  authString = ToSqlWChar(utf16_auth_str->data());
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLConnectW(rc, *(*kTraceOption));
