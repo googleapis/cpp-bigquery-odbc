@@ -14,12 +14,12 @@ REGEDIT4
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\ODBC Data Sources]
 "SampleDSN"="Simba ODBC Driver for Google BigQuery"
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\SampleDSN]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\SampleDSN]
 "Description"="ODBC Driver for Google BigQuery 1"
 "Catalog"="bigquery-devtools-drivers"
 "Driver"="C:\\Program Files (x86)\\Simba Technologies\\Simba ODBC Driver for Google BigQuery\\SimbaODBCDriverforGoogleBigQuery32.dll"

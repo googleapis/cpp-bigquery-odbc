@@ -2424,6 +2424,7 @@ SQLRETURN SQL_API SQLExtendedFetch(SQLHSTMT statementHandletmt,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function
 ////////////////////////////////////////////////////////////////////////////////////////
+#if !defined(_WIN32) || defined(_WIN64)
 SQLRETURN SQL_API SQLColAttributeA(SQLHSTMT statementHandle,
                                    SQLUSMALLINT columnNumber,
                                    SQLUSMALLINT fieldIdentifier,
@@ -2435,6 +2436,7 @@ SQLRETURN SQL_API SQLColAttributeA(SQLHSTMT statementHandle,
                          characterAttribute, characterAttributeBufferLen,
                          characterAttributeStringLen, numericAttribute);
 }
+#endif /* WIN32 || WIN64 */
 
 SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLUSMALLINT columnNumber,
