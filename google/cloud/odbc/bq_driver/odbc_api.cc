@@ -2424,17 +2424,17 @@ SQLRETURN SQL_API SQLExtendedFetch(SQLHSTMT statementHandletmt,
 // For more details see:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function
 ////////////////////////////////////////////////////////////////////////////////////////
-SQLRETURN SQL_API SQLColAttributeA(SQLHSTMT statementHandle,
-                                   SQLUSMALLINT columnNumber,
-                                   SQLUSMALLINT fieldIdentifier,
-                                   SQLPOINTER characterAttribute,
-                                   SQLSMALLINT characterAttributeBufferLen,
-                                   SQLSMALLINT* characterAttributeStringLen,
-                                   SQLLEN* numericAttribute) {
-  return SQLColAttribute(statementHandle, columnNumber, fieldIdentifier,
-                         characterAttribute, characterAttributeBufferLen,
-                         characterAttributeStringLen, numericAttribute);
-}
+// SQLRETURN SQL_API SQLColAttributeA(SQLHSTMT statementHandle,
+//                                    SQLUSMALLINT columnNumber,
+//                                    SQLUSMALLINT fieldIdentifier,
+//                                    SQLPOINTER characterAttribute,
+//                                    SQLSMALLINT characterAttributeBufferLen,
+//                                    SQLSMALLINT* characterAttributeStringLen,
+//                                    SQLLEN* numericAttribute) {
+//   return SQLColAttribute(statementHandle, columnNumber, fieldIdentifier,
+//                          characterAttribute, characterAttributeBufferLen,
+//                          characterAttributeStringLen, numericAttribute);
+// }
 
 SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLUSMALLINT columnNumber,
