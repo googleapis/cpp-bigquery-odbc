@@ -416,9 +416,6 @@ SQLRETURN SQL_API SQLDriverConnectW(
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
-  SQLCHAR output_connection_buffer[outConnectionStringBufferLen];
-  memset(output_connection_buffer, 0, outConnectionStringBufferLen);
-  SQLSMALLINT output_connection_str_len = 0;
   bool is_tracing_enabled = IsTracingEnabled("SQLDriverConnectW");
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
@@ -1251,6 +1248,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                 valueBufferLen);
     // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
     *valueStringLen = updated_out_attr_status->length();
+    std::memcpy(value, temp, (*valueStringLen) * sizeof(SQLWCHAR) * 2);
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
@@ -1599,8 +1597,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT* descPrecision, SQLSMALLINT* descScale, SQLSMALLINT* nullable) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLGetDescRecW");
-  SQLCHAR name_buffer[nameBufferLen];
-  memset(name_buffer, 0, nameBufferLen);
+  SQLCHAR name_buffer[kBufferLength];
   SQLSMALLINT name_buffer_len = 0;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
@@ -1928,8 +1925,7 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
                                     SQLSMALLINT cursorNameBufferLen,
                                     SQLSMALLINT* cursorNameStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLCHAR cursor_name[cursorNameBufferLen];
-  memset(cursor_name, 0, cursorNameBufferLen);
+  SQLCHAR cursor_name[kBufferLength];
   SQLSMALLINT cursor_name_len = 0;
   bool is_tracing_enabled = IsTracingEnabled("SQLGetCursorNameW");
 
@@ -2683,8 +2679,7 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLDescribeColW");
-  SQLCHAR column_name_buffer[columnNameBufferLen];
-  memset(column_name_buffer, 0, columnNameBufferLen);
+  SQLCHAR column_name_buffer[kBufferLength];
   SQLSMALLINT column_name_buffer_len = 0;
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.

@@ -145,9 +145,16 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
     // the ordering
     sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
     std::vector<std::string> input_col_values;
-    for (auto data : input_data) {
-      std::string dataStr = converter.to_bytes(data.str_field2);
-      input_col_values.emplace_back(dataStr);
+    if (col_name.compare("Hindi")) {
+      for (auto data : input_data) {
+        std::string dataStr = converter.to_bytes(data.str_field2);
+        input_col_values.emplace_back(dataStr);
+      }
+    } else if (col_name.compare("Chinese")) {
+      for (auto data : input_data) {
+        std::string dataStr = converter.to_bytes(data.str_field1);
+        input_col_values.emplace_back(dataStr);
+      }
     }
     sort(input_col_values.begin(), input_col_values.end(), str_comparison);
 

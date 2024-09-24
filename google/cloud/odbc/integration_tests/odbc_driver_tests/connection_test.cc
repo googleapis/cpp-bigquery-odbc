@@ -694,7 +694,9 @@ TEST(ConnectionTest, SQLSetConnectAttrA_UpdateString) {
 }
 
 TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
-  SQLCHAR buf[256] = "test";
+  std::wstring wstr = L"test";
+  std::vector<SQLWCHAR> buf(wstr.begin(), wstr.end());
+  buf.emplace_back(L'\0');
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
@@ -703,25 +705,28 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   // Simba is not following the spec and accepts incorrect lengths,
   // Google driver will follow the spec and accept correct lengths.
   auto status = SQLSetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
-                                   (SQLPOINTER)buf, 4);
+                                   (SQLPOINTER)buf.data(), 4);
   CheckError(status, "SQLSetConnectAttr", conn);
 
   std::string expected = "test";
 
   buf[0] = '0';
-  std::string buffer = reinterpret_cast<char*>(buf);
+  std::string buffer =
+      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(buf.data()), NULL);
   EXPECT_EQ("0est", buffer);
 
-  SQLCHAR output[256];
+  SQLWCHAR output[256] = {0};
   SQLINTEGER length;
   status = SQLGetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttr", conn);
-
-  std::string actual = reinterpret_cast<char*>(output);
+  std::wstring actual = reinterpret_cast<wchar_t*>(output);
+  std::vector<SQLWCHAR> outbuf(actual.begin(), actual.end());
+  outbuf.emplace_back(L'\0');
+  std::string str_out = ConvertSQLWCHARToString(outbuf.data(), NULL);
   // Parity with Simba Driver - Original value is retained even though
   // input buf has been modified by the caller.
-  EXPECT_EQ(expected, actual);
+  EXPECT_EQ(expected, str_out);
   EXPECT_EQ(expected.size(), length);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
