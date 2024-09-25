@@ -716,7 +716,7 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   buf[0] = '0';
   std::string buffer =
       ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(buf.data()), NULL);
-  EXPECT_EQ("0est", buffer);
+  EXPECT_STREQ("0est", buffer.data());
 
   SQLWCHAR output[256];
   SQLINTEGER length;

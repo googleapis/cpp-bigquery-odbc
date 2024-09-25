@@ -120,7 +120,7 @@ TEST(SQLDescribeColumnW, DescribeAllColumns) {
     std::string ret_col_name =
         ConvertSQLWCHARToString(column_name, column_name_len);
 
-    EXPECT_EQ(ret_col_name, table_col_name);
+    EXPECT_STREQ(ret_col_name.data(), table_col_name.data());
     EXPECT_EQ(column_name_len, table_col_name.size());
     EXPECT_TRUE(AreSqlAndBqTypesSame(data_type, col_type_sanitized));
     // Most of the values returned are supposed to be the same as
