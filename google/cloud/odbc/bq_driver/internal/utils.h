@@ -178,6 +178,22 @@ inline void SanitizeIdentifierArgument(std::string& id_arg) {
     std::transform(id_arg.begin(), id_arg.end(), id_arg.begin(), ::toupper);
   }
 }
+bool AddDSNToRegistry(const std::string& dsnName, 
+                      const std::string& driver, 
+                      const std::string& description, 
+                      const std::string& serverName, 
+                      const std::string& databaseName) ;
+
+bool EditDSNInRegistry(const std::string& dsnName, 
+                       const std::string& lpszDriver, 
+                       const std::string& email, 
+                       const std::string& serverName, 
+                       const std::string& keyFilePath, 
+                       const std::string& oAuthMechanism, 
+                       const std::string& catalog, 
+                       const std::string& datasetName) ;
+
+bool RemoveDSNFromRegistry(const std::string& dsnName);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

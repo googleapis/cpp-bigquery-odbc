@@ -560,4 +560,20 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 
+TEST(SQLConfigDataSourceInternal,success){
+   HWND hwndParent = NULL; 
+    WORD fRequest = ODBC_ADD_DSN; 
+    LPCSTR lpszDriver = "SQL Server";
+     LPCSTR lpszAttributes = "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+    auto status = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(status, true);
+    fRequest = ODBC_CONFIG_DSN; 
+    lpszAttributes = "DSN=Personnel Data\0DESCRIPTION=Testing DSN\0DATABASE=Personnel\0\0";
+    auto result = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(result, true);
+    fRequest = ODBC_REMOVE_DSN; 
+    auto result2 = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(result2, true);
+}
+
 }  // namespace google::cloud::odbc_bq_driver

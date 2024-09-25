@@ -22,6 +22,8 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "odbc_sql_results.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -47,6 +49,10 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
+using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
+using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -429,5 +435,89 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
 
   return SQL_SUCCESS;
 }
+
+bool SQLConfigDataSourceInternal(HWND hwndParent,
+                                WORD fRequest,
+                                LPCSTR lpszDriver,
+                                LPCSTR lpszAttributes) {
+                  
+    if (!lpszDriver || !lpszAttributes) {
+        return FALSE; 
+    }
+   std::map<std::string, std::string> attributesMap;
+   size_t start = 0;
+    std::string attributesStr(lpszAttributes);
+    while (start < attributesStr.size()) {
+        size_t end = attributesStr.find('\0', start);
+        if (end == std::string::npos) {
+            end = attributesStr.size();
+        }
+        std::string field = attributesStr.substr(start, end - start);
+        
+        size_t delimiter = field.find('=');
+        if (delimiter != std::string::npos) {
+            std::string key = field.substr(0, delimiter);
+            std::string value = field.substr(delimiter + 1);
+            attributesMap[key] = value;
+        }
+
+        start = end + 1;
+    }
+
+    std::string dsnName = attributesMap["DSN"];
+    std::string description = attributesMap["DESCRIPTION"];
+    std::string serverName = attributesMap["SERVER"];
+    std::string databaseName = attributesMap["DATABASE"];
+    std::string emailId = attributesMap["EMAIL"];
+    // Handle the request
+    switch (fRequest) {
+        case ODBC_ADD_DSN:
+        case ODBC_ADD_SYS_DSN:
+            if (!AddDSNToRegistry(dsnName, lpszDriver, description, serverName, databaseName)) {
+                std::cerr << "Failed to write DSN to registry" << std::endl;
+                return FALSE;
+            }
+
+            return TRUE;
+
+        case ODBC_CONFIG_DSN:
+        case ODBC_CONFIG_SYS_DSN:
+        {      DriverForm form;
+               form.Show();
+               form.GetHwnd();
+               MSG msg = {};
+                while (GetMessage(&msg, NULL, 0, 0)) {
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                }
+                std::string email = form.GetEmail();
+                std::string keyFilePath = form.GetKeyFilePath();
+                std::string oAuthMechanism = form.GetOAuthMechanism();
+                std::string catalog = form.GetCatalogName();
+                std::string datasetName = form.GetDatasetName();
+                              
+            if (!EditDSNInRegistry(dsnName, lpszDriver, email, serverName,keyFilePath,oAuthMechanism,catalog,datasetName )) {
+                std::cerr << "Failed to update DSN in registry" << std::endl;
+                return FALSE;
+            }
+
+            return TRUE;
+        }
+        case ODBC_REMOVE_DSN:
+        case ODBC_REMOVE_SYS_DSN:
+            if (!RemoveDSNFromRegistry(dsnName)) {
+                std::cerr << "Failed to update DSN in registry" << std::endl;
+                return FALSE;
+            }
+            
+            return TRUE;
+
+        default:
+            std::cerr << "Invalid request type" << std::endl;
+            return FALSE;
+    }
+  return TRUE;
+}
+
 
 }  // namespace google::cloud::odbc_bq_driver

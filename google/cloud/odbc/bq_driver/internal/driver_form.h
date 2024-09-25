@@ -16,6 +16,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -38,10 +39,17 @@ class DriverForm {
   DriverForm();
   ~DriverForm();
   void Show();
-  HWND GetHwnd() const;
+  void InitControls();
+  const std::string& GetEmail() const;
+  const std::string& GetKeyFilePath() const;
+  const std::string& GetOAuthMechanism() const;
+  const std::string& GetDatasetName() const;
+  const std::string& GetCatalogName() const; 
 
+  HWND GetHwnd() const;
+  
  private:
-  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
+static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;
   static char const CLASS_NAME[];

@@ -101,6 +101,11 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle);
 
+bool SQLConfigDataSourceInternal(HWND hwndParent,
+                                WORD fRequest,
+                                LPCSTR lpszDriver,
+                                LPCSTR lpszAttributes);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H
