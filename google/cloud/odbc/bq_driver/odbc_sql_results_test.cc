@@ -559,7 +559,7 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_EQ(StmtStates::kStatementPrepared, stmt_handle.GetStmtState());
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
-
+#ifdef _WIN32
 TEST(SQLConfigDataSourceInternal,success){
    HWND hwndParent = NULL; 
     WORD fRequest = ODBC_ADD_DSN; 
@@ -575,5 +575,6 @@ TEST(SQLConfigDataSourceInternal,success){
     auto result2 = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
     EXPECT_EQ(result2, true);
 }
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver
