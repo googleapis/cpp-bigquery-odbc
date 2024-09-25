@@ -437,6 +437,7 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
   }
   return StatusRecord::Ok();
 }
+#ifdef _WIN32
 bool AddDSNToRegistry(const std::string& dsnName, 
                       const std::string& driver, 
                       const std::string& description, 
@@ -624,4 +625,6 @@ bool RemoveDSNFromRegistry(const std::string& dsnName) {
     std::cout << "DSN '" << dsnName << "' successfully removed from the registry." << std::endl;
     return true;
 }
+#endif
+
 }  // namespace google::cloud::odbc_bq_driver_internal
