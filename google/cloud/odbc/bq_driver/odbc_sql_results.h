@@ -101,10 +101,12 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle);
 
+#ifdef _WIN32
 bool SQLConfigDataSourceInternal(HWND hwndParent,
                                 WORD fRequest,
                                 LPCSTR lpszDriver,
                                 LPCSTR lpszAttributes);
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver
 
