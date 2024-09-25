@@ -436,6 +436,7 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   return SQL_SUCCESS;
 }
 
+#ifdef _WIN32
 bool SQLConfigDataSourceInternal(HWND hwndParent,
                                 WORD fRequest,
                                 LPCSTR lpszDriver,
@@ -518,6 +519,7 @@ bool SQLConfigDataSourceInternal(HWND hwndParent,
     }
   return TRUE;
 }
+#endif
 
 
 }  // namespace google::cloud::odbc_bq_driver
