@@ -84,7 +84,11 @@ function (odbc_define_tests)
     # default of 5 seconds depending on the size of the shared lib. PRE_TEST
     # mode has been added for efficiency so the tests are discovered quickly.
     if (BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
-        gtest_discover_tests(all_tests DISCOVERY_MODE PRE_TEST
+        gtest_discover_tests(all_tests 
+                             # Parameterized tests is currently not supported by GoogleTest
+                             # for shared library objects. Its not able to instantiate the tests.
+                             TEST_FILTER "-DescriptorTypeParameterizedTest:-StatementParameterizedTest"
+                             DISCOVERY_MODE PRE_TEST
                              DISCOVERY_TIMEOUT 300)
     else ()
         gtest_discover_tests(all_tests)
