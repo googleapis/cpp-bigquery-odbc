@@ -23,7 +23,10 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "odbc_sql_results.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+
+#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#endif
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -49,10 +52,13 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
+#endif
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
