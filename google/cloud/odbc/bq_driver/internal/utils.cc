@@ -438,7 +438,7 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
   return StatusRecord::Ok();
 }
 #ifdef _WIN32
-bool AddDSNToRegistry(const std::string& dsnName, 
+StatusRecord AddDSNToRegistry(const std::string& dsnName, 
                       const std::string& driver, 
                       const std::string& description, 
                       const std::string& serverName, 
@@ -450,68 +450,58 @@ bool AddDSNToRegistry(const std::string& dsnName,
     HKEY hKey = nullptr;
 
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, registryPath.c_str(), 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) != ERROR_SUCCESS) {
-        std::cerr << "Failed to create or open registry key for DSN: " << dsnName << std::endl;
-        return false;
+       return StatusRecord{SQLStates::k_HY000(),"Failed to create or open registry key for DSN"};
     }
 
     if (RegSetValueExA(hKey, "Driver", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(driver.c_str()), 
             static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to set Driver value for DSN: " << dsnName << std::endl;
-        RegCloseKey(hKey);
-        return false;
+      RegCloseKey(hKey);
+      return StatusRecord{SQLStates::k_HY000(),"Failed to set Driver value for DSN"};   
     }
 
     if (RegSetValueExA(hKey, "Description", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(description.c_str()), 
             static_cast<DWORD>(description.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to set Description value for DSN: " << dsnName << std::endl;
-        RegCloseKey(hKey);
-        return false;
+       RegCloseKey(hKey);
+       return StatusRecord{SQLStates::k_HY000(),"Failed to set Description value for DSN"}; 
     }
 
     if (RegSetValueExA(hKey, "Server", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(serverName.c_str()), 
             static_cast<DWORD>(serverName.size() + 1)) != ERROR_SUCCESS) 
-    {
-        std::cerr << "Failed to set Server value for DSN: " << dsnName << std::endl;
-        RegCloseKey(hKey);
-        return false;
+    {  RegCloseKey(hKey);
+       return StatusRecord{SQLStates::k_HY000(),"Failed to set Server value for DSN"}; 
     }
 
     if (RegSetValueExA(hKey, "Database", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(databaseName.c_str()), 
             static_cast<DWORD>(databaseName.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to set Database value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to set Database value for DSN"}; 
     }
 
     RegCloseKey(hKey);
 
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, odbcPath.c_str(), 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) != ERROR_SUCCESS) {
-        std::cerr << "Failed to open ODBC Data Sources registry key" << std::endl;
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to open ODBC Data Sources registry key"}; 
     }
 
     if (RegSetValueExA(hKey, dsnName.c_str(), 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(driver.c_str()), 
             static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) 
-    {
-        std::cerr << "Failed to add DSN to ODBC Data Sources: " << dsnName << std::endl;
+    {   
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to add DSN to ODBC Data Sources"}; 
     }
 
     RegCloseKey(hKey);
-
-    std::cout << "DSN '" << dsnName << "' successfully added to the registry." << std::endl;
-    return true;
+    return StatusRecord::Ok();
 }
-bool EditDSNInRegistry(const std::string& dsnName, 
+StatusRecord EditDSNInRegistry(const std::string& dsnName, 
                        const std::string& lpszDriver, 
                        const std::string& email, 
                        const std::string& serverName, 
@@ -525,79 +515,71 @@ bool EditDSNInRegistry(const std::string& dsnName,
     HKEY hKey = nullptr;
 
     if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, registryPath.c_str(), 0, KEY_WRITE, &hKey) != ERROR_SUCCESS) {
-        std::cerr << "Failed to open registry key for DSN: " << dsnName << std::endl;
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to open registry key for DSN"};
     }
 
     if (!lpszDriver.empty() && RegSetValueExA(hKey, "Driver", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(lpszDriver.c_str()), 
             static_cast<DWORD>(lpszDriver.size() + 1)) != ERROR_SUCCESS) 
-    {
-        std::cerr << "Failed to modify Driver value for DSN: " << dsnName << std::endl;
+    { 
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify Driver value for DSN"};
     }
 
     if (!email.empty() && RegSetValueExA(hKey, "Email", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(email.c_str()), 
             static_cast<DWORD>(email.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify Email value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify Email value for DSN"};
     }
 
     if (!serverName.empty() && RegSetValueExA(hKey, "Server", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(serverName.c_str()), 
             static_cast<DWORD>(serverName.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify Server value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify Server value for DSN"};
     }
 
     if (!keyFilePath.empty() && RegSetValueExA(hKey, "KeyFilePath", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(keyFilePath.c_str()), 
             static_cast<DWORD>(keyFilePath.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify KeyFilePath value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify KeyFilePath value for DSN"};
+       
     }
 
     if (!oAuthMechanism.empty() && RegSetValueExA(hKey, "OAuthMechanism", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(oAuthMechanism.c_str()), 
             static_cast<DWORD>(oAuthMechanism.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify OAuthMechanism value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify OAuthMechanism value for DSN"};
     }
 
     if (!catalog.empty() && RegSetValueExA(hKey, "Catalog", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(catalog.c_str()), 
             static_cast<DWORD>(catalog.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify Catalog value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify Catalog value for DSN"};
     }
 
     if (!datasetName.empty() && RegSetValueExA(hKey, "Dataset", 0, REG_SZ, 
             reinterpret_cast<const BYTE*>(datasetName.c_str()), 
             static_cast<DWORD>(datasetName.size() + 1)) != ERROR_SUCCESS) 
     {
-        std::cerr << "Failed to modify Dataset value for DSN: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to modify Dataset value for DSN"};
     }
 
     RegCloseKey(hKey);
 
-    std::cout << "DSN '" << dsnName << "' successfully updated in the registry." << std::endl;
-    return true;
+    return StatusRecord::Ok();
 }
-bool RemoveDSNFromRegistry(const std::string& dsnName) {
+StatusRecord RemoveDSNFromRegistry(const std::string& dsnName) {
 
     const std::string registryPath = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsnName;
     const std::string odbcPath = "SOFTWARE\\ODBC\\ODBC.INI\\ODBC Data Sources";
@@ -605,25 +587,21 @@ bool RemoveDSNFromRegistry(const std::string& dsnName) {
     HKEY hKey = nullptr;
 
     if (RegDeleteKeyA(HKEY_LOCAL_MACHINE, registryPath.c_str()) != ERROR_SUCCESS) {
-        std::cerr << "Failed to remove registry key for DSN: " << dsnName << std::endl;
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to remove registry key for DSN"};
     }
 
     if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, odbcPath.c_str(), 0, KEY_WRITE, &hKey) != ERROR_SUCCESS) {
-        std::cerr << "Failed to open ODBC Data Sources registry key" << std::endl;
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to open ODBC Data Sources registry key"};
     }
 
     if (RegDeleteValueA(hKey, dsnName.c_str()) != ERROR_SUCCESS) {
-        std::cerr << "Failed to remove DSN from ODBC Data Sources: " << dsnName << std::endl;
         RegCloseKey(hKey);
-        return false;
+        return StatusRecord{SQLStates::k_HY000(),"Failed to remove DSN from ODBC Data Sources"};
     }
 
     RegCloseKey(hKey);
 
-    std::cout << "DSN '" << dsnName << "' successfully removed from the registry." << std::endl;
-    return true;
+    return StatusRecord::Ok();
 }
 #endif
 

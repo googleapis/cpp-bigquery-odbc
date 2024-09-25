@@ -480,13 +480,10 @@ bool SQLConfigDataSourceInternal(HWND hwndParent,
     switch (fRequest) {
         case ODBC_ADD_DSN:
         case ODBC_ADD_SYS_DSN:
-            if (!AddDSNToRegistry(dsnName, lpszDriver, description, serverName, databaseName)) {
-                std::cerr << "Failed to write DSN to registry" << std::endl;
-                return FALSE;
-            }
-
-            return TRUE;
-
+        {
+           auto status = AddDSNToRegistry(dsnName, lpszDriver, description, serverName, databaseName);
+           return TRUE;
+        }
         case ODBC_CONFIG_DSN:
         case ODBC_CONFIG_SYS_DSN:
         {      DriverForm form;
@@ -502,25 +499,21 @@ bool SQLConfigDataSourceInternal(HWND hwndParent,
                 std::string oAuthMechanism = form.GetOAuthMechanism();
                 std::string catalog = form.GetCatalogName();
                 std::string datasetName = form.GetDatasetName();
-                              
-            if (!EditDSNInRegistry(dsnName, lpszDriver, email, serverName,keyFilePath,oAuthMechanism,catalog,datasetName )) {
-                std::cerr << "Failed to update DSN in registry" << std::endl;
-                return FALSE;
-            }
-
+  // #ifdef LOCAL_TEST
+  //           // Mock user input during testing
+  //            form.SetUserInput("testemail@example.com", "/mock/path/to/key", "MockOAuth", "MockCatalog", "MockDataset");
+  //            HWND button = GetDlgItem(form->GetHwnd(),103);
+  //            SendMessage(button, BM_CLICK, 0, 0);
+  // #else                    
+            EditDSNInRegistry(dsnName, lpszDriver, email, serverName,keyFilePath,oAuthMechanism,catalog,datasetName );
             return TRUE;
         }
         case ODBC_REMOVE_DSN:
         case ODBC_REMOVE_SYS_DSN:
-            if (!RemoveDSNFromRegistry(dsnName)) {
-                std::cerr << "Failed to update DSN in registry" << std::endl;
-                return FALSE;
-            }
-            
+            RemoveDSNFromRegistry(dsnName);            
             return TRUE;
 
         default:
-            std::cerr << "Invalid request type" << std::endl;
             return FALSE;
     }
   return TRUE;

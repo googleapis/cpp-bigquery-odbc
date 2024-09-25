@@ -269,7 +269,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
          GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
          m_dataset=dataBuffer;
 
-         MessageBox(hwnd, "Form data saved successfully!", "Success", MB_OK);
          DestroyWindow(hwnd);  // Close the window
          break;
         }
