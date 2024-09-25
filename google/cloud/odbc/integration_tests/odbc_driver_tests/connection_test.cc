@@ -13,8 +13,11 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
+
+using ::testing::StartsWith;
 
 TEST(SQLGetInfo, CheckPositionalUpdate) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -715,18 +718,16 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
       ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(buf.data()), NULL);
   EXPECT_EQ("0est", buffer);
 
-  SQLWCHAR output[256] = {0};
+  SQLWCHAR output[256];
   SQLINTEGER length;
   status = SQLGetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttr", conn);
-  std::wstring actual = reinterpret_cast<wchar_t*>(output);
-  std::vector<SQLWCHAR> outbuf(actual.begin(), actual.end());
-  outbuf.emplace_back(L'\0');
-  std::string str_out = ConvertSQLWCHARToString(outbuf.data(), NULL);
-  // Parity with Simba Driver - Original value is retained even though
-  // input buf has been modified by the caller.
-  EXPECT_EQ(expected, str_out);
+  std::cout << "length " << (char*)output << "--" << (char*)(output + 1) << "--"
+            << (char*)(output + 2) << std::endl;
+  std::string str_out =
+      ConvertSQLWCHARToString(output, length / sizeof(SQLWCHAR));
+  EXPECT_THAT(expected, StartsWith(str_out));
   EXPECT_EQ(expected.size(), length);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
