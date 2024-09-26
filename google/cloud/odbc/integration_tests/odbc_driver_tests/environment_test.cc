@@ -190,10 +190,16 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &get_val1, 0, nullptr),
             SQL_SUCCESS);
   EXPECT_EQ(get_val1, SQL_CP_STRICT_MATCH);
+// Not applicable against Driver Manager because:
+// (1) Driver Manager does not call the BQ Driver SQLGetEnvAttr API
+// for this attribute
+// (2) Its own implementation does not set a default value for this attribute
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &get_val2, 0, nullptr),
       SQL_SUCCESS);
   EXPECT_EQ(get_val2, SQL_OV_ODBC3);
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, &get_val2, 0, nullptr),
       SQL_SUCCESS);
@@ -237,6 +243,9 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
+// Not applicable for Driver Manager since it does not call
+// the BQ Driver for SQLSetEnvAttr API for attribute SQL_ATTR_CONNECTION_POOLING
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_OFF;
@@ -251,6 +260,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
                           nullptr),
             SQL_INVALID_HANDLE);
 }
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
