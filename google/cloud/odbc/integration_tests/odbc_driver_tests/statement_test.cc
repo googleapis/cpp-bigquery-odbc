@@ -751,7 +751,12 @@ void PrepareAndCheckQuery(std::string const& query,
   StrToChar(read_stmt, query);
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
-
+// Driver manager does not expect the statement handle to be modified since
+// its an input parameter. It creates its own structure from the statement
+// handle and sends it to the driver hence any internal state that the
+// driver sets in the input parameter will not be propagated back to the app.
+// This is probably the reason why Simba does not do this as well.
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
@@ -765,7 +770,8 @@ void PrepareAndCheckQuery(std::string const& query,
                 expected_param_name);
     }
   }
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 }
 
 TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
@@ -1268,12 +1274,16 @@ TEST(SQLPrepare, SimpleStatementTest) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
+// Driver manager does not expect the statement handle to be modified since
+// its an input parameter. It creates its own structure from the statement
+// handle and sends it to the driver hence any internal state that the
+// driver sets in the input parameter will not be propagated back to the app.
+// This is probably the reason why Simba does not do this as well.
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-
   // Retrieve the result set
   ResultSet const& result_set = stmt_handle->GetResultSet();
 
@@ -1282,7 +1292,8 @@ TEST(SQLPrepare, SimpleStatementTest) {
   ColumnSchema const& column = result_set.row_schema[0];
   EXPECT_EQ(column.col_index, 0);
   EXPECT_EQ(column.col_type, BQDataType::kInt64);
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1315,6 +1326,12 @@ TEST(SQLPrepare, InsertQuery) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
+// Driver manager does not expect the statement handle to be modified since
+// its an input parameter. It creates its own structure from the statement
+// handle and sends it to the driver hence any internal state that the
+// driver sets in the input parameter will not be propagated back to the app.
+// This is probably the reason why Simba does not do this as well.
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
@@ -1337,7 +1354,8 @@ TEST(SQLPrepare, InsertQuery) {
   ColumnSchema const& column3 = result_set.row_schema[2];
   EXPECT_EQ(column3.col_index, 2);
   EXPECT_EQ(column3.col_type, BQDataType::kInt64);
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -1586,7 +1604,12 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
 
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
-
+// Driver manager does not expect the statement handle to be modified since
+// its an input parameter. It creates its own structure from the statement
+// handle and sends it to the driver hence any internal state that the
+// driver sets in the input parameter will not be propagated back to the app.
+// This is probably the reason why Simba does not do this as well.
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   // Cast hstmt to StatementHandle*
   auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
@@ -1594,7 +1617,8 @@ TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
   EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
   EXPECT_EQ(stmt_handle->GetQueryString(), query);
 
-#endif
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
