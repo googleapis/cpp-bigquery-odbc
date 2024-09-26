@@ -28,6 +28,9 @@ jobs:
         # TODO(b/357810060): Add x86 arch
         arch: [ x64, x86 ]
         shard: [ Core, BqDriver ]
+        exclude:
+          - msvc: msvc-2019
+            shard: Core
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
