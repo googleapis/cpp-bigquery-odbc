@@ -379,8 +379,8 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
 
 StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
                                                     SQLINTEGER in_str_len) {
-  if (((in_str != nullptr) && (in_str[0] == '\0'))) {
-    return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
+  if (((in_str == nullptr) || (in_str[0] == '\0'))) {
+    return StatusRecord{SQLStates::k_HY000(), "input string is empty/Null"};
   }
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));

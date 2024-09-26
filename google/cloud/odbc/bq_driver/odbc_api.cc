@@ -706,7 +706,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
   size_t w_server_name_len = 0;
   if (serverName) {
     std::wstring w_server_str(reinterpret_cast<wchar_t const*>(serverName));
-    w_server_name_len = w_server_str.length();
+    w_server_name_len = w_server_str.length() * sizeof(SQLWCHAR);
     if (w_server_name_len == 0) {
       auto status =
           StatusRecord{SQLStates::k_HY000(),
@@ -722,6 +722,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
 
   StatusRecordOr<std::string> utf8_server_name =
       ConvertSQLWCHARToString(serverName, w_server_name_len);
+      std::cout<<"dsn str "<<utf8_server_name.GetValue()<<std::endl;
   if (!utf8_server_name) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_server_name.GetStatusRecord().message);
@@ -893,9 +894,15 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   if (status != SQL_SUCCESS) {
     return status;
   }
+
+  SQLPOINTER updated_info_val;
+  SQLCHAR info_val[kBufferLength] = "Not Set";
+  StatusRecordOr<std::wstring> updated_out_info_status;
+  updated_info_val = (SQLPOINTER)info_val;
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionEntry_SQLGetInfoW(connectionHandle, infoType, infoValue,
+    TraceFunctionEntry_SQLGetInfoW(connectionHandle, infoType, updated_info_val,
                                    infoValueBufferLen, infoValueStringLen,
                                    *(*kTraceOption));
 
@@ -903,9 +910,20 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
   // in odbc_driver_metadata.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetInfoInternal(
-      connectionHandle, infoType, infoValue, infoValueBufferLen,
+      connectionHandle, infoType, updated_info_val, infoValueBufferLen,
       infoValueStringLen);
   // Handle Unicode conversion of output parameters.
+updated_out_info_status =
+        ConvertSQLPointerToSQLWChar(updated_info_val, infoValueBufferLen);
+    if (!updated_out_info_status) {
+      TracePrintInternal(*(*kTraceOption),
+                         updated_out_info_status.GetStatusRecord().message);
+      return updated_out_info_status.GetCalculatedReturnCode();
+    }
+    std::memcpy(infoValue, (SQLPOINTER)ToSqlWChar(updated_out_info_status->data()),
+                infoValueBufferLen);
+    // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
+    *infoValueStringLen = updated_out_info_status->length();
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLGetInfoW(rc, *(*kTraceOption));

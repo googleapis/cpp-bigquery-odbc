@@ -60,6 +60,12 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn);
 SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn,
                              bool use_ansi = false);
 
+SQLRETURN DriverConnectW(std::wstring conn_str,
+                         std::shared_ptr<ODBCHandles> conn, int timeout = 30);
+
+SQLRETURN ConnectW(std::wstring dsn, std::shared_ptr<ODBCHandles> conn,
+                   int timeout = 30);
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_CONNECTION_H
