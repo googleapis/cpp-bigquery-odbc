@@ -86,6 +86,47 @@ void FromArithmeticToArithmeticTest(SrcType src_val, DestType expected_val,
   free(buf);
 }
 
+template <typename SQLType, typename CType>
+void FromIntervalToExpectedTest(SQLINTERVAL interval_type, CType interval_value,
+                                SQLSMALLINT c_type) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = interval_type;
+  switch (interval_type) {
+    case SQL_IS_DAY:
+      interval.intval.day_second.day = interval_value;
+      break;
+    case SQL_IS_MINUTE:
+      interval.intval.day_second.minute = interval_value;
+      break;
+    case SQL_IS_HOUR:
+      interval.intval.day_second.hour = interval_value;
+      break;
+    case SQL_IS_MONTH:
+      interval.intval.year_month.month = interval_value;
+      break;
+    case SQL_IS_YEAR:
+      interval.intval.year_month.year = interval_value;
+      break;
+    default:
+      throw std::runtime_error("Invalid interval Type");
+      break;
+  }
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[80];
+
+  DataBuffer dest_data{c_type, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  auto returned_val = reinterpret_cast<SQLType*>(dest_data.buf);
+  auto expected_val = static_cast<CType>(interval_value);
+
+  EXPECT_EQ(*returned_val, expected_val);
+}
+
 template <typename SrcType>
 void FromArithmeticToStringTest(SrcType src_val, std::string expected_val,
                                 SQLSMALLINT dest_type,
@@ -597,4 +638,213 @@ TEST(ConvertFromJsonDSValue, convertToWchar_Failed) {
   ASSERT_FALSE(status.ok());
 }
 
+TEST(ConvertFromIntervalDSValue, To_SQL_C_Char) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_YEAR;
+  interval.intval.year_month.year = 5;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+
+  char dest_buf[80];
+  DataBuffer dest_data{SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  auto* returned_val = reinterpret_cast<char*>(dest_data.buf);
+  EXPECT_EQ(interval_str, returned_val);
+}
+TEST(ConvertFromIntervalDSValue, To_SQL_C_WChar) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_HOUR;
+  interval.intval.day_second.hour = 7;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+
+  char dest_buf[80] = {0};
+  DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+  auto returned_val = ConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_data.buf), interval_str.length());
+  EXPECT_STREQ(returned_val.GetValue().c_str(), interval_str.data());
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_STinyInt) {
+  FromIntervalToExpectedTest<SQLCHAR, SQLCHAR>(SQL_IS_DAY, 5, SQL_C_STINYINT);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_UTinyInt) {
+  FromIntervalToExpectedTest<SQLCHAR, SQLCHAR>(SQL_IS_MINUTE, 25,
+                                               SQL_C_UTINYINT);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_SSHORT) {
+  FromIntervalToExpectedTest<SQLSMALLINT, SQLSMALLINT>(SQL_IS_MONTH, 10,
+                                                       SQL_C_SSHORT);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_UShort) {
+  FromIntervalToExpectedTest<SQLUSMALLINT, SQLSMALLINT>(SQL_IS_MONTH, 7,
+                                                        SQL_C_USHORT);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_ULong) {
+  FromIntervalToExpectedTest<SQLUINTEGER, SQLUINTEGER>(SQL_IS_YEAR, 9,
+                                                       SQL_C_ULONG);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_SBigint) {
+  FromIntervalToExpectedTest<SQLBIGINT, SQLUINTEGER>(SQL_IS_HOUR, 20,
+                                                     SQL_C_SBIGINT);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_Numeric) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_YEAR;
+  interval.intval.day_second.hour = 20;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[80];
+
+  DataBuffer dest_data{SQL_C_NUMERIC, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  SQL_NUMERIC_STRUCT* returned_val =
+      reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_data.buf);
+
+  EXPECT_EQ(returned_val->sign, 1);
+  EXPECT_EQ(returned_val->precision, 10);
+  EXPECT_EQ(returned_val->scale, 0);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_Interval) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_DAY_TO_SECOND;
+  interval.intval.day_second.day = 20;
+  interval.intval.day_second.hour = 10;
+  interval.intval.day_second.minute = 5;
+  interval.intval.day_second.second = 16;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[80];
+
+  DataBuffer dest_data{SQL_C_INTERVAL_DAY_TO_SECOND, dest_buf,
+                       sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  SQL_INTERVAL_STRUCT* data = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+  EXPECT_EQ(data->interval_type, interval.interval_type);
+  EXPECT_EQ(data->intval.day_second.day, interval.intval.day_second.day);
+  EXPECT_EQ(data->intval.day_second.hour, interval.intval.day_second.hour);
+  EXPECT_EQ(data->intval.day_second.minute, interval.intval.day_second.minute);
+  EXPECT_EQ(data->intval.day_second.second, interval.intval.day_second.second);
+}
+
+TEST(ConvertFromIntervalDSValue, To_SQL_C_Neg_Interval) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_FALSE;
+  interval.interval_type = SQL_IS_YEAR_TO_MONTH;
+  interval.intval.year_month.year = 20;
+  interval.intval.year_month.month = 10;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[80];
+
+  DataBuffer dest_data{SQL_C_INTERVAL_YEAR_TO_MONTH, dest_buf,
+                       sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  SQL_INTERVAL_STRUCT* data = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+  EXPECT_EQ(data->interval_type, interval.interval_type);
+  EXPECT_EQ(data->intval.year_month.year, interval.intval.year_month.year);
+  EXPECT_EQ(data->intval.year_month.month, interval.intval.year_month.month);
+}
+
+TEST(ConvertFromIntervalDSValue, Unsupported_DataType) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_YEAR;
+  interval.intval.day_second.hour = 20;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[50];
+
+  DataBuffer dest_data{SQL_C_FLOAT, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
+                                  StrEq("Conversion is unsupported")));
+}
+
+TEST(ConvertFromIntervalDSValue, Negative_Buffer_Length) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_YEAR;
+  interval.intval.year_month.year = 1;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[50];
+
+  DataBuffer dest_data{SQL_C_INTERVAL_YEAR, dest_buf,
+                       -1};  // Negative buffer length
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
+                                  StrEq("Buffer length is negative")));
+}
+
+TEST(ConvertFromIntervalDSValue, Insufficient_Buffer_length) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_MONTH;
+  interval.intval.year_month.year = 1;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[5];
+
+  DataBuffer dest_data{SQL_C_CHAR, dest_buf,
+                       sizeof(dest_buf)};  // Negative buffer length
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_22003(),
+                                  StrEq("Buffer length is insufficient")));
+}
+
+TEST(ConvertFromIntervalDSValue, Data_Truncated_Char) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_sign = SQL_TRUE;
+  interval.interval_type = SQL_IS_YEAR_TO_MONTH;
+  interval.intval.year_month.year = 4;
+  interval.intval.year_month.month = 2;
+
+  DSValue src_dsval;
+  std::string interval_str = FormatIntervalToString(interval);
+  StringToDSValue(interval_str, src_dsval);
+  char dest_buf[20];  // Smaller buffer than required for the string
+
+  DataBuffer dest_data{SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status,
+              StatusRecIs(SQLStates::k_01004(), StrEq("Data truncated")));
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

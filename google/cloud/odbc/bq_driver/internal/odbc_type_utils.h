@@ -218,6 +218,13 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLINTEGER* str_len_ptr);
 
+odbc_internal::StatusRecord IntervalToOutputBufferResponse(
+    const SQL_INTERVAL_STRUCT& conn_interval, SQLPOINTER dest_buf,
+    SQLLEN buffer_length, SQLLEN* result_len);
+
+odbc_internal::StatusRecord WStrIntervalBufferResponse(
+    std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
+    SQLINTEGER char_len, SQLINTEGER whole_digits_count, SQLLEN* res_len);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TYPE_UTILS_H

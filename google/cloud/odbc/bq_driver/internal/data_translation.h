@@ -529,6 +529,9 @@ inline odbc_internal::StatusRecord ConvertFromDateDSValue(
 
 StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
                                     DataBuffer& dest_data);
+
+odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
+                                                       DataBuffer& dest_data);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

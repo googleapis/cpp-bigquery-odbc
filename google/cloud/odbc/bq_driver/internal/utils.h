@@ -179,6 +179,13 @@ inline void SanitizeIdentifierArgument(std::string& id_arg) {
   }
 }
 
+inline void GetWholeDigitCount(std::string& src_str, int& digit_count) {
+  for (char ch : src_str) {
+    if (std::isdigit(ch)) {
+      ++digit_count;
+    }
+  }
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

@@ -367,8 +367,7 @@ class Table {
                       std::vector<SQL_TIME_STRUCT> rows, bool insert_index);
 
   void InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
-                          std::vector<SQL_INTERVAL_STRUCT> rows,
-                          bool use_ansi = false);
+                          std::vector<SQL_INTERVAL_STRUCT> rows);
 
   // This is used to insert json darainto a table which only has a string
   // column.

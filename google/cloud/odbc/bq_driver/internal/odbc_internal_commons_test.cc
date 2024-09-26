@@ -754,4 +754,156 @@ TEST(DSValueToDate, EmptyDateString) {
   EXPECT_EQ(returned.day, 0);
 }
 
+TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "1-0 0 0:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_YEAR);
+  EXPECT_EQ(interval_struct.intval.year_month.year, 1);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_MONTH) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-4 0 0:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_MONTH);
+  EXPECT_EQ(interval_struct.intval.year_month.month, 4);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_DAY) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 9 0:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_DAY);
+  EXPECT_EQ(interval_struct.intval.day_second.day, 9);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 7:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_HOUR);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 7);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 0:6:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_MINUTE);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 6);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_SECOND) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 0:0:10";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_SECOND);
+  EXPECT_EQ(interval_struct.intval.day_second.second, 10);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR_TO_MONTH) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "1-2 0 0:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_YEAR_TO_MONTH);
+  EXPECT_EQ(interval_struct.intval.year_month.year, 1);
+  EXPECT_EQ(interval_struct.intval.year_month.month, 2);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_HOUR) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 1 2:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_DAY_TO_HOUR);
+  EXPECT_EQ(interval_struct.intval.day_second.day, 1);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_MINUTE) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 1 2:3:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_DAY_TO_MINUTE);
+  EXPECT_EQ(interval_struct.intval.day_second.day, 1);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 3);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_SECOND) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 1 2:3:20";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_DAY_TO_SECOND);
+  EXPECT_EQ(interval_struct.intval.day_second.day, 1);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 3);
+  EXPECT_EQ(interval_struct.intval.day_second.second, 20);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_MINUTE) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 2:33:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_HOUR_TO_MINUTE);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 33);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_SECOND) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 2:3:7";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_HOUR_TO_SECOND);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 3);
+  EXPECT_EQ(interval_struct.intval.day_second.second, 7);
+}
+
+TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE_TO_SECOND) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 0 0:3:17";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, 1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_MINUTE_TO_SECOND);
+  EXPECT_EQ(interval_struct.intval.day_second.minute, 3);
+  EXPECT_EQ(interval_struct.intval.day_second.second, 17);
+}
+
+TEST(ConvertStringToIntervalStruct, neg_interval_str) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_str = "0-0 -15 2:0:0";
+  ConvertStringToIntervalStruct(interval_str, interval_struct);
+  EXPECT_EQ(interval_struct.interval_sign, -1);
+  EXPECT_EQ(interval_struct.interval_type, SQL_IS_DAY_TO_HOUR);
+  EXPECT_EQ(interval_struct.intval.day_second.day, -15);
+  EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
+}
+
+TEST(ConvertStringToIntervalStruct, Invalid_interval_str) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string interval_invalid_str = "0-1";
+  EXPECT_THROW(
+      ConvertStringToIntervalStruct(interval_invalid_str, interval_struct),
+      std::invalid_argument);
+}
+
+TEST(ConvertStringToIntervalStruct, Empty_str) {
+  SQL_INTERVAL_STRUCT interval_struct;
+  std::string empty_str = "";
+  EXPECT_THROW(ConvertStringToIntervalStruct(empty_str, interval_struct),
+               std::invalid_argument);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

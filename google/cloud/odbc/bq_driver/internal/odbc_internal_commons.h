@@ -174,6 +174,39 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   return buffer;
 }
 
+std::string FormatIntervalToString(SQL_INTERVAL_STRUCT interval);
+
+void ConvertStringToIntervalStruct(std::string const& interval_str,
+                                   SQL_INTERVAL_STRUCT& interval_struct);
+
+inline void GetSinglePrecisionInterval(
+    const SQL_INTERVAL_STRUCT interval_struct, SQLUINTEGER& value) {
+  using odbc_internal::StatusRecord;
+  StatusRecord status_record = StatusRecord::Ok();
+
+  switch (interval_struct.interval_type) {
+    case SQL_IS_YEAR:
+      value = interval_struct.intval.year_month.year;
+      break;
+    case SQL_IS_MONTH:
+      value = interval_struct.intval.year_month.month;
+      break;
+    case SQL_IS_DAY:
+      value = interval_struct.intval.day_second.day;
+      break;
+    case SQL_IS_HOUR:
+      value = interval_struct.intval.day_second.hour;
+      break;
+    case SQL_IS_MINUTE:
+      value = interval_struct.intval.day_second.minute;
+      break;
+    default:
+      status_record = odbc_internal::StatusRecord{
+          odbc_internal::SQLStates::k_07006(),
+          "Interval precision was not a single field"};
+      break;
+  }
+}
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:
