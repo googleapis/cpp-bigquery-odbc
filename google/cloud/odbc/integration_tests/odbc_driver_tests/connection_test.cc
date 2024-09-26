@@ -810,7 +810,7 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
 
 #else
 
-// Simba Driver and DriverManager doesn't support DSNLess SQLConnect API 
+// Simba Driver and DriverManager doesn't support DSNLess SQLConnect API
 // with credentials file path
 #ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(BQDriverConnectionTest, SQLConnect_DSNLess) {
@@ -835,7 +835,7 @@ TEST(BQDriverConnectionTest, SQLConnectA_DSNLess) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif // DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();
