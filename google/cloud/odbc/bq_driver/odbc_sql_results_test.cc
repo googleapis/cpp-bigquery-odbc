@@ -559,8 +559,8 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_EQ(StmtStates::kStatementPrepared, stmt_handle.GetStmtState());
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
-#ifdef _WIN32
 
+#ifdef _WIN32
 TEST(SQLConfigDataSourceInternal,success){
    HWND hwndParent = NULL; 
     WORD fRequest = ODBC_ADD_DSN; 
@@ -575,6 +575,33 @@ TEST(SQLConfigDataSourceInternal,success){
     auto result2 = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
     EXPECT_EQ(result2, true);
 }
-#endif
 
+TEST(SQLConfigDataSourceInternal,NullDriverDetails){
+    HWND hwndParent = NULL; 
+    WORD fRequest = ODBC_ADD_DSN; 
+    LPCSTR lpszDriver = NULL;
+    LPCSTR lpszAttributes = "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+    auto status = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(status, false);
+}
+
+TEST(SQLConfigDataSourceInternal,NullAttributes){
+    HWND hwndParent = NULL; 
+    WORD fRequest = ODBC_ADD_DSN; 
+    LPCSTR lpszDriver = NULL;
+    LPCSTR lpszAttributes = NULL;
+    auto status = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(status, false);
+}
+
+TEST(SQLConfigDataSourceInternal,NullRequest){
+    HWND hwndParent = NULL; 
+    WORD fRequest = NULL; 
+    LPCSTR lpszDriver = "SQL Server";
+    LPCSTR lpszAttributes = "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+    auto status = SQLConfigDataSourceInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+    EXPECT_EQ(status, false);
+}
+
+#endif
 }  // namespace google::cloud::odbc_bq_driver
