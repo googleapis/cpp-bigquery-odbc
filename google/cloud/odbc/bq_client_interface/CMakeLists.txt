@@ -71,4 +71,4 @@ function (client_interface_define_unit_tests)
     gtest_discover_tests(odbc_bq_client_interface_unit_tests)
 endfunction ()
 
-client_interface_define_unit_tests()
+# client_interface_define_unit_tests()

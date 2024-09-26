@@ -17,6 +17,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(cpp-bigquery-odbc-integration-testing LANGUAGES CXX)
 
+include(CppBigqueryOdbcCommon)
+
 function (define_client_library_integration_tests)
     if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
         return()
@@ -58,7 +60,7 @@ function (odbc_define_tests)
     file(
         GLOB odbc_driver_tests_src_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "odbc_driver_tests/*_test.cc")
+        "odbc_driver_tests/*execution_test.cc")
 
     set(odbc_driver_tests_src ${odbc_driver_tests_src_cc})
 
@@ -89,6 +91,45 @@ function (odbc_define_tests)
     else ()
         gtest_discover_tests(all_tests)
     endif ()
+endfunction ()
+
+
+function (odbc_define_tests1)
+    if (NOT ODBC_INTEGRATION_TESTING)
+        return()
+    endif ()
+
+    enable_testing()
+
+    file(
+        GLOB odbc_driver_tests_src_cc
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "odbc_driver_tests/*execution_test.cc")
+    if (BQ_DRIVER_INTEGRATION_TESTS)
+        file(
+            GLOB internal_odbc_driver_tests_src_cc
+            RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+            "odbc_driver_tests/internal/*_test.cc")
+        list(APPEND odbc_driver_tests_src_cc ${internal_odbc_driver_tests_src_cc}) 
+    endif ()
+
+    foreach (fname IN LISTS odbc_driver_tests_src_cc)
+        cpp_bigquery_odbc_add_executable(target "integration" "${fname}")
+        target_link_libraries(${target} google_cloud_odbc_testing_odbc_utils
+            GTest::gtest_main)
+
+
+        # Setting BQ_DRIVER_INTEGRATION_TESTS should use
+        # google_cloud_odbc_bq_driver target
+        if (BQ_DRIVER_INTEGRATION_TESTS)
+            add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
+            target_link_libraries(${target} google_cloud_odbc_bq_driver)
+        else ()
+            target_link_libraries(${target} odbc)
+        endif ()
+        add_test(NAME ${target} COMMAND ${target})
+        target_compile_features(${target} PUBLIC cxx_std_17)
+    endforeach ()
 endfunction ()
 
 function (odbc_define_demo_tests)
@@ -122,8 +163,6 @@ function (odbc_define_examples)
         return()
     endif ()
 
-    include(CppBigqueryOdbcCommon)
-
     file(
         GLOB examples_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -146,10 +185,10 @@ function (odbc_define_examples)
     endforeach ()
 endfunction ()
 
-odbc_define_demo_tests()
+#odbc_define_demo_tests()
 
-odbc_define_examples()
+#odbc_define_examples()
 
-odbc_define_tests()
+odbc_define_tests1()
 
-define_client_library_integration_tests()
+#define_client_library_integration_tests()

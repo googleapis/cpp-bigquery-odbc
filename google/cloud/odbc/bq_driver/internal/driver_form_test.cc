@@ -23,11 +23,13 @@ class DriverFormTest : public ::testing::Test {
   DriverForm* form;
 
   void SetUp() override {
+    std::cout << "Setup::: " << std::endl;
     form = new DriverForm();
     form->Show();
   }
 
   void TearDown() override {
+    std::cout << "Teardown::: " << std::endl;
     if (form->GetHwnd() != nullptr) {
       DestroyWindow(form->GetHwnd());
     }
