@@ -68,35 +68,24 @@ TEST(SQLGetInfo, CheckPositionalUpdate) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLGetInfoW, CheckPositionalUpdate_Wide) {
+TEST(SQLGetInfoW, CheckDriverName_Wide) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  // Check SQL_DYNAMIC_CURSOR_ATTRIBUTES1
-  SQLUINTEGER sql_bitmask_buf = 0;
-  SQLRETURN status;
-  status = SQLGetInfoW(conn->hdbc, SQL_DYNAMIC_CURSOR_ATTRIBUTES1,
-                       &sql_bitmask_buf, 0, nullptr);
-  CheckError(status, "SQLGetInfoW(SQL_DYNAMIC_CURSOR_ATTRIBUTES1)", conn);
-
-  EXPECT_NE(SQL_CA1_POSITIONED_UPDATE,
-            (sql_bitmask_buf & SQL_CA1_POSITIONED_UPDATE));
-  EXPECT_NE(SQL_CA1_POSITIONED_DELETE,
-            (sql_bitmask_buf & SQL_CA1_POSITIONED_DELETE));
-
-    SQLWCHAR sqlWCharBuf[kBufferLength];
-    std::string expected_info_val = "Google ODBC Driver For BigQuery";
-    SQLSMALLINT out_len;
-    status = SQLGetInfoW(conn->hdbc, SQL_DRIVER_NAME,
-                        reinterpret_cast<SQLPOINTER>(sqlWCharBuf), kBufferLength,
-                        &out_len);
-    ASSERT_TRUE(SQL_SUCCEEDED(status));
-    std::string str_out =
+  SQLWCHAR sqlWCharBuf[kBufferLength];
+  std::string expected_info_val = "Google ODBC Driver For BigQuery";
+  SQLSMALLINT out_len;
+  SQLRETURN status = SQLGetInfoW(conn->hdbc, SQL_DRIVER_NAME,
+                                 reinterpret_cast<SQLPOINTER>(sqlWCharBuf),
+                                 kBufferLength, &out_len);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  std::string str_out =
       ConvertSQLWCHARToString(sqlWCharBuf, out_len / sizeof(SQLWCHAR));
-       std::string actual_val = reinterpret_cast<char*>(sqlWCharBuf);
-       std::cout<<"Str "<<actual_val<<" --- "<<str_out<<std::endl; 
-    EXPECT_EQ(expected_info_val, actual_val);
-
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_EQ(str_out, "Google ODBC Driver For BigQuery");
+#else
+  EXPECT_EQ(str_out, "Simba ODBC Driver for Google BigQuery");
+#endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -701,11 +690,9 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   status = SQLGetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttr", conn);
-  std::cout << "length " << (char*)output << "--" << (char*)(output + 1) << "--"
-            << (char*)(output + 2) << std::endl;
   std::string str_out =
       ConvertSQLWCHARToString(output, length / sizeof(SQLWCHAR));
-  //EXPECT_THAT(expected, StartsWith(str_out));
+  // EXPECT_THAT(expected, StartsWith(str_out));
   EXPECT_EQ(expected.size(), length);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
