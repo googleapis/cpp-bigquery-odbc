@@ -328,73 +328,74 @@ void TraceFunctionEntry_SQLConnectW(
     SQLHDBC connection_handle, SQLWCHAR* server_name,
     SQLSMALLINT server_name_len, SQLWCHAR* user_name, SQLSMALLINT user_name_len,
     const SQLWCHAR* auth_str, SQLSMALLINT auth_str_len, TraceOptions& opts) {
-      std::string server,user,auth;
-      std::wstring server_wstr(reinterpret_cast<wchar_t const*>(server_name));
+  std::string server;
+  std::string user;
+  std::string auth;
+  std::wstring server_wstr(reinterpret_cast<wchar_t const*>(server_name));
   auto server_len = server_wstr.length();
-if(server_len>0){
-  StatusRecordOr<std::string> utf8_server_name =
-      ConvertSQLWCHARToString(server_name, server_name_len);
-  if (!utf8_server_name) {
-    TracePrintInternal(opts, utf8_server_name.GetStatusRecord().message);
-    return;
+  if (server_len > 0) {
+    StatusRecordOr<std::string> utf8_server_name =
+        ConvertSQLWCHARToString(server_name, server_name_len);
+    if (!utf8_server_name) {
+      TracePrintInternal(opts, utf8_server_name.GetStatusRecord().message);
+      return;
+    }
+    server = *utf8_server_name;
+    server_name_len = utf8_server_name->length();
   }
-  server = utf8_server_name->data();
-  server_name_len = utf8_server_name->length();
-}
-std::wstring user_wstr(reinterpret_cast<wchar_t const*>(user_name));
+  std::wstring user_wstr(reinterpret_cast<wchar_t const*>(user_name));
   auto user_len = user_wstr.length();
-if(user_len>0){
-  StatusRecordOr<std::string> utf8_user_name =
-      ConvertSQLWCHARToString(user_name, user_name_len);
-  if (!utf8_user_name) {
-    TracePrintInternal(opts, utf8_user_name.GetStatusRecord().message);
-    return;
+  if (user_len > 0) {
+    StatusRecordOr<std::string> utf8_user_name =
+        ConvertSQLWCHARToString(user_name, user_name_len);
+    if (!utf8_user_name) {
+      TracePrintInternal(opts, utf8_user_name.GetStatusRecord().message);
+      return;
+    }
+    user = *utf8_user_name;
+    user_name_len = utf8_user_name->length();
   }
-  user = utf8_user_name->data();
-  user_name_len = utf8_user_name->length();
-}
   SQLWCHAR auth_string[kAuthBufSize];
   for (int i = 0; i < auth_str_len; ++i) auth_string[i] = *(auth_str + i);
-  if(auth_str_len > 0){
-  StatusRecordOr<std::string> utf8_auth_str =
-      ConvertSQLWCHARToString(auth_string, auth_str_len);
-  if (!utf8_auth_str) {
-    TracePrintInternal(opts, utf8_auth_str.GetStatusRecord().message);
-    return;
+  if (auth_str_len > 0) {
+    StatusRecordOr<std::string> utf8_auth_str =
+        ConvertSQLWCHARToString(auth_string, auth_str_len);
+    if (!utf8_auth_str) {
+      TracePrintInternal(opts, utf8_auth_str.GetStatusRecord().message);
+      return;
+    }
+    auth = *utf8_auth_str;
+    auth_str_len = utf8_auth_str->length();
   }
-  auth = utf8_auth_str->data();
-  auth_str_len = utf8_auth_str->length();
-  }
-  TraceFunctionEntry_SQLConnect(
-      connection_handle, ToSqlChar(server.data()), server_name_len,
-      ToSqlChar(user.data()), user_name_len,
-      ToSqlChar(auth.data()), auth_str_len, opts);
+  TraceFunctionEntry_SQLConnect(connection_handle, ToSqlChar(server.data()),
+                                server_name_len, ToSqlChar(user.data()),
+                                user_name_len, ToSqlChar(auth.data()),
+                                auth_str_len, opts);
 
-if(server_len>0){
-  StatusRecordOr<std::wstring> utf16_server_name =
-      Utf8ToUtf16(server);
-  if (!utf16_server_name) {
-    TracePrintInternal(opts, utf16_server_name.GetStatusRecord().message);
-    return;
-  }
-  server_name = ToSqlWChar(utf16_server_name->data());
+  if (server_len > 0) {
+    StatusRecordOr<std::wstring> utf16_server_name = Utf8ToUtf16(server);
+    if (!utf16_server_name) {
+      TracePrintInternal(opts, utf16_server_name.GetStatusRecord().message);
+      return;
+    }
+    server_name = ToSqlWChar(utf16_server_name->data());
   }
 
-  if(user_len>0){
-  StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(user);
-  if (!utf16_user_name) {
-    TracePrintInternal(opts, utf16_user_name.GetStatusRecord().message);
-    return;
+  if (user_len > 0) {
+    StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(user);
+    if (!utf16_user_name) {
+      TracePrintInternal(opts, utf16_user_name.GetStatusRecord().message);
+      return;
+    }
+    user_name = ToSqlWChar(utf16_user_name->data());
   }
-  user_name = ToSqlWChar(utf16_user_name->data());
-  }
-  if(auth_str_len>0){
-  StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(auth);
-  if (!utf16_auth_str) {
-    TracePrintInternal(opts, utf16_auth_str.GetStatusRecord().message);
-    return;
-  }
-  auth_str = ToSqlWChar(utf16_auth_str->data());
+  if (auth_str_len > 0) {
+    StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(auth);
+    if (!utf16_auth_str) {
+      TracePrintInternal(opts, utf16_auth_str.GetStatusRecord().message);
+      return;
+    }
+    auth_str = ToSqlWChar(utf16_auth_str->data());
   }
 }
 

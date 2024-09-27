@@ -143,7 +143,6 @@ SQLRETURN ConnectW(std::wstring dsn, std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
 
   SetAttributes(conn, timeout);
-  std::wcout<<"wstr "<<dsn<<std::endl;
   std::vector<SQLWCHAR> sqlWStr(dsn.begin(), dsn.end());
   sqlWStr.emplace_back(L'\0');
 
