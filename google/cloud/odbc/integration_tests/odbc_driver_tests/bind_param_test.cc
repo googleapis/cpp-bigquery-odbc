@@ -358,6 +358,13 @@ TEST(SQLBindParameter, Bind_SQL_DOUBLE) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// Not applicable for DriverManager testing.
+// DriverManager sends SQL_C_WCHAR as SQL_C_CHAR for ANSI
+// API version of SQLBindParameter so these tests will give the same
+// results as when sending C type as SQL_C_CHAR.
+// For more details take a look at the Driver Manager code
+// https://github.com/openlink/iODBC/blob/c0b9ece094ec40bb72dcb4868a7507072ec221b7/iodbc/prepare.c#L445
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(SQLBindParameter, Bind_SQL_WCHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -384,6 +391,7 @@ TEST(SQLBindParameter, Bind_SQL_WLONGVARCHAR) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 TEST(SQLBindParameter, Bind_SQL_BIT) {
   auto conn = std::make_shared<ODBCHandles>();
