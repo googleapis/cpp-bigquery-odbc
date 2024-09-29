@@ -783,6 +783,14 @@ TEST(ConvertFromTimestampDSValue, convertToBinary_Success) {
   DSValue src_dsval;
   TimestampToDSValue(Timestamp, src_dsval);
 
+  SQL_TIMESTAMP_STRUCT expectedTimestamp;
+  expectedTimestamp.year = 2024;
+  expectedTimestamp.month = 10;
+  expectedTimestamp.day = 20;
+  expectedTimestamp.hour = 01;
+  expectedTimestamp.minute = 59;
+  expectedTimestamp.second = 43;
+  expectedTimestamp.fraction = 112233000;
   char dest_buf[30];
   DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf), nullptr};
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
@@ -791,13 +799,13 @@ TEST(ConvertFromTimestampDSValue, convertToBinary_Success) {
   SQL_TIMESTAMP_STRUCT* data =
       reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
 
-  EXPECT_EQ(data->year, Timestamp.year);
-  EXPECT_EQ(data->month, Timestamp.month);
-  EXPECT_EQ(data->day, Timestamp.day);
-  EXPECT_EQ(data->hour, Timestamp.hour);
-  EXPECT_EQ(data->minute, Timestamp.minute);
-  EXPECT_EQ(data->second, Timestamp.second);
-  EXPECT_EQ(data->fraction, Timestamp.fraction);
+  EXPECT_EQ(data->year, expectedTimestamp.year);
+  EXPECT_EQ(data->month, expectedTimestamp.month);
+  EXPECT_EQ(data->day, expectedTimestamp.day);
+  EXPECT_EQ(data->hour, expectedTimestamp.hour);
+  EXPECT_EQ(data->minute, expectedTimestamp.minute);
+  EXPECT_EQ(data->second, expectedTimestamp.second);
+  EXPECT_EQ(data->fraction, expectedTimestamp.fraction);
 }
 
 TEST(ConvertFromTimestampDSValue, convertToChar_Success) {

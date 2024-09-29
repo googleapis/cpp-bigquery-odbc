@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include <cmath>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <cmath> 
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -66,8 +66,9 @@ SQL_TIMESTAMP_STRUCT ConvertUnixTimestampToTimestampStruct(
 
   // Calculate whole seconds and fractional part
   auto total_seconds = static_cast<time_t>(unix_timestamp);
-  int fractional_part = round((unix_timestamp - total_seconds)* 1000000);  // Microseconds
- 
+  int fractional_part =
+      round((unix_timestamp - total_seconds) * 1000000);  // Microseconds
+
   // Calculate the date and time components
   int year = 1970;
   while (total_seconds >=
