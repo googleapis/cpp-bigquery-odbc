@@ -515,6 +515,7 @@ inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         if (res_len) {
           *res_len = kTimestampBinaryLength;
         }
+        timestamp_src_struct.fraction = timestamp_src_struct.fraction * 1000;
         std::memcpy(dest_buf, &timestamp_src_struct, kTimestampBinaryLength);
 
       } else {

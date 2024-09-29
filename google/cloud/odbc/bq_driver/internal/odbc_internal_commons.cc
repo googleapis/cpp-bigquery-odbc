@@ -18,6 +18,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <cmath> 
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -65,9 +66,8 @@ SQL_TIMESTAMP_STRUCT ConvertUnixTimestampToTimestampStruct(
 
   // Calculate whole seconds and fractional part
   auto total_seconds = static_cast<time_t>(unix_timestamp);
-  int fractional_part = static_cast<int>((unix_timestamp - total_seconds) *
-                                         1000000);  // Microseconds
-
+  int fractional_part = round((unix_timestamp - total_seconds)* 1000000);  // Microseconds
+ 
   // Calculate the date and time components
   int year = 1970;
   while (total_seconds >=
