@@ -179,12 +179,14 @@ inline void SanitizeIdentifierArgument(std::string& id_arg) {
   }
 }
 
-inline void GetWholeDigitCount(std::string& src_str, int& digit_count) {
+inline int GetWholeDigitCount(std::string& src_str) {
+  int digit_count = 0;
   for (char ch : src_str) {
     if (std::isdigit(ch)) {
       ++digit_count;
     }
   }
+  return digit_count;
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
 

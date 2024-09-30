@@ -90,7 +90,6 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   auto* res_len = reinterpret_cast<SQLLEN*>(dest_data.result_len);
 
   constexpr int kIntervalCharLength = 30;
-  int whole_digit_count = 0;
   int interval_src_len = interval_src_str.length();
 
   if (!dest_buf) {
@@ -104,7 +103,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   switch (dest_type) {
     case SQL_C_CHAR: {
       char* dest = reinterpret_cast<char*>(dest_buf);
-      GetWholeDigitCount(interval_src_str, whole_digit_count);
+      auto whole_digit_count = GetWholeDigitCount(interval_src_str);
       if (buffer_length > kIntervalCharLength) {
         if (res_len) {
           *res_len = interval_src_str.length();
@@ -128,7 +127,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(interval_src_str);
       int interval_char_length = wstr.GetValue().length();
-      GetWholeDigitCount(interval_src_str, whole_digit_count);
+      auto whole_digit_count = GetWholeDigitCount(interval_src_str);
       if (!wstr) {
         status_record =
             StatusRecord{SQLStates::k_HY000(), wstr.GetStatusRecord().message};
@@ -140,9 +139,9 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_STINYINT: {
-      auto* dest = reinterpret_cast<SQLCHAR*>(dest_buf);
-      HandleIntervalArthmeticConversion<SQLCHAR>(dest, conn_interval, res_len,
-                                                 status_record);
+      auto* dest = reinterpret_cast<SQLSCHAR*>(dest_buf);
+      HandleIntervalArthmeticConversion<SQLSCHAR>(dest, conn_interval, res_len,
+                                                  status_record);
       break;
     }
     case SQL_C_UTINYINT: {
