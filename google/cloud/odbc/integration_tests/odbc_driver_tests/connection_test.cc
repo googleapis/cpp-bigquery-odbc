@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
+  using ::testing::StartsWith;
 
 TEST(SQLGetInfo, CheckPositionalUpdate) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -692,7 +694,7 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   CheckError(status, "SQLGetConnectAttr", conn);
   std::string str_out =
       ConvertSQLWCHARToString(output, length / sizeof(SQLWCHAR));
-  // EXPECT_THAT(expected, StartsWith(str_out));
+  EXPECT_THAT(expected, StartsWith(str_out));
   EXPECT_EQ(expected.size(), length);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
