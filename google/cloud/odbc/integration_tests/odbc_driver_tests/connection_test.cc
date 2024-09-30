@@ -695,7 +695,7 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   std::string str_out =
       ConvertSQLWCHARToString(output, length / sizeof(SQLWCHAR));
   EXPECT_STREQ(expected.data(), str_out.data());
-  EXPECT_EQ(expected.size(), length);
+  EXPECT_EQ(expected.size(), length / sizeof(SQLWCHAR));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
