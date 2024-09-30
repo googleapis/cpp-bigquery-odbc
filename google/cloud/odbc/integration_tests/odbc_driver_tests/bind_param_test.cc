@@ -19,6 +19,7 @@
 
 namespace google::cloud::odbc_tests {
 
+
 enum class DescriptorType { kAPD, kIPD };
 
 static constexpr SQLULEN kColSize = 10;
