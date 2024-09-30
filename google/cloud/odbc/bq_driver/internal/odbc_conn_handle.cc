@@ -286,9 +286,6 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       }
       std::string val(reinterpret_cast<char*>(p_val));
       SQLINTEGER p_val_len = val.length();
-      std::cout<<"value "<<val<<std::endl;
-      std::cout<<"length "<<length<<std::endl;
-      std::cout<<"p_val_len "<<p_val_len<<std::endl;
       if (length != p_val_len && length != SQL_NTS) {
         err_msg.append("Invalid attribute length.");
         return StatusRecord{SQLStates::k_HY090(), err_msg};

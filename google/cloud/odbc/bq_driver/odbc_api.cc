@@ -737,7 +737,6 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     std::wstring w_user_name_str(reinterpret_cast<wchar_t const*>(userName));
     w_user_name_len = w_user_name_str.length();
   }
-  std::cout<<"w_user_name_len "<<w_user_name_len<<std::endl;
   if (w_user_name_len > 0) {
     utf8_user_name = ConvertSQLWCHARToString(userName, w_user_name_len);
     if (!utf8_user_name) {
@@ -754,7 +753,6 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     std::wstring w_auth_str(reinterpret_cast<wchar_t const*>(authString));
     w_auth_str_len = w_auth_str.length();
   }
-  std::cout<<"w_auth_str_len "<<w_auth_str_len<<std::endl;
   if (w_auth_str_len > 0) {
     utf8_auth_str = ConvertSQLWCHARToString(authString, w_auth_str_len);
     if (!utf8_auth_str) {
@@ -1271,7 +1269,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
     std::memcpy(value, (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data()),
                 valueBufferLen);
     // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
-    *valueStringLen = updated_out_attr_status->length();
+    *valueStringLen = wcslen(updated_out_attr_status->data());
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
