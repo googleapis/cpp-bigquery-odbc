@@ -678,7 +678,7 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
                                    (SQLPOINTER)buf.data(), 4);
   CheckError(status, "SQLSetConnectAttr", conn);
 
-  std::string expected = "test";
+  std::string expected = "te";
 
   buf[0] = '0';
   std::string buffer =
@@ -692,8 +692,8 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   CheckError(status, "SQLGetConnectAttr", conn);
   std::string str_out =
       ConvertSQLWCHARToString(output, length / sizeof(SQLWCHAR));
-  // EXPECT_THAT(expected, StartsWith(str_out));
-  EXPECT_EQ(expected.size(), length);
+  EXPECT_STREQ(expected.data, str_out.data());
+  EXPECT_EQ(expected.size(), length / sizeof(SQLWCHAR));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
