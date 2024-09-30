@@ -82,9 +82,9 @@ TEST(SQLGetInfoW, CheckDriverName_Wide) {
   std::string str_out =
       ConvertSQLWCHARToString(sqlWCharBuf, out_len / sizeof(SQLWCHAR));
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-  EXPECT_EQ(str_out, "Google ODBC Driver For BigQuery");
+  EXPECT_STREQ(str_out.data(), "Google ODBC Driver For BigQuery");
 #else
-  EXPECT_EQ(str_out, "Simba ODBC Driver for Google BigQuery");
+  EXPECT_STREQ(str_out.data(), "Simba ODBC Driver for Google BigQuery");
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
