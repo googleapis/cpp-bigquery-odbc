@@ -1138,7 +1138,7 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
       return updated_attrib_status.GetCalculatedReturnCode();
     }
     updated_attrib_val = (SQLPOINTER)ToSqlChar(updated_attrib_status->data());
-    updated_value_string_len = updated_attrib_status->length();
+    updated_value_string_len = strlen(updated_attrib_status->c_str());
   } else {
     // If we are not dealing with strings no conversions needed.
     updated_attrib_val = value;
