@@ -371,32 +371,6 @@ void TraceFunctionEntry_SQLConnectW(
                                 server_name_len, ToSqlChar(user.data()),
                                 user_name_len, ToSqlChar(auth.data()),
                                 auth_str_len, opts);
-
-  if (server_len > 0) {
-    StatusRecordOr<std::wstring> utf16_server_name = Utf8ToUtf16(server);
-    if (!utf16_server_name) {
-      TracePrintInternal(opts, utf16_server_name.GetStatusRecord().message);
-      return;
-    }
-    server_name = ToSqlWChar(utf16_server_name->data());
-  }
-
-  if (user_len > 0) {
-    StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(user);
-    if (!utf16_user_name) {
-      TracePrintInternal(opts, utf16_user_name.GetStatusRecord().message);
-      return;
-    }
-    user_name = ToSqlWChar(utf16_user_name->data());
-  }
-  if (auth_str_len > 0) {
-    StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(auth);
-    if (!utf16_auth_str) {
-      TracePrintInternal(opts, utf16_auth_str.GetStatusRecord().message);
-      return;
-    }
-    auth_str = ToSqlWChar(utf16_auth_str->data());
-  }
 }
 
 void TraceFunctionExit_SQLConnectW(SQLRETURN ret_code, TraceOptions& opts) {

@@ -1136,7 +1136,7 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
       return updated_attrib_status.GetCalculatedReturnCode();
     }
     updated_attrib_val = (SQLPOINTER)ToSqlChar(updated_attrib_status->data());
-    updated_value_string_len = updated_attrib_status->length();
+    updated_value_string_len = strlen(updated_attrib_status->c_str());
   } else {
     // If we are not dealing with strings no conversions needed.
     updated_attrib_val = value;
@@ -1269,7 +1269,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
     std::memcpy(value, (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data()),
                 valueBufferLen);
     // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
-    *valueStringLen = updated_out_attr_status->length();
+    *valueStringLen = wcslen(updated_out_attr_status->data());
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
