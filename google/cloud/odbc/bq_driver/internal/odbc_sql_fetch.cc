@@ -58,6 +58,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kJson:
       return ConvertFromJsonDSValue(ds_val, data);
     case BQDataType::kTimeStamp:
+    case BQDataType::kDatetime:
       return ConvertFromTimestampDSValue(ds_val, data);
     case BQDataType::kInterval:
       return ConvertFromIntervalDSValue(ds_val, data);
