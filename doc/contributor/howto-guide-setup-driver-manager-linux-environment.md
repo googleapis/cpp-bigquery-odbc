@@ -10,35 +10,35 @@ tests against that shared library.
    Theoretically any flavor of Linux should work assuming there are no specific
    CMAKE changes for different Linux distributions.
 
-The instructions in this document are not applicable for MacOS and Windows
-environments. There will be separate documents for those environments.
+2. The instructions in this document are not applicable for MacOS and Windows
+   environments. There will be separate documents for those environments.
 
-2. The Driver Manager used is [iODBC DriverManager](https://iodbc.org/).
+3. The Driver Manager used is [iODBC DriverManager](https://iodbc.org/).
 
-3. This document assumes [iODBC DriverManager](https://iodbc.org/) is already
+4. This document assumes [iODBC DriverManager](https://iodbc.org/) is already
    installed on the Linux workstation. If not then please install it from iODBC
    Driver Manager
    [downloads](https://iodbc.org/dataspace/doc/iodbc/wiki/iodbcWiki/Downloads#Packages%20for%20Linux%20Distributions)
    page.
 
-4. This document assumes Simba Driver is installed for the Linux environment. If
+5. This document assumes Simba Driver is installed for the Linux environment. If
    not then please install it first. You can refer to the following documents
    for Linux installations
 
    - [Simba ODBC Guide For Linux Installation](http://goto.google.com/simba-odbc-linux-connector).
    - [Magnitude Simba Configuration Guide](https://storage.googleapis.com/simba-bq-release/odbc/Simba%20Google%20BigQuery%20ODBC%20Connector%20Install%20and%20Configuration%20Guide-2.5.0.1001.pdf)
 
-5. BQ ODBC Driver Development environment has been setup. If not then please
+6. BQ ODBC Driver Development environment has been setup. If not then please
    refer to the
    [setups for CMAKE](https://github.com/googleapis/cpp-bigquery-odbc/blob/main/doc/contributor/howto-guide-setup-cmake-environment.md?plain=1)
    and
    [setup for Bazel](https://github.com/googleapis/cpp-bigquery-odbc/blob/main/doc/contributor/howto-guide-setup-bazel-environment.md)
    for setting up the development environments.
 
-6. Integration tests are running successfully against the static BQ ODBC Driver
+7. Integration tests are running successfully against the static BQ ODBC Driver
    Library.
 
-7. All build and tests commands are run from $CPP_BIGQUERY_ODBC_REPO_PATH
+8. All build and tests commands are run from $CPP_BIGQUERY_ODBC_REPO_PATH
    directory. This directory refers to $HOME/cpp-bigquery-odbc
 
 ## Building the BQ ODBC Driver shared library
