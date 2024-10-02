@@ -131,6 +131,36 @@ TEST(WriteRowset, Success_Basic) {
   }
 }
 
+TEST(WriteRowset, Success_WithOffset) {
+  SQLRETURN status;
+  StatementHandle stmt_handle = CreateStatementHandle();
+  SQLLEN bound_offset = 8;
+  SQLCHAR int_buf[20];
+  SQLLEN strlen_ind_int, strlen_ind_double, strlen_ind_str;
+  status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 20,
+                              &strlen_ind_int);
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  ResultSet result_set;
+  CreateTestingResultSet(result_set);
+
+  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  ard.GetHeaderRecord().bind_offset_ptr = &bound_offset;
+
+  SQLBIGINT* int_populated = (SQLBIGINT*)(int_buf + bound_offset);
+  for (int i = 0; i < kTestingResultSetValues.size(); i++) {
+    result_set.cursor++;
+    StatusRecord status_record = WriteRowset(result_set, 1, ard);
+    EXPECT_TRUE(status_record.ok());
+    SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
+    if (int_expected == kNullInt) {
+      EXPECT_EQ(strlen_ind_int, SQL_NULL_DATA);
+    } else {
+      EXPECT_EQ(*int_populated, int_expected);
+    }
+  }
+}
+
 // Null StrLen_or_IndPtr should cause error during SQLFetch if there were any
 // null values in the result set
 TEST(WriteRowset, Success_Fail_NullIndicator) {

@@ -22,12 +22,16 @@ using google::cloud::odbc_internal::StatusRecord;
 
 StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
                                       BQDataType bq_data_type,
-                                      DescriptorRecord& app_desc_rec) {
+                                      DescriptorRecord& app_desc_rec,
+                                      const SQLLEN* bind_offset_ptr) {
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
   SQLPOINTER app_buffer = app_desc_rec.data_ptr;
   SQLLEN app_buffer_len = app_desc_rec.octet_length;
   SQLLEN* indicator_ptr = app_desc_rec.indicator_ptr;
   SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
+  if (bind_offset_ptr) {
+    app_buffer = static_cast<char*>(app_buffer) + *bind_offset_ptr;
+  }
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
                      octet_length_ptr};
   if (IsDSValueNull(ds_val)) {
@@ -67,6 +71,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
 
 StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
                         DescriptorHandle& ard) {
+  SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
   for (ColumnSchema const& col_schema : schema) {
     int col_index = col_schema.col_index;
     DSValue const& ds_val = ds_row[col_index];
@@ -75,8 +80,8 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
       continue;
     }
     DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
-    StatusRecord status_record =
-        WriteToApplicationBuffer(ds_val, col_schema.col_type, col_desc);
+    StatusRecord status_record = WriteToApplicationBuffer(
+        ds_val, col_schema.col_type, col_desc, bind_offset_ptr);
     if (!status_record.ok()) {
       return status_record;
     }
