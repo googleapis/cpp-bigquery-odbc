@@ -195,6 +195,7 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
       }
       std::string val = (char*)buf;
       *metadata_field_ptr = val;
+      std::cout << info_name << ":: " << *metadata_field_ptr << std::endl;
     }
   }
 
