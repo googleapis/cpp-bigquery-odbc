@@ -433,6 +433,10 @@ inline void CheckError(SQLRETURN status, std::string const api,
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi = false);
 
+// Used for getting api error details after executing a SQLCancel operation.
+SQLRETURN GetCancelErrorDetails(std::string const& api, SQLHANDLE handle,
+                                std::string& error_details);
+
 void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
                       bool use_ansi = false);
 

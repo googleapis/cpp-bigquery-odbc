@@ -222,6 +222,40 @@ std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric) {
   return result;
 }
 
+SQLRETURN GetCancelErrorDetails(std::string const& api, SQLHANDLE handle,
+                                std::string& error_details) {
+  if (handle == nullptr) {
+    return -1;
+  }
+  SQLCHAR buf[kBufferLength];
+  SQLCHAR sqlstate[15];
+  char error_str[kBufferLength];
+  SQLINTEGER native_error = 0;
+  SQLRETURN status;
+  int rec_num = 0;
+  int num_recs = 0;
+
+  status = SQLGetDiagField(SQL_HANDLE_STMT, handle, 0, SQL_DIAG_NUMBER,
+                           &num_recs, 0, 0);
+  if (!SQL_SUCCEEDED(status)) {
+    return status;
+  }
+  while (handle && num_recs--) {
+    status = SQLGetDiagRec(SQL_HANDLE_STMT, handle, ++rec_num, sqlstate,
+                           &native_error, buf, kBufferLength, NULL);
+    if (status == SQL_NO_DATA) {
+      continue;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      return status;
+    }
+    sprintf(error_str, "ERROR:: %d: %s = %s (%ld) SQLSTATE=%s\n", rec_num,
+            api.c_str(), buf, (long)native_error, sqlstate);
+    error_details.append(error_str);
+  }
+  return status;
+}
+
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi) {
   if (handle == nullptr) {
