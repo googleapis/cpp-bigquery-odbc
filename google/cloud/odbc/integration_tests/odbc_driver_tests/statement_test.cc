@@ -1895,6 +1895,7 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
   if (SQL_SUCCEEDED(status)) {
     // We can't cancel an operation that is not in the process of executing.
     CheckError(status, "SQLPrepare", conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   } else if (status == SQL_STILL_EXECUTING) {
     // Cancel the operation
     status = SQLCancel(conn->hstmt);
@@ -1906,6 +1907,7 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
       // be a race condition where execute completed before cancel could cancel
       // the operation.
       CheckError(status, "SQLExecute", conn);
+      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
     } else {
       // Per spec, Make sure SQLState is HY008 and Message is 'Operation
       // canceled'.
@@ -1913,22 +1915,16 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
       ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
 // On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
-// as (HY010)
-#ifdef _WIN32
-      ASSERT_TRUE(absl::StrContains(error, "HY010"))
-          << "SQLExecute failed with unexpected error: " << error;
-      ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
-          << "SQLExecute failed with unexpected error: " << error;
-#else
+// as (HY010) and no other operation is allowed after that.
+#ifndef _WIN32
       ASSERT_TRUE(absl::StrContains(error, "HY008"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
           << "SQLExecute failed with unexpected error: " << error;
+      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 #endif  // _WIN32
     }
   }
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 /////////////////////////////////////////////////////////
