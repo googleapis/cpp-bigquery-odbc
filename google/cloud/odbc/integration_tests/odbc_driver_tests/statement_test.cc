@@ -1912,10 +1912,18 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
       std::string error;
       ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
-      ASSERT_TRUE(absl::StrContains(error, "HY008"))
+// On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
+// as (HY010)
+#ifdef _WIN32
+      ASSERT_TRUE(absl::StrContains(error, "HY010"))
+          << "SQLExecute failed with unexpected error: " << error;
+      ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
+          << "SQLExecute failed with unexpected error: " << error;
+      else() ASSERT_TRUE(absl::StrContains(error, "HY008"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
           << "SQLExecute failed with unexpected error: " << error;
+#endif  // _WIN32
     }
   }
 
