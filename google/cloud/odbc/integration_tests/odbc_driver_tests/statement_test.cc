@@ -1919,7 +1919,8 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLExecute failed with unexpected error: " << error;
-      else() ASSERT_TRUE(absl::StrContains(error, "HY008"))
+#else
+      ASSERT_TRUE(absl::StrContains(error, "HY008"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
           << "SQLExecute failed with unexpected error: " << error;
