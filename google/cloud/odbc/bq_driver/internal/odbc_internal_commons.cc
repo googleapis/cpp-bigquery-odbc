@@ -334,36 +334,37 @@ std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
   return std::string(buffer);
 }
 
-SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(std::string const& date_str) {
-    SQL_TIMESTAMP_STRUCT date_struct = {};
+SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
+    std::string const& date_str) {
+  SQL_TIMESTAMP_STRUCT date_struct = {};
 
-    int year = std::stoi(date_str.substr(0, 4));
-    int month = std::stoi(date_str.substr(5, 2));
-    int day = std::stoi(date_str.substr(8, 2));
-    int hour = std::stoi(date_str.substr(11, 2));
-    int minute = std::stoi(date_str.substr(14, 2));
-    int second = std::stoi(date_str.substr(17, 2));
-    
-    int fraction = 0;
-    std::size_t dot_pos = date_str.find('.', 19);
-    if (dot_pos != std::string::npos) {
-        std::string fraction_str = date_str.substr(dot_pos + 1);
-        fraction_str = fraction_str.substr(0, 6); 
-        while (fraction_str.length() < 6) {
-            fraction_str += "0";  
-        }
-        fraction = std::stoi(fraction_str);
+  int year = std::stoi(date_str.substr(0, 4));
+  int month = std::stoi(date_str.substr(5, 2));
+  int day = std::stoi(date_str.substr(8, 2));
+  int hour = std::stoi(date_str.substr(11, 2));
+  int minute = std::stoi(date_str.substr(14, 2));
+  int second = std::stoi(date_str.substr(17, 2));
+
+  int fraction = 0;
+  std::size_t dot_pos = date_str.find('.', 19);
+  if (dot_pos != std::string::npos) {
+    std::string fraction_str = date_str.substr(dot_pos + 1);
+    fraction_str = fraction_str.substr(0, 6);
+    while (fraction_str.length() < 6) {
+      fraction_str += "0";
     }
+    fraction = std::stoi(fraction_str);
+  }
 
-    date_struct.year = static_cast<SQLSMALLINT>(year);
-    date_struct.month = static_cast<SQLUSMALLINT>(month);
-    date_struct.day = static_cast<SQLUSMALLINT>(day);
-    date_struct.hour = static_cast<SQLUSMALLINT>(hour);
-    date_struct.minute = static_cast<SQLUSMALLINT>(minute);
-    date_struct.second = static_cast<SQLUSMALLINT>(second);
-    date_struct.fraction = static_cast<SQLUINTEGER>(fraction); 
+  date_struct.year = static_cast<SQLSMALLINT>(year);
+  date_struct.month = static_cast<SQLUSMALLINT>(month);
+  date_struct.day = static_cast<SQLUSMALLINT>(day);
+  date_struct.hour = static_cast<SQLUSMALLINT>(hour);
+  date_struct.minute = static_cast<SQLUSMALLINT>(minute);
+  date_struct.second = static_cast<SQLUSMALLINT>(second);
+  date_struct.fraction = static_cast<SQLUINTEGER>(fraction);
 
-    return date_struct;
+  return date_struct;
 }
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
@@ -433,7 +434,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             StringToDSValue(data, row_val);
             break;
           }
-           case BQDataType::kDatetime: {
+          case BQDataType::kDatetime: {
             SQL_TIMESTAMP_STRUCT time_struct =
                 ConvertStringToTimestampStruct(data);
             TimestampToDSValue(time_struct, row_val);
