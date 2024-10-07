@@ -959,4 +959,57 @@ TEST(ConvertStringToIntervalStruct, Empty_str) {
   EXPECT_THROW(ConvertStringToIntervalStruct(empty_str, interval_struct),
                std::invalid_argument);
 }
+
+bool CompareTimestampStruct(const SQL_TIMESTAMP_STRUCT& ts1,
+                            const SQL_TIMESTAMP_STRUCT& ts2) {
+  return ts1.year == ts2.year && ts1.month == ts2.month && ts1.day == ts2.day &&
+         ts1.hour == ts2.hour && ts1.minute == ts2.minute &&
+         ts1.second == ts2.second && ts1.fraction == ts2.fraction;
+}
+
+TEST(ConvertStringToTimestampStruct, ValidDateWithoutFraction) {
+  std::string date_str = "2024-10-04 12:30:45";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 0};
+
+  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+}
+
+TEST(ConvertStringToTimestampStruct, ValidDateWithFraction) {
+  std::string date_str = "2024-10-04 12:30:45.123456";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
+
+  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+}
+
+TEST(ConvertStringToTimestampStruct, ValidDateWithShortFraction) {
+  std::string date_str = "2024-10-04 12:30:45.123";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123000};
+
+  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+}
+
+TEST(ConvertStringToTimestampStruct, ValidDateNoFraction) {
+  std::string date_str = "2024-10-04 12:30:45";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 0};
+
+  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+}
+
+TEST(ConvertStringToTimestampStruct, EmptyDateString) {
+  std::string date_str = "";
+  EXPECT_THROW(ConvertStringToTimestampStruct(date_str), std::invalid_argument);
+}
+
+TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
+  std::string date_str = "2024-10-04 12:30:45.1234567";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
+
+  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

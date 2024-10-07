@@ -316,6 +316,9 @@ ConstructNamedParametersPostQueryRequest(
         google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
         named_query_params);
 
+SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
+    std::string const& date_str);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H
