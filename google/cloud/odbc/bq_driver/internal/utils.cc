@@ -391,6 +391,8 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
+  std::cout<<"stmt_txt_wstr size "<<stmt_txt_wstr.size()<<std::endl;
+  std::cout<<"in_str_len size "<<in_str_len<<std::endl;
   std::wcout<<"stmt_txt_wstr "<<stmt_txt_wstr<<std::endl;
   return Utf16ToUtf8(stmt_txt_wstr);
 }
