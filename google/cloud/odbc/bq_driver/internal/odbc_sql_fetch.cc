@@ -30,7 +30,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   SQLLEN* indicator_ptr = app_desc_rec.indicator_ptr;
   SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
   if (bind_offset_ptr) {
-    app_buffer = static_cast<char*>(app_buffer) + *bind_offset_ptr;
+    app_buffer = reinterpret_cast<char*>(app_buffer) + *bind_offset_ptr;
   }
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
                      octet_length_ptr};
