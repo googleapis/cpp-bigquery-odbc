@@ -23,17 +23,24 @@ using google::cloud::odbc_internal::StatusRecord;
 StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
                                       BQDataType bq_data_type,
                                       DescriptorRecord& app_desc_rec,
-                                      const SQLLEN* bind_offset_ptr) {
+                                      SQLLEN bind_offset,
+                                      SQLLEN bind_offset_ind) {
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
   SQLPOINTER app_buffer = app_desc_rec.data_ptr;
   SQLLEN app_buffer_len = app_desc_rec.octet_length;
   SQLLEN* indicator_ptr = app_desc_rec.indicator_ptr;
   SQLLEN* octet_length_ptr = app_desc_rec.octet_length_ptr;
-  if (bind_offset_ptr) {
-    app_buffer = reinterpret_cast<char*>(app_buffer) + *bind_offset_ptr;
+
+  app_buffer = reinterpret_cast<char*>(app_buffer) + bind_offset;
+  if (indicator_ptr) {
+    indicator_ptr = reinterpret_cast<SQLLEN*>(
+        reinterpret_cast<char*>(indicator_ptr) + bind_offset_ind);
   }
-  DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
-                     octet_length_ptr};
+  if (octet_length_ptr) {
+    octet_length_ptr = reinterpret_cast<SQLLEN*>(
+        reinterpret_cast<char*>(octet_length_ptr) + bind_offset_ind);
+  }
+
   if (IsDSValueNull(ds_val)) {
     if (indicator_ptr == nullptr) {
       return {SQLStates::k_22002(),
@@ -47,6 +54,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   if (indicator_ptr) {
     *indicator_ptr = ds_val.size();
   }
+
+  DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
+                     octet_length_ptr};
   StatusRecord status_record;
   switch (bq_data_type) {
     case BQDataType::kInt64:
@@ -70,9 +80,59 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }
 
+// This is according to the spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function?view=sql-server-ver16#buffer-addresses
+SQLLEN GetElemSize(DescriptorRecord& app_desc_rec) {
+  SQLSMALLINT target_c_type = app_desc_rec.concise_type;
+  SQLLEN app_buffer_len = app_desc_rec.octet_length;
+  switch (target_c_type) {
+    case SQL_C_CHAR:
+    case SQL_C_WCHAR:
+    case SQL_C_BINARY:
+      return app_buffer_len;
+    case SQL_C_SSHORT:
+      return sizeof(SQLSMALLINT);
+    case SQL_C_USHORT:
+      return sizeof(SQLUSMALLINT);
+    case SQL_C_SLONG:
+      return sizeof(SQLINTEGER);
+    case SQL_C_ULONG:
+      return sizeof(SQLUINTEGER);
+    case SQL_C_FLOAT:
+      return sizeof(SQLREAL);
+    case SQL_C_DOUBLE:
+      return sizeof(SQLDOUBLE);
+    case SQL_C_BIT:
+      return sizeof(SQLCHAR);
+    case SQL_C_STINYINT:
+      return sizeof(SQLSCHAR);
+    case SQL_C_UTINYINT:
+      return sizeof(SQLCHAR);
+    case SQL_C_SBIGINT:
+      return sizeof(SQLBIGINT);
+    case SQL_C_UBIGINT:
+      return sizeof(SQLUBIGINT);
+    case SQL_C_NUMERIC:
+      return sizeof(SQL_NUMERIC_STRUCT);
+    case SQL_C_TYPE_DATE:
+      return sizeof(SQL_DATE_STRUCT);
+    case SQL_C_TYPE_TIME:
+      return sizeof(SQL_TIME_STRUCT);
+    case SQL_C_TYPE_TIMESTAMP:
+      return sizeof(SQL_TIMESTAMP_STRUCT);
+    default:
+      return 0;
+  }
+}
+
 StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
-                        DescriptorHandle& ard) {
+                        DescriptorHandle& ard, int row_num) {
   SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
+  SQLLEN bind_offset = 0;
+  if (bind_offset_ptr) {
+    bind_offset = *bind_offset_ptr;
+  }
+
   for (ColumnSchema const& col_schema : schema) {
     int col_index = col_schema.col_index;
     DSValue const& ds_val = ds_row[col_index];
@@ -81,8 +141,22 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
       continue;
     }
     DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
+
+    SQLLEN elem_size, elem_size_ind;
+    SQLINTEGER bind_type = ard.GetHeaderRecord().bind_type;
+    if (bind_type == SQL_BIND_BY_COLUMN) {
+      elem_size = GetElemSize(col_desc);
+      elem_size_ind = sizeof(SQLLEN);
+    } else {
+      elem_size = bind_type;
+      elem_size_ind = bind_type;
+    }
+    SQLLEN row_offset = row_num * elem_size;
+    SQLLEN row_offset_ind = row_num * elem_size_ind;
+
     StatusRecord status_record = WriteToApplicationBuffer(
-        ds_val, col_schema.col_type, col_desc, bind_offset_ptr);
+        ds_val, col_schema.col_type, col_desc, bind_offset + row_offset,
+        bind_offset + row_offset_ind);
     if (!status_record.ok()) {
       return status_record;
     }
@@ -90,25 +164,32 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
   return StatusRecord::Ok();
 }
 
-StatusRecord WriteRowset(ResultSet const& result_set, int rowset_size,
-                         DescriptorHandle& ard) {
+StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
+                         DescriptorHandle& ard, DescriptorHandle& ird) {
   if (rowset_size <= 0) {
     StatusRecord status_record = {SQLStates::k_HY000(),
                                   "rowset_size should not be <= 0"};
     return status_record;
   }
   int cursor = result_set.cursor;
+  int row_counter = 0;
   // We write 'rowset_size' rows from result_set.rows starting at the index
   // 'cursor'
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
-       i++) {
+       i++, row_counter++) {
     StatusRecord status_record =
-        WriteDSRow(result_set.rows[i], result_set.row_schema, ard);
+        WriteDSRow(result_set.rows[i], result_set.row_schema, ard, i - cursor);
     if (!status_record.ok()) {
       return status_record;
     }
     result_set.cursor = i;
   }
+
+  SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;
+  if (rows_processed_ptr) {
+    *rows_processed_ptr = row_counter;
+  }
+
   return StatusRecord::Ok();
 }
 

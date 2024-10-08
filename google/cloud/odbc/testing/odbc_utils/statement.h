@@ -43,8 +43,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
 // Fetches results of a read query with row-wise binding and returns them as a
 // map with the column as keys
-std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
-                                            std::string query, int num_cols);
+std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
+                                      std::string query, int num_cols);
 
 // Uses SQLExecDirect to execute a read query and fetch results
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
