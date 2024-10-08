@@ -119,8 +119,9 @@ void TraceFunctionEntry_SQLDriverConnectW(
     SQLWCHAR* out_conn_str, SQLSMALLINT out_conn_str_buf_len,
     SQLSMALLINT* out_conn_str_len, SQLUSMALLINT driver_completion,
     TraceOptions& opts) {
+  StatusRecordOr<std::string> utf8_in_connection_str;
   if (in_connection_str) {
-    StatusRecordOr<std::string> utf8_in_connection_str =
+    utf8_in_connection_str =
         ConvertSQLWCHARToString(in_connection_str, in_connection_str_len);
     if (!utf8_in_connection_str) {
       TracePrintInternal(opts,
