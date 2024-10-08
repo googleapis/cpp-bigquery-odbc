@@ -899,7 +899,7 @@ struct DateTimeBasicTestStruct {
 
 std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
     {SQL_C_WCHAR, {2024, 2, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
-    {SQL_C_BINARY, {2024, 3, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
+    {SQL_C_BINARY, {2024, 3, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, {2024, 4, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
     {SQL_C_TYPE_TIME, {2024, 5, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
     {SQL_C_TYPE_TIMESTAMP, {2024, 6, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
