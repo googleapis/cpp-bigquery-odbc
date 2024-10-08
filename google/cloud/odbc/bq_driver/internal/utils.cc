@@ -282,7 +282,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+  iconv_t cd = iconv_open("UTF-8//IGNORE", "WCHAR_T");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -391,6 +391,7 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
+  std::wcout<<"stmt_txt_wstr "<<stmt_txt_wstr<<std::endl;
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 

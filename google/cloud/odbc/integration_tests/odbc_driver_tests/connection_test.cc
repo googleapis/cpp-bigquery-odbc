@@ -670,13 +670,9 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  // As per the spec if valuePtr is a character string data, string length
-  // should either the length of the string or SQL_NTS
-  // Simba is not following the spec and accepts incorrect lengths,
-  // Google driver will follow the spec and accept correct lengths.
   auto status = SQLSetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                                    (SQLPOINTER)buf.data(), 4);
-  CheckError(status, "SQLSetConnectAttr", conn);
+  CheckError(status, "SQLSetConnectAttrW", conn);
 
   std::string expected = "te";
 
