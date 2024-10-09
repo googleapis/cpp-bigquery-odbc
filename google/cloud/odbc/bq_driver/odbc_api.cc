@@ -433,7 +433,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   std::wstring in_Connection_wstr(reinterpret_cast<wchar_t const*>(inConnectionString));
     auto in_Connection_wstr_len = in_Connection_wstr.length();
   StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len * sizeof(SQLWCHAR));
+      ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
   if (!utf8_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_in_connection_str.GetStatusRecord().message);
@@ -723,7 +723,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
   }
 
   StatusRecordOr<std::string> utf8_server_name =
-      ConvertSQLWCHARToString(serverName, w_server_name_len *sizeof(SQLWCHAR));
+      ConvertSQLWCHARToString(serverName, serverNameLen);
   if (!utf8_server_name) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_server_name.GetStatusRecord().message);
