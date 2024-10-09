@@ -387,7 +387,7 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len = wstr.size();
     if(sizeof(SQLWCHAR) == 2){
-      in_str_len *= sizeof(SQLWCHAR);
+      in_str_len = in_str_len * sizeof(SQLWCHAR);
     }
   }
   stmt_txt_wstr.reserve(in_str_len);
