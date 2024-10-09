@@ -583,6 +583,7 @@ TEST(TraceLoggingConsole, FormatIntervalStructNegative) {
 #endif  // (ODBCVER >= 0x0300)
 
 #ifdef WIN32
+
 TEST(TraceLoggingConsole, WindowHandles) {
   HWND w1 = nullptr;
   SQLHWND w2 = nullptr;
