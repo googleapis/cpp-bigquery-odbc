@@ -723,7 +723,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
   }
 
   StatusRecordOr<std::string> utf8_server_name =
-      ConvertSQLWCHARToString(serverName, w_server_name_len);
+      ConvertSQLWCHARToString(serverName, w_server_name_len *sizeof(SQLWCHAR));
   if (!utf8_server_name) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_server_name.GetStatusRecord().message);
