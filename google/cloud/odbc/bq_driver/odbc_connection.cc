@@ -22,6 +22,9 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
+#ifdef _WIN32
+#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#endif /* WIN32 */
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
 namespace google::cloud::odbc_bq_driver {
@@ -42,6 +45,10 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef _WIN32
+using google::cloud::odbc_bq_driver_internal::DriverForm;
+#endif /* WIN32 */
 
 /////////////////////////////
 // Internal Helper Functions
@@ -81,6 +88,55 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
   return StatusRecord::Ok();
 }
 
+Section ExtractDSNSection(std::string conn_string,
+                          ConnectionHandle* handle_ref) {
+  StatusRecordOr<Section> connection_params_resp_status =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          conn_string);
+
+  if (!connection_params_resp_status) {
+    LogAndReturnCode(*handle_ref, connection_params_resp_status);
+    return Section();
+  }
+  auto connection_params_resp = *connection_params_resp_status;
+  Section dsn_section;
+  for (auto const& it : connection_params_resp) {
+    std::string property = it.first;
+    std::string value = it.second;
+    dsn_section[property] = value;
+  }
+  return dsn_section;
+}
+
+SQLRETURN ProcessConnectionString(std::string conn_string,
+                                  ConnectionHandle* handle_ref,
+                                  SQLCHAR* out_conn_str,
+                                  SQLSMALLINT* out_conn_str_len) {
+  auto dsn_section = ExtractDSNSection(conn_string, handle_ref);
+
+  // Any parameters defined in the env should
+  //  override the DSN section properties.
+  std::string dsn_name = dsn_section["DSN"];
+  if (!dsn_name.empty()) {
+    OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+  }
+  // Populate the DSN info inside the handle.
+  // This wasn't being called before.
+  handle_ref->SetUp(dsn_section, dsn_name);
+
+  Authentication auth = CreateAuth(dsn_section);
+  StatusRecord status = handle_ref->Connect(auth);
+  if (status.ok() && out_conn_str != nullptr) {
+    // Populate the output parameters as per the spec.
+    std::string out_tmp_str(conn_string);
+    out_tmp_str.append(";");
+    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+            out_tmp_str.length());
+    *out_conn_str_len = out_tmp_str.length();
+  }
+  return LogAndReturnCode(*handle_ref, status);
+}
+
 //////////////////////
 // Public Functions
 //////////////////////
@@ -118,43 +174,58 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   auto* handle_ref = *handle_result;
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-  StatusRecordOr<Section> connection_params_resp_status =
-      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
-          conn_string);
-  if (!connection_params_resp_status) {
-    return LogAndReturnCode(*handle_ref, connection_params_resp_status);
+  if (conn_string.empty() && window_handle == NULL) {
+    auto status_record = StatusRecord{SQLStates::k_HY092(),
+                                      "Invalid attribute/option identifier"};
+    return LogAndReturnCode(*handle_ref, status_record);
   }
 
-  auto connection_params_resp = *connection_params_resp_status;
-  Section dsn_section;
-  for (auto const& it : connection_params_resp) {
-    std::string property = it.first;
-    std::string value = it.second;
-    dsn_section[property] = value;
-  }
+  switch (driver_completion) {
+    case SQL_DRIVER_PROMPT: {
+      if (!window_handle) {
+        auto status_record =
+            StatusRecord{SQLStates::k_HY024(), "Invalid argument value"};
+        return LogAndReturnCode(*handle_ref, status_record);
+      }
+      auto connection_params_resp = ExtractDSNSection(conn_string, handle_ref);
+#ifdef _WIN32
+      if (!connection_params_resp["DSN"].empty() ||
+          !connection_params_resp["DRIVER"].empty() ||
+          !connection_params_resp["FILEDSN"].empty()) {
+        DriverForm form(window_handle);  // Pass window_handle as the parent
+        form.Show();
+        // TODO: ADD conn_string details in form or fetch details
+      }
+#endif /* WIN32 */
+      auto status_record = ProcessConnectionString(
+          conn_string, handle_ref, out_conn_str, out_conn_str_len);
+      return status_record;
+    }
+    case SQL_DRIVER_COMPLETE:
+    case SQL_DRIVER_COMPLETE_REQUIRED: {
+      auto status_record = ProcessConnectionString(
+          conn_string, handle_ref, out_conn_str, out_conn_str_len);
+      return status_record;
+    }
+    case SQL_DRIVER_NOPROMPT: {
+      if (conn_string.empty()) {
+        return LogAndReturnCode(
+            *handle_ref,
+            StatusRecord{
+                SQLStates::k_IM002(),
+                "Data source not found and no default driver specified"});
+      }
 
-  // Any parameters defined in the env should
-  //  override the DSN section properties.
-  std::string dsn_name = connection_params_resp["DSN"];
-  if (!dsn_name.empty()) {
-    OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+      auto status_record = ProcessConnectionString(
+          conn_string, handle_ref, out_conn_str, out_conn_str_len);
+      return status_record;
+    }
+    default:
+      auto status_record =
+          StatusRecord{SQLStates::k_HY110(), "Invalid driver completion"};
+      return LogAndReturnCode(*handle_ref, status_record);
   }
-
-  // Populate the DSN info inside the handle.
-  // This wasn't being called before.
-  handle_ref->SetUp(dsn_section, dsn_name);
-
-  Authentication auth = CreateAuth(dsn_section);
-  StatusRecord status = handle_ref->Connect(auth);
-  if (status.ok() && out_conn_str != nullptr) {
-    // Populate the output parameters as per the spec.
-    std::string out_tmp_str(ToCharStr(in_conn_str));
-    out_tmp_str.append(";");
-    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-            out_tmp_str.length());
-    *out_conn_str_len = out_tmp_str.length();
-  }
-  return LogAndReturnCode(*handle_ref, status);
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,

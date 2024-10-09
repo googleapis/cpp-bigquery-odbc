@@ -79,6 +79,42 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
+SQLRETURN ConnectWithPrompt(std::string conn_str,
+                            std::shared_ptr<ODBCHandles> conn,
+                            SQLHWND window_handle,
+                            SQLUSMALLINT driver_completion, int timeout,
+                            bool use_ansi) {
+  SQLSMALLINT buflen;
+  SQLCHAR data_source[kBufferLength];
+  SQLSMALLINT out_len;
+  SQLRETURN status;
+
+  SetAttributes(conn, timeout, use_ansi);
+
+  StrToChar((char*)data_source, conn_str);
+
+  if (use_ansi) {
+    status =
+        SQLDriverConnectA(conn->hdbc, window_handle, (SQLCHAR*)data_source,
+                          SQL_NTS, (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
+                          &buflen, driver_completion);
+  } else {
+    status = SQLDriverConnect(conn->hdbc, window_handle, (SQLCHAR*)data_source,
+                              SQL_NTS, (SQLCHAR*)conn->outdsn,
+                              sizeof(conn->outdsn), &buflen, driver_completion);
+  }
+  CheckError(status, "SQLDriverConnect", conn, use_ansi);
+
+  conn->connected = true;
+
+  PrintDriverVerName(conn, use_ansi);
+
+  // Allocate statement handle
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  CheckError(status, "SQLAllocHandle", conn);
+  return status;
+}
+
 SQLRETURN ConnectDsnLess(std::string username, std::string auth,
                          std::shared_ptr<ODBCHandles> conn, int timeout,
                          bool use_ansi) {
