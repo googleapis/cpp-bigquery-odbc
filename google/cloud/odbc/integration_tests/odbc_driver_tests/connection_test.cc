@@ -551,6 +551,41 @@ TEST(ConnectionTest, SQLDriverConnectA) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef _WIN32
+TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_PROMPT) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
+                              GetDesktopWindow(), SQL_DRIVER_PROMPT, true),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_COMPLETE) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
+                              GetDesktopWindow(), SQL_DRIVER_COMPLETE, true),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_COMPLETE_REQUIRED) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(
+      ConnectWithPrompt(kDefaultConnectionString, conn, GetDesktopWindow(),
+                        SQL_DRIVER_COMPLETE_REQUIRED, true),
+      SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_NOPROMPT) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
+                              GetDesktopWindow(), SQL_DRIVER_NOPROMPT, true),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif /* WIN32 */
+
 TEST(ConnectionTest, SQLSetConnectAttr_StringWithNullTermInMiddle) {
   SQLCHAR buf[256] = "te\0t";
   SQLINTEGER len = strlen(reinterpret_cast<char*>(buf));
