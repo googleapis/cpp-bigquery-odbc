@@ -35,7 +35,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 }
 
 HWND DriverForm::GetHwnd() const { return m_hwnd; }
-DriverForm::DriverForm() : m_hwnd(NULL) {}
+DriverForm::DriverForm(HWND parent_hwnd)
+    : m_hwnd(NULL), m_parent_hwnd(parent_hwnd) {}
 
 DriverForm::~DriverForm() {
   if (m_hwnd) {

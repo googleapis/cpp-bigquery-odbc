@@ -35,7 +35,7 @@ static int const kIdcDatasetBOX = 113;
 
 class DriverForm {
  public:
-  DriverForm();
+  DriverForm(HWND parent_hwnd = NULL);
   ~DriverForm();
   void Show();
   HWND GetHwnd() const;
@@ -44,6 +44,7 @@ class DriverForm {
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;
+  HWND m_parent_hwnd;
   static char const CLASS_NAME[];
 };
 
