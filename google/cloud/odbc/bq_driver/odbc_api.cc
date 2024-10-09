@@ -433,7 +433,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   std::wstring in_Connection_wstr(reinterpret_cast<wchar_t const*>(inConnectionString));
     auto in_Connection_wstr_len = in_Connection_wstr.length();
   StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len);
+      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len * sizeof(SQLWCHAR));
   if (!utf8_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_in_connection_str.GetStatusRecord().message);
@@ -1268,15 +1268,10 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                          updated_out_attr_status.GetStatusRecord().message);
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
-    // std::memcpy(value,
-    // (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data()),
-    //             valueBufferLen);
-    // value = (SQLPOINTER)ToSqlWChar(updated_out_attr_status->data());
     *valueStringLen = wcslen(updated_out_attr_status->data());
-    std::vector<SQLWCHAR> sql_w_str(updated_out_attr_status->begin(),
-                                    updated_out_attr_status->end());
+    std::vector<SQLWCHAR> sql_w_str(updated_out_attr_status->c_str(), updated_out_attr_status->c_str() + *valueStringLen/sizeof(SQLWCHAR));
     sql_w_str.emplace_back(L'\0');
-    std::memcpy(value, sql_w_str.data(), valueBufferLen);
+    std::memcpy(value, sql_w_str.data(), sql_w_str.size() * sizeof(SQLWCHAR));
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)

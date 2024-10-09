@@ -124,7 +124,7 @@ void TraceFunctionEntry_SQLDriverConnectW(
   auto in_connection_wstr_len = in_connection_wstr.length();
   if (in_connection_wstr_len>0) {
     utf8_in_connection_str =
-        ConvertSQLWCHARToString(in_connection_str, in_connection_wstr_len);
+        ConvertSQLWCHARToString(in_connection_str, in_connection_wstr_len * sizeof(SQLWCHAR));
     if (!utf8_in_connection_str) {
       TracePrintInternal(opts,
                          utf8_in_connection_str.GetStatusRecord().message);
