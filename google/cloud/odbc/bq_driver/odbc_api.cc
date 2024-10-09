@@ -432,6 +432,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // Handle Unicode conversion of input parameters.
   std::wstring in_Connection_wstr(reinterpret_cast<wchar_t const*>(inConnectionString));
     auto in_Connection_wstr_len = in_Connection_wstr.length();
+    std::cout<<"in_Connection_wstr_len "<<in_Connection_wstr_len<<std::endl;
+    std::cout<<"wcslen "<<wcslen(in_Connection_wstr.data())<<std::endl;
   StatusRecordOr<std::string> utf8_in_connection_str =
       ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
   if (!utf8_in_connection_str) {
