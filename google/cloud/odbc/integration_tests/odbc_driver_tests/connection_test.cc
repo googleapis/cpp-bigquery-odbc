@@ -687,9 +687,8 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttrW", conn);
   std::string str_out =
-      ConvertSQLWCHARToString(output, length);
-  //EXPECT_STREQ(expected.data(), str_out.data());
-  EXPECT_EQ(expected.size(), length / sizeof(SQLWCHAR));
+      ConvertSQLWCHARToString(output, SQL_NTS);
+  EXPECT_STREQ(expected.data(), str_out.data());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
