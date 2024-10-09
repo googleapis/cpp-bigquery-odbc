@@ -432,11 +432,11 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // Handle Unicode conversion of input parameters.
   std::wstring in_Connection_wstr(reinterpret_cast<wchar_t const*>(inConnectionString));
     auto in_Connection_wstr_len = in_Connection_wstr.length();
-    std::cout<<"in_Connection_wstr_len "<<in_Connection_wstr_len<<std::endl;
-    std::cout<<"wcslen "<<wcslen(in_Connection_wstr.data())<<std::endl;
-    auto len = wcslen(in_Connection_wstr.data());
+    if(sizeof(SQLWCHAR) == 2){
+      in_Connection_wstr_len *= sizeof(SQLWCHAR);
+    }
   StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(inConnectionString, len * sizeof(SQLWCHAR));
+      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len );
   if (!utf8_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_in_connection_str.GetStatusRecord().message);
