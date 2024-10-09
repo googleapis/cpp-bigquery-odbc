@@ -435,7 +435,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
     std::cout<<"in_Connection_wstr_len "<<in_Connection_wstr_len<<std::endl;
     std::cout<<"wcslen "<<wcslen(in_Connection_wstr.data())<<std::endl;
   StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
+      ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen * sizeof(SQLWCHAR));
   if (!utf8_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_in_connection_str.GetStatusRecord().message);
