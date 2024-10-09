@@ -430,13 +430,14 @@ SQLRETURN SQL_API SQLDriverConnectW(
         outConnectionStringBufferLen, outConnectionStringLen, driverCompletion,
         *(*kTraceOption));
   // Handle Unicode conversion of input parameters.
-  std::wstring in_Connection_wstr(reinterpret_cast<wchar_t const*>(inConnectionString));
-    auto in_Connection_wstr_len = in_Connection_wstr.length();
-    if(sizeof(SQLWCHAR) == 2){
-      in_Connection_wstr_len *= sizeof(SQLWCHAR);
-    }
+  std::wstring in_Connection_wstr(
+      reinterpret_cast<wchar_t const*>(inConnectionString));
+  auto in_Connection_wstr_len = in_Connection_wstr.length();
+  if (sizeof(SQLWCHAR) == 2) {
+    in_Connection_wstr_len *= sizeof(SQLWCHAR);
+  }
   StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len );
+      ConvertSQLWCHARToString(inConnectionString, in_Connection_wstr_len);
   if (!utf8_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf8_in_connection_str.GetStatusRecord().message);
@@ -1272,7 +1273,9 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
     *valueStringLen = wcslen(updated_out_attr_status->data());
-    std::vector<SQLWCHAR> sql_w_str(updated_out_attr_status->c_str(), updated_out_attr_status->c_str() + *valueStringLen/sizeof(SQLWCHAR));
+    std::vector<SQLWCHAR> sql_w_str(
+        updated_out_attr_status->c_str(),
+        updated_out_attr_status->c_str() + *valueStringLen / sizeof(SQLWCHAR));
     sql_w_str.emplace_back(L'\0');
     std::memcpy(value, sql_w_str.data(), sql_w_str.size() * sizeof(SQLWCHAR));
   }

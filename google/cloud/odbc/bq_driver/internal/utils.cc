@@ -386,7 +386,7 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len = wstr.size();
-    if(sizeof(SQLWCHAR) == 2){
+    if (sizeof(SQLWCHAR) == 2) {
       in_str_len = in_str_len * sizeof(SQLWCHAR);
     }
   }
@@ -394,9 +394,6 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
-  std::cout<<"stmt_txt_wstr size "<<stmt_txt_wstr.size()<<std::endl;
-  std::cout<<"in_str_len size "<<in_str_len<<std::endl;
-  std::wcout<<"stmt_txt_wstr "<<stmt_txt_wstr<<std::endl;
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 

@@ -682,12 +682,11 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   EXPECT_STREQ("0est", buffer.data());
 
   SQLWCHAR output[256];
-  SQLINTEGER length =0;
+  SQLINTEGER length = 0;
   status = SQLGetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttrW", conn);
-  std::string str_out =
-      ConvertSQLWCHARToString(output, SQL_NTS);
+  std::string str_out = ConvertSQLWCHARToString(output, SQL_NTS);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
