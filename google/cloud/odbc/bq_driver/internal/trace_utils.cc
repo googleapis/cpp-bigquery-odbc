@@ -728,7 +728,7 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i) {
 }
 #endif /* ODBCVER >= 0x0300 */
 
-#ifdef WIN32
+#ifdef _WIN32
 std::string FormatHWND(HWND handle) {
   char buf[kCharBufSize1];
   if (!handle)

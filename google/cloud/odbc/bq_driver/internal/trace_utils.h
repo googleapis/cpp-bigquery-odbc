@@ -231,7 +231,7 @@ std::string FormatBool(bool b);
 /////////////////////////////////////////////
 // Window specific types.
 /////////////////////////////////////////////
-#ifdef WIN32
+#ifdef _WIN32
 std::string FormatWindowHandle(HWND handle);
 std::string FormatHWND(HWND handle);
 std::string FormatSqlHWND(SQLHWND handle);

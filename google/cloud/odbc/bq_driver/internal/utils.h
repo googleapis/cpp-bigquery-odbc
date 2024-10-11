@@ -199,6 +199,24 @@ std::string GetDSNInfo(std::string const& dsn_name, WORD fRequest);
 
 #endif
 
+odbc_internal::StatusRecord AddDSNToRegistry(std::string const& dsnName,
+                                             std::string const& driver,
+                                             std::string const& description,
+                                             std::string const& serverName,
+                                             std::string const& databaseName,
+                                             WORD fRequest);
+
+odbc_internal::StatusRecord EditDSNInRegistry(
+    std::string const& dsnName, std::string const& lpszDriver,
+    std::string const& email, std::string const& serverName,
+    std::string const& keyFilePath, std::string const& oAuthMechanism,
+    std::string const& catalog, std::string const& datasetName, WORD fRequest);
+
+odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsnName,
+                                                  WORD fRequest);
+
+std::string GetDSNInfo(std::string const& dsnName, WORD fRequest);
+
 inline int GetWholeDigitCount(std::string& src_str) {
   int digit_count = 0;
   for (char ch : src_str) {
