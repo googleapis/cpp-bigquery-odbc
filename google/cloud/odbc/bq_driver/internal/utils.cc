@@ -282,7 +282,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8//IGNORE", "WCHAR_T");
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
