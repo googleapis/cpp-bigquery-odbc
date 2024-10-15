@@ -81,10 +81,30 @@ SQLRETURN SQLBindParameterInternal(
                                   "Invalid descriptor index"};
     return LogAndReturnCode(*handle, status_record);
   }
+
   if (buffer_length < 0) {
     StatusRecord status_record = {SQLStates::k_HY090(),
                                   "Invalid buffer length"};
     return LogAndReturnCode(*handle, status_record);
+  }
+
+  // Before proceeding with further processing,
+  // change the statement states if we have a data-at-execution
+  // parameter. Here we only change the statement states so we can execute
+  // any cancel operation properly. This state change should
+  // ideally be done by SQLParamData but its not
+  // implemented yet. The implementation of those functions would take care of
+  // any changes to SQLBindParameter based on these states.
+  //
+  // TODO(b/308656307, b/308655631): Move this to SQLParamData and SQLPutData
+  // when they are implemented and replace the statement here with calls to
+  // SQLParamData and SQLPutData where applicable.
+  if (parameter_value_ptr) {
+    auto param_value = reinterpret_cast<size_t>(parameter_value_ptr);
+    SQLINTEGER data_at_exec = static_cast<SQLINTEGER>(param_value);
+    if (data_at_exec == SQL_DATA_AT_EXEC) {
+      handle->SetStmtState(StmtStates::kNeedsParams);
+    }
   }
 
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);

@@ -73,6 +73,7 @@ TEST(SQLBindParameterInternal, Fail_ParameterNumberIsZero) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
@@ -94,6 +95,25 @@ TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
+}
+
+TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  SQLUSMALLINT param_number = 1;
+  SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
+  SQLSMALLINT value_type = SQL_C_CHAR;
+  SQLSMALLINT param_type = SQL_CHAR;
+  SQLULEN col_size = 10;
+  SQLSMALLINT decimal_digits = 0;
+  SQLLEN buff_len = col_size;
+  SQLLEN str_len = SQL_LEN_DATA_AT_EXEC(buff_len);
+
+  SQLBindParameterInternal(&stmt_handle, param_number, in_out_type, value_type,
+                           param_type, col_size, decimal_digits,
+                           (SQLPOINTER)SQL_DATA_AT_EXEC, buff_len, &str_len);
+
+  EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal,
@@ -119,6 +139,7 @@ TEST(SQLBindParameterInternal,
   EXPECT_EQ(0, stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
                    .GetHeaderRecord()
                    .count);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal,
@@ -144,6 +165,7 @@ TEST(SQLBindParameterInternal,
   EXPECT_EQ(0, stmt_handle.GetDescriptorHandle(DescriptorType::kIPD)
                    .GetHeaderRecord()
                    .count);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 void AssertDescribeParamResults(SQLRETURN status,
