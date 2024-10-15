@@ -137,7 +137,7 @@ class StatementHandle : public Handle {
   }
 
   // Setters and Getters related to canceling an operation.
-  inline bool IsOperationCanceled() { return operation_canceled_; }
+  inline bool IsOperationCanceled() const { return operation_canceled_; }
 
   inline void EnableCancellation() { operation_canceled_ = true; }
 
