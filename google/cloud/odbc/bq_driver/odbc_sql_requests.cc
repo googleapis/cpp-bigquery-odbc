@@ -101,7 +101,7 @@ SQLRETURN SQLBindParameterInternal(
   // SQLParamData and SQLPutData where applicable.
   if (parameter_value_ptr) {
     auto param_value = reinterpret_cast<size_t>(parameter_value_ptr);
-    SQLINTEGER data_at_exec = static_cast<SQLINTEGER>(param_value);
+    auto data_at_exec = static_cast<SQLINTEGER>(param_value);
     if (data_at_exec == SQL_DATA_AT_EXEC) {
       handle->SetStmtState(StmtStates::kNeedsParams);
     }
