@@ -224,6 +224,10 @@ function (bq_driver_define_unit_tests)
 
     if (WIN32)
         list(APPEND TEST_SOURCES bq_driver/internal/driver_form_test.cc)
+        set_target_properties(
+            google_cloud_odbc_bq_driver
+            PROPERTIES LINK_FLAGS
+                       "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/exports.def")
     endif ()
 
     add_executable(google_cloud_odbc_bq_driver_unit_tests ${TEST_SOURCES})

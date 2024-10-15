@@ -560,4 +560,68 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 
+#ifdef WIN32
+TEST(ConfigDSNInternal, success_currentUser) {
+  HWND hwndParent = NULL;
+  WORD fRequest = ODBC_ADD_DSN;
+  LPCSTR lpszDriver = "SQL Server";
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  auto status =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(status, true);
+  fRequest = ODBC_REMOVE_DSN;
+  auto result2 =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(result2, true);
+}
+
+TEST(ConfigDSNInternal, success_localMachine) {
+  HWND hwndParent = NULL;
+  WORD fRequest = ODBC_ADD_SYS_DSN;
+  LPCSTR lpszDriver = "SQL Server";
+  LPCSTR lpszAttributes =
+      "DSN=TestData\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  auto status =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(status, true);
+  fRequest = ODBC_REMOVE_SYS_DSN;
+  auto result2 =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(result2, true);
+}
+
+TEST(ConfigDSNInternal, NullDriverDetails) {
+  HWND hwndParent = NULL;
+  WORD fRequest = ODBC_ADD_DSN;
+  LPCSTR lpszDriver = NULL;
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  auto status =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(status, false);
+}
+
+TEST(ConfigDSNInternal, NullAttributes) {
+  HWND hwndParent = NULL;
+  WORD fRequest = ODBC_ADD_DSN;
+  LPCSTR lpszDriver = NULL;
+  LPCSTR lpszAttributes = NULL;
+  auto status =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(status, false);
+}
+
+TEST(ConfigDSNInternal, NullRequest) {
+  HWND hwndParent = NULL;
+  WORD fRequest = NULL;
+  LPCSTR lpszDriver = "SQL Server";
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  auto status =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(status, false);
+}
+#endif
+
 }  // namespace google::cloud::odbc_bq_driver

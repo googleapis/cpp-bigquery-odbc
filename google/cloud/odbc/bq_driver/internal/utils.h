@@ -178,6 +178,26 @@ inline void SanitizeIdentifierArgument(std::string& id_arg) {
     std::transform(id_arg.begin(), id_arg.end(), id_arg.begin(), ::toupper);
   }
 }
+#ifdef WIN32
+odbc_internal::StatusRecord AddDSNToRegistry(std::string const& dsn_ame,
+                                             std::string const& driver,
+                                             std::string const& description,
+                                             std::string const& server_name,
+                                             std::string const& database_name,
+                                             WORD fRequest);
+
+odbc_internal::StatusRecord EditDSNInRegistry(
+    std::string const& dsn_name, std::string const& lpsz_driver,
+    std::string const& email, std::string const& server_name,
+    std::string const& key_file_path, std::string const& oAuthMechanism,
+    std::string const& catalog, std::string const& dataset_name, WORD fRequest);
+
+odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name,
+                                                  WORD fRequest);
+
+std::string GetDSNInfo(std::string const& dsn_name, WORD fRequest);
+
+#endif
 
 inline int GetWholeDigitCount(std::string& src_str) {
   int digit_count = 0;

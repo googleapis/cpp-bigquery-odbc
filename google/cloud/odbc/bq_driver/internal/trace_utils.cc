@@ -746,6 +746,25 @@ std::string FormatSqlHWND(SQLHWND handle) {
     sprintf(buf, "\t\t%-s, %p\n", "SQLHWND", handle);
   return buf;
 }
+
+std::string FormatRequest(WORD fRequest) {
+  switch (fRequest) {
+    case ODBC_ADD_DSN:
+      return "ODBC_ADD_DSN";
+    case ODBC_CONFIG_DSN:
+      return "ODBC_CONFIG_DSN";
+    case ODBC_REMOVE_DSN:
+      return "ODBC_REMOVE_DSN";
+    case ODBC_ADD_SYS_DSN:
+      return "ODBC_ADD_SYS_DSN";
+    case ODBC_CONFIG_SYS_DSN:
+      return "ODBC_CONFIG_SYS_DSN";
+    case ODBC_REMOVE_SYS_DSN:
+      return "ODBC_REMOVE_SYS_DSN";
+    default:
+      return "Unknown Request";
+  }
+}
 #endif /* WIN32 */
 
 }  // namespace google::cloud::odbc_bq_driver_internal

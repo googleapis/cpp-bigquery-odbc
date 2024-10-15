@@ -15,9 +15,13 @@
 #ifndef _WIN32
 #include <iconv.h>
 #endif  // LINUX
-
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+
+#ifdef WIN32
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+using ::google::cloud::odbc_bq_driver_internal::FormatRequest;
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -437,5 +441,260 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
   }
   return StatusRecord::Ok();
 }
+#ifdef WIN32
+
+StatusRecord AddDSNToRegistry(std::string const& dsn_name,
+                              std::string const& driver,
+                              std::string const& description,
+                              std::string const& server_name,
+                              std::string const& database_name,
+                              WORD f_request) {
+  std::string const registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+  std::string const odbc_path = "SOFTWARE\\ODBC\\ODBC.INI\\ODBC Data Sources";
+
+  HKEY hKey = nullptr;
+  std::string request = FormatRequest(f_request);
+  HKEY registry_root = nullptr;
+
+  if (request == "ODBC_ADD_DSN") {
+    registry_root = HKEY_CURRENT_USER;
+  } else if (request == "ODBC_ADD_SYS_DSN") {
+    registry_root = HKEY_LOCAL_MACHINE;
+  } else {
+    return StatusRecord{SQLStates::k_HY000(), "Wrong Request"};
+  }
+  if (RegCreateKeyExA(registry_root, registry_path.c_str(), 0, NULL, 0,
+                      KEY_WRITE, NULL, &hKey, NULL) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to create or open registry key for DSN"};
+  }
+
+  if (RegSetValueExA(hKey, "Driver", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(driver.c_str()),
+                     static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to set Driver value for DSN"};
+  }
+
+  if (RegSetValueExA(hKey, "Description", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(description.c_str()),
+                     static_cast<DWORD>(description.size() + 1)) !=
+      ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to set Description value for DSN"};
+  }
+
+  if (RegSetValueExA(hKey, "Server", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(server_name.c_str()),
+                     static_cast<DWORD>(server_name.size() + 1)) !=
+      ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to set Server value for DSN"};
+  }
+
+  if (RegSetValueExA(hKey, "Database", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(database_name.c_str()),
+                     static_cast<DWORD>(database_name.size() + 1)) !=
+      ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to set Database value for DSN"};
+  }
+
+  RegCloseKey(hKey);
+
+  if (RegCreateKeyExA(registry_root, odbc_path.c_str(), 0, NULL, 0, KEY_WRITE,
+                      NULL, &hKey, NULL) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open ODBC Data Sources registry key"};
+  }
+
+  if (RegSetValueExA(hKey, dsn_name.c_str(), 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(driver.c_str()),
+                     static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to add DSN to ODBC Data Sources"};
+  }
+
+  RegCloseKey(hKey);
+  return StatusRecord::Ok();
+}
+
+StatusRecord EditDSNInRegistry(
+    std::string const& dsn_name, std::string const& driver,
+    std::string const& email, std::string const& server_name,
+    std::string const& key_file_path, std::string const& oauth_mechanism,
+    std::string const& catalog, std::string const& dataset_name,
+    WORD f_request) {
+  std::string const registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+
+  HKEY hKey = nullptr;
+  std::string request = FormatRequest(f_request);
+  HKEY registry_root = nullptr;
+
+  if (request == "ODBC_CONFIG_DSN") {
+    registry_root = HKEY_CURRENT_USER;
+  } else if (request == "ODBC_CONFIG_SYS_DSN") {
+    registry_root = HKEY_LOCAL_MACHINE;
+  } else {
+    return StatusRecord{SQLStates::k_HY000(), "Wrong Request"};
+  }
+
+  if (RegOpenKeyExA(registry_root, registry_path.c_str(), 0, KEY_WRITE,
+                    &hKey) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open registry key for DSN"};
+  }
+
+  if (!driver.empty() &&
+      RegSetValueExA(hKey, "Driver", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(driver.c_str()),
+                     static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify Driver value for DSN"};
+  }
+
+  if (!email.empty() &&
+      RegSetValueExA(hKey, "Email", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(email.c_str()),
+                     static_cast<DWORD>(email.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify Email value for DSN"};
+  }
+
+  if (!server_name.empty() &&
+      RegSetValueExA(hKey, "Server", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(server_name.c_str()),
+                     static_cast<DWORD>(server_name.size() + 1)) !=
+          ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify Server value for DSN"};
+  }
+
+  if (!key_file_path.empty() &&
+      RegSetValueExA(hKey, "KeyFilePath", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(key_file_path.c_str()),
+                     static_cast<DWORD>(key_file_path.size() + 1)) !=
+          ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify KeyFilePath value for DSN"};
+  }
+
+  if (!oauth_mechanism.empty() &&
+      RegSetValueExA(hKey, "OAuthMechanism", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(oauth_mechanism.c_str()),
+                     static_cast<DWORD>(oauth_mechanism.size() + 1)) !=
+          ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify OAuthMechanism value for DSN"};
+  }
+
+  if (!catalog.empty() &&
+      RegSetValueExA(hKey, "Catalog", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(catalog.c_str()),
+                     static_cast<DWORD>(catalog.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify Catalog value for DSN"};
+  }
+
+  if (!dataset_name.empty() &&
+      RegSetValueExA(hKey, "Dataset", 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(dataset_name.c_str()),
+                     static_cast<DWORD>(dataset_name.size() + 1)) !=
+          ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to modify Dataset value for DSN"};
+  }
+
+  RegCloseKey(hKey);
+
+  return StatusRecord::Ok();
+}
+
+StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name,
+                                   WORD f_request) {
+  std::string const registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+  std::string const odbc_path = "SOFTWARE\\ODBC\\ODBC.INI\\ODBC Data Sources";
+
+  HKEY hKey = nullptr;
+  std::string request = FormatRequest(f_request);
+  HKEY registry_root = nullptr;
+
+  if (request == "ODBC_REMOVE_DSN") {
+    registry_root = HKEY_CURRENT_USER;
+  } else if (request == "ODBC_REMOVE_SYS_DSN") {
+    registry_root = HKEY_LOCAL_MACHINE;
+  } else {
+    return StatusRecord{SQLStates::k_HY000(), "Wrong Request"};
+  }
+
+  if (RegDeleteKeyA(registry_root, registry_path.c_str()) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to remove registry key for DSN"};
+  }
+
+  if (RegOpenKeyExA(registry_root, odbc_path.c_str(), 0, KEY_WRITE, &hKey) !=
+      ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open ODBC Data Sources registry key"};
+  }
+
+  if (RegDeleteValueA(hKey, dsn_name.c_str()) != ERROR_SUCCESS) {
+    RegCloseKey(hKey);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to remove DSN from ODBC Data Sources"};
+  }
+
+  RegCloseKey(hKey);
+
+  return StatusRecord::Ok();
+}
+
+std::string GetDSNInfo(std::string const& dsn_name, WORD f_request) {
+  HKEY h_key;
+  std::string reg_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+  std::string request = FormatRequest(f_request);
+  HKEY registry_root = nullptr;
+
+  if (request == "ODBC_CONFIG_DSN") {
+    registry_root = HKEY_CURRENT_USER;
+  } else if (request == "ODBC_CONFIG_SYS_DSN") {
+    registry_root = HKEY_LOCAL_MACHINE;
+  }
+
+  if (RegOpenKeyExA(registry_root, reg_path.c_str(), 0, KEY_READ, &h_key) ==
+      ERROR_SUCCESS) {
+    std::string const expected_values[] = {
+        "dsn", "email", "oauthmechanism", "keyfilepath", "catalog", "dataset"};
+    std::string attributes;
+    for (auto const& value_name : expected_values) {
+      char data_buffer[1024];
+      DWORD data_buffer_size = sizeof(data_buffer);
+      LONG result = RegQueryValueExA(h_key, value_name.c_str(), NULL, NULL,
+                                     (LPBYTE)data_buffer, &data_buffer_size);
+
+      if (result == ERROR_SUCCESS) {
+        attributes += value_name + "=" +
+                      std::string(data_buffer, data_buffer_size - 1) + ",";
+      }
+    }
+    RegCloseKey(h_key);
+    return attributes;
+  }
+  return "";
+}
+
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -236,6 +236,7 @@ std::string FormatWindowHandle(HWND handle);
 std::string FormatHWND(HWND handle);
 std::string FormatSqlHWND(SQLHWND handle);
 std::string FormatWindowHandle(SQLHWND handle);
+std::string FormatRequest(WORD fRequest);
 #endif /* WIN32 */
 
 /////////////////////////////////////////////

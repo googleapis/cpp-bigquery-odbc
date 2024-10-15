@@ -24,6 +24,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecIs;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -417,4 +418,56 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
   EXPECT_EQ(arg, " TEST");
 }
 
+#ifdef WIN32
+std::string kTestDsn = "TestDSN";
+std::string kDriver = "TestDriver";
+std::string kDescription = "Test Description";
+std::string kServer = "localhost";
+std::string kDatabase = "TestDatabase";
+std::string kEmail = "test@example.com";
+std::string kOAuthMechanism = "OAuth2";
+std::string kKeyFilePath = "C:\\path\\to\\keyfile";
+std::string kCatalog = "TestCatalog";
+std::string kDataset = "TestDataset";
+
+TEST(AddDSNToRegistry, successfulAssertions) {
+  StatusRecord result = AddDSNToRegistry(kTestDsn, kDriver, kDescription,
+                                         kServer, kDatabase, ODBC_ADD_DSN);
+  ASSERT_TRUE(result.ok());
+  result =
+      EditDSNInRegistry(kTestDsn, kDriver, kEmail, kServer, kKeyFilePath,
+                        kOAuthMechanism, kCatalog, kDataset, ODBC_CONFIG_DSN);
+  ASSERT_TRUE(result.ok());
+  result = RemoveDSNFromRegistry(kTestDsn, ODBC_REMOVE_DSN);
+  ASSERT_TRUE(result.ok());
+}
+
+TEST(GetDSNInfo, infoSuccess) {
+  std::string info = GetDSNInfo(kTestDsn, ODBC_CONFIG_DSN);
+
+  EXPECT_EQ(info.find("dsn=" + kTestDsn), std::string::npos);
+  EXPECT_EQ(info.find("email=" + kEmail), std::string::npos);
+  EXPECT_EQ(info.find("oauthmechanism=" + kOAuthMechanism), std::string::npos);
+  EXPECT_EQ(info.find("keyfilepath=" + kKeyFilePath), std::string::npos);
+  EXPECT_EQ(info.find("catalog=" + kCatalog), std::string::npos);
+  EXPECT_EQ(info.find("dataset=" + kDataset), std::string::npos);
+}
+
+TEST(RemoveDSNFromRegistry, nullRequest) {
+  std::string dsnName = "MyTestDSN";
+  WORD request = NULL;
+  StatusRecord result = AddDSNToRegistry(dsnName, kDriver, kDescription,
+                                         kServer, kDatabase, request);
+
+  EXPECT_THAT(result,
+              StatusRecIs(SQLStates::k_HY000(), HasSubstr("Wrong Request")));
+  result = EditDSNInRegistry(dsnName, kDriver, kEmail, kServer, kKeyFilePath,
+                             kOAuthMechanism, kCatalog, kDataset, request);
+  EXPECT_THAT(result,
+              StatusRecIs(SQLStates::k_HY000(), HasSubstr("Wrong Request")));
+  result = RemoveDSNFromRegistry(dsnName, request);
+  EXPECT_THAT(result,
+              StatusRecIs(SQLStates::k_HY000(), HasSubstr("Wrong Request")));
+}
+#endif
 }  // namespace google::cloud::odbc_bq_driver_internal

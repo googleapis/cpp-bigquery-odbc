@@ -18,10 +18,15 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "odbc_sql_results.h"
+
+#ifdef WIN32
+#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#endif
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -47,6 +52,16 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef WIN32
+using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
+using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
+using google::cloud::odbc_bq_driver_internal::GetDSNInfo;
+using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
+
+bool showForm = FALSE;
+#endif
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -429,5 +444,82 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
 
   return SQL_SUCCESS;
 }
+
+#ifdef WIN32
+bool ConfigDSNInternal(HWND hwndParent, WORD fRequest, LPCSTR lpszDriver,
+                       LPCSTR lpszAttributes) {
+  if (!lpszDriver) {
+    return FALSE;
+  }
+  std::map<std::string, std::string> attributesMap;
+  size_t start = 0;
+  std::string attributesStr(lpszAttributes);
+  while (start < attributesStr.size()) {
+    size_t end = attributesStr.find('\0', start);
+    if (end == std::string::npos) {
+      end = attributesStr.size();
+    }
+    std::string field = attributesStr.substr(start, end - start);
+
+    size_t delimiter = field.find('=');
+    if (delimiter != std::string::npos) {
+      std::string key = field.substr(0, delimiter);
+      std::string value = field.substr(delimiter + 1);
+      attributesMap[key] = value;
+    }
+
+    start = end + 1;
+  }
+  std::string dsnName = attributesMap["DSN"];
+  if (dsnName.empty()) {
+    return FALSE;
+  }
+  std::string description = attributesMap["DESCRIPTION"];
+  std::string serverName = attributesMap["SERVER"];
+  std::string databaseName = attributesMap["DATABASE"];
+  std::string emailId = attributesMap["EMAIL"];
+  switch (fRequest) {
+    case ODBC_ADD_DSN:
+    case ODBC_ADD_SYS_DSN: {
+      auto status = AddDSNToRegistry(dsnName, lpszDriver, description,
+                                     serverName, databaseName, fRequest);
+      return TRUE;
+    }
+    case ODBC_CONFIG_DSN:
+    case ODBC_CONFIG_SYS_DSN: {
+      DriverForm form;
+      std::string email;
+      std::string keyFilePath;
+      std::string oAuthMechanism;
+      std::string catalog;
+      std::string datasetName;
+      std::string attr = GetDSNInfo(dsnName, fRequest);
+      form.SetValues(attr);
+      form.Show();
+      form.GetHwnd();
+      MSG msg = {};
+      while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+      email = form.GetEmail();
+      keyFilePath = form.GetKeyFilePath();
+      oAuthMechanism = form.GetOAuthMechanism();
+      catalog = form.GetCatalogName();
+      datasetName = form.GetDatasetName();
+      EditDSNInRegistry(dsnName, lpszDriver, email, serverName, keyFilePath,
+                        oAuthMechanism, catalog, datasetName, fRequest);
+      return TRUE;
+    }
+    case ODBC_REMOVE_DSN:
+    case ODBC_REMOVE_SYS_DSN:
+      RemoveDSNFromRegistry(dsnName, fRequest);
+      return TRUE;
+
+    default:
+      return FALSE;
+  }
+}
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver

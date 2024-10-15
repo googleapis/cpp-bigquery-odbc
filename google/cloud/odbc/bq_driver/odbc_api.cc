@@ -197,6 +197,10 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTables;
+#ifdef WIN32
+using google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLConfigDataSource;
+using google::cloud::odbc_bq_driver::TraceFunctionExit_SQLConfigDataSource;
+#endif
 
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceOptions;
@@ -4585,7 +4589,6 @@ SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
 
   return rc;
 }
-
 #endif  //_WIN32
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -4607,4 +4610,34 @@ SQLRETURN SQL_API SQLBulkOperations(SQLHSTMT statementHandle,
 
   return rc;
 }
+
+#ifdef WIN32
+////////////////////////////////////////////////////////////////////////////////////////////
+//  adds, modifies, or deletes data sources from the system information.
+// It may prompt the user for connection information. It can be in the driver
+// DLL or a separate setup DLL. For more details see:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/configdsn-function?view=sql-server-ver16
+////////////////////////////////////////////////////////////////////////////////////////////
+BOOL SQL_API ConfigDSN(HWND hwndParent, WORD fRequest, LPCSTR lpszDriver,
+                       LPCSTR lpszAttributes) {
+  bool rc = TRUE;
+  bool is_tracing_enabled = IsTracingEnabled("ConfigDSN");
+
+  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled)
+    TraceFunctionEntry_SQLConfigDataSource(hwndParent, fRequest, lpszDriver,
+                                           lpszAttributes, *(*kTraceOption));
+
+  // Call to common internal function for ConfigDSN
+  // in odbc_sql_results.h.
+  rc = google::cloud::odbc_bq_driver::ConfigDSNInternal(
+      hwndParent, fRequest, lpszDriver, lpszAttributes);
+
+  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled)
+    TraceFunctionExit_SQLConfigDataSource(rc, *(*kTraceOption));
+
+  return rc;
+}
+#endif
 // NOLINTEND
