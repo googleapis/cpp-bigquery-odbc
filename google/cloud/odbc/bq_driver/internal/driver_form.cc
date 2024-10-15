@@ -17,7 +17,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
