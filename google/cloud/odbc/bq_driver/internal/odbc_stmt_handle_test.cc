@@ -392,4 +392,21 @@ TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
+TEST(CancelOperation, Default) {
+  StatementHandle handle;
+  EXPECT_FALSE(handle.IsOperationCanceled());
+}
+
+TEST(CancelOperation, EnableCancellation) {
+  StatementHandle handle;
+  handle.EnableCancellation();
+  EXPECT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(CancelOperation, DisableCancellation) {
+  StatementHandle handle;
+  handle.DisableCancellation();
+  EXPECT_FALSE(handle.IsOperationCanceled());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

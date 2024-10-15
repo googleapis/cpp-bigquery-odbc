@@ -136,6 +136,13 @@ class StatementHandle : public Handle {
     return true;
   }
 
+  // Setters and Getters related to canceling an operation.
+  inline bool IsOperationCanceled() { return operation_canceled_; }
+
+  inline void EnableCancellation() { operation_canceled_ = true; }
+
+  inline void DisableCancellation() { operation_canceled_ = false; }
+
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
  protected:
@@ -155,6 +162,7 @@ class StatementHandle : public Handle {
   google::cloud::bigquery_v2_minimal_internal::Job prepared_job_;
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
+  bool operation_canceled_{false};
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
