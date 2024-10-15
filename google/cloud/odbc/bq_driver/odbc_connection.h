@@ -16,6 +16,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_CONNECTION_H
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <string>
 
 ////////////////////////////////////////////////////////////
 // Defines the following internal APIs related to
@@ -56,6 +57,9 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                              SQLSMALLINT server_name_len, SQLCHAR* user_name,
                              SQLSMALLINT user_name_len, SQLCHAR* auth_string,
                              SQLSMALLINT auth_string_len);
+
+
+SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,std::string dsn_name);
 
 }  // namespace google::cloud::odbc_bq_driver
 

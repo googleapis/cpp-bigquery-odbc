@@ -17,7 +17,6 @@
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <string>
-
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
@@ -33,7 +32,7 @@ static int const kIdcCatalogLabel = 110;
 static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
-
+static int const kIdcButtonTest= 114;
 class DriverForm {
  public:
   DriverForm();
@@ -47,7 +46,7 @@ class DriverForm {
   std::string const& GetOAuthMechanism() const;
   std::string const& GetDatasetName() const;
   std::string const& GetCatalogName() const;
-
+  SQLRETURN returnStatus(SQLRETURN status);
  private:
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);

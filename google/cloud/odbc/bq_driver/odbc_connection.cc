@@ -316,5 +316,57 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   return SQL_SUCCESS;
 }
 
+
+bool ReadDsnFromRegistry(const std::string& dsn_name, Section& dsn_section) {
+    HKEY hKey;
+    std::string registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+    if (RegOpenKeyExA(HKEY_CURRENT_USER, registry_path.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+        std::cerr << "Failed to open registry key for DSN: " << dsn_name << std::endl;
+        return false;
+    }
+
+    std::vector<std::string> keys = {"OAuthMechanism", "KeyFilePath", "Catalog", "Driver"};
+    for (const auto& key : keys) {
+        char value[256];
+        DWORD value_length = sizeof(value);
+        DWORD type = 0;
+
+        if (RegQueryValueExA(hKey, key.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(value), &value_length) == ERROR_SUCCESS) {
+            dsn_section[key] = std::string(value, value_length);
+        } else {
+            std::cerr << "Failed to retrieve property: " << key << " from DSN registry." << std::endl;
+        }
+    }
+
+    RegCloseKey(hKey);
+    return true;
+}
+
+SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,std::string dsn_name) {
+    StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(conn_handle, false);
+    if (!handle_result) {
+        TracePrintInternal(*(*kTraceOption), handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+    }
+    auto* handle_ref = *handle_result;
+
+    Section dsn_section;
+    if (!ReadDsnFromRegistry(dsn_name, dsn_section)) {
+        std::cerr << "Failed to read DSN from registry." << std::endl;
+        return SQL_ERROR; 
+    }
+
+    handle_ref->SetUp(dsn_section, dsn_name);
+
+    Authentication auth = CreateAuth(dsn_section);
+
+    StatusRecord status = handle_ref->Connect(auth);
+    if (!status.ok()) {
+        return LogAndReturnCode(*handle_ref, status);
+    }
+
+    return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)

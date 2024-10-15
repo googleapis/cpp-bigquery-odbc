@@ -15,7 +15,6 @@
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include <map>
-
 namespace google::cloud::odbc_bq_driver_internal {
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
@@ -24,6 +23,7 @@ std::string keyFilePath;
 std::string oAuthMechanism;
 std::string dataset;
 std::string catalog;
+SQLRETURN status=SQL_ERROR;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     PWSTR pCmdLine, int nCmdShow) {
@@ -111,6 +111,7 @@ std::string DriverForm::SetValues(std::string attr) {
 
   return "Success";
 }
+
 // Function to create a font
 HFONT CreateCustomFont(int fontSize) {
   LOGFONT logFont = {};
@@ -145,8 +146,12 @@ HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
 }
 
 // Helper function to create a button
-HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
-                  int height, int id) {
+HWND CreateButton(HWND parent, const char* text, int x, int y, int width, int height, int id, bool isDisabled = false) {
+    DWORD buttonStyles = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON;
+
+    if (isDisabled) {
+        buttonStyles |= WS_DISABLED;
+    }
   return CreateWindowEx(
       0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
       y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
@@ -181,7 +186,9 @@ void DriverForm::InitControls() {
   HWND hDatasetText =
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
-
+  HWND hwndTestButton =
+      CreateButton(m_hwnd, "Test...", 120, 400, 80, 30, kIdcButtonTest ,true);
+      
   HWND hwndOkButton =
       CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
   HWND hwndCancelButton =
@@ -273,6 +280,9 @@ std::string const& DriverForm::GetOAuthMechanism() const {
 std::string const& DriverForm::GetDatasetName() const { return dataset; }
 
 std::string const& DriverForm::GetCatalogName() const { return catalog; }
+SQLRETURN DriverForm::returnStatus(SQLRETURN status){
+  return status;
+}
 
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParam) {
@@ -320,6 +330,16 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           DestroyWindow(hwnd);  // Close the window
           break;
         }
+        case kIdcButtonTest: {
+          if(status==SQL_SUCCESS){
+              MessageBox(hwnd, "Connection Successful!", "Success", MB_OK | MB_ICONINFORMATION);
+            } else {
+                MessageBox(hwnd, "Connection Failed!", "Error", MB_OK | MB_ICONERROR);
+            }
+          
+    break;
+        }
+              
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;

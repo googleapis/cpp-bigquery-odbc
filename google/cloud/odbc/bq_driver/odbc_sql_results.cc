@@ -26,6 +26,7 @@
 
 #ifdef WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google\cloud\odbc\bq_driver\odbc_connection.h"
 #endif
 
 namespace google::cloud::odbc_bq_driver {
@@ -59,8 +60,7 @@ using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetDSNInfo;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
-
-bool showForm = FALSE;
+using google::cloud::odbc_bq_driver::ConnectUsingRegistryDsn;
 #endif
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
@@ -509,6 +509,9 @@ bool ConfigDSNInternal(HWND hwndParent, WORD fRequest, LPCSTR lpszDriver,
       datasetName = form.GetDatasetName();
       EditDSNInRegistry(dsnName, lpszDriver, email, serverName, keyFilePath,
                         oAuthMechanism, catalog, datasetName, fRequest);
+      SQLHDBC conn_handle=nullptr;
+      auto status= ConnectUsingRegistryDsn(conn_handle,dsnName);
+      form.returnStatus(status);
       return TRUE;
     }
     case ODBC_REMOVE_DSN:
