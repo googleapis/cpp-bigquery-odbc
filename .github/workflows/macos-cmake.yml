@@ -49,9 +49,9 @@ jobs:
       run: cmake --version
     - name: python version
       run: python3 -V
-    - name: Install six
+    - name: Install and upgrade six
       # Workaround build errors in vcpkg's gsutil
-      run: pip install --ignore-installed six
+      run: pip install --upgrade six
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       run: |
