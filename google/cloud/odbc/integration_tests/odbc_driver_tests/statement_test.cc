@@ -1773,4 +1773,3 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
 }  // namespace google::cloud::odbc_tests
 
-
