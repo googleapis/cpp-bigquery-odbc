@@ -47,6 +47,8 @@ jobs:
         brew install cmake.rb
     - name: cmake version
       run: cmake --version
+    - name: python version
+      run: python3 -V
     - name: Install six
       # Workaround build errors in vcpkg's gsutil
       run: pip install --ignore-installed six
