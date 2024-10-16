@@ -14,7 +14,7 @@ permissions:
 jobs:
   cmake:
     name: cmake + ${{ matrix.os }} + ${{ matrix.shard }}
-    runs-on: ${{ matrix.os }}-xl
+    runs-on: ${{ matrix.os }}-large
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -22,7 +22,7 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        os: [ macos-13, macos-12 ]
+        os: [ macos-13, macos-12, macos-14 ]
         shard: [ Core ]
     steps:
     - uses: actions/checkout@v3
