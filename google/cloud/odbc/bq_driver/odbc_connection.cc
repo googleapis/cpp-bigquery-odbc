@@ -317,30 +317,30 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
 }
 
 
-bool ReadDsnFromRegistry(const std::string& dsn_name, Section& dsn_section) {
-    HKEY hKey;
-    std::string registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, registry_path.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
-        std::cerr << "Failed to open registry key for DSN: " << dsn_name << std::endl;
-        return false;
-    }
+// bool ReadDsnFromRegistry(const std::string& dsn_name, Section& dsn_section) {
+//     HKEY hKey;
+//     std::string registry_path = "SOFTWARE\\ODBC\\ODBC.INI\\" + dsn_name;
+//     if (RegOpenKeyExA(HKEY_CURRENT_USER, registry_path.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+//         std::cerr << "Failed to open registry key for DSN: " << dsn_name << std::endl;
+//         return false;
+//     }
 
-    std::vector<std::string> keys = {"OAuthMechanism", "KeyFilePath", "Catalog", "Driver"};
-    for (const auto& key : keys) {
-        char value[256];
-        DWORD value_length = sizeof(value);
-        DWORD type = 0;
+//     std::vector<std::string> keys = {"OAuthMechanism", "KeyFilePath", "Catalog", "Driver"};
+//     for (const auto& key : keys) {
+//         char value[256];
+//         DWORD value_length = sizeof(value);
+//         DWORD type = 0;
 
-        if (RegQueryValueExA(hKey, key.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(value), &value_length) == ERROR_SUCCESS) {
-            dsn_section[key] = std::string(value, value_length);
-        } else {
-            std::cerr << "Failed to retrieve property: " << key << " from DSN registry." << std::endl;
-        }
-    }
+//         if (RegQueryValueExA(hKey, key.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(value), &value_length) == ERROR_SUCCESS) {
+//             dsn_section[key] = std::string(value, value_length);
+//         } else {
+//             std::cerr << "Failed to retrieve property: " << key << " from DSN registry." << std::endl;
+//         }
+//     }
 
-    RegCloseKey(hKey);
-    return true;
-}
+//     RegCloseKey(hKey);
+//     return true;
+// }
 
 SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,std::string dsn_name) {
     StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(conn_handle, false);
@@ -351,8 +351,7 @@ SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,std::string dsn_name) {
     auto* handle_ref = *handle_result;
 
     Section dsn_section;
-    if (!ReadDsnFromRegistry(dsn_name, dsn_section)) {
-        std::cerr << "Failed to read DSN from registry." << std::endl;
+    if (dsn_name.empty()) {
         return SQL_ERROR; 
     }
 
