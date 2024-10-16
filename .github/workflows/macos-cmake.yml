@@ -47,11 +47,13 @@ jobs:
         brew install cmake.rb
     - name: cmake version
       run: cmake --version
-    - name: python version
+    - name: python version before
       run: python3 -V
-    - name: Install and upgrade six
+    - name: switch to python 3.9
       # Workaround build errors in vcpkg's gsutil
-      run: pip install --upgrade six
+      run: brew switch python 3.9
+    - name: python version after
+      run: python3 -V
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       run: |
