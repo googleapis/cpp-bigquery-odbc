@@ -32,7 +32,13 @@ jobs:
       with:
         create_credentials_file: true
         credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
+    - uses: actions/setup-python@v5
+      id: py311
+      with:
+        python-version: '3.11'
     - uses: google-github-actions/setup-gcloud@v1
+      env:
+        CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -47,15 +53,6 @@ jobs:
         brew install cmake.rb
     - name: cmake version
       run: cmake --version
-    - name: python version before
-      run: python -V
-    - name: uninstall python 3.12
-      # Workaround build errors in vcpkg's gsutil
-      run: brew uninstall python3
-    - name: install python 3.11
-      run: brew reinstall python@3.11
-    - name: python version after
-      run: python -V
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       run: |
