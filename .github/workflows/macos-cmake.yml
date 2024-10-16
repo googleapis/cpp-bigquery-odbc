@@ -47,6 +47,9 @@ jobs:
         brew install cmake.rb
     - name: cmake version
       run: cmake --version
+    - name: Install six
+      # Workaround build errors in vcpkg's gsutil
+      run: pip install --ignore-installed six
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       run: |
