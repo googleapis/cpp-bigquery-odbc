@@ -54,6 +54,7 @@ jobs:
       run: |
         brew install pyenv
         pyenv install 3.11
+        pyenv global 3.11
     - name: python version after
       run: python3 -V
     - name: Download and Install sccache
