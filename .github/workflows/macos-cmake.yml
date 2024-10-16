@@ -49,9 +49,11 @@ jobs:
       run: cmake --version
     - name: python version before
       run: python3 -V
-    - name: switch to python 3.9
+    - name: switch to python 3.11
       # Workaround build errors in vcpkg's gsutil
-      run: brew switch python 3.9
+      run: |
+        brew install pyenv
+        pyenv install 3.11
     - name: python version after
       run: python3 -V
     - name: Download and Install sccache
