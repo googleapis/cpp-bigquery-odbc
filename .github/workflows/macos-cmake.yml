@@ -51,7 +51,7 @@ jobs:
       run: python -V
     - name: uninstall python 3.12
       # Workaround build errors in vcpkg's gsutil
-      run: brew uninstall --ignore-dependencies python3
+      run: brew uninstall python3
     - name: install python 3.11
       run: brew reinstall python@3.11
     - name: python version after
