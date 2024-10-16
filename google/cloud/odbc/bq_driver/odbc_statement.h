@@ -46,6 +46,7 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                              SQLSMALLINT completion_type);
 
 SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option);
+SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle);
 
 }  // namespace google::cloud::odbc_bq_driver
 

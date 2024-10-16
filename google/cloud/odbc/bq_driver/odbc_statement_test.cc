@@ -1154,4 +1154,77 @@ TEST(SQLFreeStmtInternal, UnbindParameters_NoBoundBuffers) {
   EXPECT_EQ(SQL_SUCCESS, status);
 }
 
+TEST(SQLCancelInternal, Fails_InvalidHandle) {
+  ASSERT_EQ(SQL_INVALID_HANDLE, SQLCancelInternal(nullptr));
+}
+
+TEST(SQLCancelInternal, OperationCanceledPreparedState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementPrepared);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationCanceledStillExecutingState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationCanceledNeedsParamState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kNeedsParams);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationCanceledNeedsPutDataState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kNeedsPutData);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, NoPreviousOperation) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_FALSE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationNotCanceled_StmtExecutedWithRs) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_FALSE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationNotCanceled_StmtExecutedWithoutRs) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  // TODO(jsrinivasan): Uncomment once PR-667 is merged.
+  // ASSERT_FALSE(handle.IsOperationCanceled());
+}
 }  // namespace google::cloud::odbc_bq_driver

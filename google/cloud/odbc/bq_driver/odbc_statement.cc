@@ -444,4 +444,25 @@ SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
   return LogAndReturnCode(stmt_handle, status);
 }
 
+SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  // Make sure there is a previous operation to cancel.
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementPrepared ||
+      stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting ||
+      stmt_handle.GetStmtState() == StmtStates::kNeedsParams ||
+      stmt_handle.GetStmtState() == StmtStates::kNeedsPutData) {
+    stmt_handle.EnableCancellation();
+  }
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver
