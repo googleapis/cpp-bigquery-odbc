@@ -53,7 +53,7 @@ jobs:
       # Workaround build errors in vcpkg's gsutil
       run: brew uninstall --ignore-dependencies python3
     - name: install python 3.11
-      run: brew install python3@3.11
+      run: brew install python@3.11
     - name: python version after
       run: python3 -V
     - name: Download and Install sccache
