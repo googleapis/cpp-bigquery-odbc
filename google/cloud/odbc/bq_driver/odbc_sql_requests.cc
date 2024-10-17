@@ -339,7 +339,8 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+  if (!stmt_handle.IsOperationCanceled() &&
+      stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is still executing"};
@@ -352,6 +353,26 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
         SQLStates::k_HY010(),
         "Function sequence error - statement has already executed"};
     return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  // Check if we have previously canceled an onngoing execute operation request,
+  // If so do the following for any future execute requests:
+  //   1) Disable Cancellation
+  //   2) Put the statement state to be in prepared state so any future requests
+  //   can be executed.
+  // For the the current execute request
+  //   1) Return success without executing the query because user has
+  //      requested cancellation.
+  // For more details please see the cancel design:
+  // http://goto.google.com/odbc-sql-cancel-design
+  if (stmt_handle.IsOperationCanceled() &&
+      stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    // For any future execute requests.
+    stmt_handle.DisableCancellation();
+    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    // For current execution, return without executing the request since
+    // user has cancelled it.
+    return SQL_SUCCESS;
   }
 
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);

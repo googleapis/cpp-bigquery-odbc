@@ -481,6 +481,18 @@ TEST(SQLExecuteInternal, Fail_ExecutionInProgress) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(SQLExecuteInternal, CancellationOfOngoingExecuteOperation) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementStillExecuting);
+  handle.EnableCancellation();
+
+  SQLRETURN status = SQLExecuteInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementPrepared);
+}
+
 TEST(SQLSetCursorNameInternal, Fail_NullHandle) {
   SQLRETURN status = SQLSetCursorNameInternal(nullptr, nullptr, 0);
 
