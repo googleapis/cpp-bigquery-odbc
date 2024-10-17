@@ -25,6 +25,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -290,6 +291,31 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
     return LogAndReturnCode(handle_ref, status_record);
+  }
+
+  std::string query_str = ToCharStr(in_statement_text);
+  if (query_str.empty()) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY000(), "Query text is null or empty"};
+    return LogAndReturnCode(handle_ref, status_record);
+  }
+
+  // Check if we have previously canceled an onngoing prepare operation request,
+  // If so do the following for any future prepare requests:
+  //   1) Disable Cancellation
+  //   2) Put the statement state to be not prepared.
+  // For the the current prepare request
+  //   1) Return success without preparing the query because user has
+  // requested cancellation.
+  // For more details please see the cancel design:
+  // http://goto.google.com/odbc-sql-cancel-design
+  if (handle_ref.IsOperationCanceled() &&
+      handle_ref.GetStmtState() == StmtStates::kStatementPrepared) {
+    // For any future prepare requests.
+    handle_ref.DisableCancellation();
+    handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
+    // For current prepare request.
+    return SQL_SUCCESS;
   }
 
   StatusRecord status = handle_ref.PrepareQuery(in_statement_text);

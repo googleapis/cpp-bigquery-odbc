@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
@@ -34,6 +35,7 @@ using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
+using ::testing::HasSubstr;
 
 TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
   DescriptorHandle desc_handle;
@@ -376,6 +378,71 @@ TEST(SQLPrepareInternal, Fail_InvalidHandle) {
   SQLRETURN status = SQLPrepareInternal(stmt_handle, query, len);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLPrepareInternal, InvalidQueryLength) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+  std::string queryStr = "select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = 0;
+
+  SQLRETURN status = SQLPrepareInternal(&handle, query, len);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid query length"));
+}
+
+TEST(SQLPrepareInternal, NullQueryText) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+
+  SQLRETURN status = SQLPrepareInternal(&handle, nullptr, SQL_NTS);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Query text is null or empty"));
+}
+
+TEST(SQLPrepareInternal, EmptyQueryText) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+  std::string queryStr = "";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+
+  SQLRETURN status = SQLPrepareInternal(&handle, query, SQL_NTS);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Query text is null or empty"));
+}
+
+TEST(SQLPrepareInternal, DisableCancellationOfPreviousOperation) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
+  handle.EnableCancellation();
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLPrepareInternal(&handle, query, len);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
 }
 
 TEST(SQLExecuteInternal, Fail_NullHandle) {
