@@ -197,21 +197,11 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   // Add default dataset from the config
   ConnectionHandle& conn_handle = *GetConnectionHandle();
-  // Not defining a catalog or default dataset is an internal error
-  // and indicates connection handle was not initialized correctly
-  // and we cannot proceed with the server request without it.
   std::string catalog_name = conn_handle.GetDsn().catalog;
-  if (catalog_name.empty()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal error: catalog cannot be empty"};
-  }
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   if (!default_dataset.empty()) {
     req.configuration.query.default_dataset.project_id = catalog_name;
     req.configuration.query.default_dataset.dataset_id = default_dataset;
-  } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal error: default dataset cannot be empty"};
   }
 
   std::regex positional_pattern(R"(\?)");
