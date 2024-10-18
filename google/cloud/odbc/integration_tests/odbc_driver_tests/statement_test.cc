@@ -144,6 +144,7 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
 #ifndef _WIN32
+  // TODO(b/357795885):Handle SQLDescribeCol Api Invalid Output WRT SIMBA(WIN).
   auto results = *FetchDirect(conn, query, 1, is_async, use_ansi);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 #endif  // _WIN32
@@ -1418,8 +1419,7 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
 
   SQLCHAR out_param_name = 0;
-  status =
-      SQLGetDescField(conn->ipd, 1, SQL_DESC_NAME, &out_param_name, 0, NULL);
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_NAME, &out_param_name, 0, 0);
   CheckError(status, "SQLGetDescField(SQL_DESC_NAME)", conn);
   EXPECT_EQ(0, out_param_name);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1730,9 +1730,6 @@ TEST(SQLCloseCursor, CloseCursorAndExecuteAgain) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-// TODO(b/357794952): Handle SQLGetDiagField API Invalid Return Value WRT
-// SIMBA(WIN) during SQLFetch
 
 TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
   auto conn = std::make_shared<ODBCHandles>();

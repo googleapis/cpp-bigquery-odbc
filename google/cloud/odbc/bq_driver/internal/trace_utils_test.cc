@@ -602,7 +602,6 @@ TEST(TraceLoggingConsole, WindowHandles) {
 }
 
 TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 #ifdef _WIN64
   auto sections_status =
       ParseConfig("SOFTWARE\\Google\\ODBC Driver for Google BigQuery");
@@ -611,16 +610,6 @@ TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
       "SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google "
       "BigQuery");
 #endif  // _WIN64
-#else
-#ifdef _WIN64
-  auto sections_status =
-      ParseConfig("SOFTWARE\\Simba\\Simba ODBC Driver for Google BigQuery");
-#else
-  auto sections_status = ParseConfig(
-      "SOFTWARE\\WOW6432Node\\Simba\\Simba ODBC Driver for Google "
-      "BigQuery");
-#endif  // _WIN64
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
   ASSERT_STATUS_RECORD_OK(sections_status);
   auto sections = *sections_status;
 

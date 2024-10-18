@@ -176,16 +176,8 @@ TEST(Parsing, ParseConfig_IncorrectPath) {
 #endif  // _WIN32
 }
 
+#ifndef _WIN32
 TEST(GetPathToOdbcIni, GetPath_EnvVar) {
-#ifdef _WIN32
-  std::string expected = "SampleDSN";
-  google::cloud::odbc_bigquery_client_interface::SetEnv("ODBC_TESTS_DSN",
-                                                        expected);
-  std::string actual =
-      ::google::cloud::internal::GetEnv("ODBC_TESTS_DSN").value_or("");
-  EXPECT_EQ(actual, expected);
-  google::cloud::odbc_bigquery_client_interface::UnsetEnv("ODBC_TESTS_DSN");
-#else
   std::string expected = "my_path";
   google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
 
@@ -193,8 +185,8 @@ TEST(GetPathToOdbcIni, GetPath_EnvVar) {
 
   EXPECT_EQ(actual, expected);
   google::cloud::odbc_bigquery_client_interface::UnsetEnv("ODBCINI");
-#endif  //_WIN32
 }
+#endif
 
 TEST(GetPathToOdbcIni, GetPath_HomeVar) {
 #ifdef _WIN32

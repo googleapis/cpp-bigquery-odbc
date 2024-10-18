@@ -269,8 +269,8 @@ void GetErrorDetails(std::string const& api, SQLHANDLE handle,
   int rec_num = 0;
   int num_recs = 0;
 
-  status = SQLGetDiagField(handle_type, handle, 0, SQL_DIAG_NUMBER, &num_recs,
-                           0, NULL);
+  status =
+      SQLGetDiagField(handle_type, handle, 0, SQL_DIAG_NUMBER, &num_recs, 0, 0);
   if (!SQL_SUCCEEDED(status)) {
     FAIL() << "SQLGetDiagField(" << handle_type
            << ") failed with status: " << status;

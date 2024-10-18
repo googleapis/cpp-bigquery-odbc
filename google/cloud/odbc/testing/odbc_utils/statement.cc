@@ -614,7 +614,7 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
       CheckError(status, "SQLFetch", conn);
     }
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      SQLSMALLINT resp_status = 0, resp_status_len = 0;
+      SQLSMALLINT resp_status, resp_status_len;
       while (1) {
         status = SQLGetData(conn->hstmt, i_c + 1, SQL_CHAR, data, kBufferLength,
                             &strlen_or_ind);

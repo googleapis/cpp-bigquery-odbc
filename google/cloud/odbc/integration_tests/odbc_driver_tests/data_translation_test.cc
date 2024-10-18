@@ -314,8 +314,8 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   std::string query =
       "SELECT StringField FROM " + table_name + " ORDER BY index";
 #ifndef _WIN32
-  // Simba Driver For Windows, SQLGetDiagField API for SQL_DIAG_RETURNCODE not
-  // returning values.
+  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
+  // SQL_DIAG_RETURNCODE not returning values.
   TestTranslationsFromString(conn, query);
 #endif  // _WIN32
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -354,8 +354,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
       "SELECT NumericField FROM " + table_name + " ORDER BY index";
 
 #ifndef _WIN32
-  // Simba Driver For Windows, SQLGetDiagField API for SQL_DIAG_RETURNCODE not
-  // returning values.
+  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
+  // SQL_DIAG_RETURNCODE not returning values.
   TestTranslationsFromArithmetic<NumericBasicTestStruct>(
       conn, query, kConversionFromNumericTestData);
 #endif  // _WIN32
@@ -394,7 +394,8 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   std::string query = "SELECT IntField FROM " + table_name + " ORDER BY index";
 
 #ifndef _WIN32
-  //  Simba Driver For Windows, SQLGetDiagField API for SQL_DIAG_RETURNCODE not
+  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
+  // SQL_DIAG_RETURNCODE not
   //  returning
   // values..
   TestTranslationsFromArithmetic<Int64BasicTestStruct>(
