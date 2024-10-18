@@ -14,7 +14,7 @@ permissions:
 jobs:
   cmake:
     name: cmake + ${{ matrix.os }} + ${{ matrix.shard }}
-    runs-on: ${{ matrix.os }}-xl
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -22,7 +22,7 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        os: [ macos-13, macos-12 ]
+        os: [ macos-14, macos-13, macos-12 ]
         shard: [ Core ]
     steps:
     - uses: actions/checkout@v3
@@ -70,8 +70,13 @@ jobs:
         brew install libiodbc
     - name: Build cpp-bigquery-odbc
       run: |
+        if [ "${{ matrix.os }}" == "macos-14" ]; then
+          export ODBC_INCLUDE_PATH="/opt/homebrew/opt/libiodbc/include"
+        else
+          export ODBC_INCLUDE_PATH="/usr/local/opt/libiodbc/include"
+        fi
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-        /usr/local/bin/bash ci/gha/builds/macos-cmake.sh
+        bash ci/gha/builds/macos-cmake.sh
     env:
       USE_BAZEL_VERSION: 7.0.0
       BAZEL_REMOTE_CACHE: https://storage.googleapis.com/gha-cache-cpp-bigquery-odbc/bazel-cache/${{ matrix.os }}
@@ -80,4 +85,3 @@ jobs:
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.os }},readwrite
-      ODBC_INCLUDE_PATH: /usr/local/opt/libiodbc/include
