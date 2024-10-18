@@ -1430,6 +1430,7 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
       SQLGetDescField(conn->ipd, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
+  
 
 // TODO(b/357798825):Handle SQL_DESC_NAME Invalid Value WRT SIMBA(WIN).
 #ifndef _WIN32
