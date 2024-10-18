@@ -53,6 +53,7 @@ using ::google::cloud::StatusOr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBindParameter;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCancel;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColumns;
@@ -160,6 +161,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTablesW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCancel;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLCloseCursor;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttribute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColumns;
@@ -4425,15 +4427,28 @@ SQLRETURN SQL_API SQLEndTran(SQLSMALLINT handleType, SQLHANDLE handle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcancel-function.
 ////////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
-  SQLRETURN rc = SQL_SUCCESS;
+  SQLRETURN status = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLCancel");
 
+  // Call to Acquire mutex in odbc_lock.h, as applicable for the handle type.
+  status = AcquireHandleMutex(statementHandle, SQL_HANDLE_STMT);
+  if (status != SQL_SUCCESS) {
+    return status;
+  }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLCancel(statementHandle, *(*kTraceOption));
 
-  // Call to internal function for SQLCancel in odbc_statement.h.
+  // Call to internal function for SQLCancel in odbc_sql_results.h.
+  status = google::cloud::odbc_bq_driver::SQLCancelInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLCancel(status, *(*kTraceOption));
 
-  return rc;
+  // Call to Release mutex in odbc_lock.h, as applicable for the handle type.
+  status = ReleaseHandleMutex(statementHandle, SQL_HANDLE_STMT);
+
+  return status;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
