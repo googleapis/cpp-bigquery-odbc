@@ -430,7 +430,7 @@ TEST(SQLPrepareInternal, EmptyQueryText) {
               HasSubstr("Query text is null or empty"));
 }
 
-TEST(SQLPrepareInternal, DisableCancellationOfPreviousOperation) {
+TEST(SQLPrepareInternal, DisableCancellation_PreviouslyCompletedOperation) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   handle.EnableCancellation();
@@ -443,6 +443,44 @@ TEST(SQLPrepareInternal, DisableCancellationOfPreviousOperation) {
   ASSERT_EQ(SQL_SUCCESS, status);
   ASSERT_FALSE(handle.IsOperationCanceled());
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+}
+
+TEST(SQLPrepareInternal, PreviouslyOngoingOperation_Canceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepareStillExecuting);
+  handle.EnableCancellation();
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLPrepareInternal(&handle, query, len);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY008(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Operation canceled"));
+}
+
+TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepareStillExecuting);
+  handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
+  handle.DisableCancellation();
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLPrepareInternal(&handle, query, len);
+
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("cannot execute prepare asynchronously"));
 }
 
 TEST(SQLExecuteInternal, Fail_NullHandle) {

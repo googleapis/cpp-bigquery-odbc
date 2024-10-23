@@ -33,6 +33,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 enum class StmtStates {
   kStatementNotPrepared,
   kStatementPrepared,
+  kStatementPrepareStillExecuting,
   kStatementStillExecuting,
   kStatementExecutedWithoutRs,
   kStatementExecutedWithRs,
@@ -145,6 +146,14 @@ class StatementHandle : public Handle {
 
   std::mutex& GetMutex() const { return statement_handle_mutex_; }
 
+  std::optional<std::future<StatusRecord>> GetPossibleFuturePrepareQuery() {
+    return std::move(future_prepare_query_);
+  }
+  void SetFuturePrepareQuery(std::future<StatusRecord> fut_prepare_query) {
+    future_prepare_query_ = std::move(fut_prepare_query);
+  }
+  void NullFuturePrepareQuery() { future_prepare_query_ = std::nullopt; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -163,6 +172,8 @@ class StatementHandle : public Handle {
   odbc_internal::StatusRecord PopulateResultSet(
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
   bool operation_canceled_{false};
+  // Needed for cancellation and re-execution of asynchronous prepare requests.
+  std::optional<std::future<StatusRecord>> future_prepare_query_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
