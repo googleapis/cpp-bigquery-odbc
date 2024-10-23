@@ -246,4 +246,56 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
+SQLRETURN ConnectWithBrowse(std::string conn_str,
+                            std::shared_ptr<ODBCHandles> conn, int timeout,
+                            bool use_ansi) {
+  SQLCHAR data_source[kBufferLength];
+  SQLSMALLINT out_conn_str_len;
+  SQLRETURN status;
+
+  SetAttributes(conn, timeout, use_ansi);
+  std::cout << "str-> " << conn_str << std::endl;
+  StrToChar((char*)data_source, conn_str);
+  std::cout << "str2-> " << data_source << std::endl;
+  do {
+    if (use_ansi) {
+      status = SQLBrowseConnectA(conn->hdbc, (SQLCHAR*)data_source, SQL_NTS,
+                                 (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
+                                 &out_conn_str_len);
+    } else {
+      status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)data_source, SQL_NTS,
+                                (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
+                                &out_conn_str_len);
+
+      if (status == SQL_NEED_DATA) {
+        // Append the additional input to the current connection string
+        // for non user interaction
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+        memset(data_source, 0, sizeof(data_source));
+        auto key_path =
+            GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY")
+                .value_or("");
+        std::string additional_input =
+            ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;KeyFilePath=" +
+            key_path;
+        strcat((char*)data_source, additional_input.c_str());
+#endif
+      }
+    }
+
+  } while (status == SQL_NEED_DATA);
+
+  CheckError(status, "SQLBrowseConnect", conn, use_ansi);
+  conn->connected = true;
+
+  PrintDriverVerName(conn, use_ansi);
+
+  if (status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO) {
+    // Allocate statement handle
+    status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+    CheckError(status, "SQLAllocHandle", conn);
+  }
+  return status;
+}
+
 }  // namespace google::cloud::odbc_tests

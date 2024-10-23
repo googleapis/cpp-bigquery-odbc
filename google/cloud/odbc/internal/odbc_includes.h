@@ -32,6 +32,7 @@
 #ifdef _WIN32
 #include <algorithm>
 #include <cstdint>
+#include <sstream>
 #undef min
 #undef GetJob
 #undef SQLTables

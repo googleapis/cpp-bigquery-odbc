@@ -20,10 +20,12 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bq_driver::ToSqlChar;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -270,4 +272,133 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionHandle) {
+  auto status = SQLBrowseConnectInternal(NULL, NULL, NULL, NULL, 0, 0);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionStr) {
+  SQLCHAR* in_conn_str = ToSqlChar("DSN=TestDSN;UID=user;PWD=password;");
+  SQLSMALLINT in_conn_str_len = -2;
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, in_conn_str_len, (SQLCHAR*)out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid string or buffer length",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLBrowseConnectInternal, Fail_MissingDSNAndDriver) {
+  SQLCHAR* in_conn_str = ToSqlChar("UID=user;PWD=password;");
+  SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, conn_str_len, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_IM002(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Data source not found and no default driver specified",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLBrowseConnectInternal, Fail_MissingRequiredKeyword) {
+  auto conn_str =
+      "DRIVER=Simba ODBC Driver for Google"
+      "BigQuery;Catalog=bigquery-devtools-drivers;OAuthMechanism=0";
+  SQLCHAR* in_conn_str = ToSqlChar(conn_str);
+  SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, conn_str_len, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(SQL_NEED_DATA, status);
+}
+
+TEST(SQLBrowseConnectInternal, Success_with_DriverName) {
+  auto key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  auto conn_str =
+      "DRIVER=Simba ODBC Driver for Google"
+      "BigQuery;Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
+      "KeyFilePath=" +
+      key_path;
+
+  SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
+  SQLSMALLINT in_conn_str_len = conn_str.length();
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, in_conn_str_len, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+
+  std::string expected_out_conn_str =
+      "DRIVER=Simba ODBC Driver for Google"
+      "BigQuery;Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
+      "KeyFilePath=" +
+      key_path;
+  EXPECT_EQ(expected_out_conn_str, reinterpret_cast<char*>(out_conn_str));
+  EXPECT_EQ(expected_out_conn_str.length(), out_conn_str_len);
+  EXPECT_TRUE(conn_handle.IsConnected());
+}
+
+#ifdef _WIN32
+TEST(SQLBrowseConnectInternal, Success_with_DSN) {
+  SQLCHAR* in_conn_str = ToSqlChar("DSN=NEW_TEST_DSN");
+  SQLSMALLINT in_conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, in_conn_str_len, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+
+  std::string expected_out_conn_str = "DSN=NEW_TEST_DSN";
+  EXPECT_EQ(expected_out_conn_str, reinterpret_cast<char*>(out_conn_str));
+  EXPECT_EQ(expected_out_conn_str.length(), out_conn_str_len);
+  EXPECT_TRUE(conn_handle.IsConnected());
+}
+
+TEST(SQLBrowseConnectInternal, Success_OverrideDSNWithConnStrVal) {
+  auto key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  auto conn_str = "DSN=NEW_TEST_DSN;KeyFilePath=" + key_path;
+
+  SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
+  SQLSMALLINT in_conn_str_len = conn_str.length();
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  auto status = SQLBrowseConnectInternal(
+      &conn_handle, in_conn_str, in_conn_str_len, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+
+  std::string expected_out_conn_str =
+      "DSN=NEW_TEST_DSN;KeyFilePath=" + key_path;
+  EXPECT_EQ(expected_out_conn_str, reinterpret_cast<char*>(out_conn_str));
+  EXPECT_EQ(expected_out_conn_str.length(), out_conn_str_len);
+}
+#endif /* WIN32 */
 }  // namespace google::cloud::odbc_bq_driver
