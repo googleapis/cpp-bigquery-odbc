@@ -63,6 +63,7 @@ echo 'Configuring Environment Variables For ODBC Driver...'
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:/usr/local/lib/
 export ODBCINI=/opt/odbc-driver/googlebigqueryodbc/odbc.ini
 export ODBCINSTINI=/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini
+export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/opt/odbc-driver/connection/key.json
 export SIMBAGOOGLEBIGQUERYODBCINI=/opt/odbc-driver/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
 
 cd "$CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR"
