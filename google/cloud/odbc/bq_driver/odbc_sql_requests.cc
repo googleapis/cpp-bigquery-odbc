@@ -67,17 +67,16 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref,
       // execute it again.
       handle_ref.NullFuturePrepareQuery();
       return LogAndReturnCode(handle_ref, status);
-    } else {
-      // If for any reason we don't have the future and we have async
-      // execution enabled then this is an error. We also reset the statement
-      // state.
-      handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
-      if (async_enable == SQL_ASYNC_ENABLE_ON) {
-        auto status_record = StatusRecord{
-            SQLStates::k_HY000(),
-            "Internal error: cannot execute prepare asynchronously"};
-        return LogAndReturnCode(handle_ref, status_record);
-      }
+    }
+    // If for any reason we don't have the future and we have async
+    // execution enabled then this is an error. We also reset the statement
+    // state.
+    handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
+    if (async_enable == SQL_ASYNC_ENABLE_ON) {
+      auto status_record =
+          StatusRecord{SQLStates::k_HY000(),
+                       "Internal error: cannot execute prepare asynchronously"};
+      return LogAndReturnCode(handle_ref, status_record);
     }
   } else {
     // User has requested cancellation of an ongoing prepare operation.
