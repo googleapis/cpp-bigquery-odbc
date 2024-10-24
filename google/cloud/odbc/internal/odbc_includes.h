@@ -71,6 +71,14 @@
 #undef SQLCancelHandle
 #endif  //_WIN32
 
+// Hard code for linux
+#ifdef _WIN32
+std::string key_path =
+    GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+#else
+std::string key_path = "/opt/odbc-driver/connection/key.json";
+#endif
+
 #define SQL_ODBC3_API_START SQL_API_SQLALLOCHANDLE
 #define SQL_ODBC3_API_LAST SQL_API_SQLFETCHSCROLL
 

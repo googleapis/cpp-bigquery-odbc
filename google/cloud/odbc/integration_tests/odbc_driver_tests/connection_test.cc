@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -534,8 +535,6 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriverName) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   auto conn_str = "DRIVER=Simba ODBC Driver for Google BigQuery";
 #else
-  auto key_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   auto conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
       "Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"

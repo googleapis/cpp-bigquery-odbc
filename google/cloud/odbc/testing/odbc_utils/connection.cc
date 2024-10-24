@@ -270,9 +270,7 @@ SQLRETURN ConnectWithBrowse(std::string conn_str,
         // for non user interaction
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
         memset(data_source, 0, sizeof(data_source));
-        auto key_path =
-            GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY")
-                .value_or("");
+        auto key_path = "/opt/odbc-driver/connection/key.json";
         std::string additional_input =
             ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;KeyFilePath=" +
             key_path;

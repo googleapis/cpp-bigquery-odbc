@@ -328,8 +328,6 @@ TEST(SQLBrowseConnectInternal, Fail_MissingRequiredKeyword) {
 }
 
 TEST(SQLBrowseConnectInternal, Success_with_DriverName) {
-  auto key_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   std::cout << "key-file->> " << key_path << std::endl;
   std::string conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
@@ -381,8 +379,6 @@ TEST(SQLBrowseConnectInternal, Success_with_DSN) {
 }
 
 TEST(SQLBrowseConnectInternal, Success_OverrideDSNWithConnStrVal) {
-  auto key_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   auto conn_str = "DSN=SampleDSN;KeyFilePath=" + key_path;
 
   SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
