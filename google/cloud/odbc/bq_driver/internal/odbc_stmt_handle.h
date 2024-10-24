@@ -152,7 +152,7 @@ class StatementHandle : public Handle {
   void SetFuturePrepareQuery(std::future<StatusRecord> fut_prepare_query) {
     future_prepare_query_ = std::move(fut_prepare_query);
   }
-  void NullFuturePrepareQuery() { future_prepare_query_ = std::nullopt; }
+  void SetNullFuturePrepareQuery() { future_prepare_query_ = std::nullopt; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;

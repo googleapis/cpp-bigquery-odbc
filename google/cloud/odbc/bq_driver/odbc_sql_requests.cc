@@ -65,7 +65,7 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref,
       StatusRecord status = future_query.value().get();
       // Once the prepare future is executed reset it so we don't try to
       // execute it again.
-      handle_ref.NullFuturePrepareQuery();
+      handle_ref.SetNullFuturePrepareQuery();
       return LogAndReturnCode(handle_ref, status);
     }
     // If for any reason we don't have the future and we have async
