@@ -20,12 +20,13 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+// #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::internal::GetEnv;
 using google::cloud::odbc_bq_driver::ToSqlChar;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -35,7 +36,8 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
-using google::cloud::odbc_tests::key_path;
+
+// using google::cloud::odbc_tests::key_path;
 
 TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
   EnvironmentHandle env_handle;
@@ -329,6 +331,8 @@ TEST(SQLBrowseConnectInternal, Fail_MissingRequiredKeyword) {
 }
 
 TEST(SQLBrowseConnectInternal, Success_with_DriverName) {
+  auto key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   std::cout << "key-file->> " << key_path << std::endl;
   std::string conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
@@ -380,6 +384,8 @@ TEST(SQLBrowseConnectInternal, Success_with_DSN) {
 }
 
 TEST(SQLBrowseConnectInternal, Success_OverrideDSNWithConnStrVal) {
+  auto key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   auto conn_str = "DSN=SampleDSN;KeyFilePath=" + key_path;
 
   SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
