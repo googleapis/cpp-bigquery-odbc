@@ -1168,6 +1168,26 @@ TEST(SQLCancelInternal, OperationCanceledPreparedState) {
   ASSERT_TRUE(handle.IsOperationCanceled());
 }
 
+TEST(SQLCancelInternal, OperationCanceledAsyncPrepareState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementAsyncPrepare);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
+TEST(SQLCancelInternal, OperationCanceledAsyncExecuteState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementAsyncExecute);
+
+  SQLRETURN status = SQLCancelInternal(&handle);
+
+  ASSERT_EQ(SQL_SUCCESS, status);
+  ASSERT_TRUE(handle.IsOperationCanceled());
+}
+
 TEST(SQLCancelInternal, OperationCanceledStillExecutingState) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementStillExecuting);

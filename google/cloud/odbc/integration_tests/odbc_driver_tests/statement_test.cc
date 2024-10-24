@@ -1751,6 +1751,7 @@ TEST(SQLCloseCursor, CloseCursorWhileEndingTransaction) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// Prepare is async.
 TEST(SQLCancel, Prepare_CancelAsync_StillExecuting) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -1763,6 +1764,7 @@ TEST(SQLCancel, Prepare_CancelAsync_StillExecuting) {
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::string query = "Select 1";
+  // Prepare processed asynchronously.
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
   if (SQL_SUCCEEDED(status)) {
@@ -1796,7 +1798,63 @@ TEST(SQLCancel, Prepare_CancelAsync_StillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// Prepare is synchronous. Execute is async.
 TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
+                                   std::chrono::milliseconds(100), 2);
+
+  std::string query = "Select 1";
+  // Prepare will be processed synchronously.
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Execute should process asynchronously.
+  status = SQLExecute(conn->hstmt);
+
+  if (SQL_SUCCEEDED(status)) {
+    // We can't cancel an operation that is not in the process of executing.
+    CheckError(status, "SQLPrepare", conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  } else if (status == SQL_STILL_EXECUTING) {
+    // Cancel the operation
+    status = SQLCancel(conn->hstmt);
+    CheckError(status, "SQLCancel", conn);
+    // Call SQLExecute till completion
+    status = PollODBC(SQLExecute, backoff, conn->hstmt);
+    if (SQL_SUCCEEDED(status)) {
+      // Operation could not be cancelled. This is not an error as there could
+      // be a race condition where execute completed before cancel could cancel
+      // the operation.
+      CheckError(status, "SQLExecute", conn);
+      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    } else {
+      // Per spec, Make sure SQLState is HY008 and Message is 'Operation
+      // canceled'.
+      std::string error;
+      ASSERT_EQ(SQL_SUCCESS,
+                GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
+// On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
+// as (HY010) and no other operation is allowed after that.
+#ifndef _WIN32
+      ASSERT_TRUE(absl::StrContains(error, "HY008"))
+          << "SQLExecute failed with unexpected error: " << error;
+      ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
+          << "SQLExecute failed with unexpected error: " << error;
+      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+#endif  // _WIN32
+    }
+  }
+}
+
+// Both Prepare and Execute are async.
+TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

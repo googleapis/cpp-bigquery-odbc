@@ -454,8 +454,11 @@ SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle) {
   }
   StatementHandle& stmt_handle = *(*handle_result);
 
-  // Make sure there is a previous operation to cancel.
+  // Make sure there is a previous operation to cancel. This includes
+  // async operations as well
   if (stmt_handle.GetStmtState() == StmtStates::kStatementPrepared ||
+      stmt_handle.GetStmtState() == StmtStates::kStatementAsyncPrepare ||
+      stmt_handle.GetStmtState() == StmtStates::kStatementAsyncExecute ||
       stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting ||
       stmt_handle.GetStmtState() == StmtStates::kNeedsParams ||
       stmt_handle.GetStmtState() == StmtStates::kNeedsPutData) {

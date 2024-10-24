@@ -33,7 +33,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 enum class StmtStates {
   kStatementNotPrepared,
   kStatementPrepared,
-  kStatementPrepareStillExecuting,
+  kStatementAsyncPrepare,
+  kStatementAsyncExecute,
   kStatementStillExecuting,
   kStatementExecutedWithoutRs,
   kStatementExecutedWithRs,
@@ -149,10 +150,20 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> GetPossibleFuturePrepareQuery() {
     return std::move(future_prepare_query_);
   }
+
+  std::optional<std::future<StatusRecord>> GetPossibleFutureExecuteQuery() {
+    return std::move(future_execute_query_);
+  }
+
   void SetFuturePrepareQuery(std::future<StatusRecord> fut_prepare_query) {
     future_prepare_query_ = std::move(fut_prepare_query);
   }
   void SetNullFuturePrepareQuery() { future_prepare_query_ = std::nullopt; }
+
+  void SetFutureExecuteQuery(std::future<StatusRecord> fut_execute_query) {
+    future_execute_query_ = std::move(fut_execute_query);
+  }
+  void SetNullFutureExecuteQuery() { future_execute_query_ = std::nullopt; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
@@ -174,6 +185,8 @@ class StatementHandle : public Handle {
   bool operation_canceled_{false};
   // Needed for cancellation and re-execution of asynchronous prepare requests.
   std::optional<std::future<StatusRecord>> future_prepare_query_;
+  // Needed for cancellation and re-execution of asynchronous execute requests.
+  std::optional<std::future<StatusRecord>> future_execute_query_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

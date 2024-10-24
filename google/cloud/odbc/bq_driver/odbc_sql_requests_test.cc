@@ -445,9 +445,9 @@ TEST(SQLPrepareInternal, DisableCancellation_PreviouslyCompletedOperation) {
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
 }
 
-TEST(SQLPrepareInternal, PreviouslyOngoingOperation_Canceled) {
+TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_Canceled) {
   StatementHandle handle =
-      CreateStmtHandleWithState(StmtStates::kStatementPrepareStillExecuting);
+      CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.EnableCancellation();
   std::string queryStr = "Select 1";
   SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
@@ -466,7 +466,7 @@ TEST(SQLPrepareInternal, PreviouslyOngoingOperation_Canceled) {
 
 TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
   StatementHandle handle =
-      CreateStmtHandleWithState(StmtStates::kStatementPrepareStillExecuting);
+      CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
   handle.DisableCancellation();
   std::string queryStr = "Select 1";
@@ -480,7 +480,39 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
   EXPECT_EQ(SQLStates::k_HY000(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
-              HasSubstr("cannot execute prepare asynchronously"));
+              HasSubstr("cannot prepare query asynchronously"));
+}
+
+TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementAsyncExecute);
+  handle.EnableCancellation();
+
+  SQLRETURN status = SQLExecuteInternal(&handle);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY008(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Operation canceled"));
+}
+
+TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementAsyncExecute);
+  handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
+  handle.DisableCancellation();
+
+  SQLRETURN status = SQLExecuteInternal(&handle);
+
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("cannot execute query asynchronously"));
 }
 
 TEST(SQLExecuteInternal, Fail_NullHandle) {
