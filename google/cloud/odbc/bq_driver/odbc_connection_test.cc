@@ -20,12 +20,12 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bq_driver::ToSqlChar;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -35,6 +35,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using google::cloud::odbc_tests::key_path;
 
 TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
   EnvironmentHandle env_handle;

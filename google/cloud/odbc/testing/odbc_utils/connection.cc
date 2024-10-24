@@ -268,14 +268,14 @@ SQLRETURN ConnectWithBrowse(std::string conn_str,
       if (status == SQL_NEED_DATA) {
         // Append the additional input to the current connection string
         // for non user interaction
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+        // #ifdef BQ_DRIVER_INTEGRATION_TESTS
         memset(data_source, 0, sizeof(data_source));
-        auto key_path = "/opt/odbc-driver/connection/key.json";
+        // auto key_path = "/opt/odbc-driver/connection/key.json";
         std::string additional_input =
             ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;KeyFilePath=" +
             key_path;
         strcat((char*)data_source, additional_input.c_str());
-#endif
+        // #endif
       }
     }
 
