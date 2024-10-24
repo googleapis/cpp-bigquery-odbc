@@ -331,8 +331,7 @@ TEST(SQLBrowseConnectInternal, Fail_MissingRequiredKeyword) {
 }
 
 TEST(SQLBrowseConnectInternal, Success_with_DriverName) {
-  auto key_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  std::string key_path = "/opt/odbc-driver/connection/key.json";
   std::cout << "key-file->> " << key_path << std::endl;
   std::string conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
