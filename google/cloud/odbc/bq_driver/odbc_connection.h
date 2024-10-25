@@ -57,6 +57,11 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                              SQLSMALLINT user_name_len, SQLCHAR* auth_string,
                              SQLSMALLINT auth_string_len);
 
+SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
+                                   SQLSMALLINT in_conn_str_len,
+                                   SQLCHAR* out_conn_str,
+                                   SQLSMALLINT out_conn_str_bufflen,
+                                   SQLSMALLINT* out_conn_str_len);
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_CONNECTION_H
