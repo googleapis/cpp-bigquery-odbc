@@ -48,13 +48,9 @@ bool const kIsBqDriver = true;
 bool const kIsBqDriver = false;
 #endif
 
-// Hard code for linux
-#ifdef _WIN32
+
 inline std::string key_path =
     GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-#else
-inline std::string key_path = "/opt/odbc-driver/connection/key.json";
-#endif
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
