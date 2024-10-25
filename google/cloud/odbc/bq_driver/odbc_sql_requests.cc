@@ -87,18 +87,16 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref) {
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot prepare query asynchronously"};
     return LogAndReturnCode(handle_ref, status_record);
-  } else {
-    // User has requested cancellation of an ongoing prepare operation.
-    // We return the Cancelled error state for this request.
-    // We disable cancellation and reset the statement prepare state so
-    // subsequent prepare requests can be processed.
-    handle_ref.DisableCancellation();
-    handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
-    // For current prepare request, return operation canceled.
-    auto status_record =
-        StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
-    return LogAndReturnCode(handle_ref, status_record);
   }
+  // User has requested cancellation of an ongoing prepare operation.
+  // We return the Cancelled error state for this request.
+  // We disable cancellation and reset the statement prepare state so
+  // subsequent prepare requests can be processed.
+  handle_ref.DisableCancellation();
+  handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
+  // For current prepare request, return operation canceled.
+  auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+  return LogAndReturnCode(handle_ref, status_record);
 }
 
 // Check if previous execute operation is still executing, if so do the
@@ -144,18 +142,16 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot execute query asynchronously"};
     return LogAndReturnCode(handle_ref, status_record);
-  } else {
-    // User has requested cancellation of an ongoing execute operation.
-    // We return the Cancelled error state for this request.
-    // We disable cancellation and reset the statement execute state so
-    // subsequent execute requests can be processed.
-    handle_ref.DisableCancellation();
-    handle_ref.SetStmtState(StmtStates::kStatementPrepared);
-    // For current execute request, return operation canceled.
-    auto status_record =
-        StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
-    return LogAndReturnCode(handle_ref, status_record);
   }
+  // User has requested cancellation of an ongoing execute operation.
+  // We return the Cancelled error state for this request.
+  // We disable cancellation and reset the statement execute state so
+  // subsequent execute requests can be processed.
+  handle_ref.DisableCancellation();
+  handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+  // For current execute request, return operation canceled.
+  auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+  return LogAndReturnCode(handle_ref, status_record);
 }
 
 // This function synchronously processes current execute requests.
