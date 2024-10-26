@@ -430,22 +430,23 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     return handle_result.GetCalculatedReturnCode();
   }
 
-  static std::string static_conn_str;
   auto* handle_ref = *handle_result;
   if (in_conn_str_len < 0 && in_conn_str_len != SQL_NTS) {
-    static_conn_str.clear();
+    handle_ref->ClearCacheConnStr();
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
     return LogAndReturnCode(*handle_ref, status_record);
   }
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-  static_conn_str.clear();
-  static_conn_str += conn_string;
+  std::string cache_str = handle_ref->GetCacheConnStr();
+  if (!cache_str.empty()) {
+    conn_string = cache_str + conn_string;
+  }
 
   StatusRecordOr<Section> connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
-          static_conn_str);
+          conn_string);
 
   if (!connection_params_resp_status) {
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
@@ -463,7 +464,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   std::string driver_name = connection_params_resp["DRIVER"];
 
   if (dsn_name.empty() && driver_name.empty()) {
-    static_conn_str.clear();
+    handle_ref->ClearCacheConnStr();
     auto status_record =
         StatusRecord{SQLStates::k_IM002(),
                      "Data source not found and no default driver specified"};
@@ -499,7 +500,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
 
     auto status_check = *conn_att_resp;
     if (status_check != SQL_SUCCESS) {
-      return status_check;
+      handle_ref->SetCacheConnStr(conn_string);
+      return status_check; /* SQL_NEED_DATA return */
     }
 
     handle_ref->SetUp(dsn_section, dsn_name);
@@ -516,7 +518,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
       out_conn_str[out_tmp_str.length()] = '\0';
     }
   }
-  static_conn_str.clear();
+  handle_ref->ClearCacheConnStr();
   return SQL_SUCCESS;
 }
 }  // namespace google::cloud::odbc_bq_driver
