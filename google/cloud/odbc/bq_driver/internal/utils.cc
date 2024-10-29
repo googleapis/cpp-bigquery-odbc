@@ -535,14 +535,16 @@ StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
     if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
                        reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                       static_cast<DWORD>(kv.second.size() + 1)) != ERROR_SUCCESS) {
+                       static_cast<DWORD>(kv.second.size() + 1)) !=
+        ERROR_SUCCESS) {
       RegCloseKey(h_key);
-      return StatusRecord{SQLStates::k_HY000(), "Failed to set " + kv.first + " value"};
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Failed to set " + kv.first + " value"};
     }
   }
   return StatusRecord::Ok();
 }
-//TODO:b/376206999- Add USER DSN funcationality
+// TODO:b/376206999- Add USER DSN functionality
 StatusRecord AddDSNToRegistry(std::string const& dsn_name,
                               std::string const& driver,
                               Section const& section) {
