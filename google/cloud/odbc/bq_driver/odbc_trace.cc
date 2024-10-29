@@ -3403,12 +3403,12 @@ void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
       opts.is_file_closed = false;
     }
     if (opts.trace_file.is_open()) {
-      CollectAndPrintArgsFile("SQLConfigDataSource_Entry", opts, 4,
+      CollectAndPrintArgsFile("ConfigDSN_Entry", opts, 4,
                               ToCStr(FormatHWND(hwndParent)),
                               ToCStr(FormatRequest(fRequest)),
                               ToCStr(lpszDriver), ToCStr(lpszAttributes));
     } else {
-      CollectAndPrintArgs("SQLConfigDataSource_Entry", opts, 4,
+      CollectAndPrintArgs("ConfigDSN_Entry", opts, 4,
                           ToCStr(FormatHWND(hwndParent)),
                           ToCStr(FormatRequest(fRequest)), ToCStr(lpszDriver),
                           ToCStr(lpszAttributes));
@@ -3417,7 +3417,7 @@ void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
 }
 
 void TraceFunctionExit_ConfigDSN(SQLRETURN ret_code, TraceOptions& opts) {
-  ExitInternal("SQLConfigDataSource_Exit", ret_code, opts);
+  ExitInternal("ConfigDSN_Exit", ret_code, opts);
 }
 #endif  // _WIN32
 

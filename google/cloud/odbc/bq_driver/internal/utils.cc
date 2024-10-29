@@ -531,8 +531,18 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 
   return result;
 }
-
-// The below functionalities only works for system DSN.
+StatusRecord SetRegValues(HKEY h_key, Section const& section) {
+  for (auto const& kv : section) {
+    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
+                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
+                       static_cast<DWORD>(kv.second.size() + 1)) != ERROR_SUCCESS) {
+      RegCloseKey(h_key);
+      return StatusRecord{SQLStates::k_HY000(), "Failed to set " + kv.first + " value"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+//TODO:b/376206999- Add USER DSN funcationality
 StatusRecord AddDSNToRegistry(std::string const& dsn_name,
                               std::string const& driver,
                               Section const& section) {
@@ -541,6 +551,7 @@ StatusRecord AddDSNToRegistry(std::string const& dsn_name,
 
   HKEY h_key = nullptr;
   HKEY registry_root = HKEY_LOCAL_MACHINE;
+
   if (dsn_name.empty()) {
     return StatusRecord{SQLStates::k_HY000(), "DSN Name cannot be empty"};
   }
@@ -551,26 +562,9 @@ StatusRecord AddDSNToRegistry(std::string const& dsn_name,
                         "Failed to create or open registry key for DSN"};
   }
 
-  if (RegSetValueExA(h_key, "Driver", 0, REG_SZ,
-                     reinterpret_cast<const BYTE*>(driver.c_str()),
-                     static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) {
-    RegCloseKey(h_key);
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Failed to set Driver value for DSN"};
-  }
-
-  for (auto const& kv : section) {
-    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                       static_cast<DWORD>(kv.second.size() + 1)) !=
-        ERROR_SUCCESS) {
-      RegCloseKey(h_key);
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Failed to set " + kv.first + " value for DSN"};
-    }
-  }
-
+  StatusRecord status = SetRegValues(h_key, section);
   RegCloseKey(h_key);
+  if (!status.ok()) return status;
 
   if (RegCreateKeyExA(registry_root, odbc_path.c_str(), 0, NULL, 0, KEY_WRITE,
                       NULL, &h_key, NULL) != ERROR_SUCCESS) {
@@ -607,20 +601,9 @@ StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                         "Failed to open registry key for DSN"};
   }
 
-  for (auto const& kv : section) {
-    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                       static_cast<DWORD>(kv.second.size() + 1)) !=
-        ERROR_SUCCESS) {
-      RegCloseKey(h_key);
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Failed to modify " + kv.first + " value for DSN"};
-    }
-  }
-
+  StatusRecord status = SetRegValues(h_key, section);
   RegCloseKey(h_key);
-
-  return StatusRecord::Ok();
+  return status;
 }
 
 StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name) {
