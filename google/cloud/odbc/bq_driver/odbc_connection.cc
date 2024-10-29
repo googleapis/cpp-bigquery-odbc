@@ -81,6 +81,87 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
   return StatusRecord::Ok();
 }
 
+void OverrideDsnSectionFromConnStr(Section& dsn_section,
+                                   Section& conn_str_section) {
+  for (auto const& it : conn_str_section) {
+    std::string const& key = it.first;
+    std::string const& val = it.second;
+
+    if (dsn_section.find(key) != dsn_section.end()) {
+      dsn_section[key] = val;
+    }
+  }
+}
+
+StatusRecordOr<SQLRETURN> CheckConnAttribute(Section driver_section,
+                                             SQLCHAR* out_conn_str,
+                                             SQLSMALLINT* out_conn_str_len) {
+  std::vector<std::string> required_keywords = {
+      "Driver", "Catalog", "OAuthMechanism", "KeyFilePath"};
+  std::ostringstream out_str;
+  for (auto const& kv : driver_section) {
+    std::string key = kv.first;
+    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+    auto is_req = std::find_if(
+        required_keywords.begin(), required_keywords.end(),
+        [&key](std::string const& req_keyword) {
+          std::string lower_req_keyword = req_keyword;  // Copy required keyword
+          std::transform(lower_req_keyword.begin(), lower_req_keyword.end(),
+                         lower_req_keyword.begin(),
+                         ::tolower);  // Convert required keyword to lowercase
+          return key == lower_req_keyword;  // Compare lowercase versions
+        });
+
+    if (is_req == required_keywords.end()) {
+      // Extra key found, return error
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Non Requested connection attribute " + key + " in ConnectionString"};
+    }
+  }
+
+  for (auto const& key : required_keywords) {
+    auto req_key = key;
+    std::transform(req_key.begin(), req_key.end(), req_key.begin(), ::tolower);
+
+    auto it = std::find_if(
+        driver_section.begin(), driver_section.end(),
+        [&req_key](std::pair<std::string const, std::string> const& dr_sec) {
+          std::string lower_key = dr_sec.first;
+          std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(),
+                         ::tolower);
+          return req_key == lower_key;
+        });
+
+    if (it != driver_section.end()) {  // Key found
+      // Check if the value is empty
+      if (it->second.empty()) {
+        out_str << key << ":" << key << "=?;";
+      } else {
+        out_str << "";
+      }
+    } else if (driver_section.count(req_key) > 1) {
+      // Duplicate keyword found
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Duplicate connection string attribute found: " + key};
+    } else {
+      out_str << key << ":" << key << "=?;";
+    }
+  }
+
+  std::string res_str = out_str.str();
+  strncpy(reinterpret_cast<char*>(out_conn_str), res_str.c_str(),
+          res_str.length());
+  out_conn_str[res_str.length()] = '\0';
+  *out_conn_str_len = res_str.length();
+
+  if (!res_str.empty()) {
+    return StatusRecordOr<SQLRETURN>(SQL_NEED_DATA);
+  }
+  return StatusRecordOr<SQLRETURN>(SQL_SUCCESS);
+}
+
 //////////////////////
 // Public Functions
 //////////////////////
@@ -316,5 +397,109 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
+                                   SQLSMALLINT in_conn_str_len,
+                                   SQLCHAR* out_conn_str,
+                                   SQLSMALLINT out_conn_str_bufflen,
+                                   SQLSMALLINT* out_conn_str_len) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  auto* handle_ref = *handle_result;
+  if (in_conn_str_len < 0 && in_conn_str_len != SQL_NTS) {
+    handle_ref->ClearCacheConnStr();
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
+
+  std::string conn_string = reinterpret_cast<char*>(in_conn_str);
+  std::string cache_str = handle_ref->GetCacheConnStr();
+  if (!cache_str.empty()) {
+    conn_string = cache_str + conn_string;
+  }
+
+  StatusRecordOr<Section> connection_params_resp_status =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          conn_string);
+
+  if (!connection_params_resp_status) {
+    return LogAndReturnCode(*handle_ref, connection_params_resp_status);
+  }
+
+  auto connection_params_resp = *connection_params_resp_status;
+  Section dsn_section;
+  for (auto const& it : connection_params_resp) {
+    std::string property = it.first;
+    std::string value = it.second;
+    dsn_section[property] = value;
+  }
+
+  std::string dsn_name = connection_params_resp["DSN"];
+  std::string driver_name = connection_params_resp["DRIVER"];
+
+  if (dsn_name.empty() && driver_name.empty()) {
+    handle_ref->ClearCacheConnStr();
+    auto status_record =
+        StatusRecord{SQLStates::k_IM002(),
+                     "Data source not found and no default driver specified"};
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
+
+  if (!dsn_name.empty()) {
+    OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+    OverrideDsnSectionFromConnStr(dsn_section, connection_params_resp);
+
+    handle_ref->SetUp(dsn_section, dsn_name);
+
+    Authentication auth = CreateAuth(dsn_section);
+    StatusRecord status = handle_ref->Connect(auth);
+
+    if (status.ok() && out_conn_str != nullptr) {
+      // Populate the output parameters as per the spec.
+      std::string out_tmp_str(ToCharStr(in_conn_str));
+      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+              out_tmp_str.length());
+      *out_conn_str_len = out_tmp_str.length();
+      out_conn_str[out_tmp_str.length()] = '\0';
+    }
+  }
+
+  if (!driver_name.empty()) {
+    StatusRecordOr<SQLRETURN> conn_att_resp =
+        CheckConnAttribute(dsn_section, out_conn_str, out_conn_str_len);
+
+    if (!conn_att_resp) {
+      return LogAndReturnCode(*handle_ref, conn_att_resp);
+    }
+
+    auto status_check = *conn_att_resp;
+    if (status_check != SQL_SUCCESS) {
+      handle_ref->SetCacheConnStr(conn_string);
+      return status_check; /* SQL_NEED_DATA return */
+    }
+
+    handle_ref->SetUp(dsn_section, dsn_name);
+
+    Authentication auth = CreateAuth(dsn_section);
+    StatusRecord status = handle_ref->Connect(auth);
+
+    if (status.ok() && out_conn_str != nullptr) {
+      // Populate the output parameters as per the spec.
+      std::string out_tmp_str(ToCharStr(in_conn_str));
+      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+              out_tmp_str.length());
+      *out_conn_str_len = out_tmp_str.length();
+      out_conn_str[out_tmp_str.length()] = '\0';
+    }
+  }
+  handle_ref->ClearCacheConnStr();
+  return SQL_SUCCESS;
+}
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)

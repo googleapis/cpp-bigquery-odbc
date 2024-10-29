@@ -53,6 +53,10 @@ SQLRETURN ConnectDsnLess(std::string username, std::string auth,
                          std::shared_ptr<ODBCHandles> conn, int timeout = 30,
                          bool use_ansi = false);
 
+SQLRETURN ConnectWithBrowse(std::string conn_str,
+                            std::shared_ptr<ODBCHandles> conn, int timeout = 30,
+                            bool use_ansi = false);
+
 SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn);
 
 SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn,

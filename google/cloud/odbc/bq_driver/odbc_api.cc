@@ -94,6 +94,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTables;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBrowseConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLBrowseConnectW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttributesW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLColAttributeW;
@@ -126,6 +127,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLStatisticsW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTablePrivilegesW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTablesW;
 
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBrowseConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBrowseConnectW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttributesW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLColAttributeW;
@@ -547,17 +549,31 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
                                    SQLSMALLINT* outConnectionStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnect");
+
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   status = AcquireHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   if (status != SQL_SUCCESS) {
     return status;
   }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLBrowseConnect(
+        connectionHandle, inConnectionString, inConnectionStringLen,
+        outConnectionString, outConnectionStringBufferLen,
+        outConnectionStringLen, *(*kTraceOption));
 
   // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
   // in odbc_connection.h.
+  rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
+      connectionHandle, inConnectionString, inConnectionStringLen,
+      outConnectionString, outConnectionStringBufferLen,
+      outConnectionStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLBrowseConnect(rc, *(*kTraceOption));
+
   // Call to Release mutex for connection handle in odbc_lock.h.
   status = ReleaseHandleMutex(connectionHandle, SQL_HANDLE_DBC);
   if (status != SQL_SUCCESS) {
