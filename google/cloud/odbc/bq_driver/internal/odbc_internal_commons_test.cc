@@ -470,6 +470,36 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
+TEST(CancelBQJob, Failure_Not_Connected) {
+  ConnectionHandle handle;
+  auto status_record_or = CancelBQJob(handle, "1234");
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_08S01(),
+                     HasSubstr("Connection to the data source is broken")));
+}
+
+TEST(CancelBQJob, Failure_Null_BQClient) {
+  auto handle = CreateConnectionHandle(true);
+  auto status_record_or = CancelBQJob(handle, "1234");
+
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Invalid or null BQ Client within the connection handle")));
+}
+
+TEST(CancelBQJob, Failure_Empty_Job) {
+  ConnectionHandle handle;
+  auto status_record_or = CancelBQJob(handle, "");
+
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Invalid or empty job id")));
+}
+
 TEST(ConstructStringArrayQueryParameter, Success) {
   auto status_record_or = ConstructStringArrayQueryParameter(
       "param-name-1", {"param-val-1", "param-val-2"});

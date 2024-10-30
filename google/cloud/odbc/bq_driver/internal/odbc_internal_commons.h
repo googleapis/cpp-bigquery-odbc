@@ -246,12 +246,16 @@ struct DSResults {
 };
 
 //////////////////////////////////////////////////////////////////////
-// Common Helper functions for data retrieval from BQ data source
+// Common Helper functions related to BQ data source.
 /////////////////////////////////////////////////////////////////////
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         post_query_request);
+
+odbc_internal::StatusRecordOr<google::cloud::bigquery_v2_minimal_internal::Job>
+CancelBQJob(ConnectionHandle& conn_handle, std::string const& job_id,
+            std::string const& location = "");
 
 ////////////////////////////////////////////////////////////////////////
 // Common Helper functions for processing data results from BQ data source and

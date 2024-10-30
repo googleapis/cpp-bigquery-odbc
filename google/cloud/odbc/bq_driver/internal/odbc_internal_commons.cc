@@ -23,8 +23,10 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
+using ::google::cloud::bigquery_v2_minimal_internal::CancelJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobCreationMode;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
@@ -519,6 +521,36 @@ StatusRecordOr<std::vector<RowData>> GetRowsResults(
     return results.rows;
   }
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
+}
+
+StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
+                                std::string const& job_id,
+                                std::string const& location) {
+  // validate we have a job.
+  if (job_id.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid or empty job id"};
+  }
+  // Validate the  connection handle.
+  if (!conn_handle.IsConnected()) {
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+  // Validate we have a bq client.
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+  // validate we have a project_id.
+  std::string project_id = conn_handle.GetDsn().catalog;
+  if (project_id.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid or empty catalog in connection handle"};
+  }
+
+  Options options;
+  return bq_client->CancelJob(project_id, job_id, location, options);
 }
 
 StatusRecordOr<DSResults> FetchBQData(

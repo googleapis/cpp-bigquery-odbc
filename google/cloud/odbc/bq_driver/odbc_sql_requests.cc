@@ -28,6 +28,7 @@ namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using google::cloud::odbc_bq_driver::ToCharStr;
+using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -177,15 +178,20 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
     return rs_status_record_or.GetStatusRecord();
   }
 
-  Job prepared_job = stmt_handle.GetPreparedJob();
-  std::string statement_type =
-      prepared_job.statistics.job_query_stats.statement_type;
-  if (statement_type != "SELECT") {
-    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  if (stmt_handle.GetPreparedJob().has_value()) {
+    Job prepared_job = stmt_handle.GetPreparedJob().value();
+    std::string statement_type =
+        prepared_job.statistics.job_query_stats.statement_type;
+    if (statement_type != "SELECT") {
+      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+    } else {
+      // Store the resultset in statement handle.
+      stmt_handle.SetResultSet(*rs_status_record_or);
+      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    }
   } else {
-    // Store the resultset in statement handle.
-    stmt_handle.SetResultSet(*rs_status_record_or);
-    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal state error when executing query"};
   }
 
   return StatusRecord::Ok();
@@ -573,7 +579,22 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     stmt_handle.DisableCancellation();
     stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
     // For current execution, return without executing the request since
-    // user has cancelled it.
+    // user has cancelled it. Additionally, check if there is any jobs we need
+    // to cancel on the server.
+    if (stmt_handle.GetPreparedJob().has_value()) {
+      // 1) We do have a job to cancel.
+      std::string prepared_job_id =
+          stmt_handle.GetPreparedJob().value().job_reference.job_id;
+      ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+      // 2) Cancel the BQ Job on the server.
+      auto cancel_status = CancelBQJob(conn_handle, prepared_job_id);
+      // 3) Since we canceled the job set the prepared job to null. This is
+      // done regardless of whether cancel is complete or not. User has
+      // requested cancellation of this job. This should never be run again.
+      stmt_handle.SetNullPreparedJob();
+      return LogAndReturnCode(stmt_handle, cancel_status.GetStatusRecord());
+    }
+    // Nothing to do if there is no associated job_id.
     return SQL_SUCCESS;
   }
 

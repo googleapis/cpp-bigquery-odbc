@@ -173,7 +173,12 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   CancelJobRequest request;
   request.set_project_id(project_id);
   request.set_job_id(job_id);
-  request.set_location(location);
+  // Location may not be supplied for multi-region jobs.
+  // e.g.
+  // https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/cancel#query-parameters
+  if (!location.empty()) {
+    request.set_location(location);
+  }
 
   return StatusRecordOr<Job>::ConvertFromStatusOr(
       job_client.CancelJob(request, options));
