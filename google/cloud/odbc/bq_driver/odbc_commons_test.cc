@@ -32,6 +32,11 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
+#ifdef _WIN32
+using google::cloud::odbc_bq_driver_internal::GetSectionWin;
+using google::cloud::odbc_bq_driver_internal::Section;
+#endif
+
 TEST(SQLFreeHandleInternal, InvalidType) {
   int val = 10;
 
@@ -166,6 +171,22 @@ TEST(ConfigDSNInternal, NullRequest) {
   auto status =
       ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
   EXPECT_EQ(status, false);
+}
+
+TEST(ConfigDSNInternal, NullhandleSucess) {
+  HWND hwndParent = NULL;
+  WORD fRequest = ODBC_ADD_DSN;
+  LPCSTR lpszDriver = "ODBC Driver For Google Bigquery";
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0Email=Smith.Sesame@gmail.com\0Dataset=Personnel\0\0";
+  auto result =
+      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+  EXPECT_EQ(result, true);
+
+ result =
+      ConfigDSNInternal(hwndParent,ODBC_REMOVE_DSN, lpszDriver, lpszAttributes);
+  EXPECT_EQ(result, true);
+
 }
 
 #endif  // _WIN32
