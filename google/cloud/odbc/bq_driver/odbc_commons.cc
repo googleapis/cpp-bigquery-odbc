@@ -145,7 +145,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string catalog;
   std::string dataset_name;
 
-  form.returnStatus(status);
+  DriverForm form;
   switch (f_request) {
     case ODBC_ADD_DSN: {
       form.Show();
