@@ -32,11 +32,6 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
-#ifdef _WIN32
-using google::cloud::odbc_bq_driver_internal::GetSectionWin;
-using google::cloud::odbc_bq_driver_internal::Section;
-#endif
-
 TEST(SQLFreeHandleInternal, InvalidType) {
   int val = 10;
 
