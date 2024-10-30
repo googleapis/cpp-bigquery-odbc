@@ -537,9 +537,7 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// This test is temporarily disabled till we are able to debug this with help
-// from the vendor
-TEST(StatementTest, DISABLED_SQLPutData) {
+TEST(StatementTest, SQLPutData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
   Table table(table_name);
 
@@ -575,6 +573,85 @@ TEST(StatementTest, DISABLED_SQLPutData) {
     auto col_name = schema[i].name;
     EXPECT_EQ(results[col_name][0], data[i]);
   }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLPutData_NullData) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_NULL_TEST";
+  Table table(table_name);
+
+  Schema schema{{"NullableString", "STRING"}};
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert a row with NULL value
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  std::vector<std::string> data = {""};  // Empty string as placeholder
+
+  SQLLEN nullDataIndicator = SQL_NULL_DATA;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_CHAR, 0, 0, nullptr, 0, &nullDataIndicator),
+            SQL_SUCCESS);
+  // Prepare and execute the insert statement
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Clean up statement handle after execution
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate the inserted data is NULL
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  query = "SELECT NullableString FROM " + table_name;
+  auto results = *FetchResultsWithSqlGetData(conn, query);
+  EXPECT_TRUE(results["NullableString"][0].empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete the table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLPutData_Failure_InvalidSequence) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_SEQUENCE_TEST";
+  Table table(table_name);
+  Schema schema{{"TextField", "STRING"}};
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Prepare statement
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "INSERT INTO " + table_name + " VALUES (?)";
+
+  SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+
+  std::string data = "SampleData";
+  SQLLEN data_len = SQL_NTS;
+
+  SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_LONGVARCHAR,
+                   0, 0, (SQLPOINTER)data.c_str(), 0, &data_len);
+
+  // Incorrectly call SQLPutData before SQLExecute
+  SQLRETURN status =
+      SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size());
+  EXPECT_NE(status, SQL_SUCCESS)
+      << "Expected failure due to invalid function sequence";
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
