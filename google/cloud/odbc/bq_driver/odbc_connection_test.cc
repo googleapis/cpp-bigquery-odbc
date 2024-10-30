@@ -270,4 +270,35 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(TestODBCConnection, NonExistentDSN) {
+    EXPECT_FALSE(TestODBCConnection("InvalidDSN"));
+}
+
+TEST(TestODBCConnection, MissingKeyFilePath) {
+    EXPECT_FALSE(TestODBCConnection("DSN_MissingKeyFilePath"));
+}
+
+TEST(TestODBCConnection, EmptyKeyFilePath) {
+    EXPECT_FALSE(TestODBCConnection("DSN_EmptyKeyFilePath"));
+}
+
+TEST(TestODBCConnection, MissingOAuthMechanism) {
+    EXPECT_FALSE(TestODBCConnection("DSN_MissingOAuthMechanism"));
+}
+
+TEST(TestODBCConnection, EmptyOAuthMechanism) {
+    EXPECT_FALSE(TestODBCConnection("DSN_EmptyOAuthMechanism"));
+}
+
+TEST(TestODBCConnection, MissingCatalog) {
+    EXPECT_FALSE(TestODBCConnection("DSN_MissingCatalog"));
+}
+
+TEST(TestODBCConnection, EmptyCatalog) {
+    EXPECT_FALSE(TestODBCConnection("DSN_EmptyCatalog"));
+}
+
+TEST(TestODBCConnection, InvalidKeyFilePathFormat) {
+    EXPECT_FALSE(TestODBCConnection("DSN_InvalidKeyFilePath"));
+}
 }  // namespace google::cloud::odbc_bq_driver

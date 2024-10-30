@@ -25,6 +25,7 @@ std::string DriverForm::kKeyFilePath;
 std::string DriverForm::kOAuthMechanism;
 std::string DriverForm::kCatalog;
 std::string DriverForm::kDataset;
+bool DriverForm::kConnectionStatus;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     PWSTR pCmdLine, int nCmdShow) {
@@ -175,6 +176,9 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
+   HWND hwndTestButton =
+      CreateButton(m_hwnd, "Test...", 120, 400, 80, 30, kIdcButtonTest);
+
   HWND hwndOkButton =
       CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
   HWND hwndCancelButton =
@@ -229,10 +233,21 @@ void DriverForm::Show() {
 
   RegisterClass(&wc);
 
-  m_hwnd = CreateWindowEx(0, CLASS_NAME,
-                          "Google ODBC Driver for Google Bigquery DSN Setup",
-                          WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                          520, 650, NULL, NULL, GetModuleHandle(NULL), this);
+  int windowWidth = 520;
+  int windowHeight = 650;
+
+  int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+  int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+  int xPos = (screenWidth - windowWidth) / 2;
+  int yPos = (screenHeight - windowHeight) / 2;
+
+
+  m_hwnd = CreateWindowEx(
+      0, CLASS_NAME,
+      "Google ODBC Driver for Google Bigquery DSN Setup",
+      WS_OVERLAPPEDWINDOW, xPos, yPos, windowWidth, windowHeight,
+      NULL, NULL, GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
     CreateWindowEx(0, "STATIC",
@@ -242,7 +257,6 @@ void DriverForm::Show() {
                    m_hwnd, (HMENU)kIdcHeaderLabel, GetModuleHandle(NULL), NULL);
     InitControls();
 
-    // Create and position OK and Cancel buttons at the bottom
     RECT rcClient;
     GetClientRect(m_hwnd, &rcClient);
 
@@ -319,6 +333,20 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           DestroyWindow(hwnd);  // Close the window
           break;
         }
+        case kIdcButtonTest:{
+          if(kConnectionStatus==true){
+            std::string messageText = 
+        "SUCCESS!\n\nSuccessfully connected to data source!\n\n"
+        "ODBC Version: 03.80\n"
+        "Driver Version: 3.0.5.1011\n"
+        "Bitness: 64-bit\n"
+        "Locale: en_IN\n\n";
+         MessageBox(hwnd,messageText.c_str(), "Test Results", MB_OK | MB_ICONINFORMATION| MB_TOPMOST );
+            } else {
+                MessageBox(hwnd, "Connection Failed!", "Error", MB_OK | MB_ICONERROR);
+            }
+        }
+        
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;

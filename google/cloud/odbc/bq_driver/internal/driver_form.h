@@ -17,7 +17,6 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
-#include <map>
 #include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -37,6 +36,7 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
+static int const kIdcButtonTest= 115;
 
 class DriverForm {
  public:
@@ -60,7 +60,12 @@ class DriverForm {
 
   inline std::string const& GetCatalogName() const { return kCatalog; }
 
+ static bool returnStatus(bool status){
+     kConnectionStatus =status;
+    return kConnectionStatus;
+  }
  private:
+  static bool kConnectionStatus;
   static std::string kDsnName;
   static std::string kEmail;
   static std::string kKeyFilePath;

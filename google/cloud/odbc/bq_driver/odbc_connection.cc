@@ -42,6 +42,8 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver_internal::GetSectionWin;
+using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 
 /////////////////////////////
 // Internal Helper Functions
@@ -314,6 +316,73 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
     }
   }
   return SQL_SUCCESS;
+}
+
+SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,Authentication auth) {
+    StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(conn_handle, false);
+    if (!handle_result) {
+        TracePrintInternal(*(*kTraceOption), handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+    }
+    auto* handle_ref = *handle_result;
+
+    StatusRecord status = handle_ref->Connect(auth);
+    if (!status.ok()) {
+        return LogAndReturnCode(*handle_ref, status);
+    }
+
+    return SQL_SUCCESS;
+}
+
+bool TestODBCConnection(const std::string& dsn) {
+    std::string registry_key = GetPathToOdbcIni() + "\\" + dsn;
+    auto section_result = GetSectionWin(registry_key);
+
+    if (!section_result.Ok()) {
+        return false;
+    }
+
+    std::shared_ptr<Section> section = section_result.GetValue();
+    
+    if (section->find("KeyFilePath") == section->end() || (*section)["KeyFilePath"].empty()) {
+        return false;
+    }
+    if (section->find("OAuthMechanism") == section->end() || (*section)["OAuthMechanism"].empty()) {
+        return false;
+    }
+    if (section->find("Catalog") == section->end() || (*section)["Catalog"].empty()) {
+        return false;
+    }
+    std::string key_file_path = (*section)["KeyFilePath"]; 
+    std::string key_file_path_up;
+    for (char ch : key_file_path) {
+        if (ch == '\\') {
+            key_file_path_up += "\\\\"; 
+        } else {
+            key_file_path_up += ch; 
+        }
+    }
+
+    SQLHENV h_env;
+    SQLHDBC h_dbc;
+    SQLRETURN ret;
+
+    // Allocate environment and connection handles
+    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &h_env);
+    SQLSetEnvAttr(h_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+    SQLAllocHandle(SQL_HANDLE_DBC, h_env, &h_dbc);
+
+    //Attempt the connection
+    Authentication auth = CreateAuth(*section);
+    ret=ConnectUsingRegistryDsn(h_dbc,auth);
+    bool success = SQL_SUCCEEDED(ret);
+
+    // Disconnect and free handles
+    SQLDisconnect(h_dbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, h_dbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, h_env);
+
+    return success;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

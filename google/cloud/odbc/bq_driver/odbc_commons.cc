@@ -20,6 +20,7 @@
 
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #endif  // _WIN32
 
 namespace google::cloud::odbc_bq_driver {
@@ -43,6 +44,7 @@ using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
+using google::cloud::odbc_bq_driver::TestODBCConnection;
 #endif  // _WIN32
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
@@ -144,6 +146,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string dataset_name;
 
   DriverForm form;
+  auto status=TestODBCConnection(dsn_value);
+  form.returnStatus(status);
   switch (f_request) {
     case ODBC_ADD_DSN: {
       form.Show();
