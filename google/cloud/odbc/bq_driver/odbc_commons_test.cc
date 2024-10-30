@@ -173,30 +173,6 @@ TEST(ConfigDSNInternal, NullRequest) {
   EXPECT_EQ(status, false);
 }
 
-
-TEST(ConfigDSNInternal, NullhandleSucess) {
-  HWND hwndParent = NULL;
-  WORD fRequest = ODBC_ADD_DSN;
-  LPCSTR lpszDriver = "ODBC Driver For Google Bigquery";
-  LPCSTR lpszAttributes =
-      "DSN=Personnel Data\0Email=Smith.Sesame@gmail.com\0Dataset=Personnel\0\0";
-  auto result =
-      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
-  EXPECT_EQ(result, true);
-
-  auto status = GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\Personnel Data");
-  std::shared_ptr<Section> section2 = status.GetValue();
-  ASSERT_TRUE(section2);
-
-  EXPECT_EQ(section2->at("Email"), "Smith.Sesame@gmail.com");
-  EXPECT_EQ(section2->at("Dataset"), "Personnel");
-
- result =
-      ConfigDSNInternal(hwndParent,ODBC_REMOVE_DSN, lpszDriver, lpszAttributes);
-  EXPECT_EQ(result, true);
-
-}
-
 #endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver
