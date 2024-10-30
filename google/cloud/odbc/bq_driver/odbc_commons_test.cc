@@ -17,10 +17,10 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
-#include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -173,7 +173,7 @@ TEST(ConfigDSNInternal, NullRequest) {
   EXPECT_EQ(status, false);
 }
 
-TEST(ConfigDSNInternal, NullhandleSucess) {
+TEST(ConfigDSNInternal, NullhandleSuccess) {
   HWND hwndParent = NULL;
   WORD fRequest = ODBC_ADD_DSN;
   LPCSTR lpszDriver = "ODBC Driver For Google Bigquery";
@@ -183,10 +183,9 @@ TEST(ConfigDSNInternal, NullhandleSucess) {
       ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
   EXPECT_EQ(result, true);
 
- result =
-      ConfigDSNInternal(hwndParent,ODBC_REMOVE_DSN, lpszDriver, lpszAttributes);
+  result = ConfigDSNInternal(hwndParent, ODBC_REMOVE_DSN, lpszDriver,
+                             lpszAttributes);
   EXPECT_EQ(result, true);
-
 }
 
 #endif  // _WIN32
