@@ -42,8 +42,11 @@ using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
+#endif
 
 /////////////////////////////
 // Internal Helper Functions
@@ -318,6 +321,7 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   return SQL_SUCCESS;
 }
 
+#ifdef _WIN32
 SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,Authentication auth) {
     StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(conn_handle, false);
     if (!handle_result) {
@@ -384,6 +388,7 @@ bool TestODBCConnection(const std::string& dsn) {
 
     return success;
 }
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)
