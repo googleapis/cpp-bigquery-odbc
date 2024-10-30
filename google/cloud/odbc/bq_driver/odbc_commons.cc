@@ -143,9 +143,19 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string catalog;
   std::string dataset_name;
 
+  
   DriverForm form;
   switch (f_request) {
     case ODBC_ADD_DSN: {
+      if(hwnd_parent==NULL){
+        Section section = {{"Email", email},
+                         {"KeyFilePath", key_file_path},
+                         {"OAuthMechanism", oAuth_mechanism},
+                         {"Catalog", catalog},
+                         {"Dataset", dataset_name}};
+      AddDSNToRegistry(dsn_value, lpsz_driver, section);
+      return true;
+      }
       form.Show();
       form.GetHwnd();
       MSG msg = {};
@@ -169,6 +179,15 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       return TRUE;
     }
     case ODBC_CONFIG_DSN: {
+      if(hwnd_parent==NULL){
+         Section section2 = {{"Email", email},
+                          {"KeyFilePath", key_file_path},
+                          {"OAuthMechanism", oAuth_mechanism},
+                          {"Catalog", catalog},
+                          {"Dataset", dataset_name}};
+      EditDSNInRegistry(dsn_value, section2);
+      return true;
+      }
       std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_value;
       auto res = GetSectionWin(registry_key);
       auto section = res.GetValue();
