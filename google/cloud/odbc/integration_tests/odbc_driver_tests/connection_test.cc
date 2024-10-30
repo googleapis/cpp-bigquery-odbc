@@ -559,6 +559,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDSN) {
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriverName) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+  // TODO(b/376388234): Modify Driver name from "Simba" for internal driver
   auto conn_str = "DRIVER=Simba ODBC Driver for Google BigQuery";
 #else
   std::string key_path =

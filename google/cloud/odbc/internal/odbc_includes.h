@@ -25,7 +25,6 @@
 #include <odbcinst.h>
 #include <sql.h>
 #include <sqlext.h>
-#include <sstream>
 
 // This removes the definitions from Windows.h which conflict with the APIs our
 // driver creates. Since odbc_includes.h is included before we define our APIs,

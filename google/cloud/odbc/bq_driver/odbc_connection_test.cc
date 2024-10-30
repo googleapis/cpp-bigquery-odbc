@@ -361,6 +361,7 @@ TEST(SQLBrowseConnectInternal, Success_with_DriverName) {
   EXPECT_TRUE(conn_handle.IsConnected());
 }
 
+// TODO(b/375574032): Add service account key for unit test cases in linux
 TEST(SQLBrowseConnectInternal, Success_with_DSN) {
   SQLCHAR* in_conn_str = ToSqlChar("DSN=SampleDSN");
   SQLSMALLINT in_conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
@@ -380,6 +381,7 @@ TEST(SQLBrowseConnectInternal, Success_with_DSN) {
   EXPECT_TRUE(conn_handle.IsConnected());
 }
 
+// TODO(b/375574032): Add service account key for unit test cases in linux
 TEST(SQLBrowseConnectInternal, Success_OverrideDSNWithConnStrVal) {
   std::string key_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");

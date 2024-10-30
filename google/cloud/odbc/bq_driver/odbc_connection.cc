@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
+#include <sstream>
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
 namespace google::cloud::odbc_bq_driver {
