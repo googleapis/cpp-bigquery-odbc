@@ -23,7 +23,6 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
-using ::google::cloud::bigquery_v2_minimal_internal::CancelJobRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
