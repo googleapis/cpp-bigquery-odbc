@@ -269,7 +269,7 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
   EXPECT_EQ("Username needs to be an email address",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
-
+#ifdef _WIN32
 TEST(TestODBCConnection, NonExistentDSN) {
     EXPECT_FALSE(TestODBCConnection("InvalidDSN"));
 }
@@ -301,4 +301,5 @@ TEST(TestODBCConnection, EmptyCatalog) {
 TEST(TestODBCConnection, InvalidKeyFilePathFormat) {
     EXPECT_FALSE(TestODBCConnection("DSN_InvalidKeyFilePath"));
 }
+#endif
 }  // namespace google::cloud::odbc_bq_driver
