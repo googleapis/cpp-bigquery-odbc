@@ -14,10 +14,11 @@
 
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
-
+using google::cloud::odbc_bq_driver::TestODBCConnectionAd;
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 std::string DriverForm::kDsnName;
 std::string DriverForm::kEmail;
@@ -276,6 +277,52 @@ bool IsValidEmail(std::string const& email) {
   return std::regex_match(email, pattern);
 }
 
+void DriverForm::CaptureValues(HWND hwnd) {
+    // Retrieve DSN
+    HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+    char dsnBuffer[256];
+    GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+    kDsnName = dsnBuffer;
+
+    // Retrieve Email
+    HWND hEmail = GetDlgItem(hwnd, kIdcEmailEdit);
+    char emailBuffer[256];
+    GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
+    kEmail = emailBuffer;
+
+    //Validate Email
+    if (!IsValidEmail(kEmail) && !kEmail.empty()) {
+        MessageBox(hwnd, "Invalid email address!", "Error", MB_OK | MB_ICONERROR);
+        return ; // Exit if email is invalid
+    }
+
+    // Retrieve Key File Path
+    HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+    char keyBuffer[256];
+    GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+    kKeyFilePath = keyBuffer;
+
+    // Retrieve OAuth Mechanism
+    HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+    char authBuffer[256];
+    GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+    kOAuthMechanism = authBuffer;
+
+    // Retrieve Catalog Name
+    HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
+    char catalogBuffer[256];
+    GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+    kCatalog = catalogBuffer;
+
+    // Retrieve Dataset Name
+    HWND hDatasetBox = GetDlgItem(hwnd, kIdcDatasetBOX);
+    char dataBuffer[256];
+    GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
+    kDataset = dataBuffer;
+    
+}
+
+
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParam) {
   DriverForm* pThis =
@@ -294,46 +341,22 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           OpenFileDialog(hwnd, hEdit);
         } break;
         case kIdcButtonOk: {
-          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
-          char dsnBuffer[256];
-          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
-          kDsnName = dsnBuffer;
 
-          HWND hEmail = GetDlgItem(hwnd, kIdcEmailEdit);
-          char emailBuffer[256];
-          GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
-          kEmail = emailBuffer;
-
-          if (!IsValidEmail(kEmail) && !kEmail.empty()) {
-            MessageBox(hwnd, "Invalid email address!", "Error",
-                       MB_OK | MB_ICONERROR);
-            return 0;
-          }
-
-          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
-          char keyBuffer[256];
-          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
-          kKeyFilePath = keyBuffer;
-
-          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
-          char authBuffer[256];
-          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
-          kOAuthMechanism = authBuffer;
-
-          HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
-          char catalogBuffer[256];
-          GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
-          kCatalog = catalogBuffer;
-
-          HWND hDatasetBox = GetDlgItem(hwnd, kIdcDatasetBOX);
-          char dataBuffer[256];
-          GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
-          kDataset = dataBuffer;
-
+          CaptureValues(hwnd);
           DestroyWindow(hwnd);  // Close the window
           break;
         }
         case kIdcButtonTest:{
+          CaptureValues(hwnd);
+          Section attributesMap;
+          attributesMap["DSN"] = kDsnName;
+          attributesMap["Email"] = kEmail;
+          attributesMap["KeyFilePath"] = kKeyFilePath;
+          attributesMap["OAuthMechanism"] = kOAuthMechanism;
+          attributesMap["Catalog"] = kCatalog;
+          attributesMap["Dataset"] = kDataset;
+
+          bool status =TestODBCConnectionAd(std::make_shared<Section>(attributesMap));
           if(kConnectionStatus==true){
             std::string messageText = 
         "SUCCESS!\n\nSuccessfully connected to data source!\n\n"
@@ -342,8 +365,10 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
         "Bitness: 64-bit\n"
         "Locale: en_IN\n\n";
          MessageBox(hwnd,messageText.c_str(), "Test Results", MB_OK | MB_ICONINFORMATION| MB_TOPMOST );
+         return 0;
             } else {
                 MessageBox(hwnd, "Connection Failed!", "Error", MB_OK | MB_ICONERROR);
+                return 0;
             }
         }
         

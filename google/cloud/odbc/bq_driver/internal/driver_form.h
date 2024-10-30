@@ -64,6 +64,7 @@ class DriverForm {
      kConnectionStatus =status;
     return kConnectionStatus;
   }
+  static void CaptureValues(HWND hwnd);
  private:
   static bool kConnectionStatus;
   static std::string kDsnName;

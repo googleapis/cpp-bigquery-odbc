@@ -145,8 +145,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string catalog;
   std::string dataset_name;
 
-  DriverForm form;
-  auto status=TestODBCConnection(dsn_value);
   form.returnStatus(status);
   switch (f_request) {
     case ODBC_ADD_DSN: {
@@ -157,7 +155,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         TranslateMessage(&msg);
         DispatchMessage(&msg);
       }
-
       dsn_name = form.GetDSN();
       email = form.GetEmail();
       key_file_path = form.GetKeyFilePath();

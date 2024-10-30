@@ -388,7 +388,55 @@ bool TestODBCConnection(const std::string& dsn) {
 
     return success;
 }
+
+bool TestODBCConnectionAd(const std::shared_ptr<Section>& section) {
+    if (!section) {
+        return false;
+    }
+
+    if (section->find("KeyFilePath") == section->end() || (*section)["KeyFilePath"].empty()) {
+        return false;
+    }
+    if (section->find("OAuthMechanism") == section->end() || (*section)["OAuthMechanism"].empty()) {
+        return false;
+    }
+    if (section->find("Catalog") == section->end() || (*section)["Catalog"].empty()) {
+        return false;
+    }
+
+    std::string key_file_path = (*section)["KeyFilePath"]; 
+    std::string key_file_path_up;
+    for (char ch : key_file_path) {
+        if (ch == '\\') {
+            key_file_path_up += "\\\\"; 
+        } else {
+            key_file_path_up += ch; 
+        }
+    }
+
+    SQLHENV h_env;
+    SQLHDBC h_dbc;
+    SQLRETURN ret;
+
+    // Allocate environment and connection handles
+    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &h_env);
+    SQLSetEnvAttr(h_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+    SQLAllocHandle(SQL_HANDLE_DBC, h_env, &h_dbc);
+
+    // Attempt the connection
+    Authentication auth = CreateAuth(*section);
+    ret = ConnectUsingRegistryDsn(h_dbc, auth);
+    bool success = SQL_SUCCEEDED(ret);
+
+    // Disconnect and free handles
+    SQLDisconnect(h_dbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, h_dbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, h_env);
+
+    return true;
+}
 #endif
+
 
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)
