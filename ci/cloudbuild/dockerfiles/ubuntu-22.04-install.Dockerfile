@@ -210,7 +210,7 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
         -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
         -DBUILD_TESTING=OFF \
         -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
-        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery \
+        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager \
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install
