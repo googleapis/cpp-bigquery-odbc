@@ -582,19 +582,26 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     // user has cancelled it. Additionally, check if there is any jobs we need
     // to cancel on the server.
     if (stmt_handle.GetPreparedJob().has_value()) {
-      // 1) We do have a job to cancel.
-      std::string prepared_job_id =
-          stmt_handle.GetPreparedJob().value().job_reference.job_id;
-      ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-      // 2) Cancel the BQ Job on the server.
-      auto cancel_status = CancelBQJob(conn_handle, prepared_job_id);
+      std::string job_status =
+          stmt_handle.GetPreparedJob().value().status.state;
+      // We can only cancel running or pending jobs on the server.
+      StatusRecordOr<Job> server_cancel_status = StatusRecord::Ok();
+      if (job_status != "DONE") {
+        // 1) We have a ongoing job to cancel.
+        std::string prepared_job_id =
+            stmt_handle.GetPreparedJob().value().job_reference.job_id;
+        ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+        // 2) Cancel the BQ Job on the server.
+        server_cancel_status = CancelBQJob(conn_handle, prepared_job_id);
+      }
       // 3) Since we canceled the job set the prepared job to null. This is
       // done regardless of whether cancel is complete or not. User has
       // requested cancellation of this job. This should never be run again.
       stmt_handle.SetNullPreparedJob();
-      return LogAndReturnCode(stmt_handle, cancel_status.GetStatusRecord());
+      return LogAndReturnCode(stmt_handle,
+                              server_cancel_status.GetStatusRecord());
     }
-    // Nothing to do if there is no associated job_id.
+    // Nothing to do if there is no associated Job.
     return SQL_SUCCESS;
   }
 
