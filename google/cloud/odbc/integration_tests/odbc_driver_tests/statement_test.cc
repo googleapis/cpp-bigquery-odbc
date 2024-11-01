@@ -2170,6 +2170,204 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLMoreResults, FetchEmptyResultSet) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    auto const query = "SELECT StringField FROM " + table_name;
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    EXPECT_EQ(SQLFetch(conn->hstmt), SQL_NO_DATA); // Expect no data to fetch
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA); // Expect no result set
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, SingleResultSet) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    auto const query = "SELECT StringField FROM " + table_name;
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA); // Expect no more results
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, LoopThroughMultipleSets) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    // Insert test data for the first result set
+    auto insert_stmt = "INSERT INTO " + table_name + " VALUES ('Test1', 1, 1.0), ('Test2', 2, 2.0)";
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size()), "SQLPrepare", conn);
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+    // Execute multiple select statements
+    auto const query = "SELECT StringField FROM " + table_name + " WHERE IntegerField = 1; "
+                       "SELECT StringField FROM " + table_name + " WHERE IntegerField = 2;";
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+    
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+    int resultSetCount = 0;
+    do {
+        int rowCount = 0;
+        while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+            rowCount++;
+            // Here you would typically process the row (e.g., print, store, etc.)
+        }
+        EXPECT_GT(rowCount, 0); // Ensure at least one row was fetched from each result set
+        resultSetCount++;
+    } while (SQLMoreResults(conn->hstmt) == SQL_SUCCESS); // Check for more result sets
+
+    EXPECT_GT(resultSetCount, 1); // Ensure multiple result sets were processed
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, HandleLargeResultSet) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    // Insert a large number of rows for testing
+    for (int i = 0; i < 100; ++i) {
+        auto insert_stmt = "INSERT INTO " + table_name + " VALUES ('Test" + std::to_string(i) + "', " + 
+                            std::to_string(i) + ", " + std::to_string(i * 1.0) + ")";
+        CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size()), "SQLPrepare", conn);
+        EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    }
+
+    auto const query = "SELECT StringField FROM " + table_name; // Query that returns a large result set
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+    
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    
+    int rowCount = 0;
+    while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+        rowCount++;
+    }
+    EXPECT_GT(rowCount, 0); // Expect some rows
+    
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA); // Expect no more results after fetching all
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, CheckResultSetAttributes) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    auto const query = "SELECT StringField FROM " + table_name;
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+    
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    
+    do {
+        SQLSMALLINT numCols;
+        SQLNumResultCols(conn->hstmt, &numCols);
+        EXPECT_GT(numCols, 0); // Expect at least one column
+
+        // Check attributes of each column
+        for (SQLSMALLINT i = 1; i <= numCols; i++) {
+            SQLCHAR columnName[256];
+            SQLSMALLINT nameLength;
+            SQLSMALLINT dataType;
+            SQLULEN columnSize;
+            SQLSMALLINT decimalDigits;
+            SQLLEN nullable;
+            SQLLEN numericAttribute; // Correct type for NumericAttributePtr
+
+            SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, columnName, sizeof(columnName), &nameLength, &numericAttribute);
+            SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, &columnSize, 0, NULL, &nullable);
+            
+            EXPECT_GT(nameLength, 0); // Expect column name length to be greater than 0
+            EXPECT_GT(columnSize, 0); // Expect column size to be greater than 0
+        }
+    } while (SQLMoreResults(conn->hstmt) == SQL_SUCCESS); // Check for more results
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, MultipleResultSetsViaSeparateQueries) {
+    auto conn = std::make_shared<ODBCHandles>();
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    Table table(table_name);
+
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    // Insert some test data
+    auto insert_stmt = "INSERT INTO " + table_name + " VALUES ('Test1', 1, 1.0), ('Test2', 2, 2.0)";
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size()), "SQLPrepare", conn);
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+    // Execute the first query
+    auto const query1 = "SELECT StringField FROM " + table_name + " WHERE IntegerField = 1";
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query1.c_str(), query1.size()), "SQLPrepare", conn);
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+    int resultSetCount = 0;
+    do {
+        int rowCount = 0;
+        while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+            rowCount++;
+            // Process each row (add your row processing logic here)
+        }
+        EXPECT_GT(rowCount, 0); // Ensure at least one row is fetched
+        resultSetCount++;
+    } while (SQLMoreResults(conn->hstmt) == SQL_SUCCESS); // Move to the next result set
+
+    // Execute the second query
+    auto const query2 = "SELECT StringField FROM " + table_name + " WHERE IntegerField = 2";
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query2.c_str(), query2.size()), "SQLPrepare", conn);
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+    do {
+        int rowCount = 0;
+        while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+            rowCount++;
+            // Process each row (add your row processing logic here)
+        }
+        EXPECT_GT(rowCount, 0); // Ensure at least one row is fetched
+        resultSetCount++;
+    } while (SQLMoreResults(conn->hstmt) == SQL_SUCCESS); // Move to the next result set
+
+    EXPECT_EQ(resultSetCount, 2); // Ensure two result sets were processed
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
