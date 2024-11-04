@@ -2321,7 +2321,6 @@ TEST(SQLMoreResults, MultipleResultSetsViaSeparateQueries) {
     auto conn = std::make_shared<ODBCHandles>();
     auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_MULTIPLE_RESULT_SET_WITH_SEPARATE_QUERIES_TEST";
     Table table(table_name);
-    std::cout<<table_name<<std::endl;
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
     table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
