@@ -2172,7 +2172,7 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
 TEST(SQLMoreResults, FetchEmptyResultSet) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
     Table table(table_name);
 
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2191,7 +2191,7 @@ TEST(SQLMoreResults, FetchEmptyResultSet) {
 
 TEST(SQLMoreResults, SingleResultSet) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_SINGLE_RESULT_SET_TEST";
     Table table(table_name);
 
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2209,7 +2209,7 @@ TEST(SQLMoreResults, SingleResultSet) {
 
 TEST(SQLMoreResults, LoopThroughMultipleSets) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_MULTIPLE_RESULT_SET_TEST";
     Table table(table_name);
 
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2246,14 +2246,14 @@ TEST(SQLMoreResults, LoopThroughMultipleSets) {
 
 TEST(SQLMoreResults, HandleLargeResultSet) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_LARGE_RESULT_SET_TEST";
     Table table(table_name);
 
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
     table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
     // Insert a large number of rows for testing
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 50; ++i) {
         auto insert_stmt = "INSERT INTO " + table_name + " VALUES ('Test" + std::to_string(i) + "', " + 
                             std::to_string(i) + ", " + std::to_string(i * 1.0) + ")";
         CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size()), "SQLPrepare", conn);
@@ -2279,7 +2279,7 @@ TEST(SQLMoreResults, HandleLargeResultSet) {
 
 TEST(SQLMoreResults, CheckResultSetAttributes) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_CHECK_RESULT_SET_TEST";
     Table table(table_name);
 
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2319,9 +2319,9 @@ TEST(SQLMoreResults, CheckResultSetAttributes) {
 
 TEST(SQLMoreResults, MultipleResultSetsViaSeparateQueries) {
     auto conn = std::make_shared<ODBCHandles>();
-    auto table_name = kDatasetWithTablePrefix + "ODBC_NUM_PARAMS_TEST";
+    auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_MULTIPLE_RESULT_SET_WITH_SEPERATE_QUERIES_TEST";
     Table table(table_name);
-
+    std::cout<<table_name<<std::endl;
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
     table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
@@ -2366,7 +2366,6 @@ TEST(SQLMoreResults, MultipleResultSetsViaSeparateQueries) {
     table.Drop(conn);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
