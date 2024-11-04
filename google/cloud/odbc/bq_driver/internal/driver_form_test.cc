@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {

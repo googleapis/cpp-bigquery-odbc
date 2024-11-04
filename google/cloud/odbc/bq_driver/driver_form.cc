@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include <regex>
 
@@ -357,7 +357,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           attributesMap["Dataset"] = kDataset;
 
           bool status =TestODBCConnectionAd(std::make_shared<Section>(attributesMap));
-          if(kConnectionStatus==true){
+          if(status==true){
             std::string messageText = 
         "SUCCESS!\n\nSuccessfully connected to data source!\n\n"
         "ODBC Version: 03.80\n"

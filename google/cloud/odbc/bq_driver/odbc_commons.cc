@@ -19,7 +19,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #endif  // _WIN32
 

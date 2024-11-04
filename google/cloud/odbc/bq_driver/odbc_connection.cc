@@ -425,7 +425,15 @@ bool TestODBCConnectionAd(const std::shared_ptr<Section>& section) {
 
     // Attempt the connection
     Authentication auth = CreateAuth(*section);
-    ret = ConnectUsingRegistryDsn(h_dbc, auth);
+    try
+    {
+      ret = ConnectUsingRegistryDsn(h_dbc, auth);
+    }
+    catch(const std::exception& e)
+    {
+      ret = -1;
+    }
+    
     bool success = SQL_SUCCEEDED(ret);
 
     // Disconnect and free handles
@@ -433,7 +441,7 @@ bool TestODBCConnectionAd(const std::shared_ptr<Section>& section) {
     SQLFreeHandle(SQL_HANDLE_DBC, h_dbc);
     SQLFreeHandle(SQL_HANDLE_ENV, h_env);
 
-    return true;
+    return success;
 }
 #endif
 

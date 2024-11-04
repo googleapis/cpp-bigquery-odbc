@@ -22,11 +22,11 @@
 #include <gtest/gtest.h>
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #endif  // _WIN32
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #endif  // _WIN32
 
 namespace google::cloud::odbc_bq_driver {
