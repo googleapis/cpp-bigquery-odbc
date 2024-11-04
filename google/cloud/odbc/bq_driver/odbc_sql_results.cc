@@ -48,6 +48,7 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver_internal::checkTargetType;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -428,6 +429,90 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   }
 
   stmt_handle.CloseCursor();
+
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
+                             SQLUSMALLINT column_number,
+                             SQLSMALLINT target_c_type, SQLPOINTER target_value,
+                             SQLLEN target_value_buffer_len,
+                             SQLLEN* target_value_string_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+StatusRecord status_record;
+
+  if (column_number < 0) {
+    status_record = {
+        SQLStates::k_HY000(),
+        "Invalid ColumnNumber parameter - should not be < 0"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  StatusRecordOr<SQLULEN> use_bookmarks_status =
+      stmt_handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
+  if (!use_bookmarks_status) {
+    return LogAndReturnCode(stmt_handle, use_bookmarks_status);
+  }
+  if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
+     status_record = {
+        SQLStates::k_07006(),
+        "Invalid column number value for bookmark attribute - should not be 0"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (target_value == nullptr)
+    {
+       status_record = {SQLStates::k_HY009(),
+                                  "Target Value Buffer can not be NULL"};
+    return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+  if (target_value_buffer_len < 0) {
+    status_record = {SQLStates::k_HY090(), "BufferLength should not < 0"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (column_number > stmt_handle.GetResultSet().row_schema.size()){
+    status_record = {SQLStates::k_07009(), "Invalid column number"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+       StatusRecord{SQLStates::k_HY007(),
+                          "Associated statement is not prepared"};
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
+  
+  if(!checkTargetType(target_c_type)){
+     StatusRecord{SQLStates::k_HY003(),
+                          "Invalid c target type"};
+      return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  switch( target_type )
+        {
+          case SQL_WCHAR:
+            target_type = SQL_CHAR;
+            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
+            break;
+
+          case SQL_WVARCHAR:
+            target_type = SQL_VARCHAR;
+            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
+            break;
+
+          case SQL_WLONGVARCHAR:
+            target_type = SQL_LONGVARCHAR;
+            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
+            break;
+        }
 
   return SQL_SUCCESS;
 }

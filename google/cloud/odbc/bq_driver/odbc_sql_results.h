@@ -103,6 +103,21 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle);
 
 SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count);
 
+// Implements the semantics for SQLFetch ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// Design Doc: http://goto.google.com/odbc-sqlfetch-design
+// ODBC Spec:
+//https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdata-function?view=sql-server-ver16
+SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
+                             SQLUSMALLINT column_number, SQLSMALLINT target_c_type,
+                             SQLPOINTER target_value,
+                             SQLLEN target_value_buffer_len,
+                             SQLLEN* target_value_string_len);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H
