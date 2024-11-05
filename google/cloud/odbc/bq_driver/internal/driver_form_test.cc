@@ -166,9 +166,8 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
                         {"Catalog", "test_catalog"},
                         {"Dataset", "test_dataset"}};
 
-  std::string result = form->SetValues(attributes);
+  form->SetValues(attributes);
 
-  EXPECT_EQ(result, "Success");
   EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
@@ -182,10 +181,8 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
       {"OAuthMechanism", "OAuth"},
   };
 
-  std::string result = form->SetValues(attributes);
+  form->SetValues(attributes);
 
-  EXPECT_EQ(result, "Success");
-  EXPECT_EQ(result, "Success");
   EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
   EXPECT_EQ(form->GetKeyFilePath(), "");
@@ -196,9 +193,8 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
 TEST_F(DriverFormTest, SetValues_EmptyInput) {
   Section attributes = {};
 
-  std::string result = form->SetValues(attributes);
+  form->SetValues(attributes);
 
-  EXPECT_EQ(result, "Success");
   EXPECT_EQ(form->GetEmail(), "");
   EXPECT_EQ(form->GetOAuthMechanism(), "");
   EXPECT_EQ(form->GetKeyFilePath(), "");

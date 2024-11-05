@@ -17,8 +17,6 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
-#include <map>
-#include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -45,28 +43,28 @@ class DriverForm {
   void Show();
   HWND GetHwnd() const;
   void InitControls();
-  std::string SetValues(Section const& attributesMap);
+  void SetValues(Section const& attributesMap);
 
-  inline std::string const& GetDSN() const { return kDsnName; }
-  inline std::string const& GetEmail() const { return kEmail; }
+  inline std::string const& GetDSN() const { return dsn_name_; }
+  inline std::string const& GetEmail() const { return email_; }
 
-  inline std::string const& GetKeyFilePath() const { return kKeyFilePath; }
+  inline std::string const& GetKeyFilePath() const { return key_file_path_; }
 
   inline std::string const& GetOAuthMechanism() const {
-    return kOAuthMechanism;
+    return o_auth_mechanism_;
   }
 
-  inline std::string const& GetDatasetName() const { return kDataset; }
+  inline std::string const& GetDatasetName() const { return dataset_; }
 
-  inline std::string const& GetCatalogName() const { return kCatalog; }
+  inline std::string const& GetCatalogName() const { return catalog_; }
 
  private:
-  static std::string kDsnName;
-  static std::string kEmail;
-  static std::string kKeyFilePath;
-  static std::string kOAuthMechanism;
-  static std::string kDataset;
-  static std::string kCatalog;
+  static std::string dsn_name_;
+  static std::string email_;
+  static std::string key_file_path_;
+  static std::string o_auth_mechanism_;
+  static std::string dataset_;
+  static std::string catalog_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;
