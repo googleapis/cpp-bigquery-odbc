@@ -2366,6 +2366,50 @@ TEST(SQLMoreResults, MultipleResultSetsViaSeparateQueries) {
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLMoreResults, NoResultSet) {
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+    
+    auto table_name = kDatasetWithTablePrefix + "ODBC_NO_RESULT_SET_TEST";
+    Table table(table_name);
+    table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+    std::string query = "SELECT 1 FROM (SELECT 1) AS dummy WHERE FALSE"; // Query that returns no results
+    CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()), "SQLPrepare", conn);
+    
+    // Execute the query and check for success
+    EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+    EXPECT_EQ(SQLFetch(conn->hstmt), SQL_NO_DATA); // Expect no data fetched
+
+    // Now call SQLMoreResults to check for more results
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA); // Expect no more results
+
+    table.Drop(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLMoreResults, ErrorHandling) {
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+    auto table_name = kDatasetWithTablePrefix + "_ODBC_ERROR_SET_TEST";
+    // Use an intentional error: querying a non-existent table
+    std::string query = "SELECT * FROM " + table_name; 
+    SQLRETURN prepResult = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size());
+    
+    if (prepResult != SQL_SUCCESS) {
+        // Check if SQLPrepare failed due to table not existing
+        EXPECT_EQ(prepResult, SQL_ERROR);
+    } else {
+        // If preparation was successful, execute the query
+        EXPECT_EQ(SQLExecute(conn->hstmt), SQL_ERROR); // Expect error due to non-existent table
+    }
+
+    // After execution failure, check for more results, which should not be applicable
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA); // Expect no more results due to execution failure
+
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
