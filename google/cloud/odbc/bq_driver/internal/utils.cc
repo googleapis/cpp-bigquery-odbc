@@ -223,11 +223,20 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
-std::vector<std::string> ExtractKeys(std::string& str) {
+std::vector<std::string> ExtractKeys(std::string& str, bool is_parameterized) {
   std::smatch match;
   std::vector<std::string> keywords;
-  std::regex regex_pattern(
-      R"((\w+)[=:])");  // Pattern to capture keywords before ":" or "="
+  std::regex regex_pattern;
+
+  if (is_parameterized) {
+    regex_pattern =
+        std::regex(R"(\b([A-Za-z0-9_-]+)(?=:))");  // Pattern to capture
+                                                   // keywords before ":"
+  } else {
+    regex_pattern =
+        std::regex(R"(\b([A-Za-z0-9_-]+)(?==))");  // Pattern to capture
+                                                   // keywords before "="
+  }
 
   std::string::const_iterator search_start(str.cbegin());
   while (std::regex_search(search_start, str.cend(), match, regex_pattern)) {

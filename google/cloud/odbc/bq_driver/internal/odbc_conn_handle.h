@@ -77,6 +77,8 @@ class ConnectionHandle : public Handle {
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
+  void ClearDsn() { dsn_ = Dsn(); }
+
   Dsn GetDsn() const { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
@@ -109,14 +111,6 @@ class ConnectionHandle : public Handle {
     is_transaction_active_ = is_transaction_active;
   }
 
-  inline void SetCacheConnStr(std::string const& conn_str) {
-    cache_conn_str_ = conn_str;
-  }
-
-  std::string const& GetCacheConnStr() const { return cache_conn_str_; }
-
-  inline void ClearCacheConnStr() { cache_conn_str_.clear(); }
-
  protected:
   bool is_connected_ = false;
 
@@ -144,8 +138,6 @@ class ConnectionHandle : public Handle {
   // True if transaction was begun within the session.
   // False otherwise.
   bool is_transaction_active_ = false;
-
-  std::string cache_conn_str_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

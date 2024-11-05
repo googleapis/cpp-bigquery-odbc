@@ -88,7 +88,7 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
 StatusRecordOr<SQLRETURN> ValidateConnStr(std::string& in_conn_str,
                                           std::string& out_conn_str) {
   auto in_str_section = ExtractKeys(in_conn_str);
-  auto out_str_section = ExtractKeys(out_conn_str);
+  auto out_str_section = ExtractKeys(out_conn_str, true);
 
   std::unordered_set<std::string> seenKeys;
   for (auto const& key : in_str_section) {
@@ -410,12 +410,12 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     auto res = ValidateConnStr(conn_string, out_str);
 
     if (!res) {
+      // handle_ref->ClearDsn();
       return LogAndReturnCode(*handle_ref, res);
     }
 
     auto status_check = *res;
     if (status_check != SQL_SUCCESS) {
-      handle_ref->SetCacheConnStr(conn_string);
       return status_check; /* SQL_NEED_DATA return */
     }
   }
@@ -453,6 +453,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   std::string driver_name = dsn_section["Driver"];
 
   if (dsn_name.empty() && driver_name.empty()) {
+    // handle_ref->ClearDsn();
     auto status_record =
         StatusRecord{SQLStates::k_IM002(),
                      "Data source not found and no default driver specified"};
@@ -496,6 +497,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     out_conn_str[out_tmp_str.length()] = '\0';
   }
 
+  // handle_ref->ClearDsn();
   return SQL_SUCCESS;
 }
 }  // namespace google::cloud::odbc_bq_driver
