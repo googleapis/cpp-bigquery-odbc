@@ -63,6 +63,20 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
+inline void GetCamelCaseStr(std::string& str) {
+  std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+  static std::unordered_map<std::string, std::string> const kCamelCaseMap{
+      {"DRIVER", "Driver"},
+      {"DSN", "DSN"},
+      {"CATALOG", "Catalog"},
+      {"OAUTHMECHANISM", "OAuthMechanism"},
+      {"KEYFILEPATH", "KeyFilePath"}};
+
+  if (auto it = kCamelCaseMap.find(str); it != kCamelCaseMap.end()) {
+    str = it->second;
+  }
+}
+
 /**
  * @param s The string to be split
  *
@@ -136,6 +150,9 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 #endif  //_WIN32
 
 odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
+
+std::vector<std::string> ExtractKeys(std::string& str,
+                                     bool is_parameterized = false);
 
 // Common validation used by both SQLTables and SQLColumns
 odbc_internal::StatusRecord ValidateTableParameters(

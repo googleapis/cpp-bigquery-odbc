@@ -70,6 +70,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.catalog = dsn_section["Catalog"];
   dsn_.default_dataset = dsn_section["DefaultDataset"];
   dsn_.dsn_name = dsn_name;
+  dsn_.keyfilepath = dsn_section["KeyFilePath"];
+  dsn_.OAuthMechanism = dsn_section["OAuthMechanism"];
 
   std::string sql_dialect = dsn_section["SQLDialect"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");

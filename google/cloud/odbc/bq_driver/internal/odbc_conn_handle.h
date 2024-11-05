@@ -47,6 +47,8 @@ struct Dsn {
   std::string catalog;
   std::string default_dataset;
   std::string dsn_name;
+  std::string keyfilepath;
+  std::string OAuthMechanism;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
@@ -107,14 +109,6 @@ class ConnectionHandle : public Handle {
     is_transaction_active_ = is_transaction_active;
   }
 
-  inline void SetCacheConnStr(std::string const& conn_str) {
-    cache_conn_str_ = conn_str;
-  }
-
-  std::string const& GetCacheConnStr() const { return cache_conn_str_; }
-
-  inline void ClearCacheConnStr() { cache_conn_str_.clear(); }
-
  protected:
   bool is_connected_ = false;
 
@@ -142,8 +136,6 @@ class ConnectionHandle : public Handle {
   // True if transaction was begun within the session.
   // False otherwise.
   bool is_transaction_active_ = false;
-
-  std::string cache_conn_str_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
