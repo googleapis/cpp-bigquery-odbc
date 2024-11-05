@@ -83,16 +83,15 @@ void DriverForm::SetValues(Section const& attributesMap) {
   dsn_name_ = attributesMap.count("DSN") > 0 ? attributesMap.at("DSN") : "";
   email_ = attributesMap.count("Email") > 0 ? attributesMap.at("Email") : "";
   o_auth_mechanism_ = attributesMap.count("OAuthMechanism") > 0
-                        ? attributesMap.at("OAuthMechanism")
-                        : "";
+                          ? attributesMap.at("OAuthMechanism")
+                          : "";
   key_file_path_ = attributesMap.count("KeyFilePath") > 0
-                     ? attributesMap.at("KeyFilePath")
-                     : "";
+                       ? attributesMap.at("KeyFilePath")
+                       : "";
   catalog_ =
       attributesMap.count("Catalog") > 0 ? attributesMap.at("Catalog") : "";
   dataset_ =
       attributesMap.count("Dataset") > 0 ? attributesMap.at("Dataset") : "";
-
 }
 
 HFONT CreateCustomFont(int fontSize) {
@@ -291,7 +290,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           if (!IsValidEmail(email_) && !email_.empty()) {
             MessageBox(hwnd, "Invalid email address!", "Error",
                        MB_OK | MB_ICONERROR);
-            email_="";
+            email_ = "";
             return 0;
           }
 
