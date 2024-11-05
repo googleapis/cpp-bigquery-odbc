@@ -47,6 +47,8 @@ struct Dsn {
   std::string catalog;
   std::string default_dataset;
   std::string dsn_name;
+  std::string keyfilepath;
+  std::string OAuthMechanism;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;

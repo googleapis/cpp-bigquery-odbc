@@ -223,6 +223,20 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
+std::vector<std::string> ExtractKeys(std::string& str) {
+  std::smatch match;
+  std::vector<std::string> keywords;
+  std::regex regex_pattern(
+      R"((\w+)[=:])");  // Pattern to capture keywords before ":" or "="
+
+  std::string::const_iterator search_start(str.cbegin());
+  while (std::regex_search(search_start, str.cend(), match, regex_pattern)) {
+    keywords.push_back(match[1]);
+    search_start = match.suffix().first;
+  }
+  return keywords;
+}
+
 std::string GetPathToOdbcIni() {
 #ifdef _WIN32
   // 64-bit

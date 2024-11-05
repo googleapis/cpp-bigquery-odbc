@@ -558,22 +558,21 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDSN) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriverName) {
+  std::string key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   // TODO(b/376388234): Modify Driver name from "Simba" for internal driver
   auto conn_str = "DRIVER=Simba ODBC Driver for Google BigQuery";
 #else
-  std::string key_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
   auto conn_str =
-#ifdef _WIN32
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
-#else
-      "DRIVER=Simba Google BigQuery ODBC Connector;"
-#endif
-      "Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
+      "Catalog=bigquery-devtools-drivers;"
+      "OAuthMechanism=0;"
       "KeyFilePath=" +
       key_path;
 #endif
+
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectWithBrowse(conn_str, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
