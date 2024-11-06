@@ -36,7 +36,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
-using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;

@@ -17,7 +17,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include <regex>
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bq_driver::TestODBCConnection;
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 std::string DriverForm::dsn_name_;
@@ -273,7 +273,7 @@ void DriverForm::Show() {
   }
 }
 
-bool IsValidEmail(std::string const& email) {
+bool DriverForm::IsValidEmail(std::string const& email) {
   std::regex const pattern(R"((\w+)(\.|\-)?(\w*)@(\w+)(\.\w+)+)");
   return std::regex_match(email, pattern);
 }
@@ -333,7 +333,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           char emailBuffer[256];
           GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
           email_ = emailBuffer;
-          if (!IsValidEmail(email_) && !email_.empty()) {
+          if (!pThis->IsValidEmail(email_) && !email_.empty()) {
             MessageBox(hwnd, "Invalid email address!", "Error",
                        MB_OK | MB_ICONERROR);
             email_ = "";

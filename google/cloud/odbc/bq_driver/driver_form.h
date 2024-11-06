@@ -18,7 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
 
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -45,7 +45,7 @@ class DriverForm {
   HWND GetHwnd() const;
   void InitControls();
   void SetValues(Section const& attributesMap);
-
+  bool IsValidEmail(std::string const& email);
   inline std::string const& GetDSN() const { return dsn_name_; }
   inline std::string const& GetEmail() const { return email_; }
 
