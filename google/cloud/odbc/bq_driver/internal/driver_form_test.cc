@@ -111,7 +111,7 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
 
   char buffer[256];
   SendMessage(hComboBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "For Current User")
+  ASSERT_STREQ(buffer, "Service Authentication")
       << "First item text should be 'For Current User'.";
 }
 

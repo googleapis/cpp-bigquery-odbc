@@ -179,7 +179,7 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
-   HWND hwndTestButton =
+  HWND hwndTestButton =
       CreateButton(m_hwnd, "Test...", 120, 400, 80, 30, kIdcButtonTest);
 
   HWND hwndOkButton =
@@ -189,7 +189,8 @@ void DriverForm::InitControls() {
 
   // Populate dropdowns
   SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Service Authentication");
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Application Default Credentials");
+  SendMessage(hComboBox, CB_ADDSTRING, 0,
+              (LPARAM) "Application Default Credentials");
   SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
 
   SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
@@ -245,12 +246,10 @@ void DriverForm::Show() {
   int xPos = (screenWidth - windowWidth) / 2;
   int yPos = (screenHeight - windowHeight) / 2;
 
-
   m_hwnd = CreateWindowEx(
-      0, CLASS_NAME,
-      "Google ODBC Driver for Google Bigquery DSN Setup",
-      WS_OVERLAPPEDWINDOW, xPos, yPos, windowWidth, windowHeight,
-      NULL, NULL, GetModuleHandle(NULL), this);
+      0, CLASS_NAME, "Google ODBC Driver for Google Bigquery DSN Setup",
+      WS_OVERLAPPEDWINDOW, xPos, yPos, windowWidth, windowHeight, NULL, NULL,
+      GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
     CreateWindowEx(0, "STATIC",
@@ -280,28 +279,26 @@ bool IsValidEmail(std::string const& email) {
 }
 
 void DriverForm::CaptureValues(HWND hwnd) {
-    HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
-    char dsnBuffer[256];
-    GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
-    dsn_name_test_ = dsnBuffer;
+  HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+  char dsnBuffer[256];
+  GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+  dsn_name_test_ = dsnBuffer;
 
-    HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
-    char keyBuffer[256];
-    GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
-    key_file_path_test_ = keyBuffer;
+  HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+  char keyBuffer[256];
+  GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+  key_file_path_test_ = keyBuffer;
 
-    HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
-    char authBuffer[256];
-    GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
-    o_auth_mechanism_test_= authBuffer;
+  HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+  char authBuffer[256];
+  GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+  o_auth_mechanism_test_ = authBuffer;
 
-    HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
-    char catalogBuffer[256];
-    GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
-    catalog_test_ = catalogBuffer;
-
+  HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
+  char catalogBuffer[256];
+  GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+  catalog_test_ = catalogBuffer;
 }
-
 
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParam) {
@@ -366,7 +363,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           DestroyWindow(hwnd);  // Close the window
           break;
         }
-        case kIdcButtonTest:{
+        case kIdcButtonTest: {
           CaptureValues(hwnd);
           Section attributesMap;
           attributesMap["DSN"] = dsn_name_test_;
@@ -376,18 +373,21 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           attributesMap["Catalog"] = catalog_test_;
           attributesMap["Dataset"] = dataset_;
 
-          bool status =TestODBCConnection(std::make_shared<Section>(attributesMap));
-          if(status==true){
-            std::string messageText = 
-        "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
-         MessageBox(hwnd,messageText.c_str(), "Test Results", MB_OK | MB_ICONINFORMATION| MB_TOPMOST );
-         return 0;
-            } else {
-                MessageBox(hwnd, "Connection Failed!", "Error", MB_OK | MB_ICONERROR);
-                return 0;
-            }
+          bool status =
+              TestODBCConnection(std::make_shared<Section>(attributesMap));
+          if (status == true) {
+            std::string messageText =
+                "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
+            MessageBox(hwnd, messageText.c_str(), "Test Results",
+                       MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+            return 0;
+          } else {
+            MessageBox(hwnd, "Connection Failed!", "Error",
+                       MB_OK | MB_ICONERROR);
+            return 0;
+          }
         }
-        
+
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;

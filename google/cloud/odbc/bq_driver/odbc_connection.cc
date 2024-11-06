@@ -44,8 +44,8 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 #ifdef _WIN32
-using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
+using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 #endif
 
 /////////////////////////////
@@ -322,90 +322,90 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
 }
 
 #ifdef _WIN32
-SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle,Authentication auth) {
-    StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(conn_handle, false);
-    if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption), handle_result.GetStatusRecord().message);
-        return handle_result.GetCalculatedReturnCode();
-    }
-    auto* handle_ref = *handle_result;
+SQLRETURN ConnectUsingRegistryDsn(SQLHDBC conn_handle, Authentication auth) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  auto* handle_ref = *handle_result;
 
-    StatusRecord status = handle_ref->Connect(auth);
-    if (!status.ok()) {
-        return LogAndReturnCode(*handle_ref, status);
-    }
+  StatusRecord status = handle_ref->Connect(auth);
+  if (!status.ok()) {
+    return LogAndReturnCode(*handle_ref, status);
+  }
 
-    return SQL_SUCCESS;
+  return SQL_SUCCESS;
 }
 
-bool TestODBCConnection(const std::shared_ptr<Section>& section) {
-    if (!section) {
-        return false;
-    }
+bool TestODBCConnection(std::shared_ptr<Section> const& section) {
+  if (!section) {
+    return false;
+  }
 
-    if (section->find("KeyFilePath") == section->end() || (*section)["KeyFilePath"].empty()) {
-        return false;
-    }
-    if (section->find("OAuthMechanism") == section->end() || (*section)["OAuthMechanism"].empty()) {
-        return false;
-    }
-    if (section->find("Catalog") == section->end() || (*section)["Catalog"].empty()) {
-        return false;
-    }
-    std::string oauth_mechanism = (*section)["OAuthMechanism"];
-    std::string oauth_value ; 
-    if (oauth_mechanism == "Service Authentication") {
-        oauth_value ="0";
-    } else if (oauth_mechanism == "Application Default Credentials") {
-        oauth_value = "4";
-    } 
-    else{
-      return false;
-    }
+  if (section->find("KeyFilePath") == section->end() ||
+      (*section)["KeyFilePath"].empty()) {
+    return false;
+  }
+  if (section->find("OAuthMechanism") == section->end() ||
+      (*section)["OAuthMechanism"].empty()) {
+    return false;
+  }
+  if (section->find("Catalog") == section->end() ||
+      (*section)["Catalog"].empty()) {
+    return false;
+  }
+  std::string oauth_mechanism = (*section)["OAuthMechanism"];
+  std::string oauth_value;
+  if (oauth_mechanism == "Service Authentication") {
+    oauth_value = "0";
+  } else if (oauth_mechanism == "Application Default Credentials") {
+    oauth_value = "4";
+  } else {
+    return false;
+  }
 
-    (*section)["OAuthMechanism"] = oauth_value;
+  (*section)["OAuthMechanism"] = oauth_value;
 
-    std::string key_file_path = (*section)["KeyFilePath"]; 
-    std::string key_file_path_up;
-    for (char ch : key_file_path) {
-        if (ch == '\\') {
-            key_file_path_up += "\\\\"; 
-        } else {
-            key_file_path_up += ch; 
-        }
+  std::string key_file_path = (*section)["KeyFilePath"];
+  std::string key_file_path_up;
+  for (char ch : key_file_path) {
+    if (ch == '\\') {
+      key_file_path_up += "\\\\";
+    } else {
+      key_file_path_up += ch;
     }
+  }
 
-    SQLHENV h_env;
-    SQLHDBC h_dbc;
-    SQLRETURN ret;
+  SQLHENV h_env;
+  SQLHDBC h_dbc;
+  SQLRETURN ret;
 
-    // Allocate environment and connection handles
-    SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &h_env);
-    SQLSetEnvAttr(h_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
-    SQLAllocHandle(SQL_HANDLE_DBC, h_env, &h_dbc);
+  // Allocate environment and connection handles
+  SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &h_env);
+  SQLSetEnvAttr(h_env, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+  SQLAllocHandle(SQL_HANDLE_DBC, h_env, &h_dbc);
 
-    // Attempt the connection
-    Authentication auth = CreateAuth(*section);
-    try
-    {
-      ret = ConnectUsingRegistryDsn(h_dbc, auth);
-    }
-    catch(const std::exception& e)
-    {
-      ret = -1;
-    }
-    
-    bool status = SQL_SUCCEEDED(ret);
+  // Attempt the connection
+  Authentication auth = CreateAuth(*section);
+  try {
+    ret = ConnectUsingRegistryDsn(h_dbc, auth);
+  } catch (std::exception const& e) {
+    ret = -1;
+  }
 
-    // Disconnect and free handles
-    SQLDisconnect(h_dbc);
-    SQLFreeHandle(SQL_HANDLE_DBC, h_dbc);
-    SQLFreeHandle(SQL_HANDLE_ENV, h_env);
+  bool status = SQL_SUCCEEDED(ret);
 
-    return status;
+  // Disconnect and free handles
+  SQLDisconnect(h_dbc);
+  SQLFreeHandle(SQL_HANDLE_DBC, h_dbc);
+  SQLFreeHandle(SQL_HANDLE_ENV, h_env);
+
+  return status;
 }
 #endif
-
 
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)

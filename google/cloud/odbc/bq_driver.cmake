@@ -72,12 +72,6 @@ set(COMMON_SOURCES
     bq_driver/internal/utils.cc
     bq_driver/internal/utils.h)
 
-# # Add Windows-specific source files if compiling on Windows
-# if (WIN32)
-#     list(APPEND COMMON_SOURCES bq_driver/internal/driver_form.cc
-#          bq_driver/internal/driver_form.h)
-# endif ()
-
 # Create the library target
 add_library(google_cloud_odbc_bq_driver_internal ${COMMON_SOURCES})
 
@@ -102,7 +96,6 @@ target_include_directories(google_cloud_odbc_bq_driver_internal
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
 create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
-
 
 set(COMMON_SOURCES_BQ
     bq_driver/odbc_api.cc
@@ -131,14 +124,14 @@ set(COMMON_SOURCES_BQ
     bq_driver/odbc_utils.cc
     bq_driver/odbc_utils.h)
 
-    # Add Windows-specific source files if compiling on Windows
+# Add Windows-specific source files if compiling on Windows
 if (WIN32)
     list(APPEND COMMON_SOURCES_BQ bq_driver/driver_form.cc
          bq_driver/driver_form.h)
 endif ()
 
-    # BQ Driver Library
-    add_library(google_cloud_odbc_bq_driver ${COMMON_SOURCES_BQ})
+# BQ Driver Library
+add_library(google_cloud_odbc_bq_driver ${COMMON_SOURCES_BQ})
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver

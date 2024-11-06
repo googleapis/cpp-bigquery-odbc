@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -35,7 +35,7 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
-static int const kIdcButtonTest= 115;
+static int const kIdcButtonTest = 115;
 
 class DriverForm {
  public:
@@ -60,6 +60,7 @@ class DriverForm {
   inline std::string const& GetCatalogName() const { return catalog_; }
 
   static void CaptureValues(HWND hwnd);
+
  private:
   static std::string dsn_name_;
   static std::string email_;
@@ -83,4 +84,4 @@ void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
 #endif /* WIN32 */
 
 }  // namespace google::cloud::odbc_bq_driver_internal
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
