@@ -13,11 +13,12 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
-
+using google::cloud::odbc_bq_driver::TestODBCConnection;
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 std::string DriverForm::dsn_name_;
 std::string DriverForm::email_;
@@ -25,6 +26,11 @@ std::string DriverForm::key_file_path_;
 std::string DriverForm::o_auth_mechanism_;
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
+std::string DriverForm::catalog_test_;
+std::string DriverForm::o_auth_mechanism_test_;
+std::string DriverForm::key_file_path_test_;
+std::string DriverForm::dsn_name_test_;
+bool DriverForm::connection_status_;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     PWSTR pCmdLine, int nCmdShow) {
@@ -156,7 +162,7 @@ void DriverForm::InitControls() {
 
   HWND hAuthHead =
       CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
-  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 150, 100, kIdcComboBox);
+  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 220, 100, kIdcComboBox);
 
   HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
   HWND hEmailEdit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
@@ -173,14 +179,17 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
+   HWND hwndTestButton =
+      CreateButton(m_hwnd, "Test...", 120, 400, 80, 30, kIdcButtonTest);
+
   HWND hwndOkButton =
       CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
   HWND hwndCancelButton =
       CreateButton(m_hwnd, "Cancel", 320, 400, 80, 30, kIdcButtonCancel);
 
   // Populate dropdowns
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For Current User");
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For All Users");
+  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Service Authentication");
+  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Application Default Credentials");
   SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
 
   SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
@@ -227,10 +236,21 @@ void DriverForm::Show() {
 
   RegisterClass(&wc);
 
-  m_hwnd = CreateWindowEx(0, CLASS_NAME,
-                          "Google ODBC Driver for Google Bigquery DSN Setup",
-                          WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                          520, 650, NULL, NULL, GetModuleHandle(NULL), this);
+  int windowWidth = 520;
+  int windowHeight = 650;
+
+  int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+  int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+  int xPos = (screenWidth - windowWidth) / 2;
+  int yPos = (screenHeight - windowHeight) / 2;
+
+
+  m_hwnd = CreateWindowEx(
+      0, CLASS_NAME,
+      "Google ODBC Driver for Google Bigquery DSN Setup",
+      WS_OVERLAPPEDWINDOW, xPos, yPos, windowWidth, windowHeight,
+      NULL, NULL, GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
     CreateWindowEx(0, "STATIC",
@@ -240,7 +260,6 @@ void DriverForm::Show() {
                    m_hwnd, (HMENU)kIdcHeaderLabel, GetModuleHandle(NULL), NULL);
     InitControls();
 
-    // Create and position OK and Cancel buttons at the bottom
     RECT rcClient;
     GetClientRect(m_hwnd, &rcClient);
 
@@ -260,6 +279,30 @@ bool IsValidEmail(std::string const& email) {
   return std::regex_match(email, pattern);
 }
 
+void DriverForm::CaptureValues(HWND hwnd) {
+    HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+    char dsnBuffer[256];
+    GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+    dsn_name_test_ = dsnBuffer;
+
+    HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+    char keyBuffer[256];
+    GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+    key_file_path_test_ = keyBuffer;
+
+    HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+    char authBuffer[256];
+    GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+    o_auth_mechanism_test_= authBuffer;
+
+    HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
+    char catalogBuffer[256];
+    GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+    catalog_test_ = catalogBuffer;
+
+}
+
+
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParam) {
   DriverForm* pThis =
@@ -270,7 +313,13 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
       // Set the instance pointer in the window's user data
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
       break;
-
+    case WM_KEYDOWN: {
+      if (wParam == VK_ESCAPE) {
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+        return 0;
+      }
+      break;
+    }
     case WM_COMMAND:
       switch (LOWORD(wParam)) {
         case kIdcBrowseButton: {
@@ -317,6 +366,28 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           DestroyWindow(hwnd);  // Close the window
           break;
         }
+        case kIdcButtonTest:{
+          CaptureValues(hwnd);
+          Section attributesMap;
+          attributesMap["DSN"] = dsn_name_test_;
+          attributesMap["Email"] = email_;
+          attributesMap["KeyFilePath"] = key_file_path_test_;
+          attributesMap["OAuthMechanism"] = o_auth_mechanism_test_;
+          attributesMap["Catalog"] = catalog_test_;
+          attributesMap["Dataset"] = dataset_;
+
+          bool status =TestODBCConnection(std::make_shared<Section>(attributesMap));
+          if(status==true){
+            std::string messageText = 
+        "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
+         MessageBox(hwnd,messageText.c_str(), "Test Results", MB_OK | MB_ICONINFORMATION| MB_TOPMOST );
+         return 0;
+            } else {
+                MessageBox(hwnd, "Connection Failed!", "Error", MB_OK | MB_ICONERROR);
+                return 0;
+            }
+        }
+        
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;

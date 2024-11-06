@@ -35,6 +35,7 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
+static int const kIdcButtonTest= 115;
 
 class DriverForm {
  public:
@@ -58,6 +59,7 @@ class DriverForm {
 
   inline std::string const& GetCatalogName() const { return catalog_; }
 
+  static void CaptureValues(HWND hwnd);
  private:
   static std::string dsn_name_;
   static std::string email_;
@@ -65,6 +67,11 @@ class DriverForm {
   static std::string o_auth_mechanism_;
   static std::string dataset_;
   static std::string catalog_;
+  static std::string catalog_test_;
+  static std::string o_auth_mechanism_test_;
+  static std::string key_file_path_test_;
+  static std::string dsn_name_test_;
+  static bool connection_status_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;

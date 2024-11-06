@@ -269,5 +269,40 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
   EXPECT_EQ("Username needs to be an email address",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
+#ifdef _WIN32
 
+TEST(TestODBCConnection, SectionIsNull) {
+    EXPECT_FALSE(TestODBCConnection(nullptr));
+}
+
+TEST(TestODBCConnection, KeyFilePathIsMissing) {
+  auto section=std::make_shared<Section>();
+    (*section)["OAuthMechanism"] = "OAuthMechanismValue";
+    (*section)["Catalog"] = "CatalogValue";
+    EXPECT_FALSE(TestODBCConnection(section));
+}
+
+TEST(TestODBCConnection, OAuthMechanismIsMissing) {
+  auto section=std::make_shared<Section>();
+    (*section)["KeyFilePath"] = "ValidKeyFilePath";
+    (*section)["Catalog"] = "CatalogValue";
+    EXPECT_FALSE(TestODBCConnection(section));
+}
+
+TEST(TestODBCConnection, CatalogIsMissing) {
+    auto section=std::make_shared<Section>();
+    (*section)["KeyFilePath"] = "ValidKeyFilePath";
+    (*section)["OAuthMechanism"] = "OAuthMechanismValue";
+    EXPECT_FALSE(TestODBCConnection(section));
+}
+
+TEST(TestODBCConnection, ConnectionFails) {
+    auto section=std::make_shared<Section>();
+    (*section)["KeyFilePath"] = "InvalidKeyFilePath";
+    (*section)["OAuthMechanism"] = "InvalidOAuthMechanism";
+    (*section)["Catalog"] = "InvalidCatalog";
+
+    EXPECT_FALSE(TestODBCConnection(section));
+}
+#endif
 }  // namespace google::cloud::odbc_bq_driver
