@@ -195,7 +195,7 @@ function (bq_driver_define_unit_tests)
     set(TEST_SOURCES
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
-        bq_driver/internal/driver_form_test.cc
+        bq_driver/driver_form_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_desc_attr_test.cc
@@ -230,7 +230,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/odbc_utils_test.cc)
 
     if (WIN32)
-        list(APPEND TEST_SOURCES bq_driver/internal/driver_form_test.cc)
+        list(APPEND TEST_SOURCES bq_driver/driver_form_test.cc)
     endif ()
 
     add_executable(google_cloud_odbc_bq_driver_unit_tests ${TEST_SOURCES})

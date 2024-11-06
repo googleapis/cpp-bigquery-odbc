@@ -16,7 +16,7 @@
 #include "google/cloud/odbc/bq_driver/driver_form.h"
 #include <gtest/gtest.h>
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -202,5 +202,5 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
   EXPECT_EQ(form->GetDatasetName(), "");
 }
 
-}  // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver
 #endif /* WIN32*/
