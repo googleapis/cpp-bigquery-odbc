@@ -408,5 +408,5 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-}  // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver
 #endif /* WIN32*/

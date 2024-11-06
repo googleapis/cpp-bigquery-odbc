@@ -83,5 +83,5 @@ void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
 
 #endif /* WIN32 */
 
-}  // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
