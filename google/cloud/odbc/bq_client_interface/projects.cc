@@ -74,7 +74,7 @@ StatusRecordOr<Project> ConvertFrom(
   bq_project.id = rm_project.project_id();
   bq_project.friendly_name = rm_project.display_name();
   bq_project.project_reference.project_id = rm_project.project_id();
-  auto index = rm_project.name().find("/");
+  auto index = rm_project.name().find('/');
   if (index == std::string::npos) {
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The project " + rm_project.project_id() +
