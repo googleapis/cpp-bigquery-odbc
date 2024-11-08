@@ -72,7 +72,8 @@ class ODBCBQClient {
   odbc_internal::StatusRecordOr<
       ::google::cloud::bigquery_v2_minimal_internal::Project>
   GetProject(std::string const& project_id,
-             ::google::cloud::Options const& options);
+             ::google::cloud::Options const& options,
+             bool use_resource_mgr = false);
 
   // Lists all projects for the user.
   odbc_internal::StatusRecordOr<

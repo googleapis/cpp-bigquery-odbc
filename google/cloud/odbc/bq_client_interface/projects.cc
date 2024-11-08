@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
+#include "google/cloud/resourcemanager/v3/projects_client.h"
+#include <google/cloud/resourcemanager/v3/projects.pb.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -24,6 +26,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::resourcemanager_v3::ProjectsClient;
 
 StatusRecordOr<std::vector<Project>> ListAllProjects(
     ProjectClient& project_client, Options const& options) {
@@ -62,6 +65,56 @@ StatusRecordOr<Project> GetProject(ProjectClient& project_client,
 
   return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                       "The project " + project_id + " was not found"};
+}
+
+StatusRecordOr<Project> ConvertFrom(
+    google::cloud::resourcemanager::v3::Project const& rm_project) {
+  Project bq_project;
+  bq_project.kind = "bigquery#project";
+  bq_project.id = rm_project.project_id();
+  bq_project.friendly_name = rm_project.display_name();
+  bq_project.project_reference.project_id = rm_project.project_id();
+  auto index = rm_project.name().find("/");
+  if (index == std::string::npos) {
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "The project " + rm_project.project_id() +
+                            " was not found with valid project name"};
+  }
+
+  bq_project.numeric_id = std::stoi(rm_project.name().substr(index + 1));
+  return bq_project;
+}
+
+StatusRecordOr<Project> GetProjectRM(ProjectsClient& projects_rm_client,
+                                     std::string const& project_id,
+                                     Options const& options) {
+  if (project_id.empty()) {
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "The project id cannot be empty"};
+  }
+  std::string req_rm_project_id = "projects/";
+  if (!absl::StartsWith(project_id, "projects/")) {
+    req_rm_project_id.append(project_id);
+  } else {
+    req_rm_project_id = project_id;
+  }
+
+  StatusOr<google::cloud::resourcemanager::v3::Project> resp_rm_project =
+      projects_rm_client.GetProject(req_rm_project_id, options);
+  if (!resp_rm_project) {
+    return StatusRecord::ConvertFrom(resp_rm_project.status());
+  }
+
+  // Validate we got the correct project back from the server.
+  std::string resp_rm_project_id = "projects/";
+  resp_rm_project_id.append((*resp_rm_project).project_id());
+
+  if (resp_rm_project_id != req_rm_project_id) {
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "The project " + project_id + " was not found"};
+  }
+
+  return ConvertFrom(*resp_rm_project);
 }
 
 StatusRecordOr<std::vector<Project>> FilterProjects(
