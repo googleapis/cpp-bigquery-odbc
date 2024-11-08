@@ -25,14 +25,16 @@ function (define_client_library_integration_tests)
     file(
         GLOB client_library_tests_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "bq_apis/*.cc")
+        "bq_apis/*_test.cc")
     add_executable(scheduled_integration_tests ${client_library_tests_cc})
 
     target_link_libraries(
         scheduled_integration_tests
         PUBLIC google-cloud-cpp::experimental-bigquery_rest
+               google-cloud-cpp::resourcemanager
                google_cloud_odbc_testing_client_library_utils
-               google_cloud_odbc_testing_utils GTest::gtest_main)
+               google_cloud_odbc_testing_utils
+               GTest::gtest_main)
 
     target_include_directories(scheduled_integration_tests
                                PUBLIC ${CMAKE_SOURCE_DIR})
