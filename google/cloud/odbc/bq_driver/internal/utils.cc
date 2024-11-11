@@ -284,7 +284,6 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-std::wcout << "utf_16_str  " << utf_16_str << std::endl;
   iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
   int errorno = -1;
   int* errorptr = &errorno;
@@ -387,7 +386,6 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   }
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
-  std::wcout << "wstr " << wstr << std::endl;
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len = wstr.size();
     // Calculating length based on SQLWCHAR size in different plateform and

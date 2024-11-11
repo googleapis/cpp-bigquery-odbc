@@ -457,48 +457,20 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // This should not be unicode converted if it is empty. Instead we send a
   // SQLCHAR empty value directly to the internal function.
   SQLCHAR out_conn_str[kBufferLength];
-  StatusRecordOr<std::string> utf8_out_conn_str;
-
-  std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
-  auto out_len = wstr.length();
-  if (out_len > 0) {
-    utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString, out_len);
-    if (!utf8_out_conn_str) {
-      TracePrintInternal(*(*kTraceOption),
-                         utf8_out_conn_str.GetStatusRecord().message);
-      return utf8_out_conn_str.GetCalculatedReturnCode();
-    }
-    *outConnectionStringLen = utf8_out_conn_str->length();
+     SQLSMALLINT out_conn_str_len = 0;
     // Call to internal common function for SQLDriverConnect and
     // SQLDriverConnectW in odbc_connection.h.
     rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
         connectionHandle, windowHandle,
         ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
-        ToSqlChar(utf8_out_conn_str->data()), outConnectionStringBufferLen,
-        outConnectionStringLen, driverCompletion);
-  } else {
-    // Call to internal common function for SQLDriverConnect and
-    // SQLDriverConnectW in odbc_connection.h.
-    rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-        connectionHandle, windowHandle,
-        ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
-        out_conn_str, outConnectionStringBufferLen, outConnectionStringLen,
+        out_conn_str, outConnectionStringBufferLen, &out_conn_str_len,
         driverCompletion);
-  }
+  
   // Handle Unicode conversion of output parameters.
-  StatusRecordOr<std::wstring> utf16_in_connection_str =
-      Utf8ToUtf16(*utf8_in_connection_str);
-  if (!utf16_in_connection_str) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf16_in_connection_str.GetStatusRecord().message);
-    return utf16_in_connection_str.GetCalculatedReturnCode();
-  }
-  inConnectionString = ToSqlWChar(utf16_in_connection_str->data());
-  inConnectionStringLen = utf16_in_connection_str->length();
-
+if(outConnectionString){
   StatusRecordOr<std::wstring> utf16_out_conn_str;
-  if (out_len > 0) {
-    utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
+  if (out_conn_str_len > 0) {
+    utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
   } else {
     std::string val(ToCharStr(out_conn_str));
     utf16_out_conn_str = Utf8ToUtf16(val);
@@ -509,7 +481,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     return utf16_out_conn_str.GetCalculatedReturnCode();
   }
   outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
-  *outConnectionStringLen = utf16_out_conn_str->length();
+  } 
+  if(outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionExit_SQLDriverConnectW(rc, *(*kTraceOption));

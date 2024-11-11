@@ -152,6 +152,13 @@ SQLRETURN Connect(std::wstring dsn, std::shared_ptr<ODBCHandles> conn,
         NumSqlChar(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
 
     CheckError(status, "SQLDriverConnectW", conn);
+status = SQLDisconnect(conn->hdbc);
+    CheckError(status, "SQLDisconnect", conn);
+    status = SQLDriverConnectW(
+        conn->hdbc, NULL, sqlWStr.data(), SQL_NTS, NULL,
+        0, NULL, SQL_DRIVER_COMPLETE);
+
+    CheckError(status, "SQLDriverConnectW", conn);
   } else {
     status =
         SQLConnectW(conn->hdbc, sqlWStr.data(), SQL_NTS,
