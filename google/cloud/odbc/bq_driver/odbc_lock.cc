@@ -39,7 +39,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
                            "Invalid Environment Handle Acquire");
         return SQL_INVALID_HANDLE;
       }
-      env_handle_ptr->GetMutex().lock();
+      env_handle_ptr->GetMutex().try_lock();
       break;
     }
     case SQL_HANDLE_DBC: {
@@ -51,7 +51,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
         return SQL_INVALID_HANDLE;
       }
 
-      conn_handle_ptr->GetMutex().lock();
+      conn_handle_ptr->GetMutex().try_lock();
       break;
     }
     case SQL_HANDLE_STMT: {
@@ -61,7 +61,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
                            "Invalid Statement Handle Acquire");
         return SQL_INVALID_HANDLE;
       }
-      stmt_handle_ptr->GetMutex().lock();
+      stmt_handle_ptr->GetMutex().try_lock();
       break;
     }
     case SQL_HANDLE_DESC: {
@@ -71,7 +71,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handleType) {
                            "Invalid Descriptor Handle Acquire");
         return SQL_INVALID_HANDLE;
       }
-      desc_handle_ptr->GetMutex().lock();
+      desc_handle_ptr->GetMutex().try_lock();
       break;
     }
     default:
