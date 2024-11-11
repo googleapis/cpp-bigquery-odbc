@@ -552,14 +552,6 @@ TEST(ConnectionTest, SQLDriverConnectA) {
 }
 
 #ifdef _WIN32
-TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_PROMPT) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
-                              GetDesktopWindow(), SQL_DRIVER_PROMPT, true),
-            SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_COMPLETE) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,

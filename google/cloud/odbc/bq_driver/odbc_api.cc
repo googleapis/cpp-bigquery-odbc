@@ -235,6 +235,7 @@ void RecordTraceStatus(std::string const& name, StatusRecord const& s) {
 }
 
 bool IsTracingEnabled(std::string const& name) {
+  return false;
   if (!kTraceOption) {
     RecordTraceStatus(name, kTraceOption.GetStatusRecord());
     return false;
@@ -459,24 +460,25 @@ SQLRETURN SQL_API SQLDriverConnectW(
   SQLCHAR out_conn_str[kBufferLength];
   StatusRecordOr<std::string> utf8_out_conn_str;
 
-  std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
-  auto out_len = wstr.length();
-  if (out_len > 0) {
-    utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString, out_len);
-    if (!utf8_out_conn_str) {
-      TracePrintInternal(*(*kTraceOption),
-                         utf8_out_conn_str.GetStatusRecord().message);
-      return utf8_out_conn_str.GetCalculatedReturnCode();
-    }
-    *outConnectionStringLen = utf8_out_conn_str->length();
-    // Call to internal common function for SQLDriverConnect and
-    // SQLDriverConnectW in odbc_connection.h.
-    rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-        connectionHandle, windowHandle,
-        ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
-        ToSqlChar(utf8_out_conn_str->data()), outConnectionStringBufferLen,
-        outConnectionStringLen, driverCompletion);
-  } else {
+  // std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
+  //  auto out_len = wstr.length();
+  //  if (out_len > 0) {
+  //   utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString,
+  //   out_len); if (!utf8_out_conn_str) {
+  //     TracePrintInternal(*(*kTraceOption),
+  //                        utf8_out_conn_str.GetStatusRecord().message);
+  //     return utf8_out_conn_str.GetCalculatedReturnCode();
+  //   }
+  //   *outConnectionStringLen = utf8_out_conn_str->length();
+  //    // Call to internal common function for SQLDriverConnect and
+  //    // SQLDriverConnectW in odbc_connection.h.
+  //    rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
+  //        connectionHandle, windowHandle,
+  //        ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
+  //        ToSqlChar(utf8_out_conn_str->data()), outConnectionStringBufferLen,
+  //        outConnectionStringLen, driverCompletion);
+  //  } else
+  {
     // Call to internal common function for SQLDriverConnect and
     // SQLDriverConnectW in odbc_connection.h.
     rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
@@ -497,9 +499,10 @@ SQLRETURN SQL_API SQLDriverConnectW(
   inConnectionStringLen = utf16_in_connection_str->length();
 
   StatusRecordOr<std::wstring> utf16_out_conn_str;
-  if (out_len > 0) {
-    utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
-  } else {
+  // if (out_len > 0) {
+  //   utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
+  // } else
+  {
     std::string val(ToCharStr(out_conn_str));
     utf16_out_conn_str = Utf8ToUtf16(val);
   }
