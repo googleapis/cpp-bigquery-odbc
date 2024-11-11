@@ -470,7 +470,7 @@ void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
     }
     insert_stmt.append(row_str);
   }
-
+std::wcout << "insert_stmt complete " << insert_stmt << std::endl;
   std::vector<SQLWCHAR> sqlWStr(insert_stmt.begin(), insert_stmt.end());
   sqlWStr.emplace_back(L'\0');
   status = SQLPrepareW(conn->hstmt, sqlWStr.data(), SQL_NTS);
