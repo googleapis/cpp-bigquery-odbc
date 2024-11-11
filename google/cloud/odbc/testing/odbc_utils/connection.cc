@@ -84,7 +84,7 @@ SQLRETURN ConnectWithPrompt(std::string conn_str,
                             SQLHWND window_handle,
                             SQLUSMALLINT driver_completion, int timeout,
                             bool use_ansi) {
-  SQLSMALLINT buflen;
+  SQLSMALLINT buflen = 0;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
@@ -108,10 +108,6 @@ SQLRETURN ConnectWithPrompt(std::string conn_str,
   conn->connected = true;
 
   PrintDriverVerName(conn, use_ansi);
-
-  // Allocate statement handle
-  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
-  CheckError(status, "SQLAllocHandle", conn);
   return status;
 }
 
