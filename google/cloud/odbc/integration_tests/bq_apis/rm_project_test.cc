@@ -30,7 +30,7 @@ using ::google::cloud::resourcemanager_v3::MakeProjectsConnection;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::testing::HasSubstr;
 
-std::string const kRMProjectWithoutPrefix = kCatalogName;
+std::string const kRMProjectWithoutPrefix = "bigquery-devtools-drivers";
 std::string const kRMProjectWithPrefix = "projects/" + kRMProjectWithoutPrefix;
 
 TEST(ResourceManagerGetProject, SuccessProjectWithPrefix) {
