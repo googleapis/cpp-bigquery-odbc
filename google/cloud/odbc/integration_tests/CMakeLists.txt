@@ -34,6 +34,7 @@ function (define_client_library_integration_tests)
                google-cloud-cpp::resourcemanager
                google_cloud_odbc_testing_client_library_utils
                google_cloud_odbc_testing_utils
+               google_cloud_odbc_testing_odbc_utils
                GTest::gtest_main)
 
     target_include_directories(scheduled_integration_tests
