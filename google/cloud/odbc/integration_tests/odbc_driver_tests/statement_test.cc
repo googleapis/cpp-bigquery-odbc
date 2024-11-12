@@ -132,9 +132,8 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
     }
   }
 }
-// TODO(b/378099926): This test is currently failing with unixODBC Driver
-// Manager. Enable the test after it is fixed.
-TEST(StatementTest, DISABLED_SQLFetch_Unicode) {
+
+TEST(StatementTest, SQLFetch_Unicode) {
   std::string const table_name = kDatasetWithTablePrefix + "ODBC_UNICODE_TEST";
   Table table(table_name);
 
