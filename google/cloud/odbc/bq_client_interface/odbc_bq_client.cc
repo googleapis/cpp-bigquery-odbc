@@ -82,8 +82,12 @@ StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
 }
 
 StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
-ODBCBQClient::GetProject(std::string const& project_id,
-                         Options const& options) {
+ODBCBQClient::GetProject(std::string const& project_id, Options const& options,
+                         bool use_resource_mgr) {
+  if (use_resource_mgr) {
+    return ::google::cloud::odbc_bigquery_client_interface::GetProjectRM(
+        project_rm_client_, project_id, options);
+  }
   return ::google::cloud::odbc_bigquery_client_interface::GetProject(
       project_client_, project_id, options);
 }

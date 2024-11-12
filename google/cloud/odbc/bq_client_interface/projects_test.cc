@@ -17,6 +17,9 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_project_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
+#include "google/cloud/resourcemanager/v3/mocks/mock_projects_connection.h"
+#include "google/cloud/resourcemanager/v3/projects_client.h"
+#include <google/cloud/resourcemanager/v3/projects.pb.h>
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -28,8 +31,42 @@ using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_bigquery_client_interface::ListAllProjects;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::google::cloud::resourcemanager_v3::ProjectsClient;
+using ::google::cloud::resourcemanager_v3_mocks::MockProjectsConnection;
 using ::testing::HasSubstr;
 
+namespace {
+
+ProjectsClient GetMockResourceProjectsClient(
+    google::cloud::resourcemanager::v3::Project const& expected_rm_project) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetProject)
+      .WillOnce(
+          [expected_rm_project](
+              google::cloud::resourcemanager::v3::GetProjectRequest const&) {
+            return make_status_or(expected_rm_project);
+            ;
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+  return mocked_projects_client;
+}
+
+void VerifyResourceProjectResults(
+    std::string const& kind, std::int64_t const& numeric_id,
+    google::cloud::resourcemanager::v3::Project const& expected_rm_project,
+    Project const& actual_bq_project) {
+  EXPECT_EQ(kind, actual_bq_project.kind);
+  EXPECT_EQ(numeric_id, actual_bq_project.numeric_id);
+  EXPECT_EQ(expected_rm_project.project_id(), actual_bq_project.id);
+  EXPECT_EQ(expected_rm_project.display_name(),
+            actual_bq_project.friendly_name);
+  EXPECT_EQ(expected_rm_project.project_id(),
+            actual_bq_project.project_reference.project_id);
+}
+
+}  // namespace
 TEST(ListAllProjects, ListZeroProjects) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
@@ -182,5 +219,94 @@ TEST(FilterProjects, FilterProjectsFailure_UnauthenticatedRequest) {
   EXPECT_THAT(projects, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
                                        HasSubstr("denied")));
 }
+
+TEST(GetResourceManagerProject, SuccessWithProjectsPrefix) {
+  Options options;
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockResourceProjectsClient(expected_rm_project);
+
+  StatusRecordOr<Project> actual_bq_project =
+      GetProjectRM(mocked_projects_client, "projects/test", options);
+  ASSERT_STATUS_RECORD_OK(actual_bq_project);
+
+  VerifyResourceProjectResults(/*kind*/ "bigquery#project",
+                               /*numeric_id*/ 1234, expected_rm_project,
+                               *actual_bq_project);
+}
+
+TEST(GetResourceManagerProject, SuccessWithoutProjectsPrefix) {
+  Options options;
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockResourceProjectsClient(expected_rm_project);
+
+  StatusRecordOr<Project> actual_bq_project =
+      GetProjectRM(mocked_projects_client, "test", options);
+  ASSERT_STATUS_RECORD_OK(actual_bq_project);
+
+  VerifyResourceProjectResults(/*kind*/ "bigquery#project",
+                               /*numeric_id*/ 1234, expected_rm_project,
+                               *actual_bq_project);
+}
+
+TEST(GetResourceManagerProject, Fail_EmptyProjectId) {
+  Options options;
+  auto mock = std::make_shared<MockProjectsConnection>();
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  StatusRecordOr<Project> actual_bq_project =
+      GetProjectRM(mocked_projects_client, "", options);
+
+  EXPECT_THAT(actual_bq_project,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("cannot be empty")));
+}
+
+TEST(GetResourceManagerProject, Fail_ProjectNotFound) {
+  Options options;
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockResourceProjectsClient(expected_rm_project);
+
+  StatusRecordOr<Project> actual_bq_project =
+      GetProjectRM(mocked_projects_client, "test123", options);
+
+  EXPECT_THAT(actual_bq_project,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("not found")));
+}
+
+TEST(GetResourceManagerProject, Fail_InvalidProjectName) {
+  Options options;
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects-1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockResourceProjectsClient(expected_rm_project);
+
+  StatusRecordOr<Project> actual_bq_project =
+      GetProjectRM(mocked_projects_client, "test", options);
+
+  EXPECT_THAT(actual_bq_project,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("not found with valid project name")));
+}
+
+// TODO: Add more tests.
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
