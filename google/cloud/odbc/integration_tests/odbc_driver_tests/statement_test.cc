@@ -164,8 +164,6 @@ TEST(StatementTest, SQLFetch_Unicode) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
 void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
@@ -193,10 +191,12 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
     // Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
     for (int i = 0; i < ret_col_values.size(); i++) {
-      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
     }
   }
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
@@ -765,30 +765,27 @@ TEST(StatementTest, SQLGetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
-TEST(StatementTest, FetchDirectRowWise) {
+TEST(StatementTest, FetchRowWise) {
   std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
-  table.Create(conn,
-               "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
-               false);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
-  table.InsertData(conn, kSampleData, false);
+  table.InsertData(conn, kSampleData, false, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField, IntegerField FROM " + table_name;
-  auto results = *FetchDirectRowWise(conn, query, 1);
+  auto results = *FetchRowWise(conn, query, 1);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -806,7 +803,7 @@ TEST(StatementTest, RollBackTransaction) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
+  table.CreateWithPrepare(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
   // Insert some data to the table
@@ -852,8 +849,6 @@ TEST(StatementTest, RollBackTransaction) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void PrepareAndCheckQuery(std::string const& query,
                           std::shared_ptr<ODBCHandles> conn,

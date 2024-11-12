@@ -393,7 +393,9 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     for (auto const& col : row.columns) {
       BQDataType col_type = result_set.row_schema[i++].col_type;
       std::string data = col.value;
-      if (!data.empty()) {
+      if (col.is_null) {
+        rs_row.emplace_back(kNullValue);
+      } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
           case BQDataType::kString: {
