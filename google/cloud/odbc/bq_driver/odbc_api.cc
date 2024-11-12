@@ -460,7 +460,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   SQLCHAR out_conn_str[kBufferLength];
   StatusRecordOr<std::string> utf8_out_conn_str;
 
-  // std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
+  std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
   //  auto out_len = wstr.length();
   //  if (out_len > 0) {
   //   utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString,
