@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
@@ -29,8 +30,8 @@ using ::google::cloud::resourcemanager_v3::MakeProjectsConnection;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::testing::HasSubstr;
 
-std::string const kRMProjectWithoutPrefix = "bigquery-devtools-drivers";
-std::string const kRMProjectWithPrefix = "projects/bigquery-devtools-drivers";
+std::string const kRMProjectWithoutPrefix = kCatalogName;
+std::string const kRMProjectWithPrefix = "projects/" + kRMProjectWithoutPrefix;
 
 TEST(ResourceManagerGetProject, SuccessProjectWithPrefix) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
