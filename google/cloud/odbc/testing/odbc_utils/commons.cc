@@ -324,6 +324,47 @@ inline void CheckError(SQLRETURN status, std::string const api,
   }
 }
 
+std::string GetInsertionString(std::string table_name, StdRows rows) {
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return "";
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::string row_str = "( ";
+
+    auto str_field = row.str_field;
+    if (!str_field.empty()) {
+      row_str.append("'" + str_field + "', ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    auto int_field = row.int_field;
+    if (int_field != NULL) {
+      row_str.append(std::to_string(int_field) + ", ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    auto float_field = row.float_field;
+    if (float_field != NULL) {
+      row_str.append(std::to_string(float_field));
+    } else {
+      row_str.append("NULL");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+  return insert_stmt;
+}
+
 void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
                    bool use_ansi) {
   char create_table_stmt[kBufferLength];
@@ -363,45 +404,11 @@ void Table::DropWithPrepare(std::shared_ptr<ODBCHandles> conn) {
 // testing/commons.*
 void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
                        bool use_ansi, bool use_sqlprepare) {
-  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
-  int num_rows = rows.size();
-  if (!num_rows) {
+  SQLRETURN status;
+  std::string insert_stmt = GetInsertionString(table_name_, rows);
+  if (insert_stmt.empty()) {
     return;
   }
-
-  for (int i = 0; i < num_rows; i++) {
-    auto row = rows[i];
-    std::string row_str = "( ";
-
-    auto str_field = row.str_field;
-    if (!str_field.empty()) {
-      row_str.append("'" + str_field + "', ");
-    } else {
-      row_str.append("NULL, ");
-    }
-
-    auto int_field = row.int_field;
-    if (int_field != NULL) {
-      row_str.append(std::to_string(int_field) + ", ");
-    } else {
-      row_str.append("NULL, ");
-    }
-
-    auto float_field = row.float_field;
-    if (float_field != NULL) {
-      row_str.append(std::to_string(float_field));
-    } else {
-      row_str.append("NULL");
-    }
-
-    row_str.append(")");
-    if (i != (num_rows - 1)) {
-      row_str.append(", ");
-    }
-    insert_stmt.append(row_str);
-  }
-
-  SQLRETURN status;
   if (use_sqlprepare) {
     if (use_ansi) {
       status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
