@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
-#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
