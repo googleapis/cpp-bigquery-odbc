@@ -15,16 +15,20 @@
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include <regex>
+#include <shlobj.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
+char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
 std::string DriverForm::dsn_name_;
 std::string DriverForm::email_;
 std::string DriverForm::key_file_path_;
 std::string DriverForm::o_auth_mechanism_;
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
+std::string LogTraceDialog::log_level_;
+std::string LogTraceDialog::log_file_path_;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     PWSTR pCmdLine, int nCmdShow) {
@@ -48,6 +52,14 @@ DriverForm::~DriverForm() {
   if (m_hwnd) {
     DestroyWindow(m_hwnd);
   }
+}
+
+LogTraceDialog::LogTraceDialog() : parent_hwnd(NULL) {}
+LogTraceDialog::~LogTraceDialog() {
+  if (parent_hwnd) {
+    DestroyWindow(parent_hwnd);
+  }
+  UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
 
 void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath = nullptr) {
@@ -79,6 +91,33 @@ void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath = nullptr) {
   }
 }
 
+void OpenFolderDialog(HWND hwnd, HWND hEdit,
+                      char const* MockFolderPath = nullptr) {
+  if (MockFolderPath) {
+    // Directly set the test folder path to the edit control if provided
+    SetWindowText(hEdit, MockFolderPath);
+    return;
+  }
+
+  BROWSEINFO bi = {};
+  bi.hwndOwner = hwnd;
+  bi.lpszTitle = "Select a Folder";
+  bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+
+  // Display the folder selection dialog
+  LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+  if (pidl != NULL) {
+    // Get the folder path from the item ID list
+    char folderPath[MAX_PATH];
+    if (SHGetPathFromIDList(pidl, folderPath)) {
+      // Set the selected folder path to the edit control
+      SetWindowText(hEdit, folderPath);
+    }
+    // Free the item ID list allocated by SHBrowseForFolder
+    CoTaskMemFree(pidl);
+  }
+}
+
 void DriverForm::SetValues(Section const& attributesMap) {
   dsn_name_ = attributesMap.count("DSN") > 0 ? attributesMap.at("DSN") : "";
   email_ = attributesMap.count("Email") > 0 ? attributesMap.at("Email") : "";
@@ -92,6 +131,13 @@ void DriverForm::SetValues(Section const& attributesMap) {
       attributesMap.count("Catalog") > 0 ? attributesMap.at("Catalog") : "";
   dataset_ =
       attributesMap.count("Dataset") > 0 ? attributesMap.at("Dataset") : "";
+}
+
+void LogTraceDialog::SetValues(Section const& attributesMap) {
+  log_level_ =
+      attributesMap.count("LogLevel") > 0 ? attributesMap.at("LogLevel") : "";
+  log_file_path_ =
+      attributesMap.count("LogPath") > 0 ? attributesMap.at("LogPath") : "";
 }
 
 HFONT CreateCustomFont(int fontSize) {
@@ -139,6 +185,31 @@ void SetControlFont(HWND hwnd, HFONT font) {
   SendMessage(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
 }
 
+void LogTraceDialog::InitControls() {
+  HWND hLogLevelHead =
+      CreateLabel(parent_hwnd, "Log Level:", 20, 50, 80, 20, 0);
+  HWND hLogLevelBox =
+      CreateComboBox(parent_hwnd, 120, 50, 250, 100, kIdclogTraceBox);
+
+  HWND hLogFileAdd = CreateLabel(parent_hwnd, "Log Path:", 20, 80, 80, 20, 0);
+  HWND hLogFileEdit =
+      CreateEditBox(parent_hwnd, 120, 80, 250, 20, kIdcLogPathEdit);
+  CreateButton(parent_hwnd, "Browse", 220, 120, 100, 20, kIdcLogBrowseBtn);
+
+  HWND hLogBtnOk =
+      CreateButton(parent_hwnd, "Ok", 120, 180, 80, 30, kIdcLogBtnOk);
+
+  HWND hLogBtnCancel =
+      CreateButton(parent_hwnd, "Cancel", 200, 180, 80, 30, kIdcLogBtnCancel);
+  // Populate dropdowns
+  SendMessage(hLogLevelBox, CB_ADDSTRING, 0, (LPARAM) "LOG_OFF");
+  SendMessage(hLogLevelBox, CB_ADDSTRING, 0, (LPARAM) "LOG_TRACE");
+  SendMessage(hLogLevelBox, CB_SETCURSEL, 0, 0);
+
+  SetWindowText(hLogLevelBox, log_level_.c_str());
+  SetWindowText(hLogFileEdit, log_file_path_.c_str());
+}
+
 // Function to initialize controls
 void DriverForm::InitControls() {
   // Set custom font for the controls
@@ -173,6 +244,9 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
+  HWND hLoggingButton =
+      CreateButton(m_hwnd, "Logging Options", 20, 380, 120, 30, kIdcLoggingBtn);
+
   HWND hwndOkButton =
       CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
   HWND hwndCancelButton =
@@ -204,12 +278,38 @@ void DriverForm::InitControls() {
   SetControlFont(hCatalogBox, hFont);
   SetControlFont(hDatasetText, hFont);
   SetControlFont(hDatasetBox, hFont);
+  SetControlFont(hLoggingButton, hFont);
 
   SetWindowText(hEmailEdit, email_.c_str());
   SetWindowText(hKeyFileEdit, key_file_path_.c_str());
   SetWindowText(hCatalogBox, catalog_.c_str());
   SetWindowText(hDatasetBox, dataset_.c_str());
   SetWindowText(hComboBox, o_auth_mechanism_.c_str());
+}
+
+void LogTraceDialog::Show(HWND hwnd) {
+  if (parent_hwnd) {
+    ShowWindow(parent_hwnd, SW_SHOW);
+    SetForegroundWindow(parent_hwnd);
+    return;
+  }
+
+  WNDCLASS wcLogging = {};
+  wcLogging.lpfnWndProc = LogTraceDialog::LogTraceProc;
+  wcLogging.hInstance = GetModuleHandle(NULL);
+  wcLogging.lpszClassName = CLASS_NAME;
+
+  RegisterClass(&wcLogging);
+
+  parent_hwnd = CreateWindowEx(
+      0, CLASS_NAME, "Logging Options", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+      CW_USEDEFAULT, 450, 300, hwnd, NULL, GetModuleHandle(NULL), this);
+
+  if (parent_hwnd) {
+    InitControls();
+  }
+  ShowWindow(parent_hwnd, SW_SHOW);
+  UpdateWindow(parent_hwnd);
 }
 
 // Function to initialize and display the form
@@ -260,10 +360,66 @@ bool IsValidEmail(std::string const& email) {
   return std::regex_match(email, pattern);
 }
 
+LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT uMsg,
+                                              WPARAM wParam, LPARAM lParam) {
+  LogTraceDialog* pThis = NULL;
+  if (uMsg == WM_NCCREATE) {
+    CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
+    pThis = (LogTraceDialog*)pCreate->lpCreateParams;
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
+  } else {
+    pThis = (LogTraceDialog*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+  }
+  switch (uMsg) {
+    case WM_COMMAND:
+      switch (LOWORD(wParam)) {
+        case kIdcLogBrowseBtn: {
+          HWND hEdit = GetDlgItem(hwnd, kIdcLogPathEdit);
+          OpenFolderDialog(hwnd, hEdit);
+          break;
+        }
+
+        case kIdcLogBtnOk: {
+          HWND hLogtrace = GetDlgItem(hwnd, kIdclogTraceBox);
+          char LogTraceBuf[256];
+          GetWindowText(hLogtrace, LogTraceBuf, sizeof(LogTraceBuf));
+          log_level_ = LogTraceBuf;
+
+          HWND hLogFilePath = GetDlgItem(hwnd, kIdcLogPathEdit);
+          char LogFilePathBuf[256];
+          GetWindowText(hLogFilePath, LogFilePathBuf, sizeof(LogFilePathBuf));
+          log_file_path_ = LogFilePathBuf;
+          DestroyWindow(hwnd);  // Close the window
+
+          break;
+        }
+        case kIdcLogBtnCancel:
+          DestroyWindow(hwnd);  // Close the window
+
+          break;
+      }
+      break;
+
+    case WM_CLOSE:
+      DestroyWindow(hwnd);  // Close the window
+
+      return 0;
+
+    case WM_DESTROY:
+      if (pThis) {
+        pThis->parent_hwnd = NULL;  // Set the window handle to NULL
+      }
+      PostQuitMessage(0);
+      return 0;
+  }
+  return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParam) {
   DriverForm* pThis =
       reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  auto logForm = new LogTraceDialog;
 
   switch (uMsg) {
     case WM_CREATE:
@@ -277,6 +433,18 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           HWND hEdit = GetDlgItem(hwnd, kIdcKeyfileEdit);
           OpenFileDialog(hwnd, hEdit);
         } break;
+
+        case kIdcLoggingBtn: {
+          if (logForm) {
+            logForm->Show(hwnd);
+            MSG msg = {};
+            while (GetMessage(&msg, NULL, 0, 0)) {
+              TranslateMessage(&msg);
+              DispatchMessage(&msg);
+            }
+          }
+          break;
+        }
         case kIdcButtonOk: {
           HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
           char dsnBuffer[256];
