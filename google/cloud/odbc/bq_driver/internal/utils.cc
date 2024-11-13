@@ -607,6 +607,26 @@ StatusRecord AddDSNToRegistry(std::string const& dsn_name,
   return StatusRecord::Ok();
 }
 
+// TODO:b/376206999- Add USER DSN functionality
+StatusRecord AddLogTraceToRegistry(Section const& section) {
+  std::string const registry_path =
+      "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
+
+  HKEY h_key = nullptr;
+  HKEY registry_root = HKEY_LOCAL_MACHINE;
+
+  if (RegCreateKeyExA(registry_root, registry_path.c_str(), 0, NULL, 0,
+                      KEY_WRITE, NULL, &h_key, NULL) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to create or open registry key for Driver"};
+  }
+
+  StatusRecord status = SetRegValues(h_key, section);
+  RegCloseKey(h_key);
+  if (!status.ok()) return status;
+  return StatusRecord::Ok();
+}
+
 StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                                Section const& section) {
   std::string const registry_path = GetPathToOdbcIni() + "\\" + dsn_name;
@@ -624,6 +644,24 @@ StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                         "Failed to open registry key for DSN"};
   }
 
+  StatusRecord status = SetRegValues(h_key, section);
+  RegCloseKey(h_key);
+  return status;
+}
+
+// TODO:b/376206999- Add USER DSN functionality
+StatusRecord EditLogTraceInRegistry(Section const& section) {
+  std::string const registry_path =
+      "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
+
+  HKEY h_key = nullptr;
+  HKEY registry_root = HKEY_LOCAL_MACHINE;
+
+  if (RegOpenKeyExA(registry_root, registry_path.c_str(), 0, KEY_WRITE,
+                    &h_key) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open registry key for Driver"};
+  }
   StatusRecord status = SetRegValues(h_key, section);
   RegCloseKey(h_key);
   return status;
