@@ -36,6 +36,18 @@ static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
 
+static int const kIdcLoggingBtn = 115;
+
+static int const kIdcLogLevel = 116;
+static int const kIdcLogBrowseBtn = 117;
+static int const kIdcLogBtnOk = 118;
+static int const kIdcLogBtnCancel = 119;
+static int const IDD_LOGGING_OPTIONS = 120;
+static int const kIdcLogPath = 121;
+static int const kIdcLogPathEdit = 122;
+static int const kIdclogTraceHead = 123;
+static int const kIdclogTraceBox = 124;
+
 class DriverForm {
  public:
   DriverForm(HWND parent_hwnd = NULL);
@@ -65,6 +77,9 @@ class DriverForm {
   static std::string o_auth_mechanism_;
   static std::string dataset_;
   static std::string catalog_;
+
+  void ShowLoggingOptions(HWND hwnd);
+
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;
@@ -72,7 +87,29 @@ class DriverForm {
   static char const CLASS_NAME[];
 };
 
+class LogTraceDialog {
+ public:
+  LogTraceDialog();
+  ~LogTraceDialog();
+  void InitControls();
+  void Show(HWND parent);
+  void SetValues(Section const& attributesMap);
+
+  inline std::string const& GetLogLevel() const { return log_level_; }
+  inline std::string const& GetLogFilePath() const { return log_file_path_; }
+
+ private:
+  HWND parent_hwnd;
+  static std::string log_level_;
+  static std::string log_file_path_;
+
+  static LRESULT CALLBACK LogTraceProc(HWND hwnd, UINT uMsg, WPARAM wParam,
+                                       LPARAM lParam);
+  static char const CLASS_NAME[];
+};
+
 void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
+void OpenFolderDialog(HWND hwnd, HWND hEdit, char const* MockFolderPath);
 
 #endif /* WIN32 */
 
