@@ -22,6 +22,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+//#include "google\cloud\odbc\bq_driver\internal\odbc_stmt_handle.cc"
+#include <sstream>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -487,6 +489,61 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   return SQL_SUCCESS;
+}
+bool containsAlphanumeric(const std::string& str) {
+    return std::any_of(str.begin(), str.end(), [](unsigned char c) { return std::isalnum(c); });
+}
+
+std::string GetCatalogAndDataset(std::string action,std::string key_file_path, std::string oauth_token) {
+    google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
+
+    if (oauth_token == "0") {
+        oauth_value = google::cloud::odbc_bigquery_client_interface::OauthMechanism::kServiceAccount;
+    } else if (oauth_token == "3") {
+        oauth_value = google::cloud::odbc_bigquery_client_interface::OauthMechanism::kApplicationDefault;
+    } else {
+        oauth_value = google::cloud::odbc_bigquery_client_interface::OauthMechanism::kServiceAccount;
+    }
+
+    // StatusRecordOr<SQLULEN> attr_status = google::cloud::odbc_bq_driver_internal::GetAttributes(SQL_ATTR_METADATA_ID);
+    // if (!attr_status) {
+    //     return ""; 
+    // }
+    SQLULEN metadata_id = 0;
+
+    auto bq_client_ptr = ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
+    if (!bq_client_ptr) {
+        return ""; 
+    }
+
+    std::shared_ptr<ODBCBQClient> bq_client_ptr_stat = *bq_client_ptr;
+    ODBCBQClient& bq_client = *bq_client_ptr_stat;
+    
+    StatusRecordOr<ResultSet> result_set_status;
+    if(action == "Catalog"){
+    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+    }
+    else if(action=="Dataset"){
+    result_set_status = GetResultSetForDatasets(bq_client, metadata_id);
+    }
+    if (!result_set_status) {
+        return ""; 
+    }
+
+    const ResultSet& result_set = result_set_status.GetValue();
+    std::string row_string;
+     for (const auto& row : result_set.rows) {
+        for (const auto& value : row) {
+            std::string value_string(value.begin(), value.end());
+            value_string.erase(remove(value_string.begin(), value_string.end(), ' '), value_string.end());
+            if (value_string.empty() || !containsAlphanumeric(value_string)) {
+                continue;
+            }
+            row_string += value_string;
+            row_string += ";"; 
+        }
+    }
+    return row_string;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
-#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
+#ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
+#define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
 
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -35,18 +35,14 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
-
-static int const kIdcLoggingBtn = 115;
-
-static int const kIdcLogLevel = 116;
+static int const kIdcButtonTest = 115;
+static int const kIdcLoggingBtn = 116;
 static int const kIdcLogBrowseBtn = 117;
 static int const kIdcLogBtnOk = 118;
 static int const kIdcLogBtnCancel = 119;
-static int const IDD_LOGGING_OPTIONS = 120;
-static int const kIdcLogPath = 121;
-static int const kIdcLogPathEdit = 122;
-static int const kIdclogTraceHead = 123;
-static int const kIdclogTraceBox = 124;
+static int const kIdcLogPath = 120;
+static int const kIdcLogPathEdit = 121;
+static int const kIdclogTraceBox = 122;
 
 class DriverForm {
  public:
@@ -56,7 +52,7 @@ class DriverForm {
   HWND GetHwnd() const;
   void InitControls();
   void SetValues(Section const& attributesMap);
-
+  bool IsValidEmail(std::string const& email);
   inline std::string const& GetDSN() const { return dsn_name_; }
   inline std::string const& GetEmail() const { return email_; }
 
@@ -113,5 +109,5 @@ void OpenFolderDialog(HWND hwnd, HWND hEdit, char const* MockFolderPath);
 
 #endif /* WIN32 */
 
-}  // namespace google::cloud::odbc_bq_driver_internal
-#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
+}  // namespace google::cloud::odbc_bq_driver
+#endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_DRIVER_FORM_H

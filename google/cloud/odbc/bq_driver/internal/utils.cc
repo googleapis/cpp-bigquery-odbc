@@ -554,13 +554,32 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 }
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
-    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                       static_cast<DWORD>(kv.second.size() + 1)) !=
-        ERROR_SUCCESS) {
-      RegCloseKey(h_key);
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Failed to set " + kv.first + " value"};
+    if (kv.first == "OAuthMechanism") {
+      std::string oauthValue;
+      if (kv.second == "Service Authentication") {
+        oauthValue = "0";
+      } else if (kv.second == "Application Default Credentials") {
+        oauthValue = "3";
+      } else
+        oauthValue = "";
+
+      if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
+                         reinterpret_cast<const BYTE*>(oauthValue.c_str()),
+                         static_cast<DWORD>(oauthValue.size() + 1)) !=
+          ERROR_SUCCESS) {
+        RegCloseKey(h_key);
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Failed to set " + kv.first + " value"};
+      }
+    } else {
+      if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
+                         reinterpret_cast<const BYTE*>(kv.second.c_str()),
+                         static_cast<DWORD>(kv.second.size() + 1)) !=
+          ERROR_SUCCESS) {
+        RegCloseKey(h_key);
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Failed to set " + kv.first + " value"};
+      }
     }
   }
   return StatusRecord::Ok();

@@ -13,11 +13,16 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google\cloud\odbc\bq_driver\odbc_driver_metadata.h"
 #include <regex>
+#include <sstream>
 #include <shlobj.h>
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
+using google::cloud::odbc_bq_driver::TestODBCConnection;
+using google::cloud::odbc_bq_driver::GetCatalogAndDataset;
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
@@ -122,9 +127,15 @@ void OpenFolderDialog(HWND hwnd, HWND hEdit,
 void DriverForm::SetValues(Section const& attributesMap) {
   dsn_name_ = attributesMap.count("DSN") > 0 ? attributesMap.at("DSN") : "";
   email_ = attributesMap.count("Email") > 0 ? attributesMap.at("Email") : "";
-  o_auth_mechanism_ = attributesMap.count("OAuthMechanism") > 0
-                          ? attributesMap.at("OAuthMechanism")
-                          : "";
+ if (attributesMap.count("OAuthMechanism") > 0) {
+    if (attributesMap.at("OAuthMechanism") == "0") {
+      o_auth_mechanism_ = "Service Authentication";
+    } else if (attributesMap.at("OAuthMechanism") == "3") {
+      o_auth_mechanism_ = "Application Default Credentials";
+    } else
+      o_auth_mechanism_ = "";
+  } else
+    o_auth_mechanism_ = "";
   key_file_path_ = attributesMap.count("KeyFilePath") > 0
                        ? attributesMap.at("KeyFilePath")
                        : "";
@@ -169,8 +180,8 @@ HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN | WS_VSCROLL, x,
+            y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 // Helper function to create a button
@@ -228,7 +239,7 @@ void DriverForm::InitControls() {
 
   HWND hAuthHead =
       CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
-  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 150, 100, kIdcComboBox);
+  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 220, 100, kIdcComboBox);
 
   HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
   HWND hEmailEdit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
@@ -245,26 +256,22 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
   HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
+ HWND hwndTestButton =
+      CreateButton(m_hwnd, "Test...", 120, 420, 80, 30, kIdcButtonTest);
+
   HWND hLoggingButton =
-      CreateButton(m_hwnd, "Logging Options", 20, 380, 120, 30, kIdcLoggingBtn);
+      CreateButton(m_hwnd, "Logging Options", 200, 370, 120, 30, kIdcLoggingBtn);
 
   HWND hwndOkButton =
-      CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
+      CreateButton(m_hwnd, "Ok", 220, 420, 80, 30, kIdcButtonOk);
   HWND hwndCancelButton =
-      CreateButton(m_hwnd, "Cancel", 320, 400, 80, 30, kIdcButtonCancel);
+      CreateButton(m_hwnd, "Cancel", 320, 420, 80, 30, kIdcButtonCancel);
 
   // Populate dropdowns
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For Current User");
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For All Users");
+  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Service Authentication");
+  SendMessage(hComboBox, CB_ADDSTRING, 0,
+              (LPARAM) "Application Default Credentials");
   SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
-
-  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
-  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 2");
-  SendMessage(hCatalogBox, CB_SETCURSEL, 0, 0);
-
-  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 1");
-  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 2");
-  SendMessage(hDatasetBox, CB_SETCURSEL, 0, 0);
 
   // Apply font to controls
   SetControlFont(hAuthHead, hFont);
@@ -302,9 +309,20 @@ void LogTraceDialog::Show(HWND hwnd) {
 
   RegisterClass(&wcLogging);
 
+ int windowWidth = 520;
+  int windowHeight = 650;
+
+  int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+  int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+  int xPos = (screenWidth - windowWidth) / 2;
+  int yPos = (screenHeight - windowHeight) / 2;
+
   parent_hwnd = CreateWindowEx(
-      0, CLASS_NAME, "Logging Options", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-      CW_USEDEFAULT, 450, 300, hwnd, NULL, GetModuleHandle(NULL), this);
+      0, CLASS_NAME, "Logging Options", 
+      
+      WS_OVERLAPPEDWINDOW, xPos,
+      yPos, 450, 300, hwnd, NULL, GetModuleHandle(NULL), this);
 
   if (parent_hwnd) {
     InitControls();
@@ -321,17 +339,26 @@ void DriverForm::Show() {
     return;
   }
 
+
   WNDCLASS wc = {};
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = GetModuleHandle(NULL);
   wc.lpszClassName = CLASS_NAME;
 
   RegisterClass(&wc);
+  int windowWidth = 520;
+  int windowHeight = 650;
 
-  m_hwnd = CreateWindowEx(0, CLASS_NAME,
-                          "Google ODBC Driver for Google Bigquery DSN Setup",
-                          WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                          520, 650, NULL, NULL, GetModuleHandle(NULL), this);
+  int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+  int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+  int xPos = (screenWidth - windowWidth) / 2;
+  int yPos = (screenHeight - windowHeight) / 2;
+  
+  m_hwnd = CreateWindowEx(
+      0, CLASS_NAME, "Google ODBC Driver for Google Bigquery DSN Setup",
+      WS_OVERLAPPEDWINDOW, xPos, yPos, windowWidth, windowHeight, NULL, NULL,
+      GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
     CreateWindowEx(0, "STATIC",
@@ -356,9 +383,27 @@ void DriverForm::Show() {
   }
 }
 
-bool IsValidEmail(std::string const& email) {
+bool DriverForm::IsValidEmail(std::string const& email) {
   std::regex const pattern(R"((\w+)(\.|\-)?(\w*)@(\w+)(\.\w+)+)");
   return std::regex_match(email, pattern);
+}
+
+std::vector<std::string> SplitString(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+void PopulateComboBox(HWND hComboBox, const std::string& data) {
+    SendMessage(hComboBox, CB_RESETCONTENT, 0, 0);
+    auto values = SplitString(data, ';');
+    for (const auto& item : values) {
+        SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)item.c_str());
+    } 
 }
 
 LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT uMsg,
@@ -423,11 +468,18 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
   auto logForm = new LogTraceDialog;
 
   switch (uMsg) {
-    case WM_CREATE:
+    case WM_CREATE:{
       // Set the instance pointer in the window's user data
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
       break;
-
+    }
+    case WM_KEYDOWN: {
+      if (wParam == VK_ESCAPE) {
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+        return 0;
+      }
+      break;
+    }
     case WM_COMMAND:
       switch (LOWORD(wParam)) {
         case kIdcBrowseButton: {
@@ -446,6 +498,87 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           }
           break;
         }
+         case kIdcCatlogBOX:{
+          HWND hCatalogBox=GetDlgItem(hwnd, kIdcCatlogBOX);
+          char catalogBuffer[256];
+          GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+
+          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsnBuffer[256];
+          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+
+          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          char keyBuffer[256];
+          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+
+
+          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+          char authBuffer[256];
+          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+          std::string oauth;
+          if (strcmp(authBuffer, "Service Authentication") == 0) {
+              oauth = "0";
+          } else if (strcmp(authBuffer, "Application Default Credentials") == 0) {
+              oauth = "3";
+          } else {
+              oauth = "";  
+          }
+
+          if (dsnBuffer[0] == '\0' || keyBuffer[0] == '\0' || authBuffer[0] == '\0') {
+              PopulateComboBox(hCatalogBox, "");
+              break;
+          }
+          else{
+          std::string catalogData = GetCatalogAndDataset("Catalog", keyBuffer, oauth);
+          if(catalogBuffer[0]=='\0'){
+          PopulateComboBox(hCatalogBox,catalogData);}
+          SetWindowText(hCatalogBox,"bigquery-devtools-drivers");
+          break;
+          }
+      }
+        case kIdcDatasetBOX:{
+          HWND hDataset=GetDlgItem(hwnd, kIdcDatasetBOX);
+          char dataBuffer[256];
+          GetWindowText(hDataset, dataBuffer, sizeof(dataBuffer));
+
+          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsnBuffer[256];
+          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+
+          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          char keyBuffer[256];
+          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+
+          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+          char authBuffer[256];
+          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+          std::string oauth;
+          if (strcmp(authBuffer, "Service Authentication") == 0) {
+              oauth = "0";
+          } else if (strcmp(authBuffer, "Application Default Credentials") == 0) {
+              oauth = "3";
+          } else {
+              oauth = "";  
+          }
+
+          HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
+          char catalogBuffer[256];
+          GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+
+          if (dsnBuffer[0] == '\0' || keyBuffer[0] == '\0' || authBuffer[0] == '\0' || catalogBuffer[0] == '\0') {
+              PopulateComboBox(hDataset, "");
+              break;
+          }
+          else{
+           std::string dataset_data = GetCatalogAndDataset("Dataset",keyBuffer,oauth);
+           if (dataBuffer[0] == '\0') {
+             PopulateComboBox(hDataset, dataset_data);
+            }
+           //PopulateComboBox(hDataset,dataset_data);
+           SetWindowText(hDataset,"INTEGRATION_TESTS");
+          break;
+          }
+        }
         case kIdcButtonOk: {
           HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
           char dsnBuffer[256];
@@ -456,7 +589,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           char emailBuffer[256];
           GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
           email_ = emailBuffer;
-          if (!IsValidEmail(email_) && !email_.empty()) {
+          if (!pThis->IsValidEmail(email_) && !email_.empty()) {
             MessageBox(hwnd, "Invalid email address!", "Error",
                        MB_OK | MB_ICONERROR);
             email_ = "";
@@ -483,10 +616,44 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
           dataset_ = dataBuffer;
 
-          DestroyWindow(hwnd);  // Close the window
+          DestroyWindow(hwnd);  
           break;
         }
-        case kIdcButtonCancel:
+          case kIdcButtonTest: {
+          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsnBuffer[256];
+          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+
+          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          char keyBuffer[256];
+          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+
+          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+          char authBuffer[256];
+          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+
+          Section attributesMap;
+          attributesMap["DSN"] = dsnBuffer;
+          attributesMap["Email"] = email_;
+          attributesMap["KeyFilePath"] = keyBuffer;
+          attributesMap["OAuthMechanism"] = authBuffer;
+          attributesMap["Dataset"] = dataset_;
+
+          bool status =
+              TestODBCConnection(std::make_shared<Section>(attributesMap));
+          if (status == true) {
+            std::string messageText =
+                "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
+            MessageBox(hwnd, messageText.c_str(), "Test Results",
+                       MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+            return 0;
+          } else {
+            MessageBox(hwnd, "Connection Failed!", "Error",
+                       MB_OK | MB_ICONERROR);
+            return 0;
+          }
+        }
+              case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;
       }
@@ -506,5 +673,5 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-}  // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver
 #endif /* WIN32*/

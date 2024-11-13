@@ -19,7 +19,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #endif  // _WIN32
 
 namespace google::cloud::odbc_bq_driver {
@@ -34,15 +34,15 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 #ifdef _WIN32
+using google::cloud::odbc_bq_driver::DriverForm;
+using google::cloud::odbc_bq_driver::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
 using google::cloud::odbc_bq_driver_internal::AddLogTraceToRegistry;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
-using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::EditLogTraceInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
-using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -180,7 +180,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         TranslateMessage(&msg);
         DispatchMessage(&msg);
       }
-
       dsn_name = form.GetDSN();
       email = form.GetEmail();
       key_file_path = form.GetKeyFilePath();

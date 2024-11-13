@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #include <gtest/gtest.h>
 
-namespace google::cloud::odbc_bq_driver_internal {
+namespace google::cloud::odbc_bq_driver {
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -111,38 +111,8 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
 
   char buffer[256];
   SendMessage(hComboBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "For Current User")
+  ASSERT_STREQ(buffer, "Service Authentication")
       << "First item text should be 'For Current User'.";
-}
-
-TEST_F(DriverFormTest, TestCatalogDropdown) {
-  HWND hCatlogBox = GetDlgItem(form->GetHwnd(), kIdcCatlogBOX);
-  ASSERT_NE(hCatlogBox, nullptr) << "Catalog dropdown should be created.";
-
-  ASSERT_EQ(SendMessage(hCatlogBox, CB_GETCOUNT, 0, 0), 2)
-      << "Catalog dropdown should have 2 items.";
-
-  int selectedIndex = SendMessage(hCatlogBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
-
-  char buffer[256];
-  SendMessage(hCatlogBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Project 1") << "First item text should be 'Project 1'.";
-}
-
-TEST_F(DriverFormTest, TestDatasetDropdown) {
-  HWND hDatasetBox = GetDlgItem(form->GetHwnd(), kIdcDatasetBOX);
-  ASSERT_NE(hDatasetBox, nullptr) << "Dataset dropdown should be created.";
-
-  ASSERT_EQ(SendMessage(hDatasetBox, CB_GETCOUNT, 0, 0), 2)
-      << "Dataset dropdown should have 2 items.";
-
-  int selectedIndex = SendMessage(hDatasetBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
-
-  char buffer[256];
-  SendMessage(hDatasetBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Dataset 1") << "First item text should be 'Dataset 1'.";
 }
 
 TEST_F(DriverFormTest, TestEmailField) {
@@ -161,7 +131,7 @@ TEST_F(DriverFormTest, TestEmailField) {
 TEST_F(DriverFormTest, SetValues_ValidInput) {
   Section attributes = {{"DSN", "test"},
                         {"Email", "test@example.com"},
-                        {"OAuthMechanism", "OAuth"},
+                        {"OAuthMechanism", "0"},
                         {"KeyFilePath", "/path/to/key"},
                         {"Catalog", "test_catalog"},
                         {"Dataset", "test_dataset"}};
@@ -169,7 +139,7 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
   form->SetValues(attributes);
 
   EXPECT_EQ(form->GetEmail(), "test@example.com");
-  EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
+  EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
   EXPECT_EQ(form->GetDatasetName(), "test_dataset");
@@ -178,13 +148,13 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
 TEST_F(DriverFormTest, SetValues_MissingAttributes) {
   Section attributes = {
       {"Email", "test@example.com"},
-      {"OAuthMechanism", "OAuth"},
+      {"OAuthMechanism", "0"},
   };
 
   form->SetValues(attributes);
 
   EXPECT_EQ(form->GetEmail(), "test@example.com");
-  EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
+  EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
   EXPECT_EQ(form->GetDatasetName(), "");
@@ -202,5 +172,5 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
   EXPECT_EQ(form->GetDatasetName(), "");
 }
 
-}  // namespace google::cloud::odbc_bq_driver_internal
+}  // namespace google::cloud::odbc_bq_driver
 #endif /* WIN32*/

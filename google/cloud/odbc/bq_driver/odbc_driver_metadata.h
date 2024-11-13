@@ -138,6 +138,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                              SQLSMALLINT table_name_len, SQLCHAR* column_name,
                              SQLSMALLINT column_name_len);
 
+std::string GetCatalogAndDataset(std::string action,std::string key_file_path, std::string oauth_token);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

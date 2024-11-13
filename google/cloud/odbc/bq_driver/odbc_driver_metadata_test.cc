@@ -982,5 +982,12 @@ TEST(SQLColumnsInternal, Failure_InvalidConnectionHandle_NotConnected) {
   EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
-
+// TEST(GetCatalogAndDataset,InvalidInputForCatalog){
+//   auto result = GetCatalogAndDataset("Catalog","","");
+//   EXPECT_EQ(result, "");
+// }
+// TEST(GetCatalogAndDataset,InvalidInputForDataset){
+//   auto result =GetCatalogAndDataset("Dataset","","");
+//    EXPECT_EQ(result, "");
+// }
 }  // namespace google::cloud::odbc_bq_driver
