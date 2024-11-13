@@ -35,11 +35,14 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
+using google::cloud::odbc_bq_driver_internal::AddLogTraceToRegistry;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
+using google::cloud::odbc_bq_driver_internal::EditLogTraceInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
+using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -146,8 +149,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       section.count("Catalog") > 0 ? section.at("Catalog") : "";
   std::string dataset_name =
       section.count("Dataset") > 0 ? section.at("Dataset") : "";
+  std::string log_level =
+      section.count("LogLevel") > 0 ? section.at("LogLevel") : "";
+  std::string log_path =
+      section.count("LogPath") > 0 ? section.at("LogPath") : "";
 
   DriverForm form;
+  LogTraceDialog logForm;
   switch (f_request) {
     case ODBC_ADD_DSN: {
       if (hwnd_parent == NULL) {
@@ -156,7 +164,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                            {"OAuthMechanism", oAuth_mechanism},
                            {"Catalog", catalog},
                            {"Dataset", dataset_name}};
+
+        Section trace_section = {
+            {"LogLevel", log_level},
+            {"LogPath", log_path},
+        };
         AddDSNToRegistry(dsn_value, lpsz_driver, section);
+        AddLogTraceToRegistry(trace_section);
         return true;
       }
       form.Show();
@@ -173,12 +187,21 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       oAuth_mechanism = form.GetOAuthMechanism();
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
+      log_level = logForm.GetLogLevel();
+      log_path = logForm.GetLogFilePath();
+
       Section section = {{"Email", email},
                          {"KeyFilePath", key_file_path},
                          {"OAuthMechanism", oAuth_mechanism},
                          {"Catalog", catalog},
                          {"Dataset", dataset_name}};
+
+      Section trace_section = {
+          {"LogLevel", log_level},
+          {"LogPath", log_path},
+      };
       AddDSNToRegistry(dsn_name, lpsz_driver, section);
+      AddLogTraceToRegistry(trace_section);
       return TRUE;
     }
     case ODBC_CONFIG_DSN: {
@@ -188,16 +211,27 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                             {"OAuthMechanism", oAuth_mechanism},
                             {"Catalog", catalog},
                             {"Dataset", dataset_name}};
+
+        Section trace_section2 = {
+            {"LogLevel", log_level},
+            {"LogPath", log_path},
+        };
         EditDSNInRegistry(dsn_value, section2);
         return true;
       }
       std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_value;
+      std::string driver_registry_key =
+          "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
       auto res = GetSectionWin(registry_key);
+      auto trace_res = GetSectionWin(driver_registry_key);
       auto section = res.GetValue();
+      auto trace_section = trace_res.GetValue();
       (*section)["DSN"] = dsn_value;
       form.SetValues(*section);
       form.Show();
       form.GetHwnd();
+
+      logForm.SetValues(*trace_section);
       MSG msg = {};
       while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
@@ -209,12 +243,20 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       oAuth_mechanism = form.GetOAuthMechanism();
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
+      log_level = logForm.GetLogLevel();
+      log_path = logForm.GetLogFilePath();
       Section section2 = {{"Email", email},
                           {"KeyFilePath", key_file_path},
                           {"OAuthMechanism", oAuth_mechanism},
                           {"Catalog", catalog},
                           {"Dataset", dataset_name}};
+
+      Section trace_section2 = {
+          {"LogLevel", log_level},
+          {"LogPath", log_path},
+      };
       EditDSNInRegistry(dsn_value, section2);
+      EditLogTraceInRegistry(trace_section2);
       return TRUE;
     }
     case ODBC_REMOVE_DSN:
