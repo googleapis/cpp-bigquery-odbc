@@ -220,11 +220,11 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
-#ifndef _WIN32
+
   // TODO(b/357795885):Handle SQLDescribeCol Api Invalid Output WRT SIMBA(WIN).
   auto results = *FetchDirect(conn, query, 1, is_async, use_ansi);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
-#endif  // _WIN32
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

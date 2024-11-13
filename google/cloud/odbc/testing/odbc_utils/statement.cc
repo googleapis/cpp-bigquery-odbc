@@ -241,7 +241,7 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, i + 1, use_ansi);
+   // DescribeCol(conn, col_ptr, i + 1, use_ansi);
 
     std::string col_name = (char*)col_ptr->name;
 
