@@ -37,6 +37,7 @@ target_link_libraries(
     odbc_bq_client_interface
     google-cloud-cpp::bigquery
     google-cloud-cpp::resourcemanager
+    google-cloud-cpp::serviceusage
     google-cloud-cpp::experimental-bigquery_rest
     google-cloud-cpp::oauth2
     odbc_internal)

@@ -38,6 +38,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 using google::cloud::odbc_internal::StatusRecordOr;
+using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
+using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
@@ -71,9 +73,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       ::google::cloud::resourcemanager_v3::ProjectsClient(
           ::google::cloud::resourcemanager_v3::MakeProjectsConnection(options));
 
+  // Create the service usage client.
+  ServiceUsageClient service_usage_client =
+      ServiceUsageClient(MakeServiceUsageConnection(options));
+
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,
-      table_client, generator, bigquery_read_client));
+      service_usage_client, table_client, generator, bigquery_read_client));
 }
 
 StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
