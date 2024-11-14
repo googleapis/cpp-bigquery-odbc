@@ -75,7 +75,7 @@ TraceOptions::CreateTraceOptionsFile(
         logging_enabled = true;
       }
     } else if (s.first == "LogFile") {
-      log_file = s.second;
+      log_file = s.second + "\\Google_bq_driver.log";
     }
   }
 
