@@ -143,7 +143,7 @@ odbc_internal::StatusRecord ValidateTableParameters(
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
 
-std::string GetPathToOdbcIni();
+std::string GetPathToOdbcIni(bool is_bq_path = false);
 
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   auto percent_filter_out =
