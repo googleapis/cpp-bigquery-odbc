@@ -222,18 +222,29 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
-std::string GetPathToOdbcIni() {
+std::string GetPathToOdbcIni(bool is_bq_path) {
 #ifdef _WIN32
+  absl::optional<std::string> path;
   // 64-bit
-  absl::optional<std::string> path = "SOFTWARE\\ODBC\\ODBC.INI";
+
+  if (is_bq_path) {
+    path = "SOFTWARE\\Google\\ODBC Driver for Google BigQuery";
+  } else {
+    path = "SOFTWARE\\ODBC\\ODBC.INI";
+  }
 #ifndef _WIN64
   // 32-bit
-  path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
+  if (is_bq_path) {
+    path = "SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google BigQuery";
+  } else {
+    path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
+  }
 #endif /* WIN64 */
   if (path) {
     return *path;
   }
 #else
+  (void)is_bq_path;  // Explicitly mark to avoid unused parameter error.
   absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
     return *path;
@@ -554,10 +565,21 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 }
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
+    std::string value;
+    if (kv.first == "LogLevel") {
+      if (kv.second == "LOG_OFF") {
+        value = "0";
+      } else if (kv.second == "LOG_TRACE") {
+        value = "6";
+      } else {
+        value = "";
+      }
+    } else {
+      value = kv.second;
+    }
     if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                       static_cast<DWORD>(kv.second.size() + 1)) !=
-        ERROR_SUCCESS) {
+                       reinterpret_cast<const BYTE*>(value.c_str()),
+                       static_cast<DWORD>(value.size() + 1)) != ERROR_SUCCESS) {
       RegCloseKey(h_key);
       return StatusRecord{SQLStates::k_HY000(),
                           "Failed to set " + kv.first + " value"};
@@ -610,7 +632,7 @@ StatusRecord AddDSNToRegistry(std::string const& dsn_name,
 // TODO:b/376206999- Add USER DSN functionality
 StatusRecord AddLogTraceToRegistry(Section const& section) {
   std::string const registry_path =
-      "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
+      "SOFTWARE\\Google\\ODBC Driver for Google BigQuery\\Driver";
 
   HKEY h_key = nullptr;
   HKEY registry_root = HKEY_LOCAL_MACHINE;
@@ -652,7 +674,7 @@ StatusRecord EditDSNInRegistry(std::string const& dsn_name,
 // TODO:b/376206999- Add USER DSN functionality
 StatusRecord EditLogTraceInRegistry(Section const& section) {
   std::string const registry_path =
-      "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
+      "SOFTWARE\\Google\\ODBC Driver for Google BigQuery\\Driver";
 
   HKEY h_key = nullptr;
   HKEY registry_root = HKEY_LOCAL_MACHINE;

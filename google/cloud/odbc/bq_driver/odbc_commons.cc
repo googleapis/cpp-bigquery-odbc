@@ -221,7 +221,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       }
       std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_value;
       std::string driver_registry_key =
-          "SOFTWARE\\Google\\Google ODBC Driver for Google BigQuery\\Driver";
+          "SOFTWARE\\Google\\ODBC Driver for Google BigQuery\\Driver";
       auto res = GetSectionWin(registry_key);
       auto trace_res = GetSectionWin(driver_registry_key);
       auto section = res.GetValue();
