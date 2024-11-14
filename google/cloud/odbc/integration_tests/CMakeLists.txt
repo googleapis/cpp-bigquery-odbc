@@ -134,10 +134,22 @@ function (odbc_define_examples)
 
     include(CppBigqueryOdbcCommon)
 
+    # Adding files for non-windows
     file(
         GLOB examples_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "odbc_driver_tests/examples/*.cc")
+
+    # Adding files for windows
+    if (WIN32)
+        file(
+            GLOB windows_examples_cc
+            RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+            "odbc_driver_tests/examples/windows/*.cc")
+
+        list(APPEND examples_cc ${windows_examples_cc})
+    endif ()
+
     foreach (fname IN LISTS examples_cc)
         cpp_bigquery_odbc_add_executable(target "example" "${fname}")
         target_link_libraries(${target} google_cloud_odbc_testing_odbc_utils
@@ -148,7 +160,11 @@ function (odbc_define_examples)
             add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
             target_link_libraries(${target} google_cloud_odbc_bq_driver)
         else ()
-            target_link_libraries(${target} odbc)
+            if (WIN32)
+                target_link_libraries(${target} odbc32)
+            else ()
+                target_link_libraries(${target} odbc)
+            endif ()
         endif ()
         target_include_directories(${target} PUBLIC ${CMAKE_SOURCE_DIR})
         target_include_directories(${target} PRIVATE $ENV{ODBC_INCLUDE_PATH})
