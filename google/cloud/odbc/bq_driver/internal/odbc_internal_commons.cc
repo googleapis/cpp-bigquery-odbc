@@ -19,6 +19,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -464,7 +465,7 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
     // true.
     return StatusRecord{
         SQLStates::k_HY000(),
-        "Internal Error: Unexpected value for job_complete: expecting true"};
+        "Internal Error: Unexpected value for job_complete1: expecting true"};
   }
   return ProcessResultSetRows(post_query_results.schema,
                               post_query_results.rows);
@@ -478,7 +479,7 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
     // true.
     return StatusRecord{
         SQLStates::k_HY000(),
-        "Internal Error: Unexpected value for job_complete: expecting true"};
+        "Internal Error: Unexpected value for job_complete2: expecting true"};
   }
   return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
@@ -506,7 +507,7 @@ StatusRecordOr<std::vector<RowData>> GetRowsResults(
     if (!results.job_complete) {
       return StatusRecord{
           SQLStates::k_HY000(),
-          "Internal Error: Unexpected value for job_complete: expecting true"};
+          "Internal Error: Unexpected value for job_complete3: expecting true"};
     }
     return results.rows;
   }
@@ -517,7 +518,7 @@ StatusRecordOr<std::vector<RowData>> GetRowsResults(
     if (!results.job_complete) {
       return StatusRecord{
           SQLStates::k_HY000(),
-          "Internal Error: Unexpected value for job_complete: expecting true"};
+          "Internal Error: Unexpected value for job_complete4: expecting true"};
     }
     return results.rows;
   }
@@ -567,6 +568,8 @@ StatusRecordOr<DSResults> FetchBQData(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
+  std::cout << "sleeping::" << std::endl;
+  std::this_thread::sleep_for(std::chrono::milliseconds(30000));
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
@@ -574,6 +577,8 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+  std::cout << "*pq_status:: " << pq_status->DebugString("pq_status:: ")
+            << std::endl;
   DSResults results;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results
@@ -582,10 +587,13 @@ StatusRecordOr<DSResults> FetchBQData(
     // Call GetAllQueryResults to get all the query results.
     auto gq_status = bq_client->GetAllQueryResults(
         pq_status->job_reference.project_id, pq_status->job_reference.job_id,
-        pq_status->job_reference.location, options);
+        pq_status->job_reference.location,
+        post_query_request.query_request().timeout(), options);
     if (!gq_status) {
       return gq_status.GetStatusRecord();
     }
+    // std::cout << "*gq_status:: " << gq_status->DebugString("gq_status:: ")
+    // <<std::endl;
     results.data_source_results = *gq_status;
   }
   if (!conn_handle.IsSessionStarted() &&
@@ -720,7 +728,8 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
 }
 
 PostQueryRequest ConstructBasicPostQueryRequest(
-    ConnectionHandle const& conn_handle, std::string const& query_str) {
+    ConnectionHandle const& conn_handle, std::string const& query_str,
+    int query_timeout) {
   std::string catalog = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
@@ -730,6 +739,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   // Construct query request.
   query_request.set_dry_run(false);
   query_request.set_query(query_str);
+  query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());

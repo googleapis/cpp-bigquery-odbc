@@ -186,6 +186,7 @@ class ODBCBQClient {
       ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
   GetAllQueryResults(std::string const& project_id, std::string const& job_id,
                      std::string const& location,
+                     std::chrono::milliseconds timeout_ms,
                      ::google::cloud::Options const& options);
 
   // Gets query results, based on the filter passed in.

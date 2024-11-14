@@ -44,8 +44,13 @@ using ::google::cloud::bigquery_v2_minimal_internal::StateFilter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::AtLeast;
+using ::testing::AtMost;
 using ::testing::Contains;
 using ::testing::HasSubstr;
+using ::testing::Return;
+
+using ms = std::chrono::milliseconds;
 
 TEST(GetJob, GetJobSuccess) {
   Options options;
@@ -526,6 +531,7 @@ TEST(Query, QuerySuccess_EmptyInputParams) {
 }
 
 TEST(Query, QueryFailure_UnauthenticatedRequest) {
+  // GTEST_SKIP() << "Skipping this test for now";
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -644,6 +650,7 @@ TEST(PostQuery, PostQuerySuccess_EmptyInputParams) {
 }
 
 TEST(PostQuery, PostQueryFailure_UnauthenticatedRequest) {
+  // GTEST_SKIP() << "Skipping this test for now";
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -728,7 +735,17 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  GetQueryResults expected;
+  int timeout_ms = 1000;
+
+  GetQueryResults query_resp_1;
+  query_resp_1.job_reference.project_id = project_id;
+  query_resp_1.job_reference.job_id = job_id;
+  query_resp_1.job_reference.location = location;
+  query_resp_1.job_complete = false;
+  GetQueryResults query_resp_2 = query_resp_1;
+  query_resp_2.job_complete = true;
+  query_resp_2.rows = {{{{{"some_value"}}}}};
+
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, QueryResults)
@@ -736,14 +753,27 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
         EXPECT_EQ(project_id, request.project_id());
         EXPECT_EQ(job_id, request.job_id());
         EXPECT_EQ(location, request.location());
-        return make_status_or(expected);
+        EXPECT_EQ(timeout_ms, request.timeout().count());
+        return make_status_or(query_resp_1);
+      })
+      .WillOnce([&](GetQueryResultsRequest const& request) {
+        EXPECT_EQ(project_id, request.project_id());
+        EXPECT_EQ(job_id, request.job_id());
+        EXPECT_EQ(location, request.location());
+        EXPECT_EQ(timeout_ms, request.timeout().count());
+        return make_status_or(query_resp_2);
       });
+
   JobClient job_client(std::move(mock));
 
-  StatusRecordOr<GetQueryResults> actual =
-      GetAllQueryResults(job_client, project_id, job_id, location, options);
+  StatusRecordOr<GetQueryResults> actual = GetAllQueryResults(
+      job_client, project_id, job_id, location, ms(timeout_ms), options);
 
   ASSERT_STATUS_RECORD_OK(actual);
+  EXPECT_EQ(actual->job_reference.project_id, project_id);
+  EXPECT_EQ(actual->job_reference.job_id, job_id);
+  EXPECT_EQ(actual->job_reference.location, location);
+  EXPECT_EQ(actual->rows.size(), 1);
 }
 
 TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
@@ -752,9 +782,11 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
   std::string job_id = "job_id";
   std::string location = "location";
   GetQueryResults expected_1;
+  expected_1.job_complete = true;
   expected_1.page_token = "token";
   expected_1.rows = {{{{{"value_1"}}}}};
   GetQueryResults expected_2;
+  expected_2.job_complete = true;
   expected_2.rows = {{{{{"value_2"}}}}};
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
@@ -769,8 +801,8 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
       });
   JobClient job_client(std::move(mock));
 
-  StatusRecordOr<GetQueryResults> actual =
-      GetAllQueryResults(job_client, project_id, job_id, location, options);
+  StatusRecordOr<GetQueryResults> actual = GetAllQueryResults(
+      job_client, project_id, job_id, location, ms(0), options);
 
   ASSERT_STATUS_RECORD_OK(actual);
   EXPECT_EQ(2, actual->rows.size());
@@ -783,6 +815,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
   std::string job_id;
   std::string location;
   GetQueryResults expected;
+  expected.job_complete = true;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, QueryResults)
@@ -790,14 +823,41 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
         EXPECT_EQ(project_id, request.project_id());
         EXPECT_EQ(job_id, request.job_id());
         EXPECT_EQ(location, request.location());
+        EXPECT_EQ(0, request.timeout().count());
         return make_status_or(expected);
       });
   JobClient job_client(std::move(mock));
 
-  StatusRecordOr<GetQueryResults> actual =
-      GetAllQueryResults(job_client, project_id, job_id, location, options);
+  StatusRecordOr<GetQueryResults> actual = GetAllQueryResults(
+      job_client, project_id, job_id, location, ms(0), options);
 
   ASSERT_STATUS_RECORD_OK(actual);
+}
+
+TEST(GetAllQueryResults, GetAllQueryResultsFailure_Timeout) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string job_id = "job_id";
+  std::string location = "location";
+  int timeout_ms = 100;
+
+  GetQueryResults query_resp;
+  query_resp.job_reference.project_id = project_id;
+  query_resp.job_reference.job_id = job_id;
+  query_resp.job_reference.location = location;
+  query_resp.job_complete = false;
+
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, QueryResults).WillRepeatedly(Return(query_resp));
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<GetQueryResults> actual = GetAllQueryResults(
+      job_client, project_id, job_id, location, ms(timeout_ms), options);
+
+  EXPECT_THAT(actual,
+              StatusRecordIs(SQLStates::k_HYT00(),
+                             HasSubstr("The query timeout period expired")));
 }
 
 TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
@@ -805,7 +865,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
   std::string project_id = "project_id";
   std::string job_id = "job_id";
   std::string location = "location";
-  GetQueryResults expected;
+  int timeout = 13;
   auto mock = std::make_shared<MockBigQueryJobConnection>();
   EXPECT_CALL(*mock, options);
   EXPECT_CALL(*mock, QueryResults)
@@ -813,12 +873,13 @@ TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
         EXPECT_EQ(project_id, request.project_id());
         EXPECT_EQ(job_id, request.job_id());
         EXPECT_EQ(location, request.location());
+        EXPECT_EQ(timeout, request.timeout().count());
         return Status(StatusCode::kUnauthenticated, "denied");
       });
   JobClient job_client(std::move(mock));
 
-  StatusRecordOr<GetQueryResults> actual =
-      GetAllQueryResults(job_client, project_id, job_id, location, options);
+  StatusRecordOr<GetQueryResults> actual = GetAllQueryResults(
+      job_client, project_id, job_id, location, ms(timeout), options);
 
   EXPECT_THAT(actual,
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));

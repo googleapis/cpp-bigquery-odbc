@@ -62,12 +62,14 @@ TEST(SQLExecute, SimpleLargeDataRead) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
+  SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)1, 0);
+  CheckError(status, "SQLSetStmtAttr", conn, false);
 
   // (5) Fetch Rows
   std::string insert_stmt =
       "SELECT mean_dew_point, num_mean_temp_samples FROM "
       "bigquery-public-data.samples.gsod WHERE mean_dew_point IS NOT NULL "
-      "LIMIT 400000";
+      "LIMIT 500000";
   std::cout << "Prepare a read query ..." << std::endl << std::endl;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
                       insert_stmt.size());

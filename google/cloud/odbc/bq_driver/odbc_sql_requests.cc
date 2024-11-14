@@ -160,9 +160,16 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  StatusRecordOr<SQLULEN> query_timeout_status =
+      stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+  if (!query_timeout_status) {
+    return query_timeout_status.GetStatusRecord();
+  }
+  int query_timeout = *query_timeout_status;
+  std::cout << "query_timeout:: " << query_timeout << std::endl;
   std::string query_str = stmt_handle.GetQueryString();
   PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(conn_handle, query_str);
+      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {

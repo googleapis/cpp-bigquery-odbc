@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include <thread>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -31,8 +32,11 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::internal::ExponentialBackoffPolicy;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using ms = std::chrono::milliseconds;
 
 // When 'Job' object is created, all members are created with default values,
 // usually empty strings. Client library doesn't provide any validation around
@@ -88,7 +92,7 @@ std::vector<std::string> CreateKeysToFilterOut(
   if (query_request.max_results() <= 0) {
     default_filtered_keys.emplace_back("maxResults");
   }
-  if (query_request.timeout() == std::chrono::milliseconds(0)) {
+  if (query_request.timeout() == ms(0)) {
     default_filtered_keys.emplace_back("timeoutMs");
   }
   return default_filtered_keys;
@@ -193,8 +197,22 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
-  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
-      job_client.Query(post_query_request, options));
+  nlohmann::json request;
+  to_json(request, post_query_request);
+  std::cout << "PostQueryRequest:: " << request.dump(4) << std::endl;
+  // std::cout << "post_query_request:: " <<
+  // post_query_request.DebugString("some:: ") <<std::endl;
+
+  StatusRecordOr<PostQueryResults> results =
+      StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
+          job_client.Query(post_query_request, options));
+  std::cout << "PostQueryResults:: " << std::endl;
+  // nlohmann::json resp;
+  // to_json(resp, *results);
+  // std::cout << "PostQueryResults:: " << resp.dump(4) << std::endl;
+  //  std::cout << "PostQueryResults:: " << results->DebugString("post query
+  //  response:: ") << std::endl;
+  return results;
 }
 
 StatusRecordOr<PostQueryResults> PostQuery(
@@ -206,23 +224,54 @@ StatusRecordOr<PostQueryResults> PostQuery(
 
 StatusRecordOr<GetQueryResults> GetAllQueryResults(
     JobClient& job_client, std::string const& project_id,
-    std::string const& job_id, std::string const& location,
+    std::string const& job_id, std::string const& location, ms timeout_ms,
     Options const& options) {
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(project_id);
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location(location);
+  get_query_results_request.set_timeout(timeout_ms);
+  // get_query_results_request.set_timeout(ms(1));
+  std::cout << "set_timeout 1000:: " << std::endl;
 
   GetQueryResults get_query_results;
+  ExponentialBackoffPolicy backoff(ms(10), ms(200), 2);
+  auto start_time = std::chrono::system_clock::now();
 
   while (true) {
+    if (timeout_ms.count() > 0 &&
+        std::chrono::system_clock::now() > start_time + timeout_ms) {
+      return StatusRecord{SQLStates::k_HYT00(),
+                          "The query timeout period expired"};
+    }
+    std::this_thread::sleep_for(backoff.OnCompletion());
+    std::cout << "Calling job_client.QueryResults:: " << std::endl;
+
+    nlohmann::json request;
+    to_json(request, get_query_results_request);
+    std::cout << "GetQueryResultsRequest:: " << request.dump(4) << std::endl;
+    // std::cout << "*get_query_results_request:: " <<
+    // get_query_results_request.DebugString("get_query_results_request:: ")
+    // <<std::endl;
     StatusOr<GetQueryResults> get_query_results_partial =
         job_client.QueryResults(get_query_results_request, options);
+    std::cout << "Returned job_client.QueryResults:: " << std::endl;
 
     if (!get_query_results_partial) {
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
+    nlohmann::json response;
+    to_json(response, *get_query_results_partial);
+    std::cout << "GetQueryResults:: " << response.dump(4) << std::endl;
+    // std::cout << "*get_query_results_partial:: " <<
+    // get_query_results_partial->DebugString("*get_query_results_partial:: ")
+    // <<std::endl;
 
+    // If job_complete is false, there would be no rows and we should wait for
+    // job completion
+    if (!get_query_results_partial->job_complete) {
+      continue;
+    }
     if (get_query_results.rows.empty()) {
       // It's the first response. Copy it.
       get_query_results = *get_query_results_partial;
@@ -231,6 +280,9 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
                                     get_query_results_partial->rows.begin(),
                                     get_query_results_partial->rows.end());
     }
+
+    // if (get_query_results_partial->job_complete &&
+    //     get_query_results_partial->page_token.empty()) {
     if (get_query_results_partial->page_token.empty()) {
       get_query_results.page_token = "";
       break;
@@ -253,7 +305,7 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_location(location);
   get_query_results_request.set_start_index(query_results_filter.start_index);
   get_query_results_request.set_timeout(
-      std::chrono::milliseconds(query_results_filter.query_timeout_ms));
+      ms(query_results_filter.query_timeout_ms));
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
 
