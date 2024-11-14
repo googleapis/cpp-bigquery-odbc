@@ -59,6 +59,7 @@ else ()
     find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
     find_package(google_cloud_cpp_oauth2 CONFIG REQUIRED)
     find_package(google_cloud_cpp_resourcemanager REQUIRED)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
     find_package(google_cloud_cpp_serviceusage REQUIRED)
 endif ()
 
