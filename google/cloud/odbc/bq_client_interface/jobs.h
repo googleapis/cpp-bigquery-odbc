@@ -111,7 +111,8 @@ odbc_internal::StatusRecordOr<
 GetAllQueryResults(
     ::google::cloud::bigquery_v2_minimal_internal::JobClient& job_client,
     std::string const& project_id, std::string const& job_id,
-    std::string const& location, ::google::cloud::Options const& options);
+    std::string const& location, std::chrono::milliseconds timeout_ms,
+    ::google::cloud::Options const& options);
 
 // Gets query results, based on the filter passed in.
 odbc_internal::StatusRecordOr<

@@ -674,6 +674,14 @@ TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
   EXPECT_TRUE(returned.query_request().connection_properties().empty());
 }
 
+TEST(ConstructBasicPostQueryRequest, Basic_SetTimeout) {
+  ConnectionHandle conn_handle;
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, "SELECT 1", 2);
+  EXPECT_EQ(returned.query_request().timeout(),
+            std::chrono::milliseconds(2000));
+}
+
 TEST(ConstructBasicPostQueryRequest, Basic_UseSession) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;

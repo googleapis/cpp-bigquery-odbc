@@ -62,6 +62,8 @@ TEST(SQLExecute, SimpleLargeDataRead) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
+  SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)1, 0);
+  CheckError(status, "SQLSetStmtAttr", conn, false);
 
   // (5) Fetch Rows
   std::string insert_stmt =

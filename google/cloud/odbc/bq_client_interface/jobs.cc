@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include <thread>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -31,8 +32,11 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::internal::ExponentialBackoffPolicy;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using chrono_ms = std::chrono::milliseconds;
 
 // When 'Job' object is created, all members are created with default values,
 // usually empty strings. Client library doesn't provide any validation around
@@ -88,7 +92,7 @@ std::vector<std::string> CreateKeysToFilterOut(
   if (query_request.max_results() <= 0) {
     default_filtered_keys.emplace_back("maxResults");
   }
-  if (query_request.timeout() == std::chrono::milliseconds(0)) {
+  if (query_request.timeout() == chrono_ms(0)) {
     default_filtered_keys.emplace_back("timeoutMs");
   }
   return default_filtered_keys;
@@ -207,15 +211,26 @@ StatusRecordOr<PostQueryResults> PostQuery(
 StatusRecordOr<GetQueryResults> GetAllQueryResults(
     JobClient& job_client, std::string const& project_id,
     std::string const& job_id, std::string const& location,
-    Options const& options) {
+    chrono_ms timeout_ms, Options const& options) {
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(project_id);
   get_query_results_request.set_job_id(job_id);
   get_query_results_request.set_location(location);
+  get_query_results_request.set_timeout(timeout_ms);
 
   GetQueryResults get_query_results;
+  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
+  auto start_time = std::chrono::system_clock::now();
 
   while (true) {
+    if (timeout_ms.count() > 0 &&
+        std::chrono::system_clock::now() > start_time + timeout_ms) {
+      std::string message = "The query timeout period of " +
+                            std::to_string(timeout_ms.count()) +
+                            "ms has expired";
+      return StatusRecord{SQLStates::k_HYT00(), message};
+    }
+    std::this_thread::sleep_for(backoff.OnCompletion());
     StatusOr<GetQueryResults> get_query_results_partial =
         job_client.QueryResults(get_query_results_request, options);
 
@@ -223,6 +238,12 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
 
+    // If job_complete is false, there would be no rows and we should wait for
+    // job completion
+    if (!get_query_results_partial->job_complete &&
+        get_query_results_partial->rows.empty()) {
+      continue;
+    }
     if (get_query_results.rows.empty()) {
       // It's the first response. Copy it.
       get_query_results = *get_query_results_partial;
@@ -231,6 +252,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
                                     get_query_results_partial->rows.begin(),
                                     get_query_results_partial->rows.end());
     }
+
     if (get_query_results_partial->page_token.empty()) {
       get_query_results.page_token = "";
       break;
@@ -253,7 +275,7 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_location(location);
   get_query_results_request.set_start_index(query_results_filter.start_index);
   get_query_results_request.set_timeout(
-      std::chrono::milliseconds(query_results_filter.query_timeout_ms));
+      chrono_ms(query_results_filter.query_timeout_ms));
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
 
