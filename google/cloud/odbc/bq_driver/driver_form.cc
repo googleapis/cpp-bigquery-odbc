@@ -228,8 +228,8 @@ void DriverForm::InitControls() {
   HFONT hFont = CreateCustomFont(10);  // Font size 10
 
   // Create controls
-  HWND hDSNnameHeader = CreateLabel(m_hwnd, "DSN Name:", 20, 80, 100, 20, 0);
-  HWND hDSNnameEdit = CreateEditBox(m_hwnd, 100, 80, 200, 20, kIdcDSNEdit);
+HWND hDSNnameHeader = CreateLabel(m_hwnd, "DSN Name:", 20, 80, 100, 20, 0);
+HWND hDSNnameEdit = CreateEditBox(m_hwnd, 140, 80, 200, 20, kIdcDSNEdit);
   SetWindowText(hDSNnameEdit, dsn_name_.c_str());
   if (!dsn_name_.empty()) {
     // If there is a value, make the edit box read-only
@@ -237,36 +237,27 @@ void DriverForm::InitControls() {
     SendMessage(hDsnEditBox, EM_SETREADONLY, TRUE, 0);
   }
 
-  HWND hAuthHead =
-      CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
-  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 220, 100, kIdcComboBox);
+ HWND hAuthHead = CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
+HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 220, 100, kIdcComboBox);
 
-  HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
-  HWND hEmailEdit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
+HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
+HWND hEmailEdit = CreateEditBox(m_hwnd, 140, 160, 200, 20, kIdcEmailEdit);
 
-  HWND hPathAdd = CreateLabel(m_hwnd, "Key File Path:", 20, 200, 100, 30, 0);
-  HWND hKeyFileEdit = CreateEditBox(m_hwnd, 120, 200, 250, 20, kIdcKeyfileEdit);
-  CreateButton(m_hwnd, "Browse", 150, 230, 100, 20, kIdcBrowseButton);
+HWND hPathAdd = CreateLabel(m_hwnd, "Key File Path:", 20, 200, 100, 30, 0);
+HWND hKeyFileEdit = CreateEditBox(m_hwnd, 140, 200, 250, 20, kIdcKeyfileEdit);
+CreateButton(m_hwnd, "Browse", 400, 200, 100, 20, kIdcBrowseButton);
 
-  HWND hCatalogText = CreateLabel(m_hwnd, "Catalog (Project):", 20, 280, 110,
-                                  20, kIdcCatalogLabel);
-  HWND hCatalogBox = CreateComboBox(m_hwnd, 160, 280, 230, 100, kIdcCatlogBOX);
+HWND hCatalogText = CreateLabel(m_hwnd, "Catalog (Project):", 20, 240, 110, 20, kIdcCatalogLabel);
+HWND hCatalogBox = CreateComboBox(m_hwnd, 140, 240, 230, 100, kIdcCatlogBOX);
 
-  HWND hDatasetText =
-      CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
-  HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
-
- HWND hwndTestButton =
-      CreateButton(m_hwnd, "Test...", 120, 420, 80, 30, kIdcButtonTest);
-
+HWND hDatasetText = CreateLabel(m_hwnd, "Dataset:", 20, 280, 50, 20, kIdcDatasetLabel);
+HWND hDatasetBox = CreateComboBox(m_hwnd, 140, 280, 230, 100 ,kIdcDatasetBOX);
   HWND hLoggingButton =
       CreateButton(m_hwnd, "Logging Options", 200, 370, 120, 30, kIdcLoggingBtn);
-
-  HWND hwndOkButton =
-      CreateButton(m_hwnd, "Ok", 220, 420, 80, 30, kIdcButtonOk);
-  HWND hwndCancelButton =
-      CreateButton(m_hwnd, "Cancel", 320, 420, 80, 30, kIdcButtonCancel);
-
+// Adjust button positions
+HWND hwndTestButton = CreateButton(m_hwnd,"Test...",120 ,450 ,80 ,30,kIdcButtonTest);
+HWND hwndOkButton = CreateButton(m_hwnd,"Ok",220 ,450 ,80 ,30,kIdcButtonOk);
+HWND hwndCancelButton = CreateButton(m_hwnd,"Cancel",320 ,450 ,80 ,30,kIdcButtonCancel);
   // Populate dropdowns
   SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "Service Authentication");
   SendMessage(hComboBox, CB_ADDSTRING, 0,

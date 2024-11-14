@@ -23,7 +23,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
 #ifdef _WIN32
-#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/driver_form.h"
 #endif /* WIN32 */
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
@@ -47,7 +47,7 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 #ifdef _WIN32
-using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver::DriverForm;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 #endif /* WIN32 */
@@ -238,7 +238,10 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     out_tmp_str.append(";");
     strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
             out_tmp_str.length());
+            if(out_conn_str_len != nullptr)
+            {
     *out_conn_str_len = out_tmp_str.length();
+            }
   }
   return LogAndReturnCode(*handle_ref, status);
 }

@@ -149,13 +149,13 @@ if (BUILD_SHARED_LIBS)
     endif ()
     # Combine all OBJ dependencies and add it to the Shared Object.
     if (NOT TARGET google_cloud_cpp_bigquery_rest)
-        add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)
+        add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED STATIC)
     endif ()
     if (NOT TARGET google_cloud_cpp_bigquery)
-        add_library(google_cloud_cpp_bigquery OBJECT IMPORTED)
+        add_library(google_cloud_cpp_bigquery OBJECT IMPORTED STATIC)
     endif ()
     if (NOT TARGET google_cloud_cpp_oauth2)
-        add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED)
+        add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED STATIC)
     endif ()
     target_link_libraries(
         google_cloud_odbc_bq_driver

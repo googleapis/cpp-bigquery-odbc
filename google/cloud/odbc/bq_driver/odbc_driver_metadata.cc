@@ -40,6 +40,7 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
@@ -82,7 +83,7 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
                                            SQLSMALLINT in_buffer_len,
                                            SQLSMALLINT* str_len_ptr) {
   StatusRecordOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
+      ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
     TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
@@ -99,6 +100,10 @@ SQLRETURN HandleConnectionInformationTypes(SQLHDBC connection_handle,
     }
     case SQL_DATABASE_NAME: {
       info_type_value = handle->GetDsn().catalog;
+      break;
+    }
+      case SQL_DRIVER_ODBC_VER: {
+      info_type_value = kDriverOdbcVer;
       break;
     }
     default: {
@@ -176,26 +181,29 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
+
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
+
+
+                                      // Handle information types dependent on connection handle.
+  if (info_type == SQL_DATA_SOURCE_NAME || info_type == SQL_DATABASE_NAME || info_type == SQL_DRIVER_ODBC_VER) {
+    return HandleConnectionInformationTypes(connection_handle, info_type,
+                                            info_value_ptr, in_buffer_len,
+                                            str_len_ptr);
+  }
   if (!handle_result) {
     TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* handle = *handle_result;
-
+ 
   if (in_buffer_len < 0) {
     std::string mesg = "Invalid Input BufferLength";
     auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
     return LogAndReturnCode(*handle, status_record);
   }
 
-  // Handle information types dependent on connection handle.
-  if (info_type == SQL_DATA_SOURCE_NAME || info_type == SQL_DATABASE_NAME) {
-    return HandleConnectionInformationTypes(connection_handle, info_type,
-                                            info_value_ptr, in_buffer_len,
-                                            str_len_ptr);
-  }
   // Handle rest of the information types not dependent on the connection
   // handle.
   if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {

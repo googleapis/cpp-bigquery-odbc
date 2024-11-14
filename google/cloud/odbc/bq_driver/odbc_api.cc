@@ -488,8 +488,11 @@ SQLRETURN SQL_API SQLDriverConnectW(
         driverCompletion);
   }
   // Handle Unicode conversion of output parameters.
+  if(utf8_in_connection_str->data() != nullptr)
+  {
   StatusRecordOr<std::wstring> utf16_in_connection_str =
       Utf8ToUtf16(*utf8_in_connection_str);
+
   if (!utf16_in_connection_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf16_in_connection_str.GetStatusRecord().message);
@@ -497,7 +500,9 @@ SQLRETURN SQL_API SQLDriverConnectW(
   }
   inConnectionString = ToSqlWChar(utf16_in_connection_str->data());
   inConnectionStringLen = utf16_in_connection_str->length();
-
+  }
+  if(out_conn_str != nullptr)
+  {
   StatusRecordOr<std::wstring> utf16_out_conn_str;
   // if (out_len > 0) {
   //   utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
@@ -514,6 +519,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
   *outConnectionStringLen = utf16_out_conn_str->length();
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
+  }
   if (is_tracing_enabled)
     TraceFunctionExit_SQLDriverConnectW(rc, *(*kTraceOption));
   // Call to Release mutex for connection handle in odbc_lock.h.
