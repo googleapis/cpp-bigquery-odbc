@@ -24,7 +24,6 @@ set(PROJECT_VERSION_PRE_RELEASE "rc")
 
 include(CTest)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 add_subdirectory(google/cloud/odbc)
