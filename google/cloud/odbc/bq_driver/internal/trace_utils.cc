@@ -728,7 +728,7 @@ std::string FormatIntervalStruct(SQL_INTERVAL_STRUCT i) {
 }
 #endif /* ODBCVER >= 0x0300 */
 
-#ifdef WIN32
+#ifdef _WIN32
 std::string FormatHWND(HWND handle) {
   char buf[kCharBufSize1];
   if (!handle)
@@ -746,6 +746,25 @@ std::string FormatSqlHWND(SQLHWND handle) {
     sprintf(buf, "\t\t%-s, %p\n", "SQLHWND", handle);
   return buf;
 }
-#endif /* WIN32 */
+
+std::string FormatRequest(WORD f_request) {
+  switch (f_request) {
+    case ODBC_ADD_DSN:
+      return "ODBC_ADD_DSN";
+    case ODBC_CONFIG_DSN:
+      return "ODBC_CONFIG_DSN";
+    case ODBC_REMOVE_DSN:
+      return "ODBC_REMOVE_DSN";
+    case ODBC_ADD_SYS_DSN:
+      return "ODBC_ADD_SYS_DSN";
+    case ODBC_CONFIG_SYS_DSN:
+      return "ODBC_CONFIG_SYS_DSN";
+    case ODBC_REMOVE_SYS_DSN:
+      return "ODBC_REMOVE_SYS_DSN";
+    default:
+      return "Unknown Request";
+  }
+}
+#endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal

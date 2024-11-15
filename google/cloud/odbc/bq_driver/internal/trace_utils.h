@@ -231,13 +231,13 @@ std::string FormatBool(bool b);
 /////////////////////////////////////////////
 // Window specific types.
 /////////////////////////////////////////////
-#ifdef WIN32
+#ifdef _WIN32
 std::string FormatWindowHandle(HWND handle);
 std::string FormatHWND(HWND handle);
 std::string FormatSqlHWND(SQLHWND handle);
 std::string FormatWindowHandle(SQLHWND handle);
-#endif /* WIN32 */
-
+std::string FormatRequest(WORD f_request);
+#endif  // _WIN32
 /////////////////////////////////////////////
 // Struct types.
 /////////////////////////////////////////////

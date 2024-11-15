@@ -14,10 +14,17 @@
 
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
+std::string DriverForm::dsn_name_;
+std::string DriverForm::email_;
+std::string DriverForm::key_file_path_;
+std::string DriverForm::o_auth_mechanism_;
+std::string DriverForm::catalog_;
+std::string DriverForm::dataset_;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     PWSTR pCmdLine, int nCmdShow) {
@@ -72,7 +79,21 @@ void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath = nullptr) {
   }
 }
 
-// Function to create a font
+void DriverForm::SetValues(Section const& attributesMap) {
+  dsn_name_ = attributesMap.count("DSN") > 0 ? attributesMap.at("DSN") : "";
+  email_ = attributesMap.count("Email") > 0 ? attributesMap.at("Email") : "";
+  o_auth_mechanism_ = attributesMap.count("OAuthMechanism") > 0
+                          ? attributesMap.at("OAuthMechanism")
+                          : "";
+  key_file_path_ = attributesMap.count("KeyFilePath") > 0
+                       ? attributesMap.at("KeyFilePath")
+                       : "";
+  catalog_ =
+      attributesMap.count("Catalog") > 0 ? attributesMap.at("Catalog") : "";
+  dataset_ =
+      attributesMap.count("Dataset") > 0 ? attributesMap.at("Dataset") : "";
+}
+
 HFONT CreateCustomFont(int fontSize) {
   LOGFONT logFont = {};
   HFONT hFont = NULL;
@@ -83,13 +104,122 @@ HFONT CreateCustomFont(int fontSize) {
   hFont = CreateFontIndirect(&logFont);
   return hFont;
 }
+// Helper function to create a static label
+HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
+                 int height, int id) {
+  return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
+                        y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
+}
 
+// Helper function to create an edit box
+HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
+  return CreateWindowEx(
+      0, "EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, x, y, width,
+      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to create a combo box (dropdown)
+HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
+  return CreateWindowEx(
+      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
+      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to create a button
+HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
+                  int height, int id) {
+  return CreateWindowEx(
+      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
+      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to set font for controls
+void SetControlFont(HWND hwnd, HFONT font) {
+  SendMessage(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
+}
+
+// Function to initialize controls
+void DriverForm::InitControls() {
+  // Set custom font for the controls
+  HFONT hFont = CreateCustomFont(10);  // Font size 10
+
+  // Create controls
+  HWND hDSNnameHeader = CreateLabel(m_hwnd, "DSN Name:", 20, 80, 100, 20, 0);
+  HWND hDSNnameEdit = CreateEditBox(m_hwnd, 100, 80, 200, 20, kIdcDSNEdit);
+  SetWindowText(hDSNnameEdit, dsn_name_.c_str());
+  if (!dsn_name_.empty()) {
+    // If there is a value, make the edit box read-only
+    HWND hDsnEditBox = GetDlgItem(m_hwnd, kIdcDSNEdit);
+    SendMessage(hDsnEditBox, EM_SETREADONLY, TRUE, 0);
+  }
+
+  HWND hAuthHead =
+      CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
+  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 150, 100, kIdcComboBox);
+
+  HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
+  HWND hEmailEdit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
+
+  HWND hPathAdd = CreateLabel(m_hwnd, "Key File Path:", 20, 200, 100, 30, 0);
+  HWND hKeyFileEdit = CreateEditBox(m_hwnd, 120, 200, 250, 20, kIdcKeyfileEdit);
+  CreateButton(m_hwnd, "Browse", 150, 230, 100, 20, kIdcBrowseButton);
+
+  HWND hCatalogText = CreateLabel(m_hwnd, "Catalog (Project):", 20, 280, 110,
+                                  20, kIdcCatalogLabel);
+  HWND hCatalogBox = CreateComboBox(m_hwnd, 160, 280, 230, 100, kIdcCatlogBOX);
+
+  HWND hDatasetText =
+      CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
+  HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
+
+  HWND hwndOkButton =
+      CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
+  HWND hwndCancelButton =
+      CreateButton(m_hwnd, "Cancel", 320, 400, 80, 30, kIdcButtonCancel);
+
+  // Populate dropdowns
+  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For Current User");
+  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For All Users");
+  SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
+
+  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
+  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 2");
+  SendMessage(hCatalogBox, CB_SETCURSEL, 0, 0);
+
+  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 1");
+  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 2");
+  SendMessage(hDatasetBox, CB_SETCURSEL, 0, 0);
+
+  // Apply font to controls
+  SetControlFont(hAuthHead, hFont);
+  SetControlFont(hComboBox, hFont);
+  SetControlFont(hDSNnameHeader, hFont);
+  SetControlFont(hDSNnameEdit, hFont);
+  SetControlFont(hEmailHeader, hFont);
+  SetControlFont(hEmailEdit, hFont);
+  SetControlFont(hPathAdd, hFont);
+  SetControlFont(hKeyFileEdit, hFont);
+  SetControlFont(hCatalogText, hFont);
+  SetControlFont(hCatalogBox, hFont);
+  SetControlFont(hDatasetText, hFont);
+  SetControlFont(hDatasetBox, hFont);
+
+  SetWindowText(hEmailEdit, email_.c_str());
+  SetWindowText(hKeyFileEdit, key_file_path_.c_str());
+  SetWindowText(hCatalogBox, catalog_.c_str());
+  SetWindowText(hDatasetBox, dataset_.c_str());
+  SetWindowText(hComboBox, o_auth_mechanism_.c_str());
+}
+
+// Function to initialize and display the form
 void DriverForm::Show() {
   if (m_hwnd) {
     ShowWindow(m_hwnd, SW_SHOW);
     SetForegroundWindow(m_hwnd);
     return;
   }
+
   WNDCLASS wc = {};
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = GetModuleHandle(NULL);
@@ -97,117 +227,18 @@ void DriverForm::Show() {
 
   RegisterClass(&wc);
 
-  m_hwnd = CreateWindowEx(0, CLASS_NAME, "Driver Form", WS_OVERLAPPEDWINDOW,
-                          CW_USEDEFAULT, CW_USEDEFAULT, 900, 800, NULL, NULL,
-                          GetModuleHandle(NULL), this);
+  m_hwnd = CreateWindowEx(0, CLASS_NAME,
+                          "Google ODBC Driver for Google Bigquery DSN Setup",
+                          WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                          520, 650, NULL, NULL, GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
-    // Set custom font for the controls
-    HFONT hFont = CreateCustomFont(10);  // Font size 10
-
-    // Create (Authentication header) before the dropdown
     CreateWindowEx(0, "STATIC",
-                   "Authentication",  // Header text
-                   WS_VISIBLE | WS_CHILD | SS_LEFT, 20, 90, 120,
+                   "DSN configure",  // Header text
+                   WS_VISIBLE | WS_CHILD | SS_LEFT, 20, 50, 200,
                    20,  // Position and size
                    m_hwnd, (HMENU)kIdcHeaderLabel, GetModuleHandle(NULL), NULL);
-
-    // Create (header) and dropdown on the same line
-    HWND hAuthHead = CreateWindowEx(
-        0, "STATIC", "OAuth Mechanism:", WS_VISIBLE | WS_CHILD | SS_LEFT,
-        // labelX, 90, labelWidth, 20,  // Position and size of the text
-        20, 120, 120, 20, m_hwnd, (HMENU)kIdcLabel, GetModuleHandle(NULL),
-        NULL);
-
-    // create dropdown
-    HWND hComboBox =
-        CreateWindowEx(0, "COMBOBOX", NULL,
-                       WS_TABSTOP | WS_VISIBLE | WS_CHILD |
-                           CBS_DROPDOWN,  // Styles for a dropdown
-                       // comboX, 90, comboWidth, 100,
-                       140, 120, 150, 100, m_hwnd, (HMENU)kIdcComboBox,
-                       GetModuleHandle(NULL), NULL);
-
-    // Create Email Label
-    HWND hEmailHeader = CreateWindowEx(
-        0, "STATIC", "Email:", WS_VISIBLE | WS_CHILD | SS_LEFT, 20, 160, 40, 20,
-        m_hwnd, NULL, GetModuleHandle(NULL), NULL);
-
-    // Create Email Edit Control
-    HWND hEmailEdit = CreateWindowEx(
-        0, "EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, 100, 160,
-        200, 20, m_hwnd, (HMENU)kIdcEmailEdit, GetModuleHandle(NULL), NULL);
-
-    // Create Key File Path Label
-    HWND hPathAdd = CreateWindowEx(
-        0, "STATIC", "Key File Path:", WS_VISIBLE | WS_CHILD | SS_LEFT, 20, 200,
-        100, 30, m_hwnd, NULL, GetModuleHandle(NULL), NULL);
-
-    // Create Key File Path Edit Control
-    HWND hKeyFileEdit = CreateWindowEx(
-        0, "EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, 120, 200,
-        250, 20, m_hwnd, (HMENU)kIdcKeyfileEdit, GetModuleHandle(NULL), NULL);
-
-    // Create Browse Button
-    CreateWindowEx(0, "BUTTON", "Browse",
-                   WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 150, 230,
-                   100, 20, m_hwnd, (HMENU)kIdcBrowseButton,
-                   GetModuleHandle(NULL), NULL);
-
-    HWND hCatalogText = CreateWindowEx(
-        0, "STATIC", "Catalog (Project):", WS_VISIBLE | WS_CHILD | SS_LEFT,
-        // labelX, 90, labelWidth, 20,  // Position and size of the text
-        20, 280, 110, 20, m_hwnd, (HMENU)kIdcCatalogLabel,
-        GetModuleHandle(NULL), NULL);
-    // create dropdown
-    HWND hCatlogBox =
-        CreateWindowEx(0, "COMBOBOX", NULL,
-                       WS_TABSTOP | WS_VISIBLE | WS_CHILD |
-                           CBS_DROPDOWN,  // Styles for a dropdown
-                       // comboX, 90, comboWidth, 100,
-                       160, 280, 230, 100, m_hwnd, (HMENU)kIdcCatlogBOX,
-                       GetModuleHandle(NULL), NULL);
-
-    HWND hDatasetText = CreateWindowEx(
-        0, "STATIC", "Dataset:", WS_VISIBLE | WS_CHILD | SS_LEFT,
-        // labelX, 90, labelWidth, 20,  // Position and size of the text
-        20, 320, 50, 20, m_hwnd, (HMENU)kIdcDatasetLabel, GetModuleHandle(NULL),
-        NULL);
-    // create dropdown
-    HWND hDatasetBox =
-        CreateWindowEx(0, "COMBOBOX", NULL,
-                       WS_TABSTOP | WS_VISIBLE | WS_CHILD |
-                           CBS_DROPDOWN,  // Styles for a dropdown
-                       // comboX, 90, comboWidth, 100,
-                       160, 320, 230, 100, m_hwnd, (HMENU)kIdcDatasetBOX,
-                       GetModuleHandle(NULL), NULL);
-
-    // For OAuthMechanism dropdown values
-    SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For Current User");
-    SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For All Users");
-    SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
-
-    // For Catalog dropdown values
-    SendMessage(hCatlogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
-    SendMessage(hCatlogBox, CB_ADDSTRING, 0, (LPARAM) "Project 2");
-    SendMessage(hCatlogBox, CB_SETCURSEL, 0, 0);
-
-    // For Dataset dropdown values
-    SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 1");
-    SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 2");
-    SendMessage(hDatasetBox, CB_SETCURSEL, 0, 0);
-
-    // Apply font to controls
-    // SendMessage(hAuthHead, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hAuthHead, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hEmailEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hEmailHeader, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hPathAdd, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hKeyFileEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hCatalogText, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hDatasetText, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(GetDlgItem(m_hwnd, kIdcBrowseButton), WM_SETFONT, (WPARAM)hFont,
-                TRUE);
+    InitControls();
 
     // Create and position OK and Cancel buttons at the bottom
     RECT rcClient;
@@ -219,22 +250,14 @@ void DriverForm::Show() {
                   20;        // Position 20 pixels from the bottom
     int buttonSpacing = 20;  // Space between buttons
 
-    // Create an OK button
-    CreateWindowEx(0, "BUTTON", "OK",
-                   WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 20,
-                   buttonY, buttonWidth, buttonHeight, m_hwnd,
-                   (HMENU)kIdcButtonOk, GetModuleHandle(NULL), NULL);
-
-    // Create a Cancel button
-    CreateWindowEx(0, "BUTTON", "Cancel",
-                   WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                   20 + buttonWidth + buttonSpacing, buttonY, buttonWidth,
-                   buttonHeight, m_hwnd, (HMENU)kIdcButtonCancel,
-                   GetModuleHandle(NULL), NULL);
-
     ShowWindow(m_hwnd, SW_SHOW);
     UpdateWindow(m_hwnd);
   }
+}
+
+bool IsValidEmail(std::string const& email) {
+  std::regex const pattern(R"((\w+)(\.|\-)?(\w*)@(\w+)(\.\w+)+)");
+  return std::regex_match(email, pattern);
 }
 
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
@@ -254,10 +277,46 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
           HWND hEdit = GetDlgItem(hwnd, kIdcKeyfileEdit);
           OpenFileDialog(hwnd, hEdit);
         } break;
-        case kIdcButtonOk:
+        case kIdcButtonOk: {
+          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsnBuffer[256];
+          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
+          dsn_name_ = dsnBuffer;
+
+          HWND hEmail = GetDlgItem(hwnd, kIdcEmailEdit);
+          char emailBuffer[256];
+          GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
+          email_ = emailBuffer;
+          if (!IsValidEmail(email_) && !email_.empty()) {
+            MessageBox(hwnd, "Invalid email address!", "Error",
+                       MB_OK | MB_ICONERROR);
+            email_ = "";
+            return 0;
+          }
+
+          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          char keyBuffer[256];
+          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
+          key_file_path_ = keyBuffer;
+
+          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
+          char authBuffer[256];
+          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
+          o_auth_mechanism_ = authBuffer;
+
+          HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
+          char catalogBuffer[256];
+          GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
+          catalog_ = catalogBuffer;
+
+          HWND hDatasetBox = GetDlgItem(hwnd, kIdcDatasetBOX);
+          char dataBuffer[256];
+          GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
+          dataset_ = dataBuffer;
 
           DestroyWindow(hwnd);  // Close the window
           break;
+        }
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window
           break;

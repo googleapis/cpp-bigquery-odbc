@@ -32,6 +32,11 @@ namespace google::cloud::odbc_bq_driver {
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle);
 
+#ifdef _WIN32
+bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
+                       LPCSTR lpsz_attributes);
+#endif  // _WIN32
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_COMMONS_H

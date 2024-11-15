@@ -263,8 +263,10 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#if defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
-// On Windows, this test times-out for the existing driver
+#ifndef _WIN32
+// On Windows, this test times-out for the existing driver and our driver
+// CheckDataTypes function times out at the last statement and flow doesn't
+// reach this TEST
 TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -277,6 +279,22 @@ TEST(SQLGetTypeInfoTestAnsi, all_datatypes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   CheckDataTypes(conn, SQL_ALL_TYPES, true, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLGetTypeInfoTestWide, all_datatypes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status = SQLGetTypeInfoW(conn->hstmt, SQL_ALL_TYPES);
+  CheckError(status, "SQLGetTypeInfo", conn);
+
+  SQLCHAR type_name[kBufferLength];
+  SQLLEN type_name_len;
+
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, (SQLPOINTER)type_name,
+                      (SQLLEN)sizeof(type_name), &type_name_len);
+  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

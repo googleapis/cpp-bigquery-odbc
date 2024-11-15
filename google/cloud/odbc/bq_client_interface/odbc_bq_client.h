@@ -25,6 +25,7 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
+#include "google/cloud/resourcemanager/v3/projects_client.h"
 #include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -71,7 +72,8 @@ class ODBCBQClient {
   odbc_internal::StatusRecordOr<
       ::google::cloud::bigquery_v2_minimal_internal::Project>
   GetProject(std::string const& project_id,
-             ::google::cloud::Options const& options);
+             ::google::cloud::Options const& options,
+             bool use_resource_mgr = false);
 
   // Lists all projects for the user.
   odbc_internal::StatusRecordOr<
@@ -222,6 +224,7 @@ class ODBCBQClient {
       ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client,
       ::google::cloud::bigquery_v2_minimal_internal::ProjectClient
           project_client,
+      ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client,
       ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client,
       std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
           access_token_generator,
@@ -230,6 +233,7 @@ class ODBCBQClient {
       : dataset_client_(std::move(dataset_client)),
         job_client_(std::move(job_client)),
         project_client_(std::move(project_client)),
+        project_rm_client_(std::move(project_rm_client)),
         table_client_(std::move(table_client)),
         access_token_generator_(std::move(access_token_generator)),
         bigquery_read_client_(std::move(bigquery_read_client)) {}
@@ -237,6 +241,7 @@ class ODBCBQClient {
   ::google::cloud::bigquery_v2_minimal_internal::DatasetClient dataset_client_;
   ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client_;
   ::google::cloud::bigquery_v2_minimal_internal::ProjectClient project_client_;
+  ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client_;
   ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client_;
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
       access_token_generator_;

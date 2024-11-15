@@ -46,26 +46,34 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   if (!credentials) {
     return credentials.GetStatusRecord();
   }
+
   Options options =
       google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
           *credentials);
+
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
   TableClient table_client = TableClient(MakeTableConnection(options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
-
   // Disable background threads for BQ Read Connection so we don't end up
   // blocking the main thread with the shared driver library.
+  // This needs to be done for GRPC clients, in this case storage read client
+  // and resource manager client.
   CompletionQueue cq;
   options.set<GrpcCompletionQueueOption>(cq);
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(options));
 
-  return std::shared_ptr<ODBCBQClient>(
-      new ODBCBQClient(dataset_client, job_client, project_client, table_client,
-                       generator, bigquery_read_client));
+  // Create the resource manager project client.
+  ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client =
+      ::google::cloud::resourcemanager_v3::ProjectsClient(
+          ::google::cloud::resourcemanager_v3::MakeProjectsConnection(options));
+
+  return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
+      dataset_client, job_client, project_client, project_rm_client,
+      table_client, generator, bigquery_read_client));
 }
 
 StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
@@ -74,8 +82,12 @@ StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
 }
 
 StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
-ODBCBQClient::GetProject(std::string const& project_id,
-                         Options const& options) {
+ODBCBQClient::GetProject(std::string const& project_id, Options const& options,
+                         bool use_resource_mgr) {
+  if (use_resource_mgr) {
+    return ::google::cloud::odbc_bigquery_client_interface::GetProjectRM(
+        project_rm_client_, project_id, options);
+  }
   return ::google::cloud::odbc_bigquery_client_interface::GetProject(
       project_client_, project_id, options);
 }

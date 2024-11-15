@@ -15,11 +15,13 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
 
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
+using google::cloud::odbc_bq_driver_internal::Section;
 static int const kIdcComboBox = 102;
 static int const kIdcButtonOk = 103;
 static int const kIdcHeaderLabel = 104;
@@ -32,6 +34,7 @@ static int const kIdcCatalogLabel = 110;
 static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
+static int const kIdcDSNEdit = 114;
 
 class DriverForm {
  public:
@@ -39,8 +42,29 @@ class DriverForm {
   ~DriverForm();
   void Show();
   HWND GetHwnd() const;
+  void InitControls();
+  void SetValues(Section const& attributesMap);
+
+  inline std::string const& GetDSN() const { return dsn_name_; }
+  inline std::string const& GetEmail() const { return email_; }
+
+  inline std::string const& GetKeyFilePath() const { return key_file_path_; }
+
+  inline std::string const& GetOAuthMechanism() const {
+    return o_auth_mechanism_;
+  }
+
+  inline std::string const& GetDatasetName() const { return dataset_; }
+
+  inline std::string const& GetCatalogName() const { return catalog_; }
 
  private:
+  static std::string dsn_name_;
+  static std::string email_;
+  static std::string key_file_path_;
+  static std::string o_auth_mechanism_;
+  static std::string dataset_;
+  static std::string catalog_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
   HWND m_hwnd;

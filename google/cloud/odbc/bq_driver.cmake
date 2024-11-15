@@ -140,6 +140,12 @@ add_subdirectory(bq_client_interface)
 add_subdirectory(internal)
 
 if (BUILD_SHARED_LIBS)
+    if (WIN32)
+        set_target_properties(
+            google_cloud_odbc_bq_driver
+            PROPERTIES LINK_FLAGS
+                       "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/exports.def")
+    endif ()
     # Combine all OBJ dependencies and add it to the Shared Object.
     if (NOT TARGET google_cloud_cpp_bigquery_rest)
         add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)

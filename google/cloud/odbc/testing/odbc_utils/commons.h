@@ -131,15 +131,24 @@ struct StdRow {
   SQLDOUBLE float_field;
 };
 
+struct StdUnicodeRow {
+  SQLBIGINT int_field;
+  std::wstring str_field1;
+  std::wstring str_field2;
+};
+
 using StdRows = std::vector<StdRow>;
+
+using StdUnicodeRows = std::vector<StdUnicodeRow>;
 
 struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
   SQLINTEGER int_field;
-  SQLINTEGER len_status_ind_int;
+  // We should use SQLLEN instead of SQLINTEGER for length indicators
+  SQLLEN len_status_ind_int;
   SQLDOUBLE float_field;
-  SQLINTEGER len_status_ind_float;
+  SQLLEN len_status_ind_float;
 };
 
 struct ExpectedDescriptorConfig {
@@ -321,6 +330,8 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   }
 }
 
+std::string GetInsertionString(std::string table_name, StdRows rows);
+
 class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
@@ -337,6 +348,9 @@ class Table {
 
   void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
                   bool use_ansi = false, bool use_sqlprepare = false);
+
+  void InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+                         StdUnicodeRows rows);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be

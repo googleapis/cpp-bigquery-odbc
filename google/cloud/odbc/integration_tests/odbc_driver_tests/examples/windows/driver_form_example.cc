@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include <gtest/gtest.h>
 
@@ -24,8 +23,6 @@ using google::cloud::odbc_bq_driver_internal::kIdcBrowseButton;
 using google::cloud::odbc_bq_driver_internal::kIdcButtonOk;
 using google::cloud::odbc_bq_driver_internal::kIdcKeyfileEdit;
 using google::cloud::odbc_bq_driver_internal::OpenFileDialog;
-
-#ifdef _WIN32
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -63,8 +60,6 @@ class DriverFormTest : public ::testing::Test {
 void MockOpenFileDialog(HWND hwnd, HWND hEdit, char const* simulatedPath) {
   OpenFileDialog(hwnd, hEdit, simulatedPath);
 }
-
-#endif
 
 }  // namespace
 
@@ -116,4 +111,3 @@ int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-#endif /* WIN32 */

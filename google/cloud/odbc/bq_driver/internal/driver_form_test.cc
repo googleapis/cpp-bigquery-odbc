@@ -158,5 +158,49 @@ TEST_F(DriverFormTest, TestEmailField) {
       << "Email edit control should contain the correct text.";
 }
 
+TEST_F(DriverFormTest, SetValues_ValidInput) {
+  Section attributes = {{"DSN", "test"},
+                        {"Email", "test@example.com"},
+                        {"OAuthMechanism", "OAuth"},
+                        {"KeyFilePath", "/path/to/key"},
+                        {"Catalog", "test_catalog"},
+                        {"Dataset", "test_dataset"}};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetEmail(), "test@example.com");
+  EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
+  EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
+  EXPECT_EQ(form->GetCatalogName(), "test_catalog");
+  EXPECT_EQ(form->GetDatasetName(), "test_dataset");
+}
+
+TEST_F(DriverFormTest, SetValues_MissingAttributes) {
+  Section attributes = {
+      {"Email", "test@example.com"},
+      {"OAuthMechanism", "OAuth"},
+  };
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetEmail(), "test@example.com");
+  EXPECT_EQ(form->GetOAuthMechanism(), "OAuth");
+  EXPECT_EQ(form->GetKeyFilePath(), "");
+  EXPECT_EQ(form->GetCatalogName(), "");
+  EXPECT_EQ(form->GetDatasetName(), "");
+}
+
+TEST_F(DriverFormTest, SetValues_EmptyInput) {
+  Section attributes = {};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetEmail(), "");
+  EXPECT_EQ(form->GetOAuthMechanism(), "");
+  EXPECT_EQ(form->GetKeyFilePath(), "");
+  EXPECT_EQ(form->GetCatalogName(), "");
+  EXPECT_EQ(form->GetDatasetName(), "");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif /* WIN32*/

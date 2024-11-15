@@ -18,6 +18,10 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
+#ifdef _WIN32
+#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#endif  // _WIN32
+
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -28,6 +32,18 @@ using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef _WIN32
+using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
+using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
+using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
+using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
+using google::cloud::odbc_bq_driver_internal::GetSectionWin;
+using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
+using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
+using google::cloud::odbc_bq_driver_internal::Section;
+#endif  // _WIN32
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
   switch (handle_type) {
@@ -108,5 +124,108 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
   }
   return SQL_SUCCESS;
 }
+
+#ifdef _WIN32
+bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
+                       LPCSTR lpsz_attributes) {
+  if (!lpsz_driver) {
+    return FALSE;
+  }
+  std::string attribute = ConvertLPCSTRToString(lpsz_attributes);
+  StatusRecordOr<Section> statusOrSection = ParseConnectionString(attribute);
+  Section section = *statusOrSection;
+  std::string dsn_value =
+      section.count("DSN") > 0 ? section.at("DSN") : "Default DSN";
+  std::string dsn_name;
+  std::string email = section.count("Email") > 0 ? section.at("Email") : "";
+  std::string key_file_path =
+      section.count("KeyFilePath") > 0 ? section.at("KeyFilePath") : "";
+  std::string oAuth_mechanism =
+      section.count("OAuthMechanism") > 0 ? section.at("OAuthMechanism") : "";
+  std::string catalog =
+      section.count("Catalog") > 0 ? section.at("Catalog") : "";
+  std::string dataset_name =
+      section.count("Dataset") > 0 ? section.at("Dataset") : "";
+
+  DriverForm form;
+  switch (f_request) {
+    case ODBC_ADD_DSN: {
+      if (hwnd_parent == NULL) {
+        Section section = {{"Email", email},
+                           {"KeyFilePath", key_file_path},
+                           {"OAuthMechanism", oAuth_mechanism},
+                           {"Catalog", catalog},
+                           {"Dataset", dataset_name}};
+        AddDSNToRegistry(dsn_value, lpsz_driver, section);
+        return true;
+      }
+      form.Show();
+      form.GetHwnd();
+      MSG msg = {};
+      while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+
+      dsn_name = form.GetDSN();
+      email = form.GetEmail();
+      key_file_path = form.GetKeyFilePath();
+      oAuth_mechanism = form.GetOAuthMechanism();
+      catalog = form.GetCatalogName();
+      dataset_name = form.GetDatasetName();
+      Section section = {{"Email", email},
+                         {"KeyFilePath", key_file_path},
+                         {"OAuthMechanism", oAuth_mechanism},
+                         {"Catalog", catalog},
+                         {"Dataset", dataset_name}};
+      AddDSNToRegistry(dsn_name, lpsz_driver, section);
+      return TRUE;
+    }
+    case ODBC_CONFIG_DSN: {
+      if (hwnd_parent == NULL) {
+        Section section2 = {{"Email", email},
+                            {"KeyFilePath", key_file_path},
+                            {"OAuthMechanism", oAuth_mechanism},
+                            {"Catalog", catalog},
+                            {"Dataset", dataset_name}};
+        EditDSNInRegistry(dsn_value, section2);
+        return true;
+      }
+      std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_value;
+      auto res = GetSectionWin(registry_key);
+      auto section = res.GetValue();
+      (*section)["DSN"] = dsn_value;
+      form.SetValues(*section);
+      form.Show();
+      form.GetHwnd();
+      MSG msg = {};
+      while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+
+      email = form.GetEmail();
+      key_file_path = form.GetKeyFilePath();
+      oAuth_mechanism = form.GetOAuthMechanism();
+      catalog = form.GetCatalogName();
+      dataset_name = form.GetDatasetName();
+      Section section2 = {{"Email", email},
+                          {"KeyFilePath", key_file_path},
+                          {"OAuthMechanism", oAuth_mechanism},
+                          {"Catalog", catalog},
+                          {"Dataset", dataset_name}};
+      EditDSNInRegistry(dsn_value, section2);
+      return TRUE;
+    }
+    case ODBC_REMOVE_DSN:
+      RemoveDSNFromRegistry(dsn_value);
+      return TRUE;
+
+    default:
+      return FALSE;
+  }
+}
+
+#endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver

@@ -15,7 +15,6 @@
 #ifndef _WIN32
 #include <iconv.h>
 #endif  // LINUX
-
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
 
@@ -272,6 +271,9 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
         SQLStates::k_HY000(),
         "Error determining buffer size while converting wstring to string"};
   }
+  if (sizeof(SQLWCHAR) == 2) {
+    utf8Length = utf8Length * sizeof(SQLWCHAR);
+  }
   std::string utf8Str(utf8Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
   int result = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1,
@@ -399,6 +401,24 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 
+bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier) {
+  switch (DiagIdentifier) {
+    case SQL_DIAG_DYNAMIC_FUNCTION:
+    case SQL_DIAG_CLASS_ORIGIN:
+    case SQL_DIAG_CONNECTION_NAME:
+    case SQL_DIAG_MESSAGE_TEXT:
+    case SQL_DIAG_SERVER_NAME:
+    case SQL_DIAG_SQLSTATE:
+    case SQL_DIAG_SUBCLASS_ORIGIN:
+      return true;
+      break;
+
+    default:
+      return false;
+      break;
+  }
+}
+
 bool IsFieldIdentifierString(SQLSMALLINT FieldIdentifier) {
   switch (FieldIdentifier) {
     case SQL_DESC_BASE_COLUMN_NAME:
@@ -512,5 +532,132 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
   }
   return StatusRecord::Ok();
 }
+#ifdef _WIN32
+std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
+  if (lpszAttributes == nullptr) return "";
+
+  std::string result;
+  while (true) {
+    while (*lpszAttributes != '\0') {
+      result += *lpszAttributes;
+      lpszAttributes++;
+    }
+    result += ';';
+    lpszAttributes++;
+    if (*lpszAttributes == '\0') {
+      result += ';';
+      break;
+    }
+  }
+
+  return result;
+}
+StatusRecord SetRegValues(HKEY h_key, Section const& section) {
+  for (auto const& kv : section) {
+    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
+                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
+                       static_cast<DWORD>(kv.second.size() + 1)) !=
+        ERROR_SUCCESS) {
+      RegCloseKey(h_key);
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Failed to set " + kv.first + " value"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+// TODO:b/376206999- Add USER DSN functionality
+StatusRecord AddDSNToRegistry(std::string const& dsn_name,
+                              std::string const& driver,
+                              Section const& section) {
+  std::string const registry_path = GetPathToOdbcIni() + "\\" + dsn_name;
+  std::string const odbc_path = GetPathToOdbcIni() + "\\ODBC Data Sources";
+
+  HKEY h_key = nullptr;
+  HKEY registry_root = HKEY_LOCAL_MACHINE;
+
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN Name cannot be empty"};
+  }
+
+  if (RegCreateKeyExA(registry_root, registry_path.c_str(), 0, NULL, 0,
+                      KEY_WRITE, NULL, &h_key, NULL) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to create or open registry key for DSN"};
+  }
+
+  StatusRecord status = SetRegValues(h_key, section);
+  RegCloseKey(h_key);
+  if (!status.ok()) return status;
+
+  if (RegCreateKeyExA(registry_root, odbc_path.c_str(), 0, NULL, 0, KEY_WRITE,
+                      NULL, &h_key, NULL) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open ODBC Data Sources registry key"};
+  }
+
+  if (RegSetValueExA(h_key, dsn_name.c_str(), 0, REG_SZ,
+                     reinterpret_cast<const BYTE*>(driver.c_str()),
+                     static_cast<DWORD>(driver.size() + 1)) != ERROR_SUCCESS) {
+    RegCloseKey(h_key);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to add DSN to ODBC Data Sources"};
+  }
+
+  RegCloseKey(h_key);
+  return StatusRecord::Ok();
+}
+
+StatusRecord EditDSNInRegistry(std::string const& dsn_name,
+                               Section const& section) {
+  std::string const registry_path = GetPathToOdbcIni() + "\\" + dsn_name;
+
+  HKEY h_key = nullptr;
+  HKEY registry_root = HKEY_LOCAL_MACHINE;
+
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN Name cannot be empty"};
+  }
+
+  if (RegOpenKeyExA(registry_root, registry_path.c_str(), 0, KEY_WRITE,
+                    &h_key) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open registry key for DSN"};
+  }
+
+  StatusRecord status = SetRegValues(h_key, section);
+  RegCloseKey(h_key);
+  return status;
+}
+
+StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name) {
+  std::string const registry_path = GetPathToOdbcIni() + "\\" + dsn_name;
+  std::string const odbc_path = GetPathToOdbcIni() + "\\ODBC Data Sources";
+
+  HKEY h_key = nullptr;
+  HKEY registry_root = HKEY_LOCAL_MACHINE;
+
+  if (RegDeleteKeyA(registry_root, registry_path.c_str()) != ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to remove registry key for DSN"};
+  }
+
+  if (RegOpenKeyExA(registry_root, odbc_path.c_str(), 0, KEY_WRITE, &h_key) !=
+      ERROR_SUCCESS) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to open ODBC Data Sources registry key"};
+  }
+
+  if (RegDeleteValueA(h_key, dsn_name.c_str()) != ERROR_SUCCESS) {
+    RegCloseKey(h_key);
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to remove DSN from ODBC Data Sources"};
+  }
+
+  RegCloseKey(h_key);
+
+  return StatusRecord::Ok();
+}
+
+#endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -175,7 +175,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (!rowset_size) {
     rowset_size = 1;
   }
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard);
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 

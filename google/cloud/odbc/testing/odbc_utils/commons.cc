@@ -324,6 +324,47 @@ inline void CheckError(SQLRETURN status, std::string const api,
   }
 }
 
+std::string GetInsertionString(std::string table_name, StdRows rows) {
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return "";
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::string row_str = "( ";
+
+    auto str_field = row.str_field;
+    if (!str_field.empty()) {
+      row_str.append("'" + str_field + "', ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    auto int_field = row.int_field;
+    if (int_field != NULL) {
+      row_str.append(std::to_string(int_field) + ", ");
+    } else {
+      row_str.append("NULL, ");
+    }
+
+    auto float_field = row.float_field;
+    if (float_field != NULL) {
+      row_str.append(std::to_string(float_field));
+    } else {
+      row_str.append("NULL");
+    }
+
+    row_str.append(")");
+    if (i != (num_rows - 1)) {
+      row_str.append(", ");
+    }
+    insert_stmt.append(row_str);
+  }
+  return insert_stmt;
+}
+
 void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
                    bool use_ansi) {
   char create_table_stmt[kBufferLength];
@@ -363,45 +404,11 @@ void Table::DropWithPrepare(std::shared_ptr<ODBCHandles> conn) {
 // testing/commons.*
 void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
                        bool use_ansi, bool use_sqlprepare) {
-  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
-  int num_rows = rows.size();
-  if (!num_rows) {
+  SQLRETURN status;
+  std::string insert_stmt = GetInsertionString(table_name_, rows);
+  if (insert_stmt.empty()) {
     return;
   }
-
-  for (int i = 0; i < num_rows; i++) {
-    auto row = rows[i];
-    std::string row_str = "( ";
-
-    auto str_field = row.str_field;
-    if (!str_field.empty()) {
-      row_str.append("'" + str_field + "', ");
-    } else {
-      row_str.append("NULL, ");
-    }
-
-    auto int_field = row.int_field;
-    if (int_field != NULL) {
-      row_str.append(std::to_string(int_field) + ", ");
-    } else {
-      row_str.append("NULL, ");
-    }
-
-    auto float_field = row.float_field;
-    if (float_field != NULL) {
-      row_str.append(std::to_string(float_field));
-    } else {
-      row_str.append("NULL");
-    }
-
-    row_str.append(")");
-    if (i != (num_rows - 1)) {
-      row_str.append(", ");
-    }
-    insert_stmt.append(row_str);
-  }
-
-  SQLRETURN status;
   if (use_sqlprepare) {
     if (use_ansi) {
       status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
@@ -423,6 +430,58 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
     }
     CheckError(status, "SQLExecDirect", conn, use_ansi);
   }
+}
+
+void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+                              StdUnicodeRows rows) {
+  std::wstring wTableName = Utf8ToUtf16(table_name_);
+  std::wstring wstrTable = wTableName.c_str();
+  SQLRETURN status;
+  std::wstring insert_stmt = L"INSERT INTO " + wstrTable + L" VALUES ";
+  int num_rows = rows.size();
+  if (!num_rows) {
+    return;
+  }
+
+  for (int i = 0; i < num_rows; i++) {
+    auto row = rows[i];
+    std::wstring row_str = L"( ";
+
+    auto int_field = row.int_field;
+    if (int_field != NULL) {
+      row_str.append(std::to_wstring(int_field) + L", ");
+    } else {
+      row_str += L'\0';
+    }
+
+    auto str_field1 = row.str_field1;
+    if (!str_field1.empty()) {
+      row_str.append(L"'" + str_field1 + L"', ");
+    } else {
+      row_str += L'\0';
+    }
+
+    auto str_field2 = row.str_field2;
+    if (!str_field2.empty()) {
+      row_str.append(L"'" + str_field2 + L"'");
+    } else {
+      row_str += L'\0';
+    }
+
+    row_str.append(L")");
+    if (i != (num_rows - 1)) {
+      row_str.append(L", ");
+    } else {
+      row_str += L'\0';
+    }
+    insert_stmt.append(row_str);
+  }
+
+  std::vector<SQLWCHAR> sqlWStr(insert_stmt.begin(), insert_stmt.end());
+  status = SQLPrepareW(conn->hstmt, sqlWStr.data(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
 }
 
 void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
@@ -1044,15 +1103,18 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int utf8Length = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1, NULL,
+  int utf8Length = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1, NULL,
                                        0, NULL, NULL);
   if (utf8Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting wstring to string");
   }
+  if (sizeof(SQLWCHAR) == 2) {
+    utf8Length = utf8Length * sizeof(SQLWCHAR);
+  }
   std::string utf8Str(utf8Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int result = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1,
+  int result = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1,
                                    &utf8Str[0], utf8Length, NULL, NULL);
   if (result == 0) {
     throw std::runtime_error("Error while converting wstring to string");
@@ -1099,14 +1161,14 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
   int utf16Length =
-      MultiByteToWideChar(CP_UTF8, 0, utf_8_str.c_str(), -1, NULL, 0);
+      MultiByteToWideChar(CP_ACP, 0, utf_8_str.c_str(), -1, NULL, 0);
   if (utf16Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting string to wstring");
   }
   std::wstring utf16Str(utf16Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
-  int result = MultiByteToWideChar(CP_UTF8, 0, utf_8_str.c_str(), -1,
+  int result = MultiByteToWideChar(CP_ACP, 0, utf_8_str.c_str(), -1,
                                    &utf16Str[0], utf16Length);
   if (result == 0) {
     throw std::runtime_error("Error while converting string to wstring");

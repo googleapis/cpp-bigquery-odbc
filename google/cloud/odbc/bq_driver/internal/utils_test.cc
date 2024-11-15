@@ -24,6 +24,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_utils::StatusRecIs;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -405,6 +406,16 @@ TEST(UnicodeConversion, EmptyData_Utf16ToUtf8) {
                                          HasSubstr("string is empty/Null")));
 }
 
+TEST(DiagIdentifierString, IsDiagIdentifierString_true) {
+  EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_DYNAMIC_FUNCTION));
+  EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_CONNECTION_NAME));
+  EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_SERVER_NAME));
+}
+
+TEST(DiagIdentifierString, IsDiagIdentifierString_false) {
+  EXPECT_FALSE(IsDiagIdentifierString(SQL_DIAG_DYNAMIC_FUNCTION_CODE));
+}
+
 TEST(IsSearchPatternArgument, SearchPattern_Percent) {
   EXPECT_TRUE(IsSearchPatternArgument("%"));
 }
@@ -469,5 +480,121 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
   SanitizeIdentifierArgument(arg);
   EXPECT_EQ(arg, " TEST");
 }
+#ifdef _WIN32
+std::string kTestDsn = "TestDSN";
+std::string kDriver = "TestDriver";
+std::string kEmail = "test@example.com";
+std::string kOAuthMechanism = "OAuth2";
+std::string kKeyFilePath = "C:\\path\\to\\keyfile";
+std::string kCatalog = "TestCatalog";
+std::string kDataset = "TestDataset";
 
+Section CreateTestSection() {
+  Section section;
+  section["Email"] = kEmail;
+  section["KeyFilePath"] = kKeyFilePath;
+  section["OAuthMechanism"] = kOAuthMechanism;
+  section["Catalog"] = kCatalog;
+  section["Dataset"] = kDataset;
+  return section;
+}
+
+TEST(AddDSNToRegistry, successfulAssertions) {
+  Section section = CreateTestSection();
+  StatusRecord result = AddDSNToRegistry(kTestDsn, kDriver, section);
+  ASSERT_TRUE(result.ok());
+
+  auto status = GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\" + kTestDsn);
+  std::shared_ptr<Section> section2 = status.GetValue();
+  ASSERT_TRUE(section2);
+
+  EXPECT_EQ(section2->at("Email"), kEmail);
+  EXPECT_EQ(section2->at("KeyFilePath"), kKeyFilePath);
+  EXPECT_EQ(section2->at("OAuthMechanism"), kOAuthMechanism);
+  EXPECT_EQ(section2->at("Catalog"), kCatalog);
+  EXPECT_EQ(section2->at("Dataset"), kDataset);
+
+  result = RemoveDSNFromRegistry(kTestDsn);
+  ASSERT_TRUE(result.ok());
+}
+
+TEST(EditDSNInRegistry, successEdit) {
+  Section section = CreateTestSection();
+  StatusRecord result = AddDSNToRegistry(kTestDsn, kDriver, section);
+  ASSERT_TRUE(result.ok());
+
+  section["Email"] = "test@gmail.com";
+  section["KeyFilePath"] = "C:\\path\\to\\abc";
+  result = EditDSNInRegistry(kTestDsn, section);
+  ASSERT_TRUE(result.ok());
+  auto status = GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\" + kTestDsn);
+  std::shared_ptr<Section> section2 = status.GetValue();
+  ASSERT_TRUE(section2);
+
+  EXPECT_EQ(section2->at("Email"), "test@gmail.com");
+  EXPECT_EQ(section2->at("KeyFilePath"), "C:\\path\\to\\abc");
+  EXPECT_EQ(section2->at("OAuthMechanism"), kOAuthMechanism);
+  EXPECT_EQ(section2->at("Catalog"), kCatalog);
+  EXPECT_EQ(section2->at("Dataset"), kDataset);
+
+  result = RemoveDSNFromRegistry(kTestDsn);
+  ASSERT_TRUE(result.ok());
+}
+
+TEST(RemoveDSNFromRegistry, successDeletion) {
+  Section section = CreateTestSection();
+  StatusRecord result = AddDSNToRegistry(kTestDsn, kDriver, section);
+  ASSERT_TRUE(result.ok());
+  result = RemoveDSNFromRegistry(kTestDsn);
+  ASSERT_TRUE(result.ok());
+
+  auto status = GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\" + kTestDsn);
+  ASSERT_FALSE(status.Ok());
+}
+
+TEST(AddDSNToRegistry, emptyDSN) {
+  Section section = {};
+  StatusRecord result = AddDSNToRegistry("", kDriver, section);
+  EXPECT_THAT(result, StatusRecIs(SQLStates::k_HY000(),
+                                  HasSubstr("DSN Name cannot be empty")));
+}
+
+TEST(EditDSNInRegistry, nonExistingDSN) {
+  Section section = {};
+  StatusRecord result = EditDSNInRegistry("", section);
+  EXPECT_THAT(result, StatusRecIs(SQLStates::k_HY000(),
+                                  HasSubstr("DSN Name cannot be empty")));
+}
+
+TEST(RemoveDSNFromRegistry, nonExistentDSN) {
+  StatusRecord result = RemoveDSNFromRegistry("");
+  EXPECT_THAT(result,
+              StatusRecIs(SQLStates::k_HY000(),
+                          HasSubstr("Failed to remove registry key for DSN")));
+}
+
+TEST(ConvertLPCSTRToString, valid_string) {
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  std::string result = ConvertLPCSTRToString(lpszAttributes);
+  EXPECT_EQ(result,
+            "DSN=Personnel Data;UID=Smith;PWD=Sesame;DATABASE=Personnel;;");
+  EXPECT_EQ(result.length(), 60);
+}
+
+TEST(ConvertLPCSTRToString, invalid_string) {
+  LPCSTR lpszAttributes = nullptr;
+  std::string result = ConvertLPCSTRToString(lpszAttributes);
+  EXPECT_EQ(result, "");
+  EXPECT_EQ(result.length(), 0);
+}
+TEST(ParseConnectionString, null_terminating_string) {
+  LPCSTR lpszAttributes =
+      "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
+  std::string conn_str = ConvertLPCSTRToString(lpszAttributes);
+  StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
+  ASSERT_STATUS_RECORD_OK(section_resp_status);
+}
+
+#endif  //_WIN32
 }  // namespace google::cloud::odbc_bq_driver_internal

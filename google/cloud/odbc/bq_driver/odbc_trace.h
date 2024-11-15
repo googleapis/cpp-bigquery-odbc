@@ -641,6 +641,13 @@ void TraceFunctionEntry_SQLBulkOperations(SQLHSTMT statement_handle,
 void TraceFunctionExit_SQLBulkOperations(SQLRETURN ret_code,
                                          TraceOptions& opts);
 
+#ifdef _WIN32
+void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
+                                  LPCSTR lpszDriver, LPCSTR lpszAttributes,
+                                  TraceOptions& opts);
+
+void TraceFunctionExit_ConfigDSN(SQLRETURN ret_code, TraceOptions& opts);
+#endif  // _WIN32
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_TRACE_H

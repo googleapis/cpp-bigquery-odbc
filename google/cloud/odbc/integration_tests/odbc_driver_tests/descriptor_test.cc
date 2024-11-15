@@ -453,6 +453,39 @@ TEST(SQLSetDescFieldAnsi, Field_SQL_DESC_ARRAY_STATUS_PTR) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLSetDescFieldW, Field_SQL_DESC_NAME) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
+  CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_PARAM_DESC)", conn);
+
+  // Setting Field
+  std::wstring wstr = L"test";
+  std::vector<SQLWCHAR> buf(wstr.begin(), wstr.end());
+  buf.emplace_back(L'\0');
+  status = SQLSetDescFieldW(conn->ipd, 1, SQL_DESC_NAME, (SQLPOINTER)buf.data(),
+                            kBufferLength);
+  CheckError(status, "SQLSetDescFieldW(SQL_DESC_NAME)", conn);
+
+  // Getting fields
+  std::string expected = "test";
+  SQLWCHAR new_buf[kBufferLength];
+  status = SQLGetDescFieldW(conn->ipd, 1, SQL_DESC_NAME, &new_buf,
+                            kBufferLength, NULL);
+  CheckError(status, "SQLGetDescFieldW(SQL_DESC_NAME)", conn);
+
+  std::string str = ConvertSQLWCHARToString(new_buf, NULL);
+  EXPECT_STREQ(expected.data(), str.data());
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLSetDescField, DefaultField_SQL_DESC_LENGTH) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

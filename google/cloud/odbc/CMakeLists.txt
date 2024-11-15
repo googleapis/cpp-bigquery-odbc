@@ -46,7 +46,8 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
     set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
     set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
     set(BUILD_TESTING OFF)
-    set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery)
+    set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery
+                                resourcemanager)
 
     FetchContent_Declare(
         google-cloud-cpp
@@ -57,6 +58,7 @@ else ()
     find_package(google_cloud_cpp_bigquery CONFIG REQUIRED)
     find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
     find_package(google_cloud_cpp_oauth2 CONFIG REQUIRED)
+    find_package(google_cloud_cpp_resourcemanager REQUIRED)
 endif ()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
