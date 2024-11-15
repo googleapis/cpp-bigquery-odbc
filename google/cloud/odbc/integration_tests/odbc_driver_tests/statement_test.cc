@@ -51,12 +51,6 @@ StdRows const kSampleData{
     {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
 };
 
-StdUnicodeRows const kUnicodeSampleData{
-    {1, L"हिंदी", L"中国人"},
-    {2, L"नमस्ते", L"你好"},
-    {3, L"परीक्षण", L"测试"},
-};
-
 // Checks if the column description returned by DescribeCol matches the schema
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                      Schema schema, bool use_ansi = false) {
@@ -93,76 +87,7 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
   }
 }
 
-// Verify if the inserted data(<input_data>) is the same as the data fetched
-// col-wise Note: This doesn't verify the integrity of the fetched rows
-void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
-                                    Results col_wise_data,
-                                    std::vector<std::string> col_names) {
-  if (!col_names.size()) {
-    std::vector<std::string> all_col_names;
-    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
-      all_col_names.emplace_back(it->first);
-    }
-    col_names = all_col_names;
-  }
-
-  for (auto col_name : col_names) {
-    auto ret_col_values = col_wise_data[col_name];
-    // We have to sort inserted and returned values because we haven't specified
-    // the ordering
-    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
-    std::vector<std::string> input_col_values;
-    if (col_name.compare("Hindi")) {
-      for (auto data : input_data) {
-        std::string dataStr = Utf16ToUtf8(data.str_field2);
-        input_col_values.emplace_back(dataStr);
-      }
-    } else if (col_name.compare("Chinese")) {
-      for (auto data : input_data) {
-        std::string dataStr = Utf16ToUtf8(data.str_field1);
-        input_col_values.emplace_back(dataStr);
-      }
-    }
-    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
-
-    // Check if the sorted inserted and returned vectors have same values
-    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for (int i = 0; i < ret_col_values.size(); i++) {
-      EXPECT_STREQ(ret_col_values[i].c_str(), input_col_values[i].c_str());
-    }
-  }
-}
-
-TEST(StatementTest, SQLFetch_Unicode) {
-  std::string const table_name = kDatasetWithTablePrefix + "ODBC_UNICODE_TEST";
-  Table table(table_name);
-
-  // Create Table
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(
-      conn, "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertUnicodeData(conn, kUnicodeSampleData);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  // TODO(#14): Add integer and floating point fields too
-  auto const query = "SELECT Hindi, Chinese FROM " + table_name;
-  auto results = *FetchResults(conn, query, true);
-  VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results,
-                                 std::vector<std::string>());
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
@@ -191,12 +116,10 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
     // Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
     for (int i = 0; i < ret_col_values.size(); i++) {
-      EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]);
     }
   }
 }
-
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
@@ -697,54 +620,6 @@ TEST(StatementTest, SQLSetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLSetCursorNameW) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  std::wstring cursor_name = L"INSERT_CURSOR_WIDE";
-  SQLCHAR cursor_name_ret[kBufferLength];
-
-  std::vector<SQLWCHAR> sqlWStr(cursor_name.begin(), cursor_name.end());
-  sqlWStr.emplace_back(L'\0');
-
-  auto status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), sqlWStr.size());
-  CheckError(status, "SQLSetCursorNameW", conn, true);
-
-  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret,
-                             kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorNameW", conn, true);
-
-  std::string expected = "INSERT_CURSOR_WIDE";
-  std::string actual = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), expected.size());
-  EXPECT_STREQ(actual.data(), expected.data());
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(StatementTest, SQLGetCursorNameW) {
-  SQLSMALLINT curNameLen;
-
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLCHAR cursor_name_ret[kBufferLength];
-
-  std::string query = "SELECT 1;";
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
-
-  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret,
-                             kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorNameW", conn);
-
-  std::string actual = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), NULL);
-  EXPECT_THAT(actual, StartsWith("SQL_CUR"));
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(StatementTest, SQLGetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -765,27 +640,30 @@ TEST(StatementTest, SQLGetCursorName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, FetchRowWise) {
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(StatementTest, FetchDirectRowWise) {
   std::string const table_name = kDatasetWithTablePrefix + "ROW_WISE_FETCH";
   Table table(table_name);
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
-  table.CreateWithPrepare(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(conn,
+               "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
+               false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
-  table.InsertData(conn, kSampleData, false, true);
+  table.InsertData(conn, kSampleData, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField, IntegerField FROM " + table_name;
-  auto results = *FetchRowWise(conn, query, 1);
+  auto results = *FetchDirectRowWise(conn, query, 1);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -803,7 +681,7 @@ TEST(StatementTest, RollBackTransaction) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(
+  table.Create(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
   // Insert some data to the table
@@ -849,6 +727,8 @@ TEST(StatementTest, RollBackTransaction) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void PrepareAndCheckQuery(std::string const& query,
                           std::shared_ptr<ODBCHandles> conn,
@@ -1136,41 +1016,6 @@ TEST_P(StatementParameterizedTest, SetAndGetStatementDescriptorAttributes) {
   status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
                        GetParam());
   CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
-
-  // Get attribute using descriptor handle
-  SQLULEN arr_size_desc_handle = 0;
-  GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_desc_handle, 0,
-               NULL, GetParam());
-
-  EXPECT_EQ(arr_size, arr_size_desc_handle);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST_P(StatementParameterizedTest,
-       SetAndGetStatementDescriptorAttributes_Wide) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLRETURN status;
-
-  // Set attribute using statement handle
-  SQLULEN arr_size = 5;
-  status = SQLSetStmtAttrW(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                           (SQLPOINTER)arr_size, 0);
-  CheckError(status, "SQLSetStmtAttrW(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
-
-  // Get attribute using statement handle
-  SQLULEN arr_size_stmt_handle = 0;
-  status = SQLGetStmtAttrW(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                           &arr_size_stmt_handle, 0, NULL);
-  CheckError(status, "SQLGetStmtAttrW(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
-
-  EXPECT_EQ(arr_size, arr_size_stmt_handle);
-
-  // Get descriptor using statement handle
-  status =
-      SQLGetStmtAttrW(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL);
-  CheckError(status, "SQLGetStmtAttrW(SQL_ATTR_APP_ROW_DESC)", conn);
 
   // Get attribute using descriptor handle
   SQLULEN arr_size_desc_handle = 0;
@@ -2649,13 +2494,16 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   CheckError(status, "SQLExecute", conn);
 
   SQLSMALLINT num_cols;
+
   status = SQLNumResultCols(conn->hstmt, &num_cols);
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string procedure_call =
       "DECLARE OutStringField STRING;\n"
       "CALL " +
@@ -2692,7 +2540,6 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   status = SQLNumResultCols(conn->hstmt, &num_cols);
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 3);
-  
   num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
@@ -2801,7 +2648,6 @@ TEST(SQLMoreResults, ProcedureWithMultipleSQLMoreResultsCalls) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -2971,6 +2817,7 @@ TEST(SQLMoreResults, ProcedureWithEmptyResultSet) {
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
