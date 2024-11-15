@@ -2820,6 +2820,7 @@ TEST(SQLMoreResults, ProcedureWithEmptyResultSet) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
