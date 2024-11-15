@@ -55,13 +55,11 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
     )
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-                          ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
     find_package(google_cloud_cpp_bigquery CONFIG REQUIRED)
     find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
     find_package(google_cloud_cpp_oauth2 CONFIG REQUIRED)
     find_package(google_cloud_cpp_resourcemanager REQUIRED)
-    find_package(google_cloud_cpp_serviceusage REQUIRED)
+    find_package(google_cloud_cpp_serviceusage CONFIG REQUIRED)
 endif ()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
