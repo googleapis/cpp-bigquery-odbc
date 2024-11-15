@@ -2758,11 +2758,11 @@ TEST(SQLMoreResults, ProcedureWithMissingInputParams) {
 
   SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
   if (status != SQL_SUCCESS) {
-    // Check if SQLPrepare failed due to table not existing
+    // Check if SQLPrepare failed due to missing input parameters
     EXPECT_EQ(status, SQL_ERROR);
   } else {
     // If preparation was successful, execute the query
-    EXPECT_EQ(SQLExecute(conn->hstmt),SQL_SUCCESS);  // Expect error due to non-existent table
+    EXPECT_EQ(SQLExecute(conn->hstmt),SQL_SUCCESS);
   }
   // Try to call procedure without providing the input parameter (missing IntegerField)
   std::string procedure_call = 
@@ -2772,11 +2772,11 @@ TEST(SQLMoreResults, ProcedureWithMissingInputParams) {
 
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
   if (status != SQL_SUCCESS) {
-    // Check if SQLPrepare failed due to table not existing
+    // Check if SQLPrepare failed due to missing input parameters
     EXPECT_EQ(status, SQL_ERROR);
   } else {
     // If preparation was successful, execute the query
-    EXPECT_EQ(SQLExecute(conn->hstmt),SQL_SUCCESS);  // Expect error due to non-existent table
+    EXPECT_EQ(SQLExecute(conn->hstmt),SQL_SUCCESS);
   }
 
   // Now, check the SQLMoreResults behavior after the failed procedure call
