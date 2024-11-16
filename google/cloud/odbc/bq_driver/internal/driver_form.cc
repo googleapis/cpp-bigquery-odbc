@@ -134,10 +134,17 @@ void DriverForm::SetValues(Section const& attributesMap) {
 }
 
 void LogTraceDialog::SetValues(Section const& attributesMap) {
-  log_level_ =
-      attributesMap.count("LogLevel") > 0 ? attributesMap.at("LogLevel") : "";
+  if (attributesMap.count("LogLevel") > 0) {
+    if (attributesMap.at("LogLevel") == "0") {
+      log_level_ = "LOG_OFF";
+    } else if (attributesMap.at("LogLevel") == "6") {
+      log_level_ = "LOG_TRACE";
+    }
+  } else {
+    log_level_ = "";
+  }
   log_file_path_ =
-      attributesMap.count("LogPath") > 0 ? attributesMap.at("LogPath") : "";
+      attributesMap.count("LogFile") > 0 ? attributesMap.at("LogFile") : "";
 }
 
 HFONT CreateCustomFont(int fontSize) {
@@ -191,9 +198,9 @@ void LogTraceDialog::InitControls() {
   HWND hLogLevelBox =
       CreateComboBox(parent_hwnd, 120, 50, 250, 100, kIdclogTraceBox);
 
-  HWND hLogFileAdd = CreateLabel(parent_hwnd, "Log Path:", 20, 80, 80, 20, 0);
+  HWND hLogFileAdd = CreateLabel(parent_hwnd, "Log File:", 20, 80, 80, 20, 0);
   HWND hLogFileEdit =
-      CreateEditBox(parent_hwnd, 120, 80, 250, 20, kIdcLogPathEdit);
+      CreateEditBox(parent_hwnd, 120, 80, 250, 20, kIdcLogFileEdit);
   CreateButton(parent_hwnd, "Browse", 220, 120, 100, 20, kIdcLogBrowseBtn);
 
   HWND hLogBtnOk =
@@ -381,7 +388,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT uMsg,
     case WM_COMMAND:
       switch (LOWORD(wParam)) {
         case kIdcLogBrowseBtn: {
-          HWND hEdit = GetDlgItem(hwnd, kIdcLogPathEdit);
+          HWND hEdit = GetDlgItem(hwnd, kIdcLogFileEdit);
           OpenFolderDialog(hwnd, hEdit);
           break;
         }
@@ -392,10 +399,10 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT uMsg,
           GetWindowText(hLogtrace, LogTraceBuf, sizeof(LogTraceBuf));
           log_level_ = LogTraceBuf;
 
-          HWND hLogFilePath = GetDlgItem(hwnd, kIdcLogPathEdit);
-          char LogFilePathBuf[256];
-          GetWindowText(hLogFilePath, LogFilePathBuf, sizeof(LogFilePathBuf));
-          log_file_path_ = LogFilePathBuf;
+          HWND hLogFilePath = GetDlgItem(hwnd, kIdcLogFileEdit);
+          char LogFileFileBuf[256];
+          GetWindowText(hLogFilePath, LogFileFileBuf, sizeof(LogFileFileBuf));
+          log_file_path_ = LogFileFileBuf;
           DestroyWindow(hwnd);  // Close the window
           break;
         }

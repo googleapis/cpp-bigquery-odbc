@@ -151,8 +151,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       section.count("Dataset") > 0 ? section.at("Dataset") : "";
   std::string log_level =
       section.count("LogLevel") > 0 ? section.at("LogLevel") : "";
-  std::string log_path =
-      section.count("LogPath") > 0 ? section.at("LogPath") : "";
+  std::string log_file =
+      section.count("LogFile") > 0 ? section.at("LogFile") : "";
 
   DriverForm form;
   LogTraceDialog logForm;
@@ -167,7 +167,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
         Section trace_section = {
             {"LogLevel", log_level},
-            {"LogPath", log_path},
+            {"LogFile", log_file},
         };
         AddDSNToRegistry(dsn_value, lpsz_driver, section);
         AddLogTraceToRegistry(trace_section);
@@ -188,7 +188,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
       log_level = logForm.GetLogLevel();
-      log_path = logForm.GetLogFilePath();
+      log_file = logForm.GetLogFilePath();
 
       Section section = {{"Email", email},
                          {"KeyFilePath", key_file_path},
@@ -198,7 +198,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
       Section trace_section = {
           {"LogLevel", log_level},
-          {"LogPath", log_path},
+          {"LogFile", log_file},
       };
       AddDSNToRegistry(dsn_name, lpsz_driver, section);
       AddLogTraceToRegistry(trace_section);
@@ -214,7 +214,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
         Section trace_section2 = {
             {"LogLevel", log_level},
-            {"LogPath", log_path},
+            {"LogFile", log_file},
         };
         EditDSNInRegistry(dsn_value, section2);
         return true;
@@ -244,7 +244,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
       log_level = logForm.GetLogLevel();
-      log_path = logForm.GetLogFilePath();
+      log_file = logForm.GetLogFilePath();
       Section section2 = {{"Email", email},
                           {"KeyFilePath", key_file_path},
                           {"OAuthMechanism", oAuth_mechanism},
@@ -253,7 +253,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
       Section trace_section2 = {
           {"LogLevel", log_level},
-          {"LogPath", log_path},
+          {"LogFile", log_file},
       };
       EditDSNInRegistry(dsn_value, section2);
       EditLogTraceInRegistry(trace_section2);
