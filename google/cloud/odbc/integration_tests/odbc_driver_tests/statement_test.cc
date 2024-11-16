@@ -3075,6 +3075,7 @@ TEST(SQLMoreResults, ProcedureWithEmptyResultSet) {
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
