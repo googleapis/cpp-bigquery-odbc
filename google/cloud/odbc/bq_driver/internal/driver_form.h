@@ -39,9 +39,8 @@ static int const kIdcLoggingBtn = 115;
 static int const kIdcLogBrowseBtn = 116;
 static int const kIdcLogBtnOk = 117;
 static int const kIdcLogBtnCancel = 118;
-static int const kIdcLogPath = 119;
-static int const kIdcLogPathEdit = 120;
-static int const kIdclogTraceBox = 121;
+static int const kIdcLogFileEdit = 119;
+static int const kIdclogTraceBox = 120;
 
 class DriverForm {
  public:
