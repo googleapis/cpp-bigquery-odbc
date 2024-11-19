@@ -263,10 +263,8 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef _WIN32
-// On Windows, this test times-out for the existing driver and our driver
-// CheckDataTypes function times out at the last statement and flow doesn't
-// reach this TEST
+#if defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
+// On Windows, this test times-out for the existing driver
 TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);

@@ -293,8 +293,8 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
-std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query, int num_cols) {
+std::shared_ptr<Results> FetchDirectRowWise(std::shared_ptr<ODBCHandles> conn,
+                                            std::string query, int num_cols) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
@@ -318,11 +318,8 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
                           (SQLPOINTER)&num_rows_fetched, 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn, false);
-
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn, false);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
@@ -356,7 +353,8 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
 
     BindCol(conn, col_ptr, i + 1);
   }
-  //  Read all the rows using SQLFetch
+
+  // Read all the rows using SQLFetch
   while (1) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
@@ -370,7 +368,7 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
       // TODO(b/338370441): Irrespective of num_cols, here we are returning only
       // one column to the results
       std::string col_name = (char*)cols[0]->name;
-      if (row_set[i_r].len_status_ind_str == SQL_NULL_DATA) {
+      if (row_set[i_r].len_status_ind_str < 0) {
         results[col_name].emplace_back(std::string());
         continue;
       }
