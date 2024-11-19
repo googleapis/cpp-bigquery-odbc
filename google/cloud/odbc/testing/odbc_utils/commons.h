@@ -145,10 +145,9 @@ struct StdOdbcRow {
   SQLCHAR str_field[3 * kBufferLength];
   SQLLEN len_status_ind_str;
   SQLINTEGER int_field;
-  // We should use SQLLEN instead of SQLINTEGER for length indicators
-  SQLLEN len_status_ind_int;
+  SQLINTEGER len_status_ind_int;
   SQLDOUBLE float_field;
-  SQLLEN len_status_ind_float;
+  SQLINTEGER len_status_ind_float;
 };
 
 struct ExpectedDescriptorConfig {
