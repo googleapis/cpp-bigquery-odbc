@@ -330,8 +330,6 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   }
 }
 
-std::string GetInsertionString(std::string table_name, StdRows rows);
-
 class Table {
  public:
   Table(std::string table_name) { table_name_ = table_name; };
