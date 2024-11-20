@@ -102,17 +102,13 @@ TEST(WriteRowset, Success_Basic) {
   CreateTestingResultSet(result_set);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
-  SQLULEN rows_processed;
-  ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
 
   SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
   SQLDOUBLE* double_populated = (SQLDOUBLE*)double_buf;
   for (int i = 0; i < kTestingResultSetValues.size(); i++) {
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    StatusRecord status_record = WriteRowset(result_set, 1, ard);
     EXPECT_TRUE(status_record.ok());
-    EXPECT_EQ(rows_processed, 1);
     SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
     if (int_expected == kNullInt) {
       EXPECT_EQ(strlen_ind_int, SQL_NULL_DATA);
@@ -135,62 +131,14 @@ TEST(WriteRowset, Success_Basic) {
   }
 }
 
-TEST(WriteRowset, Success_MultipleRows) {
-  SQLRETURN status;
-  StatementHandle stmt_handle = CreateStatementHandle();
-  constexpr int rs_size = 3;
-  SQLCHAR int_buf[30];
-  // SQLINTEGER* strlen_inds = new SQLINTEGER[rs_size];
-  SQLLEN* strlen_inds = new SQLLEN[rs_size];
-  status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 30,
-                              strlen_inds);
-  ASSERT_EQ(SQL_SUCCESS, status);
-
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
-
-  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  ard.GetHeaderRecord().array_size = rs_size;
-  ard.GetHeaderRecord().bind_type = 0;
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
-  SQLULEN rows_processed;
-  ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
-
-  for (int i = 0; i < kTestingResultSetValues.size(); i += rs_size) {
-    int num_rows_to_write =
-        std::min((int)(kTestingResultSetValues.size() - i), rs_size);
-    result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, rs_size, ard, ird);
-    EXPECT_TRUE(status_record.ok());
-    // Verify if the field corresponding to stmt attribute
-    // SQL_ATTR_ROWS_FETCHED_PTR was populated
-    EXPECT_EQ(rows_processed, num_rows_to_write);
-    SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
-    for (int row_i = 0; row_i < num_rows_to_write; row_i++) {
-      SQLBIGINT int_expected = kTestingResultSetValues[i + row_i].int_field;
-      if (int_expected == kNullInt) {
-        EXPECT_EQ(strlen_inds[row_i], SQL_NULL_DATA);
-      } else {
-        // Rowset is populated sequentially starting from the base buffer
-        // address(int_buf) in chunks of the size of the data type(if the data
-        // type is fixed length).
-        EXPECT_EQ(*(int_populated + row_i), int_expected);
-      }
-    }
-  }
-  delete strlen_inds;
-}
-
 TEST(WriteRowset, Success_WithOffset) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLLEN bound_offset = 8;
   SQLCHAR int_buf[20];
-  SQLLEN strlen_ind_int;
-  status = SQLBindColInternal(
-      &stmt_handle, 1, SQL_C_SBIGINT, int_buf, 20,
-      reinterpret_cast<SQLLEN*>(reinterpret_cast<char*>(&strlen_ind_int) -
-                                bound_offset));
+  SQLLEN strlen_ind_int, strlen_ind_double, strlen_ind_str;
+  status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 20,
+                              &strlen_ind_int);
   ASSERT_EQ(SQL_SUCCESS, status);
 
   ResultSet result_set;
@@ -198,12 +146,11 @@ TEST(WriteRowset, Success_WithOffset) {
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   ard.GetHeaderRecord().bind_offset_ptr = &bound_offset;
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
   SQLBIGINT* int_populated = (SQLBIGINT*)(int_buf + bound_offset);
   for (int i = 0; i < kTestingResultSetValues.size(); i++) {
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    StatusRecord status_record = WriteRowset(result_set, 1, ard);
     EXPECT_TRUE(status_record.ok());
     SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
     if (int_expected == kNullInt) {
@@ -232,11 +179,10 @@ TEST(WriteRowset, Success_Fail_NullIndicator) {
   result_set.rows.emplace_back(DSRow{kNullValue});
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
   SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22002(), status_record.sql_state);
   EXPECT_EQ("Indicator variable required but not supplied",
@@ -256,9 +202,8 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
   EXPECT_EQ("Numeric value out of range", status_record.message);
@@ -280,9 +225,8 @@ TEST(WriteRowset, Failure_FractionalTruncation) {
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(result_set, 1, ard);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
