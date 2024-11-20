@@ -32,6 +32,10 @@ using ::testing::HasSubstr;
 std::string const kRMProjectWithoutPrefix = "bigquery-devtools-drivers";
 std::string const kRMProjectWithPrefix = "projects/" + kRMProjectWithoutPrefix;
 
+std::string const kParentFolder =
+    "folders/329838888119";  // bq-partner-org.joonix.net/data
+std::string const kParentInvalidFolder = "folders/1234";
+
 TEST(ResourceManagerGetProject, SuccessProjectWithPrefix) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -70,6 +74,83 @@ TEST(ResourceManagerGetProject, Failure_ProjectNotFound) {
 
   EXPECT_THAT(project, StatusIs(StatusCode::kPermissionDenied,
                                 HasSubstr("may not exist")));
+}
+
+TEST(ResourceManagerSearchProjects, Success_WithQuery) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+
+  StreamRange<Project> range =
+      projects_client.SearchProjects("state:ACTIVE", *options);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    ASSERT_STATUS_OK(project);
+  }
+}
+
+TEST(ResourceManagerSearchProjects, Success_EmptyQuery) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+
+  StreamRange<Project> range = projects_client.SearchProjects("", *options);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    ASSERT_STATUS_OK(project);
+  }
+}
+
+TEST(ResourceManagerSearchProjects, Failure_InvalidArgument_BadQuery) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+
+  StreamRange<Project> range =
+      projects_client.SearchProjects("status:ACTIVE", *options);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    EXPECT_THAT(project, StatusIs(StatusCode::kInvalidArgument,
+                                  HasSubstr("Invalid filter query")));
+  }
+}
+
+TEST(ResourceManagerListProjects, Success_ParentIsFolder) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+
+  StreamRange<Project> range =
+      projects_client.ListProjects(kParentFolder, *options);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    ASSERT_STATUS_OK(project);
+  }
+}
+
+TEST(ResourceManagerListProjects, Failure_Forbidden) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+
+  StreamRange<Project> range =
+      projects_client.ListProjects(kParentInvalidFolder, *options);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    EXPECT_THAT(project,
+                StatusIs(StatusCode::kPermissionDenied,
+                         HasSubstr("The caller does not have permission")));
+  }
 }
 
 }  // namespace google::cloud::odbc_integration_tests_apis

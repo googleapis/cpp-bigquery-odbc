@@ -19,11 +19,15 @@
 #include "google/cloud/mocks/mock_stream_range.h"
 #include "google/cloud/resourcemanager/v3/mocks/mock_projects_connection.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
+#include "google/cloud/serviceusage/v1/mocks/mock_service_usage_connection.h"
 #include <google/cloud/resourcemanager/v3/projects.pb.h>
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+using ::google::api::serviceusage::v1::GetServiceRequest;
+using ::google::api::serviceusage::v1::Service;
+using ::google::api::serviceusage::v1::State;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::MockProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
@@ -33,7 +37,12 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::google::cloud::resourcemanager_v3_mocks::MockProjectsConnection;
+using ::google::cloud::serviceusage_v1::ServiceUsageClient;
+using ::google::cloud::serviceusage_v1_mocks::MockServiceUsageConnection;
 using ::testing::HasSubstr;
+
+std::string const kParentFolder = "folders/123";
+std::string const kParentOrganization = "organizations/123";
 
 namespace {
 
@@ -66,7 +75,149 @@ void VerifyResourceProjectResults(
             actual_bq_project.project_reference.project_id);
 }
 
+ProjectsClient GetMockListProjectsClientSuccess(
+    google::cloud::resourcemanager::v3::Project const& expected_rm_project) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListProjects)
+      .WillOnce(
+          [expected_rm_project](
+              google::cloud::resourcemanager::v3::ListProjectsRequest const&) {
+            return mocks::MakeStreamRange<
+                google::cloud::resourcemanager::v3::Project>(
+                {expected_rm_project});
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+  return mocked_projects_client;
+}
+
+ProjectsClient GetMockSearchProjectsClientSuccess(
+    google::cloud::resourcemanager::v3::Project const& expected_rm_project) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, SearchProjects)
+      .WillOnce([expected_rm_project](google::cloud::resourcemanager::v3::
+                                          SearchProjectsRequest const&) {
+        return mocks::MakeStreamRange<
+            google::cloud::resourcemanager::v3::Project>({expected_rm_project});
+      });
+  ProjectsClient mocked_projects_client(std::move(mock));
+  return mocked_projects_client;
+}
+
+ProjectsClient GetMockSearchProjectsClientFailure(
+    Status const& expected_status) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, SearchProjects)
+      .WillOnce([expected_status](google::cloud::resourcemanager::v3::
+                                      SearchProjectsRequest const&) {
+        return mocks::MakeStreamRange<
+            google::cloud::resourcemanager::v3::Project>({}, expected_status);
+      });
+  ProjectsClient mocked_projects_client(std::move(mock));
+  return mocked_projects_client;
+}
+
+ProjectsClient GetMockListProjectsClientFailure(Status const& expected_status) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListProjects)
+      .WillOnce(
+          [expected_status](
+              google::cloud::resourcemanager::v3::ListProjectsRequest const&) {
+            return mocks::MakeStreamRange<
+                google::cloud::resourcemanager::v3::Project>({},
+                                                             expected_status);
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+  return mocked_projects_client;
+}
+
+ServiceUsageClient GetMockServiceUsageClient(Service const& expected_service) {
+  auto mock = std::make_shared<MockServiceUsageConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetService)
+      .WillOnce([expected_service](GetServiceRequest const&) {
+        return make_status_or(expected_service);
+        ;
+      });
+  ServiceUsageClient mock_service_usage_client(std::move(mock));
+  return mock_service_usage_client;
+}
+
+void TestSearchProjectsRMSuccess(State const& expected_state,
+                                 std::string const& search_query,
+                                 int expected_projects_size) {
+  Options options;
+
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockSearchProjectsClientSuccess(expected_rm_project);
+
+  Service expected_service;
+  expected_service.set_state(expected_state);
+  ServiceUsageClient mocked_service_usage_client =
+      GetMockServiceUsageClient(expected_service);
+
+  StatusRecordOr<std::vector<Project>> bq_projects =
+      SearchProjectsRM(mocked_projects_client, mocked_service_usage_client,
+                       search_query, options);
+  ASSERT_STATUS_RECORD_OK(bq_projects);
+  if (expected_state == State::ENABLED) {
+    ASSERT_FALSE((*bq_projects).empty());
+    ASSERT_EQ((*bq_projects).size(), expected_projects_size);
+    if (expected_projects_size == 1) {
+      ASSERT_EQ(expected_rm_project.project_id(), (*bq_projects)[0].id);
+    }
+  } else {
+    ASSERT_TRUE((*bq_projects).empty());
+  }
+}
+
+void TestListProjectsRMSuccess(State const& expected_state,
+                               std::string const& parent,
+                               int expected_projects_size) {
+  Options options;
+
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+
+  ProjectsClient mocked_projects_client =
+      GetMockListProjectsClientSuccess(expected_rm_project);
+
+  Service expected_service;
+  expected_service.set_state(expected_state);
+  ServiceUsageClient mocked_service_usage_client =
+      GetMockServiceUsageClient(expected_service);
+
+  StatusRecordOr<std::vector<Project>> bq_projects = ListAllProjectsRM(
+      mocked_projects_client, mocked_service_usage_client, parent, options);
+  ASSERT_STATUS_RECORD_OK(bq_projects);
+  if (expected_state == State::ENABLED) {
+    ASSERT_FALSE((*bq_projects).empty());
+    ASSERT_EQ((*bq_projects).size(), expected_projects_size);
+    if (expected_projects_size == 1) {
+      ASSERT_EQ(expected_rm_project.project_id(), (*bq_projects)[0].id);
+    }
+  } else {
+    ASSERT_TRUE((*bq_projects).empty());
+  }
+}
+
 }  // namespace
+
 TEST(ListAllProjects, ListZeroProjects) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
@@ -307,6 +458,131 @@ TEST(GetResourceManagerProject, Fail_InvalidProjectName) {
                              HasSubstr("not found with valid project name")));
 }
 
-// TODO: Add more tests.
+TEST(SearchProjectsRM, Success_EmptyQuery_EnabledState) {
+  TestSearchProjectsRMSuccess(State::ENABLED, /* query */ "",
+                              /*projects size*/ 1);
+}
+
+TEST(SearchProjectsRM, Success_EmptyQuery_DisabledState) {
+  TestSearchProjectsRMSuccess(State::DISABLED, /* query */ "",
+                              /*projects size*/ 0);
+}
+
+TEST(SearchProjectsRM, Success_EmptyQuery_UnSpecifiedState) {
+  TestSearchProjectsRMSuccess(State::STATE_UNSPECIFIED, /* query */ "",
+                              /*projects size*/ 0);
+}
+
+TEST(SearchProjectsRM, Success_WithQuery_EnabledState) {
+  TestSearchProjectsRMSuccess(State::ENABLED, /* query */ "state:ACTIVE",
+                              /*projects size*/ 1);
+}
+
+TEST(SearchProjectsRM, Success_WithQuery_DisabledState) {
+  TestSearchProjectsRMSuccess(State::DISABLED, /* query */ "state:ACTIVE",
+                              /*projects size*/ 0);
+}
+
+TEST(SearchProjectsRM, Success_WithQuery_UnSpecifiedState) {
+  TestSearchProjectsRMSuccess(State::STATE_UNSPECIFIED,
+                              /* query */ "state:ACTIVE",
+                              /*projects size*/ 0);
+}
+
+TEST(SearchProjectsRM, Failure_Invalid_Argument) {
+  auto expected_status = Status(StatusCode::kInvalidArgument, "Bad Argument");
+  Options options;
+
+  ProjectsClient mocked_projects_client =
+      GetMockSearchProjectsClientFailure(expected_status);
+
+  auto mock = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock));
+
+  StatusRecordOr<std::vector<Project>> bq_projects = SearchProjectsRM(
+      mocked_projects_client, mocked_service_usage_client, "", options);
+  EXPECT_THAT(bq_projects,
+              StatusRecordIs(odbc_internal::SQLStates::k_42000(),
+                             HasSubstr(expected_status.message())));
+}
+
+TEST(ListProjectsRM, Success_ParentIsFolder_EnabledState) {
+  TestListProjectsRMSuccess(State::ENABLED, kParentFolder,
+                            /*projects size*/ 1);
+}
+
+TEST(ListProjectsRM, Success_ParentIsFolder_DisabledState) {
+  TestListProjectsRMSuccess(State::DISABLED, kParentFolder,
+                            /*projects size*/ 0);
+}
+
+TEST(ListProjectsRM, Success_ParentIsFolder_UnSpecifiedState) {
+  TestListProjectsRMSuccess(State::STATE_UNSPECIFIED, kParentFolder,
+                            /*projects size*/ 0);
+}
+
+TEST(ListProjectsRM, Success_ParentIsOrganization_EnabledState) {
+  TestListProjectsRMSuccess(State::ENABLED, kParentOrganization,
+                            /*projects size*/ 1);
+}
+
+TEST(ListProjectsRM, Success_ParentIsOrganization_DisabledState) {
+  TestListProjectsRMSuccess(State::DISABLED, kParentOrganization,
+                            /*projects size*/ 0);
+}
+
+TEST(ListProjectsRM, Success_ParentIsOrganization_UnSpecifiedState) {
+  TestListProjectsRMSuccess(State::STATE_UNSPECIFIED, kParentOrganization,
+                            /*projects size*/ 0);
+}
+
+TEST(ListProjectsRM, Failure_Forbidden) {
+  auto expected_status = Status(StatusCode::kPermissionDenied,
+                                "The caller does not have permission");
+  Options options;
+
+  ProjectsClient mocked_projects_client =
+      GetMockListProjectsClientFailure(expected_status);
+
+  auto mock = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock));
+
+  StatusRecordOr<std::vector<Project>> bq_projects =
+      ListAllProjectsRM(mocked_projects_client, mocked_service_usage_client,
+                        "folders/1234", options);
+  EXPECT_THAT(bq_projects,
+              StatusRecordIs(odbc_internal::SQLStates::k_42000(),
+                             HasSubstr(expected_status.message())));
+}
+
+TEST(ListProjectsRM, Failure_EmptyParent) {
+  Options options;
+  auto mock = std::make_shared<MockProjectsConnection>();
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  auto mock_su = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock_su));
+
+  StatusRecordOr<std::vector<Project>> bq_projects = ListAllProjectsRM(
+      mocked_projects_client, mocked_service_usage_client, "", options);
+  EXPECT_THAT(
+      bq_projects,
+      StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                     HasSubstr("parent resource cannot be null or empty")));
+}
+
+TEST(ListProjectsRM, Failure_InvalidParent) {
+  Options options;
+  auto mock = std::make_shared<MockProjectsConnection>();
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  auto mock_su = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock_su));
+
+  StatusRecordOr<std::vector<Project>> bq_projects = ListAllProjectsRM(
+      mocked_projects_client, mocked_service_usage_client, "1234", options);
+  EXPECT_THAT(bq_projects, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                                          HasSubstr("Invalid parent")));
+}
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

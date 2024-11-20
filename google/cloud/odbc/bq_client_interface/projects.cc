@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
-#include "google/cloud/resourcemanager/v3/projects_client.h"
 #include <google/cloud/resourcemanager/v3/projects.pb.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+using ::google::api::serviceusage::v1::GetServiceRequest;
+using ::google::api::serviceusage::v1::Service;
+using ::google::api::serviceusage::v1::State;
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
@@ -27,6 +29,39 @@ using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
+using ::google::cloud::serviceusage_v1::ServiceUsageClient;
+
+StatusRecordOr<Project> ConvertFrom(
+    google::cloud::resourcemanager::v3::Project const& rm_project) {
+  Project bq_project;
+  bq_project.kind = "bigquery#project";
+  bq_project.id = rm_project.project_id();
+  bq_project.friendly_name = rm_project.display_name();
+  bq_project.project_reference.project_id = rm_project.project_id();
+  auto index = rm_project.name().find('/');
+  if (index == std::string::npos) {
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "The project " + rm_project.project_id() +
+                            " was not found with valid project name"};
+  }
+
+  bq_project.numeric_id = std::stoi(rm_project.name().substr(index + 1));
+  return bq_project;
+}
+
+bool IsProjectBQEnabled(std::string const& bq_project_id,
+                        ServiceUsageClient& service_usage_client,
+                        Options const& options) {
+  std::string name =
+      "projects/" + bq_project_id + "/services/bigquery.googleapis.com";
+  GetServiceRequest request;
+  request.set_name(name);
+  auto const& bq_service = service_usage_client.GetService(request, options);
+  if (!bq_service) {
+    return false;
+  }
+  return ((*bq_service).state() == State::ENABLED);
+}
 
 StatusRecordOr<std::vector<Project>> ListAllProjects(
     ProjectClient& project_client, Options const& options) {
@@ -65,24 +100,6 @@ StatusRecordOr<Project> GetProject(ProjectClient& project_client,
 
   return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                       "The project " + project_id + " was not found"};
-}
-
-StatusRecordOr<Project> ConvertFrom(
-    google::cloud::resourcemanager::v3::Project const& rm_project) {
-  Project bq_project;
-  bq_project.kind = "bigquery#project";
-  bq_project.id = rm_project.project_id();
-  bq_project.friendly_name = rm_project.display_name();
-  bq_project.project_reference.project_id = rm_project.project_id();
-  auto index = rm_project.name().find('/');
-  if (index == std::string::npos) {
-    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
-                        "The project " + rm_project.project_id() +
-                            " was not found with valid project name"};
-  }
-
-  bq_project.numeric_id = std::stoi(rm_project.name().substr(index + 1));
-  return bq_project;
 }
 
 StatusRecordOr<Project> GetProjectRM(ProjectsClient& projects_rm_client,
@@ -137,6 +154,73 @@ StatusRecordOr<std::vector<Project>> FilterProjects(
   }
 
   return projects;
+}
+
+StatusRecordOr<std::vector<Project>> SearchProjectsRM(
+    ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
+    std::string const& query, ::google::cloud::Options const& options) {
+  std::string search_query = (query.empty()) ? "state:ACTIVE" : query;
+
+  StreamRange<google::cloud::resourcemanager::v3::Project>
+      rm_projects_response =
+          projects_rm_client.SearchProjects(search_query, options);
+
+  std::vector<Project> bq_projects;
+  for (auto const& rm_project : rm_projects_response) {
+    if (!rm_project) {
+      return StatusRecord::ConvertFrom(rm_project.status());
+    }
+    // Filter by BQ enabled projects.
+    if (IsProjectBQEnabled((*rm_project).project_id(), service_usage_client,
+                           options)) {
+      auto const& bq_project = ConvertFrom(*rm_project);
+      if (!bq_project) {
+        return bq_project.GetStatusRecord();
+      }
+      bq_projects.push_back(*bq_project);
+    }
+  }
+
+  return bq_projects;
+}
+
+StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
+    ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
+    std::string const& parent, Options const& options) {
+  if (parent.empty()) {
+    return StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                        "The parent resource cannot be null or empty"};
+  }
+
+  if (!absl::StartsWith(parent, "folders") &&
+      !absl::StartsWith(parent, "organizations")) {
+    return StatusRecord{
+        odbc_internal::SQLStates::k_HY000(),
+        "Invalid parent " + parent +
+            " resource. Accepted formats are: 'folders/{folder_id}' "
+            "and 'organizations/{org_id}'"};
+  }
+
+  StreamRange<google::cloud::resourcemanager::v3::Project>
+      rm_projects_response = projects_rm_client.ListProjects(parent, options);
+
+  std::vector<Project> bq_projects;
+  for (auto const& rm_project : rm_projects_response) {
+    if (!rm_project) {
+      return StatusRecord::ConvertFrom(rm_project.status());
+    }
+    // Filter by BQ enabled projects.
+    if (IsProjectBQEnabled((*rm_project).project_id(), service_usage_client,
+                           options)) {
+      auto const& bq_project = ConvertFrom(*rm_project);
+      if (!bq_project) {
+        return bq_project.GetStatusRecord();
+      }
+      bq_projects.push_back(*bq_project);
+    }
+  }
+
+  return bq_projects;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

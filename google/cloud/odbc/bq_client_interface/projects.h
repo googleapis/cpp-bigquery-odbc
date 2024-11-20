@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
+#include "google/cloud/serviceusage/v1/service_usage_client.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -27,6 +28,25 @@ odbc_internal::StatusRecordOr<
 ListAllProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                     project_client,
                 ::google::cloud::Options const& options);
+// List all BQ enabled projects for this user via the ResourceManager API.
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+ListAllProjectsRM(
+    ::google::cloud::resourcemanager_v3::ProjectsClient& projects_rm_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client,
+    std::string const& parent, ::google::cloud::Options const& options);
+// Search BQ enabled projects for this user via the ResourceManager API.
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+SearchProjectsRM(
+    ::google::cloud::resourcemanager_v3::ProjectsClient& projects_rm_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client,
+    std::string const& query, ::google::cloud::Options const& options);
+// Returns true if project is BQ enabled, false otherwise.
+bool IsProjectBQEnabled(
+    std::string const& bq_project_id,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
+    ::google::cloud::Options const& options);
 
 // APIs for fetching detailed project information for the project passed in.
 
