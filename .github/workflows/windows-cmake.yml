@@ -78,10 +78,6 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-    - name: Download and Install CMake
-      shell: bash
-      run: |
-        choco install -y cmake --version 3.29.0
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       shell: bash
