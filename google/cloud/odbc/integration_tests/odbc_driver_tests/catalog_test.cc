@@ -379,7 +379,6 @@ TEST(CatalogTest, SQLTables_AllProjects) {
   for (auto const& result : results) {
     project_found =
         project_found || (kCatalogName == result.project_name.value());
-    EXPECT_EQ(kCatalogName, result.project_name.value());
     EXPECT_FALSE(result.dataset_name.has_value());
     EXPECT_FALSE(result.table_name.has_value());
     EXPECT_FALSE(result.table_type.has_value());
