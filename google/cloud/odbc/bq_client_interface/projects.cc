@@ -20,7 +20,6 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::api::serviceusage::v1::GetServiceRequest;
-using ::google::api::serviceusage::v1::Service;
 using ::google::api::serviceusage::v1::State;
 using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
