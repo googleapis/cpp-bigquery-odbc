@@ -571,18 +571,4 @@ TEST(ListProjectsRM, Failure_EmptyParent) {
                      HasSubstr("parent resource cannot be null or empty")));
 }
 
-TEST(ListProjectsRM, Failure_InvalidParent) {
-  Options options;
-  auto mock = std::make_shared<MockProjectsConnection>();
-  ProjectsClient mocked_projects_client(std::move(mock));
-
-  auto mock_su = std::make_shared<MockServiceUsageConnection>();
-  ServiceUsageClient mocked_service_usage_client(std::move(mock_su));
-
-  StatusRecordOr<std::vector<Project>> bq_projects = ListAllProjectsRM(
-      mocked_projects_client, mocked_service_usage_client, "1234", options);
-  EXPECT_THAT(bq_projects, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
-                                          HasSubstr("Invalid parent")));
-}
-
 }  // namespace google::cloud::odbc_bigquery_client_interface

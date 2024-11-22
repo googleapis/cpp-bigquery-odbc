@@ -191,15 +191,6 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
                         "The parent resource cannot be null or empty"};
   }
 
-  if (!absl::StartsWith(parent, "folders") &&
-      !absl::StartsWith(parent, "organizations")) {
-    return StatusRecord{
-        odbc_internal::SQLStates::k_HY000(),
-        "Invalid parent " + parent +
-            " resource. Accepted formats are: 'folders/{folder_id}' "
-            "and 'organizations/{org_id}'"};
-  }
-
   StreamRange<google::cloud::resourcemanager::v3::Project>
       rm_projects_response = projects_rm_client.ListProjects(parent, options);
 
