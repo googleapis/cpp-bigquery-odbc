@@ -75,7 +75,8 @@ set(COMMON_SOURCES
 # Add Windows-specific source files if compiling on Windows
 if (WIN32)
     list(APPEND COMMON_SOURCES bq_driver/internal/driver_form.cc
-         bq_driver/internal/driver_form.h)
+         bq_driver/internal/driver_form.h bq_driver/odbc_windows.cc
+         bq_driver/odbc_windows.h)
 endif ()
 
 # Create the library target
@@ -229,7 +230,8 @@ function (bq_driver_define_unit_tests)
         bq_driver/odbc_utils_test.cc)
 
     if (WIN32)
-        list(APPEND TEST_SOURCES bq_driver/internal/driver_form_test.cc)
+        list(APPEND TEST_SOURCES bq_driver/internal/driver_form_test.cc
+             bq_driver/odbc_windows_test.cc)
     endif ()
 
     add_executable(google_cloud_odbc_bq_driver_unit_tests ${TEST_SOURCES})

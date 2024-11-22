@@ -33,7 +33,9 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
-
+#ifdef _WIN32
+#include "google/cloud/odbc/bq_driver/odbc_windows.h"
+#endif  //_WIN32
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // ODBC APIs supported in initial driver release.
@@ -4567,7 +4569,7 @@ BOOL SQL_API ConfigDSN(HWND hwndParent, WORD fRequest, LPCSTR lpszDriver,
                                  lpszAttributes, *(*kTraceOption));
 
   // Call to common internal function for ConfigDSN
-  // in odbc_sql_results.h.
+  // in odbc_windows.cc.
   rc = google::cloud::odbc_bq_driver::ConfigDSNInternal(
       hwndParent, fRequest, lpszDriver, lpszAttributes);
 
