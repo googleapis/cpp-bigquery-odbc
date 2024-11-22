@@ -30,7 +30,8 @@ function (define_client_library_integration_tests)
 
     target_link_libraries(
         scheduled_integration_tests
-        PUBLIC google-cloud-cpp::experimental-bigquery_rest
+        PUBLIC odbc_bq_client_interface
+               google-cloud-cpp::experimental-bigquery_rest
                google-cloud-cpp::resourcemanager
                google-cloud-cpp::serviceusage
                google_cloud_odbc_testing_client_library_utils

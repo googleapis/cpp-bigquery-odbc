@@ -72,8 +72,6 @@ if (BUILD_SHARED_LIBS)
     add_definitions(-DDRIVER_MANAGER_TESTING_ENABLED)
 endif ()
 
-if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
-    include(bq_driver.cmake)
-endif ()
+include(bq_driver.cmake)
 
 add_subdirectory(integration_tests)

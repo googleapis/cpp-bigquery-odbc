@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
@@ -21,9 +22,13 @@
 namespace google::cloud::odbc_integration_tests_apis {
 
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_utils::StatusIs;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
 using google::cloud::resourcemanager::v3::Project;
 using ::google::cloud::resourcemanager_v3::MakeProjectsConnection;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
@@ -151,6 +156,76 @@ TEST(ResourceManagerListProjects, Failure_Forbidden) {
                 StatusIs(StatusCode::kPermissionDenied,
                          HasSubstr("The caller does not have permission")));
   }
+}
+
+// RM Integration tests via ODBCBQClient.
+TEST(ODBCBQClient, Success_RM_ListAPI) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->ListAllProjectsRM(kParentFolder, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+}
+
+TEST(ODBCBQClient, Failure_RM_ListAPI) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->ListAllProjectsRM(kParentInvalidFolder, *options);
+  EXPECT_THAT(projects_status,
+              StatusRecordIs(SQLStates::k_42000(),
+                             HasSubstr("The caller does not have permission")));
+}
+
+TEST(ODBCBQClient, Success_RM_SearchAPI) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->SearchAllProjectsRM("state:ACTIVE", *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+}
+
+TEST(ODBCBQClient, Failure_RM_SearchAPI) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->SearchAllProjectsRM("status:ACTIVE", *options);
+  EXPECT_THAT(
+      projects_status,
+      StatusRecordIs(SQLStates::k_42000(), HasSubstr("Invalid filter query")));
 }
 
 }  // namespace google::cloud::odbc_integration_tests_apis

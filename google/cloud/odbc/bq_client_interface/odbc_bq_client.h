@@ -76,10 +76,30 @@ class ODBCBQClient {
              ::google::cloud::Options const& options,
              bool use_resource_mgr = false);
 
-  // Lists all projects for the user.
+  ///////////////////////////////////////////////////////////////////////////
+  // BEGIN: Different API variations for listing all projects for the user.
+  ///////////////////////////////////////////////////////////////////////////
+
+  // Calls BQ projects.List
   odbc_internal::StatusRecordOr<
       std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
   ListAllProjects(::google::cloud::Options const& options);
+
+  // Calls RM projects.List
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  ListAllProjectsRM(std::string const& parent,
+                    ::google::cloud::Options const& options);
+
+  // Calls RM projects.Search
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  SearchAllProjectsRM(std::string const& query,
+                      ::google::cloud::Options const& options);
+
+  ///////////////////////////////////////////////////////////////////////////
+  // END: Different API variations for listing all projects for the user.
+  ///////////////////////////////////////////////////////////////////////////
 
   // Filter projects for the user, based on project_ids.
   odbc_internal::StatusRecordOr<
@@ -241,6 +261,14 @@ class ODBCBQClient {
         table_client_(std::move(table_client)),
         access_token_generator_(std::move(access_token_generator)),
         bigquery_read_client_(std::move(bigquery_read_client)) {}
+
+  // Internal common API for the different project.List options .
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  ListAllProjectsInternal(::google::cloud::Options const& options,
+                          std::string const& parent = "",
+                          std::string const& query = "",
+                          bool use_resource_manager = false);
 
   ::google::cloud::bigquery_v2_minimal_internal::DatasetClient dataset_client_;
   ::google::cloud::bigquery_v2_minimal_internal::JobClient job_client_;

@@ -23,18 +23,30 @@
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
+#include <algorithm>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
 using ::google::cloud::bigquery_storage_v1::MakeBigQueryReadConnection;
+using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
+using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeDatasetConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeProjectConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::MakeTableConnection;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -87,9 +99,9 @@ StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
       access_token_generator_);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
-ODBCBQClient::GetProject(std::string const& project_id, Options const& options,
-                         bool use_resource_mgr) {
+StatusRecordOr<Project> ODBCBQClient::GetProject(std::string const& project_id,
+                                                 Options const& options,
+                                                 bool use_resource_mgr) {
   if (use_resource_mgr) {
     return ::google::cloud::odbc_bigquery_client_interface::GetProjectRM(
         project_rm_client_, project_id, options);
@@ -97,121 +109,135 @@ ODBCBQClient::GetProject(std::string const& project_id, Options const& options,
   return ::google::cloud::odbc_bigquery_client_interface::GetProject(
       project_client_, project_id, options);
 }
-StatusRecordOr<
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
-ODBCBQClient::ListAllProjects(Options const& options) {
-  return ::google::cloud::odbc_bigquery_client_interface::ListAllProjects(
-      project_client_, options);
+
+StatusRecordOr<std::vector<Project>> ODBCBQClient::ListAllProjects(
+    Options const& options) {
+  return ListAllProjectsInternal(options, /*parent*/ "", /*query*/ "", false);
 }
 
-StatusRecordOr<
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
-ODBCBQClient::FilterProjects(std::vector<std::string> const& project_ids,
-                             Options const& options) {
+StatusRecordOr<std::vector<Project>> ODBCBQClient::ListAllProjectsRM(
+    std::string const& parent, Options const& options) {
+  return ListAllProjectsInternal(options, parent, /*query*/ "", true);
+}
+
+StatusRecordOr<std::vector<Project>> ODBCBQClient::SearchAllProjectsRM(
+    std::string const& query, Options const& options) {
+  auto all_projects_status =
+      ListAllProjectsInternal(options, /*parent*/ "", query, true);
+  if (!all_projects_status) {
+    return all_projects_status.GetStatusRecord();
+  }
+  std::vector<Project> all_projects = *all_projects_status;
+  // Search API returns results in unspecified order.
+  std::sort(all_projects.begin(), all_projects.end(),
+            [](Project const& p1, Project const& p2) {
+              return p1.numeric_id < p2.numeric_id;
+            });
+  return all_projects;
+}
+
+StatusRecordOr<std::vector<Project>> ODBCBQClient::ListAllProjectsInternal(
+    Options const& options, std::string const& parent, std::string const& query,
+    bool use_resource_manager) {
+  // Calls BQ API
+  if (!use_resource_manager) {
+    return ::google::cloud::odbc_bigquery_client_interface::ListAllProjects(
+        project_client_, options);
+  }
+  // Calls RM projects.List
+  if (!parent.empty()) {
+    return ::google::cloud::odbc_bigquery_client_interface::ListAllProjectsRM(
+        project_rm_client_, service_usage_client_, parent, options);
+  }
+  // Calls RM projects.Search
+  return ::google::cloud::odbc_bigquery_client_interface::SearchProjectsRM(
+      project_rm_client_, service_usage_client_, query, options);
+}
+
+StatusRecordOr<std::vector<Project>> ODBCBQClient::FilterProjects(
+    std::vector<std::string> const& project_ids, Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::FilterProjects(
       project_client_, project_ids, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Dataset>
-ODBCBQClient::GetDataset(std::string const& project_id,
-                         std::string const& dataset_id,
-                         Options const& options) {
+StatusRecordOr<Dataset> ODBCBQClient::GetDataset(std::string const& project_id,
+                                                 std::string const& dataset_id,
+                                                 Options const& options) {
   return google::cloud::odbc_bigquery_client_interface::GetDataset(
       dataset_client_, project_id, dataset_id, options);
 }
 
-StatusRecordOr<std::vector<
-    ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
-ODBCBQClient::ListAllDatasets(std::string const& project_id,
-                              Options const& options) {
+StatusRecordOr<std::vector<ListFormatDataset>> ODBCBQClient::ListAllDatasets(
+    std::string const& project_id, Options const& options) {
   return google::cloud::odbc_bigquery_client_interface::ListAllDatasets(
       dataset_client_, project_id, options);
 }
 
-StatusRecordOr<std::vector<
-    ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset>>
-ODBCBQClient::FilterDatasets(std::string const& project_id,
-                             DatasetFilter const& dataset_filter,
-                             ::google::cloud::Options const& options) {
+StatusRecordOr<std::vector<ListFormatDataset>> ODBCBQClient::FilterDatasets(
+    std::string const& project_id, DatasetFilter const& dataset_filter,
+    ::google::cloud::Options const& options) {
   return google::cloud::odbc_bigquery_client_interface::FilterDatasets(
       dataset_client_, project_id, dataset_filter, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Table>
-ODBCBQClient::GetTable(std::string const& project_id,
-                       std::string const& dataset_id,
-                       std::string const& table_id,
-                       TableFilter const& table_filter,
-                       ::google::cloud::Options const& options) {
+StatusRecordOr<Table> ODBCBQClient::GetTable(
+    std::string const& project_id, std::string const& dataset_id,
+    std::string const& table_id, TableFilter const& table_filter,
+    ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::GetTable(
       table_client_, project_id, dataset_id, table_id, table_filter, options);
 }
 
-StatusRecordOr<
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatTable>>
-ODBCBQClient::ListAllTables(std::string const& project_id,
-                            std::string const& dataset_id,
-                            ::google::cloud::Options const& options) {
+StatusRecordOr<std::vector<ListFormatTable>> ODBCBQClient::ListAllTables(
+    std::string const& project_id, std::string const& dataset_id,
+    ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ListAllTables(
       table_client_, project_id, dataset_id, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job>
-ODBCBQClient::GetJob(std::string const& project_id, std::string const& job_id,
-                     std::string const& location,
-                     ::google::cloud::Options const& options) {
+StatusRecordOr<Job> ODBCBQClient::GetJob(
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::GetJob(
       job_client_, project_id, job_id, location, options);
 }
 
-StatusRecordOr<
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
-ODBCBQClient::ListAllJobs(std::string const& project_id,
-                          ::google::cloud::Options const& options) {
+StatusRecordOr<std::vector<ListFormatJob>> ODBCBQClient::ListAllJobs(
+    std::string const& project_id, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ListAllJobs(
       job_client_, project_id, options);
 }
 
-StatusRecordOr<
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::ListFormatJob>>
-ODBCBQClient::FilterJobs(std::string const& project_id,
-                         JobFilter const& job_filter,
-                         ::google::cloud::Options const& options) {
+StatusRecordOr<std::vector<ListFormatJob>> ODBCBQClient::FilterJobs(
+    std::string const& project_id, JobFilter const& job_filter,
+    ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::FilterJobs(
       job_client_, project_id, job_filter, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job>
-ODBCBQClient::InsertJob(
-    std::string const& project_id,
-    ::google::cloud::bigquery_v2_minimal_internal::Job const& job,
+StatusRecordOr<Job> ODBCBQClient::InsertJob(
+    std::string const& project_id, Job const& job,
     ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::InsertJob(
       job_client_, project_id, job, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Job>
-ODBCBQClient::CancelJob(std::string const& project_id,
-                        std::string const& job_id, std::string const& location,
-                        ::google::cloud::Options const& options) {
+StatusRecordOr<Job> ODBCBQClient::CancelJob(
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::CancelJob(
       job_client_, project_id, job_id, location, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
-ODBCBQClient::Query(
-    std::string const& project_id,
-    ::google::cloud::bigquery_v2_minimal_internal::QueryRequest const&
-        query_request,
+StatusRecordOr<PostQueryResults> ODBCBQClient::Query(
+    std::string const& project_id, QueryRequest const& query_request,
     ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::Query(
       job_client_, project_id, query_request, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
-ODBCBQClient::PostQuery(
-    ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        post_query_request,
+StatusRecordOr<PostQueryResults> ODBCBQClient::PostQuery(
+    PostQueryRequest const& post_query_request,
     ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::PostQuery(
       job_client_, post_query_request, options);
@@ -223,12 +249,14 @@ ODBCBQClient::GetAllQueryResults(std::string const& project_id,
                                  std::string const& location,
                                  std::chrono::milliseconds timeout_ms,
                                  ::google::cloud::Options const& options) {
+StatusRecordOr<GetQueryResults> ODBCBQClient::GetAllQueryResults(
+    std::string const& project_id, std::string const& job_id,
+    std::string const& location, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::GetAllQueryResults(
       job_client_, project_id, job_id, location, timeout_ms, options);
 }
 
-StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
-ODBCBQClient::FilterQueryResults(
+StatusRecordOr<GetQueryResults> ODBCBQClient::FilterQueryResults(
     std::string const& project_id, std::string const& job_id,
     std::string const& location,
     QueryResultsFilterParams const& query_results_filter,
