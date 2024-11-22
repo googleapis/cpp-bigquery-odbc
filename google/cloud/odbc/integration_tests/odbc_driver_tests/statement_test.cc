@@ -2749,7 +2749,6 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   status = SQLNumResultCols(conn->hstmt, &num_cols);
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 1);
-
   int num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;

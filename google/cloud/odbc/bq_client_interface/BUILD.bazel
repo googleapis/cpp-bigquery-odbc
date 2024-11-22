@@ -29,6 +29,7 @@ cc_library(
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
         "@com_google_cloud_cpp//:oauth2",
         "@com_google_cloud_cpp//:resourcemanager",
+        "@com_google_cloud_cpp//:serviceusage",
     ],
 )
 

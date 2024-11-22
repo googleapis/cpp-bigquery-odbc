@@ -43,7 +43,6 @@ io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_DEMO_TESTING=OFF \
-  -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=ON
 io::run cmake --build cmake-out --clean-first
