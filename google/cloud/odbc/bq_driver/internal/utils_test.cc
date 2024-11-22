@@ -484,7 +484,7 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";
 std::string kEmail = "test@example.com";
-std::string kOAuthMechanism = "OAuth2";
+std::string kOAuthMechanism = "Service Authentication";
 std::string kKeyFilePath = "C:\\path\\to\\keyfile";
 std::string kCatalog = "TestCatalog";
 std::string kDataset = "TestDataset";
@@ -510,7 +510,7 @@ TEST(AddDSNToRegistry, successfulAssertions) {
 
   EXPECT_EQ(section2->at("Email"), kEmail);
   EXPECT_EQ(section2->at("KeyFilePath"), kKeyFilePath);
-  EXPECT_EQ(section2->at("OAuthMechanism"), kOAuthMechanism);
+  EXPECT_EQ(section2->at("OAuthMechanism"), "0");
   EXPECT_EQ(section2->at("Catalog"), kCatalog);
   EXPECT_EQ(section2->at("Dataset"), kDataset);
 
@@ -533,7 +533,7 @@ TEST(EditDSNInRegistry, successEdit) {
 
   EXPECT_EQ(section2->at("Email"), "test@gmail.com");
   EXPECT_EQ(section2->at("KeyFilePath"), "C:\\path\\to\\abc");
-  EXPECT_EQ(section2->at("OAuthMechanism"), kOAuthMechanism);
+  EXPECT_EQ(section2->at("OAuthMechanism"), "0");
   EXPECT_EQ(section2->at("Catalog"), kCatalog);
   EXPECT_EQ(section2->at("Dataset"), kDataset);
 

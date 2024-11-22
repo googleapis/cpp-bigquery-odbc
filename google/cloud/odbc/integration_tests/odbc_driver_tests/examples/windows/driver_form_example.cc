@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include <gtest/gtest.h>
 

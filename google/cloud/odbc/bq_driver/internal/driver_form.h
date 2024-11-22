@@ -35,6 +35,7 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
+static int const kIdcButtonTest = 115;
 
 class DriverForm {
  public:
@@ -44,7 +45,7 @@ class DriverForm {
   HWND GetHwnd() const;
   void InitControls();
   void SetValues(Section const& attributesMap);
-
+  bool IsValidEmail(std::string const& email);
   inline std::string const& GetDSN() const { return dsn_name_; }
   inline std::string const& GetEmail() const { return email_; }
 
@@ -57,6 +58,8 @@ class DriverForm {
   inline std::string const& GetDatasetName() const { return dataset_; }
 
   inline std::string const& GetCatalogName() const { return catalog_; }
+
+  static bool TestODBCConnection(std::shared_ptr<Section> const& section);
 
  private:
   static std::string dsn_name_;
