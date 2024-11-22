@@ -43,6 +43,8 @@ cc_library(
         "@com_google_cloud_cpp//:bigquery_mocks",
         "@com_google_cloud_cpp//:experimental-bigquery-rest_mocks",
         "@com_google_cloud_cpp//:mocks",
+        "@com_google_cloud_cpp//:resourcemanager_mocks",
+        "@com_google_cloud_cpp//:serviceusage_mocks",
         "@com_google_googletest//:gtest_main",
     ],
 ) for bq_client_interface_test in glob(["*_test.cc"])]
