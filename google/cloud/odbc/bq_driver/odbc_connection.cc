@@ -90,26 +90,6 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
   return StatusRecord::Ok();
 }
 
-Section GetConnStrSection(std::string conn_string,
-                          ConnectionHandle* handle_ref) {
-  StatusRecordOr<Section> connection_params_resp_status =
-      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
-          conn_string);
-
-  if (!connection_params_resp_status) {
-    LogAndReturnCode(*handle_ref, connection_params_resp_status);
-    return Section();
-  }
-  auto connection_params_resp = *connection_params_resp_status;
-  Section section;
-  for (auto const& it : connection_params_resp) {
-    std::string property = it.first;
-    std::string value = it.second;
-    section[property] = value;
-  }
-  return section;
-}
-
 //////////////////////
 // Public Functions
 //////////////////////
@@ -155,16 +135,26 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
             *handle_ref, StatusRecord{SQLStates::k_HY092(),
                                       "Invalid attribute/option identifier"});
       }
-      auto connection_params_resp = GetConnStrSection(conn_string, handle_ref);
+
+      StatusRecordOr<Section> connection_params_resp_status =
+          google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+              conn_string);
+      if (!connection_params_resp_status) {
+        LogAndReturnCode(*handle_ref, connection_params_resp_status);
+      }
+
+      auto connection_params_resp = *connection_params_resp_status;
+
       DriverForm form(window_handle);  // Pass window_handle as the parent
       std::string dsn_name = connection_params_resp["DSN"];
       std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_name;
+
       auto res = GetSectionWin(registry_key);
       auto section = res.GetValue();
       (*section)["DSN"] = dsn_name;
       form.SetValues(*section);
-      form.Show();
 
+      form.Show();
       form.GetHwnd();
 
       MSG msg = {};
@@ -181,9 +171,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                              {"Dataset", form.GetDatasetName()}};
 
       handle_ref->SetUp(dsn_section, dsn_val);
-
       Authentication auth = CreateAuth(dsn_section);
       StatusRecord status = handle_ref->Connect(auth);
+
       if (status.ok() && out_conn_str != nullptr) {
         // Populate the output parameters as per the spec.
         std::string out_tmp_str(conn_string);
@@ -194,7 +184,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
       }
       return LogAndReturnCode(*handle_ref, status);
     }
-#endif
+#endif /* _WIN32 */
     case SQL_DRIVER_COMPLETE:
     case SQL_DRIVER_COMPLETE_REQUIRED: {
       if (conn_string.empty() && !window_handle) {
@@ -218,8 +208,14 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
           *handle_ref,
           StatusRecord{SQLStates::k_HY110(), "Invalid driver completion"});
   }
-  auto dsn_section = GetConnStrSection(conn_string, handle_ref);
+  StatusRecordOr<Section> connection_params_resp_status =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          conn_string);
 
+  if (!connection_params_resp_status) {
+    LogAndReturnCode(*handle_ref, connection_params_resp_status);
+  }
+  auto dsn_section = *connection_params_resp_status;
   // Any parameters defined in the env should
   //  override the DSN section properties.
   std::string dsn_name = dsn_section["DSN"];

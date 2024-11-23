@@ -460,7 +460,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   SQLCHAR out_conn_str[kBufferLength];
   StatusRecordOr<std::string> utf8_out_conn_str;
 
-  std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
+  // std::wstring wstr(reinterpret_cast<wchar_t const*>(outConnectionString));
   //  auto out_len = wstr.length();
   //  if (out_len > 0) {
   //   utf8_out_conn_str = ConvertSQLWCHARToString(outConnectionString,
@@ -478,15 +478,14 @@ SQLRETURN SQL_API SQLDriverConnectW(
   //        ToSqlChar(utf8_out_conn_str->data()), outConnectionStringBufferLen,
   //        outConnectionStringLen, driverCompletion);
   //  } else
-  {
-    // Call to internal common function for SQLDriverConnect and
-    // SQLDriverConnectW in odbc_connection.h.
-    rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-        connectionHandle, windowHandle,
-        ToSqlChar(utf8_in_connection_str->data()), inConnectionStringLen,
-        out_conn_str, outConnectionStringBufferLen, outConnectionStringLen,
-        driverCompletion);
-  }
+  // {
+  // Call to internal common function for SQLDriverConnect and
+  // SQLDriverConnectW in odbc_connection.h.
+  rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
+      connectionHandle, windowHandle, ToSqlChar(utf8_in_connection_str->data()),
+      inConnectionStringLen, out_conn_str, outConnectionStringBufferLen,
+      outConnectionStringLen, driverCompletion);
+  // }
   // Handle Unicode conversion of output parameters.
   StatusRecordOr<std::wstring> utf16_in_connection_str =
       Utf8ToUtf16(*utf8_in_connection_str);
@@ -502,10 +501,10 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // if (out_len > 0) {
   //   utf16_out_conn_str = Utf8ToUtf16(*utf8_out_conn_str);
   // } else
-  {
-    std::string val(ToCharStr(out_conn_str));
-    utf16_out_conn_str = Utf8ToUtf16(val);
-  }
+  // {
+  std::string val(ToCharStr(out_conn_str));
+  utf16_out_conn_str = Utf8ToUtf16(val);
+  // }
   if (!utf16_out_conn_str) {
     TracePrintInternal(*(*kTraceOption),
                        utf16_out_conn_str.GetStatusRecord().message);
