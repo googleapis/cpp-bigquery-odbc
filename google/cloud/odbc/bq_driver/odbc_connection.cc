@@ -22,7 +22,6 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
-#include <sstream>
 
 // NOLINTBEGIN(misc-unused-parameters, readability-non-const-parameter)
 namespace google::cloud::odbc_bq_driver {
@@ -31,11 +30,10 @@ using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver::IsValidEmail;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::Authentication;
+using google::cloud::odbc_bq_driver_internal::CheckConnAttribute;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
-using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using google::cloud::odbc_bq_driver_internal::ExtractKeys;
 using google::cloud::odbc_bq_driver_internal::GetCamelCaseStr;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -87,73 +85,36 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
 
 StatusRecordOr<SQLRETURN> ValidateConnStr(std::string& in_conn_str,
                                           std::string& out_conn_str) {
-  auto in_str_section = ExtractKeys(in_conn_str);
-  auto out_str_section = ExtractKeys(out_conn_str);
-
-  std::unordered_set<std::string> seen_keys;
-  for (auto const& key : in_str_section) {
-    if (seen_keys.find(key) != seen_keys.end()) {
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "Duplicate connection string attribute found: " + key};
-    }
-    seen_keys.insert(key);
-
-    if (std::find(out_str_section.begin(), out_str_section.end(), key) ==
-        out_str_section.end()) {
+  auto in_str_section =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          in_conn_str);
+  if (!in_str_section) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        in_str_section.GetStatusRecord().message};
+  }
+  auto out_str_section =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          out_conn_str, true);
+  if (!out_str_section) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        out_str_section.GetStatusRecord().message};
+  }
+  // Check if any key in in_str_section is missing from out_str_section
+  for (auto const& [key, _] : *in_str_section) {
+    if (out_str_section->find(key) == out_str_section->end()) {
       return StatusRecord{
           SQLStates::k_HY000(),
           "Non Requested connection attribute " + key + " in ConnectionString"};
     }
   }
-
-  for (auto const& key : out_str_section) {
-    if (seen_keys.find(key) == seen_keys.end()) {
+  // Check if any key in out_str_section is missing from in_str_section
+  for (auto const& [key, _] : *out_str_section) {
+    if (in_str_section->find(key) == in_str_section->end()) {
       return StatusRecordOr<SQLRETURN>(SQL_NEED_DATA);
     }
   }
-
   return StatusRecordOr<SQLRETURN>(SQL_SUCCESS);
 }
-
-SQLRETURN CheckConnAttribute(Dsn const& dsn, SQLCHAR* out_conn_str,
-                             SQLSMALLINT* out_conn_str_len) {
-  std::vector<std::string> required_keywords = {"Catalog", "OAuthMechanism",
-                                                "KeyFilePath"};
-
-  std::ostringstream out_str;
-
-  for (auto const& key : required_keywords) {
-    if (key == "Catalog") {
-      if (dsn.catalog.empty()) {
-        out_str << key << ":" << key << "=?;";
-      }
-    } else if (key == "OAuthMechanism") {
-      if (dsn.OAuthMechanism.empty()) {
-        out_str << key << ":" << key << "=?;";
-      }
-    } else if (key == "KeyFilePath") {
-      if (dsn.keyfilepath.empty()) {
-        out_str << key << ":" << key << "=?;";
-      }
-    } else {
-      out_str << "";
-    }
-  }
-
-  std::string res_str = out_str.str();
-  strncpy(reinterpret_cast<char*>(out_conn_str), res_str.c_str(),
-          res_str.length());
-  out_conn_str[res_str.length()] = '\0';
-  *out_conn_str_len = res_str.length();
-
-  if (!res_str.empty()) {
-    return SQL_NEED_DATA;
-  }
-
-  return SQL_SUCCESS;
-}
-
 //////////////////////
 // Public Functions
 //////////////////////
@@ -418,17 +379,9 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
       return status_check; /* SQL_NEED_DATA return */
     }
   }
-
-  if (in_conn_str_len < 0 && in_conn_str_len != SQL_NTS) {
-    auto status_record =
-        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
-    return LogAndReturnCode(*handle_ref, status_record);
-  }
-
-  std::string cache_str = handle_ref->GetDsn().driver;
-
-  if (!cache_str.empty()) {
-    conn_string = "Driver=" + cache_str + conn_string;
+  std::string driver_name = handle_ref->GetDsn().driver;
+  if (!driver_name.empty()) {
+    conn_string = "Driver=" + driver_name + conn_string;
   }
 
   StatusRecordOr<Section> connection_params_resp_status =
@@ -440,6 +393,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   }
 
   auto connection_params_resp = *connection_params_resp_status;
+
   Section dsn_section;
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
@@ -449,15 +403,6 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   }
 
   std::string dsn_name = dsn_section["DSN"];
-  std::string driver_name = dsn_section["Driver"];
-
-  if (dsn_name.empty() && driver_name.empty()) {
-    auto status_record =
-        StatusRecord{SQLStates::k_IM002(),
-                     "Data source not found and no default driver specified"};
-    return LogAndReturnCode(*handle_ref, status_record);
-  }
-
   if (!dsn_name.empty()) {
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
   }
@@ -470,31 +415,40 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   handle_ref->SetUp(dsn_section, dsn_name);
   SQLRETURN conn_att_resp =
       CheckConnAttribute(handle_ref->GetDsn(), out_conn_str, out_conn_str_len);
-
   if (conn_att_resp != SQL_SUCCESS) {
     return conn_att_resp; /* SQL_NEED_DATA return */
   }
-
   Authentication auth = CreateAuth(dsn_section);
   StatusRecord status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {
     // Populate the output parameters as per the spec.
+    auto* temp_conn_str = in_conn_str;
     if (dsn_name.empty()) {
-      snprintf(reinterpret_cast<char*>(in_conn_str), conn_string.length() + 5,
-               "DRIVER={%s};Catalog=%s;KeyFilePath=%s;OAuthMechanism=%s;",
-               driver_name.c_str(), handle_ref->GetDsn().catalog.c_str(),
+      snprintf(reinterpret_cast<char*>(temp_conn_str), conn_string.length() + 5,
+               "DRIVER={%s};Catalog=%s;KeyFilePath=%s;OAuthMechanism=%s",
+               handle_ref->GetDsn().driver.c_str(),
+               handle_ref->GetDsn().catalog.c_str(),
                handle_ref->GetDsn().keyfilepath.c_str(),
-               handle_ref->GetDsn().OAuthMechanism.c_str());
+               handle_ref->GetDsn().oauthmechanism.c_str());
     }
 
-    std::string out_tmp_str(ToCharStr(in_conn_str));
+    std::string out_tmp_str(ToCharStr(temp_conn_str));
+    if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
+      out_tmp_str.append(";");
+    }
+    *out_conn_str_len = out_tmp_str.length();
+
+    if (*out_conn_str_len > out_conn_str_bufflen) {
+      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+              out_conn_str_bufflen - 1);
+      out_conn_str[out_conn_str_bufflen - 1] = '\0';
+      return SQL_NEED_DATA;
+    }
     strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
             out_tmp_str.length());
-    *out_conn_str_len = out_tmp_str.length();
     out_conn_str[out_tmp_str.length()] = '\0';
   }
-
   return SQL_SUCCESS;
 }
 }  // namespace google::cloud::odbc_bq_driver

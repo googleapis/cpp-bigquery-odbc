@@ -196,15 +196,21 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 
 #endif  //_WIN32
 
-StatusRecordOr<Section> ParseConnectionString(std::string& str) {
+StatusRecordOr<Section> ParseConnectionString(std::string& str,
+                                              bool is_parameterized) {
   Section section;
+  std::vector<std::string> property_splits;
   std::vector<std::string> splits = Split(str, ";");
   for (std::string& property : splits) {
     Trim(property);
     if (property.empty()) {
       continue;
     }
-    std::vector<std::string> property_splits = Split(property, "=", 2);
+    if (is_parameterized) {
+      property_splits = Split(property, ":", 2);
+    } else {
+      property_splits = Split(property, "=", 2);
+    }
     if (property_splits.size() < 2) {
       return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
     }
@@ -212,37 +218,26 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
     std::string value = Join(property_splits, "", 1);
     Trim(field);
     Trim(value);
+    if (!value.empty()) {
+      int start_pos = value.find('{');
+      int end_pos = value.find('}');
+      if (start_pos != std::string::npos && end_pos != std::string::npos &&
+          end_pos > start_pos) {
+        value = value.substr(
+            start_pos + 1,
+            end_pos - start_pos - 1);  // Extract content inside braces
+      }
+    }
     if (field.empty() || value.empty()) {
       continue;
     }
-    if (!section.count(field)) {
-      section[field] = value;
+    if (section.count(field) > 0 && section[field] == value) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Connection Attribute " + field + " already found!"};
     }
+    section[field] = value;
   }
   return section;
-}
-
-std::vector<std::string> ExtractKeys(std::string& str, bool is_parameterized) {
-  std::smatch match;
-  std::vector<std::string> keywords;
-  std::regex regex_pattern;
-
-  if (is_parameterized) {
-    regex_pattern =
-        std::regex(R"(\b([A-Za-z0-9_-]+)(?=:))");  // Pattern to capture
-                                                   // keywords before ":"
-  } else {
-    regex_pattern =
-        std::regex(R"(\b([A-Za-z0-9_-]+)(?==))");  // Pattern to capture
-                                                   // keywords before "="
-  }
-
-  std::string::const_iterator search_start(str.cbegin());
-  while (std::regex_search(search_start, str.cend(), match, regex_pattern)) {
-    keywords.push_back(match[1]);
-    search_start = match.suffix().first;
-  }
-  return keywords;
 }
 
 std::string GetPathToOdbcIni() {

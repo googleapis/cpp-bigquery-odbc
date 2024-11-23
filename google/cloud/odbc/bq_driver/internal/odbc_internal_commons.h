@@ -24,6 +24,7 @@
 #include "absl/types/variant.h"
 #include <chrono>
 #include <cstring>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,31 @@ inline SQLRETURN LogAndReturnCode(
     TracePrintInternal(*(*kTraceOption), status_record.message);
   }
   return status_record.CalculateReturnCode();
+}
+
+inline SQLRETURN CheckConnAttribute(Dsn const& dsn, SQLCHAR* out_conn_str,
+                                    SQLSMALLINT* out_conn_str_len) {
+  std::vector<std::pair<std::string, std::string>> required_keywords = {
+      {"Catalog", dsn.catalog},
+      {"OAuthMechanism", dsn.oauthmechanism},
+      {"KeyFilePath", dsn.keyfilepath}};
+
+  std::ostringstream missing_attributes;
+  for (auto const& [key, value] : required_keywords) {
+    if (value.empty()) {
+      missing_attributes << key << ":" << key << "=?;";
+    }
+  }
+  std::string res_str = missing_attributes.str();
+  strncpy(reinterpret_cast<char*>(out_conn_str), res_str.c_str(),
+          res_str.length());
+  out_conn_str[res_str.length()] = '\0';
+  *out_conn_str_len = res_str.length();
+
+  if (!res_str.empty()) {
+    return SQL_NEED_DATA;
+  }
+  return SQL_SUCCESS;
 }
 
 // Data Types as supported by the BQ DataSource.

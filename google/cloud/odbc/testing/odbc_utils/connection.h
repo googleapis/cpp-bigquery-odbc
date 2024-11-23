@@ -38,6 +38,9 @@ std::string const kServiceAccountEmail =
     "bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam."
     "gserviceaccount.com";
 
+void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
+                   bool use_ansi = false);
+
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN
 Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,

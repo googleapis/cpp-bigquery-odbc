@@ -258,7 +258,7 @@ TEST(Parsing, ParseConnectionString_DuplicateFields) {
   StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
   ASSERT_STATUS_RECORD_OK(section_resp_status);
   Section section_resp = *section_resp_status;
-  EXPECT_EQ(section_resp["a"], "3");
+  EXPECT_EQ(section_resp["a"], "4");
 }
 
 TEST(FilterUsingOdbcRegex, UseBaseRegex) {
@@ -480,6 +480,43 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
   SanitizeIdentifierArgument(arg);
   EXPECT_EQ(arg, " TEST");
 }
+
+TEST(GetCamelCaseStr, SuccessCases) {
+  std::string str1 = "driver";
+  GetCamelCaseStr(str1);
+  EXPECT_EQ(str1, "Driver");
+
+  std::string str2 = "catalog";
+  GetCamelCaseStr(str2);
+  EXPECT_EQ(str2, "Catalog");
+
+  std::string str3 = "oauthmechanism";
+  GetCamelCaseStr(str3);
+  EXPECT_EQ(str3, "OAuthMechanism");
+
+  std::string str4 = "keyfilepath";
+  GetCamelCaseStr(str4);
+  EXPECT_EQ(str4, "KeyFilePath");
+}
+
+TEST(GetCamelCaseStr, FailureCases) {
+  std::string str1 = "unknown";
+  GetCamelCaseStr(str1);
+  EXPECT_EQ(str1, "UNKNOWN");
+
+  std::string str2 = "randomkey";
+  GetCamelCaseStr(str2);
+  EXPECT_EQ(str2, "RANDOMKEY");
+
+  std::string str3 = "somevalue";
+  GetCamelCaseStr(str3);
+  EXPECT_EQ(str3, "SOMEVALUE");
+
+  std::string str4 = "drivers";
+  GetCamelCaseStr(str4);
+  EXPECT_EQ(str4, "DRIVERS");
+}
+
 #ifdef _WIN32
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";
@@ -595,6 +632,5 @@ TEST(ParseConnectionString, null_terminating_string) {
   StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
   ASSERT_STATUS_RECORD_OK(section_resp_status);
 }
-
 #endif  //_WIN32
 }  // namespace google::cloud::odbc_bq_driver_internal

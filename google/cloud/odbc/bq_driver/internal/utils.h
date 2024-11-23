@@ -149,10 +149,8 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 
 #endif  //_WIN32
 
-odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
-
-std::vector<std::string> ExtractKeys(std::string& str,
-                                     bool is_parameterized = false);
+odbc_internal::StatusRecordOr<Section> ParseConnectionString(
+    std::string& str, bool is_parameterized = false);
 
 // Common validation used by both SQLTables and SQLColumns
 odbc_internal::StatusRecord ValidateTableParameters(
