@@ -26,8 +26,8 @@ std::string DriverForm::o_auth_mechanism_;
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                    PWSTR pCmdLine, int nCmdShow) {
+int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
+                    PWSTR p_cmd_line, int n_cmd_show) {
   DriverForm DriverForm;
   DriverForm.Show();
 
@@ -51,21 +51,22 @@ DriverForm::~DriverForm() {
   }
 }
 
-void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath = nullptr) {
-  if (MockFilePath) {
+void OpenFileDialog(HWND hwnd, HWND h_edit,
+                    char const* mock_file_path = nullptr) {
+  if (mock_file_path) {
     // Directly set the test file path to the edit control if provided
-    SetWindowText(hEdit, MockFilePath);
+    SetWindowText(h_edit, mock_file_path);
     return;
   }
   OPENFILENAME ofn;
-  char szFile[260] = {0};  // Buffer for file path
+  char sz_file[260] = {0};  // Buffer for file path
 
   // Initialize OPENFILENAME structure
   ZeroMemory(&ofn, sizeof(ofn));
   ofn.lStructSize = sizeof(ofn);
   ofn.hwndOwner = hwnd;
-  ofn.lpstrFile = szFile;
-  ofn.nMaxFile = sizeof(szFile);
+  ofn.lpstrFile = sz_file;
+  ofn.nMaxFile = sizeof(sz_file);
   ofn.lpstrFilter = "JSON Files\0*.JSON\0All Files\0*.*\0";
   ofn.nFilterIndex = 1;
   ofn.lpstrFileTitle = NULL;
@@ -76,34 +77,34 @@ void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath = nullptr) {
   // Display the Open File dialog
   if (GetOpenFileName(&ofn)) {
     // Set the selected file path to the edit control
-    SetWindowText(hEdit, szFile);
+    SetWindowText(h_edit, sz_file);
   }
 }
 
-void DriverForm::SetValues(Section const& attributesMap) {
-  dsn_name_ = attributesMap.count("DSN") > 0 ? attributesMap.at("DSN") : "";
-  email_ = attributesMap.count("Email") > 0 ? attributesMap.at("Email") : "";
-  o_auth_mechanism_ = attributesMap.count("OAuthMechanism") > 0
-                          ? attributesMap.at("OAuthMechanism")
+void DriverForm::SetValues(Section const& attributes_map) {
+  dsn_name_ = attributes_map.count("DSN") > 0 ? attributes_map.at("DSN") : "";
+  email_ = attributes_map.count("Email") > 0 ? attributes_map.at("Email") : "";
+  o_auth_mechanism_ = attributes_map.count("OAuthMechanism") > 0
+                          ? attributes_map.at("OAuthMechanism")
                           : "";
-  key_file_path_ = attributesMap.count("KeyFilePath") > 0
-                       ? attributesMap.at("KeyFilePath")
+  key_file_path_ = attributes_map.count("KeyFilePath") > 0
+                       ? attributes_map.at("KeyFilePath")
                        : "";
   catalog_ =
-      attributesMap.count("Catalog") > 0 ? attributesMap.at("Catalog") : "";
+      attributes_map.count("Catalog") > 0 ? attributes_map.at("Catalog") : "";
   dataset_ =
-      attributesMap.count("Dataset") > 0 ? attributesMap.at("Dataset") : "";
+      attributes_map.count("Dataset") > 0 ? attributes_map.at("Dataset") : "";
 }
 
-HFONT CreateCustomFont(int fontSize) {
-  LOGFONT logFont = {};
-  HFONT hFont = NULL;
-  logFont.lfHeight = -MulDiv(fontSize, GetDeviceCaps(GetDC(NULL), LOGPIXELSY),
-                             72);        // Negative height for screen fonts
-  lstrcpy(logFont.lfFaceName, "Arial");  // Font face name
+HFONT CreateCustomFont(int font_size) {
+  LOGFONT log_font = {};
+  HFONT h_font = NULL;
+  log_font.lfHeight = -MulDiv(font_size, GetDeviceCaps(GetDC(NULL), LOGPIXELSY),
+                              72);        // Negative height for screen fonts
+  lstrcpy(log_font.lfFaceName, "Arial");  // Font face name
 
-  hFont = CreateFontIndirect(&logFont);
-  return hFont;
+  h_font = CreateFontIndirect(&log_font);
+  return h_font;
 }
 // Helper function to create a static label
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
@@ -143,74 +144,77 @@ void SetControlFont(HWND hwnd, HFONT font) {
 // Function to initialize controls
 void DriverForm::InitControls() {
   // Set custom font for the controls
-  HFONT hFont = CreateCustomFont(10);  // Font size 10
+  HFONT h_font = CreateCustomFont(10);  // Font size 10
 
   // Create controls
-  HWND hDSNnameHeader = CreateLabel(m_hwnd, "DSN Name:", 20, 80, 100, 20, 0);
-  HWND hDSNnameEdit = CreateEditBox(m_hwnd, 100, 80, 200, 20, kIdcDSNEdit);
-  SetWindowText(hDSNnameEdit, dsn_name_.c_str());
+  HWND h_dsn_name_header = CreateLabel(m_hwnd, "DSN Name:", 20, 80, 100, 20, 0);
+  HWND h_dsn_name_edit = CreateEditBox(m_hwnd, 100, 80, 200, 20, kIdcDSNEdit);
+  SetWindowText(h_dsn_name_edit, dsn_name_.c_str());
   if (!dsn_name_.empty()) {
     // If there is a value, make the edit box read-only
-    HWND hDsnEditBox = GetDlgItem(m_hwnd, kIdcDSNEdit);
-    SendMessage(hDsnEditBox, EM_SETREADONLY, TRUE, 0);
+    HWND h_dsn_edit_box = GetDlgItem(m_hwnd, kIdcDSNEdit);
+    SendMessage(h_dsn_edit_box, EM_SETREADONLY, TRUE, 0);
   }
 
-  HWND hAuthHead =
+  HWND h_auth_head =
       CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 120, 120, 20, kIdcLabel);
-  HWND hComboBox = CreateComboBox(m_hwnd, 140, 120, 150, 100, kIdcComboBox);
+  HWND h_auth_box = CreateComboBox(m_hwnd, 140, 120, 150, 100, kIdcAuthBox);
 
-  HWND hEmailHeader = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
-  HWND hEmailEdit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
+  HWND h_email_header = CreateLabel(m_hwnd, "Email:", 20, 160, 40, 20, 0);
+  HWND h_email_edit = CreateEditBox(m_hwnd, 100, 160, 200, 20, kIdcEmailEdit);
 
-  HWND hPathAdd = CreateLabel(m_hwnd, "Key File Path:", 20, 200, 100, 30, 0);
-  HWND hKeyFileEdit = CreateEditBox(m_hwnd, 120, 200, 250, 20, kIdcKeyfileEdit);
+  HWND h_path_add = CreateLabel(m_hwnd, "Key File Path:", 20, 200, 100, 30, 0);
+  HWND h_keyfile_edit =
+      CreateEditBox(m_hwnd, 120, 200, 250, 20, kIdcKeyfileEdit);
   CreateButton(m_hwnd, "Browse", 150, 230, 100, 20, kIdcBrowseButton);
 
-  HWND hCatalogText = CreateLabel(m_hwnd, "Catalog (Project):", 20, 280, 110,
-                                  20, kIdcCatalogLabel);
-  HWND hCatalogBox = CreateComboBox(m_hwnd, 160, 280, 230, 100, kIdcCatlogBOX);
+  HWND h_catalog_text = CreateLabel(m_hwnd, "Catalog (Project):", 20, 280, 110,
+                                    20, kIdcCatalogLabel);
+  HWND h_catalog_box =
+      CreateComboBox(m_hwnd, 160, 280, 230, 100, kIdcCatlogBOX);
 
-  HWND hDatasetText =
+  HWND h_dataset_text =
       CreateLabel(m_hwnd, "Dataset:", 20, 320, 50, 20, kIdcDatasetLabel);
-  HWND hDatasetBox = CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
+  HWND h_dataset_box =
+      CreateComboBox(m_hwnd, 160, 320, 230, 100, kIdcDatasetBOX);
 
-  HWND hwndOkButton =
+  HWND hwnd_ok_button =
       CreateButton(m_hwnd, "Ok", 220, 400, 80, 30, kIdcButtonOk);
-  HWND hwndCancelButton =
+  HWND hwnd_cancel_button =
       CreateButton(m_hwnd, "Cancel", 320, 400, 80, 30, kIdcButtonCancel);
 
   // Populate dropdowns
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For Current User");
-  SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM) "For All Users");
-  SendMessage(hComboBox, CB_SETCURSEL, 0, 0);
+  SendMessage(h_auth_box, CB_ADDSTRING, 0, (LPARAM) "For Current User");
+  SendMessage(h_auth_box, CB_ADDSTRING, 0, (LPARAM) "For All Users");
+  SendMessage(h_auth_box, CB_SETCURSEL, 0, 0);
 
-  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 1");
-  SendMessage(hCatalogBox, CB_ADDSTRING, 0, (LPARAM) "Project 2");
-  SendMessage(hCatalogBox, CB_SETCURSEL, 0, 0);
+  SendMessage(h_catalog_box, CB_ADDSTRING, 0, (LPARAM) "Project 1");
+  SendMessage(h_catalog_box, CB_ADDSTRING, 0, (LPARAM) "Project 2");
+  SendMessage(h_catalog_box, CB_SETCURSEL, 0, 0);
 
-  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 1");
-  SendMessage(hDatasetBox, CB_ADDSTRING, 0, (LPARAM) "Dataset 2");
-  SendMessage(hDatasetBox, CB_SETCURSEL, 0, 0);
+  SendMessage(h_dataset_box, CB_ADDSTRING, 0, (LPARAM) "Dataset 1");
+  SendMessage(h_dataset_box, CB_ADDSTRING, 0, (LPARAM) "Dataset 2");
+  SendMessage(h_dataset_box, CB_SETCURSEL, 0, 0);
 
   // Apply font to controls
-  SetControlFont(hAuthHead, hFont);
-  SetControlFont(hComboBox, hFont);
-  SetControlFont(hDSNnameHeader, hFont);
-  SetControlFont(hDSNnameEdit, hFont);
-  SetControlFont(hEmailHeader, hFont);
-  SetControlFont(hEmailEdit, hFont);
-  SetControlFont(hPathAdd, hFont);
-  SetControlFont(hKeyFileEdit, hFont);
-  SetControlFont(hCatalogText, hFont);
-  SetControlFont(hCatalogBox, hFont);
-  SetControlFont(hDatasetText, hFont);
-  SetControlFont(hDatasetBox, hFont);
+  SetControlFont(h_auth_head, h_font);
+  SetControlFont(h_auth_box, h_font);
+  SetControlFont(h_dsn_name_header, h_font);
+  SetControlFont(h_dsn_name_edit, h_font);
+  SetControlFont(h_email_header, h_font);
+  SetControlFont(h_email_edit, h_font);
+  SetControlFont(h_path_add, h_font);
+  SetControlFont(h_keyfile_edit, h_font);
+  SetControlFont(h_catalog_text, h_font);
+  SetControlFont(h_catalog_box, h_font);
+  SetControlFont(h_dataset_text, h_font);
+  SetControlFont(h_dataset_box, h_font);
 
-  SetWindowText(hEmailEdit, email_.c_str());
-  SetWindowText(hKeyFileEdit, key_file_path_.c_str());
-  SetWindowText(hCatalogBox, catalog_.c_str());
-  SetWindowText(hDatasetBox, dataset_.c_str());
-  SetWindowText(hComboBox, o_auth_mechanism_.c_str());
+  SetWindowText(h_email_edit, email_.c_str());
+  SetWindowText(h_keyfile_edit, key_file_path_.c_str());
+  SetWindowText(h_catalog_box, catalog_.c_str());
+  SetWindowText(h_dataset_box, dataset_.c_str());
+  SetWindowText(h_auth_box, o_auth_mechanism_.c_str());
 }
 
 // Function to initialize and display the form
@@ -242,14 +246,14 @@ void DriverForm::Show() {
     InitControls();
 
     // Create and position OK and Cancel buttons at the bottom
-    RECT rcClient;
-    GetClientRect(m_hwnd, &rcClient);
+    RECT rc_client;
+    GetClientRect(m_hwnd, &rc_client);
 
-    int buttonWidth = 100;
-    int buttonHeight = 30;
-    int buttonY = rcClient.bottom - buttonHeight -
-                  20;        // Position 20 pixels from the bottom
-    int buttonSpacing = 20;  // Space between buttons
+    int button_width = 100;
+    int button_height = 30;
+    int button_y = rc_client.bottom - button_height -
+                   20;        // Position 20 pixels from the bottom
+    int button_spacing = 20;  // Space between buttons
 
     ShowWindow(m_hwnd, SW_SHOW);
     UpdateWindow(m_hwnd);
@@ -261,33 +265,33 @@ bool IsValidEmail(std::string const& email) {
   return std::regex_match(email, pattern);
 }
 
-LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                                        LPARAM lParam) {
-  DriverForm* pThis =
+LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
+                                        LPARAM l_param) {
+  DriverForm* p_this =
       reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
-  switch (uMsg) {
+  switch (u_msg) {
     case WM_CREATE:
       // Set the instance pointer in the window's user data
-      SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
+      SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
       break;
 
     case WM_COMMAND:
-      switch (LOWORD(wParam)) {
+      switch (LOWORD(w_param)) {
         case kIdcBrowseButton: {
-          HWND hEdit = GetDlgItem(hwnd, kIdcKeyfileEdit);
-          OpenFileDialog(hwnd, hEdit);
+          HWND h_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          OpenFileDialog(hwnd, h_edit);
         } break;
         case kIdcButtonOk: {
-          HWND hDSN = GetDlgItem(hwnd, kIdcDSNEdit);
-          char dsnBuffer[256];
-          GetWindowText(hDSN, dsnBuffer, sizeof(dsnBuffer));
-          dsn_name_ = dsnBuffer;
+          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsn_buffer[256];
+          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
+          dsn_name_ = dsn_buffer;
 
-          HWND hEmail = GetDlgItem(hwnd, kIdcEmailEdit);
-          char emailBuffer[256];
-          GetWindowText(hEmail, emailBuffer, sizeof(emailBuffer));
-          email_ = emailBuffer;
+          HWND h_email = GetDlgItem(hwnd, kIdcEmailEdit);
+          char email_buffer[256];
+          GetWindowText(h_email, email_buffer, sizeof(email_buffer));
+          email_ = email_buffer;
           if (!IsValidEmail(email_) && !email_.empty()) {
             MessageBox(hwnd, "Invalid email address!", "Error",
                        MB_OK | MB_ICONERROR);
@@ -295,25 +299,25 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             return 0;
           }
 
-          HWND hKey = GetDlgItem(hwnd, kIdcKeyfileEdit);
-          char keyBuffer[256];
-          GetWindowText(hKey, keyBuffer, sizeof(keyBuffer));
-          key_file_path_ = keyBuffer;
+          HWND h_key = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          char key_buffer[256];
+          GetWindowText(h_key, key_buffer, sizeof(key_buffer));
+          key_file_path_ = key_buffer;
 
-          HWND hComboBox = GetDlgItem(hwnd, kIdcComboBox);
-          char authBuffer[256];
-          GetWindowText(hComboBox, authBuffer, sizeof(authBuffer));
-          o_auth_mechanism_ = authBuffer;
+          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
+          char auth_buffer[256];
+          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
+          o_auth_mechanism_ = auth_buffer;
 
-          HWND hCatalogBox = GetDlgItem(hwnd, kIdcCatlogBOX);
-          char catalogBuffer[256];
-          GetWindowText(hCatalogBox, catalogBuffer, sizeof(catalogBuffer));
-          catalog_ = catalogBuffer;
+          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
+          char catalog_buffer[256];
+          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
+          catalog_ = catalog_buffer;
 
-          HWND hDatasetBox = GetDlgItem(hwnd, kIdcDatasetBOX);
-          char dataBuffer[256];
-          GetWindowText(hDatasetBox, dataBuffer, sizeof(dataBuffer));
-          dataset_ = dataBuffer;
+          HWND h_dataset_box = GetDlgItem(hwnd, kIdcDatasetBOX);
+          char data_buffer[256];
+          GetWindowText(h_dataset_box, data_buffer, sizeof(data_buffer));
+          dataset_ = data_buffer;
 
           DestroyWindow(hwnd);  // Close the window
           break;
@@ -329,14 +333,14 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
       return 0;
 
     case WM_DESTROY:
-      if (pThis) {
-        pThis->m_hwnd = NULL;  // Set the window handle to NULL
+      if (p_this) {
+        p_this->m_hwnd = NULL;  // Set the window handle to NULL
       }
       PostQuitMessage(0);
       return 0;
   }
-  return DefWindowProc(hwnd, uMsg, wParam, lParam);
+  return DefWindowProc(hwnd, u_msg, w_param, l_param);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
-#endif /* WIN32*/
+#endif  // _WIN32

@@ -43,16 +43,16 @@ class DriverFormTest : public ::testing::Test {
     }
   }
 
-  void ClickButton(HWND hwnd, int buttonId) {
-    HWND button = GetDlgItem(hwnd, buttonId);
+  void ClickButton(HWND hwnd, int button_id) {
+    HWND button = GetDlgItem(hwnd, button_id);
     ASSERT_NE(button, nullptr) << "Button should be created.";
     SendMessage(button, BM_CLICK, 0, 0);
     ProcessMessages();  // Process any messages resulting from the click
   }
 };
 
-void MockOpenFileDialog(HWND hwnd, HWND hEdit, char const* simulatedPath) {
-  OpenFileDialog(hwnd, hEdit, simulatedPath);
+void MockOpenFileDialog(HWND hwnd, HWND h_edit, char const* simulated_path) {
+  OpenFileDialog(hwnd, h_edit, simulated_path);
 }
 
 TEST_F(DriverFormTest, TestUIOpens) {
@@ -100,61 +100,61 @@ TEST_F(DriverFormTest, TestButtonClickCancel) {
 }
 
 TEST_F(DriverFormTest, TestAuthDropdown) {
-  HWND hComboBox = GetDlgItem(form->GetHwnd(), kIdcComboBox);
-  ASSERT_NE(hComboBox, nullptr) << "Auth dropdown should be created.";
+  HWND h_combo_box = GetDlgItem(form->GetHwnd(), kIdcAuthBox);
+  ASSERT_NE(h_combo_box, nullptr) << "Auth dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(hComboBox, CB_GETCOUNT, 0, 0), 2)
+  ASSERT_EQ(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 2)
       << "Auth dropdown should have 2 items.";
 
-  int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
+  int selected_index = SendMessage(h_combo_box, CB_GETCURSEL, 0, 0);
+  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
-  SendMessage(hComboBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
+  SendMessage(h_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
   ASSERT_STREQ(buffer, "For Current User")
       << "First item text should be 'For Current User'.";
 }
 
 TEST_F(DriverFormTest, TestCatalogDropdown) {
-  HWND hCatlogBox = GetDlgItem(form->GetHwnd(), kIdcCatlogBOX);
-  ASSERT_NE(hCatlogBox, nullptr) << "Catalog dropdown should be created.";
+  HWND h_catlog_box = GetDlgItem(form->GetHwnd(), kIdcCatlogBOX);
+  ASSERT_NE(h_catlog_box, nullptr) << "Catalog dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(hCatlogBox, CB_GETCOUNT, 0, 0), 2)
+  ASSERT_EQ(SendMessage(h_catlog_box, CB_GETCOUNT, 0, 0), 2)
       << "Catalog dropdown should have 2 items.";
 
-  int selectedIndex = SendMessage(hCatlogBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
+  int selected_index = SendMessage(h_catlog_box, CB_GETCURSEL, 0, 0);
+  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
-  SendMessage(hCatlogBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
+  SendMessage(h_catlog_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
   ASSERT_STREQ(buffer, "Project 1") << "First item text should be 'Project 1'.";
 }
 
 TEST_F(DriverFormTest, TestDatasetDropdown) {
-  HWND hDatasetBox = GetDlgItem(form->GetHwnd(), kIdcDatasetBOX);
-  ASSERT_NE(hDatasetBox, nullptr) << "Dataset dropdown should be created.";
+  HWND h_dataset_box = GetDlgItem(form->GetHwnd(), kIdcDatasetBOX);
+  ASSERT_NE(h_dataset_box, nullptr) << "Dataset dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(hDatasetBox, CB_GETCOUNT, 0, 0), 2)
+  ASSERT_EQ(SendMessage(h_dataset_box, CB_GETCOUNT, 0, 0), 2)
       << "Dataset dropdown should have 2 items.";
 
-  int selectedIndex = SendMessage(hDatasetBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
+  int selected_index = SendMessage(h_dataset_box, CB_GETCURSEL, 0, 0);
+  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
-  SendMessage(hDatasetBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
+  SendMessage(h_dataset_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
   ASSERT_STREQ(buffer, "Dataset 1") << "First item text should be 'Dataset 1'.";
 }
 
 TEST_F(DriverFormTest, TestEmailField) {
-  HWND hEmailEdit = GetDlgItem(form->GetHwnd(), kIdcEmailEdit);
-  ASSERT_NE(hEmailEdit, nullptr) << "Email edit control should be created.";
+  HWND h_email_edit = GetDlgItem(form->GetHwnd(), kIdcEmailEdit);
+  ASSERT_NE(h_email_edit, nullptr) << "Email edit control should be created.";
 
-  char const* testEmail = "test@example.com";
-  SendMessage(hEmailEdit, WM_SETTEXT, 0, (LPARAM)testEmail);
+  char const* test_email = "test@example.com";
+  SendMessage(h_email_edit, WM_SETTEXT, 0, (LPARAM)test_email);
 
   char buffer[256];
-  SendMessage(hEmailEdit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, testEmail)
+  SendMessage(h_email_edit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
+  ASSERT_STREQ(buffer, test_email)
       << "Email edit control should contain the correct text.";
 }
 
@@ -203,4 +203,4 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
-#endif /* WIN32*/
+#endif  // _WIN32

@@ -22,7 +22,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::Section;
-static int const kIdcComboBox = 102;
+static int const kIdcAuthBox = 102;
 static int const kIdcButtonOk = 103;
 static int const kIdcHeaderLabel = 104;
 static int const kIdcLabel = 105;
@@ -43,7 +43,7 @@ class DriverForm {
   void Show();
   HWND GetHwnd() const;
   void InitControls();
-  void SetValues(Section const& attributesMap);
+  void SetValues(Section const& attributes_map);
 
   inline std::string const& GetDSN() const { return dsn_name_; }
   inline std::string const& GetEmail() const { return email_; }
@@ -65,16 +65,16 @@ class DriverForm {
   static std::string o_auth_mechanism_;
   static std::string dataset_;
   static std::string catalog_;
-  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                                     LPARAM lParam);
+  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
+                                     LPARAM l_param);
   HWND m_hwnd;
   HWND m_parent_hwnd;
   static char const CLASS_NAME[];
 };
 
-void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
+void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path);
 
-#endif /* WIN32 */
+#endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H

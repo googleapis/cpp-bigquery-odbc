@@ -576,7 +576,7 @@ TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_NOPROMPT) {
             SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif /* WIN32 */
+#endif  // _WIN32
 
 TEST(ConnectionTest, SQLSetConnectAttr_StringWithNullTermInMiddle) {
   SQLCHAR buf[256] = "te\0t";

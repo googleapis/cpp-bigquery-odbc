@@ -137,8 +137,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
       }
 
       StatusRecordOr<Section> connection_params_resp_status =
-      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
-          conn_string);
+          google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+              conn_string);
       if (!connection_params_resp_status) {
         LogAndReturnCode(*handle_ref, connection_params_resp_status);
       }
@@ -163,14 +163,12 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
         DispatchMessage(&msg);
       }
       std::string dsn_val = form.GetDSN();
-      Section dsn_section = {
-              {"DSN", dsn_val},
-              {"Email", form.GetEmail()},
-              {"KeyFilePath", form.GetKeyFilePath()},
-              {"OAuthMechanism", form.GetOAuthMechanism()},
-              {"Catalog", form.GetCatalogName()},
-              {"Dataset", form.GetDatasetName()}
-                             };
+      Section dsn_section = {{"DSN", dsn_val},
+                             {"Email", form.GetEmail()},
+                             {"KeyFilePath", form.GetKeyFilePath()},
+                             {"OAuthMechanism", form.GetOAuthMechanism()},
+                             {"Catalog", form.GetCatalogName()},
+                             {"Dataset", form.GetDatasetName()}};
 
       handle_ref->SetUp(dsn_section, dsn_val);
       Authentication auth = CreateAuth(dsn_section);
@@ -186,25 +184,29 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
       }
       return LogAndReturnCode(*handle_ref, status);
     }
-#endif /* _WIN32 */
+#endif  // _WIN32
     case SQL_DRIVER_COMPLETE:
     case SQL_DRIVER_COMPLETE_REQUIRED: {
       if (conn_string.empty() && !window_handle) {
-        return LogAndReturnCode(*handle_ref, StatusRecord{
-                      SQLStates::k_IM008(), "Dialog failed"});
+        return LogAndReturnCode(
+            *handle_ref, StatusRecord{SQLStates::k_IM008(), "Dialog failed"});
       }
       break;
     }
     case SQL_DRIVER_NOPROMPT: {
       if (conn_string.empty()) {
-        return LogAndReturnCode(*handle_ref, StatusRecord{
-              SQLStates::k_IM002(),"Data source not found and no default driver specified"});
+        return LogAndReturnCode(
+            *handle_ref,
+            StatusRecord{
+                SQLStates::k_IM002(),
+                "Data source not found and no default driver specified"});
       }
       break;
     }
     default:
-      return LogAndReturnCode(*handle_ref, StatusRecord{
-                          SQLStates::k_HY110(), "Invalid driver completion"});
+      return LogAndReturnCode(
+          *handle_ref,
+          StatusRecord{SQLStates::k_HY110(), "Invalid driver completion"});
   }
   StatusRecordOr<Section> connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
