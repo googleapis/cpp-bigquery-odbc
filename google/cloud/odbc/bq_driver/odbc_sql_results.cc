@@ -25,9 +25,13 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::CheckTargetType;
+using google::cloud::odbc_bq_driver_internal::ConvertFromArithmeticDSValue;
 using google::cloud::bigquery_v2_minimal_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
 using google::cloud::odbc_bq_driver_internal::CreateTypeInfoRowSchema;
+using google::cloud::odbc_bq_driver_internal::DataBuffer;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
@@ -48,7 +52,6 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_bq_driver_internal::checkTargetType;
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -433,6 +436,7 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   return SQL_SUCCESS;
 }
 
+// NOLINTBEGIN(readability-non-const-parameter)
 SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
@@ -446,12 +450,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   StatementHandle& stmt_handle = *(*handle_result);
 
-StatusRecord status_record;
+  StatusRecord status_record;
 
   if (column_number < 0) {
-    status_record = {
-        SQLStates::k_HY000(),
-        "Invalid ColumnNumber parameter - should not be < 0"};
+    status_record = {SQLStates::k_HY000(),
+                     "Invalid ColumnNumber parameter - should not be < 0"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -461,58 +464,88 @@ StatusRecord status_record;
     return LogAndReturnCode(stmt_handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
-     status_record = {
-        SQLStates::k_07006(),
-        "Invalid column number value for bookmark attribute - should not be 0"};
+    status_record = {SQLStates::k_07009(), "Invalid descriptor index"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  if (target_value == nullptr)
-    {
-       status_record = {SQLStates::k_HY009(),
-                                  "Target Value Buffer can not be NULL"};
+  if (target_value == nullptr) {
+    status_record = {SQLStates::k_HY009(), "Invalid use of null pointer"};
     return LogAndReturnCode(stmt_handle, status_record);
-    }
+  }
 
   if (target_value_buffer_len < 0) {
-    status_record = {SQLStates::k_HY090(), "BufferLength should not < 0"};
+    status_record = {SQLStates::k_HY090(), "Invalid string or buffer length"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  if (column_number > stmt_handle.GetResultSet().row_schema.size()){
-    status_record = {SQLStates::k_07009(), "Invalid column number"};
+  if (!CheckTargetType(target_c_type)) {
+    status_record = {SQLStates::k_22018(), "Invalid Char Value For Cast"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  if (column_number > stmt_handle.GetResultSet().row_schema.size()) {
+    status_record = {SQLStates::k_07009(), "Invalid Column In Result Set"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
-       StatusRecord{SQLStates::k_HY007(),
-                          "Associated statement is not prepared"};
-      return LogAndReturnCode(stmt_handle, status_record);
-    }
-  
-  if(!checkTargetType(target_c_type)){
-     StatusRecord{SQLStates::k_HY003(),
-                          "Invalid c target type"};
-      return LogAndReturnCode(stmt_handle, status_record);
+    StatusRecord{SQLStates::k_HY007(), "Associated statement is not prepared"};
+    return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  switch( target_type )
-        {
-          case SQL_WCHAR:
-            target_type = SQL_CHAR;
-            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
-            break;
+  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
 
-          case SQL_WVARCHAR:
-            target_type = SQL_VARCHAR;
-            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
-            break;
+  ResultSet const& result_set = stmt_handle.GetResultSet();
+  if (result_set.cursor >= result_set.rows.size()) {
+    return SQL_NO_DATA;
+  }
 
-          case SQL_WLONGVARCHAR:
-            target_type = SQL_LONGVARCHAR;
-            target_value_buffer_len = target_value_buffer_len / sizeof( SQLWCHAR );
-            break;
-        }
+  int cursor = result_set.cursor;
+  DSRow const& ds_row = result_set.rows[cursor];
+  RowSchema const& schema = result_set.row_schema;
+  BQDataType bq_data_type;
+  for (auto const& col_schema : schema) {
+    if (col_schema.col_index == column_number - 1)
+      bq_data_type = col_schema.col_type;
+  }
+  DSValue const& ds_val = ds_row[column_number - 1];
+
+  if (target_c_type == SQL_ARD_TYPE) {
+    GetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE, &target_c_type, 0,
+                 nullptr);
+  }
+  DataBuffer data = {target_c_type, target_value, target_value_buffer_len,
+                     target_value_string_len};
+
+  switch (bq_data_type) {
+    case BQDataType::kInt64:
+      status_record = ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
+      break;
+    case BQDataType::kFloat64:
+      status_record = ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
+      break;
+    case BQDataType::kString:
+      status_record = ConvertFromStringDSValue(ds_val, data);
+      break;
+    case BQDataType::kDate:
+      status_record = ConvertFromDateDSValue(ds_val, data);
+      break;
+    case BQDataType::kTime:
+      status_record = ConvertFromTimeDSValue(ds_val, data);
+      break;
+    case BQDataType::kJson:
+      status_record = ConvertFromJsonDSValue(ds_val, data);
+      break;
+    case BQDataType::kTimeStamp:
+    case BQDataType::kDatetime:
+      status_record = ConvertFromTimestampDSValue(ds_val, data);
+      break;
+    case BQDataType::kInterval:
+      status_record = ConvertFromIntervalDSValue(ds_val, data);
+      break;
+    default:
+      status_record = {SQLStates::k_HYC00(), "Data type not supported"};
+  }
 
   return SQL_SUCCESS;
 }

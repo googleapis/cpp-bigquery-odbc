@@ -202,7 +202,10 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_CHAR: {
-      std::string str = std::to_string(src_val);
+      std::string str;
+      if (!IsDSValueNull(src_dsval)) {
+        str = std::to_string(src_val);
+      }
       StatusRecord status_record =
           StringValueToOutputBufferResponse(str.c_str(), dest_data);
       return status_record;

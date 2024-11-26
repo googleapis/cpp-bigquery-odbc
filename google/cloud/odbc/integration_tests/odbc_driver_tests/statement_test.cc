@@ -229,6 +229,107 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
   }
 }
 
+void VerifyColumnWiseTimestampResults(StdTimestampRows input_data,
+                                      Results col_wise_data,
+                                      std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      std::string expected_val = FormatTimeStamp(data.value);
+      input_col_values.emplace_back(expected_val);
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+    }
+  }
+}
+
+void VerifyColumnWiseResultsInt(StdRows input_data, Results col_wise_data,
+                                std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      if (data.int_field)
+        input_col_values.emplace_back(std::to_string(data.int_field));
+      else
+        input_col_values.emplace_back("");
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+    }
+  }
+}
+
+void VerifyColumnWiseResultsFloat(StdRows input_data, Results col_wise_data,
+                                  std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    for (auto data : input_data) {
+      if (data.float_field)
+        input_col_values.emplace_back(std::to_string(data.float_field));
+      else
+        input_col_values.emplace_back("");
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      if (ret_col_values[i].compare("") < 0)
+        EXPECT_EQ((SQLDOUBLE*)(ret_col_values[i].data()),
+                  (SQLDOUBLE*)(input_col_values[i].data()))
+            << " at index: " << i;
+    }
+  }
+}
+
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -601,6 +702,44 @@ TEST(StatementTest, SQLFetchScroll) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif
+
+TEST(StatementTest, SQLGetData_Timestamp) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SQL_GET_DATA_TEST_TIMESTAMP";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Id INT64, DOB timestamp)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<SQL_TIMESTAMP_STRUCT> timestamp_data;
+  for (auto const& test_data : kConversionFromTimestampTestData) {
+    timestamp_data.push_back(test_data.value);
+  }
+  table.InsertTimestampData(conn, timestamp_data, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT DOB FROM " + table_name;
+
+  auto results = *FetchResultsWithSqlGetData(conn, query);
+
+  VerifyColumnWiseTimestampResults(kConversionFromTimestampTestData, results,
+                                   std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
   Table table(table_name);
@@ -629,11 +768,33 @@ TEST(StatementTest, SQLGetData) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  std::string queryInt = "SELECT IntegerField FROM " + table_name;
+
+  auto resultsInt = *FetchResultsWithSqlGetData(conn, queryInt);
+
+  VerifyColumnWiseResultsInt(kSampleData, resultsInt,
+                             std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  std::string queryFloat = "SELECT FloatField FROM " + table_name;
+
+  auto resultsFloat = *FetchResultsWithSqlGetData(conn, queryFloat);
+
+  VerifyColumnWiseResultsFloat(kSampleData, resultsFloat,
+                               std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
   ////////////////
   /// USE ANSI
   ////////////////
@@ -669,8 +830,10 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   table_ansi.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+#endif
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test is temporarily disabled till we are able to debug this with help
 // from the vendor
 TEST(StatementTest, DISABLED_SQLPutData) {

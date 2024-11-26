@@ -73,6 +73,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeStmt;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetCursorName;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagField;
@@ -184,6 +185,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeStmt;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetCursorName;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDescField;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagField;
@@ -2295,12 +2297,20 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  bool is_tracing_enabled = IsTracingEnabled("SQLGetData");
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLGetData(statementHandle, columnNumber, targetCType,
+                                  targetValue, targetValueBufferLen,
+                                  targetValueStringLen, *(*kTraceOption));
 
   // Call to internal function for SQLGetData in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLGetDataInternal(
+      statementHandle, columnNumber, targetCType, targetValue,
+      targetValueBufferLen, targetValueStringLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLGetData(rc, *(*kTraceOption));
 
   return rc;
 }

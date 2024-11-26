@@ -35,6 +35,7 @@ using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
+using ::testing::HasSubstr;
 
 inline SQLUSMALLINT GetDescCount(SQLPOINTER ard) {
   SQLUSMALLINT out_desc_count;
@@ -587,4 +588,67 @@ TEST(SQLRowCountInternal, WrongState) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
+TEST(SQLGetData, InvalidColumn_Bookmark) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLGetDataInternal(&handle, 0, SQL_CHAR, buf, 1024, &target_str_len);
+  ASSERT_EQ(SQL_ERROR, status);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid descriptor index"));
+  EXPECT_EQ(SQLStates::k_07009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetData, Fail_Null_TargetValue) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLGetDataInternal(&handle, 1, SQL_CHAR, NULL, 1024, &target_str_len);
+  ASSERT_EQ(SQL_ERROR, status);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid use of null pointer"));
+  EXPECT_EQ(SQLStates::k_HY009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetData, InvalidBufferLength) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLGetDataInternal(&handle, 1, SQL_CHAR, buf, -20, &target_str_len);
+  ASSERT_EQ(SQL_ERROR, status);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid string or buffer length"));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetData, InvalidColumnNumber) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLGetDataInternal(&handle, 10, SQL_CHAR, buf, 1024, &target_str_len);
+  ASSERT_EQ(SQL_ERROR, status);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid Column In Result Set"));
+  EXPECT_EQ(SQLStates::k_07009(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetData, InvalidTargetType) {
+  StatementHandle handle = CreateStatementHandle();
+  SQLCHAR buf[20];
+  SQLLEN target_str_len;
+  SQLRETURN status =
+      SQLGetDataInternal(&handle, 1, SQL_C_DATE, buf, 1024, &target_str_len);
+  ASSERT_EQ(SQL_ERROR, status);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid Char Value For Cast"));
+  EXPECT_EQ(SQLStates::k_22018(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
 }  // namespace google::cloud::odbc_bq_driver
