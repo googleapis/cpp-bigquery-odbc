@@ -647,6 +647,12 @@ void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
                                   TraceOptions& opts);
 
 void TraceFunctionExit_ConfigDSN(SQLRETURN ret_code, TraceOptions& opts);
+
+void TraceFunctionEntry_SQLMoreResults(SQLHSTMT statement_handle,
+                                   TraceOptions& opts);
+
+void TraceFunctionExit_SQLMoreResults(SQLHSTMT statement_handle,
+                                   TraceOptions& opts);                                 
 #endif  // _WIN32
 }  // namespace google::cloud::odbc_bq_driver
 

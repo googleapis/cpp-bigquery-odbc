@@ -93,6 +93,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLTables;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLMoreResults;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
@@ -201,6 +202,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescRec;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetEnvAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTables;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLMoreResults;
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver::TraceFunctionEntry_ConfigDSN;
 using google::cloud::odbc_bq_driver::TraceFunctionExit_ConfigDSN;
@@ -2906,12 +2908,20 @@ SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLExecute");
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLMoreResults(statementHandle, *(*kTraceOption));
 
-  // Call to internal function for SQLMoreResults in odbc_sql_results.h.
+  // Call to internal common function for SQLGetInfo and SQLGetInfoW
+  // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLMoreResultsInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLMoreResults(rc, *(*kTraceOption));
+  // Call to Release mutex for statement handle in odbc_lock.h.
 
   return rc;
 }

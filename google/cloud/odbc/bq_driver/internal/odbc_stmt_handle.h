@@ -40,6 +40,8 @@ enum class StmtStates {
   kStatementExecutedWithRs,
   kNeedsParams,
   kNeedsPutData,
+  kStatementResultsConsumed,
+  kStatementAsyncGetResults,
 };
 
 class ConnectionHandle;
@@ -168,6 +170,39 @@ class StatementHandle : public Handle {
   }
   void SetNullFutureExecuteQuery() { future_execute_query_ = std::nullopt; }
 
+  void SetFutureGetResultsQuery(std::future<StatusRecord> fut_more_results_query) {
+    future_more_results_query_ = std::move(fut_more_results_query);
+  }
+
+  std::optional<std::future<StatusRecord>> GetPossibleFutureGetResults() {
+      // Check if the statement handle is in a state that allows us to fetch results asynchronously
+      if (this->GetStmtState() != StmtStates::kStatementAsyncGetResults) {
+          return std::nullopt;  // No asynchronous result-fetching operation in progress
+      }
+
+      // Return the stored future representing the asynchronous fetching operation
+      if (this->future_more_results_query_.has_value()) {
+          return std::move(future_prepare_query_);
+      }
+
+      // If for some reason there's no future (invalid state), return std::nullopt
+      return std::nullopt;
+  }
+
+  bool HasMoreResults() {
+      // Check if the statement is in a valid state to check for more results.
+      if (this->GetStmtState() == StmtStates::kStatementExecutedWithRs &&
+          this->GetStmtState() == StmtStates::kStatementResultsConsumed) {
+          // If the statement isn't in a valid state, return a error.
+          return true;
+      }
+
+      // If there are no more results, return false
+      return false;  // No more results available
+  }
+
+  void SetNullFutureGetResultsQuery() { future_more_results_query_ = std::nullopt; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -190,6 +225,8 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_prepare_query_;
   // Needed for cancellation and re-execution of asynchronous execute requests.
   std::optional<std::future<StatusRecord>> future_execute_query_;
+  // Needed for cancellation and re-execution of asynchronous more results requests.
+  std::optional<std::future<StatusRecord>> future_more_results_query_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

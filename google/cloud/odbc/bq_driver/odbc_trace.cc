@@ -1797,30 +1797,6 @@ void TraceFunctionExit_SQLFetchScroll(SQLRETURN ret_code, TraceOptions& opts) {
   ExitInternal("SQLFetchScroll_Exit", ret_code, opts);
 }
 
-void TraceFunctionEntry_SQLMoreResults(SQLHSTMT statement_handle,
-                                       TraceOptions& opts) {
-  if (opts.logging_enabled) {
-    if (opts.is_file_closed) {
-      opts.trace_file.open(opts.log_file,
-                           std::ofstream::out | std::ofstream::app);
-      opts.is_file_closed = false;
-    }
-    if (opts.trace_file.is_open()) {
-      CollectAndPrintArgsFile("SQLMoreResults_Entry", opts, 2,
-                              ToCStr(FormatSqlHandleType(SQL_HANDLE_STMT)),
-                              ToCStr(FormatSqlHandle(statement_handle)));
-    } else {
-      CollectAndPrintArgs("SQLMoreResults_Entry", opts, 2,
-                          ToCStr(FormatSqlHandleType(SQL_HANDLE_STMT)),
-                          ToCStr(FormatSqlHandle(statement_handle)));
-    }
-  }
-}
-
-void TraceFunctionExit_SQLMoreResults(SQLRETURN ret_code, TraceOptions& opts) {
-  ExitInternal("SQLMoreResults_Exit", ret_code, opts);
-}
-
 void TraceFunctionEntry_SQLGetDiagField(
     SQLSMALLINT handle_type, SQLHANDLE handle, SQLSMALLINT rec_no,
     SQLSMALLINT diag_id, SQLPOINTER diag_info, SQLSMALLINT diag_info_buf_len,
@@ -3169,6 +3145,32 @@ void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
 void TraceFunctionExit_ConfigDSN(SQLRETURN ret_code, TraceOptions& opts) {
   ExitInternal("ConfigDSN_Exit", ret_code, opts);
 }
+
+void TraceFunctionEntry_SQLMoreResults(SQLHSTMT statement_handle,
+                                   TraceOptions& opts) {
+  if (opts.logging_enabled) {
+    if (opts.is_file_closed) {
+      opts.trace_file.open(opts.log_file,
+                           std::ofstream::out | std::ofstream::app);
+      opts.is_file_closed = false;
+    }
+    if (opts.trace_file.is_open()) {
+      CollectAndPrintArgsFile("SQLMoreResults_Entry", opts, 2,
+                              ToCStr(FormatSqlHandleType(SQL_HANDLE_STMT)),
+                              ToCStr(FormatSqlHandle(statement_handle)));
+    } else {
+      CollectAndPrintArgs("SQLMoreResults_Entry", opts, 2,
+                          ToCStr(FormatSqlHandleType(SQL_HANDLE_STMT)),
+                          ToCStr(FormatSqlHandle(statement_handle)));
+    }
+  }
+}
+
+void TraceFunctionExit_SQLMoreResults(SQLRETURN ret_code, TraceOptions& opts) {
+  ExitInternal("SQLMoreResults_Exit", ret_code, opts);
+}
+
+
 #endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver
