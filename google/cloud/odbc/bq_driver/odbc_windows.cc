@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -129,4 +128,3 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 }
 
 }  // namespace google::cloud::odbc_bq_driver
-#endif /* WIN32*/

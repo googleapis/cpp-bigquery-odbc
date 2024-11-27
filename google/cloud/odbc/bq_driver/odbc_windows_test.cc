@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <gtest/gtest.h>
 
@@ -73,4 +72,3 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
 }
 
 }  // namespace google::cloud::odbc_bq_driver
-#endif  // _WIN32
