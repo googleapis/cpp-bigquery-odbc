@@ -805,12 +805,17 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
 
     // If no more results, fetch the results synchronously
     StatusRecord fetch_status = ActuallyFetchResults(stmt_handle);
-    if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) { 
+    
+    if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) {
+        // If the fetch fails, check if it's due to a no-results condition
+        if (fetch_status.CalculateReturnCode() == SQL_ERROR) {
+            return SQL_NO_DATA;  // Explicitly handle no data condition
+        }
         return LogAndReturnCode(stmt_handle, fetch_status);  // Error in fetching results
     }
 
     // Final check to see if we have more results
-    if (stmt_handle.HasMoreResults() == SQL_ERROR) {
+    if (stmt_handle.HasMoreResults()) {
         stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);  // Transition to executed state
         return SQL_SUCCESS_WITH_INFO;  // Indicate that there are more results
     }
