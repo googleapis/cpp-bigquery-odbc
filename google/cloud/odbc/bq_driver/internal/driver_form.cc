@@ -114,7 +114,7 @@ StatusRecord DriverForm::TestODBCConnection(
   Authentication auth = CreateAuthentication(*section);
 
   SQLRETURN ret = ConnectUsingRegistryDsn(auth);
-  
+
   if (!SQL_SUCCEEDED(ret)) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Failed to establish ODBC connection."};
