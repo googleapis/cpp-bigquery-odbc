@@ -2702,9 +2702,8 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
       "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING)\n"
       "BEGIN\n"
       "SET StringField = GENERATE_UUID();\n"
-      "INSERT INTO " +
-      table_name +
-      " VALUES(StringField, IntegerField, FloatField);\n"
+      "INSERT INTO " + table_name + " (StringField, IntegerField, FloatField) "
+      "VALUES(StringField, IntegerField, FloatField);\n"
       "SELECT FORMAT(\"Created row %s\", StringField);\n"
       "END";
 
@@ -2727,11 +2726,8 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
 
   std::string procedure_call =
       "DECLARE OutStringField STRING;\n"
-      "CALL " +
-      procedure_name +
-      "(32, 45.6, OutStringField);\n"
-      "SELECT * FROM " +
-      table_name;
+      "CALL " + procedure_name + "(32, 45.6, OutStringField);\n"
+      "SELECT * FROM " + table_name;
 
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
