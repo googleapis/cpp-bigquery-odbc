@@ -555,17 +555,17 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
     if (kv.first == "OAuthMechanism") {
-      std::string oauthValue;
+      std::string o_auth_value;
       if (kv.second == "Service Authentication") {
-        oauthValue = "0";
+        o_auth_value = "0";
       } else if (kv.second == "Application Default Credentials") {
-        oauthValue = "3";
+        o_auth_value = "3";
       } else
-        oauthValue = "";
+        o_auth_value = "";
 
       if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                         reinterpret_cast<const BYTE*>(oauthValue.c_str()),
-                         static_cast<DWORD>(oauthValue.size() + 1)) !=
+                         reinterpret_cast<const BYTE*>(o_auth_value.c_str()),
+                         static_cast<DWORD>(o_auth_value.size() + 1)) !=
           ERROR_SUCCESS) {
         RegCloseKey(h_key);
         return StatusRecord{SQLStates::k_HY000(),

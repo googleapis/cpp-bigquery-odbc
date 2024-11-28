@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -26,6 +25,7 @@ using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
+using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
@@ -34,15 +34,15 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     return FALSE;
   }
   std::string attribute = ConvertLPCSTRToString(lpsz_attributes);
-  StatusRecordOr<Section> statusOrSection = ParseConnectionString(attribute);
-  Section section = *statusOrSection;
+  StatusRecordOr<Section> status_or_section = ParseConnectionString(attribute);
+  Section section = *status_or_section;
   std::string dsn_value =
       section.count("DSN") > 0 ? section.at("DSN") : "Default DSN";
   std::string dsn_name;
   std::string email = section.count("Email") > 0 ? section.at("Email") : "";
   std::string key_file_path =
       section.count("KeyFilePath") > 0 ? section.at("KeyFilePath") : "";
-  std::string oAuth_mechanism =
+  std::string o_auth_mechanism =
       section.count("OAuthMechanism") > 0 ? section.at("OAuthMechanism") : "";
   std::string catalog =
       section.count("Catalog") > 0 ? section.at("Catalog") : "";
@@ -55,7 +55,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       if (hwnd_parent == NULL) {
         Section section = {{"Email", email},
                            {"KeyFilePath", key_file_path},
-                           {"OAuthMechanism", oAuth_mechanism},
+                           {"OAuthMechanism", o_auth_mechanism},
                            {"Catalog", catalog},
                            {"Dataset", dataset_name}};
         AddDSNToRegistry(dsn_value, lpsz_driver, section);
@@ -72,12 +72,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       dsn_name = form.GetDSN();
       email = form.GetEmail();
       key_file_path = form.GetKeyFilePath();
-      oAuth_mechanism = form.GetOAuthMechanism();
+      o_auth_mechanism = form.GetOAuthMechanism();
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
       Section section = {{"Email", email},
                          {"KeyFilePath", key_file_path},
-                         {"OAuthMechanism", oAuth_mechanism},
+                         {"OAuthMechanism", o_auth_mechanism},
                          {"Catalog", catalog},
                          {"Dataset", dataset_name}};
       AddDSNToRegistry(dsn_name, lpsz_driver, section);
@@ -87,7 +87,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       if (hwnd_parent == NULL) {
         Section section2 = {{"Email", email},
                             {"KeyFilePath", key_file_path},
-                            {"OAuthMechanism", oAuth_mechanism},
+                            {"OAuthMechanism", o_auth_mechanism},
                             {"Catalog", catalog},
                             {"Dataset", dataset_name}};
         EditDSNInRegistry(dsn_value, section2);
@@ -108,12 +108,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
       email = form.GetEmail();
       key_file_path = form.GetKeyFilePath();
-      oAuth_mechanism = form.GetOAuthMechanism();
+      o_auth_mechanism = form.GetOAuthMechanism();
       catalog = form.GetCatalogName();
       dataset_name = form.GetDatasetName();
       Section section2 = {{"Email", email},
                           {"KeyFilePath", key_file_path},
-                          {"OAuthMechanism", oAuth_mechanism},
+                          {"OAuthMechanism", o_auth_mechanism},
                           {"Catalog", catalog},
                           {"Dataset", dataset_name}};
       EditDSNInRegistry(dsn_value, section2);
@@ -129,4 +129,3 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 }
 
 }  // namespace google::cloud::odbc_bq_driver
-#endif /* WIN32*/

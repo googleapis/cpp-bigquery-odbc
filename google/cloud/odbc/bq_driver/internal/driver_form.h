@@ -17,12 +17,11 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-#ifdef _WIN32
-using google::cloud::odbc_bq_driver_internal::Section;
-static int const kIdcComboBox = 102;
+static int const kIdcAuthBox = 102;
 static int const kIdcButtonOk = 103;
 static int const kIdcHeaderLabel = 104;
 static int const kIdcLabel = 105;
@@ -44,8 +43,8 @@ class DriverForm {
   void Show();
   HWND GetHwnd() const;
   void InitControls();
-  void SetValues(Section const& attributesMap);
-  bool IsValidEmail(std::string const& email);
+  void SetValues(Section const& attributes_map);
+  odbc_internal::StatusRecord IsValidEmail(std::string const& email);
   inline std::string const& GetDSN() const { return dsn_name_; }
   inline std::string const& GetEmail() const { return email_; }
 
@@ -59,7 +58,8 @@ class DriverForm {
 
   inline std::string const& GetCatalogName() const { return catalog_; }
 
-  static bool TestODBCConnection(std::shared_ptr<Section> const& section);
+  static odbc_internal::StatusRecord TestODBCConnection(
+      std::shared_ptr<odbc_bq_driver_internal::Section> const& section);
 
  private:
   static std::string dsn_name_;
@@ -68,15 +68,13 @@ class DriverForm {
   static std::string o_auth_mechanism_;
   static std::string dataset_;
   static std::string catalog_;
-  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                                     LPARAM lParam);
+  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
+                                     LPARAM l_param);
   HWND m_hwnd;
   static char const CLASS_NAME[];
 };
 
-void OpenFileDialog(HWND hwnd, HWND hEdit, char const* MockFilePath);
-
-#endif /* WIN32 */
+void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H

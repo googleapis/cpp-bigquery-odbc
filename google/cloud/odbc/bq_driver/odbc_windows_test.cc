@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <gtest/gtest.h>
 
@@ -21,45 +20,45 @@ using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::Section;
 
 TEST(ConfigDSNInternal, NullDriverDetails) {
-  HWND hwndParent = NULL;
-  WORD fRequest = ODBC_ADD_DSN;
-  LPCSTR lpszDriver = NULL;
-  LPCSTR lpszAttributes =
+  HWND hwnd_parent = NULL;
+  WORD f_request = ODBC_ADD_DSN;
+  LPCSTR lpsz_driver = NULL;
+  LPCSTR lpsz_attributes =
       "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
   auto status =
-      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+      ConfigDSNInternal(hwnd_parent, f_request, lpsz_driver, lpsz_attributes);
   EXPECT_EQ(status, false);
 }
 
 TEST(ConfigDSNInternal, NullAttributes) {
-  HWND hwndParent = NULL;
-  WORD fRequest = ODBC_ADD_DSN;
-  LPCSTR lpszDriver = NULL;
-  LPCSTR lpszAttributes = NULL;
+  HWND hwnd_parent = NULL;
+  WORD f_request = ODBC_ADD_DSN;
+  LPCSTR lpsz_driver = NULL;
+  LPCSTR lpsz_attributes = NULL;
   auto status =
-      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+      ConfigDSNInternal(hwnd_parent, f_request, lpsz_driver, lpsz_attributes);
   EXPECT_EQ(status, false);
 }
 
 TEST(ConfigDSNInternal, NullRequest) {
-  HWND hwndParent = NULL;
-  WORD fRequest = NULL;
-  LPCSTR lpszDriver = "SQL Server";
-  LPCSTR lpszAttributes =
+  HWND hwnd_parent = NULL;
+  WORD f_request = NULL;
+  LPCSTR lpsz_driver = "SQL Server";
+  LPCSTR lpsz_attributes =
       "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
   auto status =
-      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+      ConfigDSNInternal(hwnd_parent, f_request, lpsz_driver, lpsz_attributes);
   EXPECT_EQ(status, false);
 }
 
 TEST(ConfigDSNInternal, NullhandleSuccess) {
-  HWND hwndParent = NULL;
-  WORD fRequest = ODBC_ADD_DSN;
-  LPCSTR lpszDriver = "ODBC Driver For Google Bigquery";
-  LPCSTR lpszAttributes =
+  HWND hwnd_parent = NULL;
+  WORD f_request = ODBC_ADD_DSN;
+  LPCSTR lpsz_driver = "ODBC Driver For Google BigQuery";
+  LPCSTR lpsz_attributes =
       "DSN=Personnel Data\0Email=Smith.Sesame@gmail.com\0Dataset=Personnel\0\0";
   auto result =
-      ConfigDSNInternal(hwndParent, fRequest, lpszDriver, lpszAttributes);
+      ConfigDSNInternal(hwnd_parent, f_request, lpsz_driver, lpsz_attributes);
   EXPECT_EQ(result, true);
   auto status = GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\Personnel Data");
   std::shared_ptr<Section> section2 = status.GetValue();
@@ -67,10 +66,9 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
 
   EXPECT_EQ(section2->at("Email"), "Smith.Sesame@gmail.com");
   EXPECT_EQ(section2->at("Dataset"), "Personnel");
-  result = ConfigDSNInternal(hwndParent, ODBC_REMOVE_DSN, lpszDriver,
-                             lpszAttributes);
+  result = ConfigDSNInternal(hwnd_parent, ODBC_REMOVE_DSN, lpsz_driver,
+                             lpsz_attributes);
   EXPECT_EQ(result, true);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
-#endif  // _WIN32

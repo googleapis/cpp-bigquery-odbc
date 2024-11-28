@@ -75,8 +75,7 @@ set(COMMON_SOURCES
 # Add Windows-specific source files if compiling on Windows
 if (WIN32)
     list(APPEND COMMON_SOURCES bq_driver/internal/driver_form.cc
-         bq_driver/internal/driver_form.h bq_driver/odbc_windows.cc
-         bq_driver/odbc_windows.h)
+         bq_driver/internal/driver_form.h)
 endif ()
 
 # Create the library target
@@ -105,8 +104,7 @@ target_include_directories(google_cloud_odbc_bq_driver_internal
 create_bazel_config(google_cloud_odbc_bq_driver_internal YEAR 2023)
 
 # BQ Driver Library
-add_library(
-    google_cloud_odbc_bq_driver # cmake-format: sort
+set(COMMON_SOURCES_BQ
     bq_driver/odbc_api.cc
     bq_driver/odbc_commons.cc
     bq_driver/odbc_commons.h
@@ -132,6 +130,15 @@ add_library(
     bq_driver/odbc_trace.h
     bq_driver/odbc_utils.cc
     bq_driver/odbc_utils.h)
+
+# Add Windows-specific source files if compiling on Windows
+if (WIN32)
+    list(APPEND COMMON_SOURCES_BQ bq_driver/odbc_windows.cc
+         bq_driver/odbc_windows.h)
+endif ()
+
+# BQ Driver Library
+add_library(google_cloud_odbc_bq_driver ${COMMON_SOURCES_BQ})
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver
@@ -195,7 +202,6 @@ function (bq_driver_define_unit_tests)
     set(TEST_SOURCES
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
-        bq_driver/internal/driver_form_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_desc_attr_test.cc

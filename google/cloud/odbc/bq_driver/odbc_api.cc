@@ -4569,7 +4569,7 @@ BOOL SQL_API ConfigDSN(HWND hwndParent, WORD fRequest, LPCSTR lpszDriver,
                                  lpszAttributes, *(*kTraceOption));
 
   // Call to common internal function for ConfigDSN
-  // in odbc_windows.cc.
+  // in odbc_windows.h.
   rc = google::cloud::odbc_bq_driver::ConfigDSNInternal(
       hwndParent, fRequest, lpszDriver, lpszAttributes);
 

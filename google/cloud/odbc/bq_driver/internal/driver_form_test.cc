@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_testing_utils::StatusRecIs;
+using ::testing::HasSubstr;
 
 class DriverFormTest : public ::testing::Test {
  protected:
@@ -43,16 +46,16 @@ class DriverFormTest : public ::testing::Test {
     }
   }
 
-  void ClickButton(HWND hwnd, int buttonId) {
-    HWND button = GetDlgItem(hwnd, buttonId);
+  void ClickButton(HWND hwnd, int button_id) {
+    HWND button = GetDlgItem(hwnd, button_id);
     ASSERT_NE(button, nullptr) << "Button should be created.";
     SendMessage(button, BM_CLICK, 0, 0);
     ProcessMessages();  // Process any messages resulting from the click
   }
 };
 
-void MockOpenFileDialog(HWND hwnd, HWND hEdit, char const* simulatedPath) {
-  OpenFileDialog(hwnd, hEdit, simulatedPath);
+void MockOpenFileDialog(HWND hwnd, HWND h_edit, char const* simulated_path) {
+  OpenFileDialog(hwnd, h_edit, simulated_path);
 }
 
 TEST_F(DriverFormTest, TestUIOpens) {
@@ -100,31 +103,31 @@ TEST_F(DriverFormTest, TestButtonClickCancel) {
 }
 
 TEST_F(DriverFormTest, TestAuthDropdown) {
-  HWND hComboBox = GetDlgItem(form->GetHwnd(), kIdcComboBox);
-  ASSERT_NE(hComboBox, nullptr) << "Auth dropdown should be created.";
+  HWND h_combo_box = GetDlgItem(form->GetHwnd(), kIdcAuthBox);
+  ASSERT_NE(h_combo_box, nullptr) << "Auth dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(hComboBox, CB_GETCOUNT, 0, 0), 2)
+  ASSERT_EQ(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 2)
       << "Auth dropdown should have 2 items.";
 
-  int selectedIndex = SendMessage(hComboBox, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selectedIndex, 0) << "First item should be selected by default.";
+  int selected_index = SendMessage(h_combo_box, CB_GETCURSEL, 0, 0);
+  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
-  SendMessage(hComboBox, CB_GETLBTEXT, selectedIndex, (LPARAM)buffer);
+  SendMessage(h_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
   ASSERT_STREQ(buffer, "Service Authentication")
       << "First item text should be 'Service Authentication'.";
 }
 
 TEST_F(DriverFormTest, TestEmailField) {
-  HWND hEmailEdit = GetDlgItem(form->GetHwnd(), kIdcEmailEdit);
-  ASSERT_NE(hEmailEdit, nullptr) << "Email edit control should be created.";
+  HWND h_email_edit = GetDlgItem(form->GetHwnd(), kIdcEmailEdit);
+  ASSERT_NE(h_email_edit, nullptr) << "Email edit control should be created.";
 
-  char const* testEmail = "test@example.com";
-  SendMessage(hEmailEdit, WM_SETTEXT, 0, (LPARAM)testEmail);
+  char const* test_email = "test@example.com";
+  SendMessage(h_email_edit, WM_SETTEXT, 0, (LPARAM)test_email);
 
   char buffer[256];
-  SendMessage(hEmailEdit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, testEmail)
+  SendMessage(h_email_edit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
+  ASSERT_STREQ(buffer, test_email)
       << "Email edit control should contain the correct text.";
 }
 
@@ -173,21 +176,31 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
 }
 
 TEST_F(DriverFormTest, TestConnection_SectionIsNull) {
-  EXPECT_FALSE(DriverForm::TestODBCConnection(nullptr));
+  auto status = DriverForm::TestODBCConnection(nullptr);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
+                                  HasSubstr("The provided section is null.")));
 }
 
 TEST_F(DriverFormTest, TestConnection_OAuthMechanismIsMissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["Catalog"] = "CatalogValue";
-  EXPECT_FALSE(DriverForm::TestODBCConnection(section));
+  auto status = DriverForm::TestODBCConnection(section);
+  EXPECT_THAT(status,
+              StatusRecIs(SQLStates::k_HY000(),
+                          HasSubstr("OAuthMechanism is missing or empty")));
 }
 
 TEST_F(DriverFormTest, TestConnection_CatalogIsMissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
-  EXPECT_FALSE(DriverForm::TestODBCConnection(section));
+  auto status = DriverForm::TestODBCConnection(section);
+  EXPECT_THAT(
+      status,
+      StatusRecIs(SQLStates::k_HY000(),
+                  HasSubstr("OAuthMechanism must be 'Service Authentication' "
+                            "or 'Application Default Credentials'")));
 }
 
 TEST_F(DriverFormTest, TestConnection_ConnectionFails) {
@@ -196,8 +209,12 @@ TEST_F(DriverFormTest, TestConnection_ConnectionFails) {
   (*section)["OAuthMechanism"] = "InvalidOAuthMechanism";
   (*section)["Catalog"] = "InvalidCatalog";
 
-  EXPECT_FALSE(DriverForm::TestODBCConnection(section));
+  auto status = DriverForm::TestODBCConnection(section);
+  EXPECT_THAT(
+      status,
+      StatusRecIs(SQLStates::k_HY000(),
+                  HasSubstr("OAuthMechanism must be 'Service Authentication' "
+                            "or 'Application Default Credentials'")));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
-#endif /* WIN32*/
