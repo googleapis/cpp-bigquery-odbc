@@ -340,8 +340,8 @@ void DriverForm::Show() {
 
   m_hwnd = CreateWindowEx(
       0, CLASS_NAME, "Google ODBC Driver for Google Bigquery DSN Setup",
-      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, window_width,
-      window_height, NULL, NULL, GetModuleHandle(NULL), this);
+      WS_OVERLAPPEDWINDOW, xPos, yPos, window_width, window_height, NULL, NULL,
+      GetModuleHandle(NULL), this);
 
   if (m_hwnd) {
     CreateWindowEx(0, "STATIC",
