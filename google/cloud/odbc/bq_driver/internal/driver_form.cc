@@ -111,15 +111,10 @@ StatusRecord DriverForm::TestODBCConnection(
     }
   }
 
-  SQLRETURN ret;
   Authentication auth = CreateAuthentication(*section);
-  try {
-    ret = ConnectUsingRegistryDsn(auth);
-  } catch (std::exception const& e) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Connection Error: " + std::string(e.what())};
-  }
 
+  SQLRETURN ret = ConnectUsingRegistryDsn(auth);
+  
   if (!SQL_SUCCEEDED(ret)) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Failed to establish ODBC connection."};

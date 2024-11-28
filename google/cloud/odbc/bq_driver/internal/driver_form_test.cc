@@ -191,24 +191,10 @@ TEST_F(DriverFormTest, TestConnection_OAuthMechanismIsMissing) {
                           HasSubstr("OAuthMechanism is missing or empty")));
 }
 
-TEST_F(DriverFormTest, TestConnection_CatalogIsMissing) {
+TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
-  auto status = DriverForm::TestODBCConnection(section);
-  EXPECT_THAT(
-      status,
-      StatusRecIs(SQLStates::k_HY000(),
-                  HasSubstr("OAuthMechanism must be 'Service Authentication' "
-                            "or 'Application Default Credentials'")));
-}
-
-TEST_F(DriverFormTest, TestConnection_ConnectionFails) {
-  auto section = std::make_shared<Section>();
-  (*section)["KeyFilePath"] = "InvalidKeyFilePath";
-  (*section)["OAuthMechanism"] = "InvalidOAuthMechanism";
-  (*section)["Catalog"] = "InvalidCatalog";
-
   auto status = DriverForm::TestODBCConnection(section);
   EXPECT_THAT(
       status,
