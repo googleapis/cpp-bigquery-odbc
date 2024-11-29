@@ -176,24 +176,29 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
 }
 
 TEST_F(DriverFormTest, TestEncryptDataDropdown) {
-  HWND h_encrypt_data_combo_box = GetDlgItem(form->GetHwnd(), kIdcEncryptDataComboBox);
-  ASSERT_NE(h_encrypt_data_combo_box, nullptr) << "Encrypt Data dropdown should be created.";
+  HWND h_encrypt_data_combo_box =
+      GetDlgItem(form->GetHwnd(), kIdcEncryptDataComboBox);
+  ASSERT_NE(h_encrypt_data_combo_box, nullptr)
+      << "Encrypt Data dropdown should be created.";
 
   ASSERT_EQ(SendMessage(h_encrypt_data_combo_box, CB_GETCOUNT, 0, 0), 2)
       << "Encrypt Data dropdown should have 2 items.";
 
-  int selected_index = SendMessage(h_encrypt_data_combo_box, CB_GETCURSEL, 0, 0);
+  int selected_index =
+      SendMessage(h_encrypt_data_combo_box, CB_GETCURSEL, 0, 0);
   ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
-  SendMessage(h_encrypt_data_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
+  SendMessage(h_encrypt_data_combo_box, CB_GETLBTEXT, selected_index,
+              (LPARAM)buffer);
   ASSERT_STREQ(buffer, "For Current User Only")
       << "First item text should be 'For Current User Only'.";
 }
 
 TEST_F(DriverFormTest, TestMinTLSVersionDropdown) {
   HWND h_min_tls_combo_box = GetDlgItem(form->GetHwnd(), kIdcMinTLSComboBox);
-  ASSERT_NE(h_min_tls_combo_box, nullptr) << "Minimum TLS Version dropdown should be created.";
+  ASSERT_NE(h_min_tls_combo_box, nullptr)
+      << "Minimum TLS Version dropdown should be created.";
 
   ASSERT_EQ(SendMessage(h_min_tls_combo_box, CB_GETCOUNT, 0, 0), 3)
       << "Minimum TLS Version dropdown should have 3 items.";
@@ -202,35 +207,44 @@ TEST_F(DriverFormTest, TestMinTLSVersionDropdown) {
   ASSERT_EQ(selected_index, 2) << "Third item should be selected by default.";
 
   char buffer[256];
-  SendMessage(h_min_tls_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
+  SendMessage(h_min_tls_combo_box, CB_GETLBTEXT, selected_index,
+              (LPARAM)buffer);
   ASSERT_STREQ(buffer, "1.2") << "Selected TLS version should be '1.2'.";
 }
 
 TEST_F(DriverFormTest, TestProxyOptionsButton) {
-  HWND h_proxy_options_button = GetDlgItem(form->GetHwnd(), kIdcProxyOptionsButton);
-  ASSERT_NE(h_proxy_options_button, nullptr) << "Proxy Options button should be created.";
+  HWND h_proxy_options_button =
+      GetDlgItem(form->GetHwnd(), kIdcProxyOptionsButton);
+  ASSERT_NE(h_proxy_options_button, nullptr)
+      << "Proxy Options button should be created.";
 
   char buffer[256];
-  SendMessage(h_proxy_options_button, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Proxy Options...") << "Proxy Options button should have correct text.";
+  SendMessage(h_proxy_options_button, WM_GETTEXT, sizeof(buffer),
+              (LPARAM)buffer);
+  ASSERT_STREQ(buffer, "Proxy Options...")
+      << "Proxy Options button should have correct text.";
 }
 
 TEST_F(DriverFormTest, TestLoggingOptionsButton) {
   HWND h_logging_button = GetDlgItem(form->GetHwnd(), kIdcLoggingBtn);
-  ASSERT_NE(h_logging_button, nullptr) << "Logging Options button should be created.";
+  ASSERT_NE(h_logging_button, nullptr)
+      << "Logging Options button should be created.";
 
   char buffer[256];
   SendMessage(h_logging_button, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Logging Options...") << "Logging Options button should have correct text.";
+  ASSERT_STREQ(buffer, "Logging Options...")
+      << "Logging Options button should have correct text.";
 }
 
 TEST_F(DriverFormTest, TestAdvanceOptionsButton) {
   HWND h_advance_opt_button = GetDlgItem(form->GetHwnd(), kIdcAdvanceOptBtn);
-  ASSERT_NE(h_advance_opt_button, nullptr) << "Advance Options button should be created.";
+  ASSERT_NE(h_advance_opt_button, nullptr)
+      << "Advance Options button should be created.";
 
   char buffer[256];
   SendMessage(h_advance_opt_button, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Advance Options...") << "Advance Options button should have correct text.";
+  ASSERT_STREQ(buffer, "Advance Options...")
+      << "Advance Options button should have correct text.";
 }
 
 class ProxyOptionsTest : public ::testing::Test {
@@ -262,7 +276,7 @@ class ProxyOptionsTest : public ::testing::Test {
     HWND button = GetDlgItem(hwnd, button_id);
     ASSERT_NE(button, nullptr) << "Button should be created.";
     SendMessage(button, BM_CLICK, 0, 0);
-    ProcessMessages(); 
+    ProcessMessages();
   }
 };
 
@@ -270,106 +284,106 @@ TEST_F(ProxyOptionsTest, ShowWindow) {
   HWND hwnd = proxy_options->GetHwnd();
   ASSERT_EQ(hwnd, nullptr) << "Window should not be shown initially.";
 
-  proxy_options->Show(nullptr); 
+  proxy_options->Show(nullptr);
 
   hwnd = proxy_options->GetHwnd();
   ASSERT_NE(hwnd, nullptr) << "Window should be created and displayed.";
 
   ShowWindow(hwnd, SW_SHOWNORMAL);
-  ASSERT_EQ(IsWindow(hwnd), TRUE) << "Window should be visible after calling Show.";
+  ASSERT_EQ(IsWindow(hwnd), TRUE)
+      << "Window should be visible after calling Show.";
 }
 
 class AdvanceOptionsTest : public ::testing::Test {
-protected:
-    AdvanceOptions* advance_options;
+ protected:
+  AdvanceOptions* advance_options;
 
-    void SetUp() override {
-        advance_options = new AdvanceOptions();
-        advance_options->InitControls();
-    }
+  void SetUp() override {
+    advance_options = new AdvanceOptions();
+    advance_options->InitControls();
+  }
 
-    void TearDown() override {
-        if (advance_options->GetHwnd() != nullptr) {
-            DestroyWindow(advance_options->GetHwnd());
-        }
-        Sleep(600);  
-        delete advance_options;
+  void TearDown() override {
+    if (advance_options->GetHwnd() != nullptr) {
+      DestroyWindow(advance_options->GetHwnd());
     }
+    Sleep(600);
+    delete advance_options;
+  }
 
-    void ProcessMessages() {
-        MSG msg;
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
+  void ProcessMessages() {
+    MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
+  }
 
-    void ClickButton(HWND hwnd, int button_id) {
-        HWND button = GetDlgItem(hwnd, button_id);
-        ASSERT_NE(button, nullptr) << "Button should be created.";
-        SendMessage(button, BM_CLICK, 0, 0);
-        ProcessMessages();  
-    }
+  void ClickButton(HWND hwnd, int button_id) {
+    HWND button = GetDlgItem(hwnd, button_id);
+    ASSERT_NE(button, nullptr) << "Button should be created.";
+    SendMessage(button, BM_CLICK, 0, 0);
+    ProcessMessages();
+  }
 };
 TEST_F(AdvanceOptionsTest, ShowWindow) {
   HWND hwnd = advance_options->GetHwnd();
   ASSERT_EQ(hwnd, nullptr) << "Window should not be shown initially.";
 
-  advance_options->Show(nullptr); 
+  advance_options->Show(nullptr);
 
   hwnd = advance_options->GetHwnd();
   ASSERT_NE(hwnd, nullptr) << "Window should be created and displayed.";
 
   ShowWindow(hwnd, SW_SHOWNORMAL);
-  ASSERT_EQ(IsWindow(hwnd), TRUE) << "Window should be visible after calling Show.";
+  ASSERT_EQ(IsWindow(hwnd), TRUE)
+      << "Window should be visible after calling Show.";
 }
 
 TEST_F(AdvanceOptionsTest, SetValues_ValidInput) {
-    Section attribute_map = {
-        {"LanguageDialect", "Standard SQL"},
-        {"LargeResultsDatasetId", "dataset1"},
-        {"EncryptionKey", "key123"},
-        {"RowsFetchedPerBlock", "500"},
-        {"DefaultStringColumnLength", "10000"},
-        {"LargeResultsTempTableExpirationTime", "3600000"},
-        {"SessionLocation", "USA"},
-        {"AdditionalProjects", "projectA,projectB"},
-        {"QueryProperties", "property1=value1"},
-        {"HTAPI_ActivationThreshold", "10000"}
-    };
+  Section attribute_map = {{"LanguageDialect", "Standard SQL"},
+                           {"LargeResultsDatasetId", "dataset1"},
+                           {"EncryptionKey", "key123"},
+                           {"RowsFetchedPerBlock", "500"},
+                           {"DefaultStringColumnLength", "10000"},
+                           {"LargeResultsTempTableExpirationTime", "3600000"},
+                           {"SessionLocation", "USA"},
+                           {"AdditionalProjects", "projectA,projectB"},
+                           {"QueryProperties", "property1=value1"},
+                           {"HTAPI_ActivationThreshold", "10000"}};
 
-    AdvanceOptions options;
-    options.SetValues(attribute_map);
+  AdvanceOptions options;
+  options.SetValues(attribute_map);
 
-    EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
-    EXPECT_EQ(options.GetDatasetName(), "dataset1");
-    EXPECT_EQ(options.GetEncryptionKey(), "key123");
-    EXPECT_EQ(options.GetRowsPerBlock(), "500");
-    EXPECT_EQ(options.GetDefaultStringLength(), "10000");
-    EXPECT_EQ(options.GetTempTableExpiration(), "3600000");
-    EXPECT_EQ(options.GetSessionLocation(), "USA");
-    EXPECT_EQ(options.GetAdditionalProjects(), "projectA,projectB");
-    EXPECT_EQ(options.GetQueryProperties(), "property1=value1");
-    EXPECT_EQ(options.GetActivationThreshold(), "10000");
+  EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
+  EXPECT_EQ(options.GetDatasetName(), "dataset1");
+  EXPECT_EQ(options.GetEncryptionKey(), "key123");
+  EXPECT_EQ(options.GetRowsPerBlock(), "500");
+  EXPECT_EQ(options.GetDefaultStringLength(), "10000");
+  EXPECT_EQ(options.GetTempTableExpiration(), "3600000");
+  EXPECT_EQ(options.GetSessionLocation(), "USA");
+  EXPECT_EQ(options.GetAdditionalProjects(), "projectA,projectB");
+  EXPECT_EQ(options.GetQueryProperties(), "property1=value1");
+  EXPECT_EQ(options.GetActivationThreshold(), "10000");
 }
 TEST_F(AdvanceOptionsTest, SetValues_MissingKeys) {
-    Section attribute_map = {
-        {"LanguageDialect", "Standard SQL"},
-    };
+  Section attribute_map = {
+      {"LanguageDialect", "Standard SQL"},
+  };
 
-    AdvanceOptions options;
-    options.SetValues(attribute_map);
+  AdvanceOptions options;
+  options.SetValues(attribute_map);
 
-    EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
-    EXPECT_EQ(options.GetDatasetName(), "");
-    EXPECT_EQ(options.GetEncryptionKey(), "");
-    EXPECT_EQ(options.GetRowsPerBlock(), "");
-    EXPECT_EQ(options.GetDefaultStringLength(), "");
-    EXPECT_EQ(options.GetTempTableExpiration(), "");
-    EXPECT_EQ(options.GetSessionLocation(), "");
-    EXPECT_EQ(options.GetAdditionalProjects(), "");
-    EXPECT_EQ(options.GetQueryProperties(), "");
-    EXPECT_EQ(options.GetActivationThreshold(), "");
+  EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
+  EXPECT_EQ(options.GetDatasetName(), "");
+  EXPECT_EQ(options.GetEncryptionKey(), "");
+  EXPECT_EQ(options.GetRowsPerBlock(), "");
+  EXPECT_EQ(options.GetDefaultStringLength(), "");
+  EXPECT_EQ(options.GetTempTableExpiration(), "");
+  EXPECT_EQ(options.GetSessionLocation(), "");
+  EXPECT_EQ(options.GetAdditionalProjects(), "");
+  EXPECT_EQ(options.GetQueryProperties(), "");
+  EXPECT_EQ(options.GetActivationThreshold(), "");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

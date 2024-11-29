@@ -34,19 +34,19 @@ static int const kIdcDatasetLabel = 111;
 static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
-static int const kIdcButtonTest=115;
-static int const kIdcProxyOKButton=116;
-static int const kIdcProxyCancelButton=117;
-static int const kIdcProxyHostLabel=118;
-static int const kIdcMinTLSComboBox=119;
-static int const kIdcTrustStoreCheckbox=120;
-static int const kIdcTrustedCertEdit=121;
-static int const kIdcTrustedCertBrowseButton=122;
-static int const kIdcDescriptionEdit=123;
-static int const kIdcEncryptDataComboBox=124;
+static int const kIdcButtonTest = 115;
+static int const kIdcProxyOKButton = 116;
+static int const kIdcProxyCancelButton = 117;
+static int const kIdcProxyHostLabel = 118;
+static int const kIdcMinTLSComboBox = 119;
+static int const kIdcTrustStoreCheckbox = 120;
+static int const kIdcTrustedCertEdit = 121;
+static int const kIdcTrustedCertBrowseButton = 122;
+static int const kIdcDescriptionEdit = 123;
+static int const kIdcEncryptDataComboBox = 124;
 static int const kIdcLoggingBtn = 125;
-static int const kIdcProxyOptionsButton=126;
-static int const kIdcAdvanceOptBtn=127;
+static int const kIdcProxyOptionsButton = 126;
+static int const kIdcAdvanceOptBtn = 127;
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -57,21 +57,20 @@ static int const kIdcRowsPerBlockEdit = 134;
 static int const kIdcDefaultStringEdit = 135;
 static int const kIdcEnableSessionCheckbox = 136;
 static int const kIdcSessionLocationEdit = 137;
-static int const kIdcProxyHostName=138;
+static int const kIdcProxyHostName = 138;
 static int const kIdcAdditionalProjectsEdit = 139;
 static int const kIdcQueryPropertiesEdit = 140;
 static int const kIdcOKButton = 141;
 static int const kIdcCancelButton = 142;
 static int const kIdcLanguageDialectComboBox = 143;
 static int const kIdcAllowLargeResultsCheckbox = 144;
-static int const kIdcProxyCheckbox=145;
-static int const kIdcProxyPortLabel=146;
-static int const kIdcProxyPortEdit=147;
-static int const kIdcProxyUsernameLabel=148;
-static int const kIdcProxyUsernameEdit=149;
-static int const kIdcProxyPasswordLabel=150;
-static int const kIdcProxyPasswordEdit=151;
-
+static int const kIdcProxyCheckbox = 145;
+static int const kIdcProxyPortLabel = 146;
+static int const kIdcProxyPortEdit = 147;
+static int const kIdcProxyUsernameLabel = 148;
+static int const kIdcProxyUsernameEdit = 149;
+static int const kIdcProxyPasswordLabel = 150;
+static int const kIdcProxyPasswordEdit = 151;
 
 class DriverForm {
  public:
@@ -98,7 +97,8 @@ class DriverForm {
   inline std::string const& GetEncryptData() const { return encrypt_data_; }
   inline std::string const& GetTrustedCerts() const { return trusted_cert_; }
   inline std::string const& GetMinTls() const { return min_tls_version_; }
-  inline std::string const& GetDescription() const{ return description_;}
+  inline std::string const& GetDescription() const { return description_; }
+
  private:
   static std::string dsn_name_;
   static std::string email_;
@@ -124,17 +124,32 @@ class AdvanceOptions {
   void Show(HWND parent);
   HWND GetHwnd() const;
   void SetValues(Section const& attributes_map);
-  inline std::string const& GetLanguageDialect() const { return language_dialect_; }
+  inline std::string const& GetLanguageDialect() const {
+    return language_dialect_;
+  }
   inline std::string const& GetDatasetName() const { return adv_dataset_name_; }
   inline std::string const& GetEncryptionKey() const { return encryption_key_; }
-  inline std::string const& GetSessionLocation() const { return session_location_; }
-  inline std::string const& GetAdditionalProjects() const { return additional_projects_; }
-  inline std::string const& GetQueryProperties() const {return query_properties_; }
-  inline std::string const& GetRowsPerBlock() const {return rows_per_block_; }
-  inline std::string const& GetDefaultStringLength() const { return default_string_length_; }
-  inline std::string const& GetTempTableExpiration() const { return temp_expiration_;}
-  inline std::string const& GetActivationThreshold() const { return activation_threshold_;}
-  private:
+  inline std::string const& GetSessionLocation() const {
+    return session_location_;
+  }
+  inline std::string const& GetAdditionalProjects() const {
+    return additional_projects_;
+  }
+  inline std::string const& GetQueryProperties() const {
+    return query_properties_;
+  }
+  inline std::string const& GetRowsPerBlock() const { return rows_per_block_; }
+  inline std::string const& GetDefaultStringLength() const {
+    return default_string_length_;
+  }
+  inline std::string const& GetTempTableExpiration() const {
+    return temp_expiration_;
+  }
+  inline std::string const& GetActivationThreshold() const {
+    return activation_threshold_;
+  }
+
+ private:
   HWND parent_hwnd;
   static std::string language_dialect_;
   static std::string adv_dataset_name_;
@@ -147,7 +162,7 @@ class AdvanceOptions {
   static std::string query_properties_;
   static std::string activation_threshold_;
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
-                                       LPARAM l_param);
+                                         LPARAM l_param);
   static char const CLASS_NAME[];
 };
 
@@ -158,7 +173,8 @@ class ProxyOptions {
   void InitControls();
   void Show(HWND parent);
   HWND GetHwnd() const;
-  private:
+
+ private:
   HWND proxy_hwnd;
   static LRESULT CALLBACK ProxyOptProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM l_param);

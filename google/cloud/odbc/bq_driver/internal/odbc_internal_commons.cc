@@ -784,7 +784,7 @@ ConstructNamedParametersPostQueryRequest(
   query_request.set_dry_run(false);
   query_request.set_default_dataset(ds_ref);
   query_request.set_query(named_query);
-  // Following are specific to parametrized queries.
+  // Following are specific to Parametrized queries.
   query_request.set_parameter_mode("NAMED");
   query_request.set_query_parameters(named_query_params);
   query_request.set_use_legacy_sql(false);
