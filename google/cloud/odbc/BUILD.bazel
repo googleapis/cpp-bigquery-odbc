@@ -45,11 +45,12 @@ cc_library(
 
 [cc_test(
     name = driver_internal_utils_test.replace("/", "_").replace(".cc", ""),
-    timeout = "long",
-    srcs = [driver_internal_utils_test],
+    srcs = select({
+        ":windows": [driver_internal_utils_test],
+        "//conditions:default": [driver_internal_utils_test] if not driver_internal_utils_test.endswith("driver_form_test.cc") else [],
+    }),
     tags = ["unit-tests"],
     deps = [
-        "//:google_cloud_odbc_bq_driver_internal",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
@@ -72,7 +73,10 @@ cc_library(
 
 [cc_test(
     name = driver_utils_test.replace("/", "_").replace(".cc", ""),
-    srcs = [driver_utils_test],
+    srcs = select({
+        ":windows": [driver_utils_test],
+        "//conditions:default": [driver_utils_test] if not driver_utils_test.endswith("odbc_windows_test.cc") else [],
+    }),
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
