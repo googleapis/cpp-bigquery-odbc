@@ -1502,7 +1502,7 @@ TEST(SQLPrepare, InsertQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, ParametrizedQuery) {
+TEST(SQLPrepare, ParameterizedQuery) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
