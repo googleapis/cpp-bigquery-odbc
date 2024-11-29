@@ -480,6 +480,70 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
   SanitizeIdentifierArgument(arg);
   EXPECT_EQ(arg, " TEST");
 }
+
+TEST(PopulateOutputConnectionString, Success) {
+  SQLCHAR out_conn_str[50] = {0};
+  SQLSMALLINT out_conn_str_len;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len, conn_string);
+
+  EXPECT_EQ(result.ok(), true);
+  EXPECT_STREQ(reinterpret_cast<char*>(out_conn_str), "DSN=SampleDSN;");
+  EXPECT_EQ(out_conn_str_len, strlen("DSN=SampleDSN;"));
+}
+
+TEST(PopulateOutputConnectionString, Fail_Truncated) {
+  SQLCHAR out_conn_str[10] = {0};
+  SQLSMALLINT out_conn_str_len;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len, conn_string);
+
+  EXPECT_EQ(result.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(result.message, "String data, right truncated");
+
+  EXPECT_STREQ(reinterpret_cast<char*>(out_conn_str), "DSN=Sampl");
+  EXPECT_NE(out_conn_str_len, conn_string.size());
+}
+
+TEST(PopulateOutputConnectionString, EmptyConnectionString) {
+  SQLCHAR out_conn_str[10] = {0};
+  SQLSMALLINT out_conn_str_len;
+  std::string conn_string = "";
+
+  auto result = PopulateOutputConnectionString(
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len, conn_string);
+
+  EXPECT_EQ(result.ok(), false);
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(result.message, "Invalid Connection String");
+}
+
+TEST(PopulateOutputConnectionString, Fail_NullOutConnStr) {
+  SQLSMALLINT out_conn_str_len;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(nullptr, 50, &out_conn_str_len,
+                                               conn_string);
+
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(result.message, "Null output buffer or length pointer");
+}
+
+TEST(PopulateOutputConnectionString, Fail_NullOutConnStrLen) {
+  SQLCHAR out_conn_str[50] = {0};
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(
+      out_conn_str, sizeof(out_conn_str), nullptr, conn_string);
+
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(result.message, "Null output buffer or length pointer");
+}
+
 #ifdef _WIN32
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";

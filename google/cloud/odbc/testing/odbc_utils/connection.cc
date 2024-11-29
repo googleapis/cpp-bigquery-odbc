@@ -17,7 +17,7 @@
 namespace google::cloud::odbc_tests {
 
 void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
-                   bool use_ansi = false) {
+                   bool use_ansi) {
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
 

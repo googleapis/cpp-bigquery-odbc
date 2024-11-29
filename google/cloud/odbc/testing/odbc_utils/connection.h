@@ -20,6 +20,8 @@
 
 namespace google::cloud::odbc_tests {
 
+void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
+                   bool use_ansi = false);
 // Returns the default DSN name after checking if ODBC_TESTS_DSN env is defined
 inline std::string const GetDefaultDSN() {
   return google::cloud::internal::GetEnv("ODBC_TESTS_DSN")

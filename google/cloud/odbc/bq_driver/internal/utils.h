@@ -207,6 +207,11 @@ inline int GetWholeDigitCount(std::string& src_str) {
   }
   return digit_count;
 }
+
+odbc_internal::StatusRecord PopulateOutputConnectionString(
+    SQLCHAR* out_conn_str, SQLSMALLINT out_conn_str_buflen,
+    SQLSMALLINT* out_conn_str_len, std::string& conn_string);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

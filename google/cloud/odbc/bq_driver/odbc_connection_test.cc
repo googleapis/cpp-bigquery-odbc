@@ -270,4 +270,73 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(SQLDriverConnectInternal, Fail_InvalidConnectionHandle) {
+  SQLCHAR* in_conn_str = ToSqlChar("DSN=SampleDSN");
+  SQLCHAR out_conn_str[10] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto status = SQLDriverConnectInternal(
+      nullptr, nullptr, in_conn_str, SQL_NTS, (SQLCHAR*)out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_PROMPT);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLDriverConnectInternal, Fail_EmptyConnectionString) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  SQLCHAR* in_conn_str = ToSqlChar("");
+  SQLCHAR out_conn_str[256] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto status = SQLDriverConnectInternal(
+      &conn_handle, nullptr, in_conn_str, SQL_NTS, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_NOPROMPT);
+  EXPECT_EQ(status, SQL_ERROR);
+}
+
+TEST(SQLDriverConnectInternal, Fail_DSNNotFound) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  std::string conn_str = "DSN=NON_EXISTENT_DSN";
+  SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
+  SQLCHAR out_conn_str[256] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto status = SQLDriverConnectInternal(
+      &conn_handle, nullptr, in_conn_str, SQL_NTS, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_COMPLETE);
+  EXPECT_EQ(status, SQL_ERROR);
+}
+
+TEST(SQLDriverConnectInternal, Fail_DSNAndDriverNotFound) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  SQLCHAR* in_conn_str = ToSqlChar("");
+  SQLCHAR out_conn_str[256] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto status = SQLDriverConnectInternal(
+      &conn_handle, nullptr, in_conn_str, SQL_NTS, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_NOPROMPT);
+
+  EXPECT_EQ(status, SQL_ERROR);
+}
+
+TEST(SQLDriverConnectInternal, Dialog_Failed) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  SQLCHAR* in_conn_str = ToSqlChar("");
+  SQLCHAR out_conn_str[256] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto status = SQLDriverConnectInternal(
+      &conn_handle, nullptr, in_conn_str, SQL_NTS, out_conn_str,
+      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_COMPLETE_REQUIRED);
+  EXPECT_EQ(status, SQL_ERROR);
+  EXPECT_EQ(SQLStates::k_IM008(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Dialog failed",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
