@@ -2686,89 +2686,106 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string table_name =
-      kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
+  std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
   Table table(table_name);
   table.Drop(conn);
-  std::cout<<"Enter CreateWithPrepare"<<std::endl;
-  table.CreateWithPrepare(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-  std::cout<<"Exit CreateWithPrepare"<<std::endl;  
+
+  std::cout << "Enter CreateWithPrepare" << std::endl;
+  std::string create_table_sql = "CREATE TABLE " + table_name + " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
+  std::cout << "SQL: " << create_table_sql << std::endl;
+  table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  std::cout << "Exit CreateWithPrepare" << std::endl;  
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string procedure_name =
-      kDatasetWithTablePrefix + "ODBC_PROCEDURE_INSERT_STD_ROW";
+  // Set up the procedure with a varying number of parameters
+  std::string procedure_name = kDatasetWithTablePrefix + "ODBC_PROCEDURE_INSERT_STD_ROW";
   std::string procedure_create =
-      "CREATE OR REPLACE PROCEDURE " + procedure_name +
-      "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING)\n"
+      "CREATE OR REPLACE PROCEDURE " + procedure_name + 
+      "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING, INOUT ExtraField STRING)\n"
       "BEGIN\n"
       "SET StringField = GENERATE_UUID();\n"
+      "SET ExtraField = CONCAT(ExtraField, '_suffix');\n"
       "INSERT INTO " + table_name + " (StringField, IntegerField, FloatField) "
       "VALUES(StringField, IntegerField, FloatField);\n"
-      "SELECT FORMAT(\"Created row %s\", StringField);\n"
+      "SELECT FORMAT(\"Created row %s\", StringField), ExtraField;\n"
       "END";
-  std::cout<<"Enter Prepare"<<std::endl;
-  SQLRETURN status =
-      SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
-  std::cout<<"Exite Prepare"<<std::endl;    
+  
+  std::cout << "SQL: " << procedure_create << std::endl;
+  std::cout << "Enter Prepare Procedure Create" << std::endl;
+  SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
+  std::cout << "SQLPrepare status: " << status << std::endl;
   CheckError(status, "SQLPrepare", conn);
+  
+  std::cout << "Enter Execute Procedure Create" << std::endl;
   status = SQLExecute(conn->hstmt);
+  std::cout << "SQLExecute status: " << status << std::endl;
   CheckError(status, "SQLExecute", conn);
 
   SQLSMALLINT num_cols;
-
   status = SQLNumResultCols(conn->hstmt, &num_cols);
+  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
+  // Adjust the procedure call to match the number of parameters (2 IN, 2 OUT)
   std::string procedure_call =
       "DECLARE OutStringField STRING;\n"
-      "CALL " + procedure_name + "(32, 45.6, OutStringField);\n"
+      "DECLARE InOutExtraField STRING DEFAULT 'Test';\n"
+      "CALL " + procedure_name + "(32, 45.6, OutStringField, InOutExtraField);\n"
       "SELECT * FROM " + table_name;
-  std::cout<<"Enter Prepare Procedure call"<<std::endl;
+
+  std::cout << "SQL: " << procedure_call << std::endl;
+  std::cout << "Enter Prepare Procedure Call" << std::endl;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
-  std::cout<<"Exit Prepare Procedure call"<<std::endl;
+  std::cout << "SQLPrepare status: " << status << std::endl;
   CheckError(status, "SQLPrepare", conn);
+
+  std::cout << "Enter Execute Procedure Call" << std::endl;
   status = SQLExecute(conn->hstmt);
+  std::cout << "SQLExecute status: " << status << std::endl;
   CheckError(status, "SQLExecute", conn);
 
   // Validations for INSERT INTO ...
   status = SQLNumResultCols(conn->hstmt, &num_cols);
+  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
 
-  // Validations for SELECT FORMAT ...
+  // Validations for SELECT FORMAT (which should include the OUT parameter)
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
   status = SQLNumResultCols(conn->hstmt, &num_cols);
+  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 1);
+  EXPECT_EQ(num_cols, 2); // Expecting 2 columns (StringField, ExtraField)
 
   int num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
+    std::cout << "Fetched row: " << num_rows_returned << std::endl;
   }
   EXPECT_EQ(num_rows_returned, 1);
 
   // Validations for SELECT * FROM ...
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
   status = SQLNumResultCols(conn->hstmt, &num_cols);
+  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 3);
+  EXPECT_EQ(num_cols, 3); // Expecting 3 columns (StringField, IntegerField, FloatField)
   num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
+    std::cout << "Fetched row: " << num_rows_returned << std::endl;
   }
   EXPECT_EQ(num_rows_returned, 1);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
