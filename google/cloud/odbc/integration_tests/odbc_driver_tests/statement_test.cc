@@ -2689,10 +2689,12 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   std::string table_name =
       kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
   Table table(table_name);
+  table.Drop(conn);
+  std::cout<<"Enter CreateWithPrepare"<<std::endl;
   table.CreateWithPrepare(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  std::cout<<"Exit CreateWithPrepare"<<std::endl;  
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string procedure_name =
@@ -2706,9 +2708,10 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
       "VALUES(StringField, IntegerField, FloatField);\n"
       "SELECT FORMAT(\"Created row %s\", StringField);\n"
       "END";
-
+  std::cout<<"Enter Prepare"<<std::endl;
   SQLRETURN status =
       SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
+  std::cout<<"Exite Prepare"<<std::endl;    
   CheckError(status, "SQLPrepare", conn);
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
@@ -2728,8 +2731,9 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
       "DECLARE OutStringField STRING;\n"
       "CALL " + procedure_name + "(32, 45.6, OutStringField);\n"
       "SELECT * FROM " + table_name;
-
+  std::cout<<"Enter Prepare Procedure call"<<std::endl;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+  std::cout<<"Exit Prepare Procedure call"<<std::endl;
   CheckError(status, "SQLPrepare", conn);
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
