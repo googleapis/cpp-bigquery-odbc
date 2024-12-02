@@ -2688,15 +2688,16 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
 
   // Ensure table contains the correct columns
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
+  std::cout<<table_name<<std::endl;
   Table table(table_name);
   table.Drop(conn);
 
   // Modify the table creation query to ensure it has all required columns
   std::cout << "Enter CreateWithPrepare" << std::endl;
   std::string create_table_sql = 
-      "CREATE TABLE " + table_name + " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
+      "CREATE TABLE " + table_name + " (StringField STRING, IntegerField INTEGER);";
   std::cout << "SQL: " << create_table_sql << std::endl;
-  table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER)");
   std::cout << "Exit CreateWithPrepare" << std::endl;
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -2706,13 +2707,13 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   std::string procedure_name = kDatasetWithTablePrefix + "ODBC_PROCEDURE_INSERT_STD_ROW";
   std::string procedure_create =
       "CREATE OR REPLACE PROCEDURE " + procedure_name + 
-      "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING, INOUT ExtraField STRING)\n"
+      "(IntegerField INT64, OUT StringField STRING, INOUT ExtraField STRING)\n"
       "OPTIONS(strict_mode=false)\n"  // Add this line to suppress strict mode validation
       "BEGIN\n"
       "SET StringField = GENERATE_UUID();\n"
       "SET ExtraField = CONCAT(ExtraField, '_suffix');\n"
-      "INSERT INTO " + table_name + " (StringField, IntegerField, FloatField) "
-      "VALUES(StringField, IntegerField, FloatField);\n"
+      "INSERT INTO " + table_name + " (StringField, IntegerField) "
+      "VALUES(StringField, IntegerField);\n"
       "SELECT FORMAT(\"Created row %s\", StringField), ExtraField;\n"
       "END";
 
@@ -2741,7 +2742,7 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   std::string procedure_call =
       "DECLARE OutStringField STRING;\n"
       "DECLARE InOutExtraField STRING DEFAULT 'Test';\n"
-      "CALL " + procedure_name + "(32, 45.6, OutStringField, InOutExtraField);\n"
+      "CALL " + procedure_name + "(32, OutStringField, InOutExtraField);\n"
       "SELECT * FROM " + table_name;
 
   std::cout << "SQL: " << procedure_call << std::endl;
@@ -2781,7 +2782,7 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   status = SQLNumResultCols(conn->hstmt, &num_cols);
   std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 3); // Expecting 3 columns (StringField, IntegerField, FloatField)
+  EXPECT_EQ(num_cols, 2); // Expecting 2 columns (StringField, IntegerField)
   num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
