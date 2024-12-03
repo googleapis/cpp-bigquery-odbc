@@ -77,6 +77,14 @@ FilterProjects(::google::cloud::bigquery_v2_minimal_internal::ProjectClient&
                    project_client,
                std::vector<std::string> const& project_ids,
                ::google::cloud::Options const& options);
+// Filter projects for the user, based on project_ids, using the RM List API.
+odbc_internal::StatusRecordOr<
+    std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+FilterProjectsRMList(
+    ::google::cloud::resourcemanager_v3::ProjectsClient& projects_rm_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client,
+    std::string const& parent, std::vector<std::string> const& project_ids,
+    ::google::cloud::Options const& options);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 

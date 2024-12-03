@@ -39,6 +39,7 @@ using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::google::cloud::resourcemanager_v3_mocks::MockProjectsConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 using ::google::cloud::serviceusage_v1_mocks::MockServiceUsageConnection;
+using testing::AtLeast;
 using ::testing::HasSubstr;
 
 std::string const kParentFolder = "folders/123";
@@ -569,6 +570,114 @@ TEST(ListProjectsRM, Failure_EmptyParent) {
       bq_projects,
       StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
                      HasSubstr("parent resource cannot be null or empty")));
+}
+
+TEST(FilterProjectsRMList, FilterZeroProjects_NoRMProjects) {
+  Options options;
+  auto mock = std::make_shared<MockProjectsConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListProjects)
+      .WillOnce(
+          [](google::cloud::resourcemanager::v3::ListProjectsRequest const&) {
+            return mocks::MakeStreamRange<
+                google::cloud::resourcemanager::v3::Project>({});
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  auto mock_su = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock_su));
+
+  StatusRecordOr<std::vector<Project>> projects =
+      FilterProjectsRMList(mocked_projects_client, mocked_service_usage_client,
+                           kParentFolder, {"id_1", "id_2"}, options);
+
+  EXPECT_EQ(0, projects->size());
+}
+
+TEST(FilterProjectsRMList, FilterZeroProjects_NoBQEnabledProjects) {
+  Options options;
+  google::cloud::resourcemanager::v3::Project expected_rm_project;
+  expected_rm_project.set_name("projects/1234");
+  expected_rm_project.set_project_id("test");
+  expected_rm_project.set_display_name("test");
+  ProjectsClient mocked_projects_client =
+      GetMockListProjectsClientSuccess(expected_rm_project);
+
+  Service expected_service;
+  expected_service.set_state(State::DISABLED);
+  ServiceUsageClient mocked_service_usage_client =
+      GetMockServiceUsageClient(expected_service);
+
+  StatusRecordOr<std::vector<Project>> projects =
+      FilterProjectsRMList(mocked_projects_client, mocked_service_usage_client,
+                           kParentFolder, {"id_1", "id_2"}, options);
+
+  EXPECT_EQ(0, projects->size());
+}
+
+TEST(FilterProjectsRMList, FilterOneProject) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  google::cloud::resourcemanager::v3::Project expected_rm_project_1;
+  expected_rm_project_1.set_name("projects/1234");
+  expected_rm_project_1.set_project_id("test1");
+  expected_rm_project_1.set_display_name("test1");
+  google::cloud::resourcemanager::v3::Project expected_rm_project_2;
+  expected_rm_project_2.set_name("projects/8901");
+  expected_rm_project_2.set_project_id("test2");
+  expected_rm_project_2.set_display_name("test2");
+  EXPECT_CALL(*mock, ListProjects)
+      .WillOnce(
+          [expected_rm_project_1, expected_rm_project_2](
+              google::cloud::resourcemanager::v3::ListProjectsRequest const&) {
+            return mocks::MakeStreamRange<
+                google::cloud::resourcemanager::v3::Project>(
+                {expected_rm_project_1, expected_rm_project_2});
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  Service expected_service;
+  expected_service.set_state(State::ENABLED);
+  auto mock_su = std::make_shared<MockServiceUsageConnection>();
+  EXPECT_CALL(*mock_su, options);
+  EXPECT_CALL(*mock_su, GetService)
+      .Times(AtLeast(1))
+      .WillRepeatedly([expected_service](GetServiceRequest const&) {
+        return make_status_or(expected_service);
+      });
+  ServiceUsageClient mocked_service_usage_client(std::move(mock_su));
+
+  StatusRecordOr<std::vector<Project>> projects = FilterProjectsRMList(
+      mocked_projects_client, mocked_service_usage_client, kParentFolder,
+      {expected_rm_project_1.project_id(), "id_2"}, options);
+
+  EXPECT_EQ(1, projects->size());
+  EXPECT_EQ(expected_rm_project_1.project_id(), projects->at(0).id);
+}
+
+TEST(FilterProjectsRMList, Failure_UnauthenticatedRequest) {
+  auto mock = std::make_shared<MockProjectsConnection>();
+  Options options;
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListProjects)
+      .WillOnce(
+          [](google::cloud::resourcemanager::v3::ListProjectsRequest const&) {
+            return mocks::MakeStreamRange<
+                google::cloud::resourcemanager::v3::Project>(
+                {}, Status(StatusCode::kUnauthenticated, "denied"));
+          });
+  ProjectsClient mocked_projects_client(std::move(mock));
+
+  auto mock_2 = std::make_shared<MockServiceUsageConnection>();
+  ServiceUsageClient mocked_service_usage_client(std::move(mock_2));
+
+  StatusRecordOr<std::vector<Project>> projects =
+      FilterProjectsRMList(mocked_projects_client, mocked_service_usage_client,
+                           kParentFolder, {"id_1", "id_2"}, options);
+
+  EXPECT_THAT(projects, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
+                                       HasSubstr("denied")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

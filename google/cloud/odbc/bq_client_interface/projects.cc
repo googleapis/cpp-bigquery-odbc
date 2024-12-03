@@ -30,6 +30,23 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
+StatusRecordOr<std::vector<Project>> FilterBQProjects(
+    std::vector<std::string> const& project_ids,
+    StreamRange<Project>& bq_projects) {
+  std::vector<Project> projects;
+  for (auto const& project : bq_projects) {
+    if (!project) {
+      return StatusRecord::ConvertFrom(project.status());
+    }
+    if (std::find(project_ids.begin(), project_ids.end(), (*project).id) !=
+        project_ids.end()) {
+      projects.push_back(*project);
+    }
+  }
+
+  return projects;
+}
+
 StatusRecordOr<Project> ConvertFrom(
     google::cloud::resourcemanager::v3::Project const& rm_project) {
   Project bq_project;
@@ -133,28 +150,6 @@ StatusRecordOr<Project> GetProjectRM(ProjectsClient& projects_rm_client,
   return ConvertFrom(*resp_rm_project);
 }
 
-StatusRecordOr<std::vector<Project>> FilterProjects(
-    ProjectClient& project_client, std::vector<std::string> const& project_ids,
-    Options const& options) {
-  ListProjectsRequest request;
-
-  StreamRange<Project> projects_response =
-      project_client.ListProjects(request, options);
-
-  std::vector<Project> projects;
-  for (auto const& project : projects_response) {
-    if (!project) {
-      return StatusRecord::ConvertFrom(project.status());
-    }
-    if (std::find(project_ids.begin(), project_ids.end(), (*project).id) !=
-        project_ids.end()) {
-      projects.push_back(*project);
-    }
-  }
-
-  return projects;
-}
-
 StatusRecordOr<std::vector<Project>> SearchProjectsRM(
     ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
     std::string const& query, ::google::cloud::Options const& options) {
@@ -190,7 +185,6 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The parent resource cannot be null or empty"};
   }
-
   StreamRange<google::cloud::resourcemanager::v3::Project>
       rm_projects_response = projects_rm_client.ListProjects(parent, options);
 
@@ -211,6 +205,39 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
   }
 
   return bq_projects;
+}
+
+StatusRecordOr<std::vector<Project>> FilterProjects(
+    ProjectClient& project_client, std::vector<std::string> const& project_ids,
+    Options const& options) {
+  ListProjectsRequest request;
+
+  StreamRange<Project> projects_response =
+      project_client.ListProjects(request, options);
+
+  return FilterBQProjects(project_ids, projects_response);
+}
+
+StatusRecordOr<std::vector<Project>> FilterProjectsRMList(
+    ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
+    std::string const& parent, std::vector<std::string> const& project_ids,
+    Options const& options) {
+  StatusRecordOr<std::vector<Project>> bq_all_projects = ListAllProjectsRM(
+      projects_rm_client, service_usage_client, parent, options);
+
+  if (!bq_all_projects) {
+    return bq_all_projects.GetStatusRecord();
+  }
+
+  std::vector<Project> projects;
+  for (auto const& project : *bq_all_projects) {
+    if (std::find(project_ids.begin(), project_ids.end(), project.id) !=
+        project_ids.end()) {
+      projects.push_back(project);
+    }
+  }
+
+  return projects;
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
