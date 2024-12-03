@@ -2526,16 +2526,29 @@ TEST(SQLMoreResults, CheckResultSetAttributes) {
   auto table_name = kDatasetWithTablePrefix + "ODBC_CHECK_RESULT_SET_TEST";
   Table table(table_name);
 
+  // Step 1: Connect to the database
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  
+  // Step 2: Create the table using CreateWithPrepare
+  table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
 
+  // Step 3: Insert data using a prepared insert statement
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES "
+                            "('Test1', 1, 1.0), "
+                            "('Test2', 2, 2.0)";
+  
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), insert_stmt.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Step 4: Query the table for the StringField column
   auto const query = "SELECT StringField FROM " + table_name;
   CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()),
              "SQLPrepare", conn);
-
+  
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
 
+  // Step 5: Fetch and check the result set attributes
   do {
     SQLSMALLINT numCols;
     SQLNumResultCols(conn->hstmt, &numCols);
@@ -2549,20 +2562,22 @@ TEST(SQLMoreResults, CheckResultSetAttributes) {
       SQLULEN columnSize;
       SQLSMALLINT decimalDigits;
       SQLLEN nullable;
-      SQLLEN numericAttribute;  // Correct type for NumericAttributePtr
+      SQLLEN numericAttribute;
 
+      // Fetch column name and attributes
       SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, columnName,
                       sizeof(columnName), &nameLength, &numericAttribute);
       SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, &columnSize, 0,
                       NULL, &nullable);
 
-      EXPECT_GT(nameLength,
-                0);  // Expect column name length to be greater than 0
+      // Output the column attributes for debugging
+      std::cout << "Column name: " << columnName << ", size: " << columnSize << std::endl;
+      EXPECT_GT(nameLength, 0);  // Expect column name length to be greater than 0
       EXPECT_GT(columnSize, 0);  // Expect column size to be greater than 0
     }
-  } while (SQLMoreResults(conn->hstmt) ==
-           SQL_SUCCESS);  // Check for more results
+  } while (SQLMoreResults(conn->hstmt) == SQL_SUCCESS);  // Check for more results
 
+  // Step 6: Clean up
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
