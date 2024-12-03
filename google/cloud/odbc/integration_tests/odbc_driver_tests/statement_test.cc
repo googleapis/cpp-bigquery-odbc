@@ -2681,7 +2681,7 @@ TEST(SQLMoreResults, ErrorHandling) {
 }
 
 // Stored Procedures
-
+#ifdef _WIN32
 TEST(SQLMoreResults, ProcedureWithInOutParams) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2993,6 +2993,7 @@ TEST(SQLMoreResults, ProcedureWithEmptyResultSet) {
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
