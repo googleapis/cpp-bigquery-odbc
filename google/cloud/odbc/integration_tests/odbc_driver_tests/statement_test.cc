@@ -1502,7 +1502,7 @@ TEST(SQLPrepare, InsertQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, ParametrizedQuery) {
+TEST(SQLPrepare, ParameterizedQuery) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
@@ -2486,16 +2486,17 @@ TEST(SQLRowCount, InsertValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string table_name = kDatasetWithTablePrefix + "ROWCOUNT_INSERT_TEST_TABLE";
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_INSERT_TEST_TABLE";
   std::string create_stmt =
       "CREATE OR REPLACE TABLE " + table_name +
       " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
-  std::string insert_stmt = 
-      "INSERT INTO " + table_name + " VALUES "
-      "(\"Row 1\", 1, 1.1), "
-      "(\"Row 2\", 2, 2.2), "
-      "(\"Row 3\", 3, 3.3);";
-  
+  std::string insert_stmt = "INSERT INTO " + table_name +
+                            " VALUES "
+                            "(\"Row 1\", 1, 1.1), "
+                            "(\"Row 2\", 2, 2.2), "
+                            "(\"Row 3\", 3, 3.3);";
+
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare (Create Table)", conn);
 
@@ -2511,7 +2512,7 @@ TEST(SQLRowCount, InsertValidation) {
   SQLLEN row_count;
   status = SQLRowCount(conn->hstmt, &row_count);
   CheckError(status, "SQLRowCount (Insert)", conn);
-  EXPECT_EQ(row_count, 3);  
+  EXPECT_EQ(row_count, 3);
 
   Table table(table_name);
   table.Drop(conn);
@@ -2522,19 +2523,22 @@ TEST(SQLRowCount, UpdateValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string table_name = kDatasetWithTablePrefix + "ROWCOUNT_UPDATE_TEST_TABLE";
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_UPDATE_TEST_TABLE";
   std::string create_stmt =
       "CREATE OR REPLACE TABLE " + table_name +
       " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
-  std::string insert_stmt = 
-      "INSERT INTO " + table_name + " VALUES "
-      "(\"Row 1\", 1, 1.1), "
-      "(\"Row 2\", 2, 2.2), "
-      "(\"Row 3\", 3, 3.3);";
-  std::string update_stmt = 
-      "UPDATE " + table_name + " SET StringField = \"Updated Row\" WHERE IntegerField = 1;";
-  
-  SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
+  std::string insert_stmt = "INSERT INTO " + table_name +
+                            " VALUES "
+                            "(\"Row 1\", 1, 1.1), "
+                            "(\"Row 2\", 2, 2.2), "
+                            "(\"Row 3\", 3, 3.3);";
+  std::string update_stmt =
+      "UPDATE " + table_name +
+      " SET StringField = \"Updated Row\" WHERE IntegerField = 1;";
+
+  SQLRETURN status =
+      SQLPrepare(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare (Create Table)", conn);
 
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
@@ -2555,7 +2559,7 @@ TEST(SQLRowCount, UpdateValidation) {
   SQLLEN row_count;
   status = SQLRowCount(conn->hstmt, &row_count);
   CheckError(status, "SQLRowCount (Update)", conn);
-  EXPECT_EQ(row_count, 1);  
+  EXPECT_EQ(row_count, 1);
 
   Table table(table_name);
   table.Drop(conn);
@@ -2566,23 +2570,24 @@ TEST(SQLRowCount, DeleteValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string table_name = kDatasetWithTablePrefix + "ROWCOUNT_DELETE_TEST_TABLE";
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_DELETE_TEST_TABLE";
   std::string create_stmt =
       "CREATE OR REPLACE TABLE " + table_name +
       " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
-  std::string insert_stmt = 
-      "INSERT INTO " + table_name + " VALUES "
-      "(\"Row 1\", 1, 1.1), "
-      "(\"Row 2\", 2, 2.2), "
-      "(\"Row 3\", 3, 3.3);";
-  std::string delete_stmt = 
+  std::string insert_stmt = "INSERT INTO " + table_name +
+                            " VALUES "
+                            "(\"Row 1\", 1, 1.1), "
+                            "(\"Row 2\", 2, 2.2), "
+                            "(\"Row 3\", 3, 3.3);";
+  std::string delete_stmt =
       "DELETE FROM " + table_name + " WHERE IntegerField = 3;";
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare (Create Table)", conn);
 
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect (Create Table)", conn);
-  
+
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare (Insert)", conn);
 
@@ -2598,13 +2603,13 @@ TEST(SQLRowCount, DeleteValidation) {
   SQLLEN row_count;
   status = SQLRowCount(conn->hstmt, &row_count);
   CheckError(status, "SQLRowCount (Delete)", conn);
-  EXPECT_EQ(row_count, 1); 
+  EXPECT_EQ(row_count, 1);
 
   Table table(table_name);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
- 
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

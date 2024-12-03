@@ -71,7 +71,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  // Parametrized Primary Keys Query.
+  // Parameterized Primary Keys Query.
   std::string primary_keys_query(kBasicPrimaryKeysQuery);
   primary_keys_query.append(" AND kc.table_catalog = @")
       .append(kNamedCatalogParam)

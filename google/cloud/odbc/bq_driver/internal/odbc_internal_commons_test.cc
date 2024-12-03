@@ -778,7 +778,7 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
 
   EXPECT_THAT(status_record_or,
               StatusRecordIs(SQLStates::k_HY090(),
-                             HasSubstr("parametrized query is required")));
+                             HasSubstr("parameterized query is required")));
 }
 
 TEST(ProcessResultSetRows, Success_Basic) {
