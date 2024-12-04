@@ -211,7 +211,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
           conn_string);
 
   if (!connection_params_resp_status) {
-    LogAndReturnCode(*handle_ref, connection_params_resp_status);
+    return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
   auto dsn_section = *connection_params_resp_status;
   // Any parameters defined in the env should

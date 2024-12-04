@@ -505,6 +505,14 @@ void SetAttr(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false) {
   EXPECT_EQ(4, length);
 }
 
+void GetWindowHandle(SQLHWND& window_handle) {
+#ifdef _WIN32
+  window_handle = GetDesktopWindow();
+#else
+  window_handle = nullptr;
+#endif  // _WIN32
+}
+
 TEST(ConnectionTest, SQLDriverConnect) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -552,32 +560,39 @@ TEST(ConnectionTest, SQLDriverConnectA) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifdef _WIN32
 TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_COMPLETE) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
-                              GetDesktopWindow(), SQL_DRIVER_COMPLETE, true),
+  SQLHWND window_handle;
+  GetWindowHandle(window_handle);
+
+  EXPECT_EQ(ConnectWithPromptWindows(kDefaultConnectionString, conn,
+                                     window_handle, SQL_DRIVER_COMPLETE, true),
             SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_COMPLETE_REQUIRED) {
   auto conn = std::make_shared<ODBCHandles>();
+  SQLHWND window_handle;
+  GetWindowHandle(window_handle);
+
   EXPECT_EQ(
-      ConnectWithPrompt(kDefaultConnectionString, conn, GetDesktopWindow(),
-                        SQL_DRIVER_COMPLETE_REQUIRED, true),
+      ConnectWithPromptWindows(kDefaultConnectionString, conn, window_handle,
+                               SQL_DRIVER_COMPLETE_REQUIRED, true),
       SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_NOPROMPT) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(ConnectWithPrompt(kDefaultConnectionString, conn,
-                              GetDesktopWindow(), SQL_DRIVER_NOPROMPT, true),
+  SQLHWND window_handle;
+  GetWindowHandle(window_handle);
+
+  EXPECT_EQ(ConnectWithPromptWindows(kDefaultConnectionString, conn,
+                                     window_handle, SQL_DRIVER_NOPROMPT, true),
             SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // _WIN32
 
 TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
   auto conn = std::make_shared<ODBCHandles>();

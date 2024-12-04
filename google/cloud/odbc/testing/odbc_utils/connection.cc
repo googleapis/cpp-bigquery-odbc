@@ -79,11 +79,11 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
-SQLRETURN ConnectWithPrompt(std::string conn_str,
-                            std::shared_ptr<ODBCHandles> conn,
-                            SQLHWND window_handle,
-                            SQLUSMALLINT driver_completion, int timeout,
-                            bool use_ansi) {
+SQLRETURN ConnectWithPromptWindows(std::string conn_str,
+                                   std::shared_ptr<ODBCHandles> conn,
+                                   SQLHWND window_handle,
+                                   SQLUSMALLINT driver_completion, int timeout,
+                                   bool use_ansi) {
   SQLSMALLINT buflen = 0;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
