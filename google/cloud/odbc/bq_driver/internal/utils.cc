@@ -557,7 +557,7 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
     if (kv.first == "OAuthMechanism") {
-      std::string o_auth_value = "";
+      auto o_auth_value = "";
       if (kv.second == "Service Authentication") {
         o_auth_value =
             std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
