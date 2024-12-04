@@ -59,7 +59,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string o_auth_mechanism =ConvertOAuthMechanism(
       section.count("OAuthMechanism") > 0 ? section.at("OAuthMechanism") : "");
   std::string catalog =
-      section.count("Catalog") > 0 ? section.at("Catalog") : "";a
+      section.count("Catalog") > 0 ? section.at("Catalog") : "";
   std::string dataset_name =
       section.count("Dataset") > 0 ? section.at("Dataset") : "";
 
