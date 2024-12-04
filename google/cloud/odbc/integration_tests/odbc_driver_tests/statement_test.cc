@@ -2571,7 +2571,6 @@ TEST(SQLMoreResults, CheckResultSetAttributes) {
                       NULL, &nullable);
 
       // Output the column attributes for debugging
-      std::cout << "Column name: " << columnName << ", size: " << columnSize << std::endl;
       EXPECT_GT(nameLength, 0);  // Expect column name length to be greater than 0
       EXPECT_GT(columnSize, 0);  // Expect column size to be greater than 0
     }
@@ -2703,17 +2702,13 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
 
   // Ensure table contains the correct columns
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
-  std::cout<<table_name<<std::endl;
   Table table(table_name);
   table.Drop(conn);
 
   // Modify the table creation query to ensure it has all required columns
-  std::cout << "Enter CreateWithPrepare" << std::endl;
   std::string create_table_sql = 
       "CREATE TABLE " + table_name + " (StringField STRING, IntegerField INTEGER);";
-  std::cout << "SQL: " << create_table_sql << std::endl;
   table.CreateWithPrepare(conn, "(StringField STRING, IntegerField INTEGER)");
-  std::cout << "Exit CreateWithPrepare" << std::endl;
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2732,20 +2727,14 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
       "SELECT FORMAT(\"Created row %s\", StringField), ExtraField;\n"
       "END";
 
-  std::cout << "SQL: " << procedure_create << std::endl;
-  std::cout << "Enter Prepare Procedure Create" << std::endl;
   SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
-  std::cout << "SQLPrepare status: " << status << std::endl;
   CheckError(status, "SQLPrepare", conn);
 
-  std::cout << "Enter Execute Procedure Create" << std::endl;
   status = SQLExecute(conn->hstmt);
-  std::cout << "SQLExecute status: " << status << std::endl;
   CheckError(status, "SQLExecute", conn);
 
   SQLSMALLINT num_cols;
   status = SQLNumResultCols(conn->hstmt, &num_cols);
-  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
@@ -2760,20 +2749,14 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
       "CALL " + procedure_name + "(32, OutStringField, InOutExtraField);\n"
       "SELECT * FROM " + table_name;
 
-  std::cout << "SQL: " << procedure_call << std::endl;
-  std::cout << "Enter Prepare Procedure Call" << std::endl;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
-  std::cout << "SQLPrepare status: " << status << std::endl;
   CheckError(status, "SQLPrepare", conn);
 
-  std::cout << "Enter Execute Procedure Call" << std::endl;
   status = SQLExecute(conn->hstmt);
-  std::cout << "SQLExecute status: " << status << std::endl;
   CheckError(status, "SQLExecute", conn);
 
   // Validations for INSERT INTO ...
   status = SQLNumResultCols(conn->hstmt, &num_cols);
-  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
@@ -2781,27 +2764,23 @@ TEST(SQLMoreResults, ProcedureWithInOutParams) {
   // Validations for SELECT FORMAT (which should include the OUT parameter)
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
   status = SQLNumResultCols(conn->hstmt, &num_cols);
-  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 2); // Expecting 2 columns (StringField, ExtraField)
 
   int num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
-    std::cout << "Fetched row: " << num_rows_returned << std::endl;
   }
   EXPECT_EQ(num_rows_returned, 1);
 
   // Validations for SELECT * FROM ...
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
   status = SQLNumResultCols(conn->hstmt, &num_cols);
-  std::cout << "SQLNumResultCols status: " << status << ", num_cols: " << num_cols << std::endl;
   CheckError(status, "SQLNumResultCols", conn);
   EXPECT_EQ(num_cols, 2); // Expecting 2 columns (StringField, IntegerField)
   num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     num_rows_returned++;
-    std::cout << "Fetched row: " << num_rows_returned << std::endl;
   }
   EXPECT_EQ(num_rows_returned, 1);
 
