@@ -557,15 +557,14 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
     if (kv.first == "OAuthMechanism") {
-      std::string o_auth_value;
+      std::string o_auth_value = "";
       if (kv.second == "Service Authentication") {
         o_auth_value =
             std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
       } else if (kv.second == "Application Default Credentials") {
         o_auth_value = std::to_string(
             static_cast<int>(OauthMechanism::kApplicationDefault));
-      } else
-        o_auth_value = "";
+      }
 
       if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
                          reinterpret_cast<const BYTE*>(o_auth_value.c_str()),
