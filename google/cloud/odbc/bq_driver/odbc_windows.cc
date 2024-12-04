@@ -40,6 +40,7 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism){
             static_cast<int>(OauthMechanism::kApplicationDefault));
       } else
         o_auth_value = "";
+    return o_auth_value;
 }
 bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                        LPCSTR lpsz_attributes) {
