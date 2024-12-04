@@ -15,16 +15,11 @@
 #ifndef _WIN32
 #include <iconv.h>
 #endif  // LINUX
-#ifdef _WIN32
-#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
-#endif  // _WIN32
+
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-#ifdef _WIN32
-using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-#endif  // _WIN32
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -558,37 +553,17 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
   return result;
 }
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
-  for (auto const& kv : section) {
-    if (kv.first == "OAuthMechanism") {
-      std::string o_auth_value;
-      if (kv.second == "Service Authentication") {
-        o_auth_value =
-            std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
-      } else if (kv.second == "Application Default Credentials") {
-        o_auth_value = std::to_string(
-            static_cast<int>(OauthMechanism::kApplicationDefault));
-      } else
-        o_auth_value = "";
-
-      if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                         reinterpret_cast<const BYTE*>(o_auth_value.c_str()),
-                         static_cast<DWORD>(o_auth_value.size() + 1)) !=
-          ERROR_SUCCESS) {
-        RegCloseKey(h_key);
-        return StatusRecord{SQLStates::k_HY000(),
-                            "Failed to set " + kv.first + " value"};
-      }
-    } else {
-      if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                         reinterpret_cast<const BYTE*>(kv.second.c_str()),
-                         static_cast<DWORD>(kv.second.size() + 1)) !=
-          ERROR_SUCCESS) {
-        RegCloseKey(h_key);
-        return StatusRecord{SQLStates::k_HY000(),
-                            "Failed to set " + kv.first + " value"};
-      }
-    }
+    for (auto const& kv : section) {
+    if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
+                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
+                       static_cast<DWORD>(kv.second.size() + 1)) !=
+        ERROR_SUCCESS) {
+      RegCloseKey(h_key);
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Failed to set " + kv.first + " value"};
+      
   }
+    }
   return StatusRecord::Ok();
 }
 // TODO:b/376206999- Add USER DSN functionality
