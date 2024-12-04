@@ -17,14 +17,14 @@
 #endif  // LINUX
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
-#endif
+#endif  // _WIN32
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 #ifdef _WIN32
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-#endif
+#endif  // _WIN32
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
