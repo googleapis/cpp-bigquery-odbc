@@ -484,7 +484,7 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";
 std::string kEmail = "test@example.com";
-std::string kOAuthMechanism = "Service Authentication";
+std::string kOAuthMechanism = "0";
 std::string kKeyFilePath = "C:\\path\\to\\keyfile";
 std::string kCatalog = "TestCatalog";
 std::string kDataset = "TestDataset";
