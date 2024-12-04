@@ -82,7 +82,7 @@ odbc_internal::StatusRecordOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
 FilterProjectsRMList(
     ::google::cloud::resourcemanager_v3::ProjectsClient& projects_rm_client,
-    ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
     std::string const& parent, std::vector<std::string> const& project_ids,
     ::google::cloud::Options const& options);
 

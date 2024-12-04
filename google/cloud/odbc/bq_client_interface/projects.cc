@@ -219,9 +219,9 @@ StatusRecordOr<std::vector<Project>> FilterProjects(
 }
 
 StatusRecordOr<std::vector<Project>> FilterProjectsRMList(
-    ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
-    std::string const& parent, std::vector<std::string> const& project_ids,
-    Options const& options) {
+    ProjectsClient& projects_rm_client,
+    ServiceUsageClient& service_usage_client, std::string const& parent,
+    std::vector<std::string> const& project_ids, Options const& options) {
   StatusRecordOr<std::vector<Project>> bq_all_projects = ListAllProjectsRM(
       projects_rm_client, service_usage_client, parent, options);
 
