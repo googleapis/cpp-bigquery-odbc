@@ -20,6 +20,15 @@
 
 namespace google::cloud::odbc_tests {
 
+// Helper to store field information
+struct DataField {
+  SQLPOINTER data_ptr;
+  SQLLEN data_size;
+  SQLSMALLINT c_type;
+  SQLSMALLINT sql_type;
+  SQLLEN* str_len_or_ind_ptr;
+};
+
 SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
                       SQLPOINTER value, SQLINTEGER value_buffer_len,
                       SQLINTEGER* value_string_len, bool use_ansi);
@@ -71,6 +80,12 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
 
 void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
                           std::vector<std::string> data, bool use_ansi = false);
+
+void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
+                     std::string const& table_name);
+
+void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
+                        std::string const& table_name);
 
 }  // namespace google::cloud::odbc_tests
 
