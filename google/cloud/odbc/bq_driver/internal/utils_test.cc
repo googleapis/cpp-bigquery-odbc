@@ -482,7 +482,7 @@ TEST(SanitizeIdentifierArgument, ArgumentWithoutQuotes) {
 }
 
 TEST(PopulateOutputConnectionString, Success) {
-  SQLCHAR out_conn_str[50] = {0};
+  SQLCHAR out_conn_str[50];
   SQLSMALLINT out_conn_str_len;
   std::string conn_string = "DSN=SampleDSN";
 
@@ -495,7 +495,7 @@ TEST(PopulateOutputConnectionString, Success) {
 }
 
 TEST(PopulateOutputConnectionString, Fail_Truncated) {
-  SQLCHAR out_conn_str[10] = {0};
+  SQLCHAR out_conn_str[10];
   SQLSMALLINT out_conn_str_len;
   std::string conn_string = "DSN=SampleDSN";
 
@@ -510,7 +510,7 @@ TEST(PopulateOutputConnectionString, Fail_Truncated) {
 }
 
 TEST(PopulateOutputConnectionString, EmptyConnectionString) {
-  SQLCHAR out_conn_str[10] = {0};
+  SQLCHAR out_conn_str[10];
   SQLSMALLINT out_conn_str_len;
   std::string conn_string = "";
 
@@ -534,7 +534,7 @@ TEST(PopulateOutputConnectionString, Fail_NullOutConnStr) {
 }
 
 TEST(PopulateOutputConnectionString, Fail_NullOutConnStrLen) {
-  SQLCHAR out_conn_str[50] = {0};
+  SQLCHAR out_conn_str[50];
   std::string conn_string = "DSN=SampleDSN";
 
   auto result = PopulateOutputConnectionString(
