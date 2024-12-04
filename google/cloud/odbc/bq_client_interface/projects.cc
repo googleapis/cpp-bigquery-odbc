@@ -240,4 +240,26 @@ StatusRecordOr<std::vector<Project>> FilterProjectsRMList(
   return projects;
 }
 
+StatusRecordOr<std::vector<Project>> FilterProjectsRMSearch(
+    ProjectsClient& projects_rm_client,
+    ServiceUsageClient& service_usage_client, std::string const& query,
+    std::vector<std::string> const& project_ids, Options const& options) {
+  StatusRecordOr<std::vector<Project>> bq_all_projects = SearchProjectsRM(
+      projects_rm_client, service_usage_client, query, options);
+
+  if (!bq_all_projects) {
+    return bq_all_projects.GetStatusRecord();
+  }
+
+  std::vector<Project> projects;
+  for (auto const& project : *bq_all_projects) {
+    if (std::find(project_ids.begin(), project_ids.end(), project.id) !=
+        project_ids.end()) {
+      projects.push_back(project);
+    }
+  }
+
+  return projects;
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
