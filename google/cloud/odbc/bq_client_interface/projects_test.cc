@@ -625,7 +625,6 @@ TEST(FilterProjectsRMList, FilterZeroProjects_NoBQEnabledProjects) {
   expected_rm_project.set_display_name("test");
   ProjectsClient mocked_projects_client =
       GetMockListProjectsClientSuccess(expected_rm_project);
-  GetMockSearchProjectsClientSuccess(expected_rm_project);
 
   Service expected_service;
   expected_service.set_state(State::DISABLED);
@@ -645,8 +644,7 @@ TEST(FilterProjectsRMSearch, FilterZeroProjects_NoBQEnabledProjects) {
   expected_rm_project.set_project_id("test");
   expected_rm_project.set_display_name("test");
   ProjectsClient mocked_projects_client =
-      GetMockListProjectsClientSuccess(expected_rm_project);
-  GetMockSearchProjectsClientSuccess(expected_rm_project);
+      GetMockSearchProjectsClientSuccess(expected_rm_project);
 
   Service expected_service;
   expected_service.set_state(State::DISABLED);
