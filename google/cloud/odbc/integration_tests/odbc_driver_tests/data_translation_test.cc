@@ -724,7 +724,108 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+struct ArrayBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  std::vector<SQLBIGINT> value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
 
+std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
+    {SQL_C_CHAR, {1,2,3,4,5}, SQL_SUCCESS},
+    {SQL_C_CHAR, {12,21,32,33}, SQL_SUCCESS},
+    {SQL_C_CHAR, {21,32,43,33,2}, SQL_SUCCESS},
+    {SQL_C_CHAR, {121,123,1212}, SQL_SUCCESS},
+};
+
+void TestTranslationsFromArray(std::shared_ptr<ODBCHandles> conn,
+                                  std::string query) {
+  SQLRETURN status;
+  SQLPOINTER data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  for (auto const& expected : kConversionFromArrayTestData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+                        
+    CheckError(status, "SQLBindCol", conn);
+
+    status = SQLFetch(conn->hstmt);
+std::cout<<"data "<<(char*)data<<std::endl;
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    if (!SQL_SUCCEEDED(status)) {
+      EXPECT_EQ(SQL_ERROR, expected.status);
+      break;
+    }
+    EXPECT_EQ(SQL_SUCCESS, expected.status);
+    // std::string expected_val = FormatTimeStamp(expected.value);
+    // switch (expected.target_c_type) {
+    //   case SQL_C_CHAR: {
+    //     std::string returned_val = reinterpret_cast<char*>(data);
+    //     EXPECT_EQ(returned_val, expected_val);
+    //     break;
+    //   }
+    //   case SQL_C_WCHAR: {
+    //     SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
+    //     std::string returned_val =
+    //         ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+    //     EXPECT_STREQ(returned_val.data(), expected_val.data());
+    //     break;
+    //   }
+      
+    //   default:
+    //     break;
+    // }
+  }
+}
+
+TEST(DataTranslationTest, From_SQL_Array_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_ARRAY";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, ArrayField ARRAY<INT64>)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<std::vector<SQLBIGINT>> array_data;
+  for (auto const& row : kConversionFromArrayTestData) {
+    std::vector<SQLBIGINT> temp;
+    for (auto const& var  : row.value) {
+    temp.push_back(var);
+  }
+  array_data.push_back(temp);
+  }
+  table.InsertArrayData(conn, array_data, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT ArrayField FROM " + table_name + " Order by index";
+  TestTranslationsFromArray(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // // Delete table
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.DropWithPrepare(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct DateBasicTestStruct {

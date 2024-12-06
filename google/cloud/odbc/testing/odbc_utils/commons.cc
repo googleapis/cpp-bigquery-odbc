@@ -717,6 +717,49 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
 }
+
+void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
+                                std::vector<std::vector<SQLBIGINT>> rows,
+                                bool insert_index) {
+  if (rows.empty()) {
+    return;
+  }
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+
+  for (size_t i = 0; i < rows.size(); ++i) {
+    auto const& row = rows[i];
+    
+      insert_stmt << "(";
+      if (insert_index) {
+      insert_stmt << i << ", [";
+    }
+    int col_index =0;
+    for (auto const& var  : row) {
+    insert_stmt<<" "<<var;
+    if (col_index != row.size() - 1) {
+      insert_stmt << ", ";
+    }
+    col_index++;
+  }
+
+  insert_stmt << "])";
+
+    if (i != rows.size() - 1) {
+      insert_stmt << ", ";
+    }
+  }
+
+  std::string insert_stmt_str = insert_stmt.str();
+  std::cout<<"insert_stmt_str "<<insert_stmt_str<<std::endl;
+  SQLRETURN status;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
+
 std::string FormatDate(const SQL_DATE_STRUCT& date) {
   char buffer[11];
   snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", date.year, date.month,
