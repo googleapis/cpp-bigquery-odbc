@@ -49,7 +49,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
-using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
