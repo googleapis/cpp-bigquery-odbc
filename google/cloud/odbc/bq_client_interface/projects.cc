@@ -60,8 +60,8 @@ StatusRecordOr<Project> ConvertFrom(
                         "The project " + rm_project.project_id() +
                             " was not found with valid project name"};
   }
-
-  bq_project.numeric_id = std::stoi(rm_project.name().substr(index + 1));
+  std::string s_numeric_id = rm_project.name().substr(index + 1);
+  bq_project.numeric_id = std::stoll(s_numeric_id);
   return bq_project;
 }
 

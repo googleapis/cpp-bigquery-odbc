@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
@@ -25,6 +26,8 @@ using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_utils::StatusIs;
@@ -62,8 +65,7 @@ TEST(ResourceManagerGetProject, Failure_InvalidArgument) {
   auto projects_client = ProjectsClient(
       ::google::cloud::resourcemanager_v3::MakeProjectsConnection(*options));
 
-  StatusOr<Project> project =
-      projects_client.GetProject(kRMProjectWithoutPrefix, *options);
+  StatusOr<Project> project = projects_client.GetProject("invalid", *options);
 
   EXPECT_THAT(project, StatusIs(StatusCode::kInvalidArgument,
                                 HasSubstr("invalid argument")));
@@ -159,7 +161,45 @@ TEST(ResourceManagerListProjects, Failure_Forbidden) {
 }
 
 // RM Integration tests via ODBCBQClient.
-TEST(ODBCBQClient, Success_RM_ListAPI) {
+TEST(ODBCBQClient, GetProjectRM_Success) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects_status =
+          (*odbc_bq_client)->GetProject(kRMProjectWithPrefix, *options, true);
+
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  EXPECT_EQ((*projects_status).id, kRMProjectWithoutPrefix);
+}
+
+TEST(ODBCBQClient, GetProjectRM_Failure_ProjectNotFound) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects_status =
+          (*odbc_bq_client)->GetProject("invalid", *options, true);
+
+  EXPECT_THAT(projects_status,
+              StatusRecordIs(SQLStates::k_42000(), HasSubstr("may not exist")));
+}
+
+TEST(ODBCBQClient, ListProjectsRM_Success) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   std::string path_to_file_with_credentials =
@@ -173,9 +213,10 @@ TEST(ODBCBQClient, Success_RM_ListAPI) {
   auto projects_status =
       (*odbc_bq_client)->ListAllProjectsRM(kParentFolder, *options);
   ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
 }
 
-TEST(ODBCBQClient, Failure_RM_ListAPI) {
+TEST(ODBCBQClient, ListProjectsRM_Failure) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   std::string path_to_file_with_credentials =
@@ -193,7 +234,7 @@ TEST(ODBCBQClient, Failure_RM_ListAPI) {
                              HasSubstr("The caller does not have permission")));
 }
 
-TEST(ODBCBQClient, Success_RM_SearchAPI) {
+TEST(ODBCBQClient, SearchProjectsRM_Success) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   std::string path_to_file_with_credentials =
@@ -209,7 +250,7 @@ TEST(ODBCBQClient, Success_RM_SearchAPI) {
   ASSERT_STATUS_RECORD_OK(projects_status);
 }
 
-TEST(ODBCBQClient, Failure_RM_SearchAPI) {
+TEST(ODBCBQClient, SearchProjectsRM_Failure) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
   auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
@@ -223,6 +264,89 @@ TEST(ODBCBQClient, Failure_RM_SearchAPI) {
 
   auto projects_status =
       (*odbc_bq_client)->SearchAllProjectsRM("status:ACTIVE", *options);
+  EXPECT_THAT(
+      projects_status,
+      StatusRecordIs(SQLStates::k_42000(), HasSubstr("Invalid filter query")));
+}
+
+TEST(ODBCBQClient, FilterProjectsRMList_Success) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMList(kParentFolder, project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
+}
+
+TEST(ODBCBQClient, FilterProjectsRMList_Failure) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMList(kParentInvalidFolder, project_ids, *options);
+  EXPECT_THAT(projects_status,
+              StatusRecordIs(SQLStates::k_42000(),
+                             HasSubstr("The caller does not have permission")));
+}
+
+TEST(ODBCBQClient, FilterProjectsRMSearch_Success) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMSearch("state:ACTIVE", project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
+}
+
+TEST(ODBCBQClient, FilterProjectsRMSearch_Failure) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto projects_client = ProjectsClient(MakeProjectsConnection(*options));
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMSearch("status:ACTIVE", project_ids, *options);
   EXPECT_THAT(
       projects_status,
       StatusRecordIs(SQLStates::k_42000(), HasSubstr("Invalid filter query")));

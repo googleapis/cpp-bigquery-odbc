@@ -49,6 +49,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
@@ -279,6 +280,22 @@ ODBCBQClient::ReadRows(
     int max_read_responses, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ReadRows(
       bigquery_read_client_, read_rows_request, max_read_responses, options);
+}
+
+// Filter projects for the user, based on project_ids, using RM List API.
+StatusRecordOr<std::vector<Project>> ODBCBQClient::FilterProjectsRMList(
+    std::string const& parent, std::vector<std::string> const& project_ids,
+    Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::FilterProjectsRMList(
+      project_rm_client_, service_usage_client_, parent, project_ids, options);
+}
+// Filter projects for the user, based on project_ids, using RM Search API.
+StatusRecordOr<std::vector<Project>> ODBCBQClient::FilterProjectsRMSearch(
+    std::string const& query, std::vector<std::string> const& project_ids,
+    Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::
+      FilterProjectsRMSearch(project_rm_client_, service_usage_client_, query,
+                             project_ids, options);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

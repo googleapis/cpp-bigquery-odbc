@@ -106,6 +106,18 @@ class ODBCBQClient {
       std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
   FilterProjects(std::vector<std::string> const& project_ids,
                  ::google::cloud::Options const& options);
+  // Filter projects for the user, based on project_ids, using RM List API.
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  FilterProjectsRMList(std::string const& parent,
+                       std::vector<std::string> const& project_ids,
+                       ::google::cloud::Options const& options);
+  // Filter projects for the user, based on project_ids, using RM Search API.
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery_v2_minimal_internal::Project>>
+  FilterProjectsRMSearch(std::string const& query,
+                         std::vector<std::string> const& project_ids,
+                         ::google::cloud::Options const& options);
 
   ///////////////
   // Dataset APIs
