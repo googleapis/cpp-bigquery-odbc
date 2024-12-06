@@ -56,12 +56,10 @@ jobs:
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
     # We are deliberately downgrading cmake here because v3.31.0 runs each integration test twice
-    - name: Download and Install CMake
-      shell: bash
-      run: |
-        choco install -y --allow-downgrade cmake --version 3.29.2 || \
-        (sleep 60  ; choco install -y --allow-downgrade cmake --version 3.29.2) || \
-        (sleep 120 ; choco install -y --allow-downgrade cmake --version 3.29.2)
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+      with:
+        cmakeVersion: "3.29.0"
     - name: Download and Install ODBC Driver
       shell: powershell
       # TODO(b/357810060): Enable msvc-2019 arch
