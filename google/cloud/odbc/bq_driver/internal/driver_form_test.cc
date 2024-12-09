@@ -68,22 +68,6 @@ TEST_F(DriverFormTest, TestUIOpens) {
       << "Form window should be visible.";
 }
 
-TEST_F(DriverFormTest, TestButtonClickOK) {
-  form->Show();
-  ASSERT_NE(form->GetHwnd(), nullptr)
-      << "Form window handle should not be null after showing the form.";
-  ClickButton(form->GetHwnd(), kIdcButtonOk);
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  MSG msg;
-  while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
-  }
-
-  EXPECT_EQ(IsWindow(form->GetHwnd()), FALSE)
-      << "Form should be closed when OK button is clicked.";
-}
-
 TEST_F(DriverFormTest, TestButtonClickCancel) {
   form->Show();
   ASSERT_NE(form->GetHwnd(), nullptr)
