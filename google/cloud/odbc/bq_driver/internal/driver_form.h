@@ -184,7 +184,6 @@ class ProxyOptions {
   static char const CLASS_NAME[];
 };
 
-
 void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path);
 
 }  // namespace google::cloud::odbc_bq_driver_internal

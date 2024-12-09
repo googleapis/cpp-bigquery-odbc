@@ -764,8 +764,7 @@ void ProxyOptions::InitControls() {
   HWND h_proxy_host_label = CreateLabel(proxy_hwnd, "Proxy Host:", 20, 60, 150,
                                         20, kIdcProxyHostLabel);
   HWND h_proxy_host_edit =
-      CreateEditBox(proxy_hwnd, 150, 60, 240, 20,
-                    kIdcProxyHostName );
+      CreateEditBox(proxy_hwnd, 150, 60, 240, 20, kIdcProxyHostName);
   EnableWindow(h_proxy_host_edit, FALSE);
   HWND h_proxy_port_label = CreateLabel(proxy_hwnd, "Proxy Port:", 20, 100, 150,
                                         20, kIdcProxyPortLabel);
@@ -779,8 +778,8 @@ void ProxyOptions::InitControls() {
   EnableWindow(h_proxy_username_edit, FALSE);
   HWND h_proxy_password_label = CreateLabel(
       proxy_hwnd, "Proxy Password:", 20, 180, 180, 20, kIdcProxyPasswordLabel);
-  HWND h_proxy_password_edit = CreateEditBox(
-      proxy_hwnd, 150, 180, 240, 20, kIdcProxyPasswordEdit);
+  HWND h_proxy_password_edit =
+      CreateEditBox(proxy_hwnd, 150, 180, 240, 20, kIdcProxyPasswordEdit);
   EnableWindow(h_proxy_password_edit, FALSE);
   HWND h_ok_button =
       CreateButton(proxy_hwnd, "OK", 180, 220, 80, 30, kIdcProxyOKButton);
@@ -810,10 +809,9 @@ void ProxyOptions::Show(HWND hwnd) {
   int x_pos = (screen_width - window_width) / 2;
   int y_pos = (screen_height - window_height) / 2;
 
-  proxy_hwnd =
-      CreateWindowEx(0, CLASS_NAME, "Proxy Options", WS_OVERLAPPEDWINDOW,
-                     CW_USEDEFAULT, CW_USEDEFAULT, 470, 400,
-                     NULL, NULL, GetModuleHandle(NULL), this);
+  proxy_hwnd = CreateWindowEx(
+      0, CLASS_NAME, "Proxy Options", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+      CW_USEDEFAULT, 470, 400, NULL, NULL, GetModuleHandle(NULL), this);
 
   if (proxy_hwnd) {
     InitControls();
@@ -828,14 +826,14 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
   switch (msg) {
     case WM_COMMAND: {
       int wm_id = LOWORD(w_param);
-      if(wm_id == kIdcProxyCheckbox && HIWORD(w_param)==BN_CLICKED){
-          BOOL is_checked = IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED;
+      if (wm_id == kIdcProxyCheckbox && HIWORD(w_param) == BN_CLICKED) {
+        BOOL is_checked =
+            IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED;
         EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
         EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
         EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
         EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
-        }
-      else if (wm_id == kIdcProxyOKButton) {
+      } else if (wm_id == kIdcProxyOKButton) {
         DestroyWindow(hwnd);
       } else if (wm_id == kIdcProxyCancelButton) {
         DestroyWindow(hwnd);
@@ -855,24 +853,23 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
 }
 
 void EvaluateFields(HWND hwnd) {
-char dsn_buffer[256] = {0};
-char key_buffer[256] = {0};
-char auth_buffer[256] = {0};
-char catalog_buffer[256] = {0};
+  char dsn_buffer[256] = {0};
+  char key_buffer[256] = {0};
+  char auth_buffer[256] = {0};
+  char catalog_buffer[256] = {0};
 
-GetWindowText(GetDlgItem(hwnd, kIdcDSNEdit), dsn_buffer, sizeof(dsn_buffer));
-GetWindowText(GetDlgItem(hwnd, kIdcKeyfileEdit), key_buffer,
-              sizeof(key_buffer));
-GetWindowText(GetDlgItem(hwnd, kIdcAuthBox), auth_buffer,
-             sizeof(auth_buffer));
-GetWindowText(GetDlgItem(hwnd, kIdcCatlogBOX), catalog_buffer,
-              sizeof(catalog_buffer));
-BOOL enable = dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
-              auth_buffer[0] != '\0' && catalog_buffer[0] != '\0';
+  GetWindowText(GetDlgItem(hwnd, kIdcDSNEdit), dsn_buffer, sizeof(dsn_buffer));
+  GetWindowText(GetDlgItem(hwnd, kIdcKeyfileEdit), key_buffer,
+                sizeof(key_buffer));
+  GetWindowText(GetDlgItem(hwnd, kIdcAuthBox), auth_buffer,
+                sizeof(auth_buffer));
+  GetWindowText(GetDlgItem(hwnd, kIdcCatlogBOX), catalog_buffer,
+                sizeof(catalog_buffer));
+  BOOL enable = dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
+                auth_buffer[0] != '\0' && catalog_buffer[0] != '\0';
 
-EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
-EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
-
+  EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
+  EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
 }
 
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
@@ -888,7 +885,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       break;
 
     case WM_COMMAND:
-    if(HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE){
+      if (HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE) {
         EvaluateFields(hwnd);
       }
       switch (LOWORD(w_param)) {
@@ -897,8 +894,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         case kIdcDSNEdit:
         case kIdcKeyfileEdit: {
           EvaluateFields(hwnd);
-          }
-          break; 
+        } break;
         case kIdcBrowseButton: {
           HWND h_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
           OpenFileDialog(hwnd, h_edit);
@@ -945,7 +941,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char data_buffer[256];
           GetWindowText(h_dataset_box, data_buffer, sizeof(data_buffer));
           dataset_ = data_buffer;
-         
+
           HWND h_encrypt_combo_box = GetDlgItem(hwnd, kIdcEncryptDataComboBox);
           char encrypt_buffer[256];
           GetWindowText(h_encrypt_combo_box, encrypt_buffer,
@@ -1041,7 +1037,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         }
       }
       break;
-      
+
     case WM_CLOSE:
       DestroyWindow(hwnd);
       return 0;

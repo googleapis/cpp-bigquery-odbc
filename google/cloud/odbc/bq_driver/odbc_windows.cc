@@ -20,9 +20,9 @@
 namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
+using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
-using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
@@ -199,6 +199,5 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       return FALSE;
   }
 }
-
 
 }  // namespace google::cloud::odbc_bq_driver
