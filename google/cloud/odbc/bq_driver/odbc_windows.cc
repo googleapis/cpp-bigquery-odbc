@@ -22,6 +22,7 @@ using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
+using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
@@ -35,7 +36,7 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
   if (o_auth_mechanism == "Service Authentication") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
-  } else if (o_auth_mechanism == "Application Default Credentials") {
+  } else if (o_auth_mechanism == "Application Credentials") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
   } else
@@ -56,83 +57,140 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string email = section.count("Email") > 0 ? section.at("Email") : "";
   std::string key_file_path =
       section.count("KeyFilePath") > 0 ? section.at("KeyFilePath") : "";
-  std::string o_auth_mechanism = ConvertOAuthMechanism(
-      section.count("OAuthMechanism") > 0 ? section.at("OAuthMechanism") : "");
+  std::string o_auth_mechanism =
+      section.count("OAuthMechanism") > 0 ? section.at("OAuthMechanism") : "";
   std::string catalog =
       section.count("Catalog") > 0 ? section.at("Catalog") : "";
   std::string dataset_name =
       section.count("Dataset") > 0 ? section.at("Dataset") : "";
-
+  std::string encrypt_data =
+      section.count("EncryptData") > 0 ? section.at("EncryptData") : "";
+  std::string trusted_certs =
+      section.count("TrustedCerts") > 0 ? section.at("TrustedCerts") : "";
+  std::string min_tls_version =
+      section.count("Min_TLS") > 0 ? section.at("Min_TLS") : "";
+  std::string description =
+      section.count("Description") > 0 ? section.at("Description") : "";
+  std::string language_dialect =
+      section.count("LanguageDialect") > 0 ? section.at("LanguageDialect") : "";
+  std::string large_dataset_name = section.count("LargeResultsDatasetId") > 0
+                                       ? section.at("LargeResultsDatasetId")
+                                       : "";
+  std::string encryption_key =
+      section.count("EncryptionKey") > 0 ? section.at("EncryptionKey") : "";
+  std::string rows_per_block = section.count("RowsFetchedPerBlock") > 0
+                                   ? section.at("RowsFetchedPerBlock")
+                                   : "";
+  std::string default_string_length =
+      section.count("DefaultStringColumnLength") > 0
+          ? section.at("DefaultStringColumnLength")
+          : "";
+  std::string temp_expiration =
+      section.count("LargeResultsTempTableExpirationTime") > 0
+          ? section.at("LargeResultsTempTableExpirationTime")
+          : "";
+  std::string session_location =
+      section.count("SessionLocation") > 0 ? section.at("SessionLocation") : "";
+  std::string additional_projects = section.count("AdditionalProjects") > 0
+                                        ? section.at("AdditionalProjects")
+                                        : "";
+  std::string query_properties =
+      section.count("QueryProperties") > 0 ? section.at("QueryProperties") : "";
+  std::string activation_threshold =
+      section.count(" HTAPI_ActivationThreshold") > 0
+          ? section.at(" HTAPI_ActivationThreshold")
+          : "";
   DriverForm form;
+  AdvanceOptions advance_form;
+  auto createSectionFromForm = [&]() -> Section {
+    return {{"Email", email},
+            {"KeyFilePath", key_file_path},
+            {"OAuthMechanism", o_auth_mechanism},
+            {"Catalog", catalog},
+            {"Dataset", dataset_name},
+            {"EncryptData", encrypt_data},
+            {"TrustedCerts", trusted_certs},
+            {"Min_TLS", min_tls_version},
+            {"Description", description},
+            {"LargeResultsDatasetId", large_dataset_name},
+            {"EncryptionKey", encryption_key},
+            {"RowsFetchedPerBlock", rows_per_block},
+            {"DefaultStringColumnLength", default_string_length},
+            {"LargeResultsTempTableExpirationTime", temp_expiration},
+            {"SessionLocation", session_location},
+            {"AdditionalProjects", additional_projects},
+            {"QueryProperties", query_properties},
+            {"HTAPI_ActivationThreshold", activation_threshold}};
+  };
+
+  auto showFormAndReturnValues = [&]() -> std::string {
+    form.Show();
+    form.GetHwnd();
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+
+    dsn_name = form.GetDSN();
+    email = form.GetEmail();
+    key_file_path = form.GetKeyFilePath();
+    o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
+    catalog = form.GetCatalogName();
+    dataset_name = form.GetDatasetName();
+    encrypt_data = form.GetEncryptData();
+    trusted_certs = form.GetTrustedCerts();
+    min_tls_version = form.GetMinTls();
+    description = form.GetDescription();
+
+    large_dataset_name = advance_form.GetDatasetName();
+    encryption_key = advance_form.GetEncryptionKey();
+    rows_per_block = advance_form.GetRowsPerBlock();
+    default_string_length = advance_form.GetDefaultStringLength();
+    temp_expiration = advance_form.GetTempTableExpiration();
+    session_location = advance_form.GetSessionLocation();
+    additional_projects = advance_form.GetAdditionalProjects();
+    query_properties = advance_form.GetQueryProperties();
+    activation_threshold = advance_form.GetActivationThreshold();
+
+    return dsn_name;
+  };
+
   switch (f_request) {
     case ODBC_ADD_DSN: {
       if (hwnd_parent == NULL) {
-        Section section = {{"Email", email},
-                           {"KeyFilePath", key_file_path},
-                           {"OAuthMechanism", o_auth_mechanism},
-                           {"Catalog", catalog},
-                           {"Dataset", dataset_name}};
+        Section section = createSectionFromForm();
         AddDSNToRegistry(dsn_value, lpsz_driver, section);
         return true;
       }
-      form.Show();
-      form.GetHwnd();
-      MSG msg = {};
-      while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-      }
 
-      dsn_name = form.GetDSN();
-      email = form.GetEmail();
-      key_file_path = form.GetKeyFilePath();
-      o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
-      catalog = form.GetCatalogName();
-      dataset_name = form.GetDatasetName();
-      Section section = {{"Email", email},
-                         {"KeyFilePath", key_file_path},
-                         {"OAuthMechanism", o_auth_mechanism},
-                         {"Catalog", catalog},
-                         {"Dataset", dataset_name}};
+      dsn_name = showFormAndReturnValues();
+      Section section = createSectionFromForm();
       AddDSNToRegistry(dsn_name, lpsz_driver, section);
       return TRUE;
     }
+
     case ODBC_CONFIG_DSN: {
       if (hwnd_parent == NULL) {
-        Section section2 = {{"Email", email},
-                            {"KeyFilePath", key_file_path},
-                            {"OAuthMechanism", o_auth_mechanism},
-                            {"Catalog", catalog},
-                            {"Dataset", dataset_name}};
+        Section section2 = createSectionFromForm();
         EditDSNInRegistry(dsn_value, section2);
         return true;
       }
+
       std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_value;
       auto res = GetSectionWin(registry_key);
       auto section = res.GetValue();
       (*section)["DSN"] = dsn_value;
-      form.SetValues(*section);
-      form.Show();
-      form.GetHwnd();
-      MSG msg = {};
-      while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-      }
 
-      email = form.GetEmail();
-      key_file_path = form.GetKeyFilePath();
-      o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
-      catalog = form.GetCatalogName();
-      dataset_name = form.GetDatasetName();
-      Section section2 = {{"Email", email},
-                          {"KeyFilePath", key_file_path},
-                          {"OAuthMechanism", o_auth_mechanism},
-                          {"Catalog", catalog},
-                          {"Dataset", dataset_name}};
+      form.SetValues(*section);
+      advance_form.SetValues(*section);
+      dsn_name = showFormAndReturnValues();
+
+      Section section2 = createSectionFromForm();
       EditDSNInRegistry(dsn_value, section2);
       return TRUE;
     }
+
     case ODBC_REMOVE_DSN:
       RemoveDSNFromRegistry(dsn_value);
       return TRUE;
@@ -141,5 +199,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       return FALSE;
   }
 }
+
 
 }  // namespace google::cloud::odbc_bq_driver
