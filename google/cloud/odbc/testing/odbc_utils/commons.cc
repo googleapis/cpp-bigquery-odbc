@@ -379,6 +379,16 @@ void Table::Create(std::shared_ptr<ODBCHandles> conn, std::string schema_str,
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 }
 
+void Table::CreateW(std::shared_ptr<ODBCHandles> conn,
+                    std::wstring schema_str) {
+  SQLWCHAR create_table_stmt[kBufferLength];
+  swprintf(reinterpret_cast<wchar_t*>(create_table_stmt), kBufferLength,
+           L"CREATE OR REPLACE TABLE %ls %ls", wtable_name_.c_str(),
+           schema_str.c_str());
+  SQLRETURN status = SQLExecDirectW(conn->hstmt, create_table_stmt, SQL_NTS);
+  CheckError(status, "SQLExecDirectW", conn);
+}
+
 void Table::CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
                               std::string schema_str) {
   CreateTableWithPrepare(conn, table_name_, schema_str);
@@ -394,6 +404,14 @@ void Table::Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
     status = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_table_stmt, SQL_NTS);
   }
   CheckError(status, "SQLExecDirect", conn, use_ansi);
+}
+
+void Table::DropW(std::shared_ptr<ODBCHandles> conn) {
+  SQLWCHAR drop_table_stmt[kBufferLength];
+  swprintf(reinterpret_cast<wchar_t*>(drop_table_stmt), kBufferLength,
+           L"DROP TABLE IF EXISTS %ls", wtable_name_.c_str());
+  SQLRETURN status = SQLExecDirectW(conn->hstmt, drop_table_stmt, SQL_NTS);
+  CheckError(status, "SQLExecDirectW", conn);
 }
 
 void Table::DropWithPrepare(std::shared_ptr<ODBCHandles> conn) {

@@ -22,6 +22,7 @@
 #include <nlohmann/json.hpp>
 // We need sorting functions
 #include <algorithm>
+#include <codecvt>
 #include <fstream>
 #include <iomanip>
 #include <locale>
@@ -262,6 +263,16 @@ inline void StrToChar(char* dest, std::string src) {
   strcpy(dest, src.c_str());
 }
 
+inline std::wstring ToWStr(std::string const& str) {
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.from_bytes(str);
+}
+
+inline std::string WStrToStr(std::wstring const& wstr) {
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.to_bytes(wstr);
+}
+
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
@@ -334,15 +345,30 @@ std::string GetInsertionString(std::string table_name, StdRows rows);
 
 class Table {
  public:
-  Table(std::string table_name) { table_name_ = table_name; };
+  Table() = default;
+  Table(std::string table_name) {
+    table_name_ = table_name;
+    wtable_name_ = ToWStr(table_name_);
+  };
+
+  Table(std::wstring wtable_name) {
+    table_name_ = WStrToStr(wtable_name);
+    wtable_name_ = wtable_name;
+  };
 
   void Create(std::shared_ptr<ODBCHandles> conn,
               std::string schema_str = "(Column INT64)", bool use_ansi = false);
+
+  // Uses SQLExecDirectW
+  void CreateW(std::shared_ptr<ODBCHandles> conn, std::wstring schema_str);
 
   void CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
                          std::string schema_str);
 
   void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
+
+  // Uses SQLExecDirectW
+  void DropW(std::shared_ptr<ODBCHandles> conn);
 
   void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
 
@@ -391,6 +417,7 @@ class Table {
 
  private:
   std::string table_name_;
+  std::wstring wtable_name_;
 };
 
 std::string GetRandomString(int len);

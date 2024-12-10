@@ -42,8 +42,12 @@ class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
                          testing::Values(false, true));
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+class MultiStatementTest : public ::testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, MultiStatementTest,
+                         testing::Values(true, false));
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
     {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
@@ -243,6 +247,30 @@ TEST(StatementTest, SQLExecDirect) {
   ////////////////
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLExecDirectW) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring const table_name =
+      ToWStr(kDatasetWithTablePrefix) + L"ODBC_INSERT_SQLEXECDIRECTW_TEST";
+  Table table(table_name);
+
+  table.CreateW(conn, L"(string_field STRING)");
+
+  std::wstring const string_field = L"Some Test String नमस्ते";
+  SQLWCHAR insert_stmt[kBufferLength];
+  swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
+           table_name.c_str(), string_field.c_str());
+
+  SQLRETURN status =
+      SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt, SQL_NTS);
+  CheckError(status, "SQLExecDirectW", conn);
+
+  table.DropW(conn);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -2107,6 +2135,7 @@ TEST(SQLCancel, Prepare_Execute_CancelNoOp) {
 }
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 // Integration tests for SQLCancel.
 
 /////////////////////////////////////////////////////////
@@ -2325,11 +2354,19 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(MultiStatementTest, Basic_script) {
+TEST_P(MultiStatementTest, BasicScript) {
+  bool use_prepare = GetParam();
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_TEST_TABLE";
+  std::string table_name;
+  if (use_prepare) {
+    table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_TEST_TABLE";
+  } else {
+    table_name =
+        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECDIRECT_TEST_TABLE";
+  }
+
   std::string create_stmt =
       "CREATE OR REPLACE TABLE " + table_name +
       " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
@@ -2341,10 +2378,16 @@ TEST(MultiStatementTest, Basic_script) {
   std::string query =
       create_stmt + insert_stmt + ";" + select_stmt_1 + ";" + select_stmt_2;
 
-  SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  SQLRETURN status;
+  if (use_prepare) {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+    CheckError(status, "SQLExecDirect", conn);
+  }
 
   SQLSMALLINT num_cols;
 
@@ -2391,12 +2434,23 @@ TEST(MultiStatementTest, Basic_script) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(MultiStatementTest, ProcedureWithInOutParams) {
+TEST_P(MultiStatementTest, ProcedureWithInOutParams) {
+  bool use_prepare = GetParam();
+
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name =
-      kDatasetWithTablePrefix + "ODBC_SCRIPTS_PROCEDURES_TABLE";
+  std::string table_name, procedure_name;
+  if (use_prepare) {
+    table_name =
+        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_PROCEDURES_TABLE";
+    procedure_name =
+        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECUTE_INSERT_STD_ROW";
+  } else {
+    table_name = kDatasetWithTablePrefix +
+                 "ODBC_SCRIPTS_SQL_EXECDIRECT_PROCEDURES_TABLE";
+    procedure_name =
+        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECDIRECT_INSERT_STD_ROW";
+  }
   Table table(table_name);
   table.CreateWithPrepare(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
@@ -2404,8 +2458,6 @@ TEST(MultiStatementTest, ProcedureWithInOutParams) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string procedure_name =
-      kDatasetWithTablePrefix + "ODBC_PROCEDURE_INSERT_STD_ROW";
   std::string procedure_create =
       "CREATE OR REPLACE PROCEDURE " + procedure_name +
       "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING)\n"
@@ -2442,10 +2494,16 @@ TEST(MultiStatementTest, ProcedureWithInOutParams) {
       "SELECT * FROM " +
       table_name;
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  if (use_prepare) {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+  } else {
+    status =
+        SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+    CheckError(status, "SQLExecDirect", conn);
+  }
 
   // Validations for INSERT INTO ...
   status = SQLNumResultCols(conn->hstmt, &num_cols);
