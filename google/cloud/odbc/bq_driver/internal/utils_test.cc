@@ -261,6 +261,19 @@ TEST(Parsing, ParseConnectionString_DuplicateFields) {
   EXPECT_EQ(section_resp["a"], "3");
 }
 
+TEST(Parsing, ParseConnectionString_RemoveCurlyBraces) {
+  std::string conn_str = "a={3};b=4;";
+  StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
+  ASSERT_STATUS_RECORD_OK(section_resp_status);
+  Section section_resp = *section_resp_status;
+
+  EXPECT_EQ(section_resp["a"], "3");
+  EXPECT_EQ(section_resp["b"], "4");
+
+  EXPECT_NE(section_resp["a"], "{3}");
+  EXPECT_NE(section_resp["a"], "3}");
+}
+
 TEST(FilterUsingOdbcRegex, UseBaseRegex) {
   auto regex = CastOdbcRegexToCppRegex("abcde");
 
@@ -542,6 +555,42 @@ TEST(PopulateOutputConnectionString, Fail_NullOutConnStrLen) {
 
   EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
   EXPECT_EQ(result.message, "Null output buffer or length pointer");
+}
+
+TEST(GetCamelCaseStr, SuccessCases) {
+  std::string str1 = "driver";
+  GetCamelCaseStr(str1);
+  EXPECT_EQ(str1, "Driver");
+
+  std::string str2 = "catalog";
+  GetCamelCaseStr(str2);
+  EXPECT_EQ(str2, "Catalog");
+
+  std::string str3 = "oauthmechanism";
+  GetCamelCaseStr(str3);
+  EXPECT_EQ(str3, "OAuthMechanism");
+
+  std::string str4 = "keyfilepath";
+  GetCamelCaseStr(str4);
+  EXPECT_EQ(str4, "KeyFilePath");
+}
+
+TEST(GetCamelCaseStr, FailureCases) {
+  std::string str1 = "unknown";
+  GetCamelCaseStr(str1);
+  EXPECT_EQ(str1, "unknown");
+
+  std::string str2 = "randomkey";
+  GetCamelCaseStr(str2);
+  EXPECT_EQ(str2, "randomkey");
+
+  std::string str3 = "somevalue";
+  GetCamelCaseStr(str3);
+  EXPECT_EQ(str3, "somevalue");
+
+  std::string str4 = "drivers";
+  GetCamelCaseStr(str4);
+  EXPECT_EQ(str4, "drivers");
 }
 
 #ifdef _WIN32
