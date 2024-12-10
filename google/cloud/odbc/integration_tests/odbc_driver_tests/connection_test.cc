@@ -930,9 +930,6 @@ TEST(ConnectionTest, SQLConnectA_WithDSN) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/383015448): Remove BQ_DRIVER_INTEGRATION_TESTS Flag once
-// SQLBrowseConnect Implemented
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
                            int expected_error_code,
                            std::string const& expected_message_regex) {
@@ -950,8 +947,14 @@ void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
   EXPECT_EQ(native_error, expected_error_code);
 
   std::string actual_message(reinterpret_cast<char*>(buf));
-  EXPECT_THAT(actual_message, ::testing::ContainsRegex(expected_message_regex));
   EXPECT_EQ(actual_message.size(), string_length_ptr);
+
+  if (kIsBqDriver) {
+    EXPECT_THAT(actual_message, ::testing::HasSubstr(expected_message_regex));
+  } else {
+    EXPECT_THAT(actual_message,
+                ::testing::ContainsRegex(expected_message_regex));
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
@@ -1059,6 +1062,13 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
+  // TODO(b/383449326): Add other connection attributes for the connection
+  if (kIsBqDriver) {
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+  }
+
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
   EXPECT_THAT(res_out_conn_str,
@@ -1111,11 +1121,17 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_NEED_DATA);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+
+  // TODO(b/383449326): Add other connection attributes for the connection
+  if (kIsBqDriver) {
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+  }
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
@@ -1126,7 +1142,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name + "}";
 
-  SQLCHAR in_conn_str[kBufferLength] = {0};
+  SQLCHAR in_conn_str[kBufferLength];
   SQLCHAR out_conn_str[kBufferLength] = {0};
   SQLSMALLINT out_conn_str_len;
 
@@ -1138,11 +1154,10 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
                                  sizeof(out_conn_str), &out_conn_str_len);
 
   EXPECT_EQ(status, SQL_NEED_DATA);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
@@ -1157,12 +1172,21 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
-  CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
-                        "Invalid connection string");
+
+  // TODO(b/383449326): Add other connection attributes for the connection
+  if (kIsBqDriver) {
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 0,
+        "[Google][ODBC BigQuery Driver] Invalid Connection String");
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
+                          "Invalid connection string");
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1185,12 +1209,10 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
                                  sizeof(out_conn_str), &out_conn_str_len);
 
   EXPECT_EQ(status, SQL_NEED_DATA);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
-  EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
@@ -1207,13 +1229,67 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   EXPECT_THAT(res_out_conn_str, HasSubstr("Catalog:Catalog=?"));
 #endif  // _WIN32
-  CheckDiagnosticRecord(conn->hdbc, "HY000", 11600,
-                        "Connection Error: Non Requested connection attribute");
+
+  // TODO(b/383449326): Add other connection attributes for the connection
+  if (kIsBqDriver) {
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+                          "[Google][ODBC BigQuery Driver] Connection Error: "
+                          "Non Requested connection attribute");
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 11600,
+        "Connection Error: Non Requested connection attribute");
+  }
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name +
+                         "};"
+                         "Catalog=bigquery-devtools-drivers";
+
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  StrToChar((char*)in_conn_str, conn_str);
+  google::cloud::odbc_tests::SetAttributes(conn, 30);
+
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(status, SQL_NEED_DATA);
+
+  // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+#ifdef _WIN32
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  EXPECT_THAT(res_out_conn_str, HasSubstr("OAuthMechanism:OAuthMechanism=?;"));
+#endif  // _WIN32
+
+  conn_str = "Catalog=bigquery-devtools-drivers;OAuthMechanism=0;";
+
+  StrToChar((char*)in_conn_str, conn_str);
+  status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_ERROR);
+
+  if (kIsBqDriver) {
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+                          "[Google][ODBC BigQuery Driver] Connection Error: "
+                          "Connection Attribute Catalog already found!");
+  } else {
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 11590,
+        "Connection Error: Connection Attribute Catalog already found!");
+  }
+}
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs

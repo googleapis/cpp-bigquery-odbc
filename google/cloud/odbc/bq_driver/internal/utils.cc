@@ -212,6 +212,11 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
     std::string value = Join(property_splits, "", 1);
     Trim(field);
     Trim(value);
+
+    // Remove enclosing curly braces if they exist
+    if (!value.empty() && value.front() == '{' && value.back() == '}') {
+      value = value.substr(1, value.size() - 2);
+    }
     if (field.empty() || value.empty()) {
       continue;
     }
