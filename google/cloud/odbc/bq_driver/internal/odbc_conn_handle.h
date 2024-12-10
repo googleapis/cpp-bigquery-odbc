@@ -47,6 +47,8 @@ struct Dsn {
   std::string catalog;
   std::string default_dataset;
   std::string dsn_name;
+  std::string key_file_path;
+  std::string o_auth_mechanism;
   std::string list_projects_parent;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
@@ -107,6 +109,15 @@ class ConnectionHandle : public Handle {
   inline void SetTransactionActive(bool is_transaction_active) {
     is_transaction_active_ = is_transaction_active;
   }
+  inline void SaveRequestedAttribute(
+      std::vector<std::string> const& attributes) {
+    requested_attributes_ = attributes;
+  }
+  std::vector<std::string> GetRequestedAttribute() {
+    return requested_attributes_;
+  }
+  odbc_internal::StatusRecord ValidateAllowedAttributes(
+      Section const& attributes);
 
  protected:
   bool is_connected_ = false;
@@ -122,6 +133,8 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, SQLPOINTER> attribute_values_;
   // stores string attribute values.
   std::map<SQLINTEGER, std::string> attribute_str_values_;
+  // stores string attribute keys.
+  std::vector<std::string> requested_attributes_;
   // storage of all statement handles associated with this connection handle
   std::set<StatementHandle*> stmt_handles_;
   // storage of all explicitly allocated descriptor handles associated with this

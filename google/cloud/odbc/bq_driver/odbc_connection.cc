@@ -36,6 +36,7 @@ using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::GetCamelCaseStr;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
@@ -43,6 +44,7 @@ using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_bq_driver_internal::ValidateConnAttribute;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -397,5 +399,94 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
+                                   SQLSMALLINT in_conn_str_len,
+                                   SQLCHAR* out_conn_str,
+                                   SQLSMALLINT out_conn_str_bufflen,
+                                   SQLSMALLINT* out_conn_str_len) {
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(conn_handle, false);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  auto* handle_ref = *handle_result;
+
+  std::string conn_string = reinterpret_cast<char*>(in_conn_str);
+  StatusRecordOr<Section> connection_params_resp_status =
+      google::cloud::odbc_bq_driver_internal::ParseConnectionString(
+          conn_string);
+
+  if (!connection_params_resp_status) {
+    return LogAndReturnCode(*handle_ref, connection_params_resp_status);
+  }
+
+  auto connection_params_resp = *connection_params_resp_status;
+
+  Section dsn_section;
+  for (auto const& it : connection_params_resp) {
+    std::string property = it.first;
+    std::string value = it.second;
+    GetCamelCaseStr(property);
+    dsn_section[property] = value;
+  }
+
+  StatusRecord validation_status =
+      handle_ref->ValidateAllowedAttributes(dsn_section);
+  if (!validation_status.ok()) {
+    return LogAndReturnCode(*handle_ref, validation_status);
+  }
+
+  std::string dsn_name = dsn_section["DSN"];
+  if (!dsn_name.empty()) {
+    OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+
+    for (auto const& it : connection_params_resp) {
+      if (!dsn_section[it.first].empty()) {
+        dsn_section[it.first] = it.second;
+      }
+    }
+  }
+
+  handle_ref->SetUp(dsn_section, dsn_name);
+  bool conn_att_resp =
+      ValidateConnAttribute(handle_ref, out_conn_str, out_conn_str_len);
+  if (!conn_att_resp) {
+    return SQL_NEED_DATA;
+  }
+  Authentication auth = CreateAuth(dsn_section);
+  StatusRecord status = handle_ref->Connect(auth);
+
+  if (status.ok() && out_conn_str != nullptr) {
+    // Populate the output parameters as per the spec.
+    auto* temp_conn_str = in_conn_str;
+    if (dsn_name.empty()) {
+      snprintf(reinterpret_cast<char*>(temp_conn_str), 1024,
+               "DRIVER={%s};Catalog=%s;KeyFilePath=%s;OAuthMechanism=%s",
+               handle_ref->GetDsn().driver.c_str(),
+               handle_ref->GetDsn().catalog.c_str(),
+               handle_ref->GetDsn().key_file_path.c_str(),
+               handle_ref->GetDsn().o_auth_mechanism.c_str());
+    }
+
+    std::string out_tmp_str(ToCharStr(temp_conn_str));
+    if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
+      out_tmp_str.append(";");
+    }
+    *out_conn_str_len = out_tmp_str.length();
+
+    if (*out_conn_str_len > out_conn_str_bufflen) {
+      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+              out_conn_str_bufflen - 1);
+      out_conn_str[out_conn_str_bufflen - 1] = '\0';
+      return SQL_NEED_DATA;
+    }
+    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+            out_tmp_str.length());
+    out_conn_str[out_tmp_str.length()] = '\0';
+  }
+  return SQL_SUCCESS;
+}
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)
