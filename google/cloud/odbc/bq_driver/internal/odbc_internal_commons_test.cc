@@ -29,6 +29,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bq_driver_internal::ValidateConnAttribute;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -1050,4 +1051,78 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   EXPECT_TRUE(CompareTimestampStruct(result, expected));
 }
 
+TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
+  ConnectionHandle conn_handle;
+  Section section;
+  section["Catalog"] = "BigQueryCatalog";
+  section["OAuthMechanism"] = "1";
+  section["KeyFilePath"] = "/path/to/keyfile";
+
+  conn_handle.SetUp(section, "");
+
+  SQLCHAR out_conn_str[1024] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  auto result =
+      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
+  EXPECT_TRUE(result);
+  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str), "");
+  EXPECT_EQ(out_conn_str_len, 0);
+}
+
+TEST(ValidateConnAttribute, Failure_MissingSomeKeywords) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["Catalog"] = "BigQueryCatalog";
+
+  conn_handle.SetUp(dsn_section, "");
+
+  SQLCHAR out_conn_str[1024] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  SQLRETURN result =
+      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
+  std::string const expected_out_conn_str = "OAuthMechanism:OAuthMechanism=?;";
+
+  EXPECT_FALSE(result);
+  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
+               expected_out_conn_str.c_str());
+  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+}
+
+TEST(ValidateConnAttribute, Failure_AllKeywordsMissing) {
+  ConnectionHandle conn_handle;
+  SQLCHAR out_conn_str[1024] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  SQLRETURN result =
+      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
+  std::string const expected_out_conn_str =
+      "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;";
+
+  EXPECT_FALSE(result);
+  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
+               expected_out_conn_str.c_str());
+  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+}
+
+TEST(ValidateConnAttribute, Failure_PartialMissingEmptyInput) {
+  ConnectionHandle conn_handle;
+  Section section;
+  section["Catalog"] = "BigQueryCatalog";
+  section["OAuthMechanism"] = "1";
+
+  conn_handle.SetUp(section, "");
+  SQLCHAR out_conn_str[1024] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  SQLRETURN result =
+      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
+  std::string const expected_out_conn_str = "KeyFilePath:KeyFilePath=?;";
+
+  EXPECT_FALSE(result);
+  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
+               expected_out_conn_str.c_str());
+  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
