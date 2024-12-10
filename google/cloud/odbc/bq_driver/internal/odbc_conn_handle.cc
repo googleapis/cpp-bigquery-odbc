@@ -71,6 +71,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.default_dataset = dsn_section["DefaultDataset"];
   dsn_.list_projects_parent = dsn_section["ListProjectsParent"];
   dsn_.dsn_name = dsn_name;
+  dsn_.key_file_path = dsn_section["KeyFilePath"];
+  dsn_.o_auth_mechanism = dsn_section["OAuthMechanism"];
 
   std::string sql_dialect = dsn_section["SQLDialect"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
@@ -308,4 +310,39 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
   return StatusRecord::Ok();
 }
 
+StatusRecord ConnectionHandle::ValidateAllowedAttributes(
+    Section const& attributes) {
+  StatusRecord status_record = StatusRecord::Ok();
+  std::unordered_map<std::string, std::string> const dsn_fields = {
+      {"DRIVER", dsn_.driver},
+      {"DSN", dsn_.dsn_name},
+      {"CATALOG", dsn_.catalog},
+      {"OAUTHMECHANISM", dsn_.o_auth_mechanism},
+      {"KEYFILEPATH", dsn_.key_file_path},
+      {"DESCRIPTION", dsn_.description},
+  };
+
+  if (!requested_attributes_.empty()) {
+    for (auto const& [key, _] : attributes) {
+      if (std::find(requested_attributes_.begin(), requested_attributes_.end(),
+                    key) == requested_attributes_.end()) {
+        status_record = StatusRecord{
+            SQLStates::k_HY000(),
+            "Connection Error: Non Requested connection attribute " + key +
+                " in ConnectionString"};
+      }
+      std::string upper_key = key;
+      std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
+                     ::toupper);
+
+      if (dsn_fields.find(upper_key) != dsn_fields.end() &&
+          !dsn_fields.at(upper_key).empty()) {
+        status_record = StatusRecord{SQLStates::k_HY000(),
+                                     "Connection Error: Connection Attribute " +
+                                         key + " already found!"};
+      }
+    }
+  }
+  return status_record;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
