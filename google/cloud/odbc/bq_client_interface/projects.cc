@@ -30,6 +30,8 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
+constexpr int kSmallProjectNum = 100;
+
 StatusRecordOr<std::vector<Project>> FilterBQProjects(
     std::vector<std::string> const& project_ids,
     StreamRange<Project>& bq_projects) {
@@ -118,9 +120,10 @@ StatusRecordOr<Project> GetProject(ProjectClient& project_client,
                       "The project " + project_id + " was not found"};
 }
 
-StatusRecordOr<Project> GetProjectRM(ProjectsClient& projects_rm_client,
-                                     std::string const& project_id,
-                                     Options const& options) {
+StatusRecordOr<Project> GetProjectRM(
+    ProjectsClient& projects_rm_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
+    std::string const& project_id, Options const& options) {
   if (project_id.empty()) {
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The project id cannot be empty"};
@@ -147,7 +150,20 @@ StatusRecordOr<Project> GetProjectRM(ProjectsClient& projects_rm_client,
                         "The project " + project_id + " was not found"};
   }
 
-  return ConvertFrom(*resp_rm_project);
+  // Ensure RM project is BQ enabled.
+  if (IsProjectBQEnabled((*resp_rm_project).project_id(), service_usage_client,
+                         options)) {
+    auto const& bq_project = ConvertFrom(*resp_rm_project);
+
+    if (!bq_project) {
+      return bq_project.GetStatusRecord();
+    }
+    return bq_project;
+  }
+
+  return StatusRecord{
+      odbc_internal::SQLStates::k_HY000(),
+      "The project " + project_id + " is not enabled for BigQuery"};
 }
 
 StatusRecordOr<std::vector<Project>> SearchProjectsRM(
@@ -222,6 +238,22 @@ StatusRecordOr<std::vector<Project>> FilterProjectsRMList(
     ProjectsClient& projects_rm_client,
     ServiceUsageClient& service_usage_client, std::string const& parent,
     std::vector<std::string> const& project_ids, Options const& options) {
+  // If we have a small list of projects then we can use GetProject instead
+  // of list projects.
+  if (project_ids.size() <= kSmallProjectNum) {
+    std::vector<Project> projects;
+    for (auto const& project_id : project_ids) {
+      auto project_status = GetProjectRM(
+          projects_rm_client, service_usage_client, project_id, options);
+      if (!project_status) {
+        // We skip any projects we cannot get via Resource Manager.
+        continue;
+      }
+      projects.push_back(*project_status);
+    }
+    return projects;
+  }
+
   StatusRecordOr<std::vector<Project>> bq_all_projects = ListAllProjectsRM(
       projects_rm_client, service_usage_client, parent, options);
 

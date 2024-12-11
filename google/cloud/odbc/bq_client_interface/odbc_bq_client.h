@@ -251,6 +251,15 @@ class ODBCBQClient {
                read_rows_request,
            int max_read_responses, ::google::cloud::Options const& options);
 
+  // Provide optional setters for setting the parent or search query for
+  // RM List or Search API respectively.
+  inline void SetListProjectsParent(std::string const& parent) {
+    list_projects_parent_ = parent;
+  }
+  inline std::string GetListProjectsParent() const {
+    return list_projects_parent_;
+  }
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
@@ -292,6 +301,8 @@ class ODBCBQClient {
       access_token_generator_;
   ::google::cloud::bigquery_storage_v1::BigQueryReadClient
       bigquery_read_client_;
+
+  std::string list_projects_parent_;
 };
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

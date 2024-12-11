@@ -30,6 +30,7 @@ std::string const kDsnCatalog = "bigquery-test";
 std::string const kDsnDefaultDataset = "bigquery-test-dataset";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
+std::string const kDsnListProjectsParent = "ListProjectsParent";
 
 TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string test_data_path =
@@ -69,6 +70,7 @@ TEST(ConnectionHandle, DsnSetup) {
   dsn_section["Description"] = kDsnDescription;
   dsn_section["Driver"] = kDsnDriver;
   dsn_section["Catalog"] = kDsnCatalog;
+  dsn_section["ListProjectsParent"] = kDsnListProjectsParent;
   dsn_section["DefaultDataset"] = kDsnDefaultDataset;
   dsn_section["SQLDialect"] = "0";
 
@@ -79,6 +81,7 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.default_dataset, kDsnDefaultDataset);
   EXPECT_EQ(actual.driver, kDsnDriver);
   EXPECT_EQ(actual.description, kDsnDescription);
+  EXPECT_EQ(actual.list_projects_parent, kDsnListProjectsParent);
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
   // `is_job_creation_required` is supposed to be false by default
@@ -183,6 +186,27 @@ TEST(ConnectionHandle, DsnSetup_SQLDialect_NotSet) {
 
   Dsn actual = conn_handle.GetDsn();
   EXPECT_FALSE(actual.is_bq_legacy_sql);
+}
+
+TEST(ConnectionHandle, DsnSetup_ListProjectsParent_NotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.list_projects_parent.empty());
+}
+
+TEST(ConnectionHandle, DsnSetup_ListProjectsParent_Set) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  dsn_section["ListProjectsParent"] = kDsnListProjectsParent;
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_EQ(actual.list_projects_parent, kDsnListProjectsParent);
 }
 
 TEST(ConnectionHandle, SetAttribute_Success_SQLUInt) {

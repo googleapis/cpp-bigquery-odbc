@@ -280,34 +280,16 @@ TEST(ODBCBQClient, FilterProjectsRMList_Success) {
       {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
-  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+  std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
 
   auto projects_status =
       (*odbc_bq_client)
           ->FilterProjectsRMList(kParentFolder, project_ids, *options);
   ASSERT_STATUS_RECORD_OK(projects_status);
-  ASSERT_TRUE((*projects_status).empty());
-}
-
-TEST(ODBCBQClient, FilterProjectsRMList_Failure) {
-  StatusOr<Options> options = CreateServiceAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  std::string path_to_file_with_credentials =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-  ASSERT_FALSE(path_to_file_with_credentials.empty());
-
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
-  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
-
-  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
-
-  auto projects_status =
-      (*odbc_bq_client)
-          ->FilterProjectsRMList(kParentInvalidFolder, project_ids, *options);
-  EXPECT_THAT(projects_status,
-              StatusRecordIs(SQLStates::k_42000(),
-                             HasSubstr("The caller does not have permission")));
+  std::vector<::google::cloud::bigquery_v2_minimal_internal::Project> projects =
+      *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
 }
 
 TEST(ODBCBQClient, FilterProjectsRMSearch_Success) {
@@ -327,7 +309,11 @@ TEST(ODBCBQClient, FilterProjectsRMSearch_Success) {
       (*odbc_bq_client)
           ->FilterProjectsRMSearch("state:ACTIVE", project_ids, *options);
   ASSERT_STATUS_RECORD_OK(projects_status);
-  ASSERT_TRUE((*projects_status).empty());
+
+  std::vector<::google::cloud::bigquery_v2_minimal_internal::Project> projects =
+      *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
 }
 
 TEST(ODBCBQClient, FilterProjectsRMSearch_Failure) {

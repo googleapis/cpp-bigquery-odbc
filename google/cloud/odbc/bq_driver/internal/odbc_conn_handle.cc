@@ -69,6 +69,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.driver = dsn_section["Driver"];
   dsn_.catalog = dsn_section["Catalog"];
   dsn_.default_dataset = dsn_section["DefaultDataset"];
+  dsn_.list_projects_parent = dsn_section["ListProjectsParent"];
   dsn_.dsn_name = dsn_name;
 
   std::string sql_dialect = dsn_section["SQLDialect"];
@@ -156,6 +157,10 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
     return response.GetStatusRecord();
   }
   client_ = *response;
+  // Set optional parent value for RM ListProjects if provided.
+  if (!GetDsn().list_projects_parent.empty()) {
+    client_->SetListProjectsParent(GetDsn().list_projects_parent);
+  }
 
   // Verify the credentials by calling ODBCBQClient::GetOAuth2Token
   StatusRecordOr<AccessToken> access_token_resp = client_->GetOAuth2Token();

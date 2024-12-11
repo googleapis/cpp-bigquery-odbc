@@ -104,7 +104,7 @@ StatusRecordOr<Project> ODBCBQClient::GetProject(std::string const& project_id,
                                                  bool use_resource_mgr) {
   if (use_resource_mgr) {
     return ::google::cloud::odbc_bigquery_client_interface::GetProjectRM(
-        project_rm_client_, project_id, options);
+        project_rm_client_, service_usage_client_, project_id, options);
   }
   return ::google::cloud::odbc_bigquery_client_interface::GetProject(
       project_client_, project_id, options);
@@ -112,6 +112,11 @@ StatusRecordOr<Project> ODBCBQClient::GetProject(std::string const& project_id,
 
 StatusRecordOr<std::vector<Project>> ODBCBQClient::ListAllProjects(
     Options const& options) {
+  // RM List API using the provided parent.
+  if (!GetListProjectsParent().empty()) {
+    return ListAllProjectsRM(GetListProjectsParent(), options);
+  }
+  // BQ Projects API.
   return ListAllProjectsInternal(options, /*parent*/ "", /*query*/ "", false);
 }
 
@@ -156,6 +161,11 @@ StatusRecordOr<std::vector<Project>> ODBCBQClient::ListAllProjectsInternal(
 
 StatusRecordOr<std::vector<Project>> ODBCBQClient::FilterProjects(
     std::vector<std::string> const& project_ids, Options const& options) {
+  // Filters projects via RM List API using the provided parent.
+  if (!GetListProjectsParent().empty()) {
+    return FilterProjectsRMList(GetListProjectsParent(), project_ids, options);
+  }
+  // Calls BQ API
   return ::google::cloud::odbc_bigquery_client_interface::FilterProjects(
       project_client_, project_ids, options);
 }

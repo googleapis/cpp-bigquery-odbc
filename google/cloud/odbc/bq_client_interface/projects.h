@@ -63,6 +63,7 @@ odbc_internal::StatusRecordOr<
     ::google::cloud::bigquery_v2_minimal_internal::Project>
 GetProjectRM(
     ::google::cloud::resourcemanager_v3::ProjectsClient& projects_rm_client,
+    ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
     std::string const& project_id, ::google::cloud::Options const& options);
 
 // Converts ResourceManager project structure to BQ project structure.
