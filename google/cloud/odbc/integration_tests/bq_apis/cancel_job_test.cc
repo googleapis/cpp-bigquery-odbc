@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/common_functions.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
@@ -29,6 +30,9 @@ using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
@@ -64,6 +68,30 @@ TEST(CancelJob, ApplicationDefaultCredentials) {
   StatusOr<Job> cancel_job_response = job_client.CancelJob(cancel_job_request);
   ASSERT_STATUS_OK(cancel_job_response);
   EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
+}
+
+TEST(ODBCBQClient_CancelJob, ApplicationDefaultCredentials) {
+  // First we create a job, so later we could 'cancel' it
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+
+  auto job_client = JobClient(MakeBigQueryJobConnection(*options));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
+  // Cancelling previous Job via ODBC BQ Client
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> cancel_job_response =
+      (*odbc_bq_client)
+          ->CancelJob(project_id, *job_id, "", std::move(*options));
+  ASSERT_STATUS_RECORD_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response->status.state, "DONE");
 }
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
