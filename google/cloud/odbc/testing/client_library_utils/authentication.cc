@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/options.h"
@@ -22,6 +23,11 @@
 namespace google::cloud::odbc_testing_client_library_utils {
 
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_client_interface::CreateCredentials;
+using ::google::cloud::odbc_bigquery_client_interface::Oauth;
+using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
 
 StatusOr<Options> CreateUserAccountAuthentication() {
   std::string path_to_file_with_credentials =
@@ -50,6 +56,18 @@ StatusOr<Options> CreateServiceAccountAuthentication() {
   auto contents = std::string(std::istreambuf_iterator<char>(is.rdbuf()), {});
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
       google::cloud::MakeServiceAccountCredentials(contents));
+}
+
+StatusOr<Options> CreateApplicationDefaultAuthentication() {
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kApplicationDefault;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  if (!creds) {
+    return Status(StatusCode::kInternal, "Unable to create ADC credentials");
+  }
+
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      *creds);
 }
 
 // TODO(b/333011414) Enable tests which use this function it or remove it

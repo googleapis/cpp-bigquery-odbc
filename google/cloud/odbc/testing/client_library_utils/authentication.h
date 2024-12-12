@@ -44,6 +44,10 @@ StatusOr<Options> CreateWrongAuthentication();
 // Updates GOOGLE_APPLICATION_CREDENTIALS env var.
 StatusOr<Options> CreateNoAccessAccountAuthentication();
 
+// Creates Options object which has credentials for Application Default
+// Authentication Authentication.
+StatusOr<Options> CreateApplicationDefaultAuthentication();
+
 }  // namespace google::cloud::odbc_testing_client_library_utils
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H

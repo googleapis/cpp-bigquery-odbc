@@ -28,7 +28,7 @@ add_library(
     util_constants.cc util_constants.h)
 
 target_link_libraries(
-    google_cloud_odbc_testing_client_library_utils
+    google_cloud_odbc_testing_client_library_utils odbc_bq_client_interface
     google-cloud-cpp::experimental-bigquery_rest GTest::gtest_main GTest::gtest
     GTest::gmock)
 

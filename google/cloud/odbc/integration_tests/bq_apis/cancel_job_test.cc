@@ -30,6 +30,8 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateApplicationDefaultAuthentication;
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthWithClientIdAuthentication;
@@ -41,6 +43,28 @@ using google::cloud::odbc_testing_client_library_utils::
 using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+TEST(CancelJob, ApplicationDefaultCredentials) {
+  // First we create a job, so later we could 'cancel' it
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
+  // Cancelling previous Job
+  CancelJobRequest cancel_job_request;
+  cancel_job_request.set_project_id(project_id);
+  cancel_job_request.set_job_id(job_id.value());
+
+  StatusOr<Job> cancel_job_response = job_client.CancelJob(cancel_job_request);
+  ASSERT_STATUS_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response.value().status.state, "DONE");
+}
 
 #ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
 TEST(CancelJob, UserAccountAuth) {
