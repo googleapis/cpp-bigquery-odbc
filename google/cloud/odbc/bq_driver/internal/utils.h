@@ -143,7 +143,7 @@ odbc_internal::StatusRecord ValidateTableParameters(
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
 
-std::string GetPathToOdbcIni();
+std::string GetPathToOdbcIni(bool is_bq_path = false);
 
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   auto percent_filter_out =
@@ -191,8 +191,12 @@ odbc_internal::StatusRecord AddDSNToRegistry(std::string const& dsn_name,
                                              std::string const& driver,
                                              Section const& section);
 
+odbc_internal::StatusRecord AddLogTraceToRegistry(Section const& section);
+
 odbc_internal::StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                                               Section const& section);
+
+odbc_internal::StatusRecord EditLogTraceInRegistry(Section const& section);
 
 odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name);
 
@@ -206,6 +210,18 @@ inline int GetWholeDigitCount(std::string& src_str) {
     }
   }
   return digit_count;
+}
+
+inline std::string GetTraceLogRegistryPath() {
+  std::string path;
+#ifdef _WIN64
+  // 64-bit
+  path = "R(SOFTWARE\Google\ODBC Driver for Google BigQuery)";
+#else
+  // 32-bit
+  path = "R(SOFTWARE\WOW6432Node\Google\ODBC Driver for Google BigQuery)";
+#endif  // _WIN64
+  return path;
 }
 
 odbc_internal::StatusRecord PopulateOutputConnectionString(

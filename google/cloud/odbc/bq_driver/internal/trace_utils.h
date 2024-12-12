@@ -260,8 +260,14 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
         TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
 
+#ifdef _WIN32
+static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOptsFile =
+        TraceOptions::CreateTraceOptionsFile(GetPathToOdbcIni(true));
+#else
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(GetPathToOdbcIni());
+#endif  // _WIN32
 
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOption = TraceOptions::GetTraceOption();
