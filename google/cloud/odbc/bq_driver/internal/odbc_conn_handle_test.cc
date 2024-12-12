@@ -30,7 +30,7 @@ std::string const kDsnCatalog = "bigquery-test";
 std::string const kDsnDefaultDataset = "bigquery-test-dataset";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
-std::string const kDsnListProjectsParent = "ListProjectsParent";
+std::string const kDsnListProjectsParent = "TestListProjectsParent";
 
 TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string test_data_path =
