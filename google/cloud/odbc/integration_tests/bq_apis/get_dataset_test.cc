@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
 #include "google/cloud/odbc/testing/utils/env_vars.h"
@@ -25,6 +27,11 @@ using bigquery_v2_minimal_internal::Dataset;
 using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::GetDatasetRequest;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
+using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
@@ -77,6 +84,47 @@ TEST(GetDataset, ServiceAccountAuth) {
   StatusOr<Dataset> dataset = dataset_client.GetDataset(request);
 
   ASSERT_STATUS_OK(dataset);
+}
+
+TEST(GetDataset, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  GetDatasetRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+
+  StatusOr<Dataset> dataset = dataset_client.GetDataset(request);
+
+  ASSERT_STATUS_OK(dataset);
+}
+
+TEST(ODBCBQClient_GetDataset, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  // Retrieving dataset via ODBC BQ Client
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Dataset> dataset_response =
+      (*odbc_bq_client)
+          ->GetDataset(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(dataset_response);
+  EXPECT_EQ(dataset_id, (*dataset_response).dataset_reference.dataset_id);
 }
 
 #ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
