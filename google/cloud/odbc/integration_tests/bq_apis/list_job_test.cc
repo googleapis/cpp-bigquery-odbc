@@ -58,10 +58,9 @@ TEST(ListJobs, UserAccountAuth) {
 
   ListJobsRequest request;
   request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
+  // Listing jobs only for the last hour to make the test faster
+  auto hour_before = std::chrono::system_clock::now() - std::chrono::hours(1);
+  request.set_min_creation_time(hour_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
@@ -83,10 +82,9 @@ TEST(ListJobs, ServiceAccountAuth) {
 
   ListJobsRequest request;
   request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
+  // Listing jobs only for a single hour so it can be completed quicker
+  auto hour_before = std::chrono::system_clock::now() - std::chrono::hours(1);
+  request.set_min_creation_time(hour_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
@@ -107,10 +105,9 @@ TEST(ListJobs, ApplicationDefaultCredentials) {
 
   ListJobsRequest request;
   request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
+  // Listing jobs only for a single hour so it can be completed quicker
+  auto hour_before = std::chrono::system_clock::now() - std::chrono::hours(1);
+  request.set_min_creation_time(hour_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
@@ -123,21 +120,14 @@ TEST(ListJobs, ApplicationDefaultCredentials) {
 }
 
 // Caution: This test lists all jobs for the service account for the project
-// and maybe slow.
-TEST(ODBCBQClient_ListJobs, ApplicationDefaultCredentials) {
+// and maybe very slow hence is disabled by default. Please only run incase
+// its necessary.
+TEST(ODBCBQClient_ListJobs, DISABLED_ApplicationDefaultCredentials) {
   StatusOr<Options> options = CreateApplicationDefaultAuthentication();
   ASSERT_STATUS_OK(options);
   auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
   std::string project_id =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-
-  ListJobsRequest request;
-  request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
-  request.set_max_creation_time(std::chrono::system_clock::now());
 
   auto odbc_bq_client =
       ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
@@ -162,10 +152,9 @@ TEST(ListJobs, ServiceAccountAuthWithClientId) {
 
   ListJobsRequest request;
   request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
+  // Listing jobs only for the last hour to make the test faster
+  auto hour_before = std::chrono::system_clock::now() - std::chrono::hours(1);
+  request.set_min_creation_time(hour_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
@@ -187,10 +176,9 @@ TEST(ListJobs, MoreRequestArguments) {
 
   ListJobsRequest request;
   request.set_project_id(project_id);
-  // Listing jobs only for the last week to make the test faster
-  auto week_before =
-      std::chrono::system_clock::now() - std::chrono::hours(7 * 24);
-  request.set_min_creation_time(week_before);
+  // Listing jobs only for the last hour to make the test faster
+  auto hour_before = std::chrono::system_clock::now() - std::chrono::hours(1);
+  request.set_min_creation_time(hour_before);
   request.set_max_creation_time(std::chrono::system_clock::now());
   request.set_projection(Projection::Full());
   request.set_all_users(true);
