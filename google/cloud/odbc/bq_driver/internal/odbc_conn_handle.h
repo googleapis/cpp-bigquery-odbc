@@ -118,6 +118,16 @@ class ConnectionHandle : public Handle {
   }
   odbc_internal::StatusRecord ValidateAllowedAttributes(
       Section const& attributes);
+  std::unordered_map<std::string, std::string> GetDSNFields() {
+    return {
+        {"DRIVER", dsn_.driver},
+        {"DSN", dsn_.dsn_name},
+        {"CATALOG", dsn_.catalog},
+        {"OAUTHMECHANISM", dsn_.o_auth_mechanism},
+        {"KEYFILEPATH", dsn_.key_file_path},
+        {"DESCRIPTION", dsn_.description},
+    };
+  }
 
  protected:
   bool is_connected_ = false;
