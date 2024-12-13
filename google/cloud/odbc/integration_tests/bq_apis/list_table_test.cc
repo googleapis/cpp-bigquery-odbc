@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
 #include "google/cloud/odbc/testing/utils/env_vars.h"
@@ -25,6 +26,12 @@ using bigquery_v2_minimal_internal::ListFormatTable;
 using bigquery_v2_minimal_internal::ListTablesRequest;
 using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::TableClient;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bigquery_client_interface::TableFilter;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
@@ -83,6 +90,62 @@ TEST(ListAllTables, ServiceAccountAuth) {
   for (auto const& table : range) {
     ASSERT_STATUS_OK(table);
   }
+}
+
+TEST(ListAllTables, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  ListTablesRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+
+  StreamRange<ListFormatTable> range = table_client.ListTables(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& table : range) {
+    ASSERT_STATUS_OK(table);
+  }
+}
+
+TEST(ODBCBQClient_ListAllTables, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  ListTablesRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatTable>> tables_response =
+      (*odbc_bq_client)
+          ->ListAllTables(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(tables_response);
+
+  std::vector<ListFormatTable> tables = (*tables_response);
+
+  ASSERT_FALSE(tables.empty());
+  bool expected_table = false;
+  for (auto const& table : tables) {
+    expected_table = (table.table_reference.project_id == project_id &&
+                      table.table_reference.dataset_id == dataset_id);
+    if (!expected_table) break;
+  }
+  ASSERT_TRUE(expected_table);
 }
 
 #ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
