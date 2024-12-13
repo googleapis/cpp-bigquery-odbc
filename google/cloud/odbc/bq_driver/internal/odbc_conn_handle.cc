@@ -313,14 +313,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
 StatusRecord ConnectionHandle::ValidateAllowedAttributes(
     Section const& attributes) {
   StatusRecord status_record = StatusRecord::Ok();
-  std::unordered_map<std::string, std::string> const dsn_fields = {
-      {"DRIVER", dsn_.driver},
-      {"DSN", dsn_.dsn_name},
-      {"CATALOG", dsn_.catalog},
-      {"OAUTHMECHANISM", dsn_.o_auth_mechanism},
-      {"KEYFILEPATH", dsn_.key_file_path},
-      {"DESCRIPTION", dsn_.description},
-  };
+  auto const dsn_fields = GetDSNFields();
 
   if (!requested_attributes_.empty()) {
     for (auto const& [key, _] : attributes) {
