@@ -684,4 +684,75 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   return LogAndReturnCode(stmt_handle, status);
 }
 
+
+SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
+    // Validate the statement handle first
+    StatusRecordOr<StatementHandle*> handle_result =
+        ValidateStatementHandle(statement_handle);
+    if (!handle_result) {
+        TracePrintInternal(*(*kTraceOption),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+    }
+    StatementHandle& stmt_handle = *(*handle_result);
+
+    // Check for cancelled statement
+    if (stmt_handle.IsOperationCanceled()) {
+        StatusRecord status_record = {
+            SQLStates::k_HY008(),
+            "Statement has been cancelled"};
+        return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+    // Handle asynchronous execution and result fetching if needed
+    StatusRecordOr<SQLULEN> async_enable_status =
+        stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+    if (!async_enable_status) {
+        return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
+    }
+
+    // Check if the statement is still executing
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+        StatusRecord status_record = {
+            SQLStates::k_HY010(),
+            "Function sequence error - statement is still executing"};
+        return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+    // Handle asynchronous execution in progress (initial state)
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncExecute) {
+        return HandleAsyncExecute(stmt_handle);  // Handle async execution completion
+    }
+
+    // Handle asynchronous result fetching if async results are enabled
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncGetResults) {
+        return HandleAsyncGetResults(stmt_handle);  // Handle async result fetching
+    }
+
+    // Handle already executed statement without results (non-SELECT queries)
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
+        stmt_handle.GetStmtState() == StmtStates::kStatementResultsConsumed) {
+        return SQL_NO_DATA;  // No results or result set consumed
+    }
+
+    // If no more results, fetch the results synchronously
+    StatusRecord fetch_status = ActuallyFetchResults(stmt_handle);
+    
+    if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) {
+        // If the fetch fails, check if it's due to a no-results condition
+        if (fetch_status.CalculateReturnCode() == SQL_ERROR) {
+            return SQL_NO_DATA;  // Explicitly handle no data condition
+        }
+        return LogAndReturnCode(stmt_handle, fetch_status);  // Error in fetching results
+    }
+
+    // Final check to see if we have more results
+    if (stmt_handle.HasMoreResults()) {
+        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);  // Transition to executed state
+        return SQL_SUCCESS_WITH_INFO;  // Indicate that there are more results
+    }
+
+    return SQL_NO_DATA;  // No more results
+}
+
 }  // namespace google::cloud::odbc_bq_driver

@@ -68,6 +68,8 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
                                    SQLCHAR* cursor_name, SQLSMALLINT buffer_len,
                                    SQLSMALLINT* name_string_len);
 
+SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle);                                   
+
 }  // namespace google::cloud::odbc_bq_driver
 
 
