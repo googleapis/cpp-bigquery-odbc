@@ -483,6 +483,13 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
                                SQLLEN* strlen_or_ind, SQLPOINTER* data);
+
+bool IsInString(const std::string& query, size_t pos);
+
+bool IsInComment(const std::string& query, size_t pos);
+
+std::vector<std::string> SplitQueries(const std::string& query_string);
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H

@@ -2908,7 +2908,7 @@ SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
-  bool is_tracing_enabled = IsTracingEnabled("SQLExecute");
+  bool is_tracing_enabled = IsTracingEnabled("SQLMoreResults");
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2917,7 +2917,7 @@ SQLRETURN SQL_API SQLMoreResults(SQLHSTMT statementHandle) {
 
   // Call to internal common function for SQLGetInfo and SQLGetInfoW
   // in odbc_driver_metadata.h.
-  rc = ::google::cloud::odbc_bq_driver::SQLMoreResultsInternal(statementHandle);
+  rc = google::cloud::odbc_bq_driver::SQLMoreResultsInternal(statementHandle);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLMoreResults(rc, *(*kTraceOption));

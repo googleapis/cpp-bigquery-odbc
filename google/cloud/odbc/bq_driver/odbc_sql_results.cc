@@ -21,6 +21,8 @@
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
+#include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "odbc_sql_results.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -47,6 +49,156 @@ using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+
+namespace{
+
+  SQLRETURN HandleAsyncGetResults(StatementHandle& handle_ref) {
+      // Precautionary check for state.
+      if (handle_ref.GetStmtState() != StmtStates::kStatementAsyncGetResults) {
+          TracePrintInternal(*(*kTraceOption), "Unexpected state in HandleAsyncGetResults:");
+          return SQL_SUCCESS;
+      }
+
+      // Handle cancellation scenario.
+      if (handle_ref.IsOperationCanceled()) {
+          TracePrintInternal(*(*kTraceOption), "Operation canceled during async result fetching.");
+          handle_ref.DisableCancellation();
+          handle_ref.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+          auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+          return LogAndReturnCode(handle_ref, status_record);
+      }
+
+      // Check for future results.
+      std::optional<std::future<StatusRecord>> future_results = handle_ref.GetPossibleFutureGetResults();
+      if (future_results.has_value()) {
+          std::future_status fut_status = future_results.value().wait_for(std::chrono::seconds(0));
+          if (fut_status == std::future_status::ready) {
+              // Future is ready; get the result.
+              auto status = future_results.value().get();
+              if (!status.ok()) {
+                  TracePrintInternal(*(*kTraceOption), "Async result fetch failed: " + status.message);
+                  handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
+              }
+              handle_ref.SetNullFutureGetResultsQuery();  // Reset the future.
+              return LogAndReturnCode(handle_ref, status);
+          }
+          // Future is not ready; indicate ongoing execution.
+          return SQL_STILL_EXECUTING;
+      }
+
+      // Future is missing; handle as an error.
+      TracePrintInternal(*(*kTraceOption), "Missing future object for async result fetching.");
+      handle_ref.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+      auto status_record = StatusRecord{SQLStates::k_HY000(), 
+                                        "Failed to fetch results asynchronously: missing future"};
+      return LogAndReturnCode(handle_ref, status_record);
+  }
+
+  StatusRecord ActuallyFetchResults(StatementHandle& stmt_handle) {
+      stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+      ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+      std::string query_str = stmt_handle.GetQueryString();
+
+      // Split queries for multiple result sets
+      std::vector<std::string> queries = google::cloud::odbc_tests::SplitQueries(query_str);
+      if (queries.empty()) {
+          return StatusRecord{SQLStates::k_HY000(), "No queries to execute"};
+      }
+
+      std::vector<ResultSet> all_result_sets;
+      for (const auto& query : queries) {
+          // Construct the request and fetch data for each query
+          PostQueryRequest post_request = ConstructBasicPostQueryRequest(conn_handle, query);
+          auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+
+          if (!ds_status_record_or) {
+              stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+              return ds_status_record_or.GetStatusRecord();
+          }
+
+          // Process query results
+          auto rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
+          if (!rs_status_record_or) {
+              stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+              return rs_status_record_or.GetStatusRecord();
+          }
+
+          // Add result set to the list
+          all_result_sets.push_back(*rs_status_record_or);
+      }
+
+      if (all_result_sets.empty()) {
+          stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+          return StatusRecord(SQLStates::k_HY000(), "No result sets received");
+      } else {
+          // Store all result sets in the statement handle
+          stmt_handle.SetAllResultSets(all_result_sets);
+          stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+      }
+
+      return StatusRecord::Ok();
+  }
+
+  // Check if previous execute operation is still executing, if so do the
+  // following: 1) If the operation wasn't canceled then
+  //    a) Complete the execution of the execute future.
+  //    b) Return the result from future.
+  // 2) If the operation was canceled then return the cancel state.
+  SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
+    // Just a precautionary validation so we don't rely on the callers
+    // good behavior.
+    if (handle_ref.GetStmtState() != StmtStates::kStatementAsyncExecute) {
+      // Nothing to do.
+      return SQL_SUCCESS;
+    }
+    if (!handle_ref.IsOperationCanceled()) {
+      std::optional<std::future<StatusRecord>> future_query =
+          handle_ref.GetPossibleFutureExecuteQuery();
+      if (future_query.has_value()) {
+        std::future_status fut_status =
+            future_query.value().wait_for(std::chrono::seconds(0));
+        if (fut_status == std::future_status::ready) {
+          // Will block till prepare future is executed.
+          auto status = future_query.value().get();
+          if (!status.ok()) {
+            // Reset the state to prepared so it can be executed again in future
+            // requests synchronously or asynchronously.
+            handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+          }
+          // Once the execute future is executed, reset it regardless of status so
+          // we don't try to execute it again.
+          handle_ref.SetNullFutureExecuteQuery();
+          return LogAndReturnCode(handle_ref, status);
+        }
+        // return that we are still executing
+        return SQL_STILL_EXECUTING;
+      }
+      // If for any reason we don't have the future and we have async
+      // execution enabled then this is an error. We also reset the statement
+      // execute state to be prepared so subsequent execute operations
+      // can be processed again.
+      handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+      auto status_record =
+          StatusRecord{SQLStates::k_HY000(),
+                      "Internal error: cannot execute query asynchronously"};
+      return LogAndReturnCode(handle_ref, status_record);
+    }
+    // User has requested cancellation of an ongoing execute operation.
+    // We return the Cancelled error state for this request.
+    // We disable cancellation and reset the statement execute state so
+    // subsequent execute requests can be processed.
+    handle_ref.DisableCancellation();
+    handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+    // For current execute request, return operation canceled.
+    auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+    return LogAndReturnCode(handle_ref, status_record);
+  }
+
+}
+
 
 SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
@@ -145,39 +297,65 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
-  StatusRecordOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
-    return handle_result.GetCalculatedReturnCode();
-  }
-  StatementHandle& handle = *(*handle_result);
+    // Validate the statement handle
+    StatusRecordOr<StatementHandle*> handle_result = ValidateStatementHandle(statement_handle);
+    if (!handle_result) {
+        TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+    }
+    StatementHandle& handle = *(*handle_result);
 
-  if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
-    return SQL_NO_DATA;
-  }
+    // Check for valid statement state
+    if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
+        return SQL_NO_DATA;
+    }
 
-  if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
-    StatusRecord status_record = {SQLStates::k_HY010(),
-                                  "No statement has been executed"};
+    if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs &&
+        handle.GetStmtState() != StmtStates::kStatementAsyncGetResults) {
+        StatusRecord status_record = {SQLStates::k_HY010(), "No statement has been executed or fetching is not allowed"};
+        return LogAndReturnCode(handle, status_record);
+    }
+
+    // Handle async fetch state
+    if (handle.GetStmtState() == StmtStates::kStatementAsyncGetResults) {
+        SQLRETURN async_result = HandleAsyncGetResults(handle);
+        if (async_result == SQL_STILL_EXECUTING) {
+            return async_result;
+        }
+        // Transition state after async fetch completes
+        if (async_result != SQL_SUCCESS && async_result != SQL_SUCCESS_WITH_INFO) {
+            return async_result;
+        }
+    }
+
+    // Fetch the next row in the result set
+    ResultSet result_set = handle.GetResultSet();
+    result_set.cursor++;
+    if (result_set.cursor >= result_set.rows.size()) {
+        // If rows are exhausted, check for additional result sets
+        if (handle.HasMoreResults()) {
+            // Transition to the next result set and reset the cursor
+            handle.SetStmtState(StmtStates::kStatementExecutedWithRs); // Update state
+            result_set = handle.GetNextResultSet(); // Assuming GetNextResultSet handles the transition
+            result_set.cursor = 0; // Reset the cursor
+            return SQL_SUCCESS;   // Indicate success for transitioning to the new result set
+        } else {
+            handle.SetStmtState(StmtStates::kStatementResultsConsumed);
+            return SQL_NO_DATA;  // Signal that no more rows or result sets are available
+        }
+    }
+
+    // Determine the rowset size
+    DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
+    int rowset_size = ard.GetHeaderRecord().array_size;
+    if (!rowset_size) {
+        rowset_size = 1;
+    }
+
+    // Write the rowset to the application buffer
+    DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+    StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
     return LogAndReturnCode(handle, status_record);
-  }
-
-  DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
-
-  ResultSet const& result_set = handle.GetResultSet();
-  result_set.cursor++;
-  if (result_set.cursor >= result_set.rows.size()) {
-    return SQL_NO_DATA;
-  }
-
-  int rowset_size = ard.GetHeaderRecord().array_size;
-  if (!rowset_size) {
-    rowset_size = 1;
-  }
-  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
-  return LogAndReturnCode(handle, status_record);
 }
 
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
@@ -429,6 +607,91 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   stmt_handle.CloseCursor();
 
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
+    // Validate the statement handle first
+    StatusRecordOr<StatementHandle*> handle_result =
+        ValidateStatementHandle(statement_handle);
+    if (!handle_result) {
+        TracePrintInternal(*(*kTraceOption),
+                           handle_result.GetStatusRecord().message);
+        return handle_result.GetCalculatedReturnCode();
+    }
+    StatementHandle& stmt_handle = *(*handle_result);
+
+    // Check for cancelled statement
+    if (stmt_handle.IsOperationCanceled()) {
+        StatusRecord status_record = {
+            SQLStates::k_HY008(),
+            "Statement has been cancelled"};
+        return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+    // Handle asynchronous execution and result fetching if needed
+    StatusRecordOr<SQLULEN> async_enable_status =
+        stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+    if (!async_enable_status) {
+        return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
+    }
+
+    // Check if the statement is still executing
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+        StatusRecord status_record = {
+            SQLStates::k_HY010(),
+            "Function sequence error - statement is still executing"};
+        return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+    // Handle asynchronous execution in progress (initial state)
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncExecute) {
+        return HandleAsyncExecute(stmt_handle);  // Handle async execution completion
+    }
+
+    // Handle asynchronous result fetching if async results are enabled
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncGetResults) {
+        SQLRETURN async_result = HandleAsyncGetResults(stmt_handle);
+        if (async_result == SQL_STILL_EXECUTING) {
+            TracePrintInternal(*(*kTraceOption), "Statement still executing asynchronously.");
+            return async_result;
+        }
+        // Check if operation completed successfully or was canceled
+        if (async_result == SQL_SUCCESS || async_result == SQL_SUCCESS_WITH_INFO) {
+            TracePrintInternal(*(*kTraceOption), "Async results successfully fetched.");
+        } else {
+            TracePrintInternal(*(*kTraceOption), "Async fetch resulted in error or cancellation.");
+        }
+        return async_result;
+    }
+
+    // Handle already executed statement without results (non-SELECT queries)
+    if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
+        stmt_handle.GetStmtState() == StmtStates::kStatementResultsConsumed) {
+        TracePrintInternal(*(*kTraceOption), "No more results available in the statement.");
+        return SQL_NO_DATA;  // No results or result set consumed
+    }
+
+    // If no more results, fetch the results synchronously
+    StatusRecord fetch_status = ActuallyFetchResults(stmt_handle);
+    if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) {
+        // If the fetch fails, check if it's due to a no-results condition
+        if (fetch_status.CalculateReturnCode() == SQL_ERROR) {
+            TracePrintInternal(*(*kTraceOption), "No data available during fetch.");
+            return SQL_NO_DATA;  // Explicitly handle no data condition
+        }
+        TracePrintInternal(*(*kTraceOption), "Error occurred while fetching results: " + fetch_status.message);
+        return LogAndReturnCode(stmt_handle, fetch_status);  // Error in fetching results
+    }
+
+    // Final check to see if we have more results
+    if (stmt_handle.HasMoreResults()) {
+        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);  // Transition to executed state
+        TracePrintInternal(*(*kTraceOption), "More results are available.");
+        return SQL_SUCCESS_WITH_INFO;  // Indicate that there are more results
+    }
+
+    TracePrintInternal(*(*kTraceOption), "No more results available.");
+    return SQL_NO_DATA;  // No more results
 }
 
 }  // namespace google::cloud::odbc_bq_driver

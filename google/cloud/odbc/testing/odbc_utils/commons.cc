@@ -1256,4 +1256,74 @@ SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
+  bool IsInString(const std::string& query, size_t pos) {
+      bool inside_single_quote = false;
+      bool inside_double_quote = false;
+      
+      for (size_t i = 0; i < pos; ++i) {
+          if (query[i] == '\'' && !inside_double_quote) {
+              inside_single_quote = !inside_single_quote;
+          }
+          if (query[i] == '\"' && !inside_single_quote) {
+              inside_double_quote = !inside_double_quote;
+          }
+      }
+      
+      return inside_single_quote || inside_double_quote;
+  }
+
+  bool IsInComment(const std::string& query, size_t pos) {
+      // Check for block comments /*...*/ or line comments -- or //
+      return (query.substr(pos, 2) == "/*") || (query.substr(pos, 2) == "--") || 
+            (query.substr(pos, 2) == "//");
+  }
+
+  std::vector<std::string> SplitQueries(const std::string& query_string) {
+      std::vector<std::string> queries;
+      std::string current_query;
+      bool inside_string = false;
+      bool inside_comment = false;
+      
+      for (size_t i = 0; i < query_string.size(); ++i) {
+          char current_char = query_string[i];
+          
+          // Handle single-line comments
+          if (i + 1 < query_string.size() && query_string[i] == '-' && query_string[i + 1] == '-') {
+              inside_comment = true;
+          }
+          // Handle multi-line comments
+          if (i + 1 < query_string.size() && query_string[i] == '/' && query_string[i + 1] == '*') {
+              inside_comment = true;
+          }
+          // Exit multi-line comments
+          if (i + 1 < query_string.size() && query_string[i] == '*' && query_string[i + 1] == '/') {
+              inside_comment = false;
+              i++; // Skip past the closing */
+          }
+
+          // Skip characters if inside comment or string
+          if (inside_comment || IsInString(query_string, i)) {
+              current_query += current_char;
+              continue;
+          }
+          
+          // Handle semicolon to split the queries
+          if (current_char == ';' && !IsInString(query_string, i) && !inside_comment) {
+              if (!current_query.empty()) {
+                  queries.push_back(current_query);
+              }
+              current_query.clear();
+          } else {
+              current_query += current_char;
+          }
+      }
+      
+      // Add the last query if any
+      if (!current_query.empty()) {
+          queries.push_back(current_query);
+      }
+      
+      return queries;
+  }
+
 }  // namespace google::cloud::odbc_tests

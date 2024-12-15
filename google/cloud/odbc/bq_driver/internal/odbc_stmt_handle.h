@@ -50,12 +50,13 @@ class StatementHandle : public Handle {
  public:
   // This constructor is used only for tests
   explicit StatementHandle(ConnectionHandle* conn_handle = nullptr)
-      : conn_handle_(conn_handle){};
+      : conn_handle_(conn_handle), current_result_set_index(-1){};
   explicit StatementHandle(ConnectionHandle* conn_handle,
                            Descriptors const& descriptors)
       : conn_handle_(conn_handle),
         descriptors_(std::move(descriptors)),
-        attributes_(kDefaultAttributes){};
+        attributes_(kDefaultAttributes),
+        current_result_set_index(-1){};
 
   ~StatementHandle() = default;
 
@@ -99,6 +100,11 @@ class StatementHandle : public Handle {
 
   inline void SetResultSet(ResultSet const& result_set) {
     result_set_ = result_set;
+  }
+
+  inline void SetAllResultSets(std::vector<ResultSet>& result_sets)
+  {
+      all_result_sets = result_sets;
   }
 
   [[nodiscard]] inline SQLSMALLINT GetParamCount() const {
@@ -190,22 +196,49 @@ class StatementHandle : public Handle {
   }
 
   bool HasMoreResults() {
-      // Check if the statement is in a valid state to check for more results.
-      if (this->GetStmtState() == StmtStates::kStatementExecutedWithRs &&
-          this->GetStmtState() == StmtStates::kStatementResultsConsumed) {
-          // If the statement isn't in a valid state, return a error.
-          return true;
+      // Check if the current state is valid for more results.
+      StmtStates state = this->GetStmtState();
+      if (state == StmtStates::kStatementExecutedWithRs ||
+          state == StmtStates::kStatementResultsConsumed) {
+          // Check if more result sets are available.
+          return !this->all_result_sets.empty();
       }
 
-      // If there are no more results, return false
-      return false;  // No more results available
+      // No more results or invalid state.
+      return false;
   }
+
+  ResultSet& GetNextResultSet() {
+    // Check if more results exist
+    if (!this->HasMoreResults()) {
+        throw std::runtime_error("No more results available.");
+    }
+
+    // Retrieve the next result set
+    // Assuming `result_sets` is a container holding all result sets for this statement
+    if (current_result_set_index + 1 < all_result_sets.size()) {
+        ++current_result_set_index; // Move to the next result set
+        this->SetStmtState(StmtStates::kStatementExecutedWithRs); // Update state
+
+        // Reset cursor for the new result set
+        all_result_sets[current_result_set_index].cursor = -1;
+
+        return all_result_sets[current_result_set_index];
+    }
+
+    // If no more results are found, set the state accordingly
+    this->SetStmtState(StmtStates::kStatementResultsConsumed);
+    throw std::runtime_error("Attempted to fetch a result set when none exist.");
+  }
+
 
   void SetNullFutureGetResultsQuery() { future_more_results_query_ = std::nullopt; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
+  std::vector<ResultSet> all_result_sets;
+  int current_result_set_index;
   std::string query_str_;
 
  private:

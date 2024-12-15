@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include <chrono>
 #include <future>
 
@@ -45,6 +46,7 @@ using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
 
 namespace {
 
@@ -98,6 +100,55 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref) {
   // For current prepare request, return operation canceled.
   auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
   return LogAndReturnCode(handle_ref, status_record);
+}
+
+// This function synchronously processes current execute requests.
+StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
+    stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+    ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+    StatusRecordOr<SQLULEN> query_timeout_status = stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+    if (!query_timeout_status) {
+        return query_timeout_status.GetStatusRecord();
+    }
+    int query_timeout = *query_timeout_status;
+
+    // Split queries for multiple result sets
+    std::vector<std::string> queries = google::cloud::odbc_tests::SplitQueries(stmt_handle.GetQueryString());
+    if (queries.empty()) {
+        return StatusRecord{SQLStates::k_HY000(), "No queries to execute"};
+    }
+
+    std::vector<ResultSet> all_result_sets;
+    for (const auto& query : queries) {
+        PostQueryRequest post_request = ConstructBasicPostQueryRequest(conn_handle, query, query_timeout);
+
+        // Fetch data for the query
+        auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+        if (!ds_status_record_or) {
+            stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+            return ds_status_record_or.GetStatusRecord();
+        }
+
+        // Process the result set
+        StatusRecordOr<ResultSet> rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
+        if (!rs_status_record_or) {
+            stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+            return rs_status_record_or.GetStatusRecord();
+        }
+
+        all_result_sets.push_back(*rs_status_record_or);
+    }
+
+    if (all_result_sets.empty()) {
+        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+    } else {
+        // Store multiple result sets in the statement handle
+        stmt_handle.SetAllResultSets(all_result_sets);
+        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    }
+
+    return StatusRecord::Ok();
 }
 
 // Check if previous execute operation is still executing, if so do the
@@ -155,127 +206,8 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
   return LogAndReturnCode(handle_ref, status_record);
 }
 
-// This function synchronously processes current execute requests.
-StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
-  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
-
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  StatusRecordOr<SQLULEN> query_timeout_status =
-      stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
-  if (!query_timeout_status) {
-    return query_timeout_status.GetStatusRecord();
-  }
-  int query_timeout = *query_timeout_status;
-  std::string query_str = stmt_handle.GetQueryString();
-  PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
-
-  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
-  if (!ds_status_record_or) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    return ds_status_record_or.GetStatusRecord();
-  }
-
-  // Process the DSResults and convert to ResultSet.
-  StatusRecordOr<ResultSet> rs_status_record_or =
-      ProcessQueryResults(*ds_status_record_or);
-  if (!rs_status_record_or) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    return rs_status_record_or.GetStatusRecord();
-  }
-
-  if (stmt_handle.GetPreparedJob().has_value()) {
-    Job prepared_job = stmt_handle.GetPreparedJob().value();
-    std::string statement_type =
-        prepared_job.statistics.job_query_stats.statement_type;
-    if (statement_type != "SELECT") {
-      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-    } else {
-      // Store the resultset in statement handle.
-      stmt_handle.SetResultSet(*rs_status_record_or);
-      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-    }
-  } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal state error when executing query"};
-  }
-
-  return StatusRecord::Ok();
-}
-
-SQLRETURN HandleAsyncGetResults(StatementHandle& handle_ref) {
-    // Just a precautionary check so we don't rely on the caller.
-    if (handle_ref.GetStmtState() != StmtStates::kStatementAsyncGetResults) {
-        // Nothing to do.
-        return SQL_SUCCESS;
-    }
-    if (!handle_ref.IsOperationCanceled()) {
-        std::optional<std::future<StatusRecord>> future_results =
-            handle_ref.GetPossibleFutureGetResults();
-        if (future_results.has_value()) {
-            std::future_status fut_status =
-                future_results.value().wait_for(std::chrono::seconds(0));
-            if (fut_status == std::future_status::ready) {
-                // Block until the future is executed.
-                auto status = future_results.value().get();
-                if (!status.ok()) {
-                    // Reset the state to handle further fetch operations.
-                    handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
-                }
-                // Once the results future is executed, reset it so we don't try again.
-                handle_ref.SetNullFutureGetResultsQuery();
-                return LogAndReturnCode(handle_ref, status);
-            }
-            // Return that we are still executing
-            return SQL_STILL_EXECUTING;
-        }
-        // If for any reason we don't have the future, reset the statement state.
-        handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
-        auto status_record = StatusRecord{SQLStates::k_HY000(),
-                                          "Internal error: cannot fetch results asynchronously"};
-        return LogAndReturnCode(handle_ref, status_record);
-    }
-    // User has requested cancellation of an ongoing fetch operation.
-    // We return the Cancel state for this request.
-    handle_ref.DisableCancellation();
-    handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
-    // For the current fetch request, return operation canceled.
-    auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
-    return LogAndReturnCode(handle_ref, status_record);
-}
-
-StatusRecord ActuallyFetchResults(StatementHandle& stmt_handle) {
-    stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
-
-    // Get the connection handle and query string.
-    ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-    std::string query_str = stmt_handle.GetQueryString();
-
-    // Construct the request to fetch results from BigQuery (or the relevant data source).
-    PostQueryRequest post_request = ConstructBasicPostQueryRequest(conn_handle, query_str);
-
-    // Fetch the data from the database (BigQuery or similar).
-    auto ds_status_record_or = FetchBQData(conn_handle, post_request);
-    if (!ds_status_record_or) {
-        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-        return ds_status_record_or.GetStatusRecord();
-    }
-
-    // Process the query results and convert them into a result set.
-    StatusRecordOr<ResultSet> rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
-    if (!rs_status_record_or) {
-        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-        return rs_status_record_or.GetStatusRecord();
-    }
-
-    // Store the result set in the statement handle.
-    stmt_handle.SetResultSet(*rs_status_record_or);
-    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-
-    return StatusRecord::Ok();
-}
-
 }  // namespace
+
 
 SQLSMALLINT GetLengthForSeconds(SQLSMALLINT parameter_type,
                                 SQLSMALLINT decimal_digits) {
@@ -750,77 +682,6 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
   return LogAndReturnCode(stmt_handle, status);
-}
-
-
-SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
-    // Validate the statement handle first
-    StatusRecordOr<StatementHandle*> handle_result =
-        ValidateStatementHandle(statement_handle);
-    if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption),
-                           handle_result.GetStatusRecord().message);
-        return handle_result.GetCalculatedReturnCode();
-    }
-    StatementHandle& stmt_handle = *(*handle_result);
-
-    // Check for cancelled statement
-    if (stmt_handle.IsOperationCanceled()) {
-        StatusRecord status_record = {
-            SQLStates::k_HY008(),
-            "Statement has been cancelled"};
-        return LogAndReturnCode(stmt_handle, status_record);
-    }
-
-    // Handle asynchronous execution and result fetching if needed
-    StatusRecordOr<SQLULEN> async_enable_status =
-        stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
-    if (!async_enable_status) {
-        return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
-    }
-
-    // Check if the statement is still executing
-    if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
-        StatusRecord status_record = {
-            SQLStates::k_HY010(),
-            "Function sequence error - statement is still executing"};
-        return LogAndReturnCode(stmt_handle, status_record);
-    }
-
-    // Handle asynchronous execution in progress (initial state)
-    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncExecute) {
-        return HandleAsyncExecute(stmt_handle);  // Handle async execution completion
-    }
-
-    // Handle asynchronous result fetching if async results are enabled
-    if (stmt_handle.GetStmtState() == StmtStates::kStatementAsyncGetResults) {
-        return HandleAsyncGetResults(stmt_handle);  // Handle async result fetching
-    }
-
-    // Handle already executed statement without results (non-SELECT queries)
-    if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs ||
-        stmt_handle.GetStmtState() == StmtStates::kStatementResultsConsumed) {
-        return SQL_NO_DATA;  // No results or result set consumed
-    }
-
-    // If no more results, fetch the results synchronously
-    StatusRecord fetch_status = ActuallyFetchResults(stmt_handle);
-    
-    if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) {
-        // If the fetch fails, check if it's due to a no-results condition
-        if (fetch_status.CalculateReturnCode() == SQL_ERROR) {
-            return SQL_NO_DATA;  // Explicitly handle no data condition
-        }
-        return LogAndReturnCode(stmt_handle, fetch_status);  // Error in fetching results
-    }
-
-    // Final check to see if we have more results
-    if (stmt_handle.HasMoreResults()) {
-        stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);  // Transition to executed state
-        return SQL_SUCCESS_WITH_INFO;  // Indicate that there are more results
-    }
-
-    return SQL_NO_DATA;  // No more results
 }
 
 }  // namespace google::cloud::odbc_bq_driver
