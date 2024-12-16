@@ -118,6 +118,8 @@ class ConnectionHandle : public Handle {
   }
   odbc_internal::StatusRecord ValidateAllowedAttributes(
       Section const& attributes);
+
+  // TODO(b/384384699): Support ListProjectsParent as part of DSN from the UI
   std::unordered_map<std::string, std::string> GetDSNFields() {
     return {
         {"DRIVER", dsn_.driver},
