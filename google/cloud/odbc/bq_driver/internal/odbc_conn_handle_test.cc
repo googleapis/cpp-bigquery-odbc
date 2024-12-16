@@ -595,6 +595,4 @@ TEST(ConnectionHandle, Fail_GetRequestedAttribute_WrongComparison) {
   std::vector<std::string> invalid_attributes = {"Invalid1", "Invalid2"};
   EXPECT_NE(conn_handle.GetRequestedAttribute(), invalid_attributes);
 }
-// TODO(171): Add tests which use refresh token
-
 }  // namespace google::cloud::odbc_bq_driver_internal
