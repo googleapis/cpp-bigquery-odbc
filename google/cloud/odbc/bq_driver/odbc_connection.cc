@@ -428,6 +428,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
+    handle_ref->SaveInputAttributes(property);
     GetCamelCaseStr(property);
     dsn_section[property] = value;
   }
@@ -450,9 +451,18 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   }
 
   handle_ref->SetUp(dsn_section, dsn_name);
-  bool conn_att_resp =
-      ValidateConnAttribute(handle_ref, out_conn_str, out_conn_str_len);
-  if (!conn_att_resp) {
+  auto conn_att_resp = ValidateConnAttribute(handle_ref);
+
+  if (conn_att_resp) {
+    auto const& attributes = *conn_att_resp;
+    std::ostringstream missing_attributes;
+
+    for (auto const& attr : attributes) {
+      missing_attributes << attr << ":" << attr << "=?;";
+    }
+    std::string res_str = missing_attributes.str();
+    PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
+                                   out_conn_str_len, res_str, false);
     return SQL_NEED_DATA;
   }
   Authentication auth = CreateAuth(dsn_section);
@@ -460,31 +470,39 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
 
   if (status.ok() && out_conn_str != nullptr) {
     // Populate the output parameters as per the spec.
-    auto* temp_conn_str = in_conn_str;
+    auto req_attrs = handle_ref->GetRequestedAttribute();
+    std::ostringstream str_stream;
+    std::string temp_conn_str = conn_string;
+
     if (dsn_name.empty()) {
-      snprintf(reinterpret_cast<char*>(temp_conn_str), 1024,
-               "DRIVER={%s};Catalog=%s;KeyFilePath=%s;OAuthMechanism=%s",
-               handle_ref->GetDsn().driver.c_str(),
-               handle_ref->GetDsn().catalog.c_str(),
-               handle_ref->GetDsn().key_file_path.c_str(),
-               handle_ref->GetDsn().o_auth_mechanism.c_str());
-    }
+      str_stream << "DRIVER={" << handle_ref->GetDsn().driver << "};"
+                 << "Catalog=" << handle_ref->GetDsn().catalog << ";"
+                 << "KeyFilePath=" << handle_ref->GetDsn().key_file_path << ";"
+                 << "OAuthMechanism=" << handle_ref->GetDsn().o_auth_mechanism
+                 << ";";
+    } else {
+      auto input_attrs = handle_ref->GetInputAttributes();
+      auto dsn_fields = handle_ref->GetDSNFields();
 
-    std::string out_tmp_str(ToCharStr(temp_conn_str));
-    if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
-      out_tmp_str.append(";");
+      for (auto const& attr : input_attrs) {
+        auto upper_key = attr;
+        std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
+                       ::toupper);
+        if (dsn_fields.find(upper_key) != dsn_fields.end()) {
+          str_stream << attr << "=" << dsn_fields[upper_key] << ";";
+        }
+      }
     }
-    *out_conn_str_len = out_tmp_str.length();
-
-    if (*out_conn_str_len > out_conn_str_bufflen) {
-      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-              out_conn_str_bufflen - 1);
-      out_conn_str[out_conn_str_bufflen - 1] = '\0';
+    std::string constructed_str = str_stream.str();
+    if (!constructed_str.empty()) {
+      temp_conn_str = str_stream.str();
+    }
+    auto status_record =
+        PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
+                                       out_conn_str_len, temp_conn_str, false);
+    if (!status_record.ok()) {
       return SQL_NEED_DATA;
     }
-    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-            out_tmp_str.length());
-    out_conn_str[out_tmp_str.length()] = '\0';
   }
   return SQL_SUCCESS;
 }
