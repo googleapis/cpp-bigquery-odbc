@@ -226,7 +226,8 @@ inline int GetWholeDigitCount(std::string& src_str) {
 
 odbc_internal::StatusRecord PopulateOutputConnectionString(
     SQLCHAR* out_conn_str, SQLSMALLINT out_conn_str_buflen,
-    SQLSMALLINT* out_conn_str_len, std::string& conn_string);
+    SQLSMALLINT* out_conn_str_len, std::string& conn_string,
+    bool is_conn_str_empty = true);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
