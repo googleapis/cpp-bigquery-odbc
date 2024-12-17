@@ -983,7 +983,11 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
 
 TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string const conn_str = kDefaultConnectionString + ";User=TestUser;";
+  std::string key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+
+  std::string const conn_str =
+      kDefaultConnectionString + ";KeyFilePath=" + key_path + ";";
 
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
@@ -1000,7 +1004,7 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   EXPECT_EQ(status, SQL_SUCCESS);
 
   std::string const expected_conn_out_str =
-      kDefaultConnectionString + ";User=TestUser;";
+      kDefaultConnectionString + ";KeyFilePath=" + key_path + ";";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
   EXPECT_EQ(res_out_conn_str, expected_conn_out_str);

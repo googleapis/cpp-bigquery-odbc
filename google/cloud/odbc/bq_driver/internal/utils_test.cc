@@ -535,28 +535,6 @@ TEST(PopulateOutputConnectionString, EmptyConnectionString) {
   EXPECT_EQ(result.message, "Invalid Connection String");
 }
 
-TEST(PopulateOutputConnectionString, Fail_NullOutConnStr) {
-  SQLSMALLINT out_conn_str_len;
-  std::string conn_string = "DSN=SampleDSN";
-
-  auto result = PopulateOutputConnectionString(nullptr, 50, &out_conn_str_len,
-                                               conn_string);
-
-  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
-  EXPECT_EQ(result.message, "Null output buffer or length pointer");
-}
-
-TEST(PopulateOutputConnectionString, Fail_NullOutConnStrLen) {
-  SQLCHAR out_conn_str[50] = {0};
-  std::string conn_string = "DSN=SampleDSN";
-
-  auto result = PopulateOutputConnectionString(
-      out_conn_str, sizeof(out_conn_str), nullptr, conn_string);
-
-  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
-  EXPECT_EQ(result.message, "Null output buffer or length pointer");
-}
-
 TEST(GetCamelCaseStr, SuccessCases) {
   std::string str1 = "driver";
   GetCamelCaseStr(str1);

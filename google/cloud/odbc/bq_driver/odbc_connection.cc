@@ -428,6 +428,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
+    handle_ref->SaveInputAttributes(property);
     GetCamelCaseStr(property);
     dsn_section[property] = value;
   }
@@ -480,16 +481,25 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                  << "OAuthMechanism=" << handle_ref->GetDsn().o_auth_mechanism
                  << ";";
     } else {
-      if (!req_attrs.empty()) {
-        auto dsn_fields = handle_ref->GetDSNFields();
-        str_stream << "DSN=" << dsn_fields["DSN"] << ";";
+      auto input_attrs = handle_ref->GetInputAttributes();
+      auto dsn_fields = handle_ref->GetDSNFields();
 
-        for (auto const& attr : req_attrs) {
-          if (dsn_fields.find(attr) != dsn_fields.end()) {
-            str_stream << attr << "=" << dsn_fields[attr] << ";";
-          }
+      for (auto const& attr : input_attrs) {
+        if (dsn_fields.find(attr) != dsn_fields.end()) {
+          str_stream << attr << "=" << dsn_fields[attr] << ";";
         }
       }
+
+      // if (!req_attrs.empty()) {
+      //   auto dsn_fields = handle_ref->GetDSNFields();
+      //   str_stream << "DSN=" << dsn_fields["DSN"] << ";";
+
+      //   for (auto const& attr : req_attrs) {
+      //     if (dsn_fields.find(attr) != dsn_fields.end()) {
+      //       str_stream << attr << "=" << dsn_fields[attr] << ";";
+      //     }
+      //   }
+      // }
     }
     std::string constructed_str = str_stream.str();
     if (!constructed_str.empty()) {
