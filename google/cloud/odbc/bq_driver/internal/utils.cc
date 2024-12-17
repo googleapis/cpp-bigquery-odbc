@@ -541,16 +541,19 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
 StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
                                             SQLSMALLINT out_conn_str_buflen,
                                             SQLSMALLINT* out_conn_str_len,
-                                            std::string& conn_string) {
-  if (conn_string.empty()) {
-    return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
+                                            std::string& conn_string,
+                                            bool is_conn_str_empty) {
+  if (is_conn_str_empty) {
+    if (conn_string.empty()) {
+      return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
+    }
   }
 
-  if (out_conn_str == nullptr || out_conn_str_len == nullptr) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Null output buffer or length pointer"};
+  std::string out_tmp_str = conn_string;
+  if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
+    out_tmp_str.append(";");
   }
-  std::string out_tmp_str = conn_string + ";";
+
   auto out_str_len = out_tmp_str.length();
 
   if (out_str_len >= out_conn_str_buflen) {
@@ -563,6 +566,7 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
   }
   strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
           out_tmp_str.length());
+  out_conn_str[out_tmp_str.length()] = '\0';
   *out_conn_str_len = out_tmp_str.length();
   return StatusRecord::Ok();
 }
