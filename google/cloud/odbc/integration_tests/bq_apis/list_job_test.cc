@@ -29,7 +29,7 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
-using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
