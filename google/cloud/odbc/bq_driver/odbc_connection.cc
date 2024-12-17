@@ -485,8 +485,11 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
       auto dsn_fields = handle_ref->GetDSNFields();
 
       for (auto const& attr : input_attrs) {
-        if (dsn_fields.find(attr) != dsn_fields.end()) {
-          str_stream << attr << "=" << dsn_fields[attr] << ";";
+        auto upper_key = attr;
+        std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
+                ::toupper);
+        if (dsn_fields.find(upper_key) != dsn_fields.end()) {
+          str_stream << attr << "=" << dsn_fields[upper_key] << ";";
         }
       }
 
