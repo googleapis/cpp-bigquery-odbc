@@ -863,4 +863,30 @@ bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs) {
   return (lhs.col_index < rhs.col_index);
 }
 
+odbc_internal::StatusRecordOr<std::vector<std::string>> ValidateConnAttribute(
+    ConnectionHandle* conn_handle) {
+  Dsn dsn = conn_handle->GetDsn();
+  std::vector<std::string> missing_attributes;
+
+  if (dsn.o_auth_mechanism.empty() && dsn.catalog.empty()) {
+    missing_attributes.emplace_back("Catalog");
+    missing_attributes.emplace_back("OAuthMechanism");
+  } else {
+    if (dsn.catalog.empty()) {
+      missing_attributes.emplace_back("Catalog");
+    }
+    if (dsn.o_auth_mechanism.empty()) {
+      missing_attributes.emplace_back("OAuthMechanism");
+    }
+    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty()) {
+      missing_attributes.emplace_back("KeyFilePath");
+    }
+  }
+
+  conn_handle->SaveRequestedAttribute(missing_attributes);
+  if (!missing_attributes.empty()) {
+    return missing_attributes;
+  }
+  return StatusRecord::Ok();
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
