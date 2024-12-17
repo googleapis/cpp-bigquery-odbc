@@ -1059,15 +1059,9 @@ TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
   section["KeyFilePath"] = "/path/to/keyfile";
 
   conn_handle.SetUp(section, "");
-
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
-
-  auto result =
-      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
-  EXPECT_TRUE(result);
-  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str), "");
-  EXPECT_EQ(out_conn_str_len, 0);
+  StatusRecordOr<std::vector<std::string>> result =
+      ValidateConnAttribute(&conn_handle);
+  EXPECT_FALSE(result.Ok());
 }
 
 TEST(ValidateConnAttribute, Failure_MissingSomeKeywords) {
@@ -1076,18 +1070,11 @@ TEST(ValidateConnAttribute, Failure_MissingSomeKeywords) {
   dsn_section["Catalog"] = "BigQueryCatalog";
 
   conn_handle.SetUp(dsn_section, "");
+  auto result = ValidateConnAttribute(&conn_handle);
 
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
-
-  SQLRETURN result =
-      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
-  std::string const expected_out_conn_str = "OAuthMechanism:OAuthMechanism=?;";
-
-  EXPECT_FALSE(result);
-  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
-               expected_out_conn_str.c_str());
-  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+  EXPECT_TRUE(result.Ok());
+  ASSERT_EQ(result.GetValue().size(), 1);
+  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"OAuthMechanism"}));
 }
 
 TEST(ValidateConnAttribute, Failure_AllKeywordsMissing) {
@@ -1095,15 +1082,12 @@ TEST(ValidateConnAttribute, Failure_AllKeywordsMissing) {
   SQLCHAR out_conn_str[1024] = {0};
   SQLSMALLINT out_conn_str_len;
 
-  SQLRETURN result =
-      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
-  std::string const expected_out_conn_str =
-      "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;";
+  auto result = ValidateConnAttribute(&conn_handle);
 
-  EXPECT_FALSE(result);
-  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
-               expected_out_conn_str.c_str());
-  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+  EXPECT_TRUE(result.Ok());
+  ASSERT_EQ(result.GetValue().size(), 2);
+  EXPECT_EQ(result.GetValue(),
+            std::vector<std::string>({"Catalog", "OAuthMechanism"}));
 }
 
 TEST(ValidateConnAttribute, Failure_PartialMissingEmptyInput) {
@@ -1113,16 +1097,10 @@ TEST(ValidateConnAttribute, Failure_PartialMissingEmptyInput) {
   section["OAuthMechanism"] = "1";
 
   conn_handle.SetUp(section, "");
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
+  auto result = ValidateConnAttribute(&conn_handle);
 
-  SQLRETURN result =
-      ValidateConnAttribute(&conn_handle, out_conn_str, &out_conn_str_len);
-  std::string const expected_out_conn_str = "KeyFilePath:KeyFilePath=?;";
-
-  EXPECT_FALSE(result);
-  EXPECT_STREQ(reinterpret_cast<char const*>(out_conn_str),
-               expected_out_conn_str.c_str());
-  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.length());
+  EXPECT_TRUE(result.Ok());
+  ASSERT_EQ(result.GetValue().size(), 1);
+  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"KeyFilePath"}));
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -119,6 +119,10 @@ class ConnectionHandle : public Handle {
   odbc_internal::StatusRecord ValidateAllowedAttributes(
       Section const& attributes);
 
+  inline void SaveInputAttributes(std::string& attribute) {
+    input_attributes_.emplace_back(attribute);
+  }
+  std::vector<std::string> GetInputAttributes() { return input_attributes_; }
   // TODO(b/384384699): Support ListProjectsParent as part of DSN from the UI
   std::unordered_map<std::string, std::string> GetDSNFields() {
     return {
@@ -147,6 +151,8 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, std::string> attribute_str_values_;
   // stores string attribute keys.
   std::vector<std::string> requested_attributes_;
+  // stores string attribute keys.
+  std::vector<std::string> input_attributes_;
   // storage of all statement handles associated with this connection handle
   std::set<StatementHandle*> stmt_handles_;
   // storage of all explicitly allocated descriptor handles associated with this

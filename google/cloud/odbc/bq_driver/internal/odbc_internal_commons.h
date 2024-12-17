@@ -50,41 +50,8 @@ inline SQLRETURN LogAndReturnCode(
   return status_record.CalculateReturnCode();
 }
 
-inline bool ValidateConnAttribute(ConnectionHandle* conn_handle,
-                                  SQLCHAR* out_conn_str,
-                                  SQLSMALLINT* out_conn_str_len) {
-  Dsn dsn = conn_handle->GetDsn();
-  std::ostringstream missing_attributes;
-  std::vector<std::string> missing;
-
-  if (dsn.o_auth_mechanism.empty() && dsn.catalog.empty()) {
-    missing.emplace_back("Catalog");
-    missing.emplace_back("OAuthMechanism");
-  } else {
-    if (dsn.catalog.empty()) {
-      missing.emplace_back("Catalog");
-    }
-    if (dsn.o_auth_mechanism.empty()) {
-      missing.emplace_back("OAuthMechanism");
-    }
-    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty()) {
-      missing.emplace_back("KeyFilePath");
-    }
-  }
-
-  for (auto const& attr : missing) {
-    missing_attributes << attr << ":" << attr << "=?;";
-  }
-  conn_handle->SaveRequestedAttribute(missing);
-
-  std::string res_str = missing_attributes.str();
-  strncpy(reinterpret_cast<char*>(out_conn_str), res_str.c_str(),
-          res_str.length());
-  out_conn_str[res_str.length()] = '\0';
-  *out_conn_str_len = res_str.length();
-
-  return res_str.empty();
-}
+odbc_internal::StatusRecordOr<std::vector<std::string>> ValidateConnAttribute(
+    ConnectionHandle* conn_handle);
 
 // Data Types as supported by the BQ DataSource.
 enum BQDataType {
