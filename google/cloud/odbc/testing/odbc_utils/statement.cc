@@ -241,7 +241,21 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
+    // DescribeCol doesnt work in AsyncMode. Hence Disabled it before use.
+    if (is_async) {
+      status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                              (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+      CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_DISABLE)", conn);
+    }
+
     DescribeCol(conn, col_ptr, i + 1, use_ansi);
+
+    // Enabling AsyncMode which was previously disabled for DescribeCol
+    if (is_async) {
+      status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                              (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+      CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
+    }
 
     std::string col_name = (char*)col_ptr->name;
 
