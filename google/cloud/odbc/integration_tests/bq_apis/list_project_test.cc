@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
@@ -25,6 +26,11 @@ using bigquery_v2_minimal_internal::MakeProjectConnection;
 using bigquery_v2_minimal_internal::Project;
 using bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
@@ -73,6 +79,38 @@ TEST(ListAllProjects, ServiceAccountAuth) {
   for (auto const& project : range) {
     ASSERT_STATUS_OK(project);
   }
+}
+
+TEST(ListAllProjects, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto project_client =
+      ProjectClient(MakeProjectConnection(std::move(*options)));
+  ListProjectsRequest request;
+
+  StreamRange<Project> range = project_client.ListProjects(request);
+
+  auto begin = range.begin();
+  ASSERT_NE(begin, range.end());
+  for (auto const& project : range) {
+    ASSERT_STATUS_OK(project);
+  }
+}
+
+TEST(ODBCBQClient_ListAllProjects, ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto project_client =
+      ProjectClient(MakeProjectConnection(std::move(*options)));
+
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<Project>> projects_response =
+      (*odbc_bq_client)->ListAllProjects(std::move(*options));
+  ASSERT_STATUS_RECORD_OK(projects_response);
+  ASSERT_FALSE((*projects_response).empty());
 }
 
 TEST(ListAllProjects, WrongPathToAuthFile) {
