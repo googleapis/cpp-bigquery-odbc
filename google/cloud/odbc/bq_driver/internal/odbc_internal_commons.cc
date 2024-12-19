@@ -41,6 +41,7 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using json = nlohmann::json;
+using google::cloud::odbc_bq_driver_internal::DmlStats;
 
 // Constants for Unix timestamp calculations
 int const kSecondsPerDay = 86400;
@@ -575,6 +576,11 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+  DmlStats dml_stats;
+  dml_stats.inserted_row_count = pq_status->dml_stats.inserted_row_count;
+  dml_stats.updated_row_count = pq_status->dml_stats.updated_row_count;
+  dml_stats.deleted_row_count = pq_status->dml_stats.deleted_row_count;
+  conn_handle.SetDmlStats(dml_stats);
   DSResults results;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results

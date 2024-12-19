@@ -25,11 +25,13 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
 using google::cloud::odbc_bq_driver_internal::CreateTypeInfoRowSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
@@ -429,6 +431,65 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   stmt_handle.CloseCursor();
 
   return SQL_SUCCESS;
+}
+
+SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+  StatusRecord status_record = StatusRecord::Ok();
+  if (row_count == nullptr) {
+    status_record = {SQLStates::k_HY001(),
+                     "Parameter 'row_count' cannot be null"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  auto stmt_state = stmt_handle.GetStmtState();
+  switch (stmt_state) {
+    case StmtStates::kStatementNotPrepared:
+      status_record = {SQLStates::k_HY001(), "Statement is not prepared"};
+      break;
+    case StmtStates::kStatementAsyncExecute:
+    case StmtStates::kStatementAsyncPrepare:
+      status_record = {SQLStates::k_HY010(), "Statement is in Async Mode"};
+      break;
+    case StmtStates::kNeedsPutData:
+      status_record = {SQLStates::k_HY010(),
+                       "Statement needs Data to be executed"};
+      break;
+    default:
+      break;
+  }
+  if (!status_record.ok()) {
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  std::string operation = stmt_handle.GetPreparedJob()
+                              .value()
+                              .statistics.job_query_stats.statement_type;
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+
+  DmlStats dml_stats;
+  conn_handle.GetDmlStats(dml_stats);
+  if (operation == "INSERT") {
+    *row_count = dml_stats.inserted_row_count;
+  } else if (operation == "UPDATE") {
+    *row_count = dml_stats.updated_row_count;
+
+  } else if (operation == "DELETE") {
+    *row_count = dml_stats.deleted_row_count;
+
+  } else if (operation == "SELECT") {
+    *row_count = -1;
+    status_record = {SQLStates::k_HY010(),
+                     "Select Operation doesnot show row count"};
+  } else {
+    *row_count = -1;
+  }
+
+  return status_record.CalculateReturnCode();
 }
 
 }  // namespace google::cloud::odbc_bq_driver
