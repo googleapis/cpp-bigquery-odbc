@@ -309,33 +309,4 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
 
   return StatusRecord::Ok();
 }
-
-StatusRecord ConnectionHandle::ValidateAllowedAttributes(
-    Section const& attributes) {
-  StatusRecord status_record = StatusRecord::Ok();
-  auto const dsn_fields = GetDSNFields();
-
-  if (!requested_attributes_.empty()) {
-    for (auto const& [key, _] : attributes) {
-      if (std::find(requested_attributes_.begin(), requested_attributes_.end(),
-                    key) == requested_attributes_.end()) {
-        status_record = StatusRecord{
-            SQLStates::k_HY000(),
-            "Connection Error: Non Requested connection attribute " + key +
-                " in ConnectionString"};
-      }
-      std::string upper_key = key;
-      std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
-                     ::toupper);
-
-      if (dsn_fields.find(upper_key) != dsn_fields.end() &&
-          !dsn_fields.at(upper_key).empty()) {
-        status_record = StatusRecord{SQLStates::k_HY000(),
-                                     "Connection Error: Connection Attribute " +
-                                         key + " already found!"};
-      }
-    }
-  }
-  return status_record;
-}
 }  // namespace google::cloud::odbc_bq_driver_internal
