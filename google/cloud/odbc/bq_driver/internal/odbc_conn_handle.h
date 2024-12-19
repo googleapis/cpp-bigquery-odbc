@@ -109,20 +109,20 @@ class ConnectionHandle : public Handle {
   inline void SetTransactionActive(bool is_transaction_active) {
     is_transaction_active_ = is_transaction_active;
   }
+  // save missing attributes required for establishing connection.
   inline void SaveRequestedAttribute(
       std::vector<std::string> const& attributes) {
     requested_attributes_ = attributes;
   }
+  // provide vector of missing attributes needed to establish connection
   std::vector<std::string> GetRequestedAttribute() {
     return requested_attributes_;
   }
+  // Validate connection attributes against requested attributes and the DSN
+  // structure.
   odbc_internal::StatusRecord ValidateAllowedAttributes(
       Section const& attributes);
 
-  inline void SaveInputAttributes(std::string& attribute) {
-    input_attributes_.emplace_back(attribute);
-  }
-  std::vector<std::string> GetInputAttributes() { return input_attributes_; }
   // TODO(b/384384699): Support ListProjectsParent as part of DSN from the UI
   std::unordered_map<std::string, std::string> GetDSNFields() {
     return {
@@ -151,8 +151,6 @@ class ConnectionHandle : public Handle {
   std::map<SQLINTEGER, std::string> attribute_str_values_;
   // stores string attribute keys.
   std::vector<std::string> requested_attributes_;
-  // stores string attribute keys.
-  std::vector<std::string> input_attributes_;
   // storage of all statement handles associated with this connection handle
   std::set<StatementHandle*> stmt_handles_;
   // storage of all explicitly allocated descriptor handles associated with this

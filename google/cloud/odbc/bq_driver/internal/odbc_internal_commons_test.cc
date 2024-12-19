@@ -29,7 +29,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
-using google::cloud::odbc_bq_driver_internal::ValidateConnAttribute;
+using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -1051,7 +1051,7 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   EXPECT_TRUE(CompareTimestampStruct(result, expected));
 }
 
-TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
+TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   ConnectionHandle conn_handle;
   Section section;
   section["Catalog"] = "BigQueryCatalog";
@@ -1059,48 +1059,44 @@ TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
   section["KeyFilePath"] = "/path/to/keyfile";
 
   conn_handle.SetUp(section, "");
-  StatusRecordOr<std::vector<std::string>> result =
-      ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
   EXPECT_FALSE(result.Ok());
 }
 
-TEST(ValidateConnAttribute, Failure_MissingSomeKeywords) {
+TEST(GetMissingAttributesStr, Failure_MissingSomeKeywords) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["Catalog"] = "BigQueryCatalog";
 
   conn_handle.SetUp(dsn_section, "");
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 1);
-  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"OAuthMechanism"}));
+  EXPECT_EQ(result.GetValue(), "OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(ValidateConnAttribute, Failure_AllKeywordsMissing) {
+TEST(GetMissingAttributesStr, Failure_AllKeywordsMissing) {
   ConnectionHandle conn_handle;
   SQLCHAR out_conn_str[1024] = {0};
   SQLSMALLINT out_conn_str_len;
 
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 2);
   EXPECT_EQ(result.GetValue(),
-            std::vector<std::string>({"Catalog", "OAuthMechanism"}));
+            "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(ValidateConnAttribute, Failure_PartialMissingEmptyInput) {
+TEST(GetMissingAttributesStr, Failure_PartialMissingEmptyInput) {
   ConnectionHandle conn_handle;
   Section section;
   section["Catalog"] = "BigQueryCatalog";
   section["OAuthMechanism"] = "1";
 
   conn_handle.SetUp(section, "");
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 1);
-  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"KeyFilePath"}));
+  EXPECT_EQ(result.GetValue(), "KeyFilePath:KeyFilePath=?;");
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

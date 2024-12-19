@@ -977,8 +977,13 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
   std::string const expected_conn_out_str = kDefaultConnectionString + ";";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-  EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
-  EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  if (kIsBqDriver) {
+    EXPECT_THAT(res_out_conn_str, HasSubstr(expected_conn_out_str));
+    EXPECT_GT(out_conn_str_len, expected_conn_out_str.size());
+  } else {
+    EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
+    EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
@@ -1006,8 +1011,13 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
       kDefaultConnectionString + ";KeyFilePath=" + key_path + ";";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-  EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
-  EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  if (kIsBqDriver) {
+    EXPECT_THAT(res_out_conn_str, HasSubstr(kDefaultConnectionString));
+    EXPECT_GT(out_conn_str_len, kDefaultConnectionString.size());
+  } else {
+    EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
+    EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {

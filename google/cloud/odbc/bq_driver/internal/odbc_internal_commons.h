@@ -50,7 +50,7 @@ inline SQLRETURN LogAndReturnCode(
   return status_record.CalculateReturnCode();
 }
 
-odbc_internal::StatusRecordOr<std::vector<std::string>> ValidateConnAttribute(
+odbc_internal::StatusRecordOr<std::string> GetMissingAttributesStr(
     ConnectionHandle* conn_handle);
 
 // Data Types as supported by the BQ DataSource.

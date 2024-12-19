@@ -37,6 +37,7 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetCamelCaseStr;
+using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
@@ -44,7 +45,6 @@ using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
-using google::cloud::odbc_bq_driver_internal::ValidateConnAttribute;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -428,7 +428,6 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
-    handle_ref->SaveInputAttributes(property);
     GetCamelCaseStr(property);
     dsn_section[property] = value;
   }
@@ -451,18 +450,11 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   }
 
   handle_ref->SetUp(dsn_section, dsn_name);
-  auto conn_att_resp = ValidateConnAttribute(handle_ref);
+  auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
-  if (conn_att_resp) {
-    auto const& attributes = *conn_att_resp;
-    std::ostringstream missing_attributes;
-
-    for (auto const& attr : attributes) {
-      missing_attributes << attr << ":" << attr << "=?;";
-    }
-    std::string res_str = missing_attributes.str();
+  if (missing_att_str) {
     PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
-                                   out_conn_str_len, res_str, false);
+                                   out_conn_str_len, *missing_att_str, false);
     return SQL_NEED_DATA;
   }
   Authentication auth = CreateAuth(dsn_section);
@@ -470,36 +462,23 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
 
   if (status.ok() && out_conn_str != nullptr) {
     // Populate the output parameters as per the spec.
-    auto req_attrs = handle_ref->GetRequestedAttribute();
     std::ostringstream str_stream;
-    std::string temp_conn_str = conn_string;
+    std::string temp_conn_str;
 
     if (dsn_name.empty()) {
-      str_stream << "DRIVER={" << handle_ref->GetDsn().driver << "};"
-                 << "Catalog=" << handle_ref->GetDsn().catalog << ";"
-                 << "KeyFilePath=" << handle_ref->GetDsn().key_file_path << ";"
-                 << "OAuthMechanism=" << handle_ref->GetDsn().o_auth_mechanism
-                 << ";";
+      str_stream << "DRIVER={" << handle_ref->GetDsn().driver << "};";
     } else {
-      auto input_attrs = handle_ref->GetInputAttributes();
-      auto dsn_fields = handle_ref->GetDSNFields();
+      str_stream << "DSN=" << handle_ref->GetDsn().dsn_name << ";";
+    }
+    str_stream << "Catalog=" << handle_ref->GetDsn().catalog << ";"
+               << "KeyFilePath=" << handle_ref->GetDsn().key_file_path << ";"
+               << "OAuthMechanism=" << handle_ref->GetDsn().o_auth_mechanism
+               << ";";
 
-      for (auto const& attr : input_attrs) {
-        auto upper_key = attr;
-        std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
-                       ::toupper);
-        if (dsn_fields.find(upper_key) != dsn_fields.end()) {
-          str_stream << attr << "=" << dsn_fields[upper_key] << ";";
-        }
-      }
-    }
     std::string constructed_str = str_stream.str();
-    if (!constructed_str.empty()) {
-      temp_conn_str = str_stream.str();
-    }
-    auto status_record =
-        PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
-                                       out_conn_str_len, temp_conn_str, false);
+    auto status_record = PopulateOutputConnectionString(
+        out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
+        false);
     if (!status_record.ok()) {
       return SQL_NEED_DATA;
     }

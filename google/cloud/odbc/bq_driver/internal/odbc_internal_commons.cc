@@ -863,9 +863,12 @@ bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs) {
   return (lhs.col_index < rhs.col_index);
 }
 
-odbc_internal::StatusRecordOr<std::vector<std::string>> ValidateConnAttribute(
+// verify the parameters for the connection and return any missing parameter as
+// a string.
+odbc_internal::StatusRecordOr<std::string> GetMissingAttributesStr(
     ConnectionHandle* conn_handle) {
   Dsn dsn = conn_handle->GetDsn();
+  std::ostringstream missing_attr_str;
   std::vector<std::string> missing_attributes;
 
   if (dsn.o_auth_mechanism.empty() && dsn.catalog.empty()) {
@@ -883,9 +886,12 @@ odbc_internal::StatusRecordOr<std::vector<std::string>> ValidateConnAttribute(
     }
   }
 
-  conn_handle->SaveRequestedAttribute(missing_attributes);
   if (!missing_attributes.empty()) {
-    return missing_attributes;
+    conn_handle->SaveRequestedAttribute(missing_attributes);
+    for (auto const& attr : missing_attributes) {
+      missing_attr_str << attr << ":" << attr << "=?;";
+    }
+    return missing_attr_str.str();
   }
   return StatusRecord::Ok();
 }
