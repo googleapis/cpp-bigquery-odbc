@@ -29,7 +29,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
-using google::cloud::odbc_bq_driver_internal::ValidateConnAttribute;
+using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -1051,7 +1051,7 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   EXPECT_TRUE(CompareTimestampStruct(result, expected));
 }
 
-TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
+TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   ConnectionHandle conn_handle;
   Section section;
   section["Catalog"] = "BigQueryCatalog";
@@ -1059,48 +1059,86 @@ TEST(ValidateConnAttribute, Success_AllRequiredKeywordsPresent) {
   section["KeyFilePath"] = "/path/to/keyfile";
 
   conn_handle.SetUp(section, "");
-  StatusRecordOr<std::vector<std::string>> result =
-      ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
   EXPECT_FALSE(result.Ok());
 }
 
-TEST(ValidateConnAttribute, Failure_MissingSomeKeywords) {
+TEST(GetMissingAttributesStr, Failure_MissingSomeKeywords) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["Catalog"] = "BigQueryCatalog";
 
   conn_handle.SetUp(dsn_section, "");
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 1);
-  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"OAuthMechanism"}));
+  EXPECT_EQ(result.GetValue(), "OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(ValidateConnAttribute, Failure_AllKeywordsMissing) {
+TEST(GetMissingAttributesStr, Failure_AllKeywordsMissing) {
   ConnectionHandle conn_handle;
   SQLCHAR out_conn_str[1024] = {0};
   SQLSMALLINT out_conn_str_len;
 
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 2);
   EXPECT_EQ(result.GetValue(),
-            std::vector<std::string>({"Catalog", "OAuthMechanism"}));
+            "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(ValidateConnAttribute, Failure_PartialMissingEmptyInput) {
+TEST(GetMissingAttributesStr, Failure_PartialMissingEmptyInput) {
   ConnectionHandle conn_handle;
   Section section;
   section["Catalog"] = "BigQueryCatalog";
   section["OAuthMechanism"] = "1";
 
   conn_handle.SetUp(section, "");
-  auto result = ValidateConnAttribute(&conn_handle);
+  auto result = GetMissingAttributesStr(&conn_handle);
 
   EXPECT_TRUE(result.Ok());
-  ASSERT_EQ(result.GetValue().size(), 1);
-  EXPECT_EQ(result.GetValue(), std::vector<std::string>({"KeyFilePath"}));
+  EXPECT_EQ(result.GetValue(), "KeyFilePath:KeyFilePath=?;");
+}
+
+TEST(ValidateAllowedAttribute, Success) {
+  ConnectionHandle conn_handle;
+  Section section = {{"Catalog", "TestVal"}, {"OAuthMechanism", "TestVal"}};
+
+  conn_handle.SetUp(section, "");
+  StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
+  EXPECT_FALSE(status_record.ok());
+}
+
+TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
+  ConnectionHandle conn_handle;
+  Section section = {{"Catalog", ""}, {"ExtraAttribute", ""}};
+
+  StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
+
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.message,
+            "Connection Error: Non Requested connection attribute "
+            "ExtraAttribute in ConnectionString");
+}
+
+TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
+  ConnectionHandle conn_handle;
+  Section section = {{"Driver", "DriverName"}};
+
+  conn_handle.SetUp(section, "");
+  StatusRecord status_record =
+      ValidateAllowedAttributes(&conn_handle, {{"Driver", "DriverName"}});
+
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.message,
+            "Connection Error: Connection Attribute Driver already found!");
+}
+
+TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
+  ConnectionHandle conn_handle;
+  Section section = {{"OAuthMechanism", ""}};
+
+  StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
+  EXPECT_TRUE(status_record.ok());
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

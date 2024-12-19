@@ -977,8 +977,13 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
   std::string const expected_conn_out_str = kDefaultConnectionString + ";";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-  EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
-  EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  if (kIsBqDriver) {
+    EXPECT_THAT(res_out_conn_str, HasSubstr(expected_conn_out_str));
+    EXPECT_GT(out_conn_str_len, expected_conn_out_str.size());
+  } else {
+    EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
+    EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
@@ -1006,8 +1011,13 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
       kDefaultConnectionString + ";KeyFilePath=" + key_path + ";";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-  EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
-  EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  if (kIsBqDriver) {
+    EXPECT_THAT(res_out_conn_str, HasSubstr(kDefaultConnectionString));
+    EXPECT_GT(out_conn_str_len, kDefaultConnectionString.size());
+  } else {
+    EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
+    EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
@@ -1123,21 +1133,21 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-  EXPECT_EQ(status, SQL_NEED_DATA);
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+    EXPECT_EQ(status, SQL_ERROR);
   } else {
+    EXPECT_EQ(status, SQL_NEED_DATA);
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-  }
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-  EXPECT_THAT(res_out_conn_str,
-              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+    EXPECT_THAT(res_out_conn_str,
+                HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
@@ -1222,7 +1232,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
   conn_str =
       ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
-      "KeyFilePath=/key/file/path/here;";
+      "InvalidKey=InvalidValue;";
   StrToChar((char*)in_conn_str, conn_str);
 
   status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
