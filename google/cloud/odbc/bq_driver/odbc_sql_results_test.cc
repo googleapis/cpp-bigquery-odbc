@@ -560,4 +560,31 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 
+TEST(SQLRowCountInternal, NullStatementHandle) {
+  SQLLEN row_count = 0;
+  SQLRETURN result = SQLRowCountInternal(nullptr, &row_count);
+
+  EXPECT_EQ(result, SQL_INVALID_HANDLE);
+}
+
+TEST(SQLRowCountInternal, NullRowCountPointer) {
+  StatementHandle handle = CreateStatementHandle();
+
+  SQLRETURN result = SQLRowCountInternal(&handle, nullptr);
+  ASSERT_EQ(result, SQL_ERROR);
+  EXPECT_EQ(SQLStates::k_HY001(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLRowCountInternal, WrongState) {
+  StatementHandle handle = CreateStatementHandle();
+  handle.SetStmtState(StmtStates::kStatementNotPrepared);
+  SQLLEN* row_count = 0;
+  SQLRETURN ret = SQLRowCountInternal(&handle, row_count);
+
+  ASSERT_EQ(ret, SQL_ERROR);
+  EXPECT_EQ(SQLStates::k_HY001(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
