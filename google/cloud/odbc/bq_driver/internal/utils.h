@@ -115,6 +115,9 @@ bool IsFieldIdentifierString(SQLSMALLINT FieldIdentifier);
 
 bool IsInfoTypeString(SQLUSMALLINT InfoType);
 
+// To validate target c type supported in SQLGetData
+bool CheckTargetType(int c_type);
+
 #ifdef _WIN32
 
 constexpr int kMaxKeyLength = 4096;

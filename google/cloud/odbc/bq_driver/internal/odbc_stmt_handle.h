@@ -91,6 +91,10 @@ class StatementHandle : public Handle {
 
   [[nodiscard]] inline std::string GetCursorName() { return cursor_name_; };
 
+  inline void SetRowOffset(SQLLEN row_offset) { row_offset_ = row_offset; };
+
+  [[nodiscard]] inline SQLLEN GetRowOffset() const { return row_offset_; };
+
   inline void SetStmtState(StmtStates stmt_state) { stmt_state_ = stmt_state; }
 
   [[nodiscard]] inline StmtStates GetStmtState() const { return stmt_state_; }
@@ -172,6 +176,9 @@ class StatementHandle : public Handle {
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
+  // Offset to manage last fetch row index in case of partial data fetch in
+  // SQLGetData
+  SQLLEN row_offset_;
 
  private:
   std::shared_ptr<Query> query_;

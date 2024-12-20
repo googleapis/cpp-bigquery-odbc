@@ -429,6 +429,36 @@ TEST(DiagIdentifierString, IsDiagIdentifierString_false) {
   EXPECT_FALSE(IsDiagIdentifierString(SQL_DIAG_DYNAMIC_FUNCTION_CODE));
 }
 
+TEST(IsFieldIdentifierString, IsFieldIdentifierString_true) {
+  EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_BASE_COLUMN_NAME));
+  EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_BASE_TABLE_NAME));
+  EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_CATALOG_NAME));
+}
+
+TEST(IsFieldIdentifierString, IsFieldIdentifierString_false) {
+  EXPECT_FALSE(IsFieldIdentifierString(SQL_DESC_MAXIMUM_SCALE));
+}
+
+TEST(IsInfoTypeString, IsInfoTypeString_true) {
+  EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME));
+  EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME_SEPARATOR));
+  EXPECT_TRUE(IsInfoTypeString(SQL_COLLATION_SEQ));
+}
+
+TEST(IsInfoTypeString, IsInfoTypeString_false) {
+  EXPECT_FALSE(IsInfoTypeString(SQL_INDEX_KEYWORDS));
+}
+
+TEST(CheckTargetType, CheckTargetType_true) {
+  EXPECT_TRUE(CheckTargetType(SQL_C_CHAR));
+  EXPECT_TRUE(CheckTargetType(SQL_C_FLOAT));
+  EXPECT_TRUE(CheckTargetType(SQL_C_TYPE_DATE));
+}
+
+TEST(CheckTargetType, CheckTargetType_false) {
+  EXPECT_FALSE(CheckTargetType(SQL_C_DATE));
+}
+
 TEST(IsSearchPatternArgument, SearchPattern_Percent) {
   EXPECT_TRUE(IsSearchPatternArgument("%"));
 }

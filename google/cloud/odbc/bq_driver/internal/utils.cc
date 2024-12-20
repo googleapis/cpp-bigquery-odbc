@@ -709,4 +709,49 @@ StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name) {
 
 #endif  // _WIN32
 
+bool CheckTargetType(int c_type) {
+  switch (c_type) {
+    case SQL_C_CHAR:
+    case SQL_C_LONG:
+    case SQL_C_SHORT:
+    case SQL_C_FLOAT:
+    case SQL_C_NUMERIC:
+    case SQL_C_DEFAULT:
+    case SQL_C_TYPE_DATE:
+    case SQL_C_TYPE_TIME:
+    case SQL_C_TYPE_TIMESTAMP:
+    case SQL_C_INTERVAL_YEAR:
+    case SQL_C_INTERVAL_MONTH:
+    case SQL_C_INTERVAL_DAY:
+    case SQL_C_INTERVAL_HOUR:
+    case SQL_C_INTERVAL_MINUTE:
+    case SQL_C_INTERVAL_SECOND:
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:
+    case SQL_C_INTERVAL_DAY_TO_HOUR:
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:
+    case SQL_C_INTERVAL_DAY_TO_SECOND:
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+    case SQL_C_BINARY:
+    case SQL_C_BIT:
+    case SQL_C_SBIGINT:
+    case SQL_C_UBIGINT:
+    case SQL_C_TINYINT:
+    case SQL_C_SLONG:
+    case SQL_C_SSHORT:
+    case SQL_C_STINYINT:
+    case SQL_C_ULONG:
+    case SQL_C_USHORT:
+    case SQL_C_UTINYINT:
+    case SQL_C_GUID:
+    case SQL_C_WCHAR:
+    case SQL_C_DOUBLE:
+      return true;
+
+    default:
+      return false;
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
