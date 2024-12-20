@@ -22,6 +22,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
+std::string const kLogTraceFileName = "\\googleodbcdriverforbigquery.log";
 
 // Initialize the Singleton instance.
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
@@ -75,7 +76,12 @@ TraceOptions::CreateTraceOptionsFile(
         logging_enabled = true;
       }
     } else if (s.first == "LogFile") {
-      log_file = s.second;
+      std::string val = s.second;
+      if (val.size() >= 4 && val.compare(val.size() - 4, 4, ".log") == 0) {
+        log_file = val;
+      } else {
+        log_file = s.second + kLogTraceFileName;
+      }
     }
   }
 

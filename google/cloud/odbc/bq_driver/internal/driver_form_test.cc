@@ -54,6 +54,16 @@ class DriverFormTest : public ::testing::Test {
   }
 };
 
+class LogTraceDialogTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    attributes_map_["log_level"] = "LOG_TRACE";
+    attributes_map_["log_file_path"] = "C:\\temp\\log.txt";
+  }
+  LogTraceDialog log_trace_dialog_;
+  Section attributes_map_;
+};
+
 void MockOpenFileDialog(HWND hwnd, HWND h_edit, char const* simulated_path) {
   OpenFileDialog(hwnd, h_edit, simulated_path);
 }
@@ -203,4 +213,38 @@ TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
                             "or 'Application Default Credentials'")));
 }
 
+TEST(LogTraceDialogTest, SetValues_ValidAttributes) {
+  LogTraceDialog log_trace_dialog;
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
+
+  Section attributes_map;
+  attributes_map["LogLevel"] = "6";
+  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+
+  log_trace_dialog.SetValues(attributes_map);
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_TRACE");
+  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "C:\\temp\\log.txt");
+}
+
+TEST(LogTraceDialogTest, SetValues_InvalidLogLevel) {
+  LogTraceDialog log_trace_dialog;
+  Section attributes_map;
+
+  attributes_map["LogLevel"] = "999";  // Invalid level
+  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+  log_trace_dialog.SetValues(attributes_map);
+
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "C:\\temp\\log.txt");
+}
+
+TEST(LogTraceDialogTest, SetValues_EmptyAttributes) {
+  LogTraceDialog log_trace_dialog;
+  Section attributes_map;
+  log_trace_dialog.SetValues(attributes_map);
+
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

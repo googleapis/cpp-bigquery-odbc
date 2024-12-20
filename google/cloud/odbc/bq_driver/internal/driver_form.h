@@ -35,6 +35,12 @@ static int const kIdcCatlogBOX = 112;
 static int const kIdcDatasetBOX = 113;
 static int const kIdcDSNEdit = 114;
 static int const kIdcButtonTest = 115;
+static int const kIdcLoggingBtn = 116;
+static int const kIdcLogBrowseBtn = 117;
+static int const kIdcLogBtnOk = 118;
+static int const kIdcLogBtnCancel = 119;
+static int const kIdcLogFileEdit = 120;
+static int const kIdclogTraceBox = 121;
 
 class DriverForm {
  public:
@@ -75,7 +81,29 @@ class DriverForm {
   static char const CLASS_NAME[];
 };
 
+class LogTraceDialog {
+ public:
+  LogTraceDialog();
+  ~LogTraceDialog();
+  void InitControls();
+  HWND GetHwnd() const;
+  void Show();
+  void SetValues(Section const& attributes_map);
+  inline std::string const& GetLogLevel() const { return log_level_; }
+  inline std::string const& GetLogFilePath() const { return log_file_path_; }
+
+ private:
+  HWND parent_hwnd;
+  static std::string log_level_;
+  static std::string log_file_path_;
+
+  static LRESULT CALLBACK LogTraceProc(HWND hwnd, UINT u_msg, WPARAM w_param,
+                                       LPARAM l_param);
+  static char const CLASS_NAME[];
+};
+
 void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path);
+void OpenFolderDialog(HWND hwnd, HWND h_edit, char const* mock_folder_path);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
