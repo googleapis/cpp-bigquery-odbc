@@ -601,29 +601,40 @@ TEST(TraceLoggingConsole, WindowHandles) {
                                 fmt1.c_str(), fmt2.c_str()));
 }
 
-// TODO(b/375112496) enable this function after trace registry work is done
-// TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
-// #ifdef _WIN64
-//   auto sections_status =
-//       ParseConfig("SOFTWARE\\Google\\ODBC Driver for Google BigQuery");
-// #else
-//   auto sections_status = ParseConfig(
-//       "SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google "
-//       "BigQuery");
-// #endif  // _WIN64
-//   ASSERT_STATUS_RECORD_OK(sections_status);
-//   auto sections = *sections_status;
+TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
+  std::string registry_path;
 
-//   for (auto const& it_outer : kWINConfigSections1) {
-//     std::string section_name = it_outer.first;
-//     Section sample_ini_section = it_outer.second;
-//     for (auto& it_inner : sample_ini_section) {
-//       std::string property = it_inner.first;
-//       EXPECT_EQ(sample_ini_section[property],
-//                 (*(sections))[section_name][property]);
-//     }
-//   }
-// }
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  registry_path = GetTraceLogRegistryPath();
+#else
+#ifdef _WIN64
+  // 64-bit
+  registry_path = "SOFTWARE\\Simba\\Simba ODBC Driver for Google BigQuery";
+#else
+  // 32-bit
+  registry_path =
+      "SOFTWARE\\WOW6432Node\\Simba\\Simba ODBC Driver for Google BigQuery";
+#endif  // _WIN64
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+  auto sections_status = ParseConfig(registry_path);
+
+  ASSERT_STATUS_RECORD_OK(sections_status);
+  auto sections = *sections_status;
+
+  for (auto const& it_outer : kWINConfigSections1) {
+    std::string driver_section = it_outer.first;
+    Section sample_ini_section = it_outer.second;
+
+    for (auto& it_inner : sample_ini_section) {
+      std::string property = it_inner.first;
+      std::string value = it_inner.second;
+      Section res_section = (*(sections))[driver_section];
+
+      EXPECT_EQ(value, res_section[property]);
+    }
+  }
+}
 #endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal

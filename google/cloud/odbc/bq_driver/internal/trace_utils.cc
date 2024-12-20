@@ -22,6 +22,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
+std::string const kLogTraceFileName = "\\trace.log";
 
 // Initialize the Singleton instance.
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
@@ -75,7 +76,7 @@ TraceOptions::CreateTraceOptionsFile(
         logging_enabled = true;
       }
     } else if (s.first == "LogFile") {
-      log_file = s.second;
+      log_file = s.second + kLogTraceFileName;
     }
   }
 
