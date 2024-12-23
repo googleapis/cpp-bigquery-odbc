@@ -420,6 +420,27 @@ class Table {
   std::wstring wtable_name_;
 };
 
+class Procedure {
+ public:
+  Procedure() = default;
+  Procedure(std::string procedure_name) {
+    procedure_name_ = procedure_name_;
+    wprocedure_name_ = ToWStr(procedure_name_);
+  };
+
+  Procedure(std::wstring wprocedure_name) {
+    procedure_name_ = WStrToStr(wprocedure_name);
+    wprocedure_name_ = wprocedure_name;
+  };
+  void DropProcedure(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
+
+  void DropProcedureWithPrepare(std::shared_ptr<ODBCHandles> conn);
+
+ private:
+  std::string procedure_name_;
+  std::wstring wprocedure_name_;
+};
+
 std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
