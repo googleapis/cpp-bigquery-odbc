@@ -961,12 +961,14 @@ void DropTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn, false);
 }
 
-void Procedure::DropProcedure(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
+void Procedure::DropProcedure(std::shared_ptr<ODBCHandles> conn,
+                              bool use_ansi) {
   char drop_procedure_stmt[kBufferLength];
   StrToChar(drop_procedure_stmt, "DROP PROCEDURE IF EXISTS " + procedure_name_);
   SQLRETURN status;
   if (use_ansi) {
-    status = SQLExecDirectA(conn->hstmt, (SQLCHAR*)drop_procedure_stmt, SQL_NTS);
+    status =
+        SQLExecDirectA(conn->hstmt, (SQLCHAR*)drop_procedure_stmt, SQL_NTS);
   } else {
     status = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_procedure_stmt, SQL_NTS);
   }
@@ -978,10 +980,11 @@ void Procedure::DropProcedureWithPrepare(std::shared_ptr<ODBCHandles> conn) {
   char drop_procedure_stmt[kBufferLength];
   // Construct the SQL statement to drop the procedure
   StrToChar(drop_procedure_stmt, "DROP PROCEDURE IF EXISTS " + procedure_name_);
-  
+
   SQLRETURN status;
   // Prepare the SQL statement
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)drop_procedure_stmt, strlen(drop_procedure_stmt));
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)drop_procedure_stmt,
+                      strlen(drop_procedure_stmt));
   CheckError(status, "SQLPrepare", conn, false);
 
   // Execute the prepared statement to drop the procedure
