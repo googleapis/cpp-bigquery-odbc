@@ -27,7 +27,7 @@ endif ()
 
 add_library(
     google_cloud_odbc_testing_bq_driver_utils # cmake-format: sort
-    handles.cc handles.h status_utils.cc status_utils.h utils.cc utils.h)
+    STATIC handles.cc handles.h status_utils.cc status_utils.h utils.cc utils.h)
 
 target_link_libraries(
     google_cloud_odbc_testing_bq_driver_utils google_cloud_odbc_bq_driver

@@ -19,6 +19,12 @@ project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
 
+# Store the original BUILD_SHARED_LIBS value
+set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+
+# Set BUILD_SHARED_LIBS to OFF for these specific dependencies
+set(BUILD_SHARED_LIBS OFF)
+
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
@@ -61,6 +67,9 @@ else ()
     find_package(google_cloud_cpp_resourcemanager REQUIRED)
     find_package(google_cloud_cpp_serviceusage REQUIRED)
 endif ()
+
+# Restore the original BUILD_SHARED_LIBS value
+set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 

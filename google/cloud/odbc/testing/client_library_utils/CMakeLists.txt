@@ -23,7 +23,7 @@ if (NOT COMMAND create_bazel_config)
 endif ()
 
 add_library(
-    google_cloud_odbc_testing_client_library_utils
+    google_cloud_odbc_testing_client_library_utils STATIC
     authentication.cc authentication.h common_functions.cc common_functions.h
     util_constants.cc util_constants.h)
 

@@ -79,7 +79,7 @@ if (WIN32)
 endif ()
 
 # Create the library target
-add_library(google_cloud_odbc_bq_driver_internal ${COMMON_SOURCES})
+add_library(google_cloud_odbc_bq_driver_internal STATIC ${COMMON_SOURCES})
 
 set(COMMON_LIBS
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
