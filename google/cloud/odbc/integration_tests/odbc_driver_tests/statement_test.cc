@@ -61,6 +61,9 @@ StdUnicodeRows const kUnicodeSampleData{
     {3, L"परीक्षण", L"测试"},
 };
 
+StdRows const kRowCountSampleData{
+    {"Row 1", 1, 1.1}, {"Row 2", 2, 2.2}, {"Row 3", 3, 3.3}};
+
 // Checks if the column description returned by DescribeCol matches the schema
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                      Schema schema, bool use_ansi = false) {
@@ -187,19 +190,47 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
     sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
 
     std::vector<std::string> input_col_values;
-    for (auto data : input_data) {
-      input_col_values.emplace_back(data.str_field);
+    if (!col_name.compare("StringField")) {
+      for (auto data : input_data) {
+        input_col_values.emplace_back(data.str_field);
+      }
+
+    } else if (!col_name.compare("IntegerField")) {
+      for (auto data : input_data) {
+        if (data.int_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.int_field));
+        else
+          input_col_values.emplace_back("");
+      }
+
+    } else if (!col_name.compare("FloatField")) {
+      for (auto data : input_data) {
+        if (data.float_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.float_field));
+        else
+          input_col_values.emplace_back("");
+      }
     }
     sort(input_col_values.begin(), input_col_values.end(), str_comparison);
 
     // Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    for (int i = 0; i < ret_col_values.size(); i++) {
-      EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+    if ((!col_name.compare("FloatField"))) {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        if (ret_col_values[i].compare("") != 0)
+          EXPECT_EQ(stod(ret_col_values[i]), stod(input_col_values[i]))
+              << " at index: " << i;
+      }
+    } else {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+      }
     }
   }
 }
 
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
@@ -580,19 +611,20 @@ TEST(StatementTest, SQLGetData) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
+  table.CreateWithPrepare(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertData(conn, kSampleData);
+  table.InsertData(conn, kSampleData, false, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  // TODO(#14): Add integer and floating point fields too
-  std::string query = "SELECT StringField FROM " + table_name;
+
+  std::string query =
+      "SELECT StringField, IntegerField, FloatField FROM " + table_name;
 
   auto results = *FetchResultsWithSqlGetData(conn, query);
 
@@ -2623,6 +2655,175 @@ TEST_P(MultiStatementTest, ProcedureWithInOutParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+class SQLRowCountTest : public ::testing::TestWithParam<bool> {
+ protected:
+  std::shared_ptr<ODBCHandles> conn_;
+  std::string table_name_;
+
+  void SetUp() override {
+    conn_ = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn_), SQL_SUCCESS);
+    table_name_ =
+        kDatasetWithTablePrefix +
+        (GetParam() ? "ROWCOUNT_TEST_TABLE_DIRECT" : "ROWCOUNT_TEST_TABLE");
+    CreateTable(table_name_);
+  }
+
+  void TearDown() override {
+    DropTable(table_name_);
+    EXPECT_EQ(Disconnect(conn_), SQL_SUCCESS);
+  }
+
+  void CreateTable(std::string const& table_name) {
+    Table table(table_name);
+    if (GetParam()) {
+      table.Create(
+          conn_,
+          "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+    } else {
+      table.CreateWithPrepare(
+          conn_,
+          "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+    }
+  }
+
+  void DropTable(std::string const& table_name) {
+    Table table(table_name);
+    if (GetParam()) {
+      table.Drop(conn_);
+    } else {
+      table.DropWithPrepare(conn_);
+    }
+  }
+
+  void ExecuteAndValidate(std::string const& query, SQLLEN expected_row_count,
+                          std::string const& step) {
+    SQLRETURN status;
+    if (GetParam()) {
+      status = SQLExecDirect(conn_->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+    } else {
+      status = ExecWithPrepare(conn_, query);
+    }
+    CheckError(status, step, conn_);
+
+    SQLLEN row_count;
+    status = SQLRowCount(conn_->hstmt, &row_count);
+    CheckError(status, "SQLRowCount (" + step + ")", conn_);
+    EXPECT_EQ(row_count, expected_row_count);
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(WithOrWithoutExecDirect, SQLRowCountTest,
+                         testing::Values(false, true));
+
+TEST_P(SQLRowCountTest, AllValidations) {
+  SQLLEN row_count;
+  auto status = SQLRowCount(conn_->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Create)", conn_);
+  EXPECT_EQ(row_count, -1);
+
+  Table table(table_name_);
+  table.InsertData(conn_, kRowCountSampleData);
+
+  status = SQLRowCount(conn_->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Insert)", conn_);
+  EXPECT_EQ(row_count, 3);
+
+  ExecuteAndValidate(
+      "UPDATE " + table_name_ +
+          " SET StringField = \"Updated Row\" WHERE IntegerField <= 3;",
+      3, "Update");
+
+  status =
+      SQLPrepare(conn_->hstmt,
+                 (SQLCHAR*)("SELECT * FROM " + table_name_).c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare (Select)", conn_);
+
+  status = SQLRowCount(conn_->hstmt, &row_count);
+  EXPECT_EQ(status, -1);
+
+  ExecuteAndValidate("DELETE FROM " + table_name_ + " WHERE IntegerField < 3;",
+                     2, "Delete");
+}
+
+TEST(SQLRowCount, SameValueUpdate) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_SAME_UPDATE_TEST_TABLE";
+
+  std::string update_stmt =
+      "UPDATE " + table_name +
+      " SET StringField = \"Row 3\" WHERE IntegerField = 3;";
+
+  Table table(table_name);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  table.InsertData(conn, kRowCountSampleData);
+
+  auto status = ExecWithPrepare(conn, update_stmt);
+  CheckError(status, "ExecWithPrepare (Update)", conn);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Update)", conn);
+  EXPECT_EQ(row_count, 1);
+
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLRowCount, WrongUpdateValidation) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_WRONG_UPDATE_TEST_TABLE";
+
+  std::string update_stmt =
+      "UPDATE " + table_name +
+      " SET StringField = \"Updated Row\" WHERE IntegerField = 4;";
+
+  Table table(table_name);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  table.InsertData(conn, kRowCountSampleData);
+
+  auto status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
+  EXPECT_EQ(status, SQL_NO_DATA);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Update)", conn);
+  EXPECT_EQ(row_count, 0);
+
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLRowCount, NonExistentTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string non_existent_table =
+      kDatasetWithTablePrefix + "NON_EXISTENT_TABLE";
+  std::string select_stmt = "SELECT COUNT(*) FROM " + non_existent_table;
+
+  auto status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
+  EXPECT_NE(status, SQL_SUCCESS);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  EXPECT_NE(status, SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLMoreResults, FetchEmptyResultSet) {
   auto conn = std::make_shared<ODBCHandles>();
   auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
@@ -2760,6 +2961,8 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
