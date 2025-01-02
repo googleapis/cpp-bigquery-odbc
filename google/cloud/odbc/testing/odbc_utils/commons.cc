@@ -22,6 +22,7 @@
 namespace google::cloud::odbc_tests {
 
 using ::google::cloud::internal::ExponentialBackoffPolicy;
+using ms = std::chrono::milliseconds;
 
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
@@ -1021,13 +1022,14 @@ void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
 
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
-                 bool use_ansi) {
+                 bool is_async) {
   SQLRETURN status;
-  if (use_ansi) {
-    status = SQLDescribeColA(conn->hstmt, col_index, col_ptr->name,
-                             kBufferLength, &col_ptr->name_len,
-                             &col_ptr->data_type, &col_ptr->data_size,
-                             &col_ptr->decimal_digits, &col_ptr->nullable);
+  ExponentialBackoffPolicy backoff(ms(10), ms(100), 2);
+  if (is_async) {
+    status = PollODBC(SQLDescribeCol, backoff, conn->hstmt, col_index,
+                      col_ptr->name, kBufferLength, &col_ptr->name_len,
+                      &col_ptr->data_type, &col_ptr->data_size,
+                      &col_ptr->decimal_digits, &col_ptr->nullable);
 
   } else {
     status = SQLDescribeCol(conn->hstmt, col_index, col_ptr->name,
@@ -1036,7 +1038,7 @@ void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                             &col_ptr->decimal_digits, &col_ptr->nullable);
   }
 
-  CheckError(status, "SQLDescribeCol", conn, use_ansi);
+  CheckError(status, "SQLDescribeCol", conn);
 }
 
 void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,

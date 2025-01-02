@@ -241,7 +241,7 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, i + 1, use_ansi);
+    DescribeCol(conn, col_ptr, i + 1, is_async);
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -331,7 +331,7 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, i + 1, false);
+    DescribeCol(conn, col_ptr, i + 1);
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -406,7 +406,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, i + 1, use_ansi);
+    DescribeCol(conn, col_ptr, i + 1);
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -523,7 +523,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
-    DescribeCol(conn, col_ptr, 1, use_ansi);
+    DescribeCol(conn, col_ptr, 1);
     auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
     col_ptr->result_set = result_set.get();
 

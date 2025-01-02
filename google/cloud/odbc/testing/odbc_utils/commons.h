@@ -509,7 +509,7 @@ void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
 // Executes the SQLDescribeCol API to initialize the Column struct
 void DescribeCol(std::shared_ptr<ODBCHandles> conn,
                  std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
-                 bool use_ansi = false);
+                 bool is_async = false);
 
 // Executes the BindCol API to bind the Column struct data buffers to the
 // statement handle
