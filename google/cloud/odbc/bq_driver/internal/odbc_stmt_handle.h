@@ -105,7 +105,7 @@ class StatementHandle : public Handle {
 
   // Setters and Getters related to unprocessed results from the client
   // interface
-  DSResults GetDSResults() const { return ds_results_; }
+  DSResults& GetDSResults() { return ds_results_; }
 
   inline void SetDSResults(DSResults const& ds_results) {
     ds_results_ = ds_results;
@@ -134,6 +134,10 @@ class StatementHandle : public Handle {
           query_parameters) {
     query_parameters_ = query_parameters;
   }
+
+  inline void SetQueryString(std::string& query_str) {
+    query_str_ = query_str;
+  };
 
   [[nodiscard]] inline std::string GetQueryString() const { return query_str_; }
 

@@ -40,8 +40,9 @@ using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
 // Column-wise results
 using Results = std::map<std::string, std::vector<std::string>>;
+using Row = std::map<int, std::string>;
 // Row-wise results
-using RowWiseResults = std::vector<std::map<int, std::string>>;
+using RowWiseResults = std::vector<Row>;
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 bool const kIsBqDriver = true;
@@ -59,7 +60,7 @@ inline std::string const GetDefaultTablePrefix() {
 }
 
 std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
-std::string const kDatasetName = "ODBC_TEST_DATASET";
+std::string const kDatasetName = "ODBC_TEST_DATASET_SACHIN";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
 
@@ -284,9 +285,19 @@ static Schema const kFullSchema = {
 
 inline bool str_comparison(std::string a, std::string b) { return a < b; }
 
+inline bool isNumeric(const std::string& str) {
+  try {
+    std::stod(str);
+    return true;
+  } catch (const std::exception& e) { 
+    return false;
+  }
+}
+
 inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
   return (sizeof(x) / sizeof(SQLCHAR));
 }
+
 
 // Copies a source <string> to a destination <char *>
 inline void StrToChar(char* dest, std::string src) {
@@ -408,6 +419,8 @@ class Table {
 
   // Uses SQLExecDirectW
   void DropW(std::shared_ptr<ODBCHandles> conn);
+
+  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> conn, std::string query = "");
 
   void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
 

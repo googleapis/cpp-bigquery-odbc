@@ -60,6 +60,10 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle);
 
+SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
+                             SQLCHAR* in_statement_text,
+                             SQLINTEGER in_text_length);
+
 SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
                                    SQLCHAR const* cursor_name,
                                    SQLSMALLINT name_len);

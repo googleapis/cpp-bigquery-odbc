@@ -32,6 +32,117 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
                         value_string_len);
 }
 
+void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
+                             std::vector<std::string> col_names) {
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    if (!col_name.compare("StringField")) {
+      for (auto data : input_data) {
+        input_col_values.emplace_back(data.str_field);
+      }
+
+    } else if (!col_name.compare("IntegerField")) {
+      for (auto data : input_data) {
+        if (data.int_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.int_field));
+        else
+          input_col_values.emplace_back("");
+      }
+
+    } else if (!col_name.compare("FloatField")) {
+      for (auto data : input_data) {
+        if (data.float_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.float_field));
+        else
+          input_col_values.emplace_back("");
+      }
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    if ((!col_name.compare("FloatField"))) {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        if (ret_col_values[i].compare("") != 0)
+          EXPECT_EQ(stod(ret_col_values[i]), stod(input_col_values[i]))
+              << " at index: " << i;
+      }
+    } else {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+      }
+    }
+  }
+}
+
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          RowWiseResults const& expected_results) {
+  // Check if both result sets have the same number of rows
+  EXPECT_EQ(actual_results.size(), expected_results.size())
+      << "Number of rows mismatch";
+
+  std::cout << "CP3::" << std::endl;
+  // Iterate over each row and compare the maps
+  for (size_t i = 0; i < actual_results.size(); ++i) {
+    std::cout << "CP4::" << std::endl;
+    auto const& actual_row = actual_results[i];
+    auto const& expected_row = expected_results[i];
+    EXPECT_EQ(actual_row.size(), expected_row.size())
+        << "Number of elements in row " << i << " mismatch";
+
+    // Sort map elements for comparison to ensure ordering consistency
+    std::vector<std::pair<int, std::string> > sorted_actual_row(
+        actual_row.begin(), actual_row.end());
+    std::vector<std::pair<int, std::string> > sorted_expected_row(
+        expected_row.begin(), expected_row.end());
+
+    std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
+    std::sort(sorted_expected_row.begin(), sorted_expected_row.end());
+
+    for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
+      EXPECT_EQ(sorted_actual_row[j].first, sorted_expected_row[j].first)
+          << "Key mismatch at row " << i << ", position " << j;
+      std::string actual = sorted_actual_row[j].second;
+      std::string expected = sorted_expected_row[j].second;
+      if (isNumeric(actual) && isNumeric(expected)) {
+        // Existing driver doesn't precicely return double values as string
+        EXPECT_NEAR(std::stod(actual), std::stod(expected), 1e-6)
+          << "Value mismatch at row " << i << ", position " << j;
+      } else {
+        EXPECT_EQ(actual, expected)
+          << "Value mismatch at row " << i << ", position " << j;
+      }
+    }
+  }
+}
+
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          StdRows const& expected_results) {
+  RowWiseResults expected_row_wise;
+  for (StdRow row: expected_results) {
+    expected_row_wise.emplace_back(Row{
+      {0, row.str_field},
+      {1, std::to_string(row.int_field)},
+      {2, std::to_string(row.float_field)}
+    });
+  }
+  std::cout << "CP2::" << std::endl;
+  VerifyRowWiseResults(actual_results, expected_row_wise);
+}
+
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
@@ -199,6 +310,55 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
   table.Drop(conn);
 
   return status;
+}
+
+RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn, std::string query) {
+  if(query.empty()) {
+    query =  "SELECT * FROM " + table_name_;
+  }
+  SQLRETURN status;
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
+  CheckError(status, "SQLNumResultCols", conn);
+
+  std::vector<TestingDataBuffer> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i + 1,
+                        SQL_C_CHAR,
+                        cols[i].target_value,
+                        cols[i].buffer_length,
+                        &(cols[i].str_len));
+    CheckError(status, "SQLBindCol", conn);
+  }
+
+  RowWiseResults results;
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);  // No ansi version.
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+    Row row;
+    for (int i_c = 0; i_c < num_cols; i_c++) {
+      SQLLEN data_len = cols[i_c].str_len;
+      if (data_len == -1) {
+        continue;
+      }
+      row[i_c] = std::string(reinterpret_cast<char*>(cols[i_c].target_value), data_len);
+      std::cout << "data_len:: " << data_len << std::endl;
+      std::cout << "i_c:: " << i_c << ", row[i_c]:: " << row[i_c] << std::endl << std::endl;
+    }
+    results.emplace_back(row);
+  }
+  return results;
 }
 
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
@@ -448,6 +608,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
         results[col_name].emplace_back(std::string());
         continue;
       }
+      std::cout << "cols[i_c]->data_type:: " << cols[i_c]->data_type << std::endl;
       std::string val;
       switch (cols[i_c]->data_type) {
         case SQL_TYPE_DATE: {
@@ -461,9 +622,14 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
           val = FormatTimeStamp(*timestamp);
           break;
         }
-        case SQL_TYPE_TIME: {
-          SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
-          val = FormatTimetoString(*time);
+        case SQL_DOUBLE: {
+          std::cout << "CP2::" << std::endl;
+          val = std::to_string(*reinterpret_cast<SQLUBIGINT*>(data));
+          break;
+        }
+        case SQL_BIGINT: {
+          std::cout << "CP2::" << std::endl;
+          val = std::to_string(*reinterpret_cast<SQLDOUBLE*>(data));
           break;
         }
         default: {
@@ -471,6 +637,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
           break;
         }
       }
+      std::cout << "data_len:: " << data_len << std::endl;
+      std::cout << "i_c:: " << i_c << ", val:: " << val << std::endl << std::endl;
       results[col_name].push_back(val);
     }
   }

@@ -15,9 +15,16 @@
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_tests {
+
+// The IntegerField must be in ascending for have consistent ordering
+StdRows const kBindParamTestData{
+    {"Test String 1", 1, 1.1},
+    {"21", 53, 5},
+};
 
 enum class DescriptorType { kAPD, kIPD };
 
@@ -712,5 +719,207 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(SQLBindParameter, BindWithExecDirect) {
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_BIND_PARAM_EXEC_DIRECT_TEST";
+  Table table(table_name);
+  Schema schema{{"StringField", "STRING"},
+                {"IntegerField", "INT64"},
+                {"FloatField", "FLOAT64"}};
+  
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data into the table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?), (?, ?, ?)";
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  StdRow row1 = kBindParamTestData[0];
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+                   (SQLPOINTER)row1.str_field.c_str(), row1.str_field.size(), NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT, SQL_BIGINT, 0, 0,
+                   &row1.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0,
+                   &row1.float_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
+
+  StdRow row2 = kBindParamTestData[1];
+  status = SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+                   (SQLPOINTER)row2.str_field.c_str(), row2.str_field.size(), NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_DOUBLE)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_UBIGINT, SQL_DOUBLE, 0, 0,
+                   &row2.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_DOUBLE)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_BIGINT, 0, 0,
+                   &row2.float_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate inserted data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  auto const query = "SELECT * FROM " + table_name + " ORDER BY IntegerField";
+  const RowWiseResults& results = table.Fetch(conn, query);
+  VerifyRowWiseResults(results, {row1, row2});
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, Fail_BindWithExecDirect) {
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_BIND_PARAM_FAILURE_TEST";
+  Table table(table_name);
+  Schema schema{{"StringField", "STRING"},
+                {"IntegerField", "INT64"},
+                {"FloatField", "FLOAT64"}};
+  
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data into the table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  StdRow row = kBindParamTestData[0];
+  //status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+  //                 (SQLPOINTER)row.str_field.c_str(), row.str_field.size(), NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+                   (SQLPOINTER)row.str_field.c_str(), row.str_field.size(), NULL);
+  // "Test String 1" cannot be converted to a double
+  // (40550) Invalid character value for cast specification. (40550) SQLSTATE=22018
+  EXPECT_EQ(status, SQL_ERROR);
+  
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT, SQL_BIGINT, 0, 0,
+                   &row.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT, SQL_DOUBLE, 0, 0,
+                   &row.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_DOUBLE)", conn);
+  
+  status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0,
+                   &row.float_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_VARCHAR, 0, 0,
+                   &row.float_field, 0, NULL);
+  // "Test String 1" cannot be converted to a double
+  // (40470) Conversion error at column 3 and row 1: numeric value out of range. (40470)
+  EXPECT_EQ(status, SQL_ERROR);
+
+  //status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  //CheckError(status, "SQLPrepare", conn);
+
+  //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  //CheckError(status, "SQLExecDirect", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate inserted data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  //auto const query = "SELECT * FROM " + table_name;
+  //const RowWiseResults& results = table.Fetch(conn, query);
+  //std::cout << "CP1::" << std::endl;
+  //VerifyRowWiseResults(results, {row});
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  //EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.Drop(conn);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLBindParameter, BindWithProcedure) {
+  SQLRETURN status;
+  std::string const procedure_name =
+        kDatasetWithTablePrefix + "ODBC_BIND_PARAM_EXEC_DIRECT_PROC_TEST";
+  
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  // Create Procedure
+  std::string procedure_create =
+    "CREATE OR REPLACE PROCEDURE " + procedure_name +
+    "(name STRING, OUT OutStringField STRING)"
+    "BEGIN "
+    "SET OutStringField = CONCAT(name, ' in wonderland');END";
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Call Procedure
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  
+  std::string procedure_call = "CALL " + procedure_name + "(?, ?);";
+
+  SQLCHAR in_str[kBufferLength] = "Alice";
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+                   in_str, kBufferLength, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR)", conn);
+  
+  SQLCHAR out_str[kBufferLength];
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_OUTPUT, SQL_C_CHAR, SQL_VARCHAR, 0, 0,
+                   out_str, kBufferLength, NULL);
+  CheckError(status, "SQLBindParameter(SQL_PARAM_OUTPUT)", conn);
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete procedure
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Procedure procedure(procedure_name);
+  procedure.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+/*
+SQLExecute -> Cache a result set
+SQLFetch -> Return the result set row by row, SQL_NO_DATA when cursor has reached end
+SQLMoreResult-> Checks if all child-statements have been called, if not populate the next result set, 
+if yes, 
+*/
+
 
 }  // namespace google::cloud::odbc_tests
