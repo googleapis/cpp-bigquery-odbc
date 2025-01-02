@@ -60,7 +60,7 @@ inline std::string const GetDefaultTablePrefix() {
 }
 
 std::string const kTableNamePrefix = GetDefaultTablePrefix() + "_";
-std::string const kDatasetName = "ODBC_TEST_DATASET";
+std::string const kDatasetName = "ODBC_TEST_DATASET_SACHIN";
 std::string const kDatasetWithTablePrefix =
     kDatasetName + "." + kTableNamePrefix;
 
@@ -298,6 +298,7 @@ inline bool isNumeric(std::string const& str) {
 inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
   return (sizeof(x) / sizeof(SQLCHAR));
 }
+
 
 // Copies a source <string> to a destination <char *>
 inline void StrToChar(char* dest, std::string src) {

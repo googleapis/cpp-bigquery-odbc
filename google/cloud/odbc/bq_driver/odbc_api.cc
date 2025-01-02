@@ -66,6 +66,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLDriverConnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLEndTran;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLForeignKeys;
@@ -177,6 +178,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLEndTran;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
@@ -2044,16 +2046,25 @@ SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
                                 SQLCHAR* statementText,
                                 SQLINTEGER statementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  
+  bool is_tracing_enabled = IsTracingEnabled("SQLExecDirect");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled)
+    TraceFunctionEntry_SQLExecDirect(statementHandle, statementText,
+                                  statementTextLen, *(*kTraceOption));
 
   // Call to common internal function for SQLExecDirect and SQLExecDirectW
   // in odbc_sql_requests.h.
+  rc = google::cloud::odbc_bq_driver::SQLExecDirectInternal(
+      statementHandle, statementText, statementTextLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (IsTracingEnabled) TraceFunctionExit_SQLExecDirect(rc, *(*kTraceOption));
 
   return rc;
 }
+
 ////////////////////////////////////////
 // Unicode version of SQLExecDirect.
 ////////////////////////////////////////
@@ -2082,6 +2093,9 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
   // Call to common internal function for SQLExecDirect and SQLExecDirectW
   // in odbc_sql_requests.h.
   // Handle Unicode conversion of output parameters.
+  rc = google::cloud::odbc_bq_driver::SQLExecDirectInternal(
+      statementHandle, ToSqlChar(utf8_stmt_txt->data()), statementTextLen);
+
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionExit_SQLExecDirectW(rc, *(*kTraceOption));

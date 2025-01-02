@@ -24,6 +24,11 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
                       SQLPOINTER value, SQLINTEGER value_buffer_len,
                       SQLINTEGER* value_string_len, bool use_ansi);
 
+// Verify if the inserted data(<input_data>) is the same as the data fetched
+// col-wise Note: This doesn't verify the integrity of the fetched rows
+void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
+                             std::vector<std::string> col_names);
+
 void VerifyRowWiseResults(RowWiseResults const& actual_results,
                           RowWiseResults const& expected_results);
 

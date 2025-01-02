@@ -176,20 +176,15 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
   return StatusRecord::Ok();
 }
 
-StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
-  // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
-  // risk.
-  if (query_text == nullptr) {
-    return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
-  }
-
+// TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
+// risk.
+StatusRecord StatementHandle::PrepareQuery(const std::string& query) {
   StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
   if (!transaction_status.ok()) {
     return transaction_status;
   }
 
   Job req;
-  std::string query(reinterpret_cast<char const*>(query_text));
   req.configuration.query.query = query;
   req.configuration.query.use_query_cache = true;
   req.configuration.dry_run = true;
@@ -232,6 +227,10 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
     return response.GetStatusRecord();
   }
 
+  nlohmann::json resp;
+  to_json(resp, *response);
+  std::cout << "InsertJobResp:: " << resp.dump(4) << std::endl;
+
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {
@@ -269,8 +268,6 @@ StatusRecord StatementHandle::PrepareQuery(const SQLCHAR* query_text) {
 
   query_str_ = query;
   prepared_job_ = *response;
-  stmt_state_ = StmtStates::kStatementPrepared;
-
   return StatusRecord::Ok();
 }
 

@@ -580,6 +580,11 @@ StatusRecordOr<DSResults> FetchBQData(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
+
+  nlohmann::json req;
+  to_json(req, post_query_request);
+  std::cout << "PostQueryRequest:: " << req.dump(4) << std::endl;
+
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
@@ -587,12 +592,20 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+  nlohmann::json resp;
+  to_json(resp, *pq_status);
+  std::cout << "PostQueryResults:: " << resp.dump(4) << std::endl;
+  
   DSResults results;
   results.dml_stats = pq_status->dml_stats;
+  results.job_ref = pq_status->job_reference;
+  std::cout << "FetchBQData:: CP3" << std::endl;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
+    std::cout << "FetchBQData:: CP4" << std::endl;
     // we have gotten all the results
     results.data_source_results = *pq_status;
   } else {
+    std::cout << "FetchBQData:: CP5" << std::endl;
     // Call GetAllQueryResults to get all the query results.
     auto gq_status = bq_client->GetAllQueryResults(
         pq_status->job_reference.project_id, pq_status->job_reference.job_id,
@@ -601,6 +614,7 @@ StatusRecordOr<DSResults> FetchBQData(
     if (!gq_status) {
       return gq_status.GetStatusRecord();
     }
+    std::cout << "FetchBQData:: CP6" << std::endl;
     results.data_source_results = *gq_status;
   }
   if (!conn_handle.IsSessionStarted() &&

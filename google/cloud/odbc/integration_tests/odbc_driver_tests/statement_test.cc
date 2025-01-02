@@ -298,68 +298,6 @@ TEST(StatementTest, SQLFetch_Unicode) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// Verify if the inserted data(<input_data>) is the same as the data fetched
-// col-wise Note: This doesn't verify the integrity of the fetched rows
-void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
-                             std::vector<std::string> col_names) {
-  if (!col_names.size()) {
-    std::vector<std::string> all_col_names;
-    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
-      all_col_names.emplace_back(it->first);
-    }
-    col_names = all_col_names;
-  }
-  for (auto col_name : col_names) {
-    auto ret_col_values = col_wise_data[col_name];
-
-    // We have to sort inserted and returned values because we haven't specified
-    // the ordering
-    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
-
-    std::vector<std::string> input_col_values;
-    if (!col_name.compare("StringField")) {
-      for (auto data : input_data) {
-        input_col_values.emplace_back(data.str_field);
-      }
-
-    } else if (!col_name.compare("IntegerField")) {
-      for (auto data : input_data) {
-        if (data.int_field != NULL)
-          input_col_values.emplace_back(std::to_string(data.int_field));
-        else
-          input_col_values.emplace_back("");
-      }
-
-    } else if (!col_name.compare("FloatField")) {
-      for (auto data : input_data) {
-        if (data.float_field != NULL)
-          input_col_values.emplace_back(std::to_string(data.float_field));
-        else
-          input_col_values.emplace_back("");
-      }
-    }
-    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
-
-    // Check if the sorted inserted and returned vectors have same values
-    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
-    if ((!col_name.compare("FloatField"))) {
-      for (int i = 0; i < ret_col_values.size(); i++) {
-        if (ret_col_values[i].compare("") != 0)
-          EXPECT_EQ(stod(ret_col_values[i]), stod(input_col_values[i]))
-              << " at index: " << i;
-      }
-    } else {
-      for (int i = 0; i < ret_col_values.size(); i++) {
-        EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
-      }
-    }
-  }
-}
-
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
   std::string const table_name = kDatasetWithTablePrefix + in_table_name;
@@ -393,7 +331,28 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
 }
 
 TEST(StatementTest, SQLExecDirect) {
+  SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
+
+  // This test doesn't work with existing driver. It fails with error:
+  // "Invalid query: Cannot set destination table in jobs with ASSERT statements (70) SQLSTATE=42000"
+  #ifdef BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"ASSERT ((SELECT COUNT(*) > 5 FROM UNNEST([1, 2, 3, 4, 5, 6]))) AS 'Table must contain more than 5 rows.'", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  #endif // BQ_DRIVER_INTEGRATION_TESTS
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT num FROM UNNEST(GENERATE_ARRAY(1, 10)) AS num;", SQL_NTS);
+  CheckError(status, "SQLExecDirect(SELECT num)", conn);
+  int num_rows_returned = 0;
+  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+    num_rows_returned++;
+  }
+  EXPECT_EQ(num_rows_returned, 10);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -695,6 +654,10 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
   ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_4", true,
                           true);
 }
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 // No ANSI version.
 TEST(StatementTest, SQLFetchScroll) {
