@@ -356,10 +356,6 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
   }
 }
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
                              bool use_ansi = false) {
   std::string const table_name = kDatasetWithTablePrefix + in_table_name;
@@ -393,7 +389,32 @@ void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
 }
 
 TEST(StatementTest, SQLExecDirect) {
+  SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
+
+// This test doesn't work with existing driver. It fails with error:
+// "Invalid query: Cannot set destination table in jobs with ASSERT statements
+// (70) SQLSTATE=42000"
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"ASSERT ((SELECT COUNT(*) > 5 FROM UNNEST([1, 2, 3, 4, 5, 6]))) AS 'Table must contain more than 5 rows.'", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(
+      conn->hstmt,
+      (SQLCHAR*)"SELECT num FROM UNNEST(GENERATE_ARRAY(1, 10)) AS num;",
+      SQL_NTS);
+  CheckError(status, "SQLExecDirect(SELECT num)", conn);
+  int num_rows_returned = 0;
+  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+    num_rows_returned++;
+  }
+  EXPECT_EQ(num_rows_returned, 10);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   EXPECT_EQ(InsertDirectStatement(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -417,8 +438,9 @@ TEST(StatementTest, SQLExecDirectW) {
 
   std::wstring const string_field = L"Some Test String नमस्ते";
   SQLWCHAR insert_stmt[kBufferLength];
-  swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
-           table_name.c_str(), string_field.c_str());
+  swprintf(reinterpret_cast<wchar_t*>(insert_stmt), kBufferLength,
+           L"INSERT INTO %ls VALUES ('%ls')", table_name.c_str(),
+           string_field.c_str());
 
   SQLRETURN status =
       SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt, SQL_NTS);
@@ -695,6 +717,10 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
   ExecDirectWithFetchTest("ODBC_FETCH_WITH_EXECDIRECT_ASYNC_TEST_4", true,
                           true);
 }
+
+// This preprocessor flag is used to disable tests for unimplemented bq_driver
+// ODBC APIs
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 // No ANSI version.
 TEST(StatementTest, SQLFetchScroll) {
@@ -2244,16 +2270,11 @@ TEST(SQLCancel, Prepare_Execute_CancelNoOp) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 // Integration tests for SQLCancel.
 
 /////////////////////////////////////////////////////////
 // 1. Tests for cancelling Asynchronous processing or
 // asynchronous operations that are still executing.
-//
-// TODO(b/308656304): Move this to common area once SQLExecDirect
-// API is implemented for BQ Driver.
 /////////////////////////////////////////////////////////
 TEST(SQLCancel, ExecDirect_CancelAsync_StillExecuting) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -2303,6 +2324,8 @@ TEST(SQLCancel, ExecDirect_CancelAsync_StillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 /////////////////////////////////////////////////////////
 // 2. Tests for cancelling operations that need more data
 // at execution.
@@ -2335,6 +2358,7 @@ TEST(SQLCancel, ExecDirect_Cancel_NeedData) {
       conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len_string_field,
       0, (SQLPOINTER)SQL_DATA_AT_EXEC, len_string_field, &len_data_at_exec);
   CheckError(status, "SQLBindParameter", conn);
+
   // Call Execute with unbound params so we can get back a SQL_NEED_DATA status.
   status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt_wo_bnd_vals, SQL_NTS);
@@ -3208,9 +3232,9 @@ class SQLRowCountTest : public ::testing::TestWithParam<bool> {
     EXPECT_EQ(row_count, expected_row_count);
   }
 };
-// TODO(b/308656304): Enable for true as well when SQLExecDirect is implemented.
+
 INSTANTIATE_TEST_SUITE_P(WithOrWithoutExecDirect, SQLRowCountTest,
-                         testing::Values(false));
+                         testing::Values(false, true));
 
 TEST_P(SQLRowCountTest, AllValidations) {
   SQLLEN row_count;

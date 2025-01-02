@@ -38,6 +38,7 @@ using google::cloud::odbc_bq_driver_internal::ConstructPositionalQueryParams;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
@@ -104,6 +105,53 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref) {
   return LogAndReturnCode(handle_ref, status_record);
 }
 
+// Handles async execution assuming that the operation wasn't cancelled.
+// Note that we are handling both SQL_ASYNC_ENABLE_ON and SQL_ASYNC_ENABLE_OFF
+// because SQL_ATTR_ASYNC_ENABLE can be updated after the first call to
+// SQLExecDirect
+SQLRETURN HandleAsyncExecDirect(StatementHandle& stmt_handle,
+                                SQLULEN async_enable) {
+  // If for any reason we don't have the future here, but the caller had it,
+  // this is an error. We reset the statement state to be
+  // `kStatementNotPrepared`, so subsequent execute operations can be processed
+  // again.
+  if (!stmt_handle.GetPossibleFutureExecDirectQuery().has_value()) {
+    stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
+    auto status_record =
+        StatusRecord{SQLStates::k_HY000(),
+                     "Internal error: cannot execute query asynchronously"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  // If future was already processed...
+  if (!stmt_handle.GetPossibleFutureExecDirectQuery().value().valid()) {
+    return SQL_SUCCESS;
+  }
+  StatusRecord execute_status;
+  if (async_enable == SQL_ASYNC_ENABLE_ON) {
+    std::future_status fut_status =
+        stmt_handle.GetPossibleFutureExecDirectQuery().value().wait_for(
+            std::chrono::seconds(0));
+    if (fut_status != std::future_status::ready) {
+      // return that we are still executing
+      return SQL_STILL_EXECUTING;
+    }
+    // Will block till ExecDirect future is executed.
+    execute_status =
+        stmt_handle.GetPossibleFutureExecDirectQuery().value().get();
+  } else {
+    // SQL_ASYNC_ENABLE_OFF here implies that it was set after ExecDirect was
+    // called with SQL_ASYNC_ENABLE_ON the first time.
+    // We have to wait synchronously for the future to finish..
+    execute_status =
+        stmt_handle.GetPossibleFutureExecDirectQuery().value().get();
+  }
+  if (!execute_status.ok()) {
+    // Reset the state to not prepared so it can be executed again.
+    stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
+  }
+  return LogAndReturnCode(stmt_handle, execute_status);
+}
+
 // Check if previous execute operation is still executing, if so do the
 // following: 1) If the operation wasn't canceled then
 //    a) Complete the execution of the execute future.
@@ -159,8 +207,12 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
   return LogAndReturnCode(handle_ref, status_record);
 }
 
-// This function synchronously processes current execute requests.
-StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
+// @brief This function synchronously processes current execute requests
+// assuming PrepareQuery was called
+// @param stmt_handle The statement handle
+// @param failure_state The state which should be set if there is any failure.
+StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
+                                    StmtStates failure_state) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
@@ -194,16 +246,17 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    stmt_handle.SetStmtState(failure_state);
     return ds_status_record_or.GetStatusRecord();
   }
+
   stmt_handle.SetDSResults(*ds_status_record_or);
 
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+    stmt_handle.SetStmtState(failure_state);
     return rs_status_record_or.GetStatusRecord();
   }
 
@@ -224,6 +277,25 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
   }
 
   return StatusRecord::Ok();
+}
+
+// This function synchronously processes current SQLExecDirect requests.
+StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  std::string query_str = stmt_handle.GetQueryString();
+  // We need to call `PrepareQuery` because:
+  // 1) We need to get `statement_type` during `ActuallyProcessExecute`
+  // through
+  //  `Job::statistics.job_query_stats.statement_type`. This is not possible
+  //  through `PostQueryResults`
+  // 2) For positional params, we need to get `QueryParameter`s before
+  //  SQLExecDirect is called.
+  StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
+  if (!prepare_status.ok()) {
+    return prepare_status;
+  }
+  return ActuallyProcessExecute(stmt_handle, StmtStates::kStatementNotPrepared);
 }
 
 }  // namespace
@@ -518,10 +590,12 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   if (*async_enable_status == SQL_ASYNC_ENABLE_ON) {
     std::future<StatusRecord> fut_prepare_query = std::async(
         std::launch::async,
-        [&handle_ref](SQLCHAR* in_statement_text) {
-          return handle_ref.PrepareQuery(in_statement_text);
+        [&handle_ref](std::string const& query_str) {
+          StatusRecord status = handle_ref.PrepareQuery(query_str);
+          handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+          return status;
         },
-        in_statement_text);
+        query_str);
     // Store the fut_prepare_query in statement handle.
     handle_ref.SetFuturePrepareQuery(std::move(fut_prepare_query));
     // Set statement state to indicate its an async prepare request.
@@ -529,7 +603,8 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
     return SQL_STILL_EXECUTING;
   }
 
-  StatusRecord status = handle_ref.PrepareQuery(in_statement_text);
+  StatusRecord status = handle_ref.PrepareQuery(query_str);
+  handle_ref.SetStmtState(StmtStates::kStatementPrepared);
   return LogAndReturnCode(handle_ref, status);
 }
 
@@ -637,9 +712,11 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   // Make this an asynchronous operation if the user has requested it
   // to be async.
   if (*async_enable_status == SQL_ASYNC_ENABLE_ON) {
-    std::future<StatusRecord> fut_execute_query = std::async(
-        std::launch::async,
-        [&stmt_handle]() { return ActuallyProcessExecute(stmt_handle); });
+    std::future<StatusRecord> fut_execute_query =
+        std::async(std::launch::async, [&stmt_handle]() {
+          return ActuallyProcessExecute(stmt_handle,
+                                        StmtStates::kStatementPrepared);
+        });
     // Store the fut_execute_query in statement handle.
     stmt_handle.SetFutureExecuteQuery(std::move(fut_execute_query));
     // Set statement state to be still executing as per the spec.
@@ -647,7 +724,151 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     return SQL_STILL_EXECUTING;
   }
 
-  StatusRecord execute_status = ActuallyProcessExecute(stmt_handle);
+  StatusRecord execute_status =
+      ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
+  return LogAndReturnCode(stmt_handle, execute_status);
+}
+
+SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
+                                SQLCHAR* in_statement_text,
+                                SQLINTEGER in_text_length) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
+    StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  // We need to throw SQL_ERROR if a statement was already executed with a
+  // result set.
+  // Note: Following cases for SQLExecDirect call are allowed by the
+  // existing driver:
+  // 1) StmtStates::kStatementPrepared: A statement was prepared.
+  // 2) StmtStates::kStatementExecutedWithoutRs: Previous executions
+  // didn't return a result set
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithRs) {
+    auto status_record =
+        StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  std::string query_str = ToCharStr(in_statement_text);
+  if (query_str.empty()) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY000(), "Query text is null or empty"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  stmt_handle.SetQueryString(query_str);
+
+  // Boolean to tell us if a ExecDirect Query was to be processed async and it
+  // wasn't finished last time. We are not using a `StmtStates` here because
+  // `StmtStates::kStatementStillExecuting` will conflict with it.
+  bool was_async_requested =
+      stmt_handle.GetPossibleFutureExecDirectQuery().has_value();
+  // `.valid()` method tells us whether the state was valid or not.
+  // It is possible that `.get` was called on the `std::future` which
+  // turned the state invalid.
+  // In this case, the query has finished and we return success.
+  if (was_async_requested &&
+      stmt_handle.GetPossibleFutureExecDirectQuery().value().valid()) {
+    return SQL_SUCCESS;
+  }
+
+  // *****************************************************************
+  // STEP 1: Handle cancellation
+  // *****************************************************************
+
+  // Check if we have canceled a ExecDirect operation that is completed,
+  // If so do the following for any future ExecDirect requests:
+  //   1) Disable Cancellation
+  //   2) Put the statement state to be not prepared.
+  // For the the current ExecDirect request
+  //  1) If the query was supposed to be async last time, CancelBQJob
+  //  2) Otherwise, return success without executing the query because user has
+  //  requested cancellation.
+  if (stmt_handle.IsOperationCanceled()) {
+    // For any future ExecDirect requests.
+    stmt_handle.DisableCancellation();
+    stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
+    if (was_async_requested) {
+      stmt_handle.SetNullFutureExecDirectQuery();
+      DSResults& ds_results = stmt_handle.GetDSResults();
+      // For current ExecDirect request, return without executing the request
+      // since user has cancelled it. Additionally, check if there is any job
+      // we need to cancel on the server.
+      if (ds_results.job_ref.has_value()) {
+        ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+        // 2) Cancel the BQ Job on the server.
+        StatusRecordOr<Job> server_cancel_status =
+            CancelBQJob(conn_handle, ds_results.job_ref.value().job_id);
+        // 3) Since we canceled the job set the prepared job to null. This is
+        // done regardless of whether cancel is complete or not. User has
+        // requested cancellation of this job. This should never be run again.
+        ds_results.job_ref = absl::nullopt;
+        // We don't need to return SQL_ERROR if it failed.
+        // Log the error in cancellation.
+        if (!server_cancel_status) {
+          TracePrintInternal(*(*kTraceOption),
+                             server_cancel_status.GetStatusRecord().message);
+        }
+      }
+      // For current ExecDirect request, return operation canceled.
+      auto status_record =
+          StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
+    // For current ExecDirect request.
+    return SQL_SUCCESS;
+  }
+
+  StatusRecordOr<SQLULEN> async_enable_status =
+      stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+  if (!async_enable_status) {
+    return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
+  }
+
+  // *****************************************************************
+  // STEP 2: Handle still executing std::future
+  // *****************************************************************
+
+  if (was_async_requested) {
+    SQLRETURN status = HandleAsyncExecDirect(stmt_handle, *async_enable_status);
+    if (status != SQL_STILL_EXECUTING) {
+      // Once the ExecDirect future is executed, reset it regardless of status
+      // so we don't try to run it again.
+      stmt_handle.SetNullFutureExecDirectQuery();
+    }
+    return status;
+  }
+
+  // *****************************************************************
+  // STEP 3: Handle creation of `std::future` if `SQL_ASYNC_ENABLE_ON`
+  // *****************************************************************
+
+  // Make this an asynchronous operation if the user has requested it
+  // to be async.
+  if (*async_enable_status == SQL_ASYNC_ENABLE_ON) {
+    std::future<StatusRecord> fut_exec_direct_query = std::async(
+        std::launch::async,
+        [&stmt_handle]() { return ActuallyProcessExecDirect(stmt_handle); });
+    // Store the fut_execute_query in statement handle.
+    stmt_handle.SetFutureExecDirectQuery(std::move(fut_exec_direct_query));
+    // Set statement state to be still executing as per the spec.
+    stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+    return SQL_STILL_EXECUTING;
+  }
+
+  // *****************************************************************
+  // STEP 4: Synchronous execution
+  // *****************************************************************
+  StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 

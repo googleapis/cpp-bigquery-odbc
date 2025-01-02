@@ -30,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::
     CreateDescRecordWithRandomValues;
@@ -561,6 +562,103 @@ TEST(SQLExecuteInternal, CancellationOfOngoingExecuteOperation) {
   ASSERT_EQ(SQL_SUCCESS, status);
   ASSERT_FALSE(handle.IsOperationCanceled());
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementPrepared);
+}
+
+TEST(SQLExecDirectInternal, Fail_InvalidHandle) {
+  StatementHandle* stmt_handle = nullptr;
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLExecDirectInternal(stmt_handle, query, len);
+
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLExecDirectInternal, InvalidQueryLength) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+  std::string queryStr = "select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = 0;
+
+  SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Invalid query length"));
+}
+
+TEST(SQLExecDirectInternal, NullQueryText) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+
+  SQLRETURN status = SQLExecDirectInternal(&handle, nullptr, SQL_NTS);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Query text is null or empty"));
+}
+
+TEST(SQLExecDirectInternal, EmptyQueryText) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
+  std::string queryStr = "";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+
+  SQLRETURN status = SQLExecDirectInternal(&handle, query, SQL_NTS);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY000(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Query text is null or empty"));
+}
+
+TEST(SQLExecDirectInternal, CancellationBetweenExecutions) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  handle.EnableCancellation();
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
+  ASSERT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementExecutedWithRs);
+}
+
+TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementStillExecuting);
+  std::future<StatusRecord> fut_query =
+      std::async(std::launch::async, []() { return StatusRecord::Ok(); });
+  handle.SetFutureExecDirectQuery(std::move(fut_query));
+
+  handle.EnableCancellation();
+  std::string queryStr = "Select 1";
+  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  SQLINTEGER len = queryStr.length();
+
+  SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY008(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Operation canceled"));
 }
 
 TEST(SQLSetCursorNameInternal, Fail_NullHandle) {

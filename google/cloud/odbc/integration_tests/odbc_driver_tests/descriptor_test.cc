@@ -32,10 +32,6 @@ struct Descriptor {
   SQLLEN* indicator_ptr;
 };
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 void SetGetDescRec(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                    Schema schema, bool use_ansi = false) {
   SQLSMALLINT desc_type;
@@ -334,7 +330,6 @@ TEST(DescriptorFieldsTest, SQLSetDescField_ANSI) {
   table.Drop(conn, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLGetDescField, Field_SQL_DESC_ALLOC_TYPE) {
   auto conn = std::make_shared<ODBCHandles>();

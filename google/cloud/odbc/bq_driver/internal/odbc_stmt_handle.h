@@ -80,7 +80,7 @@ class StatementHandle : public Handle {
       google::cloud::bigquery_v2_minimal_internal::JobStatistics const&
           job_statistics);
 
-  odbc_internal::StatusRecord PrepareQuery(const SQLCHAR* query_text);
+  odbc_internal::StatusRecord PrepareQuery(std::string const& query);
   HandleType kType = HandleType::kStmtHandle;
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };
@@ -105,7 +105,7 @@ class StatementHandle : public Handle {
 
   // Setters and Getters related to unprocessed results from the client
   // interface
-  DSResults GetDSResults() const { return ds_results_; }
+  DSResults& GetDSResults() { return ds_results_; }
 
   inline void SetDSResults(DSResults const& ds_results) {
     ds_results_ = ds_results;
@@ -134,6 +134,10 @@ class StatementHandle : public Handle {
           query_parameters) {
     query_parameters_ = query_parameters;
   }
+
+  inline void SetQueryString(std::string& query_str) {
+    query_str_ = query_str;
+  };
 
   [[nodiscard]] inline std::string GetQueryString() const { return query_str_; }
 
@@ -167,6 +171,10 @@ class StatementHandle : public Handle {
     return std::move(future_execute_query_);
   }
 
+  std::optional<std::future<StatusRecord>> GetPossibleFutureExecDirectQuery() {
+    return std::move(future_exec_direct_query_);
+  }
+
   void SetFuturePrepareQuery(std::future<StatusRecord> fut_prepare_query) {
     future_prepare_query_ = std::move(fut_prepare_query);
   }
@@ -176,6 +184,14 @@ class StatementHandle : public Handle {
     future_execute_query_ = std::move(fut_execute_query);
   }
   void SetNullFutureExecuteQuery() { future_execute_query_ = std::nullopt; }
+
+  void SetFutureExecDirectQuery(
+      std::future<StatusRecord> fut_exec_direct_query) {
+    future_exec_direct_query_ = std::move(fut_exec_direct_query);
+  }
+  void SetNullFutureExecDirectQuery() {
+    future_exec_direct_query_ = std::nullopt;
+  }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
@@ -200,6 +216,10 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_prepare_query_;
   // Needed for cancellation and re-execution of asynchronous execute requests.
   std::optional<std::future<StatusRecord>> future_execute_query_;
+  // Needed for cancellation and re-execution of asynchronous ExecDirect
+  // requests.
+  std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
+      std::nullopt;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
