@@ -264,10 +264,11 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(ODBCBQClient& bq_client,
   return CreateResultSetForProjects(*project_ids_status);
 }
 
-StatusRecordOr<ResultSet> GetResultSetForDatasets(ODBCBQClient& bq_client,
-                                                  SQLULEN metadata_id) {
+StatusRecordOr<ResultSet> GetResultSetForDatasets(
+    ODBCBQClient& bq_client, SQLULEN metadata_id,
+    std::string const& catalog_name) {
   auto project_ids_status =
-      GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
+      GetFilteredProjectIds(bq_client, catalog_name, metadata_id);
   if (!project_ids_status) {
     return project_ids_status.GetStatusRecord();
   }

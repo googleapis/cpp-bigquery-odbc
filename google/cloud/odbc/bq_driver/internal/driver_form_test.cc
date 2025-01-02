@@ -186,6 +186,14 @@ TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
                   HasSubstr("OAuthMechanism must be 'Service Authentication' "
                             "or 'Application Default Credentials'")));
 }
+TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForCatalog) {
+  auto result = DriverForm::GetCatalogAndDataset("Catalog", "", "");
+  EXPECT_EQ(result, "");
+}
+TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForDataset) {
+  auto result = DriverForm::GetCatalogAndDataset("Dataset", "", "");
+  EXPECT_EQ(result, "");
+}
 
 TEST_F(DriverFormTest, TestEncryptDataDropdown) {
   HWND h_encrypt_data_combo_box =

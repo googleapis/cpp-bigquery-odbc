@@ -16,13 +16,18 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include <regex>
+#include <sstream>
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::Authentication;
+using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
+using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -139,6 +144,65 @@ StatusRecord DriverForm::TestODBCConnection(
   return StatusRecord::Ok();
 }
 
+bool containsAlphanumeric(std::string const& str) {
+  return std::any_of(str.begin(), str.end(),
+                     [](unsigned char c) { return std::isalnum(c); });
+}
+
+std::string DriverForm::GetCatalogAndDataset(std::string action,
+                                             std::string key_file_path,
+                                             std::string oauth_token,
+                                             std::string catalog_name) {
+  google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
+
+  if (oauth_token == "Service Authentication") {
+    oauth_value = google::cloud::odbc_bigquery_client_interface::
+        OauthMechanism::kServiceAccount;
+  } else if (oauth_token == "Application Default Credentials") {
+    oauth_value = google::cloud::odbc_bigquery_client_interface::
+        OauthMechanism::kApplicationDefault;
+  } else {
+    oauth_value = google::cloud::odbc_bigquery_client_interface::
+        OauthMechanism::kExternalUser;
+  }
+
+  SQLULEN metadata_id = 0;
+  auto bq_client_ptr =
+      ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
+  if (!bq_client_ptr) {
+    return "";
+  }
+
+  std::shared_ptr<ODBCBQClient> bq_client_ptr_stat = *bq_client_ptr;
+  ODBCBQClient& bq_client = *bq_client_ptr_stat;
+
+  StatusRecordOr<ResultSet> result_set_status;
+  if (action == "Catalog") {
+    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+  } else if (action == "Dataset") {
+    result_set_status =
+        GetResultSetForDatasets(bq_client, metadata_id, catalog_name);
+  }
+  if (!result_set_status) {
+    return "";
+  }
+
+  ResultSet const& result_set = result_set_status.GetValue();
+  std::string row_string;
+  for (auto const& row : result_set.rows) {
+    for (auto const& value : row) {
+      std::string value_string(value.begin(), value.end());
+      value_string.erase(remove(value_string.begin(), value_string.end(), ' '),
+                         value_string.end());
+      if (value_string.empty() || !containsAlphanumeric(value_string)) {
+        continue;
+      }
+      row_string += value_string;
+      row_string += ";";
+    }
+  }
+  return row_string;
+}
 int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
                     PWSTR p_cmd_line, int n_cmd_show) {
   DriverForm DriverForm;
@@ -605,6 +669,86 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                        MB_OK | MB_ICONERROR);
             return 0;
           }
+        }
+        case kIdcCatlogBOX: {
+          char catalog_buffer[256];
+          char dsn_buffer[256];
+          char key_buffer[256];
+          char auth_buffer[256];
+
+          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
+          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
+          HWND h_key = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
+
+          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
+          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
+          GetWindowText(h_key, key_buffer, sizeof(key_buffer));
+          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
+
+          switch (HIWORD(w_param)) {
+            case CBN_DROPDOWN:
+              if (dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
+                  auth_buffer[0] != '\0') {
+                PopulateDropdown(h_catalog_box, "Catalog", key_buffer,
+                                 auth_buffer, "");
+                break;
+              }
+
+            case CBN_SELCHANGE:
+              int selected_index =
+                  SendMessage(h_catalog_box, CB_GETCURSEL, 0, 0);
+              if (selected_index != CB_ERR) {
+                char selected_value[256];
+                SendMessage(h_catalog_box, CB_GETLBTEXT, selected_index,
+                            reinterpret_cast<LPARAM>(selected_value));
+                SetWindowText(h_catalog_box, selected_value);
+              }
+              break;
+          }
+          break;
+        }
+        case kIdcDatasetBOX: {
+          char catalog_buffer[256];
+          char dsn_buffer[256];
+          char key_buffer[256];
+          char auth_buffer[256];
+          char dataBuffer[256];
+
+          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
+          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
+          HWND h_key = GetDlgItem(hwnd, kIdcKeyfileEdit);
+          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
+          HWND h_dataset_box = GetDlgItem(hwnd, kIdcDatasetBOX);
+
+          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
+          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
+          GetWindowText(h_key, key_buffer, sizeof(key_buffer));
+          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
+          GetWindowText(h_dataset_box, dataBuffer, sizeof(dataBuffer));
+
+          switch (HIWORD(w_param)) {
+            case CBN_DROPDOWN:
+              if (dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
+                  auth_buffer[0] != '\0' && catalog_buffer[0] != '\0') {
+                PopulateDropdown(h_dataset_box, "Dataset", key_buffer,
+                                 auth_buffer, catalog_buffer);
+                break;
+              }
+
+            case CBN_SELCHANGE:
+              int selected_index =
+                  SendMessage(h_dataset_box, CB_GETCURSEL, 0, 0);
+              if (selected_index != CB_ERR) {
+                char selected_value[256];
+                SendMessage(h_dataset_box, CB_GETLBTEXT, selected_index,
+                            reinterpret_cast<LPARAM>(selected_value));
+                SetWindowText(h_dataset_box, selected_value);
+              }
+              break;
+          }
+
+          break;
         }
         case kIdcButtonCancel:
           DestroyWindow(hwnd);  // Close the window

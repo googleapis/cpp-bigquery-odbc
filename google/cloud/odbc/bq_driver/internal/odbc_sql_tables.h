@@ -101,7 +101,8 @@ odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
 
 // Search for all datasets in all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
-    ODBCBQClient& bq_client, SQLULEN metadata_id);
+    ODBCBQClient& bq_client, SQLULEN metadata_id,
+    std::string const& catalog_name = kMatchAll);
 
 // Search for tables and populate ResultSet according to ODBC spec
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForTables(

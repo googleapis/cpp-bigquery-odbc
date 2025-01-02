@@ -73,6 +73,11 @@ class DriverForm {
   static odbc_internal::StatusRecord TestODBCConnection(
       std::shared_ptr<odbc_bq_driver_internal::Section> const& section);
 
+  static std::string GetCatalogAndDataset(std::string action,
+                                          std::string key_file_path,
+                                          std::string oauth_token,
+                                          std::string catalog_name = "");
+
  private:
   static std::string dsn_name_;
   static std::string email_;
