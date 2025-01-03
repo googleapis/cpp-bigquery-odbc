@@ -66,24 +66,24 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
 // TODO(b/385136383): Change DSN Section Keys to Uppercase for Consistency
 void ConnectionHandle::SetUp(Section& dsn_section,
                              std::string const& dsn_name) {
-  dsn_.description = dsn_section["Description"];
-  dsn_.driver = dsn_section["Driver"];
-  dsn_.catalog = dsn_section["Catalog"];
-  dsn_.default_dataset = dsn_section["DefaultDataset"];
-  dsn_.list_projects_parent = dsn_section["ListProjectsParent"];
+  dsn_.description = dsn_section["DESCRIPTION"];
+  dsn_.driver = dsn_section["DRIVER"];
+  dsn_.catalog = dsn_section["CATALOG"];
+  dsn_.default_dataset = dsn_section["DEFAULTDATASET"];
+  dsn_.list_projects_parent = dsn_section["LISTPROJECTSPARENT"];
   dsn_.dsn_name = dsn_name;
-  dsn_.key_file_path = dsn_section["KeyFilePath"];
-  dsn_.o_auth_mechanism = dsn_section["OAuthMechanism"];
+  dsn_.key_file_path = dsn_section["KEYFILEPATH"];
+  dsn_.o_auth_mechanism = dsn_section["OAUTHMECHANISM"];
 
-  std::string sql_dialect = dsn_section["SQLDialect"];
+  std::string sql_dialect = dsn_section["SQLDIALECT"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
-  std::string sessions_enabled = dsn_section["EnableSession"];
+  std::string sessions_enabled = dsn_section["ENABLESESSION"];
   dsn_.sessions_enabled =
       (!sessions_enabled.empty() && sessions_enabled != "0");
 
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
-  std::string job_creation_mode = dsn_section["JobCreationMode"];
+  std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];
   dsn_.is_job_creation_required = (job_creation_mode == "1");
 
   if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {

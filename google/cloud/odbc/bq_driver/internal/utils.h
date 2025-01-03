@@ -63,20 +63,8 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
-inline void GetCamelCaseStr(std::string& str) {
-  std::string upper_key = str;
-  std::transform(upper_key.begin(), upper_key.end(), upper_key.begin(),
-                 ::toupper);
-  static std::unordered_map<std::string, std::string> const kCamelCaseMap{
-      {"DRIVER", "Driver"},
-      {"DSN", "DSN"},
-      {"CATALOG", "Catalog"},
-      {"OAUTHMECHANISM", "OAuthMechanism"},
-      {"KEYFILEPATH", "KeyFilePath"}};
-
-  if (auto it = kCamelCaseMap.find(upper_key); it != kCamelCaseMap.end()) {
-    str = it->second;
-  }
+inline void GetUpperStr(std::string& s) {
+  std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 }
 
 /**

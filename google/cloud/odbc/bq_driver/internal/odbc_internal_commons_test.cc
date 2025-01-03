@@ -600,7 +600,7 @@ TEST(ConstructBasicPostQueryRequest, Basic) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Catalog"] = kTestCatalog;
+  dsn_section["CATALOG"] = kTestCatalog;
   conn_handle.SetUp(dsn_section, "name");
 
   PostQueryRequest returned =
@@ -621,7 +621,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["SQLDialect"] = "0";
+  dsn_section["SQLDIALECT"] = "0";
   conn_handle.SetUp(dsn_section, "name");
 
   PostQueryRequest returned =
@@ -634,7 +634,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_withJobCreationModeRequired) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["JobCreationMode"] = "1";
+  dsn_section["JOBCREATIONMODE"] = "1";
   conn_handle.SetUp(dsn_section, "name");
 
   PostQueryRequest returned =
@@ -648,8 +648,8 @@ TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Catalog"] = kTestCatalog;
-  dsn_section["DefaultDataset"] = kDefaultDataset;
+  dsn_section["CATALOG"] = kTestCatalog;
+  dsn_section["DEFAULTDATASET"] = kDefaultDataset;
   conn_handle.SetUp(dsn_section, "name");
 
   PostQueryRequest returned =
@@ -665,7 +665,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["EnableSession"] = "1";
+  dsn_section["ENABLESESSION"] = "1";
   conn_handle.SetUp(dsn_section, "name");
 
   PostQueryRequest returned =
@@ -1054,9 +1054,9 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
 TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   ConnectionHandle conn_handle;
   Section section;
-  section["Catalog"] = "BigQueryCatalog";
-  section["OAuthMechanism"] = "1";
-  section["KeyFilePath"] = "/path/to/keyfile";
+  section["CATALOG"] = "BigQueryCatalog";
+  section["OAUTHMECHANISM"] = "1";
+  section["KEYFILEPATH"] = "/path/to/keyfile";
 
   conn_handle.SetUp(section, "");
   auto result = GetMissingAttributesStr(&conn_handle);
@@ -1066,7 +1066,7 @@ TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
 TEST(GetMissingAttributesStr, Failure_MissingSomeKeywords) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Catalog"] = "BigQueryCatalog";
+  dsn_section["CATALOG"] = "BigQueryCatalog";
 
   conn_handle.SetUp(dsn_section, "");
   auto result = GetMissingAttributesStr(&conn_handle);
@@ -1090,8 +1090,8 @@ TEST(GetMissingAttributesStr, Failure_AllKeywordsMissing) {
 TEST(GetMissingAttributesStr, Failure_PartialMissingEmptyInput) {
   ConnectionHandle conn_handle;
   Section section;
-  section["Catalog"] = "BigQueryCatalog";
-  section["OAuthMechanism"] = "1";
+  section["CATALOG"] = "BigQueryCatalog";
+  section["OAUTHMECHANISM"] = "1";
 
   conn_handle.SetUp(section, "");
   auto result = GetMissingAttributesStr(&conn_handle);
@@ -1102,7 +1102,7 @@ TEST(GetMissingAttributesStr, Failure_PartialMissingEmptyInput) {
 
 TEST(ValidateAllowedAttribute, Success) {
   ConnectionHandle conn_handle;
-  Section section = {{"Catalog", "TestVal"}, {"OAuthMechanism", "TestVal"}};
+  Section section = {{"CATALOG", "TestVal"}, {"OAUTHMECHANISM", "TestVal"}};
 
   conn_handle.SetUp(section, "");
   StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
@@ -1111,7 +1111,7 @@ TEST(ValidateAllowedAttribute, Success) {
 
 TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
   ConnectionHandle conn_handle;
-  Section section = {{"Catalog", ""}, {"ExtraAttribute", ""}};
+  Section section = {{"CATALOG", ""}, {"ExtraAttribute", ""}};
 
   StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
 
@@ -1123,20 +1123,20 @@ TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
 
 TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
   ConnectionHandle conn_handle;
-  Section section = {{"Driver", "DriverName"}};
+  Section section = {{"DRIVER", "DriverName"}};
 
   conn_handle.SetUp(section, "");
   StatusRecord status_record =
-      ValidateAllowedAttributes(&conn_handle, {{"Driver", "DriverName"}});
+      ValidateAllowedAttributes(&conn_handle, {{"DRIVER", "DriverName"}});
 
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.message,
-            "Connection Error: Connection Attribute Driver already found!");
+            "Connection Error: Connection Attribute DRIVER already found!");
 }
 
 TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
   ConnectionHandle conn_handle;
-  Section section = {{"OAuthMechanism", ""}};
+  Section section = {{"OAUTHMECHANISM", ""}};
 
   StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
   EXPECT_TRUE(status_record.ok());

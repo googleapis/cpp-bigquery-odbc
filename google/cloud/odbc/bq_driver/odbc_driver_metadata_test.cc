@@ -85,9 +85,9 @@ void CreateConnHandle(bool connected, bool setup_dsn) {
   }
   if (setup_dsn) {
     Section dsn_section;
-    dsn_section["Description"] = kDsnDescription;
-    dsn_section["Driver"] = kDsnDriver;
-    dsn_section["Catalog"] = kDsnCatalog;
+    dsn_section["DESCRIPTION"] = kDsnDescription;
+    dsn_section["DRIVER"] = kDsnDriver;
+    dsn_section["CATALOG"] = kDsnCatalog;
     connection_handle->SetUp(dsn_section, kDsnName);
   }
 }

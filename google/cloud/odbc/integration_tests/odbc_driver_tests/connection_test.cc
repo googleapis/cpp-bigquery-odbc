@@ -646,6 +646,16 @@ TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
   EXPECT_NE(out_conn_str_len, sizeof(out_conn_str));
 }
 
+TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::vector<std::string> const conn_string = {
+      "dsn=SampleDSN", "DSN=SampleDSN", "DsN=SampleDSN"};
+  for (auto const& conn_str : conn_string) {
+    EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
+
 TEST(ConnectionTest, SQLSetConnectAttr_StringWithNullTermInMiddle) {
   SQLCHAR buf[256] = "te\0t";
   SQLINTEGER len = strlen(reinterpret_cast<char*>(buf));
@@ -1296,7 +1306,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
   if (kIsBqDriver) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
                           "[Google][ODBC BigQuery Driver] Connection Error: "
-                          "Connection Attribute Catalog already found!");
+                          "Connection Attribute CATALOG already found!");
   } else {
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11590,
