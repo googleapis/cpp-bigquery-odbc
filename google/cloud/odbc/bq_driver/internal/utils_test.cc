@@ -535,42 +535,6 @@ TEST(PopulateOutputConnectionString, EmptyConnectionString) {
   EXPECT_EQ(result.message, "Invalid Connection String");
 }
 
-TEST(GetCamelCaseStr, SuccessCases) {
-  std::string str1 = "driver";
-  GetCamelCaseStr(str1);
-  EXPECT_EQ(str1, "Driver");
-
-  std::string str2 = "catalog";
-  GetCamelCaseStr(str2);
-  EXPECT_EQ(str2, "Catalog");
-
-  std::string str3 = "oauthmechanism";
-  GetCamelCaseStr(str3);
-  EXPECT_EQ(str3, "OAuthMechanism");
-
-  std::string str4 = "keyfilepath";
-  GetCamelCaseStr(str4);
-  EXPECT_EQ(str4, "KeyFilePath");
-}
-
-TEST(GetCamelCaseStr, FailureCases) {
-  std::string str1 = "unknown";
-  GetCamelCaseStr(str1);
-  EXPECT_EQ(str1, "unknown");
-
-  std::string str2 = "randomkey";
-  GetCamelCaseStr(str2);
-  EXPECT_EQ(str2, "randomkey");
-
-  std::string str3 = "somevalue";
-  GetCamelCaseStr(str3);
-  EXPECT_EQ(str3, "somevalue");
-
-  std::string str4 = "drivers";
-  GetCamelCaseStr(str4);
-  EXPECT_EQ(str4, "drivers");
-}
-
 #ifdef _WIN32
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";

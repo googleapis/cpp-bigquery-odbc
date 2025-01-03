@@ -1296,7 +1296,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
   if (kIsBqDriver) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
                           "[Google][ODBC BigQuery Driver] Connection Error: "
-                          "Connection Attribute Catalog already found!");
+                          "Connection Attribute CATALOG already found!");
   } else {
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11590,

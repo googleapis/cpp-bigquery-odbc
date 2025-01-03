@@ -36,8 +36,8 @@ using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using google::cloud::odbc_bq_driver_internal::GetCamelCaseStr;
 using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
+using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
@@ -64,16 +64,16 @@ Authentication CreateAuth(Section& dsn_section) {
   Authentication auth;
   int auth_int;
   try {
-    auth_int = stoi(dsn_section["OAuthMechanism"]);
+    auth_int = stoi(dsn_section["OAUTHMECHANISM"]);
   } catch (std::exception const& ex) {
     auto& opts = *(*kTraceOption);
     TracePrintInternal(opts, ex.what());
     auth_int = 0;
   }
   auth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  auth.email = dsn_section["Email"];
-  auth.key_file_path = dsn_section["KeyFilePath"];
-  auth.refresh_token = dsn_section["RefreshToken"];
+  auth.email = dsn_section["EMAIL"];
+  auth.key_file_path = dsn_section["KEYFILEPATH"];
+  auth.refresh_token = dsn_section["REFRESHTOKEN"];
   return auth;
 }
 
@@ -89,7 +89,14 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
       return sections_status.GetStatusRecord();
     }
     auto sections = *sections_status;
-    dsn_section = (*sections)[dsn_name];
+
+    Section temp_section;
+    for (auto const& [key, value] : (*sections)[dsn_name]) {
+      std::string upper_key = key;
+      GetUpperStr(upper_key);
+      temp_section[upper_key] = value;
+    }
+    dsn_section = temp_section;
   }
   return StatusRecord::Ok();
 }
@@ -132,11 +139,11 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
 
   // Retrieve user inputs and configure the connection.
   Section dsn_section = {{"DSN", form.GetDSN()},
-                         {"Email", form.GetEmail()},
-                         {"KeyFilePath", form.GetKeyFilePath()},
-                         {"OAuthMechanism", form.GetOAuthMechanism()},
-                         {"Catalog", form.GetCatalogName()},
-                         {"Dataset", form.GetDatasetName()}};
+                         {"EMAIL", form.GetEmail()},
+                         {"KEYFILEPATH", form.GetKeyFilePath()},
+                         {"OAUTHMECHANISM", form.GetOAuthMechanism()},
+                         {"CATALOG", form.GetCatalogName()},
+                         {"DATASET", form.GetDatasetName()}};
 
   handle_ref->SetUp(dsn_section, form.GetDSN());
   Authentication auth = CreateAuth(dsn_section);
@@ -216,12 +223,28 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   if (!connection_params_resp_status) {
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
-  auto dsn_section = *connection_params_resp_status;
+
+  auto connection_params_resp = *connection_params_resp_status;
+
+  Section dsn_section;
+  for (auto const& it : connection_params_resp) {
+    std::string property = it.first;
+    std::string value = it.second;
+    GetUpperStr(property);
+    dsn_section[property] = value;
+  }
   // Any parameters defined in the env should
   //  override the DSN section properties.
   std::string dsn_name = dsn_section["DSN"];
   if (!dsn_name.empty()) {
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
+
+    for (auto& it : connection_params_resp) {
+      std::string property = it.first;
+      if (!dsn_section[property].empty()) {
+        dsn_section[property] = it.second;
+      }
+    }
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
@@ -300,10 +323,10 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
           SQLStates::k_HY090(), "Username needs to be an email address"};
       return LogAndReturnCode(handle_ref, status_record);
     }
-    dsn_section["OAuthMechanism"] =
+    dsn_section["OAUTHMECHANISM"] =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
-    dsn_section["Email"] = user_name_str;
-    dsn_section["KeyFilePath"] = auth_string_str;
+    dsn_section["EMAIL"] = user_name_str;
+    dsn_section["KEYFILEPATH"] = auth_string_str;
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
@@ -429,7 +452,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
-    GetCamelCaseStr(property);
+    GetUpperStr(property);
     dsn_section[property] = value;
   }
 
@@ -443,9 +466,10 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   if (!dsn_name.empty()) {
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
 
-    for (auto const& it : connection_params_resp) {
-      if (!dsn_section[it.first].empty()) {
-        dsn_section[it.first] = it.second;
+    for (auto& it : connection_params_resp) {
+      std::string property = it.first;
+      if (!dsn_section[property].empty()) {
+        dsn_section[property] = it.second;
       }
     }
   }

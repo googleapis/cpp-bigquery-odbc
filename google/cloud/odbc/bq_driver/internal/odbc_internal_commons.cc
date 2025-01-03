@@ -903,11 +903,11 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
 
   // TODO(b/384384699): Support ListProjectsParent as part of DSN from the UI
   std::unordered_map<std::string, std::string> dsn_map = {
-      {"Driver", dsn_fields.driver},
-      {"Catalog", dsn_fields.catalog},
+      {"DRIVER", dsn_fields.driver},
+      {"CATALOG", dsn_fields.catalog},
       {"DSN", dsn_fields.dsn_name},
-      {"KeyFilePath", dsn_fields.key_file_path},
-      {"OAuthMechanism", dsn_fields.o_auth_mechanism}};
+      {"KEYFILEPATH", dsn_fields.key_file_path},
+      {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism}};
 
   for (auto const& [key, _] : attributes) {
     auto it = dsn_map.find(key);

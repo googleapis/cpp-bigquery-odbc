@@ -67,12 +67,12 @@ TEST(ConnectionHandle, ConnectWithInvalidAuth) {
 TEST(ConnectionHandle, DsnSetup) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Description"] = kDsnDescription;
-  dsn_section["Driver"] = kDsnDriver;
-  dsn_section["Catalog"] = kDsnCatalog;
-  dsn_section["ListProjectsParent"] = kDsnListProjectsParent;
-  dsn_section["DefaultDataset"] = kDsnDefaultDataset;
-  dsn_section["SQLDialect"] = "0";
+  dsn_section["DESCRIPTION"] = kDsnDescription;
+  dsn_section["DRIVER"] = kDsnDriver;
+  dsn_section["CATALOG"] = kDsnCatalog;
+  dsn_section["LISTPROJECTSPARENT"] = kDsnListProjectsParent;
+  dsn_section["DEFAULTDATASET"] = kDsnDefaultDataset;
+  dsn_section["SQLDIALECT"] = "0";
 
   conn_handle.SetUp(dsn_section, kDsnName);
   Dsn actual = conn_handle.GetDsn();
@@ -93,7 +93,7 @@ TEST(ConnectionHandle, DsnSetup) {
 TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["JobCreationMode"] = "1";
+  dsn_section["JOBCREATIONMODE"] = "1";
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -104,7 +104,7 @@ TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {
 TEST(ConnectionHandle, DsnSetup_JobCreationDefault) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["JobCreationMode"] = "9";
+  dsn_section["JOBCREATIONMODE"] = "9";
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -115,7 +115,7 @@ TEST(ConnectionHandle, DsnSetup_JobCreationDefault) {
 TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["EnableSession"] = "aaaaaa";
+  dsn_section["ENABLESESSION"] = "aaaaaa";
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -126,7 +126,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {
 TEST(ConnectionHandle, DsnSetup_SessionsEnabled_True) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["EnableSession"] = "1";
+  dsn_section["ENABLESESSION"] = "1";
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -137,7 +137,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_True) {
 TEST(ConnectionHandle, DsnSetup_SessionsEnabled_False) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["EnableSession"] = "0";
+  dsn_section["ENABLESESSION"] = "0";
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -148,7 +148,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_False) {
 TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Catalog"] = kDsnCatalog;
+  dsn_section["CATALOG"] = kDsnCatalog;
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -162,7 +162,7 @@ TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {
 TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
   ConnectionHandle conn_handle;
   Section dsn_section;
-  dsn_section["Catalog"] = kDsnCatalog;
+  dsn_section["CATALOG"] = kDsnCatalog;
 
   SQLCHAR buf[256] = "test";
   auto status_record =
@@ -202,7 +202,7 @@ TEST(ConnectionHandle, DsnSetup_ListProjectsParent_Set) {
   ConnectionHandle conn_handle;
   Section dsn_section;
 
-  dsn_section["ListProjectsParent"] = kDsnListProjectsParent;
+  dsn_section["LISTPROJECTSPARENT"] = kDsnListProjectsParent;
   conn_handle.SetUp(dsn_section, kDsnName);
 
   Dsn actual = conn_handle.GetDsn();
