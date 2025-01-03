@@ -149,10 +149,10 @@ bool containsAlphanumeric(std::string const& str) {
                      [](unsigned char c) { return std::isalnum(c); });
 }
 
-std::string DriverForm::GetCatalogAndDataset(std::string action,
-                                             std::string key_file_path,
-                                             std::string oauth_token,
-                                             std::string catalog_name) {
+std::string DriverForm::GetCatalogAndDataset(std::string const& action,
+                                             std::string const& key_file_path,
+                                             std::string const& oauth_token,
+                                             std::string const& catalog_name) {
   google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
 
   if (oauth_token == "Service Authentication") {
@@ -173,8 +173,7 @@ std::string DriverForm::GetCatalogAndDataset(std::string action,
     return "";
   }
 
-  std::shared_ptr<ODBCBQClient> bq_client_ptr_stat = *bq_client_ptr;
-  ODBCBQClient& bq_client = *bq_client_ptr_stat;
+  ODBCBQClient& bq_client = **bq_client_ptr;
 
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
@@ -534,7 +533,55 @@ void EvaluateFields(HWND hwnd) {
   EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
   EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
 }
+std::vector<std::string> SplitString(std::string const& str, char delimiter) {
+  std::vector<std::string> tokens;
+  std::stringstream ss(str);
+  std::string token;
+  while (std::getline(ss, token, delimiter)) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
 
+void PopulateDropdown(HWND h_dataset_box, std::string text,
+                      std::string key_file, std::string oauth,
+                      std::string catalog) {
+  SendMessage(h_dataset_box, CB_RESETCONTENT, 0, 0);
+  auto fetched_values =
+      DriverForm::GetCatalogAndDataset(text, key_file, oauth, catalog);
+  std::vector<std::string> values = SplitString(fetched_values, ';');
+  for (auto const& value : values) {
+    SendMessage(h_dataset_box, CB_ADDSTRING, 0,
+                reinterpret_cast<LPARAM>(value.c_str()));
+  }
+}
+void RetrieveFieldText(HWND hwnd, int control_id, char* buffer,
+                       size_t buffer_size) {
+  HWND h_control = GetDlgItem(hwnd, control_id);
+  GetWindowText(h_control, buffer, buffer_size);
+}
+
+void HandleDropdown(HWND hwnd, int control_id, char const* field_type,
+                    char const* key_buffer, char const* auth_buffer,
+                    char const* catalog_buffer = "") {
+  HWND h_control = GetDlgItem(hwnd, control_id);
+  if (key_buffer[0] && auth_buffer[0] &&
+      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
+    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
+                     catalog_buffer);
+  }
+}
+
+void HandleSelectionChange(HWND hwnd, int control_id) {
+  HWND h_control = GetDlgItem(hwnd, control_id);
+  int selected_index = SendMessage(h_control, CB_GETCURSEL, 0, 0);
+  if (selected_index != CB_ERR) {
+    char selected_value[256];
+    SendMessage(h_control, CB_GETLBTEXT, selected_index,
+                reinterpret_cast<LPARAM>(selected_value));
+    SetWindowText(h_control, selected_value);
+  }
+}
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
   DriverForm* p_this =
@@ -552,7 +599,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       }
       switch (LOWORD(w_param)) {
         case kIdcAuthBox:
-        case kIdcCatlogBOX:
         case kIdcDSNEdit:
         case kIdcKeyfileEdit: {
           EvaluateFields(hwnd);
@@ -670,84 +716,47 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             return 0;
           }
         }
-        case kIdcCatlogBOX: {
-          char catalog_buffer[256];
-          char dsn_buffer[256];
-          char key_buffer[256];
-          char auth_buffer[256];
-
-          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
-          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
-          HWND h_key = GetDlgItem(hwnd, kIdcKeyfileEdit);
-          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
-
-          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
-          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
-          GetWindowText(h_key, key_buffer, sizeof(key_buffer));
-          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
-
-          switch (HIWORD(w_param)) {
-            case CBN_DROPDOWN:
-              if (dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
-                  auth_buffer[0] != '\0') {
-                PopulateDropdown(h_catalog_box, "Catalog", key_buffer,
-                                 auth_buffer, "");
-                break;
-              }
-
-            case CBN_SELCHANGE:
-              int selected_index =
-                  SendMessage(h_catalog_box, CB_GETCURSEL, 0, 0);
-              if (selected_index != CB_ERR) {
-                char selected_value[256];
-                SendMessage(h_catalog_box, CB_GETLBTEXT, selected_index,
-                            reinterpret_cast<LPARAM>(selected_value));
-                SetWindowText(h_catalog_box, selected_value);
-              }
-              break;
-          }
-          break;
-        }
+        case kIdcCatlogBOX:
         case kIdcDatasetBOX: {
-          char catalog_buffer[256];
-          char dsn_buffer[256];
-          char key_buffer[256];
-          char auth_buffer[256];
-          char dataBuffer[256];
+          EvaluateFields(hwnd);
+          char catalog_buffer[256] = {};
+          char dsn_buffer[256] = {};
+          char key_buffer[256] = {};
+          char auth_buffer[256] = {};
+          char data_buffer[256] = {};  // Only used for kIdcDatasetBOX
 
-          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
-          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
-          HWND h_key = GetDlgItem(hwnd, kIdcKeyfileEdit);
-          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
-          HWND h_dataset_box = GetDlgItem(hwnd, kIdcDatasetBOX);
+          RetrieveFieldText(hwnd, kIdcCatlogBOX, catalog_buffer,
+                            sizeof(catalog_buffer));
+          RetrieveFieldText(hwnd, kIdcDSNEdit, dsn_buffer, sizeof(dsn_buffer));
+          RetrieveFieldText(hwnd, kIdcKeyfileEdit, key_buffer,
+                            sizeof(key_buffer));
+          RetrieveFieldText(hwnd, kIdcAuthBox, auth_buffer,
+                            sizeof(auth_buffer));
 
-          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
-          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
-          GetWindowText(h_key, key_buffer, sizeof(key_buffer));
-          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
-          GetWindowText(h_dataset_box, dataBuffer, sizeof(dataBuffer));
+          if (LOWORD(w_param) == kIdcDatasetBOX) {
+            RetrieveFieldText(hwnd, kIdcDatasetBOX, data_buffer,
+                              sizeof(data_buffer));
+          }
 
           switch (HIWORD(w_param)) {
             case CBN_DROPDOWN:
-              if (dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
-                  auth_buffer[0] != '\0' && catalog_buffer[0] != '\0') {
-                PopulateDropdown(h_dataset_box, "Dataset", key_buffer,
-                                 auth_buffer, catalog_buffer);
-                break;
+              if (LOWORD(w_param) == kIdcCatlogBOX) {
+                HandleDropdown(hwnd, kIdcCatlogBOX, "Catalog", key_buffer,
+                               auth_buffer);
+              } else if (LOWORD(w_param) == kIdcDatasetBOX) {
+                HandleDropdown(hwnd, kIdcDatasetBOX, "Dataset", key_buffer,
+                               auth_buffer, catalog_buffer);
               }
+              break;
 
             case CBN_SELCHANGE:
-              int selected_index =
-                  SendMessage(h_dataset_box, CB_GETCURSEL, 0, 0);
-              if (selected_index != CB_ERR) {
-                char selected_value[256];
-                SendMessage(h_dataset_box, CB_GETLBTEXT, selected_index,
-                            reinterpret_cast<LPARAM>(selected_value));
-                SetWindowText(h_dataset_box, selected_value);
+              if (LOWORD(w_param) == kIdcCatlogBOX) {
+                HandleSelectionChange(hwnd, kIdcCatlogBOX);
+              } else if (LOWORD(w_param) == kIdcDatasetBOX) {
+                HandleSelectionChange(hwnd, kIdcDatasetBOX);
               }
               break;
           }
-
           break;
         }
         case kIdcButtonCancel:
