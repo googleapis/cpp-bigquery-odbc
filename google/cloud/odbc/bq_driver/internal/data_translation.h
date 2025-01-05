@@ -89,7 +89,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
   // TODO(b/343404637): Handle all arithmetic types
   switch (dest_type) {
     case SQL_C_FLOAT: {
-      auto* dest_val = static_cast<SQLREAL*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLREAL*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -103,7 +103,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_DOUBLE: {
-      auto* dest_val = static_cast<SQLDOUBLE*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLDOUBLE>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -117,7 +117,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_SBIGINT: {
-      auto* dest_val = static_cast<SQLBIGINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLBIGINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLBIGINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -131,7 +131,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_UBIGINT: {
-      auto* dest_val = static_cast<SQLUBIGINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUBIGINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLUBIGINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -145,7 +145,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_SSHORT: {
-      auto* dest_val = static_cast<SQLSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLSMALLINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -159,7 +159,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_USHORT: {
-      auto* dest_val = static_cast<SQLUSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
 
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLUSMALLINT>(src_val);
@@ -174,7 +174,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_SLONG: {
-      auto* dest_val = static_cast<SQLINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLINTEGER>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -188,7 +188,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_ULONG: {
-      auto* dest_val = static_cast<SQLUINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SrcType, SQLUINTEGER>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -269,7 +269,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
   // TODO(b/343404637): Handle all arithmetic types
   switch (dest_type) {
     case SQL_C_FLOAT: {
-      auto* dest_val = static_cast<SQLREAL*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLREAL*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -283,7 +283,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_DOUBLE: {
-      auto* dest_val = static_cast<SQLDOUBLE*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -297,7 +297,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_SBIGINT: {
-      auto* dest_val = static_cast<SQLBIGINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLBIGINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLBIGINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -311,7 +311,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_UBIGINT: {
-      auto* dest_val = static_cast<SQLUBIGINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUBIGINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUBIGINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -325,7 +325,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_SSHORT: {
-      auto* dest_val = static_cast<SQLSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -339,7 +339,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_USHORT: {
-      auto* dest_val = static_cast<SQLUSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -353,7 +353,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_SLONG: {
-      auto* dest_val = static_cast<SQLINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -367,7 +367,7 @@ inline odbc_internal::StatusRecord ConvertFromStringDSValue(
       return status_record;
     }
     case SQL_C_ULONG: {
-      auto* dest_val = static_cast<SQLUINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_buf);
       StatusRecord status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUINTEGER>(src_val);
       // In case of 'Numeric value out of range'(22003), no need to populate the
@@ -555,7 +555,7 @@ inline odbc_internal::StatusRecord ConvertFromTimestampDSValue(
       std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
       wstr_data.emplace_back(L'\0');
 
-      auto* dest = static_cast<SQLWCHAR*>(dest_buf);
+      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
       if (buffer_length > k_timestamp_src_len) {
         if (res_len) {
           *res_len = k_timestamp_src_len * sizeof(SQLWCHAR);
