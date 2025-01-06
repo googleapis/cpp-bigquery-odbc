@@ -2857,7 +2857,36 @@ TEST(SQLRowCount, NonExistentTable) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLRowCount, Async_ExecDirect_StillExecuting) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                               (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::string query =
+      "UPDATE test_table SET column_name = 'Test' WHERE condition = "
+      "'Condition'";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  EXPECT_EQ(status, SQL_STILL_EXECUTING);
+  SQLLEN rowCount = 0;
+  status = SQLRowCount(conn->hstmt, &rowCount);
+  EXPECT_EQ(status, SQL_ERROR);
+
+  ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
+                                   std::chrono::milliseconds(100), 2);
+  status = PollODBC(SQLExecDirect, backoff, conn->hstmt,
+                    (SQLCHAR*)query.c_str(), strlen(query.c_str()));
+
+  ASSERT_EQ(status, SQL_ERROR);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(SQLRowCount, SameValueUpdate) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

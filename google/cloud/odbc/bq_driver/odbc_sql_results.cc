@@ -466,13 +466,16 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   if (!status_record.ok()) {
     return LogAndReturnCode(stmt_handle, status_record);
   }
-  std::string operation = stmt_handle.GetPreparedJob()
-                              .value()
-                              .statistics.job_query_stats.statement_type;
+  auto prepared_job = stmt_handle.GetPreparedJob();
+  if (!prepared_job) {
+    status_record = {SQLStates::k_HY001(), "Prepared job is not available"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+  std::string operation =
+      prepared_job->statistics.job_query_stats.statement_type;
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 
-  DmlStats dml_stats;
-  conn_handle.GetDmlStats(dml_stats);
+  DmlStats dml_stats = conn_handle.GetDmlStats();
   if (operation == "INSERT") {
     *row_count = dml_stats.inserted_row_count;
   } else if (operation == "UPDATE") {

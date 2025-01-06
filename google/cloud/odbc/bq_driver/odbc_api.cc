@@ -2742,7 +2742,6 @@ SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN* rowCount) {
     TraceFunctionExit_SQLRowCount(rc, *(*kTraceOption));
   }
 
-
   return rc;
 }
 

@@ -115,7 +115,7 @@ class ConnectionHandle : public Handle {
   }
 
   inline void SetDmlStats(DmlStats dml_stats) { dml_stats_ = dml_stats; }
-  inline void GetDmlStats(DmlStats& dml_stats) { dml_stats = dml_stats_; }
+  DmlStats GetDmlStats() const { return dml_stats_; }
 
  protected:
   bool is_connected_ = false;
