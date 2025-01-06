@@ -72,12 +72,22 @@ class DriverForm {
   inline std::string const& GetTrustedCerts() const { return trusted_cert_; }
   inline std::string const& GetMinTls() const { return min_tls_version_; }
   inline std::string const& GetDescription() const { return description_; }
+  inline std::string const& GetLogLevel() const {
+    return LogTraceDialog::log_level_;
+  }
+  inline std::string const& GetLogFilePath() const {
+    return LogTraceDialog::log_file_path_;
+  }
   static odbc_internal::StatusRecord TestODBCConnection(
       std::shared_ptr<odbc_bq_driver_internal::Section> const& section);
 
   static odbc_internal::StatusRecordOr<std::string> GetCatalogAndDataset(
       std::string const& action, std::string const& key_file_path,
       std::string const& oauth_token, std::string const& catalog_name = "");
+
+  inline void SetLogTraceValues(Section const& attributes_map) {
+    log_trace_dialog_.SetValues(attributes_map);
+  }
 
  private:
   static std::string dsn_name_;
@@ -94,6 +104,7 @@ class DriverForm {
                                      LPARAM l_param);
   HWND m_hwnd;
   HWND m_parent_hwnd;
+  LogTraceDialog log_trace_dialog_;
   static char const CLASS_NAME[];
 };
 
