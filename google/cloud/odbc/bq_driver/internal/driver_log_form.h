@@ -35,6 +35,7 @@ class LogTraceDialog {
   inline std::string const& GetLogLevel() const { return log_level_; }
   inline std::string const& GetLogFilePath() const { return log_file_path_; }
 
+  friend class DriverForm;  
  private:
   HWND parent_hwnd;
   static std::string log_level_;
