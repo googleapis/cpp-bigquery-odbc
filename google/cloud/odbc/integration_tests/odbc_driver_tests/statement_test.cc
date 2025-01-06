@@ -2948,6 +2948,136 @@ TEST(SQLRowCount, NonExistentTable) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLPutData_BinaryData) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_BINARY_DATA_TEST";
+  Table table(table_name);
+
+  // Schema with a binary field
+  Schema schema{{"BinaryField", "BYTES"}};
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Prepare binary data
+  std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
+  SQLLEN binary_data_len = binary_data.size();
+
+  // Insert binary data using SQLPutData
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_BINARY,
+                             SQL_LONGVARBINARY, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  // Provide data using SQLPutData
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, binary_data.data(), binary_data_len),
+            SQL_SUCCESS);
+
+  // Complete the execution
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Verify the inserted binary data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  query = "SELECT BinaryField FROM " + table_name;
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  uint8_t result[256] = {0};
+  SQLLEN result_len = 0;
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_BINARY, result, sizeof(result),
+                       &result_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(result_len, binary_data_len);  // Verify length matches
+  EXPECT_TRUE(std::equal(result, result + binary_data_len,
+                         binary_data.begin()));  // Verify content matches
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Clean up
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLPutData_BinaryData) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_BINARY_DATA_TEST";
+  Table table(table_name);
+
+  // Schema with a binary field
+  Schema schema{{"BinaryField", "BYTES"}};
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Prepare binary data
+  std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
+  SQLLEN binary_data_len = binary_data.size();
+
+  // Insert binary data using SQLPutData
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_BINARY,
+                             SQL_LONGVARBINARY, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  // Provide data using SQLPutData
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, binary_data.data(), binary_data_len),
+            SQL_SUCCESS);
+
+  // Complete the execution
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Verify the inserted binary data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  query = "SELECT BinaryField FROM " + table_name;
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  uint8_t result[256] = {0};
+  SQLLEN result_len = 0;
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_BINARY, result, sizeof(result),
+                       &result_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(result_len, binary_data_len);  // Verify length matches
+  EXPECT_TRUE(std::equal(result, result + binary_data_len,
+                         binary_data.begin()));  // Verify content matches
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Clean up
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
