@@ -259,10 +259,14 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsConsole =
         TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
-
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(GetPathToOdbcIni());
-
+    kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(
+#ifdef _WIN32
+        GetPathToOdbcIni(/* is_log_reg_path */ true)
+#else
+        GetPathToOdbcIni()
+#endif  // _WIN32
+    );
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOption = TraceOptions::GetTraceOption();
 

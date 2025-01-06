@@ -159,7 +159,9 @@ odbc_internal::StatusRecord ValidateTableParameters(
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
 
-std::string GetPathToOdbcIni();
+std::string GetPathToOdbcIni(bool is_log_reg_path = false);
+
+std::string GetTraceLogRegistryPath();
 
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   auto percent_filter_out =
@@ -207,8 +209,12 @@ odbc_internal::StatusRecord AddDSNToRegistry(std::string const& dsn_name,
                                              std::string const& driver,
                                              Section const& section);
 
+odbc_internal::StatusRecord AddLogTraceToRegistry(Section const& section);
+
 odbc_internal::StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                                               Section const& section);
+
+odbc_internal::StatusRecord EditLogTraceInRegistry(Section const& section);
 
 odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name);
 
