@@ -576,6 +576,9 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+  conn_handle.SetDmlStats({pq_status->dml_stats.inserted_row_count,
+                           pq_status->dml_stats.deleted_row_count,
+                           pq_status->dml_stats.updated_row_count});
   DSResults results;
   results.dml_stats = pq_status->dml_stats;
   if (pq_status->job_complete && pq_status->page_token.empty()) {

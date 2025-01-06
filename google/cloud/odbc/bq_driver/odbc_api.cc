@@ -162,6 +162,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLStatisticsW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTablePrivilegesW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLTablesW;
 
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLRowCount;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLAllocHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLBindParameter;
@@ -196,6 +197,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLRowCount;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetCursorName;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetDescField;
@@ -2732,12 +2734,28 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLRowCount(SQLHSTMT statementHandle, SQLLEN* rowCount) {
   SQLRETURN rc = SQL_SUCCESS;
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLRowCount");
+
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) {
+    TraceFunctionEntry_SQLRowCount(statementHandle, rowCount, *(*kTraceOption));
+  }
 
   // Call to internal function for SQLRowCount in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLRowCountInternal(statementHandle,
+                                                            rowCount);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) {
+    TraceFunctionExit_SQLRowCount(rc, *(*kTraceOption));
+  }
 
   return rc;
 }
