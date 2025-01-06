@@ -854,7 +854,7 @@ TEST(StatementTest, FetchRowWise) {
 
 TEST(StatementTest, RollBackTransaction) {
   std::string const table_name =
-      kDatasetWithTablePrefix + "_RollBackTransaction";
+      kDatasetWithTablePrefix + "_RollBackTransactionn";
   Table table(table_name);
 
   // Create Table
