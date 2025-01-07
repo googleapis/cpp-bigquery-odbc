@@ -440,6 +440,9 @@ class Table {
                       std::vector<nlohmann::json> rows,
                       bool insert_index = false);
 
+  void InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
+                         std::vector<uint8_t> rows, bool insert_index);
+
  private:
   std::string table_name_;
   std::wstring wtable_name_;

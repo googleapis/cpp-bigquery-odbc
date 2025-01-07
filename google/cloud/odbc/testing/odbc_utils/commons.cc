@@ -767,6 +767,35 @@ void Table::InsertDateData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 }
 
+void Table::InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
+                              std::vector<uint8_t> rows, bool insert_index) {
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+
+  for (size_t i = 0; i < rows.size(); ++i) {
+    auto const& row = rows[i];
+    insert_stmt << "(";
+
+    if (insert_index) {
+      insert_stmt << i << ", ";
+    }
+
+    insert_stmt << (row != 0 ? "TRUE" : "FALSE");
+    insert_stmt << ")";
+
+    if (i != rows.size() - 1) {
+      insert_stmt << ", ";
+    }
+  }
+
+  std::string insert_stmt_str = insert_stmt.str();
+  SQLRETURN status;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
+
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   char buffer[9];
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", time.hour, time.minute,

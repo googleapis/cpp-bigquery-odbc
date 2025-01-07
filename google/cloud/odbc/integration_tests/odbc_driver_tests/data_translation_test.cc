@@ -595,6 +595,135 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
 }
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
+struct BooleanBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQLCHAR value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<BooleanBasicTestStruct> const kConversionFromBooleanTestData{
+    {SQL_C_CHAR, '1', SQL_SUCCESS},  {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BINARY, 1, SQL_SUCCESS},  {SQL_C_WCHAR, L'1', SQL_SUCCESS},
+    {SQL_C_DOUBLE, 0, SQL_SUCCESS},  {SQL_C_LONG, 1, SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, 0, SQL_ERROR},
+};
+
+void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
+                                 std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  int row_count = 0;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  for (auto const& expected : kConversionFromBooleanTestData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+
+    CheckError(status, "SQLBindCol", conn);
+
+    status = SQLFetch(conn->hstmt);
+
+    if (status == SQL_NO_DATA) {
+      ++row_count;
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      EXPECT_EQ(SQL_ERROR, expected.status);
+      ++row_count;
+      break;
+    }
+    EXPECT_EQ(SQL_SUCCESS, expected.status);
+
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR: {
+        std::string returned_val = reinterpret_cast<char*>(data);
+        std::string expected_val(1, expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_BIT: {
+        SQLCHAR returned_val = *reinterpret_cast<SQLCHAR*>(data);
+        EXPECT_EQ(returned_val, expected.value);
+        break;
+      }
+      case SQL_C_BINARY: {
+        if (strlen_or_ind == sizeof(SQLCHAR)) {
+          SQLCHAR* binary_value = reinterpret_cast<SQLCHAR*>(data);
+          EXPECT_EQ(*binary_value, expected.value);
+        }
+        break;
+      }
+      case SQL_C_WCHAR: {
+        std::wstring wstr = reinterpret_cast<wchar_t*>(data);
+        std::string returned_val_utf8 =
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
+        std::string expected_val(1, expected.value);
+        EXPECT_STREQ(returned_val_utf8.data(), expected_val.data());
+        break;
+      }
+      case SQL_C_DOUBLE: {
+        SQLDOUBLE returned_val = *reinterpret_cast<SQLDOUBLE*>(data);
+        SQLDOUBLE expected_val = static_cast<SQLDOUBLE>(expected.value);
+        EXPECT_DOUBLE_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_LONG: {
+        SQLINTEGER returned_val = *reinterpret_cast<SQLINTEGER*>(data);
+        SQLINTEGER expected_val = static_cast<SQLINTEGER>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      default:
+        break;
+    }
+    ++row_count;
+  }
+  EXPECT_EQ(row_count, kConversionFromBooleanTestData.size());
+}
+
+TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_BOOLEAN";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, BoolField BOOLEAN)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<SQLCHAR> boolean_data;
+  for (auto const& test_case : kConversionFromBooleanTestData) {
+    boolean_data.push_back(test_case.value);
+  }
+  table.InsertBooleanData(conn, boolean_data, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT BoolField FROM " + table_name + " Order by index";
+  TestTranslationsFromBoolean(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
