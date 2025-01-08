@@ -60,7 +60,6 @@ StatementHandle ::StatementHandle(StatementHandle const& statementHandle)
   descriptors_ = statementHandle.descriptors_;
   query_ = statementHandle.query_;
   attributes_ = statementHandle.attributes_;
-  row_offset_ = statementHandle.row_offset_;
   // TODO(b/349757194): Convert shallow copy to deep copy
   conn_handle_ = statementHandle.conn_handle_;
   query_parameters_ = statementHandle.query_parameters_;
@@ -76,7 +75,6 @@ StatementHandle& StatementHandle::operator=(
     descriptors_ = statementHandle.descriptors_;
     query_ = statementHandle.query_;
     attributes_ = statementHandle.attributes_;
-    row_offset_ = statementHandle.row_offset_;
     // TODO(b/349757194): Convert shallow copy to deep copy
     conn_handle_ = statementHandle.conn_handle_;
     query_parameters_ = statementHandle.query_parameters_;
@@ -94,7 +92,6 @@ StatementHandle::StatementHandle(StatementHandle&& statementHandle) noexcept {
   attributes_ = std::move(statementHandle.attributes_);
   conn_handle_ = std::move(statementHandle.conn_handle_);
   query_parameters_ = std::move(statementHandle.query_parameters_);
-  row_offset_ = std::move(statementHandle.row_offset_);
 }
 StatementHandle& StatementHandle::operator=(
     StatementHandle&& statementHandle) noexcept {
@@ -107,7 +104,6 @@ StatementHandle& StatementHandle::operator=(
   attributes_ = std::move(statementHandle.attributes_);
   conn_handle_ = std::move(statementHandle.conn_handle_);
   query_parameters_ = std::move(statementHandle.query_parameters_);
-  row_offset_ = std::move(statementHandle.row_offset_);
   return *this;
 }
 
