@@ -152,6 +152,35 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
   return std::make_shared<Sections>(sections);
 }
 
+// Helper function to create a static label
+HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
+                 int height, int id) {
+  return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
+                        y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to create an edit box
+HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
+  return CreateWindowEx(
+      0, "EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, x, y, width,
+      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to create a combo box (dropdown)
+HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
+  return CreateWindowEx(
+      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
+      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+
+// Helper function to create a button
+HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
+                  int height, int id) {
+  return CreateWindowEx(
+      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
+      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
 #else
 
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(

@@ -76,54 +76,25 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
       attributes_map.count(kLogFile) > 0 ? attributes_map.at(kLogFile) : "";
 }
 
-// TODO(b/390308855): Move to common utils
-HWND CreateLogLabel(HWND parent, char const* text, int x, int y, int width,
-                    int height, int id) {
-  return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
-                        y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateLogEditBox(HWND parent, int x, int y, int width, int height,
-                      int id) {
-  return CreateWindowEx(
-      0, "EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, x, y, width,
-      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateLogComboBox(HWND parent, int x, int y, int width, int height,
-                       int id) {
-  return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateLogButton(HWND parent, char const* text, int x, int y, int width,
-                     int height, int id) {
-  return CreateWindowEx(
-      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
 void LogTraceDialog::InitControls() {
   HWND h_log_level_head =
-      CreateLogLabel(parent_hwnd, "Log Level:", 20, 50, 80, kLabelHeight, 0);
-  HWND h_log_level_box = CreateLogComboBox(parent_hwnd, 120, 50, kComboBoxWidth,
-                                           KComboBoxHeight, kIdclogTraceBox);
+      CreateLabel(parent_hwnd, "Log Level:", 20, 50, 80, 20, 0);
+  HWND h_log_level_box = CreateComboBox(parent_hwnd, 120, 50, kComboBoxWidth,
+                                        KComboBoxHeight, kIdclogTraceBox);
 
   HWND h_log_file_add =
-      CreateLogLabel(parent_hwnd, "Log File:", 20, 80, 80, kLabelHeight, 0);
-  HWND h_log_file_edit = CreateLogEditBox(parent_hwnd, 120, 80, kEditBoxWidth,
-                                          kEditBoxHeight, kIdcLogFileEdit);
+      CreateLabel(parent_hwnd, "Log File:", 20, 80, 80, kLabelHeight, 0);
+  HWND h_log_file_edit = CreateEditBox(parent_hwnd, 120, 80, kEditBoxWidth,
+                                       kEditBoxHeight, kIdcLogFileEdit);
 
-  HWND h_log_browse_btn = CreateLogButton(
-      parent_hwnd, "Browse", 220, 120, kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
+  HWND h_log_browse_btn = CreateButton(parent_hwnd, "Browse", 220, 120,
+                                       kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
 
-  HWND h_log_btn_ok = CreateLogButton(parent_hwnd, "Ok", 120, 180, kBtnWidth,
-                                      kBtnHeight, kIdcLogBtnOk);
+  HWND h_log_btn_ok = CreateButton(parent_hwnd, "Ok", 120, 180, kBtnWidth,
+                                   kBtnHeight, kIdcLogBtnOk);
 
-  HWND h_log_btn_cancel = CreateLogButton(
-      parent_hwnd, "Cancel", 200, 180, kBtnWidth, kBtnHeight, kIdcLogBtnCancel);
+  HWND h_log_btn_cancel = CreateButton(parent_hwnd, "Cancel", 200, 180,
+                                       kBtnWidth, kBtnHeight, kIdcLogBtnCancel);
   // Populate dropdowns
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)KLogTrace.c_str());

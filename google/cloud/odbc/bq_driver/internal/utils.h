@@ -135,6 +135,15 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
 odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     std::string const& registry_key);
 
+HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
+                 int height, int id);
+
+HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id);
+
+HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id);
+
+HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
+                  int height, int id);
 #else
 
 odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
