@@ -28,11 +28,17 @@ load(":google_cloud_odbc_bq_driver_internal.bzl", "google_cloud_odbc_bq_driver_i
 cc_library(
     name = "google_cloud_odbc_bq_driver_internal",
     srcs = google_cloud_odbc_bq_driver_internal_srcs + select({
-        ":windows": ["bq_driver/internal/driver_form.cc"],
+        ":windows": [
+            "bq_driver/internal/driver_form.cc",
+            "bq_driver/internal/driver_log_form.cc",
+        ],
         "//conditions:default": [],
     }),
     hdrs = google_cloud_odbc_bq_driver_internal_hdrs + select({
-        ":windows": ["bq_driver/internal/driver_form.h"],
+        ":windows": [
+            "bq_driver/internal/driver_form.h",
+            "bq_driver/internal/driver_log_form.h",
+        ],
         "//conditions:default": [],
     }),
     visibility = ["//:__pkg__"],
@@ -47,7 +53,7 @@ cc_library(
     name = driver_internal_utils_test.replace("/", "_").replace(".cc", ""),
     srcs = select({
         ":windows": [driver_internal_utils_test],
-        "//conditions:default": [driver_internal_utils_test] if not driver_internal_utils_test.endswith("driver_form_test.cc") else [],
+        "//conditions:default": [driver_internal_utils_test] if not (driver_internal_utils_test.endswith("driver_form_test.cc") or driver_internal_utils_test.endswith("driver_log_form_test.cc")) else [],
     }),
     tags = ["unit-tests"],
     deps = [
