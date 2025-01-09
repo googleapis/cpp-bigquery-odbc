@@ -416,7 +416,8 @@ TEST(SQLBrowseConnectInternal, Fail_NonRequestedAttributeInConnStr) {
   EXPECT_EQ(SQLStates::k_HY000(),
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_EQ(
-      "Connection Error: Non Requested connection attribute ALLOWLARGERESULTS "
+      "Connection Error: Non Requested connection attribute "
+      "'ALLOWLARGERESULTS' "
       "in "
       "ConnectionString",
       conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
@@ -458,7 +459,7 @@ TEST(SQLBrowseConnectInternal, Fail_ConnectionAttributeAlreadyPresent) {
   EXPECT_EQ(status, SQL_ERROR);
   EXPECT_EQ(SQLStates::k_HY000(),
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
-  EXPECT_EQ("Connection Error: Connection Attribute DRIVER already found!",
+  EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 }  // namespace google::cloud::odbc_bq_driver

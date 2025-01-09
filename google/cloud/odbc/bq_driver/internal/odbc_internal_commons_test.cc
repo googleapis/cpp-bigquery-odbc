@@ -1118,7 +1118,7 @@ TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.message,
             "Connection Error: Non Requested connection attribute "
-            "ExtraAttribute in ConnectionString");
+            "'ExtraAttribute' in ConnectionString");
 }
 
 TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
@@ -1131,7 +1131,7 @@ TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
 
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.message,
-            "Connection Error: Connection Attribute DRIVER already found!");
+            "Connection Error: Connection Attribute 'DRIVER' already found!");
 }
 
 TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {

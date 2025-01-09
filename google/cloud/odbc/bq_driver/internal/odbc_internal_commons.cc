@@ -915,15 +915,15 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
     auto it = dsn_map.find(key);
     if (it != dsn_map.end()) {
       if (!it->second.empty()) {
-        status_record = StatusRecord{SQLStates::k_HY000(),
-                                     "Connection Error: Connection Attribute " +
-                                         key + " already found!"};
+        status_record = StatusRecord{
+            SQLStates::k_HY000(), "Connection Error: Connection Attribute '" +
+                                      key + "' already found!"};
       }
     } else {
-      status_record =
-          StatusRecord{SQLStates::k_HY000(),
-                       "Connection Error: Non Requested connection attribute " +
-                           key + " in ConnectionString"};
+      status_record = StatusRecord{
+          SQLStates::k_HY000(),
+          "Connection Error: Non Requested connection attribute '" + key +
+              "' in ConnectionString"};
     }
   }
   return status_record;
