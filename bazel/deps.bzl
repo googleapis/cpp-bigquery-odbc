@@ -47,11 +47,20 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "rules_cc",
         urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.9.tar.gz",
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.0.9/rules_cc-0.0.9.tar.gz",
+            "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
         ],
-        sha256 = "2037875b9a4456dce4a79d112a8ae885bbc4aad968e6587dca6e64f3a0900cdf",
-        strip_prefix = "rules_cc-0.0.9",
+        sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
+        strip_prefix = "rules_cc-0.0.15",
+    )
+
+    maybe(
+        http_archive,
+        name = "com_google_protobuf",
+        urls = [
+            "https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz",
+        ],
+        sha256 = "008a11cc56f9b96679b4c285fd05f46d317d685be3ab524b2a310be0fbad987e",
+        strip_prefix = "protobuf-29.3",
     )
 
     # Load Abseil : google-cloud-cpp updated the version
@@ -92,9 +101,19 @@ def cpp_bigquery_odbc_deps(name = None):
 
     maybe(
         http_archive,
+        name = "com_github_grpc_grpc",
+        urls = [
+            "https://github.com/grpc/grpc/archive/v1.69.0.tar.gz",
+        ],
+        sha256 = "cd256d91781911d46a57506978b3979bfee45d5086a1b6668a3ae19c5e77f8dc",
+        strip_prefix = "grpc-1.69.0",
+    )
+
+    maybe(
+        http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.30.0.tar.gz",
+            "https://github.com/googleapis/google-cloud-cpp/archive/c244812e7f7297b78c1d084ccbfbba2ed8aa2349.tar.gz",
         ],
-        strip_prefix = "google-cloud-cpp-2.30.0",
+        strip_prefix = "google-cloud-cpp-c244812e7f7297b78c1d084ccbfbba2ed8aa2349",
     )
