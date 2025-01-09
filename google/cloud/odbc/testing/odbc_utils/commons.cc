@@ -719,39 +719,100 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
 }
 
 void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
-                                std::vector<std::vector<SQLBIGINT>> rows,
-                                bool insert_index) {
-  if (rows.empty()) {
+                            StdArrayRows array_rows, bool insert_index) {
+  if (array_rows.empty()) {
     return;
   }
   std::ostringstream insert_stmt;
   insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
 
-  for (size_t i = 0; i < rows.size(); ++i) {
-    auto const& row = rows[i];
-    
-      insert_stmt << "(";
-      if (insert_index) {
+  for (size_t i = 0; i < array_rows.size(); ++i) {
+    auto const& array_row = array_rows[i];
+    auto const& int_row = array_row.int_value;
+    auto const& double_row = array_row.double_value;
+    auto const& string_row = array_row.string_value;
+
+    insert_stmt << "(";
+    if (insert_index) {
       insert_stmt << i << ", [";
     }
-    int col_index =0;
-    for (auto const& var  : row) {
-    insert_stmt<<" "<<var;
-    if (col_index != row.size() - 1) {
-      insert_stmt << ", ";
+    int col_index = 0;
+    for (auto const& var : int_row) {
+      insert_stmt << " " << var;
+      if (col_index != int_row.size() - 1) {
+        insert_stmt << ", ";
+      }
+      col_index++;
     }
-    col_index++;
-  }
 
-  insert_stmt << "])";
+    insert_stmt << "], [";
 
-    if (i != rows.size() - 1) {
+    col_index = 0;
+    for (auto const& var : double_row) {
+      insert_stmt << " " << var;
+      if (col_index != double_row.size() - 1) {
+        insert_stmt << ", ";
+      }
+      col_index++;
+    }
+
+    insert_stmt << "], [";
+
+    col_index = 0;
+    for (auto const& var : string_row) {
+      insert_stmt << " '" << var << "'";
+      if (col_index != string_row.size() - 1) {
+        insert_stmt << ", ";
+      }
+      col_index++;
+    }
+
+    insert_stmt << "])";
+
+    if (i != array_rows.size() - 1) {
       insert_stmt << ", ";
     }
   }
 
   std::string insert_stmt_str = insert_stmt.str();
-  std::cout<<"insert_stmt_str "<<insert_stmt_str<<std::endl;
+  SQLRETURN status;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
+
+void Table::InsertArrayStructData(std::shared_ptr<ODBCHandles> conn,
+                                  StdArrayRows array_rows, bool insert_index) {
+  if (array_rows.empty()) {
+    return;
+  }
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+
+  for (size_t row = 0; row < array_rows.size(); ++row) {
+    auto const& array_row = array_rows[row];
+    auto const& int_row = array_row.int_value;
+    auto const& double_row = array_row.double_value;
+    auto const& string_row = array_row.string_value;
+    insert_stmt << "(";
+    if (insert_index) {
+      insert_stmt << row << ", [";
+    }
+    for (size_t i = 0; i < int_row.size(); ++i) {
+      insert_stmt << "STRUCT(" << int_row[i] << ", " << double_row[i] << ", '"
+                  << string_row[i] << "')";
+      if (i != int_row.size() - 1) insert_stmt << ",";
+    }
+    insert_stmt << "])";
+
+    if (row != array_rows.size() - 1) {
+      insert_stmt << ", ";
+    }
+  }
+
+  std::string insert_stmt_str = insert_stmt.str();
   SQLRETURN status;
 
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
