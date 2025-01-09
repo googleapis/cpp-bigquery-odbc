@@ -188,11 +188,15 @@ TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
 }
 TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForCatalog) {
   auto result = DriverForm::GetCatalogAndDataset("Catalog", "", "");
-  EXPECT_EQ(result, "");
+  EXPECT_FALSE(result.Ok());
+  EXPECT_EQ(result.GetStatusRecord().message,
+            "Failed to create BigQuery client.");
 }
 TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForDataset) {
   auto result = DriverForm::GetCatalogAndDataset("Dataset", "", "");
-  EXPECT_EQ(result, "");
+  EXPECT_FALSE(result.Ok());
+  EXPECT_EQ(result.GetStatusRecord().message,
+            "Failed to create BigQuery client.");
 }
 
 TEST_F(DriverFormTest, TestEncryptDataDropdown) {

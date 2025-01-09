@@ -18,7 +18,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include <regex>
-#include <sstream>
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bigquery_client_interface::Oauth;
@@ -149,12 +148,12 @@ bool containsAlphanumeric(std::string const& str) {
                      [](unsigned char c) { return std::isalnum(c); });
 }
 
-std::string DriverForm::GetCatalogAndDataset(std::string const& action,
-                                             std::string const& key_file_path,
-                                             std::string const& oauth_token,
-                                             std::string const& catalog_name) {
+StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
+    std::string const& action, std::string const& key_file_path,
+    std::string const& oauth_token, std::string const& catalog_name) {
   google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
 
+  // TODO(b/383592420): Add call to user auth once its tested
   if (oauth_token == "Service Authentication") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kServiceAccount;
@@ -170,7 +169,8 @@ std::string DriverForm::GetCatalogAndDataset(std::string const& action,
   auto bq_client_ptr =
       ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
   if (!bq_client_ptr) {
-    return "";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to create BigQuery client."};
   }
 
   ODBCBQClient& bq_client = **bq_client_ptr;
@@ -182,26 +182,27 @@ std::string DriverForm::GetCatalogAndDataset(std::string const& action,
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, catalog_name);
   }
-  if (!result_set_status) {
-    return "";
+
+  if (!result_set_status.Ok()) {
+    return StatusRecord{SQLStates::k_HY000(), "Failed to fetch result set."};
   }
 
-  ResultSet const& result_set = result_set_status.GetValue();
+  ResultSet const& result_set = *result_set_status;
   std::string row_string;
   for (auto const& row : result_set.rows) {
     for (auto const& value : row) {
       std::string value_string(value.begin(), value.end());
       value_string.erase(remove(value_string.begin(), value_string.end(), ' '),
                          value_string.end());
-      if (value_string.empty() || !containsAlphanumeric(value_string)) {
-        continue;
+      if (!value_string.empty() && containsAlphanumeric(value_string)) {
+        row_string += value_string + ";";
       }
-      row_string += value_string;
-      row_string += ";";
     }
   }
+
   return row_string;
 }
+
 int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
                     PWSTR p_cmd_line, int n_cmd_show) {
   DriverForm DriverForm;
@@ -533,28 +534,33 @@ void EvaluateFields(HWND hwnd) {
   EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
   EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
 }
-std::vector<std::string> SplitString(std::string const& str, char delimiter) {
-  std::vector<std::string> tokens;
-  std::stringstream ss(str);
-  std::string token;
-  while (std::getline(ss, token, delimiter)) {
-    tokens.push_back(token);
-  }
-  return tokens;
-}
 
 void PopulateDropdown(HWND h_dataset_box, std::string text,
                       std::string key_file, std::string oauth,
                       std::string catalog) {
   SendMessage(h_dataset_box, CB_RESETCONTENT, 0, 0);
-  auto fetched_values =
+
+  StatusRecordOr<std::string> status_record =
       DriverForm::GetCatalogAndDataset(text, key_file, oauth, catalog);
-  std::vector<std::string> values = SplitString(fetched_values, ';');
+
+  if (!status_record.Ok()) {
+    MessageBox(h_dataset_box, status_record.GetStatusRecord().message.c_str(),
+               "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+
+  std::string row_string = status_record.GetValue();
+
+  std::vector<std::string> values = Split(row_string, ";");
+
   for (auto const& value : values) {
-    SendMessage(h_dataset_box, CB_ADDSTRING, 0,
-                reinterpret_cast<LPARAM>(value.c_str()));
+    if (!value.empty()) {
+      SendMessage(h_dataset_box, CB_ADDSTRING, 0,
+                  reinterpret_cast<LPARAM>(value.c_str()));
+    }
   }
 }
+
 void RetrieveFieldText(HWND hwnd, int control_id, char* buffer,
                        size_t buffer_size) {
   HWND h_control = GetDlgItem(hwnd, control_id);
