@@ -555,6 +555,7 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
   return bq_client->CancelJob(project_id, job_id, location, options);
 }
 
+// TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
   // Validate the  connection handle.
@@ -576,6 +577,7 @@ StatusRecordOr<DSResults> FetchBQData(
     return pq_status.GetStatusRecord();
   }
   DSResults results;
+  results.dml_stats = pq_status->dml_stats;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results
     results.data_source_results = *pq_status;

@@ -103,6 +103,15 @@ class StatementHandle : public Handle {
     return query_parameters_.size();
   }
 
+  // Setters and Getters related to unprocessed results from the client
+  // interface
+  DSResults GetDSResults() const { return ds_results_; }
+
+  inline void SetDSResults(DSResults const& ds_results) {
+    ds_results_ = ds_results;
+  }
+
+  // Getter for the results processed by the Driver
   [[nodiscard]] inline ResultSet const& GetResultSet() const {
     return result_set_;
   }
@@ -179,6 +188,7 @@ class StatementHandle : public Handle {
   std::map<int, SQLULEN> attributes_;
   ConnectionHandle* conn_handle_{nullptr};
   std::string cursor_name_;
+  DSResults ds_results_;
   mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;

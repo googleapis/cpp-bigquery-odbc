@@ -175,6 +175,7 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
     stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
     return ds_status_record_or.GetStatusRecord();
   }
+  stmt_handle.SetDSResults(*ds_status_record_or);
 
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =

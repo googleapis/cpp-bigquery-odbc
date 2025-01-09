@@ -234,6 +234,7 @@ inline void GetSinglePrecisionInterval(
       break;
   }
 }
+
 // This is the result populated by performing a bq query API.
 // For each call, onely one of PostQueryResults or GetQueryResults will be
 // populated with the following semantics:
@@ -250,6 +251,7 @@ struct DSResults {
                 google::cloud::bigquery_v2_minimal_internal::PostQueryResults,
                 google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
       data_source_results;
+  google::cloud::bigquery_v2_minimal_internal::DmlStats dml_stats;
 };
 
 //////////////////////////////////////////////////////////////////////
