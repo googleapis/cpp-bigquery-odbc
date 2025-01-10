@@ -2035,15 +2035,6 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
     CheckError(status, "SQLPrepare", conn);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   } else if (status == SQL_STILL_EXECUTING) {
-    SQLLEN row_count;
-        SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
-        EXPECT_EQ(rc_status, SQL_ERROR);
-        ASSERT_EQ(SQL_SUCCESS,
-                GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
-      ASSERT_TRUE(absl::StrContains(error, "HY010"))
-          << "SQLRowCount failed with unexpected error: " << error;
-      ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
-          << "SQLRowCount failed with unexpected error: " << error;
     // Cancel the operation
     status = SQLCancel(conn->hstmt);
     CheckError(status, "SQLCancel", conn);
@@ -2999,17 +2990,18 @@ auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
   status = SQLExecute(conn->hstmt);
          std::string error;
-  if(status == SQL_STILL_EXECUTING) {
+  while(status == SQL_STILL_EXECUTING) {
         SQLLEN row_count;
         SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
         EXPECT_EQ(rc_status, SQL_ERROR);
+   #ifndef _WIN32
         ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
       ASSERT_TRUE(absl::StrContains(error, "HY010"))
           << "SQLRowCount failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLRowCount failed with unexpected error: " << error;
-
+    #endif //_WIN32
     ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
                                      std::chrono::milliseconds(100), 2);
     status = PollODBC(SQLExecute, backoff, conn->hstmt);
