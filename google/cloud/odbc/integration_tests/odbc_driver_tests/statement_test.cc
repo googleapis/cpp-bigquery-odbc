@@ -2029,12 +2029,21 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
 
   // Execute should process asynchronously.
   status = SQLExecute(conn->hstmt);
-
+  std::string error;
   if (SQL_SUCCEEDED(status)) {
     // We can't cancel an operation that is not in the process of executing.
     CheckError(status, "SQLPrepare", conn);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   } else if (status == SQL_STILL_EXECUTING) {
+    SQLLEN row_count;
+        SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
+        EXPECT_EQ(rc_status, SQL_ERROR);
+        ASSERT_EQ(SQL_SUCCESS,
+                GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
+      ASSERT_TRUE(absl::StrContains(error, "HY010"))
+          << "SQLRowCount failed with unexpected error: " << error;
+      ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
+          << "SQLRowCount failed with unexpected error: " << error;
     // Cancel the operation
     status = SQLCancel(conn->hstmt);
     CheckError(status, "SQLCancel", conn);
@@ -2049,7 +2058,7 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
     } else {
       // Per spec, Make sure SQLState is HY008 and Message is 'Operation
       // canceled'.
-      std::string error;
+      
       ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
 // On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
@@ -2990,8 +2999,7 @@ auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
 
   status = SQLExecute(conn->hstmt);
          std::string error;
-
-    while (status == SQL_STILL_EXECUTING) {
+  if(status == SQL_STILL_EXECUTING) {
         SQLLEN row_count;
         SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
         EXPECT_EQ(rc_status, SQL_ERROR);
