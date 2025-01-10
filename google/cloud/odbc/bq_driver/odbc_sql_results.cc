@@ -452,6 +452,8 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
       status_record = {SQLStates::k_HY001(), "Statement is not prepared"};
       break;
     case StmtStates::kStatementAsyncExecute:
+      status_record = {SQLStates::k_HY010(), "Function sequence error"};
+      break;
     case StmtStates::kStatementAsyncPrepare:
       status_record = {SQLStates::k_HY010(), "Function sequence error"};
       break;
