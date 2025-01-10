@@ -731,6 +731,7 @@ void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
     auto const& int_row = array_row.int_value;
     auto const& double_row = array_row.double_value;
     auto const& string_row = array_row.string_value;
+    auto const& struct_row = array_row.struct_value;
 
     insert_stmt << "(";
     if (insert_index) {
@@ -767,47 +768,21 @@ void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
       col_index++;
     }
 
+    insert_stmt << "], [";
+
+    col_index = 0;
+    for (auto const& var : struct_row) {
+      insert_stmt << " STRUCT(" << var.int_value << ", " << var.double_value
+                  << ", '" << var.string_value << "')";
+      if (col_index != struct_row.size() - 1) {
+        insert_stmt << ", ";
+      }
+      col_index++;
+    }
+
     insert_stmt << "])";
 
     if (i != array_rows.size() - 1) {
-      insert_stmt << ", ";
-    }
-  }
-
-  std::string insert_stmt_str = insert_stmt.str();
-  SQLRETURN status;
-
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
-}
-
-void Table::InsertArrayStructData(std::shared_ptr<ODBCHandles> conn,
-                                  StdArrayRows array_rows, bool insert_index) {
-  if (array_rows.empty()) {
-    return;
-  }
-  std::ostringstream insert_stmt;
-  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
-
-  for (size_t row = 0; row < array_rows.size(); ++row) {
-    auto const& array_row = array_rows[row];
-    auto const& int_row = array_row.int_value;
-    auto const& double_row = array_row.double_value;
-    auto const& string_row = array_row.string_value;
-    insert_stmt << "(";
-    if (insert_index) {
-      insert_stmt << row << ", [";
-    }
-    for (size_t i = 0; i < int_row.size(); ++i) {
-      insert_stmt << "STRUCT(" << int_row[i] << ", " << double_row[i] << ", '"
-                  << string_row[i] << "')";
-      if (i != int_row.size() - 1) insert_stmt << ",";
-    }
-    insert_stmt << "])";
-
-    if (row != array_rows.size() - 1) {
       insert_stmt << ", ";
     }
   }

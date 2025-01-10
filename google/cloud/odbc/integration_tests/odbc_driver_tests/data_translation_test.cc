@@ -726,24 +726,25 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
 }
 
 std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
-    {{1, 2, 3, 4, 5},
+    {SQL_C_CHAR,
+     {1, 2, 3, 4, 5},
      {1.1, 2.1, 3.1, 4.1, 5.1},
-     {"This", "Is", "Array", "Test", "Data"}},
-    {
-        {12, 21, 32, 33},
-        {12.2, 21.4, 32.22, 33.21},
-        {"Apple", "Banana", "Mango", "Pear"},
-    },
-    {
-        {21, 32, 43, 33, 2},
-        {21.21, 32.2, 43.12, 33, 2.0},
-        {"Orange", "Grape", "Mango", "Banana", "Apple"},
-    },
-    {
-        {121, 123, 1212},
-        {121.211, 123.1, 1.21},
-        {"Apple", "Orange", "Cherry"},
-    },
+     {"This", "Is", "Array", "Test", "Data"},
+     {{1, 1.1, "data1"}, {2, 2.2, "data2"}},
+     SQL_SUCCESS},
+    {SQL_C_CHAR,
+     {12, 21, 32, 33},
+     {12.2, 21.4, 32.22, 33.21},
+     {"Apple", "Banana", "Mango", "Pear"},
+     {{12, 12.1, "data12"}, {21, 21.2, "data22"}},
+     SQL_SUCCESS},
+
+    {SQL_C_WCHAR,
+     {121, 123, 1212},
+     {121.211, 123.1, 1.21},
+     {"Apple", "Orange", "Cherry"},
+     {{13, 13.1, "data13"}, {31, 31.2, "data32"}},
+     SQL_SUCCESS},
 };
 
 void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
@@ -767,18 +768,18 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     std::vector<std::string> ret_int_values;
     std::vector<std::string> ret_double_values;
     std::vector<std::string> ret_string_values;
-    status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, data_int, kBufferLength,
-                        &strlen_or_ind);
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data_int,
+                        kBufferLength, &strlen_or_ind);
 
     CheckError(status, "SQLBindColInt", conn);
 
-    status = SQLBindCol(conn->hstmt, 2, SQL_C_CHAR, data_double, kBufferLength,
-                        &strlen_or_ind);
+    status = SQLBindCol(conn->hstmt, 2, expected.target_c_type, data_double,
+                        kBufferLength, &strlen_or_ind);
 
     CheckError(status, "SQLBindColDouble", conn);
 
-    status = SQLBindCol(conn->hstmt, 3, SQL_C_CHAR, data_string, kBufferLength,
-                        &strlen_or_ind);
+    status = SQLBindCol(conn->hstmt, 3, expected.target_c_type, data_string,
+                        kBufferLength, &strlen_or_ind);
 
     CheckError(status, "SQLBindColString", conn);
 
@@ -791,7 +792,12 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
       break;
     }
 
+    EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string str_int(reinterpret_cast<char*>(data_int));
+    if (expected.target_c_type == SQL_C_WCHAR) {
+      str_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),
+                                        SQL_NTS);
+    }
     try {
       // Parse JSON
       nlohmann::json json_object_int = nlohmann::json::parse(str_int);
@@ -807,6 +813,10 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     }
 
     std::string str_double(reinterpret_cast<char*>(data_double));
+    if (expected.target_c_type == SQL_C_WCHAR) {
+      str_double = ConvertSQLWCHARToString(
+          reinterpret_cast<SQLWCHAR*>(data_double), SQL_NTS);
+    }
     try {
       // Parse JSON
       nlohmann::json json_object_double = nlohmann::json::parse(str_double);
@@ -822,6 +832,10 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     }
 
     std::string str_string(reinterpret_cast<char*>(data_string));
+    if (expected.target_c_type == SQL_C_WCHAR) {
+      str_string = ConvertSQLWCHARToString(
+          reinterpret_cast<SQLWCHAR*>(data_string), SQL_NTS);
+    }
     try {
       // Parse JSON
       nlohmann::json json_object_string = nlohmann::json::parse(str_string);
@@ -866,7 +880,9 @@ TEST(DataTranslationTest, From_SQL_Array_to_all) {
   table.CreateWithPrepare(
       conn,
       "(index INTEGER, IntArrayField ARRAY<INT64>, DoubleArrayField "
-      "ARRAY<FLOAT64>, StringArrayField ARRAY<STRING>)");
+      "ARRAY<FLOAT64>, StringArrayField ARRAY<STRING>, StructData "
+      "ARRAY<STRUCT<int_value INT64, "
+      "float_value FLOAT64, string_value STRING>>)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -911,16 +927,9 @@ void TestArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLBindColInt", conn);
 
   status = SQLFetch(conn->hstmt);
-  std::cout << "status " << status << std::endl;
-  if (status == SQL_NO_DATA) {
-    EXPECT_EQ(ret_int_values.size(), count);
-    for (int i = 1; i <= count; i++) {
-      EXPECT_EQ(std::stoi(ret_int_values[i - 1]), i);
-    }
-  }
+  CheckError(status, "SQLFetch", conn);
 
   std::string str_int(reinterpret_cast<char*>(data_int));
-  std::cout << "data " << (char*)data_int << std::endl;
   try {
     // Parse JSON
     nlohmann::json json_object_int = nlohmann::json::parse(str_int);
@@ -933,6 +942,11 @@ void TestArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
 
   } catch (nlohmann::json::exception& e) {
     std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+  }
+
+  EXPECT_EQ(ret_int_values.size(), count);
+  for (int i = 1; i <= count; i++) {
+    EXPECT_EQ(std::stoi(ret_int_values[i - 1]), i);
   }
 }
 
@@ -960,8 +974,8 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
 
   for (auto const& expected : kConversionFromArrayTestData) {
     std::vector<std::string> ret_values;
-    status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, data, kBufferLength,
-                        &strlen_or_ind);
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
 
     CheckError(status, "SQLBindCol", conn);
 
@@ -974,7 +988,11 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
       break;
     }
 
+    EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string str(reinterpret_cast<char*>(data));
+    if (expected.target_c_type == SQL_C_WCHAR) {
+      str = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
+    }
     try {
       // Parse JSON
       nlohmann::json json_object = nlohmann::json::parse(str);
@@ -986,13 +1004,14 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
           int index = 0;
           for (auto const& element_inner : json_object_inner["f"]) {
             std::string ret_val = element_inner["v"];
-
             if (index == 0) {
-              EXPECT_EQ(std::stoi(ret_val), expected.int_value[row_count]);
+              EXPECT_EQ(std::stoi(ret_val),
+                        expected.struct_value[row_count].int_value);
             } else if (index == 1) {
-              EXPECT_EQ(std::stod(ret_val), expected.double_value[row_count]);
+              EXPECT_EQ(std::stod(ret_val),
+                        expected.struct_value[row_count].double_value);
             } else if (index == 2) {
-              EXPECT_EQ(ret_val, expected.string_value[row_count]);
+              EXPECT_EQ(ret_val, expected.struct_value[row_count].string_value);
             }
             index++;
           }
@@ -1014,20 +1033,24 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn,
-                          "(index INTEGER, data ARRAY<STRUCT<int_value INT64, "
-                          "float_value FLOAT64, string_value STRING>>)");
+  table.CreateWithPrepare(
+      conn,
+      "(index INTEGER, IntArrayField ARRAY<INT64>, DoubleArrayField "
+      "ARRAY<FLOAT64>, StringArrayField ARRAY<STRING>, StructData "
+      "ARRAY<STRUCT<int_value INT64, "
+      "float_value FLOAT64, string_value STRING>>)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertArrayStructData(conn, kConversionFromArrayTestData, true);
+  table.InsertArrayData(conn, kConversionFromArrayTestData, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as
   // expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string query = "SELECT data FROM " + table_name + " Order by index";
+  std::string query =
+      "SELECT StructData FROM " + table_name + " Order by index";
   TestArrayStructData(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
