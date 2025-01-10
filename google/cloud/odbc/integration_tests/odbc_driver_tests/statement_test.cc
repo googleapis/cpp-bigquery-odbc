@@ -2994,19 +2994,14 @@ auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
     while (status == SQL_STILL_EXECUTING) {
         SQLLEN row_count = 0;
         SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
+        EXPECT_EQ(row_count, 0);
         EXPECT_EQ(rc_status, SQL_ERROR);
-        // On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
-// as (HY010) and no other operation is allowed after that.
-#ifndef _WIN32
         ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
       ASSERT_TRUE(absl::StrContains(error, "HY010"))
           << "SQLRowCount failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLRowCount failed with unexpected error: " << error;
-      #endif  // _WIN32
-
-        EXPECT_EQ(row_count, 0);
 
     ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
                                      std::chrono::milliseconds(100), 2);
