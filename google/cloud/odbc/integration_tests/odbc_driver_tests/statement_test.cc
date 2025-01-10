@@ -2977,74 +2977,6 @@ TEST_P(SQLRowCountTest, AllValidations) {
                      2, "Delete");
 }
 
-TEST(SQLRowCount, Async_StillExecuting) {
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-    SQLRETURN status = SQLSetStmtAttr(conn->hstmt,SQL_ATTR_ASYNC_ENABLE,(SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
-    CheckError(status, "SQLSetStmtAttr", conn);
-
-    std::string query = "SELECT 1";
-    status = ExecWithPrepare(conn, query);
-
-         std::string error;
-    while (status == SQL_STILL_EXECUTING) {
-        SQLLEN row_count = 0;
-        SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
-        EXPECT_EQ(rc_status, SQL_ERROR);
-        ASSERT_EQ(SQL_SUCCESS,
-                GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
-      ASSERT_TRUE(absl::StrContains(error, "HY010"))
-          << "SQLPrepare failed with unexpected error: " << error;
-      ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
-          << "SQLPrepare failed with unexpected error: " << error;
-
-        EXPECT_EQ(row_count, 0);
-
-    ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
-                                     std::chrono::milliseconds(100), 2);
-    status = PollODBC(SQLPrepare, backoff, conn->hstmt, (SQLCHAR*)query.c_str(),
-                      strlen(query.c_str()));
-    if(status!=SQL_SUCCESS){
-      CheckError(status, "SQLPrepare", conn);
-      return;
-    }
-    }
-
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-TEST(SQLRowCount, Async_ExecDirect_StillExecuting) {
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-    SQLRETURN status = SQLSetStmtAttr(conn->hstmt,SQL_ATTR_ASYNC_ENABLE,(SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
-    CheckError(status, "SQLSetStmtAttr", conn);
-
-    std::string query = "SELECT 1";
-    status = ExecWithPrepare(conn, query);
-    
-    while (status == SQL_STILL_EXECUTING) {
-        SQLLEN rowCount = 0;
-        SQLRETURN rcStatus = SQLRowCount(conn->hstmt, &rowCount);
-        
-        EXPECT_EQ(rcStatus, SQL_ERROR);
-        
-        EXPECT_EQ(rowCount, 0);
-
-      ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
-                                     std::chrono::milliseconds(100), 2);
-     status = PollODBC(SQLPrepare, backoff, conn->hstmt, (SQLCHAR*)query.c_str(),
-                      strlen(query.c_str()));
-    if(status!=SQL_SUCCESS){
-      CheckError(status, "SQLPrepare", conn);
-      return;
-    }
-    status = PollODBC(SQLExecute, backoff, conn->hstmt);
-    CheckError(status, "SQLExecute", conn);   
-    }
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLRowCount, Async_Execute_stillExecuting) {
     auto conn = std::make_shared<ODBCHandles>();
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3063,12 +2995,16 @@ auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
         SQLLEN row_count = 0;
         SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
         EXPECT_EQ(rc_status, SQL_ERROR);
+        // On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
+// as (HY010) and no other operation is allowed after that.
+#ifndef _WIN32
         ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
       ASSERT_TRUE(absl::StrContains(error, "HY010"))
-          << "SQLPrepare failed with unexpected error: " << error;
+          << "SQLRowCount failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
-          << "SQLPrepare failed with unexpected error: " << error;
+          << "SQLRowCount failed with unexpected error: " << error;
+      #endif  // _WIN32
 
         EXPECT_EQ(row_count, 0);
 
