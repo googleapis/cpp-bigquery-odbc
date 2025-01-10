@@ -25,13 +25,12 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::bigquery_v2_minimal_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
 using google::cloud::odbc_bq_driver_internal::CreateTypeInfoRowSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
@@ -454,7 +453,7 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
       break;
     case StmtStates::kStatementAsyncExecute:
     case StmtStates::kStatementAsyncPrepare:
-      status_record = {SQLStates::k_HY010(), "Statement is in Async Mode"};
+      status_record = {SQLStates::k_HY010(), "Function sequence error"};
       break;
     case StmtStates::kNeedsPutData:
       status_record = {SQLStates::k_HY010(),
@@ -473,21 +472,14 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   }
   std::string operation =
       prepared_job->statistics.job_query_stats.statement_type;
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 
-  DmlStats dml_stats = conn_handle.GetDmlStats();
+  DmlStats dml_stats = stmt_handle.GetDSResults().dml_stats;
   if (operation == "INSERT") {
     *row_count = dml_stats.inserted_row_count;
   } else if (operation == "UPDATE") {
     *row_count = dml_stats.updated_row_count;
-
   } else if (operation == "DELETE") {
     *row_count = dml_stats.deleted_row_count;
-
-  } else if (operation == "SELECT") {
-    *row_count = -1;
-    status_record = {SQLStates::k_HY010(),
-                     "Select Operation doesnot show row count"};
   } else {
     *row_count = -1;
   }

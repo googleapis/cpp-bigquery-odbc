@@ -55,12 +55,6 @@ struct Dsn {
   bool sessions_enabled = false;
 };
 
-struct DmlStats {
-  std::int64_t inserted_row_count = 0;
-  std::int64_t deleted_row_count = 0;
-  std::int64_t updated_row_count = 0;
-};
-
 class EnvironmentHandle;
 class StatementHandle;
 class DescriptorHandle;
@@ -116,9 +110,6 @@ class ConnectionHandle : public Handle {
     is_transaction_active_ = is_transaction_active;
   }
 
-  inline void SetDmlStats(DmlStats dml_stats) { dml_stats_ = dml_stats; }
-  DmlStats GetDmlStats() const { return dml_stats_; }
-
  protected:
   bool is_connected_ = false;
 
@@ -146,7 +137,6 @@ class ConnectionHandle : public Handle {
   // True if transaction was begun within the session.
   // False otherwise.
   bool is_transaction_active_ = false;
-  DmlStats dml_stats_;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
