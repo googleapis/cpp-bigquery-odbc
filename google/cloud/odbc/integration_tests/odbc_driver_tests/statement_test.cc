@@ -2992,7 +2992,7 @@ auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
          std::string error;
 
     while (status == SQL_STILL_EXECUTING) {
-        SQLLEN row_count = 0;
+        SQLLEN row_count;
         SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
         EXPECT_EQ(row_count, 0);
         EXPECT_EQ(rc_status, SQL_ERROR);
