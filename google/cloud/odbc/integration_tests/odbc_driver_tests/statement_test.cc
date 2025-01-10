@@ -854,7 +854,7 @@ TEST(StatementTest, FetchRowWise) {
 
 TEST(StatementTest, RollBackTransaction) {
   std::string const table_name =
-      kDatasetWithTablePrefix + "_RollBackTransactionn";
+      kDatasetWithTablePrefix + "_RollBackTransaction";
   Table table(table_name);
 
   // Create Table
@@ -2857,34 +2857,6 @@ TEST(SQLRowCount, NonExistentTable) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLRowCount, Async_ExecDirect_StillExecuting) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                               (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::string query =
-      "UPDATE test_table SET column_name = 'Test' WHERE condition = "
-      "'Condition'";
-
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-  EXPECT_EQ(status, SQL_STILL_EXECUTING);
-  SQLLEN rowCount = 0;
-  status = SQLRowCount(conn->hstmt, &rowCount);
-  EXPECT_EQ(status, SQL_ERROR);
-
-  ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
-                                   std::chrono::milliseconds(100), 2);
-  status = PollODBC(SQLExecDirect, backoff, conn->hstmt,
-                    (SQLCHAR*)query.c_str(), strlen(query.c_str()));
-
-  ASSERT_EQ(status, SQL_ERROR);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLRowCount, SameValueUpdate) {
@@ -2972,7 +2944,7 @@ class SQLRowCountTest : public ::testing::TestWithParam<bool> {
     EXPECT_EQ(row_count, expected_row_count);
   }
 };
-
+// TODO(b/308656304): Enable for true as well when SQLExecDirect is implemented.
 INSTANTIATE_TEST_SUITE_P(WithOrWithoutExecDirect, SQLRowCountTest,
                          testing::Values(false));
 
@@ -2994,16 +2966,57 @@ TEST_P(SQLRowCountTest, AllValidations) {
           " SET StringField = \"Updated Row\" WHERE IntegerField <= 3;",
       3, "Update");
 
-  status =
-      SQLPrepare(conn_->hstmt,
-                 (SQLCHAR*)("SELECT * FROM " + table_name_).c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare (Select)", conn_);
+  ExecuteAndValidate("SELECT * FROM " + table_name_, -1, "Select");
 
-  status = SQLRowCount(conn_->hstmt, &row_count);
-  EXPECT_EQ(status, -1);
+  status = SQLCloseCursor(conn_->hstmt);
+  if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
+    CheckError(status, "SQLCloseCursor (SELECT)", conn_);
+  }
 
   ExecuteAndValidate("DELETE FROM " + table_name_ + " WHERE IntegerField < 3;",
                      2, "Delete");
+}
+
+TEST(SQLRowCount, Async_Execute_stillExecuting) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query = "SELECT 1";
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
+                          (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  status = SQLExecute(conn->hstmt);
+  std::string error;
+  while (status == SQL_STILL_EXECUTING) {
+    SQLLEN row_count;
+    SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
+    EXPECT_EQ(rc_status, SQL_ERROR);
+// On Linux, Simba driver returns the state of S1010 and on windows as
+// HY010.Hence this tag is added to only check for windows.
+#ifdef _WIN32
+    ASSERT_EQ(SQL_SUCCESS,
+              GetCancelErrorDetails("SQLRowCount", conn->hstmt, error));
+    ASSERT_TRUE(absl::StrContains(error, "HY010"))
+        << "SQLRowCount failed with unexpected error: " << error;
+    ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
+        << "SQLRowCount failed with unexpected error: " << error;
+#endif  //_WIN32
+    ExponentialBackoffPolicy backoff(std::chrono::milliseconds(10),
+                                     std::chrono::milliseconds(100), 2);
+    status = PollODBC(SQLExecute, backoff, conn->hstmt);
+    if (SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLExecute", conn);
+    } else {
+      ASSERT_EQ(SQL_SUCCESS,
+                GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
+      return;
+    }
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
