@@ -418,6 +418,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             StringToDSValue(data, row_val);
             break;
           }
+          case BQDataType::kArray: {
+            StringToDSValue(data, row_val);
+            break;
+          }
           case BQDataType::kDate: {
             SQL_DATE_STRUCT date_struct = ConvertStringToDateStruct(data);
             DateToDSValue(date_struct, row_val);
