@@ -2948,6 +2948,99 @@ TEST(SQLRowCount, NonExistentTable) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
+  SQLHSTMT invalid_handle = nullptr;
+  SQLPOINTER data_ptr = nullptr;
+
+  auto status = SQLParamData(invalid_handle, &data_ptr);
+  EXPECT_EQ(status, SQL_INVALID_HANDLE);
+}
+
+TEST(StatementTest, SQLParamData_UnicodeWideChar) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring const table_name =
+      ToWStr(kDatasetWithTablePrefix) + L"ODBC_PARAM_DATA_UNICODE_TEST";
+  Table table(table_name);
+  table.CreateW(conn, L"(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = L"INSERT INTO " + table_name + L" VALUES (?)";
+  std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
+  sqlWStr.emplace_back(L'\0');
+  EXPECT_EQ(SQLPrepareW(conn->hstmt, sqlWStr.data(), SQL_NTS), SQL_SUCCESS);
+
+  int const large_data_size = (1024 * 512) / sizeof(wchar_t);
+  std::wstring large_data(large_data_size, L'あ');
+  SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                             SQL_WLONGVARCHAR, large_data.size(), 0,
+                             (SQLPOINTER)1, 0, &param_size),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
+
+  SQLPOINTER data_ptr = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
+  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
+
+  for (auto val = 0; val < large_data.size(); val += chunk_size) {
+    int byte_left = large_data.size() - val;
+    int byte_to_put = std::min(chunk_size, byte_left);
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data.data() + val),
+                         byte_to_put * sizeof(wchar_t)),
+              SQL_SUCCESS);
+  }
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_SUCCESS);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropW(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// TODO(Neeraj): Enable it after SQLParamData api implementation for the
+// internal driver.
+// TEST(StatementTest, SQLParamData_StringLengthMissMatch){
+//  auto conn = std::make_shared<ODBCHandles>();
+//   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+//  std::string const table_name =
+//       kDatasetWithTablePrefix + "ODBC_PARAM_DATA_LENGTH_MISMATCH_TEST";
+//   Table table(table_name);
+//   table.Create(conn, "(StringField STRING)");
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+//   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//   auto query = "INSERT INTO " + table_name + " VALUES (?)";
+//   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+//   SQL_SUCCESS);
+
+//   std::string data = "Short data";
+//   SQLLEN data_len = 1000; // incorrect total length
+//   SQLLEN data_ptr = SQL_LEN_DATA_AT_EXEC(data_len);
+
+//   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+//                              SQL_VARCHAR, 0, 0,
+//                              nullptr, 0, &data_ptr),   SQL_SUCCESS);
+
+//   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
+
+//   SQLPOINTER param_ptr;
+//   EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_NEED_DATA);
+//   ASSERT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+//   SQL_SUCCESS); EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_ERROR);
+
+//   // Delete table
+//   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//   table.DropW(conn);
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
