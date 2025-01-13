@@ -259,6 +259,9 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
 StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
                                     DataBuffer& dest_data);
 
+StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
+                                    DataBuffer& dest_data);
+
 odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
                                                        DataBuffer& dest_data);
 
