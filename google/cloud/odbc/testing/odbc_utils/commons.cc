@@ -770,6 +770,7 @@ void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
 
     insert_stmt << "], [";
 
+    // Preparing insert statement for Array of Structs
     col_index = 0;
     for (auto const& var : struct_row) {
       insert_stmt << " STRUCT(" << var.int_value << ", " << var.double_value
