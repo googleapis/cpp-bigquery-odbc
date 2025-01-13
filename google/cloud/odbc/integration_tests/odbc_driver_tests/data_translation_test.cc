@@ -134,7 +134,7 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
     {SQL_C_BIT, 1, SQL_SUCCESS},
     {SQL_C_BIT, 2, SQL_ERROR},
 };
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 StdAllTypesRows const kConversionFromDifferentTestData{
     {
         "",
@@ -182,7 +182,7 @@ StdAllTypesRows const kConversionFromDifferentTestData{
         {{"age", 32}, {"name", "Kapoor"}},
     },
 };
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
                                     std::string query,
@@ -1997,7 +1997,6 @@ TEST(DataTranslationTest, From_Interval_Year_Month) {
   IntervalTestRunner(table_name, interval_data,
                      TestTranslationFromIntervalYearMonth);
 }
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 std::vector<std::string> GetInputValuesToString(std::string column_name,
                                                 StdAllTypesRows input_data) {
@@ -2010,7 +2009,7 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
 
   } else if (!column_name.compare("IntegerField")) {
     for (auto data : input_data) {
-      if (data.int_field != NULL)
+      if (data.int_field)
         input_values.emplace_back(std::to_string(data.int_field));
       else
         input_values.emplace_back("");
@@ -2018,7 +2017,7 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
 
   } else if (!column_name.compare("FloatField")) {
     for (auto data : input_data) {
-      if (data.float_field != NULL)
+      if (data.float_field)
         input_values.emplace_back(std::to_string(data.float_field));
       else
         input_values.emplace_back("");
@@ -2193,7 +2192,7 @@ TEST(DataTranslationTest, SQLGetData_PartialData) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(index INT64, StringField STRING)");
+  table.CreateWithPrepare(conn, "(index INT64, StringField STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -2220,8 +2219,6 @@ TEST(DataTranslationTest, SQLGetData_PartialData) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif /* BQ_DRIVER_INTEGRATION_TESTS */
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 // Disable this test case as simba returning null values

@@ -109,7 +109,6 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count);
 // For details on the implementation semantics please refer to
 // the following:
 //
-// Design Doc: http://goto.google.com/odbc-sqlfetch-design
 // ODBC Spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdata-function?view=sql-server-ver16
 SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,

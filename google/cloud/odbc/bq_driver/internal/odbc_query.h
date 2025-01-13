@@ -16,6 +16,9 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_QUERY_H
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include <vector>
 
@@ -44,6 +47,11 @@ class Query {
   ExecutionState execution_state_;
   int cursor_;
 };
+
+google::cloud::odbc_internal::StatusRecord GetColumnData(
+    DSValue const& ds_val, BQDataType bq_data_type, SQLSMALLINT target_c_type,
+    SQLPOINTER target_value, SQLLEN target_value_buffer_len,
+    SQLLEN* target_value_string_len);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

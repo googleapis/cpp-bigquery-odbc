@@ -105,7 +105,9 @@ using RowSchema = std::vector<ColumnSchema>;
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
-  mutable int cursor{-1};  // points before the next row to fetch
+  mutable int cursor{-1};      // points before the next row to fetch
+  mutable SQLLEN row_offset_;  // Offset to manage last fetch row index in case
+                               // of partial data fetch in SQLGetData
 };
 
 DSValue const kNullValue{0};

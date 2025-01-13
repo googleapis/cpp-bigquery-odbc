@@ -612,9 +612,13 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
     insert_stmt.append(row_str);
   }
 
-  SQLRETURN status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  SQLRETURN status;
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn, false);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn, false);
 }
 
 void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
