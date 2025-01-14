@@ -18,6 +18,7 @@
 
 google_cloud_odbc_bq_driver_internal_hdrs = [
     "bq_driver/internal/data_translation.h",
+    "bq_driver/internal/data_translation_inv.h",
     "bq_driver/internal/diagnostics.h",
     "bq_driver/internal/odbc_conn_attr.h",
     "bq_driver/internal/odbc_conn_handle.h",
@@ -29,6 +30,7 @@ google_cloud_odbc_bq_driver_internal_hdrs = [
     "bq_driver/internal/odbc_query.h",
     "bq_driver/internal/odbc_sql_columns.h",
     "bq_driver/internal/odbc_sql_columns_utils.h",
+    "bq_driver/internal/odbc_sql_execute_utils.h",
     "bq_driver/internal/odbc_sql_fetch.h",
     "bq_driver/internal/odbc_sql_fns.h",
     "bq_driver/internal/odbc_sql_foreign_keys.h",
@@ -46,6 +48,7 @@ google_cloud_odbc_bq_driver_internal_hdrs = [
 
 google_cloud_odbc_bq_driver_internal_srcs = [
     "bq_driver/internal/data_translation.cc",
+    "bq_driver/internal/data_translation_inv.cc",
     "bq_driver/internal/diagnostics.cc",
     "bq_driver/internal/odbc_conn_attr.cc",
     "bq_driver/internal/odbc_conn_handle.cc",
@@ -57,6 +60,7 @@ google_cloud_odbc_bq_driver_internal_srcs = [
     "bq_driver/internal/odbc_query.cc",
     "bq_driver/internal/odbc_sql_columns.cc",
     "bq_driver/internal/odbc_sql_columns_utils.cc",
+    "bq_driver/internal/odbc_sql_execute_utils.cc",
     "bq_driver/internal/odbc_sql_fetch.cc",
     "bq_driver/internal/odbc_sql_fns.cc",
     "bq_driver/internal/odbc_sql_foreign_keys.cc",
