@@ -24,7 +24,7 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
 TEST(ODBCBQClient, CreateBQClient) {
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, "path-to-the-file"});
+      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 }

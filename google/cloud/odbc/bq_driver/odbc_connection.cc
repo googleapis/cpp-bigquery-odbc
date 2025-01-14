@@ -323,10 +323,10 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
           SQLStates::k_HY090(), "Username needs to be an email address"};
       return LogAndReturnCode(handle_ref, status_record);
     }
-    dsn_section["OAUTHMECHANISM"] =
-        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
-    dsn_section["EMAIL"] = user_name_str;
-    dsn_section["KEYFILEPATH"] = auth_string_str;
+    dsn_section["OAuthMechanism"] = std::to_string(
+        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+    dsn_section["Email"] = user_name_str;
+    dsn_section["KeyFilePath"] = auth_string_str;
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.

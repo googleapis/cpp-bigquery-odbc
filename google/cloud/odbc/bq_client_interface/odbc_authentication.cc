@@ -60,7 +60,7 @@ CreateApplicationDefaultCredentials() {
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
-    case OauthMechanism::kServiceAccount:
+    case OauthMechanism::kServiceAndUserAccount:
       return CreateServiceCredentials(oauth.credentials_file_path);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials();

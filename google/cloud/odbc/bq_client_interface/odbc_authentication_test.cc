@@ -37,15 +37,15 @@ using ::testing::Return;
 using ::testing::StrEq;
 
 TEST(ServiceAuthentication, ServiceAccountAuthentication) {
-  auto credentials =
-      CreateCredentials({OauthMechanism::kServiceAccount, "path-to-the-file"});
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
 TEST(ServiceAuthentication, UserAccountAuthentication) {
-  auto credentials =
-      CreateCredentials({OauthMechanism::kServiceAccount, "path-to-the-file"});
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
@@ -58,7 +58,8 @@ TEST(DefaultApplicationAuthentication, DefaultApplicationAuthentication) {
 }
 
 TEST(ServiceAuthentication, EmptyPath) {
-  auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, ""});
+  auto credentials =
+      CreateCredentials({OauthMechanism::kServiceAndUserAccount, ""});
 
   EXPECT_THAT(credentials,
               StatusRecordIs(odbc_internal::SQLStates::k_HY000(),

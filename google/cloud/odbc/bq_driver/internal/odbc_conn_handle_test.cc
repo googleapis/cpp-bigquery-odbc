@@ -38,7 +38,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
           .value_or("");
   std::string credentials_file_path = test_data_path + "random_file.json";
 
-  Authentication auth = {OauthMechanism::kServiceAccount,
+  Authentication auth = {OauthMechanism::kServiceAndUserAccount,
                          credentials_file_path};
   ConnectionHandle conn_handle;
   StatusRecord status = conn_handle.Connect(auth);

@@ -33,8 +33,8 @@ using google::cloud::odbc_internal::StatusRecordOr;
 std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
   std::string o_auth_value;
   if (o_auth_mechanism == "Service Authentication") {
-    o_auth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
+    o_auth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
   } else if (o_auth_mechanism == "Application Default Credentials") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));

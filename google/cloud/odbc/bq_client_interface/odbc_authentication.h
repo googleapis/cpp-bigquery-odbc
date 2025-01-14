@@ -26,7 +26,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 // NOTE: This should always specify the integral values with the type names
 //  because the driver layer is tightly coupled to the integer values.
 enum class OauthMechanism {
-  kServiceAccount = 0,
+  kServiceAndUserAccount = 0,
   kApplicationDefault = 3,
   kExternalUser = 4,
 };

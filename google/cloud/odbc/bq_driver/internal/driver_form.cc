@@ -108,8 +108,8 @@ StatusRecord DriverForm::TestODBCConnection(
   std::string oauth_mechanism = (*section)[kOAuthMechanism];
   std::string oauth_value;
   if (oauth_mechanism == "Service Authentication") {
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
+    oauth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
   } else if (oauth_mechanism == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
@@ -156,7 +156,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   // TODO(b/383592420): Add call to user auth once its tested
   if (oauth_token == "Service Authentication") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
-        OauthMechanism::kServiceAccount;
+        OauthMechanism::kServiceAndUserAccount;
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kApplicationDefault;
@@ -265,8 +265,8 @@ void DriverForm::SetValues(Section const& attributes_map) {
 
   if (attributes_map.count(kOAuthMechanism) > 0) {
     std::string const& oauth_value = attributes_map.at(kOAuthMechanism);
-    if (oauth_value ==
-        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount))) {
+    if (oauth_value == std::to_string(static_cast<int>(
+                           OauthMechanism::kServiceAndUserAccount))) {
       o_auth_mechanism_ = "Service Authentication";
     } else if (oauth_value == std::to_string(static_cast<int>(
                                   OauthMechanism::kApplicationDefault))) {

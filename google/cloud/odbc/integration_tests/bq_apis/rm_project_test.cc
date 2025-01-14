@@ -287,7 +287,7 @@ TEST(ODBCBQClient, GetProjectRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -306,7 +306,7 @@ TEST(ODBCBQClient, ADC_GetProjectRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -325,7 +325,7 @@ TEST(ODBCBQClient, GetProjectRM_Failure_ProjectNotFound) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -344,7 +344,7 @@ TEST(ODBCBQClient, ADC_GetProjectRM_Failure_ProjectNotFound) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -363,7 +363,7 @@ TEST(ODBCBQClient, ListProjectsRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -380,7 +380,7 @@ TEST(ODBCBQClient, ADC_ListProjectsRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -397,7 +397,7 @@ TEST(ODBCBQClient, ListProjectsRM_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -415,7 +415,7 @@ TEST(ODBCBQClient, ADC_ListProjectsRM_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -433,7 +433,7 @@ TEST(ODBCBQClient, SearchProjectsRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -449,7 +449,7 @@ TEST(ODBCBQClient, ADC_SearchProjectsRM_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -466,7 +466,7 @@ TEST(ODBCBQClient, SearchProjectsRM_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -485,7 +485,7 @@ TEST(ODBCBQClient, ADC_SearchProjectsRM_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -503,7 +503,7 @@ TEST(ODBCBQClient, FilterProjectsRMList_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
@@ -526,7 +526,7 @@ TEST(ODBCBQClient, ADC_FilterProjectsRMList_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
@@ -549,7 +549,7 @@ TEST(ODBCBQClient, FilterProjectsRMSearch_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
@@ -573,7 +573,7 @@ TEST(ODBCBQClient, ADC_FilterProjectsRMSearch_Success) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
@@ -598,7 +598,7 @@ TEST(ODBCBQClient, FilterProjectsRMSearch_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
@@ -620,7 +620,7 @@ TEST(ODBCBQClient, ADC_FilterProjectsRMSearch_Failure) {
   ASSERT_FALSE(path_to_file_with_credentials.empty());
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAccount, path_to_file_with_credentials});
+      {OauthMechanism::kServiceAndUserAccount, path_to_file_with_credentials});
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
