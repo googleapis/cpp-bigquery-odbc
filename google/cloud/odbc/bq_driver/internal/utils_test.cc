@@ -64,6 +64,20 @@ Sections const kCommentedIniSections{
 
 #endif  // _WIN32
 
+TEST(StringUtils, DoubleStrToInt_Basic) {
+  std::string str = "123.000";
+  StatusRecord status = DoubleStrToInt(str);
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(str, "123");
+}
+
+TEST(StringUtils, DoubleStrToInt_Failure) {
+  std::string str = "a123";
+  StatusRecord status = DoubleStrToInt(str);
+  EXPECT_FALSE(status.ok());
+  EXPECT_EQ(str, "a123");
+}
+
 TEST(StringUtils, Split_Basic) {
   std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
   std::vector<std::string> v = Split(s, "\\", 2);

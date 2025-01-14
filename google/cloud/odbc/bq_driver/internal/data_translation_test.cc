@@ -32,6 +32,22 @@ TEST(CheckLimitsArithmetic, Basic) {
   status_record = CheckLimitsArithmetic<int, double>(100);
   EXPECT_TRUE(status_record.ok());
 
+  status_record = CheckLimitsArithmetic<int, double>(-100);
+  EXPECT_TRUE(status_record.ok());
+
+  status_record = CheckLimitsArithmetic<int, unsigned char>(-1);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
+  EXPECT_EQ("Numeric value out of range", status_record.message);
+
+  status_record = CheckLimitsArithmetic<int, char>(-100);
+  EXPECT_TRUE(status_record.ok());
+
+  status_record = CheckLimitsArithmetic<int, char>(-200);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
+  EXPECT_EQ("Numeric value out of range", status_record.message);
+
   status_record = CheckLimitsArithmetic<double, int>(100.0);
   EXPECT_TRUE(status_record.ok());
 
@@ -39,6 +55,11 @@ TEST(CheckLimitsArithmetic, Basic) {
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
+
+  status_record = CheckLimitsArithmetic<double, unsigned char>(-200.5);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
+  EXPECT_EQ("Numeric value out of range", status_record.message);
 
   status_record = CheckLimitsArithmetic<int64_t, int>(100);
   EXPECT_TRUE(status_record.ok());

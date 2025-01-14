@@ -41,6 +41,7 @@ struct SQLStates {
   static inline std::string k_01S02() { return "01S02"; };
   static inline std::string k_01S06() { return "01S06"; };
   static inline std::string k_01S07() { return "01S07"; };
+  static inline std::string k_07002() { return "07002"; };
   static inline std::string k_07006() { return "07006"; };
   static inline std::string k_07009() { return "07009"; };
   static inline std::string k_07S01() { return "07S01"; };
