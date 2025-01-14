@@ -594,7 +594,7 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-//#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -675,9 +675,6 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_DOUBLE: {
         SQLDOUBLE returned_val = *reinterpret_cast<SQLDOUBLE*>(data);
-        std::cout<<"Returned:"<<returned_val<<std::endl;
-        std::cout<<"Expected:"<<expected.value<<std::endl;
-
         SQLDOUBLE expected_val = static_cast<SQLDOUBLE>(expected.value);
         EXPECT_DOUBLE_EQ(returned_val, expected_val);
         break;
@@ -727,7 +724,7 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
     {SQL_C_CHAR,
      {1, 2, 3, 4, 5},

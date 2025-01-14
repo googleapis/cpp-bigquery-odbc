@@ -209,12 +209,9 @@ inline void BooleanToDSValue(bool bool_val, DSValue& value) {
 
 inline void DSValueToBoolean(DSValue const& value, bool& bool_val) {
   std::string str_value(value.begin(), value.end());
-  if (str_value == "false" || str_value == "0" || str_value.empty()) {
-    bool_val = false;
-  } else {
-    bool_val = true;
-  }
+  bool_val = !(str_value == "false" || str_value == "0" || str_value.empty());
 }
+
 
 
 

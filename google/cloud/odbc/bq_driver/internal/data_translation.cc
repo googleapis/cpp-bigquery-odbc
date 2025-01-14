@@ -249,14 +249,14 @@ StatusRecord ConvertFromBooleanDSValue(
 
    case SQL_C_CHAR: {
       auto* dest = reinterpret_cast<char*>(dest_buf);
-      if (buffer_length < 2) { // Minimum space for a single character
+      if (buffer_length < 2) { 
         if (buffer_length > 0) {
-          dest[0] = '\0'; // Null-terminate if possible
+          dest[0] = '\0'; 
         }
         status_record = StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
       } else {
-        dest[0] = conn_bool ? '1' : '0'; // Store '1' or '0'
-        dest[1] = '\0'; // Ensure null-termination for string
+        dest[0] = conn_bool ? '1' : '0';
+        dest[1] = '\0'; 
       }
       break;
     }
@@ -264,15 +264,15 @@ StatusRecord ConvertFromBooleanDSValue(
     case SQL_C_WCHAR: {
       auto* dest = reinterpret_cast<wchar_t*>(dest_buf);
       size_t wchar_len = buffer_length / sizeof(wchar_t);
-      if (wchar_len < 2) { // Minimum for L"N" or L"Y" + L'\0'
+      if (wchar_len < 2) { 
         if (wchar_len > 0) {
-          dest[0] = L'\0'; // Null-terminate if possible
+          dest[0] = L'\0'; 
         }
         status_record = StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
       } else {
         std::wstring value = conn_bool ? L"1" : L"0"; ;
         std::wcsncpy(dest, value.c_str(), wchar_len - 1);
-        dest[wchar_len - 1] = L'\0'; // Ensure null termination
+        dest[wchar_len - 1] = L'\0'; 
       }
       break;
     }
@@ -291,7 +291,7 @@ StatusRecord ConvertFromBooleanDSValue(
       if (buffer_length < sizeof(SQLINTEGER)) {
         status_record = StatusRecord{SQLStates::k_01004(), "Long integer data, right truncated"};
       } else {
-        *reinterpret_cast<SQLINTEGER*>(dest_buf) = conn_bool ;
+        *reinterpret_cast<SQLINTEGER*>(dest_buf) = static_cast<SQLINTEGER>(conn_bool) ;
       }
       break;
     }
@@ -313,7 +313,6 @@ case SQL_C_DOUBLE: {
     }
     break;
 }
-
 
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
