@@ -445,8 +445,12 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kBool:{
-            bool bool_val = reinterpret_cast<bool>(const_cast<char*>(data.c_str()));
-           //std::cout<<"entry:"<<bool_val<<std::endl;
+            bool bool_val = false;
+            if (data == "1" || data == "true" || data == "yes") {
+                bool_val = true;
+            } else if (data == "0" || data == "false" || data == "no") {
+                bool_val = false;
+            }
             BooleanToDSValue(bool_val,row_val);
             break;
           }
