@@ -1050,6 +1050,27 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
   EXPECT_TRUE(CompareTimestampStruct(result, expected));
 }
+TEST(BooleanToDSValue, CheckBooleanTrue) {
+  bool bool_val = true;  
+  DSValue val;
+  BooleanToDSValue(bool_val, val);
+
+  bool returned = false;
+  DSValueToBoolean(val, returned);
+
+  EXPECT_EQ(bool_val, returned);  
+}
+
+TEST(BooleanToDSValue, CheckBooleanFalse) {
+  bool bool_val = false; 
+  DSValue val;
+  BooleanToDSValue(bool_val, val);
+
+  bool returned = true;
+  DSValueToBoolean(val, returned);
+
+  EXPECT_EQ(bool_val, returned); 
+}
 
 TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   ConnectionHandle conn_handle;

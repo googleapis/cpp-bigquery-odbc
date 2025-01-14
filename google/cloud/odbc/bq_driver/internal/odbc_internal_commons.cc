@@ -444,6 +444,12 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             TimestampToDSValue(time_struct, row_val);
             break;
           }
+          case BQDataType::kBool:{
+            bool bool_val = reinterpret_cast<bool>(const_cast<char*>(data.c_str()));
+           //std::cout<<"entry:"<<bool_val<<std::endl;
+            BooleanToDSValue(bool_val,row_val);
+            break;
+          }
           default: {
             return StatusRecord{SQLStates::k_HY000(),
                                 "Invalid or unsupported col BQ data type"};
