@@ -1051,6 +1051,43 @@ TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   EXPECT_TRUE(CompareTimestampStruct(result, expected));
 }
 
+TEST(BooleanToDSValue, CheckBooleanTrue) {
+  bool bool_val = true;
+  DSValue val;
+  BooleanToDSValue(bool_val, val);
+
+  bool returned = false;
+  DSValueToBoolean(val, returned);
+
+  EXPECT_EQ(bool_val, returned);
+}
+
+TEST(BooleanToDSValue, CheckBooleanFalse) {
+  bool bool_val = false;
+  DSValue val;
+  BooleanToDSValue(bool_val, val);
+
+  bool returned = true;
+  DSValueToBoolean(val, returned);
+
+  EXPECT_EQ(bool_val, returned);
+}
+
+// On linux bool value only accepts true and false,else it throws out of scope
+// error. But on windows it supports TRUE and FALSE as well.
+#ifdef _WIN32
+TEST(BooleanToDSValue, CheckCaseSensitive) {
+  bool bool_val = TRUE;
+  DSValue val;
+  BooleanToDSValue(bool_val, val);
+
+  bool returned = false;
+  DSValueToBoolean(val, returned);
+
+  EXPECT_EQ(bool_val, returned);
+}
+#endif  //_WIN32
+
 TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   ConnectionHandle conn_handle;
   Section section;

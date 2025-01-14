@@ -594,7 +594,6 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -724,7 +723,7 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
     {SQL_C_CHAR,
      {1, 2, 3, 4, 5},

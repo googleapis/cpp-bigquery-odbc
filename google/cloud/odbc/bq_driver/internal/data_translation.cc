@@ -225,4 +225,101 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
+                                       DataBuffer& dest_data) {
+  bool conn_bool = false;
+
+  if (!dest_data.buf) {
+    return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
+  }
+
+  if (dest_data.buflen < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  DSValueToBoolean(src_dsval, conn_bool);
+  StatusRecord status_record = StatusRecord::Ok();
+  switch (dest_data.type) {
+    case SQL_C_CHAR: {
+      auto* dest = reinterpret_cast<char*>(dest_data.buf);
+      if (dest_data.buflen < 2) {
+        if (dest_data.buflen > 0) {
+          dest[0] = '\0';
+        }
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+      } else {
+        dest[0] = conn_bool ? '1' : '0';
+        dest[1] = '\0';
+      }
+      break;
+    }
+
+    case SQL_C_WCHAR: {
+      auto* dest = reinterpret_cast<wchar_t*>(dest_data.buf);
+      size_t wchar_len = dest_data.buflen / sizeof(wchar_t);
+      if (wchar_len < 2) {
+        if (wchar_len > 0) {
+          dest[0] = L'\0';
+        }
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+      } else {
+        std::wstring value = conn_bool ? L"1" : L"0";
+        std::wcsncpy(dest, value.c_str(), wchar_len - 1);
+        dest[wchar_len - 1] = L'\0';
+      }
+      break;
+    }
+
+    case SQL_C_BINARY: {
+      if (dest_data.buflen < sizeof(bool)) {
+        std::memcpy(dest_data.buf, &conn_bool, dest_data.buflen);
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "Binary data, right truncated"};
+      } else {
+        std::memcpy(dest_data.buf, &conn_bool, sizeof(bool));
+      }
+      break;
+    }
+
+    case SQL_C_LONG: {
+      if (dest_data.buflen < sizeof(SQLINTEGER)) {
+        status_record = StatusRecord{SQLStates::k_01004(),
+                                     "Long integer data, right truncated"};
+      } else {
+        *reinterpret_cast<SQLINTEGER*>(dest_data.buf) =
+            static_cast<SQLINTEGER>(conn_bool);
+      }
+      break;
+    }
+
+    case SQL_C_BIT: {
+      if (dest_data.buflen < sizeof(SQLCHAR)) {
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "Bit data, right truncated"};
+      } else {
+        *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
+            conn_bool ? static_cast<SQLCHAR>(1) : static_cast<SQLCHAR>(0);
+      }
+      break;
+    }
+
+    case SQL_C_DOUBLE: {
+      if (dest_data.buflen < sizeof(SQLDOUBLE)) {
+        status_record =
+            StatusRecord{SQLStates::k_01004(), "Double data, right truncated"};
+      } else {
+        *reinterpret_cast<SQLDOUBLE*>(dest_data.buf) = conn_bool ? 1.0 : 0.0;
+      }
+      break;
+    }
+
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+
+  return status_record;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

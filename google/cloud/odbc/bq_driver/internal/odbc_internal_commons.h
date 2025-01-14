@@ -201,6 +201,17 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   return buffer;
 }
 
+inline void BooleanToDSValue(bool bool_val, DSValue& value) {
+  std::string str_val = bool_val ? "true" : "false";
+  value.resize(str_val.size());
+  std::copy(str_val.begin(), str_val.end(), value.begin());
+}
+
+inline void DSValueToBoolean(DSValue const& value, bool& bool_val) {
+  std::string str_value(value.begin(), value.end());
+  bool_val = !(str_value == "false" || str_value == "0" || str_value.empty());
+}
+
 std::string FormatIntervalToString(SQL_INTERVAL_STRUCT interval);
 
 void ConvertStringToIntervalStruct(std::string const& interval_str,

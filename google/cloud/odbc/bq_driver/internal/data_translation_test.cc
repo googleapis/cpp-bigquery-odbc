@@ -1259,4 +1259,122 @@ TEST(ConvertFromIntervalDSValue, Data_Truncated_Char) {
   EXPECT_THAT(status,
               StatusRecIs(SQLStates::k_01004(), StrEq("Data truncated")));
 }
+
+TEST(ConvertFromBooleanDSValue, Unsupported_Conversion) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  char dest_buf[11];
+  DataBuffer dest_data{SQL_C_TYPE_DATE, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
+                                  StrEq("Conversion is unsupported")));
+}
+
+TEST(ConvertFromBooleanDSValue, convertToChar) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  char dest_buf[2];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_buf[0], '1');
+  EXPECT_EQ(dest_buf[1], '\0');
+  ASSERT_TRUE(status.ok());
+}
+
+// On linux bool value only accepts true and false,else it throws out of scope
+// error. But on windows it supports TRUE and FALSE as well.
+#ifdef _WIN32
+TEST(ConvertFromBooleanDSValue, caseSensitive) {
+  DSValue src_dsval;
+  BooleanToDSValue(TRUE, src_dsval);
+  char dest_buf[2];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_buf[0], '1');
+  EXPECT_EQ(dest_buf[1], '\0');
+  ASSERT_TRUE(status.ok());
+}
+#endif  //_WIN32
+
+TEST(ConvertFromBooleanDSValue, convertToWChar) {
+  DSValue src_dsval;
+  BooleanToDSValue(false, src_dsval);
+  wchar_t dest_buf[2];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_buf[0], L'0');
+  EXPECT_EQ(dest_buf[1], L'\0');
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromBooleanDSValue, convertToBinary) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  char dest_buf[sizeof(bool)];
+  DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_TRUE(*reinterpret_cast<bool*>(dest_buf));
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromBooleanDSValue, convertToLong) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  SQLINTEGER dest_value = 0;
+  DataBuffer dest_data = {SQL_C_LONG, &dest_value, sizeof(dest_value)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_value, 1);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromBooleanDSValue, convertToDouble) {
+  DSValue src_dsval;
+  BooleanToDSValue(false, src_dsval);
+  SQLDOUBLE dest_value = 1.0;
+  DataBuffer dest_data = {SQL_C_DOUBLE, &dest_value, sizeof(dest_value)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_value, 0.0);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromBooleanDSValue, convertToBit) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  SQLCHAR dest_value = 0;
+  DataBuffer dest_data = {SQL_C_BIT, &dest_value, sizeof(dest_value)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_EQ(dest_value, 1);
+  ASSERT_TRUE(status.ok());
+}
+
+TEST(ConvertFromBooleanDSValue, NullDestinationBuffer) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  DataBuffer dest_data = {SQL_C_CHAR, nullptr, 2};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
+                                  StrEq("Destination buffer is null")));
+}
+
+TEST(ConvertFromBooleanDSValue, NegativeBufferLength) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  char dest_buf[2];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, -1};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
+                                  StrEq("Buffer length is negative")));
+}
+
+TEST(ConvertFromBooleanDSValue, InsufficientBufferForChar) {
+  DSValue src_dsval;
+  BooleanToDSValue(true, src_dsval);
+  char dest_buf[1];
+  DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_01004(),
+                                  StrEq("String data, right truncated")));
+  EXPECT_EQ(dest_buf[0], '\0');
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
