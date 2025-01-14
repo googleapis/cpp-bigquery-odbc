@@ -18,11 +18,23 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <sstream>
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+StatusRecord DoubleStrToInt(std::string& double_str) {
+  std::istringstream iss(double_str);
+  int64_t int_value;
+  iss >> int_value;
+  if (iss.fail()) {
+    return StatusRecord{SQLStates::k_HY000(), "Internal error: Not a valid floating point value"};
+  }
+  double_str = std::to_string(int_value);
+  return StatusRecord::Ok();
+}
 
 std::vector<std::string> Split(std::string const& s,
                                std::string const& delimiter, int limit) {

@@ -20,10 +20,13 @@
 
 namespace google::cloud::odbc_tests {
 
-// The IntegerField must be in ascending for have consistent ordering
+// The IntegerField must be in ascending to have consistent ordering
 StdRows const kBindParamTestData{
-    {"Test String 1", 1, 1.1},
-    {"21", 53, 5},
+  {"Test String 2", 12, 1.1},
+  //{"Test String 2", -12345678810, 1.1},
+  //{"21319658722", 53, 5},
+  {"21", 23, 12345.67},
+  //{"21", 23, 5},
 };
 
 enum class DescriptorType { kAPD, kIPD };
@@ -720,9 +723,7 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
-TEST(SQLBindParameter, BindWithExecDirect) {
+TEST(SQLBindParameter, BindWithExec) {
   SQLRETURN status;
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_BIND_PARAM_EXEC_DIRECT_TEST";
@@ -734,7 +735,7 @@ TEST(SQLBindParameter, BindWithExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, getSchemaStr(schema));
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data into the table
@@ -747,35 +748,76 @@ TEST(SQLBindParameter, BindWithExecDirect) {
   CheckError(status, "SQLPrepare", conn);
 
   StdRow row1 = kBindParamTestData[0];
+  SQLLEN temp_ind = 1;
   status = SQLBindParameter(
       conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
       (SQLPOINTER)row1.str_field.c_str(), row1.str_field.size(), NULL);
   CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
 
+  //status = SQLBindParameter(
+  //    conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+  //    (SQLPOINTER)row1.str_field.c_str(), row1.str_field.size(), NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_DOUBLE)", conn);
+
+  //status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_UBIGINT,
+  //                          SQL_BIGINT, 0, 0, &row1.int_field, 0, NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
+  //status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT,
+  //                          SQL_BIGINT, 0, 0, &row1.int_field, 0, NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
+  //status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT,
+  //                          SQL_SMALLINT, 0, 0, &row1.int_field, 0, NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
   status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT,
-                            SQL_BIGINT, 0, 0, &row1.int_field, 0, NULL);
+                            SQL_SMALLINT, 0, 0, &row1.int_field, 0, NULL);
   CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
+  //status = SQLBindParameter(
+  //    conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+  //    (SQLPOINTER)row1.str_field.c_str(), row1.str_field.size(), NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
 
   status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_DOUBLE,
                             SQL_DOUBLE, 0, 0, &row1.float_field, 0, NULL);
   CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
 
   StdRow row2 = kBindParamTestData[1];
+  //status = SQLBindParameter(
+  //    conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+  //    (SQLPOINTER)row2.str_field.c_str(), row2.str_field.size(), NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_DOUBLE)", conn);
+
   status = SQLBindParameter(
-      conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+      conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_SMALLINT, 50, 0,
       (SQLPOINTER)row2.str_field.c_str(), row2.str_field.size(), NULL);
-  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_DOUBLE)", conn);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_SMALLINT)", conn);
+  
+
+  //status = SQLBindParameter(
+  //    conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+  //    (SQLPOINTER)row2.str_field.c_str(), row2.str_field.size(), NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
 
   status = SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_UBIGINT,
                             SQL_DOUBLE, 0, 0, &row2.int_field, 0, NULL);
   CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_DOUBLE)", conn);
 
   status = SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_DOUBLE,
-                            SQL_BIGINT, 0, 0, &row2.float_field, 0, NULL);
+                            SQL_DOUBLE, 0, 0, &row2.float_field, 0, NULL);
   CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
 
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  //status = SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_DOUBLE,
+  //                          SQL_TINYINT, 0, 0, &row2.float_field, 0, NULL);
+  //CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_TINYINT)", conn);
+
+  //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  //CheckError(status, "SQLExecDirect", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -789,11 +831,9 @@ TEST(SQLBindParameter, BindWithExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  //EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.Drop(conn);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

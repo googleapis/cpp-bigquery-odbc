@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -27,10 +28,13 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
+using google::cloud::odbc_bq_driver_internal::ConstructPositionalQueryParams;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
@@ -167,8 +171,24 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle) {
   }
   int query_timeout = *query_timeout_status;
   std::string query_str = stmt_handle.GetQueryString();
+
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
+
+  std::vector<QueryParameter> basic_query_params = stmt_handle.GetQueryParameters();
+  DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
+
+  std::vector<QueryParameter>& query_params = stmt_handle.GetQueryParameters();
+  if(!query_params.empty()) {
+    StatusRecord status = ConstructPositionalQueryParams(apd, ipd, query_params);
+    if(!status.ok()) {
+      return status;
+    }
+    QueryRequest query_request = post_request.query_request();
+    query_request.set_query_parameters(query_params);
+    post_request.set_query_request(query_request);
+  }
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {

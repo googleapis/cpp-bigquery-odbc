@@ -45,7 +45,7 @@ class DescriptorHandle : public Handle {
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
 
-  bool HasDescriptorRecord(int index) {
+  bool HasDescriptorRecord (int index) const {
     return descriptor_records_.count(index) > 0;
   }
 
