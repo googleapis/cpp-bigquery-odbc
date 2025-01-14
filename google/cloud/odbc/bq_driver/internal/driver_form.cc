@@ -714,6 +714,30 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             return 0;
           }
         }
+        case kIdcProxyOptionsButton: {
+          static std::unique_ptr<ProxyOptions> proxy_form;
+          if (proxy_form && IsWindowVisible(proxy_form->GetHwnd())) {
+            SetForegroundWindow(proxy_form->GetHwnd());
+            EnableWindow(hwnd, FALSE);
+            break;
+          } else {
+            proxy_form = nullptr;
+            EnableWindow(hwnd, TRUE);
+          }
+          if (!proxy_form) {
+            proxy_form = std::make_unique<ProxyOptions>();
+            EnableWindow(hwnd, FALSE);
+          }
+          proxy_form->Show(hwnd);
+          MSG msg = {};
+          while (GetMessage(&msg, NULL, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+          }
+          EnableWindow(hwnd, TRUE);
+          SetForegroundWindow(hwnd);
+          break;
+        }
         case kIdcCatlogBOX:
         case kIdcDatasetBOX: {
           EvaluateFields(hwnd);

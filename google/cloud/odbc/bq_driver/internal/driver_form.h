@@ -15,6 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_FORM_H
 
+#include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"

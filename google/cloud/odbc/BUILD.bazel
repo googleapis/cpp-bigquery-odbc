@@ -31,6 +31,7 @@ cc_library(
         ":windows": [
             "bq_driver/internal/driver_form.cc",
             "bq_driver/internal/driver_log_form.cc",
+            "bq_driver/internal/driver_form_proxy.cc",
         ],
         "//conditions:default": [],
     }),
@@ -38,6 +39,7 @@ cc_library(
         ":windows": [
             "bq_driver/internal/driver_form.h",
             "bq_driver/internal/driver_log_form.h",
+            "bq_driver/internal/driver_form_proxy.h",
         ],
         "//conditions:default": [],
     }),
@@ -56,7 +58,7 @@ cc_library(
         # `driver_log_form_test.cc` on non-Windows platforms to avoid compatibility
         # issues with platform-specific features like UI components.
         ":windows": [driver_internal_utils_test],
-        "//conditions:default": [driver_internal_utils_test] if not (driver_internal_utils_test.endswith("driver_form_test.cc") or driver_internal_utils_test.endswith("driver_log_form_test.cc")) else [],
+        "//conditions:default": [] if driver_internal_utils_test.endswith(("driver_form_test.cc", "driver_log_form_test.cc", "driver_form_proxy_test.cc")) else [],
     }),
     tags = ["unit-tests"],
     deps = [
