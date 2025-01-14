@@ -605,7 +605,7 @@ struct BooleanBasicTestStruct {
 };
 
 std::vector<BooleanBasicTestStruct> const kConversionFromBooleanTestData{
-    {SQL_C_CHAR, '1', SQL_SUCCESS},  
+    {SQL_C_CHAR, '1', SQL_SUCCESS},  {SQL_C_BIT, 0, SQL_SUCCESS},
     {SQL_C_BINARY, 1, SQL_SUCCESS},  {SQL_C_WCHAR, L'1', SQL_SUCCESS},
     {SQL_C_DOUBLE, 0, SQL_SUCCESS},  {SQL_C_LONG, 1, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, 0, SQL_ERROR},
