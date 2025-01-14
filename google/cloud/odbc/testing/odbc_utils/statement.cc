@@ -32,6 +32,56 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
                         value_string_len);
 }
 
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          RowWiseResults const& expected_results) {
+  // Check if both result sets have the same number of rows
+  EXPECT_EQ(actual_results.size(), expected_results.size())
+      << "Number of rows mismatch";
+
+  // Iterate over each row and compare the maps
+  for (size_t i = 0; i < actual_results.size(); ++i) {
+    auto const& actual_row = actual_results[i];
+    auto const& expected_row = expected_results[i];
+    EXPECT_EQ(actual_row.size(), expected_row.size())
+        << "Number of elements in row " << i << " mismatch";
+
+    // Sort map elements for comparison to ensure ordering consistency
+    std::vector<std::pair<int, std::string>> sorted_actual_row(
+        actual_row.begin(), actual_row.end());
+    std::vector<std::pair<int, std::string>> sorted_expected_row(
+        expected_row.begin(), expected_row.end());
+
+    std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
+    std::sort(sorted_expected_row.begin(), sorted_expected_row.end());
+
+    for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
+      EXPECT_EQ(sorted_actual_row[j].first, sorted_expected_row[j].first)
+          << "Key mismatch at row " << i << ", position " << j;
+      std::string actual = sorted_actual_row[j].second;
+      std::string expected = sorted_expected_row[j].second;
+      if (isNumeric(actual) && isNumeric(expected)) {
+        // Existing driver doesn't precicely return double values as string
+        EXPECT_NEAR(std::stod(actual), std::stod(expected), 1e-6)
+            << "Value mismatch at row " << i << ", position " << j;
+      } else {
+        EXPECT_EQ(actual, expected)
+            << "Value mismatch at row " << i << ", position " << j;
+      }
+    }
+  }
+}
+
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          StdRows const& expected_results) {
+  RowWiseResults expected_row_wise;
+  for (StdRow row : expected_results) {
+    expected_row_wise.emplace_back(Row{{0, row.str_field},
+                                       {1, std::to_string(row.int_field)},
+                                       {2, std::to_string(row.float_field)}});
+  }
+  VerifyRowWiseResults(actual_results, expected_row_wise);
+}
+
 // Tests direct execution of statements using SQLExecDirect
 SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
                                 bool use_ansi) {
@@ -199,6 +249,53 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
   table.Drop(conn);
 
   return status;
+}
+
+RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
+                            std::string query) {
+  if (query.empty()) {
+    query = "SELECT * FROM " + table_name_;
+  }
+  SQLRETURN status;
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
+  CheckError(status, "SQLNumResultCols", conn);
+
+  std::vector<TestingDataBuffer> cols(num_cols);
+  for (int i = 0; i < num_cols; i++) {
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i + 1, SQL_C_CHAR,
+                        cols[i].target_value, cols[i].buffer_length,
+                        &(cols[i].str_len));
+    CheckError(status, "SQLBindCol", conn);
+  }
+
+  RowWiseResults results;
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);  // No ansi version.
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+      break;
+    }
+    Row row;
+    for (int i_c = 0; i_c < num_cols; i_c++) {
+      SQLLEN data_len = cols[i_c].str_len;
+      if (data_len == -1) {
+        continue;
+      }
+      row[i_c] = std::string(reinterpret_cast<char*>(cols[i_c].target_value),
+                             data_len);
+    }
+    results.emplace_back(row);
+  }
+  return results;
 }
 
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
@@ -466,6 +563,14 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
           val = FormatTimetoString(*time);
           break;
         }
+        case SQL_DOUBLE: {
+          val = std::to_string(*reinterpret_cast<SQLDOUBLE*>(data));
+          break;
+        }
+        case SQL_BIGINT: {
+          val = std::to_string(*reinterpret_cast<SQLBIGINT*>(data));
+          break;
+        }
         default: {
           val = std::string(reinterpret_cast<char*>(data), data_len);
           break;
@@ -681,10 +786,10 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     data_ptr = data_to_insert[i];
     // TODO: This should ideally be done based on the parameter descriptions:
     // data_type and bytes_left
-    status =
-        SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                         SQL_LONGVARCHAR, param_bytes, 0, (SQLPOINTER)data_ptr,
-                         0, &chunk_size);  // No ANSI version.
+    status = SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                              SQL_LONGVARCHAR, param_bytes, 0,
+                              (SQLPOINTER)data_ptr, 0,
+                              &chunk_size);  // No ANSI version.
     CheckError(status, "SQLBindParameter", conn);
   }
 
@@ -705,8 +810,8 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     while (bytes_left > 0) {
       SQLLEN bytes_to_put =
           std::min(static_cast<int>(batch_size), static_cast<int>(bytes_left));
-      status =
-          SQLPutData(conn->hstmt, data_ptr, bytes_to_put);  // No ANSI version.
+      status = SQLPutData(conn->hstmt, data_ptr,
+                          bytes_to_put);  // No ANSI version.
       CheckError(status, "SQLPutData", conn);
       data_ptr += bytes_to_put;
       bytes_left -= bytes_to_put;

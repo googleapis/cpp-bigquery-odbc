@@ -15,9 +15,16 @@
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_tests {
+
+// The IntegerField must be in ascending for have consistent ordering
+StdRows const kBindParamTestData{
+    {"Test String 1", 1, 1.1},
+    {"21", 53, 5},
+};
 
 enum class DescriptorType { kAPD, kIPD };
 
@@ -712,5 +719,81 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(SQLBindParameter, BindWithExecDirect) {
+  SQLRETURN status;
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_BIND_PARAM_EXEC_DIRECT_TEST";
+  Table table(table_name);
+  Schema schema{{"StringField", "STRING"},
+                {"IntegerField", "INT64"},
+                {"FloatField", "FLOAT64"}};
+
+  auto conn = std::make_shared<ODBCHandles>();
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data into the table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  std::string insert_stmt =
+      "INSERT INTO " + table_name + " VALUES (?, ?, ?), (?, ?, ?)";
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  StdRow row1 = kBindParamTestData[0];
+  status = SQLBindParameter(
+      conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR, 50, 0,
+      (SQLPOINTER)row1.str_field.c_str(), row1.str_field.size(), NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_VARCHAR)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_UBIGINT,
+                            SQL_BIGINT, 0, 0, &row1.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_BIGINT)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_DOUBLE,
+                            SQL_DOUBLE, 0, 0, &row1.float_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
+
+  StdRow row2 = kBindParamTestData[1];
+  status = SQLBindParameter(
+      conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_DOUBLE, 50, 0,
+      (SQLPOINTER)row2.str_field.c_str(), row2.str_field.size(), NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR->SQL_DOUBLE)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_UBIGINT,
+                            SQL_DOUBLE, 0, 0, &row2.int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_UBIGINT->SQL_DOUBLE)", conn);
+
+  status = SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_DOUBLE,
+                            SQL_BIGINT, 0, 0, &row2.float_field, 0, NULL);
+  CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate inserted data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const query = "SELECT * FROM " + table_name + " ORDER BY IntegerField";
+  RowWiseResults const& results = table.Fetch(conn, query);
+  VerifyRowWiseResults(results, {row1, row2});
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

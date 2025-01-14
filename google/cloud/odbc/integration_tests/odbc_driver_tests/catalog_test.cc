@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/catalog.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include "gmock/gmock.h"
 #include <chrono>
 #include <thread>
@@ -720,38 +721,6 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-
-void VerifyRowWiseResults(RowWiseResults& actual_results,
-                          RowWiseResults const& expected_results) {
-  // Check if both result sets have the same number of rows
-  EXPECT_EQ(actual_results.size(), expected_results.size())
-      << "Number of rows mismatch";
-
-  // Iterate over each row and compare the maps
-  for (size_t i = 0; i < actual_results.size(); ++i) {
-    auto const& actual_row = actual_results[i];
-    auto const& expected_row = expected_results[i];
-    EXPECT_EQ(actual_row.size(), expected_row.size())
-        << "Number of elements in row " << i << " mismatch";
-
-    // Sort map elements for comparison to ensure ordering consistency
-    std::vector<std::pair<int, std::string> > sorted_actual_row(
-        actual_row.begin(), actual_row.end());
-    std::vector<std::pair<int, std::string> > sorted_expected_row(
-        expected_row.begin(), expected_row.end());
-
-    std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
-    std::sort(sorted_expected_row.begin(), sorted_expected_row.end());
-
-    for (size_t j = 0; j < sorted_actual_row.size(); ++j) {
-      // Check if keys and values match
-      EXPECT_EQ(sorted_actual_row[j].first, sorted_expected_row[j].first)
-          << "Key mismatch at row " << i << ", position " << j;
-      EXPECT_EQ(sorted_actual_row[j].second, sorted_expected_row[j].second)
-          << "Value mismatch at row " << i << ", position " << j;
-    }
-  }
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // TODO(b/360988721):SQLPrimaryKeys is not implemented correctly by Simba

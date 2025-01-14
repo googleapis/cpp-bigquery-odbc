@@ -40,8 +40,9 @@ using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
 // Column-wise results
 using Results = std::map<std::string, std::vector<std::string>>;
+using Row = std::map<int, std::string>;
 // Row-wise results
-using RowWiseResults = std::vector<std::map<int, std::string>>;
+using RowWiseResults = std::vector<Row>;
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 bool const kIsBqDriver = true;
@@ -284,6 +285,15 @@ static Schema const kFullSchema = {
 
 inline bool str_comparison(std::string a, std::string b) { return a < b; }
 
+inline bool isNumeric(std::string const& str) {
+  try {
+    std::stod(str);
+    return true;
+  } catch (std::exception const& e) {
+    return false;
+  }
+}
+
 inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
   return (sizeof(x) / sizeof(SQLCHAR));
 }
@@ -408,6 +418,9 @@ class Table {
 
   // Uses SQLExecDirectW
   void DropW(std::shared_ptr<ODBCHandles> conn);
+
+  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> conn,
+                       std::string query = "");
 
   void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
 

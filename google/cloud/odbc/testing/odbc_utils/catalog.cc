@@ -326,7 +326,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
 
   int i = 0;
   while (1) {
-    std::map<int, std::string> catalog_results;
+    Row catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -477,7 +477,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
   while (1) {
-    std::map<int, std::string> catalog_results;
+    Row catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;

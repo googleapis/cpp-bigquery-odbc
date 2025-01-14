@@ -24,6 +24,12 @@ SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
                       SQLPOINTER value, SQLINTEGER value_buffer_len,
                       SQLINTEGER* value_string_len, bool use_ansi);
 
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          RowWiseResults const& expected_results);
+
+void VerifyRowWiseResults(RowWiseResults const& actual_results,
+                          StdRows const& expected_results);
+
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
                           bool use_ansi = false);
 
