@@ -37,10 +37,15 @@ StatusOr<Options> CreateUserAccountAuthentication() {
                   "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY environment "
                   "variable is not set");
   }
-  setenv("GOOGLE_APPLICATION_CREDENTIALS",
-         path_to_file_with_credentials.c_str(), 1);
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  if (!creds) {
+    return Status(StatusCode::kInternal, "Unable to create User credentials");
+  }
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-      google::cloud::MakeGoogleDefaultCredentials());
+      *creds);
 }
 
 StatusOr<Options> CreateServiceAccountAuthentication() {
