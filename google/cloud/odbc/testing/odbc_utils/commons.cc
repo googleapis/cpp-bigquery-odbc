@@ -875,6 +875,41 @@ void Table::InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
 }
+void Table::InsertBytesData(std::shared_ptr<ODBCHandles> conn,
+                            std::vector<std::vector<SQLCHAR>> const& bytes_data,
+                            bool insert_index) {
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+
+  for (size_t i = 0; i < bytes_data.size(); ++i) {
+    auto const& row = bytes_data[i];
+    insert_stmt << "(";
+
+    if (insert_index) {
+      insert_stmt << i << ", ";
+    }
+
+    insert_stmt << "B\"";
+    for (auto const& byte : row) {
+      insert_stmt << "\\x" << std::hex << std::uppercase << std::setw(2)
+                  << std::setfill('0') << static_cast<int>(byte);
+    }
+    insert_stmt << "\"";
+    insert_stmt << ")";
+
+    if (i != bytes_data.size() - 1) {
+      insert_stmt << ", ";
+    }
+  }
+
+  std::string insert_stmt_str = insert_stmt.str();
+
+  SQLRETURN status;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+}
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   char buffer[9];
@@ -1441,6 +1476,30 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
   return Utf16ToUtf8(stmt_txt_wstr);
+}
+
+std::string ConvertHexToChar(std::string const& hexStr) {
+  std::vector<char> chars;
+  for (size_t i = 0; i < hexStr.length(); i += 2) {
+    std::string hexPair = hexStr.substr(i, 2);
+    char c = static_cast<char>(std::stoi(hexPair, nullptr, 16));
+    chars.push_back(c);
+  }
+  return std::string(chars.begin(), chars.end());
+}
+
+std::wstring ConvertHexToWchar(std::string const& hexStr) {
+  std::wstring result;
+  if (hexStr.length() % 2 != 0) {
+    throw std::invalid_argument("Hex string must have an even length.");
+  }
+  for (size_t i = 0; i < hexStr.length(); i += 2) {
+    std::string hexByte = hexStr.substr(i, 2);
+    unsigned int hexValue;
+    std::stringstream(hexByte) >> std::hex >> hexValue;
+    result += static_cast<wchar_t>(hexValue);
+  }
+  return result;
 }
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,

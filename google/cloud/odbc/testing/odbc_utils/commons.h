@@ -476,6 +476,10 @@ class Table {
   void InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<uint8_t> rows, bool insert_index);
 
+  void InsertBytesData(std::shared_ptr<ODBCHandles> conn,
+                       std::vector<std::vector<SQLCHAR>> const& bytes_data,
+                       bool use_prepared_stmt);
+
  private:
   std::string table_name_;
   std::wstring wtable_name_;
@@ -591,6 +595,10 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str);
 std::wstring Utf8ToUtf16(std::string const& utf_8_str);
 
 std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
+
+std::string ConvertHexToChar(std::string const& hexStr);
+
+std::wstring ConvertHexToWchar(std::string const& hexStr);
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
