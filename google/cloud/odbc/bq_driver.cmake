@@ -211,6 +211,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_sql_columns_test.cc
         bq_driver/internal/odbc_sql_columns_utils_test.cc
         bq_driver/internal/odbc_sql_fetch_test.cc
+        bq_driver/internal/odbc_query_test.cc
         bq_driver/internal/odbc_sql_fns_test.cc
         bq_driver/internal/odbc_sql_foreign_keys_test.cc
         bq_driver/internal/odbc_sql_info_test.cc
