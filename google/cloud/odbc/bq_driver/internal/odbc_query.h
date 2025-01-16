@@ -48,6 +48,8 @@ class Query {
   int cursor_;
 };
 
+// TODO(Kanchan): Add Unit testcase for GetColumnData in odbc_query_test.cc in
+// the SQLGetData PR Part 2.
 google::cloud::odbc_internal::StatusRecord GetColumnData(
     DSValue const& ds_val, BQDataType bq_data_type, SQLSMALLINT target_c_type,
     SQLPOINTER target_value, SQLLEN target_value_buffer_len,

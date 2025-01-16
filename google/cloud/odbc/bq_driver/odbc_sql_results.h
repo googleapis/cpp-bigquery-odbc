@@ -103,7 +103,7 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle);
 
 SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count);
 
-// Implements the semantics for SQLFetch ODBC API
+// Implements the semantics for SQLGetData ODBC API
 // as per the ODBC 3.8 spec and the design doc.
 //
 // For details on the implementation semantics please refer to

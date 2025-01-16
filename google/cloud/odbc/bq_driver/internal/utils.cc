@@ -710,7 +710,6 @@ StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name) {
 
 #endif  // _WIN32
 
-// TODO(kanchan): Handle SQL_ARD_TYPE in SQLGetData implementation PR.
 bool CheckTargetType(int c_type) {
   switch (c_type) {
     case SQL_C_CHAR:
@@ -749,6 +748,7 @@ bool CheckTargetType(int c_type) {
     case SQL_C_GUID:
     case SQL_C_WCHAR:
     case SQL_C_DOUBLE:
+    case SQL_ARD_TYPE:
       return true;
 
     default:

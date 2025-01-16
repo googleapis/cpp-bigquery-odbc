@@ -2219,6 +2219,8 @@ TEST(DataTranslationTest, SQLGetData_PartialData) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+// TODO(Kanchan): Add testcase for SQL_ARD_TYPE and SQL_APD_TYPE in SQLGetData
+// PR Part 2.
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 // Disable this test case as simba returning null values
