@@ -45,6 +45,7 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
   DataBuffer data = {target_c_type, target_value, target_value_buffer_len,
                      target_value_string_len};
 
+  // TODO(b/345194139): More data types would be added as they are implemented.
   switch (bq_data_type) {
     case BQDataType::kInt64:
       status_record = ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
