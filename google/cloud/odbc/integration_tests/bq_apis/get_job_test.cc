@@ -31,6 +31,7 @@ using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
+using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -70,7 +71,32 @@ TEST(GetJob, UserAccountAuth) {
   ASSERT_STATUS_OK(get_job_response);
   EXPECT_EQ(get_job_response.value().status.state, "DONE");
 }
-#endif  // USER_ACCOUNT_AUTH
+
+TEST(ODBCBQClient_GetJob, UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> get_job_response =
+      (*odbc_bq_client)->GetJob(project_id, *job_id, "", std::move(*options));
+
+  ASSERT_STATUS_RECORD_OK(get_job_response);
+  EXPECT_EQ(get_job_response->status.state, "DONE");
+}
+#else
 
 TEST(GetJob, ServiceAccountAuth) {
   // First we create a job, so later we could 'get' it
@@ -135,30 +161,6 @@ TEST(ODBCBQClient_GetJob, ApplicationDefaultCredentials) {
   ASSERT_STATUS_RECORD_OK(get_job_response);
   EXPECT_EQ(get_job_response->status.state, "DONE");
 }
-
-#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
-TEST(GetJob, ServiceAccountAuthWithClientId) {
-  // First we create a job, so later we could 'get' it
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  StatusOr<std::string> job_id = InsertJob(job_client);
-  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-
-  // Getting previous Job
-  GetJobRequest get_job_request;
-  get_job_request.set_project_id(project_id);
-  get_job_request.set_job_id(job_id.value());
-
-  StatusOr<Job> get_job_response = job_client.GetJob(get_job_request);
-
-  ASSERT_STATUS_OK(get_job_response);
-  EXPECT_EQ(get_job_response.value().status.state, "DONE");
-}
-#endif  // USER_ACCOUNT_AUTH
 
 TEST(GetJob, DifferentAccount) {
   // First we create a job, so later we could 'get' it
@@ -298,5 +300,7 @@ TEST(GetJob, JobIdIsEmpty) {
               StatusIs(StatusCode::kInternal,
                        HasSubstr("Not a valid Json Job object")));
 }
+
+#endif  // USER_ACCOUNT_AUTH
 
 }  // namespace google::cloud::odbc_integration_tests_apis
