@@ -905,10 +905,8 @@ void Table::InsertBytesData(std::shared_ptr<ODBCHandles> conn,
   std::string insert_stmt_str = insert_stmt.str();
 
   SQLRETURN status;
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  status = ExecWithPrepare(conn, insert_stmt_str);
+  CheckError(status, "Execute With Prepare", conn);
 }
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
@@ -1478,26 +1476,26 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 
-std::string ConvertHexToChar(std::string const& hexStr) {
+std::string ConvertHexToChar(std::string const& hex_str) {
   std::vector<char> chars;
-  for (size_t i = 0; i < hexStr.length(); i += 2) {
-    std::string hexPair = hexStr.substr(i, 2);
-    char c = static_cast<char>(std::stoi(hexPair, nullptr, 16));
+  for (size_t i = 0; i < hex_str.length(); i += 2) {
+    std::string hex_pair = hex_str.substr(i, 2);
+    char c = static_cast<char>(std::stoi(hex_pair, nullptr, 16));
     chars.push_back(c);
   }
   return std::string(chars.begin(), chars.end());
 }
 
-std::wstring ConvertHexToWchar(std::string const& hexStr) {
+std::wstring ConvertHexToWchar(std::string const& hex_str) {
   std::wstring result;
-  if (hexStr.length() % 2 != 0) {
+  if (hex_str.length() % 2 != 0) {
     throw std::invalid_argument("Hex string must have an even length.");
   }
-  for (size_t i = 0; i < hexStr.length(); i += 2) {
-    std::string hexByte = hexStr.substr(i, 2);
-    unsigned int hexValue;
-    std::stringstream(hexByte) >> std::hex >> hexValue;
-    result += static_cast<wchar_t>(hexValue);
+  for (size_t i = 0; i < hex_str.length(); i += 2) {
+    std::string hex_byte = hex_str.substr(i, 2);
+    unsigned int hex_value;
+    std::stringstream(hex_byte) >> std::hex >> hex_value;
+    result += static_cast<wchar_t>(hex_value);
   }
   return result;
 }

@@ -1082,16 +1082,11 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query.c_str());
 
   int row_count = 0;
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  status = ExecWithPrepare(conn, query);
+  CheckError(status, "Execute with Prepare", conn);
 
   for (auto const& expected : kConversionFromBytesTestData) {
     status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,

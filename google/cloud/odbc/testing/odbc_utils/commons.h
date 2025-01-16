@@ -596,9 +596,9 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str);
 
 std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
-std::string ConvertHexToChar(std::string const& hexStr);
+std::string ConvertHexToChar(std::string const& hex_str);
 
-std::wstring ConvertHexToWchar(std::string const& hexStr);
+std::wstring ConvertHexToWchar(std::string const& hex_str);
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
