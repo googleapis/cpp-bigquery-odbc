@@ -377,14 +377,19 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
   // SQLFetch.
   for (int i = 0; i < schema.fields.size(); i++) {
     TableFieldSchema table_field_schema = schema.fields[i];
-    StatusRecordOr<BQDataType> type_status_record =
+    ColumnSchema col_schema;
+    col_schema.col_index = i;
+    if(table_field_schema.mode == "REPEATED"){
+      col_schema.col_type = kArray;
+    }
+    else{
+      StatusRecordOr<BQDataType> type_status_record =
         ConvertDSType(table_field_schema.type);
     if (!type_status_record.Ok()) {
       return type_status_record.GetStatusRecord();
     }
-    ColumnSchema col_schema;
-    col_schema.col_index = i;
     col_schema.col_type = *type_status_record;
+    }
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.

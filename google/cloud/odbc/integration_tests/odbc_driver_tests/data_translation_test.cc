@@ -1002,6 +1002,13 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
     if (expected.target_c_type == SQL_C_WCHAR) {
       str = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
     }
+     nlohmann::json array = nlohmann::json::parse(str);
+
+    // Create a JSON object with the key "v" and assign the array to it
+    nlohmann::json obj;
+    obj["v"] = array;
+str = obj.dump(4);
+std::cout<<"str_int here "<<str<<std::endl;
     try {
       // Parse JSON
       nlohmann::json json_object = nlohmann::json::parse(str);
