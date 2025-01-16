@@ -68,7 +68,8 @@ TEST(ListJobs, UserAccountAuth) {
   request.set_max_creation_time(std::chrono::system_clock::now());
 
   StreamRange<ListFormatJob> range = job_client.ListJobs(request);
-
+  // We don't know how many (if any) jobs would be returned for this user.
+  // we go over the vector and make sure Job is valid.
   for (auto const& job : range) {
     ASSERT_STATUS_OK(job);
   }
@@ -96,8 +97,11 @@ TEST(ODBCBQClient_ListJobs, DISABLED_UserAccountAuth) {
       (*odbc_bq_client)->ListAllJobs(project_id, std::move(*options));
   ASSERT_STATUS_RECORD_OK(list_jobs_response);
 
-  std::vector<ListFormatJob> jobs = (*list_jobs_response);
-  ASSERT_TRUE(jobs.empty());
+  // We don't know how many (if any) jobs would be returned for this user.
+  // we go over the vector and make sure Job is valid.
+  for (auto const& job : (*list_jobs_response)) {
+    ASSERT_FALSE(job.id.empty());
+  }
 }
 
 #else
