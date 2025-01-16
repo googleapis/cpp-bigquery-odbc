@@ -33,6 +33,7 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::QueryParameter;
+using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -58,7 +59,7 @@ static std::vector<std::string> const kKeysToFilter{
     "rangePartitioning",  "clustering",     "keyResultStatement",
     "systemVariables",    "location"};
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH
 TEST(InsertJob, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -107,7 +108,65 @@ TEST(InsertJob, UserAccountAuth) {
   EXPECT_EQ(query_results_response.value().schema.fields.size(), 1);
   EXPECT_EQ(query_results_response.value().total_rows, 1);
 }
-#endif  // USER_ACCOUNT_AUTH
+
+TEST(ODBCBQClient_InsertJob, UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string table_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  std::string column_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+
+  Job job;
+  JobConfiguration job_configuration;
+  JobConfigurationQuery job_configuration_query;
+  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
+  job_configuration_query.query =
+      absl::StrCat("SELECT ", column_name, " FROM ", full_table_name, " WHERE ",
+                   column_name, " > @min_age");
+  QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
+  job_configuration_query.query_parameters = {query_parameter};
+  job_configuration.query = job_configuration_query;
+  job.configuration = job_configuration;
+
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  // Insert Job using BQ Client
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> job_response =
+      (*odbc_bq_client)->InsertJob(project_id, job, *options);
+
+  ASSERT_STATUS_RECORD_OK(job_response);
+  EXPECT_EQ((*job_response).configuration.job_type, "QUERY");
+
+  // Getting results of previous Job using BQ Client
+  std::string job_id = (*job_response).job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+
+  StatusRecordOr<GetQueryResults> query_results_response =
+      (*odbc_bq_client)
+          ->GetAllQueryResults(project_id, job_id, /*location*/ "",
+                               std::chrono::milliseconds(1000), *options);
+
+  ASSERT_STATUS_RECORD_OK(query_results_response);
+  EXPECT_TRUE((*query_results_response).job_complete);
+  EXPECT_EQ((*query_results_response).schema.fields.size(), 1);
+  EXPECT_EQ((*query_results_response).total_rows, 1);
+}
+
+#else
 
 TEST(InsertJob, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -255,57 +314,6 @@ TEST(ODBCBQClient_InsertJob, ApplicationDefaultAuthentication) {
   EXPECT_EQ((*query_results_response).schema.fields.size(), 1);
   EXPECT_EQ((*query_results_response).total_rows, 1);
 }
-
-#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
-TEST(InsertJob, ServiceAccountAuthWithClientId) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  std::string table_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  std::string column_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_AGE");
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
-  job_configuration_query.query =
-      absl::StrCat("SELECT ", column_name, " FROM ", full_table_name, " WHERE ",
-                   column_name, " > @min_age");
-  QueryParameter query_parameter = {"min_age", {"INTEGER"}, {"30"}};
-  job_configuration_query.query_parameters = {query_parameter};
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id);
-  request.set_job(job);
-  request.set_json_filter_keys(kKeysToFilter);
-
-  StatusOr<Job> job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
-  EXPECT_EQ(job_response.value().configuration.job_type, "QUERY");
-
-  // Getting results of previous Job
-  std::string job_id = job_response.value().job_reference.job_id;
-  GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id);
-  get_query_results_request.set_job_id(job_id);
-
-  StatusOr<GetQueryResults> query_results_response =
-      job_client.QueryResults(get_query_results_request);
-
-  ASSERT_STATUS_OK(query_results_response);
-  EXPECT_TRUE(query_results_response.value().job_complete);
-  EXPECT_EQ(query_results_response.value().schema.fields.size(), 1);
-  EXPECT_EQ(query_results_response.value().total_rows, 1);
-}
-#endif  // USER_ACCOUNT_AUTH
 
 TEST(InsertJob, ProjectNotExist) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -478,94 +486,6 @@ TEST(InsertJob, NoJobConfigurationQuery) {
                        HasSubstr("Required parameter is missing: query")));
 }
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
-TEST(InsertJob, NoAccessAccountAuth) {
-  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  std::string table_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
-  job_configuration_query.query =
-      absl::StrCat("SELECT * FROM ", full_table_name);
-
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id);
-  request.set_job(job);
-  request.set_json_filter_keys(kKeysToFilter);
-
-  StatusOr<Job> job_response = job_client.InsertJob(request);
-
-  EXPECT_THAT(job_response,
-              StatusIs(StatusCode::kPermissionDenied,
-                       HasSubstr("User does not have bigquery.jobs.create "
-                                 "permission in project")));
-}
-#endif  // USER_ACCOUNT_AUTH
-
-#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
-TEST(InsertJob, DifferentAccount) {
-  StatusOr<Options> options = CreateServiceAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  std::string table_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-
-  Job job;
-  JobConfiguration job_configuration;
-  JobConfigurationQuery job_configuration_query;
-  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
-  job_configuration_query.query =
-      absl::StrCat("SELECT * FROM ", full_table_name);
-
-  job_configuration.query = job_configuration_query;
-  job.configuration = job_configuration;
-  InsertJobRequest request;
-  request.set_project_id(project_id);
-  request.set_job(job);
-  request.set_json_filter_keys(kKeysToFilter);
-
-  StatusOr<Job> job_response = job_client.InsertJob(request);
-
-  ASSERT_STATUS_OK(job_response);
-  EXPECT_EQ(job_response.value().configuration.job_type, "QUERY");
-
-  // Getting results of previous Job using another account
-  StatusOr<Options> options_with_user_account =
-      CreateServiceAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto job_client_with_user_account = JobClient(
-      MakeBigQueryJobConnection(std::move(*options_with_user_account)));
-
-  std::string job_id = job_response.value().job_reference.job_id;
-  GetQueryResultsRequest get_query_results_request;
-  get_query_results_request.set_project_id(project_id);
-  get_query_results_request.set_job_id(job_id);
-
-  StatusOr<GetQueryResults> query_results_response =
-      job_client_with_user_account.QueryResults(get_query_results_request);
-
-  EXPECT_THAT(query_results_response,
-              StatusIs(StatusCode::kPermissionDenied,
-                       HasSubstr("User does not have permission to access "
-                                 "results of another user's job")));
-}
-#endif  // USER_ACCOUNT_AUTH
-
 TEST(InsertJob, CreateTableAndInsertRow) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -664,5 +584,6 @@ TEST(InsertJob, ProjectIdIsEmpty) {
   EXPECT_THAT(job_response, StatusIs(StatusCode::kNotFound,
                                      HasSubstr("Request couldn't be served")));
 }
+#endif  // USER_ACCOUNT_AUTH
 
 }  // namespace google::cloud::odbc_integration_tests_apis
