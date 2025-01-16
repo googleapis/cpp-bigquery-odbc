@@ -19,6 +19,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 class LogTraceDialogTest : public ::testing::Test {
  protected:
+  HWND mock_hwnd_;
+  HWND mock_edit_;
   void SetUp() override {
     attributes_map_["log_level"] = "LOG_TRACE";
     attributes_map_["log_file_path"] = "C:\\temp\\log.txt";
@@ -60,5 +62,22 @@ TEST(LogTraceDialogTest, SetValues_EmptyAttributes) {
 
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
   ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
+}
+
+TEST(LogTraceDialogTest, MockFolderPathProvided) {
+  HWND parent_hwnd = CreateWindow("STATIC", "MockParent", WS_OVERLAPPED, 0, 0,
+                                  100, 100, NULL, NULL, NULL, NULL);
+  HWND mock_edit = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE, 0, 0, 100,
+                                20, parent_hwnd, NULL, NULL, NULL);
+
+  // Mock folder path
+  char const* mock_folder_path = "C:\\mock\\path";
+  OpenFolderDialog(parent_hwnd, mock_edit, mock_folder_path);
+  char buffer[MAX_PATH] = {0};
+  GetWindowText(mock_edit, buffer, MAX_PATH);
+
+  ASSERT_STREQ(buffer, mock_folder_path);
+  DestroyWindow(mock_edit);
+  DestroyWindow(parent_hwnd);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

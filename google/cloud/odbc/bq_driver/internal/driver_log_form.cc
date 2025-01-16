@@ -22,6 +22,15 @@ std::string LogTraceDialog::log_level_;
 std::string LogTraceDialog::log_file_path_;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogFile = "LogFile";
+std::string const kLogOff = "LOG_OFF";
+std::string const KLogTrace = "LOG_TRACE";
+int const kBtnWidth = 80;
+int const kBtnHeight = 30;
+int const kComboBoxWidth = 220;
+int const KComboBoxHeight = 100;
+int const kLabelHeight = 20;
+int const kEditBoxWidth = 220;
+int const kEditBoxHeight = 20;
 
 HWND LogTraceDialog::GetHwnd() const { return parent_hwnd; }
 LogTraceDialog::LogTraceDialog() : parent_hwnd(NULL) {}
@@ -56,9 +65,9 @@ void OpenFolderDialog(HWND hwnd, HWND h_edit,
 void LogTraceDialog::SetValues(Section const& attributes_map) {
   if (attributes_map.count(kLogLevel) > 0) {
     if (attributes_map.at(kLogLevel) == "0") {
-      log_level_ = "LOG_OFF";
+      log_level_ = kLogOff.c_str();
     } else if (attributes_map.at(kLogLevel) == "6") {
-      log_level_ = "LOG_TRACE";
+      log_level_ = KLogTrace.c_str();
     }
   } else {
     log_level_ = "";
@@ -67,7 +76,7 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
       attributes_map.count(kLogFile) > 0 ? attributes_map.at(kLogFile) : "";
 }
 
-// TODO(Neeraj): Move to common utils
+// TODO(b/390308855): Move to common utils
 HWND CreateLogLabel(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
@@ -98,34 +107,34 @@ HWND CreateLogButton(HWND parent, char const* text, int x, int y, int width,
 
 void LogTraceDialog::InitControls() {
   HWND h_log_level_head =
-      CreateLogLabel(parent_hwnd, "Log Level:", 20, 50, 80, 20, 0);
-  HWND h_log_level_box =
-      CreateLogComboBox(parent_hwnd, 120, 50, 250, 100, kIdclogTraceBox);
+      CreateLogLabel(parent_hwnd, "Log Level:", 20, 50, 80, kLabelHeight, 0);
+  HWND h_log_level_box = CreateLogComboBox(parent_hwnd, 120, 50, kComboBoxWidth,
+                                           KComboBoxHeight, kIdclogTraceBox);
 
   HWND h_log_file_add =
-      CreateLogLabel(parent_hwnd, "Log File:", 20, 80, 80, 20, 0);
-  HWND h_log_file_edit =
-      CreateLogEditBox(parent_hwnd, 120, 80, 250, 20, kIdcLogFileEdit);
+      CreateLogLabel(parent_hwnd, "Log File:", 20, 80, 80, kLabelHeight, 0);
+  HWND h_log_file_edit = CreateLogEditBox(parent_hwnd, 120, 80, kEditBoxWidth,
+                                          kEditBoxHeight, kIdcLogFileEdit);
 
-  HWND h_log_browse_btn = CreateLogButton(parent_hwnd, "Browse", 220, 120, 100,
-                                          20, kIdcLogBrowseBtn);
+  HWND h_log_browse_btn = CreateLogButton(
+      parent_hwnd, "Browse", 220, 120, kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
 
-  HWND h_log_btn_ok =
-      CreateLogButton(parent_hwnd, "Ok", 120, 180, 80, 30, kIdcLogBtnOk);
+  HWND h_log_btn_ok = CreateLogButton(parent_hwnd, "Ok", 120, 180, kBtnWidth,
+                                      kBtnHeight, kIdcLogBtnOk);
 
-  HWND h_log_btn_cancel = CreateLogButton(parent_hwnd, "Cancel", 200, 180, 80,
-                                          30, kIdcLogBtnCancel);
+  HWND h_log_btn_cancel = CreateLogButton(
+      parent_hwnd, "Cancel", 200, 180, kBtnWidth, kBtnHeight, kIdcLogBtnCancel);
   // Populate dropdowns
-  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM) "LOG_OFF");
-  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM) "LOG_TRACE");
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)KLogTrace.c_str());
   SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
 
   // Set initial selection based on stored log_level_
-  int initial_index = (log_level_ == "LOG_TRACE") ? 1 : 0;
+  int initial_index = (log_level_ == KLogTrace.c_str()) ? 1 : 0;
   SendMessage(h_log_level_box, CB_SETCURSEL, initial_index, 0);
   SetWindowText(h_log_file_edit, log_file_path_.c_str());
 
-  BOOL enable_controls = (log_level_ == "LOG_TRACE");
+  BOOL enable_controls = (log_level_ == KLogTrace.c_str());
   EnableWindow(h_log_file_edit, enable_controls);
   EnableWindow(h_log_browse_btn, enable_controls);
 }
@@ -189,7 +198,8 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
               HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
               HWND h_log_browse_btn = GetDlgItem(hwnd, kIdcLogBrowseBtn);
 
-              BOOL enable_controls = (strcmp(selected_value, "LOG_TRACE") == 0);
+              BOOL enable_controls =
+                  (strcmp(selected_value, KLogTrace.c_str()) == 0);
               EnableWindow(h_log_file_edit, enable_controls);
               EnableWindow(h_log_browse_btn, enable_controls);
 
