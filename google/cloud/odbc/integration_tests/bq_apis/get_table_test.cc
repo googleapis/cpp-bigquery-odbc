@@ -28,6 +28,7 @@ using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::Table;
 using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::TableMetadataView;
+using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bigquery_client_interface::TableFilter;
@@ -48,7 +49,7 @@ using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH
 TEST(GetTable, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -68,7 +69,41 @@ TEST(GetTable, UserAccountAuth) {
 
   ASSERT_STATUS_OK(table);
 }
-#endif  // USER_ACCOUNT_AUTH
+
+TEST(ODBCBQClient_GetTable, UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string table_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+
+  // Retrieving table via ODBCBQClient.
+  TableFilter filter{{}, TableMetadataView::Full()};
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Table> table_response =
+      (*odbc_bq_client)
+          ->GetTable(project_id, dataset_id, table_name, filter,
+                     std::move(*options));
+  ASSERT_STATUS_RECORD_OK(table_response);
+
+  Table table = *table_response;
+  EXPECT_EQ(table.table_reference.project_id, project_id);
+  EXPECT_EQ(table.table_reference.dataset_id, dataset_id);
+  EXPECT_EQ(table.table_reference.table_id, table_name);
+}
+
+#else  // USER_ACCOUNT_AUTH
 
 TEST(GetTable, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -137,29 +172,6 @@ TEST(ODBCBQClient_GetTable, ApplicationDefaultCredentials) {
   EXPECT_EQ(table.table_reference.dataset_id, dataset_id);
   EXPECT_EQ(table.table_reference.table_id, table_name);
 }
-
-#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
-TEST(GetTable, ServiceAccountAuthWithClientId) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  std::string table_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  GetTableRequest request;
-  request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id);
-  request.set_table_id(table_name);
-
-  StatusOr<Table> table = table_client.GetTable(request);
-
-  ASSERT_STATUS_OK(table);
-}
-#endif  // USER_ACCOUNT_AUTH
 
 TEST(GetTable, TableNotExist) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -298,29 +310,6 @@ TEST(GetTable, SetView) {
   EXPECT_EQ(table.value().num_bytes, -1);
 }
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
-TEST(GetTable, NoAccessAccountAuth) {
-  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-  std::string table_name =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
-  GetTableRequest request;
-  request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id);
-  request.set_table_id(table_name);
-
-  StatusOr<Table> table = table_client.GetTable(request);
-
-  EXPECT_THAT(table, StatusIs(StatusCode::kPermissionDenied,
-                              HasSubstr("Access Denied: Table")));
-}
-#endif  // USER_ACCOUNT_AUTH
-
 TEST(GetTable, ProjectIdIsEmpty) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -377,5 +366,7 @@ TEST(GetTable, TableIdIsEmpty) {
   EXPECT_THAT(table, StatusIs(StatusCode::kInternal,
                               HasSubstr("Not a valid Json Table object")));
 }
+
+#endif  // USER_ACCOUNT_AUTH
 
 }  // namespace google::cloud::odbc_integration_tests_apis
