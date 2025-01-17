@@ -27,6 +27,7 @@ using bigquery_v2_minimal_internal::Dataset;
 using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::GetDatasetRequest;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
+using google::cloud::odbc_bigquery_client_interface::Oauth;
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -46,7 +47,7 @@ using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
+#ifdef USER_ACCOUNT_AUTH
 TEST(GetDataset, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -65,7 +66,34 @@ TEST(GetDataset, UserAccountAuth) {
 
   ASSERT_STATUS_OK(dataset);
 }
-#endif  // USER_ACCOUNT_AUTH
+
+TEST(ODBCBQClient_GetDataset, UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+
+  // Retrieving dataset via ODBC BQ Client
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Dataset> dataset_response =
+      (*odbc_bq_client)
+          ->GetDataset(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(dataset_response);
+  EXPECT_EQ(dataset_id, (*dataset_response).dataset_reference.dataset_id);
+}
+
+#else
 
 TEST(GetDataset, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -126,28 +154,6 @@ TEST(ODBCBQClient_GetDataset, ApplicationDefaultCredentials) {
   ASSERT_STATUS_RECORD_OK(dataset_response);
   EXPECT_EQ(dataset_id, (*dataset_response).dataset_reference.dataset_id);
 }
-
-#ifdef USER_ACCOUNT_AUTH  // TODO(b/333011414) Enable tests
-TEST(GetDataset, ServiceAccountAuthWithClientId) {
-  StatusOr<Options> options =
-      CreateServiceAccountAuthWithClientIdAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto dataset_client =
-      DatasetClient(MakeDatasetConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-
-  GetDatasetRequest request;
-  request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id);
-
-  StatusOr<Dataset> dataset = dataset_client.GetDataset(request);
-
-  ASSERT_STATUS_OK(dataset);
-}
-#endif  // USER_ACCOUNT_AUTH
 
 TEST(GetDataset, DatasetNotExist) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -224,26 +230,6 @@ TEST(GetDataset, DatasetIdIsEmpty) {
                                 HasSubstr("Not a valid Json Dataset object")));
 }
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
-TEST(GetDataset, NoAccessAccountAuth) {
-  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto dataset_client =
-      DatasetClient(MakeDatasetConnection(std::move(*options)));
-  std::string project_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
-  std::string dataset_id =
-      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
-
-  GetDatasetRequest request;
-  request.set_project_id(project_id);
-  request.set_dataset_id(dataset_id);
-
-  StatusOr<Dataset> dataset = dataset_client.GetDataset(request);
-
-  EXPECT_THAT(dataset, StatusIs(StatusCode::kPermissionDenied,
-                                HasSubstr("Access Denied: Dataset")));
-}
 #endif  // USER_ACCOUNT_AUTH
 
 }  // namespace google::cloud::odbc_integration_tests_apis
