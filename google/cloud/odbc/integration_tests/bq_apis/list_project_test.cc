@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
+#include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/internal/getenv.h"
@@ -26,6 +27,7 @@ using bigquery_v2_minimal_internal::MakeProjectConnection;
 using bigquery_v2_minimal_internal::Project;
 using bigquery_v2_minimal_internal::ProjectClient;
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -41,13 +43,11 @@ using google::cloud::odbc_testing_client_library_utils::
     CreateWrongAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateWrongPathToAuthFileAuthentication;
+using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
-// We don't use ServiceAccountAuthWithClientIdAuthentication
-// It's timing out after 15 minutes because of a big number of available
-// projects.
+#ifdef USER_ACCOUNT_AUTH
 TEST(ListAllProjects, UserAccountAuth) {
   StatusOr<Options> options = CreateUserAccountAuthentication();
   ASSERT_STATUS_OK(options);
@@ -63,7 +63,30 @@ TEST(ListAllProjects, UserAccountAuth) {
     ASSERT_STATUS_OK(project);
   }
 }
-#endif  // USER_ACCOUNT_AUTH
+
+TEST(ODBCBQClient_ListAllProjects, UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto project_client =
+      ProjectClient(MakeProjectConnection(std::move(*options)));
+
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+
+  // List projects via ODBC BQ Client
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<Project>> projects_response =
+      (*odbc_bq_client)->ListAllProjects(std::move(*options));
+  ASSERT_STATUS_RECORD_OK(projects_response);
+  ASSERT_FALSE((*projects_response).empty());
+}
+
+#else   // USER_ACCOUNT_AUTH
 
 TEST(ListAllProjects, ServiceAccountAuth) {
   StatusOr<Options> options = CreateServiceAccountAuthentication();
@@ -145,20 +168,6 @@ TEST(ListAllProjects, WrongAuthntication) {
     EXPECT_THAT(project, StatusIs(StatusCode::kUnauthenticated,
                                   HasSubstr("The OAuth client was not found")));
   }
-}
-
-#ifdef USER_ACCOUNT_AUTH  // TODO: b/309605217 - Enable once the bug is fixed
-TEST(ListAllProjects, NoAccessAccountAuth) {
-  StatusOr<Options> options = CreateNoAccessAccountAuthentication();
-  ASSERT_STATUS_OK(options);
-  auto project_client =
-      ProjectClient(MakeProjectConnection(std::move(*options)));
-  ListProjectsRequest request;
-
-  StreamRange<Project> range = project_client.ListProjects(request);
-
-  auto begin = range.begin();
-  EXPECT_EQ(begin, range.end());
 }
 #endif  // USER_ACCOUNT_AUTH
 
