@@ -2128,7 +2128,7 @@ TEST(DataTranslationTest, SQLGetData_AllTypes) {
 
 void TestPartialDataFromSQLGetData(std::shared_ptr<ODBCHandles> conn,
                                    std::string query,
-                                   std::vector<std::string> input_values) {
+                                   std::vector<SQLBIGINT> input_values) {
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
@@ -2148,20 +2148,22 @@ void TestPartialDataFromSQLGetData(std::shared_ptr<ODBCHandles> conn,
   while (1) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
+      std::cout << "SQLFetch status == SQL_NO_DATA" << std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
       CheckError(status, "SQLFetch", conn);
     }
+    std::cout << "SQLFetch SQL_SUCCEEDED" << std::endl;
 
     SQLSMALLINT resp_status, resp_status_len;
     std::string returned_value;
     while (1) {
-      status = SQLGetData(conn->hstmt, 1, SQL_CHAR, data, buffer_len,
+      status = SQLGetData(conn->hstmt, 1, SQL_C_CHAR, data, buffer_len,
                           &strlen_or_ind);
-      CheckError(status, "SQLGetData", conn);
       if (status == SQL_SUCCESS_WITH_INFO) {
         returned_value.append((char*)data);
+        std::cout << "returned_value partial:: " << returned_value <<std::endl;
       }
       if (SQL_SUCCEEDED(status)) {
         status =
@@ -2169,18 +2171,21 @@ void TestPartialDataFromSQLGetData(std::shared_ptr<ODBCHandles> conn,
                             &resp_status, 0, &resp_status_len);
         if (status == SQL_NO_DATA) {
           returned_value.append((char*)data);
+          std::cout << "returned_value:: " << returned_value <<std::endl;
           ret_values.emplace_back(returned_value);
           break;
         }
         CheckError(status, "SQLGetDiagField", conn);
       } else {
-        break;
+        CheckError(status, "SQLGetData", conn);
       }
     }
   }
-
-  for (int i = 0; i < ret_values.size(); i++) {
-    EXPECT_EQ(ret_values[i], input_values[i]) << " at index: " << i;
+  std::cout << "ret_values.size():: " << ret_values.size() <<std::endl;
+  for (int i = 0; i < input_values.size(); i++) {
+    std::cout << "input_values[i]:: " << input_values[i] <<std::endl;
+    std::cout << "ret_values[i]:: " << ret_values[i] <<std::endl;
+    EXPECT_EQ(ret_values[i], std::to_string(input_values[i])) << " at index: " << i;
   }
 }
 
@@ -2192,25 +2197,25 @@ TEST(DataTranslationTest, SQLGetData_PartialData) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, "(index INT64, StringField STRING)");
+  table.CreateWithPrepare(conn, "(index INT64, IntegerField INT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> string_data_to_insert;
-  for (int i = 0; i < 5; i++) {
-    string_data_to_insert.emplace_back(GetRandomString(10));
-  }
-  table.InsertStrData(conn, string_data_to_insert, true);
+  std::vector<SQLBIGINT> int_data_to_insert = {1, 12, 123, 12345, 1234567, 123456789};
+  //for (int i = 0; i < 5; i++) {
+  //  int_data_to_insert.emplace_back(rand() % 10000000);
+  //}
+  table.InsertInt64Data(conn, int_data_to_insert, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as
   // expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
-      "SELECT StringField FROM " + table_name + " ORDER BY index";
+      "SELECT IntegerField FROM " + table_name + " ORDER BY index";
 
-  TestPartialDataFromSQLGetData(conn, query, string_data_to_insert);
+  TestPartialDataFromSQLGetData(conn, query, int_data_to_insert);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
