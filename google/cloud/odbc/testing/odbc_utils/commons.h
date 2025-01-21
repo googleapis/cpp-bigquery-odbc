@@ -473,6 +473,10 @@ class Table {
                       std::vector<nlohmann::json> rows,
                       bool insert_index = false);
 
+  void InsertGeographyData(
+      std::shared_ptr<ODBCHandles> conn,
+      std::vector<std::pair<std::string, std::string>> data, bool insert_index);
+
   void InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<uint8_t> rows, bool insert_index);
 
@@ -599,6 +603,8 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
 std::string ConvertHexToChar(std::string const& hex_str);
 
 std::wstring ConvertHexToWchar(std::string const& hex_str);
+
+std::string ConvertCharToHex(char const* data, int len);
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
