@@ -589,20 +589,17 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           OpenFileDialog(hwnd, h_edit);
         } break;
         case kIdcLoggingBtn: {
-          std::unique_ptr<LogTraceDialog> log_form;
-          if (log_form && IsWindowVisible(log_form->GetHwnd())) {
-            SetForegroundWindow(log_form->GetHwnd());
+          LogTraceDialog log_form;
+          if (IsWindowVisible(log_form.GetHwnd())) {
+            SetForegroundWindow(log_form.GetHwnd());
             EnableWindow(hwnd, FALSE);
             break;
-          } else {
-            log_form = nullptr;
-            EnableWindow(hwnd, TRUE);
           }
-          if (!log_form) {
-            log_form = std::make_unique<LogTraceDialog>();
+          if (!log_form.GetHwnd()) {
+            log_form = LogTraceDialog();
             EnableWindow(hwnd, FALSE);
           }
-          log_form->Show();
+          log_form.Show();
           MSG msg = {};
           while (GetMessage(&msg, NULL, 0, 0)) {
             TranslateMessage(&msg);
