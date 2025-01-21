@@ -1144,6 +1144,48 @@ void Table::InsertJsonData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 }
 
+void Table::InsertGeographyData(
+    std::shared_ptr<ODBCHandles> conn,
+    std::vector<std::pair<std::string, std::string>> data, bool insert_index) {
+  if (data.empty()) {
+    return;
+  }
+  std::ostringstream insert_stmt;
+
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+  // int i = 0;
+  // for(auto& elem : data){
+  for (int i = 0; i < data.size(); i++) {
+    // std::ostringstream row_str;
+    auto const& elem = data[i];
+    // row_str <<"(";
+    insert_stmt << "(";
+
+    if (insert_index) {
+      insert_stmt << std::to_string(i + 1) << ", ";
+      // row_str << std::to_string(i+1) <<  ", ";
+    }
+    insert_stmt << elem.first << "('" << elem.second << "')"
+                << ")";
+    // row_str << elem.first<< "('" << elem.second << "')";
+    // row_str << ")";
+    if (i != data.size() - 1) {
+      // row_str<< ",";
+      insert_stmt << ",";
+    }
+    // insert_stmt += row_str.str();
+    // i++;
+  }
+  std::string insert_stmt_str = insert_stmt.str();
+  SQLRETURN status = ExecWithPrepare(conn, insert_stmt_str);
+
+  // SQLRETURN status =
+  //     SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt_str.c_str(), SQL_NTS);
+  // CheckError(status, "SQLPrepare", conn);
+  // status = SQLExecute(conn->hstmt);
+  // CheckError(status, "SQLExecute", conn);
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];
@@ -1498,6 +1540,18 @@ std::wstring ConvertHexToWchar(std::string const& hex_str) {
     result += static_cast<wchar_t>(hex_value);
   }
   return result;
+}
+
+std::string ConvertCharToHex(char const* data, int len) {
+  std::ostringstream oss;
+  oss << std::uppercase;
+  for (int i = 0; i < len; ++i) {
+    // Format each byte in hex, ensuring two characters per byte
+    oss << std::hex << std::setw(2) << std::setfill('0')
+        << (static_cast<unsigned char>(data[i]) & 0xFF);
+    ;
+  }
+  return oss.str();
 }
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
