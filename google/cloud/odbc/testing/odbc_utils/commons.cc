@@ -1148,6 +1148,32 @@ void Table::InsertJsonData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 }
 
+void Table::InsertGeographyData(
+    std::shared_ptr<ODBCHandles> conn,
+    std::vector<std::pair<std::string, std::string>> data, bool insert_index) {
+  if (data.empty()) {
+    return;
+  }
+  std::ostringstream insert_stmt;
+  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
+
+  for (int i = 0; i < data.size(); i++) {
+    auto const& elem = data[i];
+    insert_stmt << "(";
+
+    if (insert_index) {
+      insert_stmt << std::to_string(i + 1) << ", ";
+    }
+    insert_stmt << elem.first << "('" << elem.second << "')"
+                << ")";
+    if (i != data.size() - 1) {
+      insert_stmt << ",";
+    }
+  }
+  std::string insert_stmt_str = insert_stmt.str();
+  SQLRETURN status = ExecWithPrepare(conn, insert_stmt_str);
+}
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi) {
   char create_table_stmt[kBufferLength];
@@ -1502,6 +1528,17 @@ std::wstring ConvertHexToWchar(std::string const& hex_str) {
     result += static_cast<wchar_t>(hex_value);
   }
   return result;
+}
+
+std::string ConvertCharToHex(char const* data, int len) {
+  std::ostringstream oss;
+  oss << std::uppercase;
+  for (int i = 0; i < len; ++i) {
+    // Format each byte in hex, ensuring two characters per byte
+    oss << std::hex << std::setw(2) << std::setfill('0')
+        << (static_cast<unsigned char>(data[i]) & 0xFF);
+  }
+  return oss.str();
 }
 
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
