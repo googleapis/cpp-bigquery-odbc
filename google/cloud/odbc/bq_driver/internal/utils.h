@@ -147,6 +147,9 @@ HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id);
 
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
                   int height, int id);
+
+HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
+                    int height, int id);
 #else
 
 odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
@@ -231,21 +234,6 @@ odbc_internal::StatusRecord PopulateOutputConnectionString(
     SQLCHAR* out_conn_str, SQLSMALLINT out_conn_str_buflen,
     SQLSMALLINT* out_conn_str_len, std::string& conn_string,
     bool is_conn_str_empty = true);
-
-#ifdef _WIN32
-// Functions to create basic UI elements for the driver form.
-HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
-                 int height, int id);
-
-HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id);
-
-HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id);
-HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
-                  int height, int id);
-
-HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
-                    int height, int id);
-#endif  // WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

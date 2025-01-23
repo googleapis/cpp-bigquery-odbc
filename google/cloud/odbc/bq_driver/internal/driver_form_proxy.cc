@@ -21,20 +21,15 @@ char const ProxyOptions::CLASS_NAME[] = "ProxyOptClass";
 // Control dimensions and positions
 int const kBtnWidth = 80;
 int const kBtnHeight = 30;
-
 int const kEditBoxWidth = 240;
 int const kEditBoxHeight = 20;
-
 int const kLabelWidth = 180;
 int const kLabelHeight = 20;
-
 int const kCheckboxWidth = 150;
 int const kCheckboxHeight = 20;
-
-int const kControlSpacing = 40;  // Vertical spacing between controls
-int const kControlStartX = 20;   // X position for labels and checkboxes
-int const kEditBoxStartX = 150;  // X position for edit boxes
-
+int const kControlSpacing = 40;
+int const kControlStartX = 20;
+int const kEditBoxStartX = 150;
 int const kOkButtonX = 180;
 int const kCancelButtonX = 280;
 int const kButtonY = 220;
@@ -109,12 +104,12 @@ void ProxyOptions::Show(HWND hwnd) {
     return;
   }
 
-  WNDCLASS wc_logging = {};
-  wc_logging.lpfnWndProc = ProxyOptions::ProxyOptProc;
-  wc_logging.hInstance = GetModuleHandle(NULL);
-  wc_logging.lpszClassName = CLASS_NAME;
+  WNDCLASS wc_proxy = {};
+  wc_proxy.lpfnWndProc = ProxyOptions::ProxyOptProc;
+  wc_proxy.hInstance = GetModuleHandle(NULL);
+  wc_proxy.lpszClassName = CLASS_NAME;
 
-  RegisterClass(&wc_logging);
+  RegisterClass(&wc_proxy);
 
   int window_width = 520;
   int window_height = 650;

@@ -194,6 +194,14 @@ HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
       0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
       y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
+
+// Helper function to create a checkbox
+HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
+                    int height, int id) {
+  return CreateWindowEx(0, "BUTTON", text,
+                        WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
+                        height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
 #else
 
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
@@ -797,40 +805,5 @@ bool CheckTargetType(int c_type) {
       return false;
   }
 }
-
-#ifdef _WIN32
-HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
-                 int height, int id) {
-  return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
-                        y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
-  return CreateWindowEx(
-      0, "EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, x, y, width,
-      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
-  return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
-                  int height, int id) {
-  return CreateWindowEx(
-      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-
-HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
-                    int height, int id) {
-  return CreateWindowEx(0, "BUTTON", text,
-                        WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
-                        height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
-}
-#endif  // WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal

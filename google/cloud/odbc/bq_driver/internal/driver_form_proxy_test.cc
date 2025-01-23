@@ -30,7 +30,6 @@ class ProxyOptionsTest : public ::testing::Test {
     if (proxy_options->GetHwnd() != nullptr) {
       DestroyWindow(proxy_options->GetHwnd());
     }
-    Sleep(600);
     delete proxy_options;
   }
 

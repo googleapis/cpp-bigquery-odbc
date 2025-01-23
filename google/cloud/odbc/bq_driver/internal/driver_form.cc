@@ -715,20 +715,17 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           }
         }
         case kIdcProxyOptionsButton: {
-          static std::unique_ptr<ProxyOptions> proxy_form;
-          if (proxy_form && IsWindowVisible(proxy_form->GetHwnd())) {
-            SetForegroundWindow(proxy_form->GetHwnd());
+          ProxyOptions proxy_form;
+          if (IsWindowVisible(proxy_form.GetHwnd())) {
+            SetForegroundWindow(proxy_form.GetHwnd());
             EnableWindow(hwnd, FALSE);
             break;
-          } else {
-            proxy_form = nullptr;
-            EnableWindow(hwnd, TRUE);
           }
-          if (!proxy_form) {
-            proxy_form = std::make_unique<ProxyOptions>();
+          if (!proxy_form.GetHwnd()) {
+            proxy_form = ProxyOptions();
             EnableWindow(hwnd, FALSE);
           }
-          proxy_form->Show(hwnd);
+          proxy_form.Show(hwnd);
           MSG msg = {};
           while (GetMessage(&msg, NULL, 0, 0)) {
             TranslateMessage(&msg);
