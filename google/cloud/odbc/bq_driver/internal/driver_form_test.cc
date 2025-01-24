@@ -123,13 +123,18 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
                         {"Catalog", "test_catalog"},
                         {"Dataset", "test_dataset"}};
 
+  Section trace_log_attributes = {{"LogLevel", "6"},
+                                  {"LogFile", "/path/to/file"}};
   form->SetValues(attributes);
+  form->SetLogTraceValues(trace_log_attributes);
 
   EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
   EXPECT_EQ(form->GetDatasetName(), "test_dataset");
+  EXPECT_EQ(form->GetLogLevel(), "LOG_TRACE");
+  EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
 }
 
 TEST_F(DriverFormTest, SetValues_MissingAttributes) {
@@ -138,25 +143,32 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
       {"OAuthMechanism", "0"},
   };
 
+  Section trace_log_attributes = {{"LogFile", "/path/to/file"}};
   form->SetValues(attributes);
+  form->SetLogTraceValues(trace_log_attributes);
 
   EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
   EXPECT_EQ(form->GetDatasetName(), "");
+  EXPECT_EQ(form->GetLogLevel(), "");
+  EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
 }
 
 TEST_F(DriverFormTest, SetValues_EmptyInput) {
   Section attributes = {};
 
   form->SetValues(attributes);
+  form->SetLogTraceValues({});
 
   EXPECT_EQ(form->GetEmail(), "");
   EXPECT_EQ(form->GetOAuthMechanism(), "");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
   EXPECT_EQ(form->GetDatasetName(), "");
+  EXPECT_EQ(form->GetLogLevel(), "");
+  EXPECT_EQ(form->GetLogFilePath(), "");
 }
 
 TEST_F(DriverFormTest, TestConnection_SectionIsNull) {

@@ -114,6 +114,12 @@ struct TraceOptions {
       mu_;  // used for guarding update of internal options members.
 };
 
+std::string const kLogTraceFileName = "googleodbcdriverforbigquery.log";
+
+enum class LogLevel {
+  kLogOff = 0,
+  kLogTrace = 6,
+};
 ///////////////////////////////////////////////////////////////
 // Emit methods for actually printing the trace
 // lines to stdout or a trace file.
@@ -259,14 +265,11 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsConsole =
         TraceOptions::CreateTraceOptionsConsole(/*logging_enabled*/ true,
                                                 /*unused log_level*/ 0);
+
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOptsFile = TraceOptions::CreateTraceOptionsFile(
-#ifdef _WIN32
-        GetPathToOdbcIni(/* is_log_reg_path */ true)
-#else
-        GetPathToOdbcIni()
-#endif  // _WIN32
-    );
+    kTraceOptsFile =
+        TraceOptions::CreateTraceOptionsFile(GetTraceLogRegistryPath());
+
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOption = TraceOptions::GetTraceOption();
 

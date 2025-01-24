@@ -159,7 +159,7 @@ odbc_internal::StatusRecord ValidateTableParameters(
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
 
-std::string GetPathToOdbcIni(bool is_log_reg_path = false);
+std::string GetPathToOdbcIni();
 
 std::string GetTraceLogRegistryPath();
 

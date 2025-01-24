@@ -573,6 +573,8 @@ std::string kOAuthMechanism = "0";
 std::string kKeyFilePath = "C:\\path\\to\\keyfile";
 std::string kCatalog = "TestCatalog";
 std::string kDataset = "TestDataset";
+std::string kLogLevel = "6";
+std::string kLogPath = "/path/to/log";
 
 Section CreateTestSection() {
   Section section;
@@ -581,6 +583,13 @@ Section CreateTestSection() {
   section["OAuthMechanism"] = kOAuthMechanism;
   section["Catalog"] = kCatalog;
   section["Dataset"] = kDataset;
+  return section;
+}
+
+Section CreateTracelogTestSection() {
+  Section section;
+  section["LogLevel"] = kLogLevel;
+  section["LogPath"] = kLogPath;
   return section;
 }
 
@@ -656,6 +665,37 @@ TEST(RemoveDSNFromRegistry, nonExistentDSN) {
   EXPECT_THAT(result,
               StatusRecIs(SQLStates::k_HY000(),
                           HasSubstr("Failed to remove registry key for DSN")));
+}
+
+TEST(AddLogTraceToRegistry, Success) {
+  auto section = CreateTracelogTestSection();
+  StatusRecord result = AddLogTraceToRegistry(section);
+  ASSERT_TRUE(result.ok());
+
+  auto status = GetSectionWin(GetTraceLogRegistryPath() + "\\Driver");
+  std::shared_ptr<Section> section2 = status.GetValue();
+  ASSERT_TRUE(section2);
+
+  EXPECT_EQ(section2->at("LogLevel"), kLogLevel);
+  EXPECT_EQ(section2->at("LogPath"), kLogPath);
+}
+
+TEST(EditLogTraceInRegistry, SuccessEdit) {
+  auto section = CreateTracelogTestSection();
+  StatusRecord result = AddLogTraceToRegistry(section);
+  ASSERT_TRUE(result.ok());
+
+  section["LogLevel"] = "6";
+  section["LogPath"] = "new/log/path";
+  result = EditLogTraceInRegistry(section);
+  ASSERT_TRUE(result.ok());
+
+  auto status = GetSectionWin(GetTraceLogRegistryPath() + "\\Driver");
+  std::shared_ptr<Section> section2 = status.GetValue();
+  ASSERT_TRUE(section2);
+
+  EXPECT_EQ(section2->at("LogLevel"), "6");
+  EXPECT_EQ(section2->at("LogPath"), "new/log/path");
 }
 
 TEST(ConvertLPCSTRToString, valid_string) {

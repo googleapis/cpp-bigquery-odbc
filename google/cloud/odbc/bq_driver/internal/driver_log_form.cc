@@ -23,7 +23,7 @@ std::string LogTraceDialog::log_file_path_;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogFile = "LogFile";
 std::string const kLogOff = "LOG_OFF";
-std::string const KLogTrace = "LOG_TRACE";
+std::string const kLogTrace = "LOG_TRACE";
 int const kBtnWidth = 80;
 int const kBtnHeight = 30;
 int const kComboBoxWidth = 220;
@@ -67,7 +67,7 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
     if (attributes_map.at(kLogLevel) == "0") {
       log_level_ = kLogOff.c_str();
     } else if (attributes_map.at(kLogLevel) == "6") {
-      log_level_ = KLogTrace.c_str();
+      log_level_ = kLogTrace.c_str();
     }
   } else {
     log_level_ = "";
@@ -97,15 +97,15 @@ void LogTraceDialog::InitControls() {
                                        kBtnWidth, kBtnHeight, kIdcLogBtnCancel);
   // Populate dropdowns
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
-  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)KLogTrace.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
   SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
 
   // Set initial selection based on stored log_level_
-  int initial_index = (log_level_ == KLogTrace.c_str()) ? 1 : 0;
+  int initial_index = (log_level_ == kLogTrace.c_str()) ? 1 : 0;
   SendMessage(h_log_level_box, CB_SETCURSEL, initial_index, 0);
   SetWindowText(h_log_file_edit, log_file_path_.c_str());
 
-  BOOL enable_controls = (log_level_ == KLogTrace.c_str());
+  BOOL enable_controls = (log_level_ == kLogTrace.c_str());
   EnableWindow(h_log_file_edit, enable_controls);
   EnableWindow(h_log_browse_btn, enable_controls);
 }
@@ -170,7 +170,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
               HWND h_log_browse_btn = GetDlgItem(hwnd, kIdcLogBrowseBtn);
 
               BOOL enable_controls =
-                  (strcmp(selected_value, KLogTrace.c_str()) == 0);
+                  (strcmp(selected_value, kLogTrace.c_str()) == 0);
               EnableWindow(h_log_file_edit, enable_controls);
               EnableWindow(h_log_browse_btn, enable_controls);
 
