@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   cmake:
@@ -18,8 +19,8 @@ jobs:
       group: cpp-runners
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: read
+      id-token: write
     strategy:
       # Continue other builds even if one fails
       fail-fast: false

@@ -10,14 +10,15 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   cmake:
     name: cmake + ${{ matrix.os }} + ${{ matrix.shard }}
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: read
+      id-token: write
     strategy:
       # Continue other builds even if one fails
       fail-fast: false
