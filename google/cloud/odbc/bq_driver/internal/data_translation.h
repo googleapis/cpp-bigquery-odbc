@@ -22,9 +22,12 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-constexpr int kTimeCharLength = 8;
+
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+constexpr int kTimeCharLength = 8;
+
 // Checks if an arithmetic value can be converted to another accurately.
 template <typename SrcType, typename DestType>
 inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
@@ -45,9 +48,11 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
     return StatusRecord::Ok();  // bool can always be converted to a number (0
                                 // or 1)
   }
-
-  bool status = (value >= std::numeric_limits<DestType>::lowest() &&
-                 value <= (std::numeric_limits<DestType>::max()));
+  bool status =
+      static_cast<double>(value) >=
+          static_cast<double>(std::numeric_limits<DestType>::lowest()) &&
+      static_cast<double>(value) <=
+          static_cast<double>(std::numeric_limits<DestType>::max());
   if (!status) {
     return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
   }
@@ -215,6 +220,8 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
 }
 
 // Converts a string to SQLDOUBLE and returns StatusRecord if it failed
+// TODO(sachinpro): Make sure double is a good enough container during
+// translation wherever ConvertToDouble is used.
 inline odbc_internal::StatusRecordOr<SQLDOUBLE> ConvertToDouble(
     std::string const& str) {
   using odbc_internal::SQLStates;

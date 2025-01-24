@@ -45,6 +45,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
 
+// Converts a stringified double value into an integral string.
+odbc_internal::StatusRecord DoubleStrToInt(std::string& double_str);
+
 inline void LTrim(std::string& s) {
   s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) {
             return (std::isspace(ch) == 0);
