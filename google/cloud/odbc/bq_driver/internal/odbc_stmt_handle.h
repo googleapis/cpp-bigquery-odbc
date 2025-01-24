@@ -123,8 +123,8 @@ class StatementHandle : public Handle {
   void CloseCursor();
 
   [[nodiscard]] inline std::vector<
-      google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
-  GetQueryParameters() const {
+      google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
+  GetQueryParameters() {
     return query_parameters_;
   }
 

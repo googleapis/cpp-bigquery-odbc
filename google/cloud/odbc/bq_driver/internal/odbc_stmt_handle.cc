@@ -349,32 +349,23 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
          "Invalid attribute value (invalid descriptor handle)"});
   }
   DescriptorRecord descriptor_record;
-  std::string const nullable = "NULLABLE";
-  std::string const nullable_required = "REQUIRED";
-  std::string const array_field = "REPEATED";
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
-  TableSchema schema = job_statistics.job_query_stats.schema;
   if (stmt_params.empty()) {
     return StatusRecord::Ok();
   }
 
   for (int i = 0; i < stmt_params.size(); i++) {
+    bool is_array = stmt_params[i].parameter_type.type == "ARRAY";
     StatusRecordOr<SQLSMALLINT> record_type =
-        GetSQLDataType(stmt_params[i].parameter_type.type,
-                       (schema.fields[i].mode == array_field));
+        GetSQLDataType(stmt_params[i].parameter_type.type, is_array);
     descriptor_record.SetConciseType(*record_type, DescriptorType::kIPD);
     descriptor_record.SetName(stmt_params[i].name, stmt_params[i].name.size());
     descriptor_record.type_name = stmt_params[i].parameter_type.type;
 
-    descriptor_record.nullable =
-        (schema.fields[i].mode == nullable)            ? SQL_NULLABLE
-        : (schema.fields[i].mode == nullable_required) ? SQL_NULLABLE
-                                                       : SQL_NO_NULLS;
-
     TypeInfoRow type_info;
     GetTypeInfoFromBQType(record_type.GetValue(),
-                          stmt_params[i].parameter_type.type,
-                          schema.fields[i].mode == array_field, type_info);
+                          stmt_params[i].parameter_type.type, is_array,
+                          type_info);
 
     if (stmt_params[i].parameter_type.type == "TIME" ||
         stmt_params[i].parameter_type.type == "DATETIME") {

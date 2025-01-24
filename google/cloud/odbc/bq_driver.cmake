@@ -47,6 +47,8 @@ set(COMMON_SOURCES
     bq_driver/internal/odbc_sql_columns.h
     bq_driver/internal/odbc_sql_columns_utils.cc
     bq_driver/internal/odbc_sql_columns_utils.h
+    bq_driver/internal/odbc_sql_execute_utils.cc
+    bq_driver/internal/odbc_sql_execute_utils.h
     bq_driver/internal/odbc_sql_fetch.cc
     bq_driver/internal/odbc_sql_fetch.h
     bq_driver/internal/odbc_sql_fns.cc
@@ -212,6 +214,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/data_translation_inv_test.cc
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
+        bq_driver/internal/odbc_sql_execute_utils_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
         bq_driver/internal/odbc_conn_handle_test.cc
         bq_driver/internal/odbc_desc_attr_test.cc

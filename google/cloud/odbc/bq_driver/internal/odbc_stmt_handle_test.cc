@@ -332,14 +332,11 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   JobStatistics job_statistics;
   JobQueryStatistics job_qry_statistics;
   std::vector<QueryParameter> query_params;
-  TableSchema schema;
   TableFieldSchema f1;
   f1.type = "STRING";
   f1.precision = 20;
   f1.name = "param-name-1";
   f1.mode = "NULLABLE";
-
-  schema.fields.emplace_back(f1);
 
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"param-name-1", "param-val-1"});
@@ -349,7 +346,6 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
 
   job_qry_statistics.undeclared_query_parameters = query_params;
   job_statistics.job_query_stats = job_qry_statistics;
-  job_statistics.job_query_stats.schema = schema;
 
   StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(ipd_res.ok());
@@ -357,7 +353,6 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
   for (int i = 0; i < stmt_params.size(); i++) {
     auto const& res = stmt_params[i];
-    TableSchema res_schema = job_statistics.job_query_stats.schema;
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).type_name,
               res.parameter_type.type);
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).name, res.name);
@@ -366,9 +361,6 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
         GetSQLDataType(res.parameter_type.type);
     EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).concise_type,
               *type_status_record);
-    SQLSMALLINT nullable =
-        res_schema.fields[i].mode == "NULLABLE" ? SQL_NULLABLE : SQL_NO_NULLS;
-    EXPECT_EQ(desc_handle.GetDescriptorRecord(i + 1).nullable, nullable);
   }
 }
 
