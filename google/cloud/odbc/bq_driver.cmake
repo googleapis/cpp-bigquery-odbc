@@ -23,6 +23,8 @@ endif ()
 set(COMMON_SOURCES
     bq_driver/internal/data_translation.cc
     bq_driver/internal/data_translation.h
+    bq_driver/internal/data_translation_inv.cc
+    bq_driver/internal/data_translation_inv.h
     bq_driver/internal/diagnostics.cc
     bq_driver/internal/diagnostics.h
     bq_driver/internal/odbc_conn_attr.cc
@@ -201,6 +203,7 @@ function (bq_driver_define_unit_tests)
 
     enable_testing()
     set(TEST_SOURCES
+        bq_driver/internal/data_translation_inv_test.cc
         bq_driver/internal/data_translation_test.cc
         bq_driver/internal/diagnostics_test.cc
         bq_driver/internal/odbc_conn_attr_test.cc
