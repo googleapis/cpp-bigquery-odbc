@@ -278,30 +278,18 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
-std::string GetPathToOdbcIni(bool is_log_reg_path) {
+std::string GetPathToOdbcIni() {
 #ifdef _WIN32
-  absl::optional<std::string> path;
   // 64-bit
-  if (is_log_reg_path) {
-    // Get the registry path to the driver's folder for log tracing.
-    path = GetTraceLogRegistryPath();
-  } else {
-    path = "SOFTWARE\\ODBC\\ODBC.INI";
-  }
+  absl::optional<std::string> path = "SOFTWARE\\ODBC\\ODBC.INI";
 #ifndef _WIN64
   // 32-bit
-  if (is_log_reg_path) {
-    // Get the registry path to the driver's folder for log tracing.
-    path = GetTraceLogRegistryPath();
-  } else {
-    path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
-  }
+  path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
 #endif  // _WIN64
   if (path) {
     return *path;
   }
 #else
-  (void)is_log_reg_path;  // Explicitly mark to avoid unused parameter error.
   absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
     return *path;
@@ -670,21 +658,10 @@ std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
 // TODO(b/385158889): Support other log levels for tracing
 StatusRecord SetRegValues(HKEY h_key, Section const& section) {
   for (auto const& kv : section) {
-    std::string value;
-    if (kv.first == "LogLevel") {
-      if (kv.second == "LOG_OFF") {
-        value = "0";
-      } else if (kv.second == "LOG_TRACE") {
-        value = "6";
-      } else {
-        value = "";
-      }
-    } else {
-      value = kv.second;
-    }
     if (RegSetValueExA(h_key, kv.first.c_str(), 0, REG_SZ,
-                       reinterpret_cast<const BYTE*>(value.c_str()),
-                       static_cast<DWORD>(value.size() + 1)) != ERROR_SUCCESS) {
+                       reinterpret_cast<const BYTE*>(kv.second.c_str()),
+                       static_cast<DWORD>(kv.second.size() + 1)) !=
+        ERROR_SUCCESS) {
       RegCloseKey(h_key);
       return StatusRecord{SQLStates::k_HY000(),
                           "Failed to set " + kv.first + " value"};
@@ -745,6 +722,8 @@ StatusRecord AddDSNToRegistry(std::string const& dsn_name,
 }
 
 // TODO:b/376206999- Add USER DSN functionality
+// TODO(b/392033367): Handle creation of log trace folder within internal driver
+// installer
 StatusRecord AddLogTraceToRegistry(Section const& section) {
   std::string const registry_path = GetTraceLogRegistryPath() + "\\Driver";
   HKEY h_key = nullptr;

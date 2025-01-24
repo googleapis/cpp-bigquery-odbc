@@ -42,8 +42,7 @@ Sections const kConfigSections6{{"Driver", kDriverSection6}};
 Sections const kConfigSections7{{"Driver", kDriverSection7}};
 
 #ifdef _WIN32
-Section const kWINDriverSection1{{"LogLevel", "1"},
-                                 {"LogFile", "C:\\b\\trace.log"}};
+Section const kWINDriverSection1{{"LogLevel", "1"}, {"LogFile", "C:\\b"}};
 Sections const kWINConfigSections1{{"Driver", kWINDriverSection1}};
 #endif  // _WIN32
 
@@ -601,6 +600,24 @@ TEST(TraceLoggingConsole, WindowHandles) {
                                 fmt1.c_str(), fmt2.c_str()));
 }
 
+TEST(TraceLoggingFile, GetDefaultLogFileName) {
+  auto config_sections = std::make_shared<Sections>(kWINConfigSections1);
+  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
+      TraceOptions::CreateTraceOptionsFile(config_sections);
+  ASSERT_STATUS_RECORD_OK(test_opts_file);
+
+  EXPECT_TRUE((*test_opts_file)->logging_enabled);
+  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
+  EXPECT_EQ(1, (*test_opts_file)->log_level);
+
+  std::string file_path = (*test_opts_file)->log_file;
+  auto pos = file_path.find_last_of("\\/");
+  std::string file_name =
+      (pos != std::string::npos) ? file_path.substr(pos + 1) : file_path;
+  EXPECT_EQ(file_name, kLogTraceFileName);
+
+  (*test_opts_file)->trace_file.close();
+}
 // TODO(b/375112496) enable this function after trace registry work is done
 // TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
 // #ifdef _WIN64
