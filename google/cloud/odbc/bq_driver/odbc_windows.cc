@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -28,10 +29,13 @@ using google::cloud::odbc_bq_driver_internal::EditLogTraceInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetTraceLogRegistryPath;
+using google::cloud::odbc_bq_driver_internal::GetUpperStr;
+using google::cloud::odbc_bq_driver_internal::LogLevel;
 using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
+using google::cloud::odbc_bq_driver_internal::Trim;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
@@ -46,6 +50,20 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
     o_auth_value = "";
   return o_auth_value;
 }
+
+std::string ConvertLogLevel(std::string log_level) {
+  std::string log_level_val;
+
+  if (log_level == "LOG_TRACE") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogTrace));
+  } else if (log_level == "LOG_OFF") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogOff));
+  } else {
+    log_level_val = "";
+  }
+  return log_level_val;
+}
+
 bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                        LPCSTR lpsz_attributes) {
   if (!lpsz_driver) {
@@ -74,8 +92,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       section.count("Min_TLS") > 0 ? section.at("Min_TLS") : "";
   std::string description =
       section.count("Description") > 0 ? section.at("Description") : "";
-  std::string log_level =
-      section.count("LogLevel") > 0 ? section.at("LogLevel") : "";
+  std::string log_level = ConvertLogLevel(
+      section.count("LogLevel") > 0 ? section.at("LogLevel") : "");
   std::string log_file =
       section.count("LogFile") > 0 ? section.at("LogFile") : "";
 
@@ -115,9 +133,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     trusted_certs = form.GetTrustedCerts();
     min_tls_version = form.GetMinTls();
     description = form.GetDescription();
-    log_level = form.GetLogLevel();
+    log_level = ConvertLogLevel(form.GetLogLevel());
     log_file = form.GetLogFilePath();
-
     return dsn_name;
   };
 
