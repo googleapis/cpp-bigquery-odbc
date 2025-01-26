@@ -21,5 +21,6 @@ namespace google::cloud::odbc_bq_driver {
 bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                        LPCSTR lpsz_attributes);
 
+std::string ConvertLogLevel(std::string log_level);
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H
