@@ -71,4 +71,14 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
   EXPECT_EQ(result, true);
 }
 
+TEST(ConvertLogLevel, ValidateLogLevelConversion) {
+  // Success
+  EXPECT_EQ(ConvertLogLevel("LOG_TRACE"), "6");
+  EXPECT_EQ(ConvertLogLevel("LOG_OFF"), "0");
+
+  // Invalid
+  EXPECT_EQ(ConvertLogLevel("Invalid"), "");
+  EXPECT_EQ(ConvertLogLevel(""), "");
+  EXPECT_EQ(ConvertLogLevel("LOG"), "");
+}
 }  // namespace google::cloud::odbc_bq_driver
