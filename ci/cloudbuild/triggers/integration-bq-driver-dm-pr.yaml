@@ -1,0 +1,16 @@
+filename: ci/cloudbuild/cloudbuild.yaml
+github:
+  name: cpp-bigquery-odbc
+  owner: googleapis
+  pullRequest:
+    branch: ^driver-manager-main$
+    commentControl: COMMENTS_ENABLED_FOR_EXTERNAL_CONTRIBUTORS_ONLY
+name: integration-bq-driver-dm-pr
+substitutions:
+  _BUILD_NAME: integration-production-bq-driver-dm
+  _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
+  _DISTRO: ubuntu-22.04-install
+  _TRIGGER_TYPE: pr
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+tags:
+- pr
