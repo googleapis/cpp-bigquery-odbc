@@ -2659,7 +2659,7 @@ SQLRETURN SQL_API SQLDescribeColW(
                                     utf16_col_name->end());
     sql_w_str.emplace_back(L'\0');
     std::memcpy(columnName, sql_w_str.data(),
-                column_name_string_len * sizeof(SQLWCHAR));
+                (column_name_string_len + 1) * sizeof(SQLWCHAR));
   }
 
   *columnNameLen = column_name_string_len;
