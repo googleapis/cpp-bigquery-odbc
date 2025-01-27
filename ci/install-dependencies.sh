@@ -24,6 +24,7 @@ AVAILABLE_DEPENDENCIES[DRIVER_MANAGER_SETUP]=ci/dependencies/driver-manager-setu
 AVAILABLE_DEPENDENCIES[GCLOUD_SDK]=ci/dependencies/cloud-sdk.sh
 AVAILABLE_DEPENDENCIES[iODBC]=ci/dependencies/iODBC.sh
 AVAILABLE_DEPENDENCIES[unixODBC]=ci/dependencies/unixODBC.sh
+AVAILABLE_DEPENDENCIES[DRIVER_MANAGER_SETUP_GOOGLE_DRIVER]=ci/dependencies/driver-manager-setup-google-driver.sh
 
 DEPENDENCIES=${DEPENDENCIES:-}
 echo "DEPENDENCIES::${DEPENDENCIES}"
