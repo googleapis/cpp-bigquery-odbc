@@ -70,6 +70,10 @@ std::vector<std::string> CreateKeysToFilterOut(Job const& job) {
   } else if (job.job_reference.location.empty()) {
     default_filtered_keys.emplace_back("location");
   }
+  if (job.configuration.query.destination_encryption_configuration.kms_key_name
+          .empty()) {
+    default_filtered_keys.emplace_back("destinationEncryptionConfiguration");
+  }
   return default_filtered_keys;
 }
 
