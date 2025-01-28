@@ -64,8 +64,55 @@ TEST(ConvertFromBuffer, From_SQL_C_FLOAT) {
             "Numeric value out of range");
 }
 
+TEST(ConvertFromBuffer, From_SQL_C_DOUBLE) {
+  SQLDOUBLE value = 123456789123.45;
+  SQLLEN data_size = sizeof(SQLDOUBLE);
+  DataBuffer data = {SQL_C_DOUBLE, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_VARCHAR);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  // We have to use EXPECT_NEAR here because value is too large to be accurately
+  // represented as float
+  EXPECT_NEAR(value, stof(*conv_status), 10000);
+
+  conv_status = ConvertFromBuffer(data, SQL_REAL);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  // We have to use EXPECT_NEAR here because value is too large to be accurately
+  // represented as float
+  EXPECT_NEAR(value, stof(*conv_status), 10000);
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
 TEST(ConvertFromBuffer, From_SQL_C_SBIGINT) {
-  SQLBIGINT value = 12345;
+  SQLBIGINT value = -12345;
   SQLLEN data_size = sizeof(SQLBIGINT);
   DataBuffer data = {SQL_C_SBIGINT, &value, 0, &data_size};
   StatusRecordOr<std::string> conv_status;
@@ -75,11 +122,11 @@ TEST(ConvertFromBuffer, From_SQL_C_SBIGINT) {
 
   conv_status = ConvertFromBuffer(data, SQL_FLOAT);
   ASSERT_STATUS_RECORD_OK(conv_status);
-  EXPECT_EQ(value, std::stol(*conv_status));
+  EXPECT_EQ(value, std::stof(*conv_status));
 
   conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
   ASSERT_STATUS_RECORD_OK(conv_status);
-  EXPECT_EQ(value, std::stol(*conv_status));
+  EXPECT_EQ(value, std::stod(*conv_status));
 
   conv_status = ConvertFromBuffer(data, SQL_BIGINT);
   ASSERT_STATUS_RECORD_OK(conv_status);
@@ -88,6 +135,172 @@ TEST(ConvertFromBuffer, From_SQL_C_SBIGINT) {
   conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
   ASSERT_STATUS_RECORD_OK(conv_status);
   EXPECT_EQ(std::to_string((SQLSMALLINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_UBIGINT) {
+  SQLUBIGINT value = 12345;
+  SQLLEN data_size = sizeof(SQLUBIGINT);
+  DataBuffer data = {SQL_C_UBIGINT, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLSMALLINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_SSHORT) {
+  SQLSMALLINT value = -12345;
+  SQLLEN data_size = sizeof(SQLSMALLINT);
+  DataBuffer data = {SQL_C_SSHORT, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLSMALLINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_USHORT) {
+  SQLUSMALLINT value = 12345;
+  SQLLEN data_size = sizeof(SQLUSMALLINT);
+  DataBuffer data = {SQL_C_USHORT, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLSMALLINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_SLONG) {
+  SQLINTEGER value = -12345678912;
+  SQLLEN data_size = sizeof(SQLINTEGER);
+  DataBuffer data = {SQL_C_SLONG, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_ULONG) {
+  SQLUINTEGER value = 12345678912;
+  SQLLEN data_size = sizeof(SQLUINTEGER);
+  DataBuffer data = {SQL_C_ULONG, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  // We have to use EXPECT_NEAR here because value is too large to be accurately
+  // represented as float
+  EXPECT_NEAR(value, stof(*conv_status), 10000);
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
 
   conv_status = ConvertFromBuffer(data, SQL_TINYINT);
   EXPECT_FALSE(conv_status);
