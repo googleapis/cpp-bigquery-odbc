@@ -18,12 +18,12 @@
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
 
-std::string LogTraceDialog::log_level_;
-std::string LogTraceDialog::log_file_path_;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogFile = "LogFile";
 std::string const kLogOff = "LOG_OFF";
 std::string const kLogTrace = "LOG_TRACE";
+std::string LogTraceDialog::log_level_ = kLogOff;
+std::string LogTraceDialog::log_file_path_ = "C:\\Users\\Admin\\Documents";
 int const kBtnWidth = 80;
 int const kBtnHeight = 30;
 int const kComboBoxWidth = 220;

@@ -49,3 +49,11 @@ REGEDIT4
 "AllowLargeResults"="0"
 "LargeResultsDataSetId"="_odbc_temp_tables"
 "LargeResultsTempTableExpirationTime"="3600000"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Simba\Simba ODBC Driver for Google BigQuery\Driver]
+"LogLevel"="1"
+"LogFile"="C:\\b\\trace.log"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver]
+"LogLevel"="1"
+"LogFile"="C:\\b\\trace.log"
