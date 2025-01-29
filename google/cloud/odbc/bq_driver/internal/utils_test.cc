@@ -701,24 +701,6 @@ TEST(AddLogTraceToRegistry, Success) {
   EXPECT_EQ(section2->at("LogPath"), kLogPath);
 }
 
-TEST(EditLogTraceInRegistry, SuccessEdit) {
-  auto section = CreateTracelogTestSection();
-  StatusRecord result = AddLogTraceToRegistry(section);
-  ASSERT_TRUE(result.ok());
-
-  section["LogLevel"] = "6";
-  section["LogPath"] = "new/log/path";
-  result = EditLogTraceInRegistry(section);
-  ASSERT_TRUE(result.ok());
-
-  auto status = GetSectionWin(GetTraceLogRegistryPath() + "\\Driver");
-  std::shared_ptr<Section> section2 = status.GetValue();
-  ASSERT_TRUE(section2);
-
-  EXPECT_EQ(section2->at("LogLevel"), "6");
-  EXPECT_EQ(section2->at("LogPath"), "new/log/path");
-}
-
 TEST(ConvertLPCSTRToString, valid_string) {
   LPCSTR lpszAttributes =
       "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";

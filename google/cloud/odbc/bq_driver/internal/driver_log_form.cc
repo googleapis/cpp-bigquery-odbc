@@ -23,7 +23,7 @@ std::string const kLogFile = "LogFile";
 std::string const kLogOff = "LOG_OFF";
 std::string const kLogTrace = "LOG_TRACE";
 std::string LogTraceDialog::log_level_ = kLogOff;
-std::string LogTraceDialog::log_file_path_ = "C:\\Users\\Admin\\Documents";
+std::string LogTraceDialog::log_file_path_;
 int const kBtnWidth = 80;
 int const kBtnHeight = 30;
 int const kComboBoxWidth = 220;

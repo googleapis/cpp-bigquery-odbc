@@ -152,6 +152,7 @@ char const* ToCStr(std::string const& str);
 std::string ExitInternal(std::string const& func_name, SQLRETURN ret_code,
                          TraceOptions& opts);
 
+void AddDefaultLogFile(std::shared_ptr<Sections>& configs);
 ////////////////////////////////////////////////////////////////////
 // Additional Helper methods for validating and formatting strings
 // based on parameter types.

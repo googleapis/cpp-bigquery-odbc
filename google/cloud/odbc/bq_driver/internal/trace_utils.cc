@@ -42,14 +42,27 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
   return options_console_;
 }
 
+void AddDefaultLogFile(std::shared_ptr<Sections>& configs) {
+  if (!configs) return;
+  auto odbc_section = configs->find("Driver");
+  if (odbc_section != configs->end()) {
+    auto& driver_section = odbc_section->second;
+    auto log_file = driver_section.find("LogFile");
+    if (log_file != driver_section.end()) {
+      log_file->second += "\\" + kLogTraceFileName;
+    }
+  }
+}
+
 StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
   auto configs = ParseConfig(file_path);
   if (!configs) {
     return configs.GetStatusRecord();
   }
-
-  return CreateTraceOptionsFile(*configs);
+  std::shared_ptr<Sections> sections_ptr = *configs;
+  AddDefaultLogFile(sections_ptr);
+  return CreateTraceOptionsFile(sections_ptr);
 }
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
@@ -75,7 +88,7 @@ TraceOptions::CreateTraceOptionsFile(
         logging_enabled = true;
       }
     } else if (s.first == "LogFile") {
-      log_file = s.second + "\\" + kLogTraceFileName;
+      log_file = s.second;
     }
   }
 

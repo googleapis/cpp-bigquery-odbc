@@ -220,8 +220,6 @@ odbc_internal::StatusRecord AddLogTraceToRegistry(Section const& section);
 odbc_internal::StatusRecord EditDSNInRegistry(std::string const& dsn_name,
                                               Section const& section);
 
-odbc_internal::StatusRecord EditLogTraceInRegistry(Section const& section);
-
 odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name);
 
 #endif  // _WIN32

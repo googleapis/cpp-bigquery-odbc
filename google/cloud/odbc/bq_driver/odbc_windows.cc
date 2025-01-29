@@ -25,7 +25,6 @@ using google::cloud::odbc_bq_driver_internal::AddLogTraceToRegistry;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
-using google::cloud::odbc_bq_driver_internal::EditLogTraceInRegistry;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetTraceLogRegistryPath;
@@ -95,7 +94,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string description =
       section.count("Description") > 0 ? section.at("Description") : "";
   std::string log_level = ConvertLogLevel(
-      section.count("LogLevel") > 0 ? section.at("LogLevel") : "");
+      section.count("LogLevel") > 0 ? section.at("LogLevel") : "0");
   std::string log_file =
       section.count("LogFile") > 0 ? section.at("LogFile") : "";
 
@@ -182,7 +181,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       Section section_config = CreateSectionFromForm();
       Section trace_config_section = CreateSectionFromLogForm();
       EditDSNInRegistry(dsn_value, section_config);
-      EditLogTraceInRegistry(trace_config_section);
+      AddLogTraceToRegistry(trace_config_section);
       return TRUE;
     }
     case ODBC_REMOVE_DSN:
