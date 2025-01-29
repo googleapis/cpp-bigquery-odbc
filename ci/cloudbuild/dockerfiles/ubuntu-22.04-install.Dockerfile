@@ -77,6 +77,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230125.3.tar.gz | 
       -DABSL_BUILD_TESTING=OFF \
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out -GNinja && \
     cmake --build cmake-out --target install && \
     ldconfig && \
@@ -88,6 +89,7 @@ RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out -GNinja  && \
     cmake --build cmake-out --target install && \
     ldconfig && \
@@ -99,6 +101,7 @@ RUN curl -fsSL https://github.com/google/benchmark/archive/v1.8.0.tar.gz | \
     cmake \
         -DCMAKE_BUILD_TYPE="Release" \
         -DBUILD_SHARED_LIBS=yes \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DBENCHMARK_ENABLE_TESTING=OFF \
         -S . -B cmake-out -GNinja  && \
     cmake --build cmake-out --target install && \
@@ -111,6 +114,7 @@ RUN curl -fsSL https://github.com/google/crc32c/archive/1.1.2.tar.gz | \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -DCRC32C_BUILD_TESTS=OFF \
       -DCRC32C_BUILD_BENCHMARKS=OFF \
       -DCRC32C_USE_GLOG=OFF \
@@ -125,6 +129,7 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -DBUILD_TESTING=OFF \
       -DJSON_BuildTests=OFF \
       -S . -B cmake-out -GNinja && \
@@ -138,6 +143,7 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz 
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=yes \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -Dprotobuf_BUILD_TESTS=OFF \
         -Dprotobuf_ABSL_PROVIDER=package \
         -S . -B cmake-out -GNinja && \
@@ -151,6 +157,7 @@ RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.t
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=yes \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out --target install && \
     ldconfig && \
@@ -161,6 +168,7 @@ RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DRE2_BUILD_TESTING=OFF \
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out --target install && \
@@ -173,6 +181,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DgRPC_INSTALL=ON \
         -DgRPC_BUILD_TESTS=OFF \
         -DgRPC_ABSL_PROVIDER=package \
@@ -209,6 +218,7 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
         -DBUILD_TESTING=OFF \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
         -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager,serviceusage \
         -S . -B cmake-out -GNinja && \
@@ -231,6 +241,8 @@ ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
+
+COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
 
 # glibc 2.17 or later
 RUN echo 'Installing glibc...'
