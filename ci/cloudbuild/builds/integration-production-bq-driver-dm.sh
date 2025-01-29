@@ -25,8 +25,19 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-# This runs all the unit tests
+# echo "HOME is set to: $HOME"
+# git -C $HOME clone https://github.com/microsoft/vcpkg
+# export VCPKG_ROOT=$HOME/vcpkg
 
+
+# bash "$VCPKG_ROOT/bootstrap-vcpkg.sh"
+# echo "Current working directory is: $(pwd)"
+# echo "VCPKG_ROOT is set to: $VCPKG_ROOT"
+# echo "VCPKG_BINARY_SOURCES=$VCPKG_BINARY_SOURCES"
+# "$VCPKG_ROOT/vcpkg" install
+# echo "done processing vcpkg"
+
+# This runs all the unit tests
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
@@ -48,8 +59,6 @@ io::run cmake -B "$BUILD_DIR" \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DBUILD_SHARED_LIBS=ON \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-  -DODBC_DEMO_TESTING=ON \
-  -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
