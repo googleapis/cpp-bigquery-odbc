@@ -382,7 +382,7 @@ StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
 // ensuring proper truncation handling.
 StatusRecord ConvertBytesToWChar(std::vector<SQLCHAR> const& conn_val,
                                  DataBuffer& dest_data) {
-  auto* dest = reinterpret_cast<wchar_t*>(dest_data.buf);
+  auto* dest = reinterpret_cast<uint8_t*>(dest_data.buf);  // Use uint8_t for byte-wise copying
   StatusRecord status_record = StatusRecord::Ok();
 
   // Interpret conn_val as UTF-16 encoded data
@@ -390,10 +390,16 @@ StatusRecord ConvertBytesToWChar(std::vector<SQLCHAR> const& conn_val,
                             conn_val.size() / sizeof(char16_t));
 
   SQLLEN utf16_length = static_cast<SQLLEN>(utf16_data.size());
-  SQLLEN available_length = dest_data.buflen / sizeof(wchar_t) - 1;
+  SQLLEN available_length ;
+  #ifdef _WIN32
+  available_length = dest_data.buflen / sizeof(wchar_t) - 1;
+  #endif
+  available_length= dest_data.buflen / sizeof(uint16_t);  // Use uint16_t size for buffer
   SQLLEN copy_length = std::min(utf16_length, available_length);
 
-  // Copy characters while splitting UTF-16 into wchar_t pairs
+
+  // Copy UTF-16 characters into the destination buffer
+  #ifdef _WIN32
   for (SQLLEN i = 0; i < copy_length; ++i) {
     auto utf16_char = static_cast<uint16_t>(utf16_data[i]);
     dest[i * 2] = static_cast<wchar_t>(utf16_char & 0xFF);
@@ -403,9 +409,28 @@ StatusRecord ConvertBytesToWChar(std::vector<SQLCHAR> const& conn_val,
   // Null-terminate the output buffer
   dest[copy_length * 2] = L'\0';
 
-  // Set the result length if applicable
   if (dest_data.result_len) {
     *dest_data.result_len = (copy_length * 2 + 1) * sizeof(wchar_t);
+  }
+
+  #endif
+
+  for (SQLLEN i = 0; i < copy_length; ++i) {
+    uint16_t utf16_char = static_cast<uint16_t>(utf16_data[i]);
+
+    // Copy the low byte first, followed by a zero byte, then the high byte, followed by a zero byte
+    dest[i * 4] = static_cast<uint8_t>(utf16_char & 0xFF);  // Low byte
+    dest[i * 4 + 1] = 0x00;  // Padding byte (0x00)
+    dest[i * 4 + 2] = static_cast<uint8_t>((utf16_char >> 8) & 0xFF);  // High byte
+    dest[i * 4 + 3] = 0x00;  // Padding byte (0x00)
+  }
+
+  // Null-terminate the output buffer
+  dest[copy_length * 4] = 0x00;
+
+  // Set the result length if applicable
+  if (dest_data.result_len) {
+    *dest_data.result_len = (copy_length * 4 ); 
   }
 
   // Return truncation status if needed

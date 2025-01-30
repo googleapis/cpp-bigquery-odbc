@@ -1123,10 +1123,14 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       }
 
       case SQL_C_WCHAR: {
+      std::cout<<"DATA"<<data<<std::endl;
       std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
                                     strlen_or_ind / sizeof(SQLWCHAR));
-        std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
+      std::cout<<"DATA2"<<returned_val_utf8<<std::endl;
+
+      std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
+      std::wcout<<"DATA3"<<returned_val<<std::endl;
         returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
         std::wstring expected_val(expected.value.begin(), expected.value.end());
         expected_val.erase(expected_val.find_last_not_of(L'\0') + 1);
