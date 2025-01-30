@@ -1530,17 +1530,6 @@ std::wstring ConvertHexToWchar(std::string const& hex_str) {
   return result;
 }
 
-std::string ConvertCharToHex(char const* data, int len) {
-  std::ostringstream oss;
-  oss << std::uppercase;
-  for (int i = 0; i < len; ++i) {
-    // Format each byte in hex, ensuring two characters per byte
-    oss << std::hex << std::setw(2) << std::setfill('0')
-        << (static_cast<unsigned char>(data[i]) & 0xFF);
-  }
-  return oss.str();
-}
-
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
                                SQLLEN* strlen_or_ind, SQLPOINTER* data) {

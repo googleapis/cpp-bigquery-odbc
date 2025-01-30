@@ -604,8 +604,6 @@ std::string ConvertHexToChar(std::string const& hex_str);
 
 std::wstring ConvertHexToWchar(std::string const& hex_str);
 
-std::string ConvertCharToHex(char const* data, int len);
-
 SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
                                std::string query, SQLSMALLINT target_c_type,
                                SQLLEN* strlen_or_ind, SQLPOINTER* data);

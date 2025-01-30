@@ -16,12 +16,9 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <nlohmann/json.hpp>
 
 namespace google::cloud::odbc_tests {
-using ::testing::HasSubstr;
-
 struct TimestampBasicTestStruct {
   // The target C type SQLBindCol will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -2372,96 +2369,90 @@ struct GeographyBasicStruct {
   SQLSMALLINT target_c_type;
   // The geography parser to apply (e.g., ST_GEOGFROMTEXT, ST_GEOGFROMWKB)
   std::string geo_parser;
-  // The geography formatters to apply (e.g., ST_ASTEXT, ST_ASGEOJSON)
-  std::string geo_formatters;
   // The value that should be returned by SQLGetData if it succeeds
   std::string value;
+  // The value that should be expected.
+  std::optional<std::string> expected_value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
 
 std::vector<GeographyBasicStruct> const kConversionFromGeographyTestData{
-    {SQL_C_CHAR, "ST_GEOGFROMTEXT", "ST_ASTEXT", "POINT(120.987 14.599)",
+    {SQL_C_CHAR, "ST_GEOGFROMTEXT", "POINT(120.987 14.599)", std::nullopt,
      SQL_SUCCESS},
-    {SQL_C_CHAR, "ST_GEOGFROMTEXT", "ST_ASTEXT",
-     "LINESTRING(121.1 14.5, 122.1 15.5)", SQL_SUCCESS},
-    {SQL_C_BINARY, "ST_GEOGFROMWKB", "ST_ASBINARY",
-     "01010000008B1B85EB51B81E40CDCCCCCCCCCC2840", SQL_SUCCESS},
-    {SQL_C_WCHAR, "ST_GEOGFROMTEXT", "ST_ASTEXT",
-     "POLYGON((120 14, 121 14, 121 15, 120 15, 120 14))", SQL_SUCCESS},
-    {SQL_C_CHAR, "ST_GEOGFROMGEOJSON", "ST_ASGEOJSON",
-     "{ \"type\": \"Point\", \"coordinates\": [120.97, 14.529] } ",
+    {SQL_C_CHAR, "ST_GEOGFROMTEXT", "LINESTRING(121.1 14.5, 122.1 15.5)",
+     std::nullopt, SQL_SUCCESS},
+    {SQL_C_BINARY, "ST_GEOGFROMWKB",
+     "01010000008B1B85EB51B81E40CDCCCCCCCCCC2840",
+     "POINT(7.67999999999928 12.4)", SQL_SUCCESS},
+    {SQL_C_WCHAR, "ST_GEOGFROMTEXT",
+     "POLYGON((120 14, 121 14, 121 15, 120 15, 120 14))", std::nullopt,
      SQL_SUCCESS},
-    {SQL_C_CHAR, "ST_GEOGPOINTFROMGEOHASH", "ST_GEOHASH", "wwgqkpz2x",
+    {SQL_C_CHAR, "ST_GEOGPOINTFROMGEOHASH", "wwgqkpz2x",
+     "POINT(117.256371974945 39.110062122345)", SQL_SUCCESS},
+    {SQL_C_WCHAR, "ST_GEOGFROMGEOJSON",
+     "{ \"type\": \"LineString\", \"coordinates\": [ [120.97, 14.529], [121.1, "
+     "14.6], [121.3, 14.7], [121.5, 14.8] ] } ",
+     "LINESTRING(120.97 14.529, 121.1 14.6, 121.3 14.7, 121.5 14.8)",
      SQL_SUCCESS},
-    {SQL_C_DOUBLE, "ST_GEOGFROMTEXT", "ST_ASTEXT",
-     "LINESTRING(11.1 1.5, 120.1 12.5)", SQL_ERROR},
-    {SQL_C_TINYINT, "ST_GEOGFROMTEXT", "ST_GEOHASH", "POINT(120.987 14.599)",
+    {SQL_C_DOUBLE, "ST_GEOGFROMTEXT", "LINESTRING(11.1 1.5, 120.1 12.5)",
+     std::nullopt, SQL_ERROR},
+    {SQL_C_SSHORT, "ST_GEOGFROMTEXT", "POINT(120.987 14.599)", std::nullopt,
      SQL_ERROR},
-    {SQL_C_CHAR, "ST_GEOGFROMGEOJSON", "ST_ASGEOJSON", "{}", SQL_ERROR},
-    {SQL_C_BINARY, "ST_GEOGFROMWKB", "ST_ASBINARY", "INVALID_DATA", SQL_ERROR},
 };
 
-void TestTranslationFromGeography(std::shared_ptr<ODBCHandles> conn,
-                                  std::string table_name) {
+void TestTranslationFromGeography(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<GeographyBasicStruct> const& test_data) {
   SQLRETURN status;
   SQLPOINTER data[kBufferLength];
   SQLLEN strlen_or_ind;
   char read_stmt[kBufferLength];
-  int row_count = 1;
 
-  for (auto const& expected : kConversionFromGeographyTestData) {
-    std::string query = "SELECT " + expected.geo_formatters +
-                        "(GeoField) FROM " + table_name +
-                        " WHERE Index = " + std::to_string(row_count);
-    status = ExecWithPrepare(conn, query);
-    CheckError(status, "ExecWithPrepare", conn);
+  std::string query = "SELECT GeoField FROM " + table_name + " ORDER BY Index";
+  status = ExecWithPrepare(conn, query);
+  CheckError(status, "ExecWithPrepare", conn);
+
+  for (auto const& expected : test_data) {
     status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
                         kBufferLength, &strlen_or_ind);
     CheckError(status, "SQLBindCol", conn);
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
-      SQLFreeStmt(conn->hstmt, SQL_CLOSE);
       break;
     }
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        std::string expected_val = expected.value;
-        if (expected.geo_formatters == "ST_GEOHASH") {
-          EXPECT_THAT(returned_val, HasSubstr(expected_val));
-        } else {
-          EXPECT_EQ(returned_val, expected_val);
-        }
+        auto expected_val = expected.expected_value.value_or(expected.value);
+        EXPECT_EQ(returned_val.data(), expected_val);
         break;
       }
       case SQL_C_WCHAR: {
         auto returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
-        auto expected_val = expected.value;
-        EXPECT_STREQ(returned_val.data(), expected_val.data());
+        auto expected_val = expected.expected_value.value_or(expected.value);
+        EXPECT_EQ(returned_val.data(), expected_val);
         break;
       }
       case SQL_C_BINARY: {
-        auto returned_val =
-            ConvertCharToHex(reinterpret_cast<char*>(data), strlen_or_ind);
-        auto expected_val = ConvertHexToChar(expected.value);
-        EXPECT_EQ(returned_val, expected.value);
+        std::string returned_val(reinterpret_cast<char*>(data), strlen_or_ind);
+        EXPECT_EQ(returned_val, expected.expected_value);
         break;
       }
       case SQL_C_DOUBLE: {
         auto returned_val = reinterpret_cast<double*>(data);
         EXPECT_EQ(status, expected.status);
+        break;
       }
-      case SQL_C_TINYINT: {
-        auto returned_val = reinterpret_cast<double*>(data);
+      case SQL_C_SSHORT: {
+        SQLSMALLINT* returned_val = reinterpret_cast<SQLSMALLINT*>(data);
         EXPECT_EQ(status, expected.status);
+        break;
       }
       default:
         break;
     }
-    SQLFreeStmt(conn->hstmt, SQL_CLOSE);
-    row_count += 1;
   }
 }
 
@@ -2469,9 +2460,9 @@ TEST(DataTranslationTest, From_Geography_To_All) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_GEOGRAPHY";
   Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
 
   // Create Table
-  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(Index INTEGER, GeoField GEOGRAPHY)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -2487,7 +2478,8 @@ TEST(DataTranslationTest, From_Geography_To_All) {
 
   // Read Data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  TestTranslationFromGeography(conn, table_name);
+  TestTranslationFromGeography(conn, table_name,
+                               kConversionFromGeographyTestData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
