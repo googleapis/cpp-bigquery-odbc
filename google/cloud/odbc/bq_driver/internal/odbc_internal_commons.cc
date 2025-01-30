@@ -455,6 +455,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             BooleanToDSValue(bool_val, row_val);
             break;
           }
+          case BQDataType::kGeography: {
+            StringToDSValue(data, row_val);
+            break;
+          }
           default: {
             return StatusRecord{SQLStates::k_HY000(),
                                 "Invalid or unsupported col BQ data type"};

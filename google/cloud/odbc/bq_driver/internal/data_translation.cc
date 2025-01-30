@@ -849,4 +849,45 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
+                                         DataBuffer& dest_data) {
+  std::string src_str;
+  DSValueToString(src_dsval, src_str);
+  SQLLEN buffer_length = dest_data.buflen;
+
+  if (buffer_length < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  StatusRecord status_record = StatusRecord::Ok();
+
+  switch (dest_data.type) {
+    case SQL_C_CHAR:
+    case SQL_C_BINARY: {
+      StatusRecord status_record =
+          StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      break;
+    }
+    case SQL_C_WCHAR: {
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
+      if (!wstr) {
+        status_record = StatusRecord{SQLStates::k_HY000(),
+                                     "Conversion to SQL_C_WCHAR failed."};
+        break;
+      }
+      std::memset(dest_data.buf, 0, buffer_length);
+
+      return WStrToOutputBufferResponse(
+          wstr.GetValue(), dest_data.buf, buffer_length, src_str.length(),
+          src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
+      break;
+    }
+
+    default: {
+      status_record =
+          StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+    }
+  }
+  return status_record;
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

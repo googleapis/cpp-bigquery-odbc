@@ -2363,7 +2363,6 @@ TEST(DataTranslationTest, From_Interval_to_Arithmetic) {
 }
 #endif /* BQ_DRIVER_INTEGRATION_TESTS */
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 struct GeographyBasicStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -2487,6 +2486,4 @@ TEST(DataTranslationTest, From_Geography_To_All) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }  // namespace google::cloud::odbc_tests

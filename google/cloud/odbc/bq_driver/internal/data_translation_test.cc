@@ -1398,4 +1398,80 @@ TEST(ConvertFromBooleanDSValue, InsufficientBufferForChar) {
   EXPECT_EQ(dest_buf[0], '\0');
 }
 
+TEST(ConvertFromGeographyDSValue, InsufficientBufferForWChar) {
+  DSValue src_dsval;
+  std::string geo_str = "POINT(120.987 14.599)";
+
+  StringToDSValue(geo_str, src_dsval);
+
+  SQLWCHAR dest_buf[2];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
+
+  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_22003(),
+                                  StrEq("Buffer length is insufficient")));
+  EXPECT_EQ(dest_buf[0], L'\0');
+}
+
+TEST(ConvertFromGeographyDSValue, InvalidConversion) {
+  DSValue src_dsval;
+  std::string geo_str = "POINT(120.987 14.599)";
+  StringToDSValue(geo_str, src_dsval);
+
+  char dest_buf[50];
+  DataBuffer dest_data{SQL_C_SSHORT, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
+                                  StrEq("Conversion is unsupported")));
+}
+
+TEST(ConvertFromGeographyDSValue, To_SQL_C_CHAR) {
+  DSValue src_dsval;
+  std::string geo_str = "LINESTRING(121.1 14.5, 122.1 15.5)";
+  StringToDSValue(geo_str, src_dsval);
+
+  char dest_buf[100];
+  DataBuffer dest_data{SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
+  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+
+  auto* returned_val = reinterpret_cast<char*>(dest_data.buf);
+  EXPECT_EQ(geo_str, returned_val);
+}
+
+TEST(ConvertFromGeographyDSValue, TO_SQL_C_WCHAR) {
+  DSValue src_dsval;
+  std::string geo_str = "POLYGON((120 14, 121 14, 121 15, 120 15, 120 14))";
+  StringToDSValue(geo_str, src_dsval);
+
+  SQLWCHAR dest_buf[100];
+  SQLLEN result_len;
+  DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
+  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+
+  ASSERT_TRUE(status.ok());
+
+  auto returned_val =
+      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+                              result_len / sizeof(SQLWCHAR));
+  EXPECT_EQ(returned_val.GetValue().c_str(), geo_str);
+}
+
+TEST(ConvertFromGeographyDSValue, TO_SQL_C_Binary) {
+  DSValue src_dsval;
+  std::string geo_str = "POINT(7.67999999999928 12.4)";
+  StringToDSValue(geo_str, src_dsval);
+
+  char dest_buf[100];
+  SQLLEN res_len;
+
+  DataBuffer dest_data{SQL_C_BINARY, dest_buf, sizeof(dest_buf), &res_len};
+  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(res_len, (SQLLEN)geo_str.size());
+
+  std::string returned_val = reinterpret_cast<char*>(dest_data.buf);
+  EXPECT_EQ(returned_val, geo_str);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
