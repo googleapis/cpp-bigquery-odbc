@@ -1178,4 +1178,70 @@ TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
   StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
   EXPECT_TRUE(status_record.ok());
 }
+
+TEST(BytesToDSValue, CheckBytesConversion) {
+  std::vector<SQLCHAR> input_bytes = {0x41, 0x42, 0x43, 0x44};
+
+  DSValue ds_val;
+  BytesToDSValue(input_bytes, ds_val);
+
+  ASSERT_EQ(ds_val.size(), input_bytes.size());
+
+  for (size_t i = 0; i < input_bytes.size(); ++i) {
+    EXPECT_EQ(ds_val[i], input_bytes[i]);
+  }
+
+  std::vector<SQLCHAR> output_bytes = DSValueToBytes(ds_val);
+
+  ASSERT_EQ(output_bytes.size(), input_bytes.size());
+  for (size_t i = 0; i < output_bytes.size(); ++i) {
+    EXPECT_EQ(output_bytes[i], input_bytes[i]);
+  }
+}
+
+TEST(BytesToDSValue, ConvertLargeBytes) {
+  std::vector<SQLCHAR> input_bytes(10000, 0x42);
+  DSValue ds_value;
+
+  BytesToDSValue(input_bytes, ds_value);
+
+  ASSERT_EQ(ds_value.size(), input_bytes.size());
+
+  for (size_t i = 0; i < input_bytes.size(); ++i) {
+    EXPECT_EQ(ds_value[i], input_bytes[i]);
+  }
+
+  std::vector<SQLCHAR> output_bytes = DSValueToBytes(ds_value);
+  ASSERT_EQ(output_bytes.size(), input_bytes.size());
+  EXPECT_EQ(output_bytes, input_bytes);
+}
+
+TEST(BytesToDSValue, ConvertBytesWithNullCharacters) {
+  std::vector<SQLCHAR> input_bytes = {'A', '\0', 'B', '\0', 'C'};
+  DSValue ds_value;
+
+  BytesToDSValue(input_bytes, ds_value);
+  for (size_t i = 0; i < input_bytes.size(); ++i) {
+    EXPECT_EQ(ds_value[i], input_bytes[i]);
+  }
+
+  std::vector<SQLCHAR> output_bytes = DSValueToBytes(ds_value);
+  ASSERT_EQ(output_bytes.size(), input_bytes.size());
+  EXPECT_EQ(output_bytes, input_bytes);
+}
+
+TEST(BytesToDSValue, InvalidResizeBehavior) {
+  std::vector<SQLCHAR> input_bytes = {0x41, 0x42, 0x43, 0x44};
+
+  DSValue ds_value;
+  ds_value.reserve(input_bytes.size() + 10);
+
+  BytesToDSValue(input_bytes, ds_value);
+
+  EXPECT_EQ(ds_value.size(), input_bytes.size());
+  for (size_t i = 0; i < input_bytes.size(); ++i) {
+    EXPECT_EQ(ds_value[i], input_bytes[i]);
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

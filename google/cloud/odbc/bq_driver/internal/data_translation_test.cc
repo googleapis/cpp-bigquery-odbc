@@ -1398,4 +1398,130 @@ TEST(ConvertFromBooleanDSValue, InsufficientBufferForChar) {
   EXPECT_EQ(dest_buf[0], '\0');
 }
 
+TEST(ConvertFromBytesDSValue, BinaryDataExactFit) {
+  std::vector<SQLCHAR> source_bytes = {
+      '4', '1', '4', '2', '4', '3', '4', '4'};  // Represents "ABCD" in binary
+  DSValue source_dsval;
+
+  BytesToDSValue(source_bytes, source_dsval);
+
+  std::vector<uint8_t> dest_buf(4);
+  SQLLEN result_len = 0;
+
+  DataBuffer dest_data;
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = dest_buf.size();
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_BINARY;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  EXPECT_TRUE(status.ok());
+
+  EXPECT_EQ(result_len, static_cast<SQLLEN>(dest_buf.size()));
+
+  std::vector<uint8_t> expected_binary = {'A', 'B', 'C', 'D'};
+  EXPECT_EQ(
+      std::memcmp(dest_buf.data(), expected_binary.data(), dest_buf.size()), 0);
+}
+
+TEST(ConvertFromBytesDSValue, StringDataExactFit) {
+  std::vector<SQLCHAR> source_bytes = {'H', 'e', 'l', 'l', 'o'};
+  DSValue source_dsval;
+
+  BytesToDSValue(source_bytes, source_dsval);
+
+  std::vector<char> dest_buf(6);
+  SQLLEN result_len = 0;
+
+  DataBuffer dest_data;
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = dest_buf.size();
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_CHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(result_len, static_cast<SQLLEN>(source_bytes.size()));
+  EXPECT_STREQ(dest_buf.data(), "Hello");
+}
+
+TEST(ConvertFromBytesDSValue, NullBuffer_Error) {
+  std::vector<SQLCHAR> source_bytes = {0x01, 0x02, 0x03};
+  DSValue source_dsval;
+
+  BytesToDSValue(source_bytes, source_dsval);
+
+  DataBuffer dest_data;
+  dest_data.buf = nullptr;
+  dest_data.buflen = 10;
+  dest_data.result_len = nullptr;
+  dest_data.type = SQL_C_BINARY;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
+                                  StrEq("Destination buffer is null")));
+}
+
+TEST(ConvertFromBytesDSValue, NegativeBufferLength_Error) {
+  std::vector<SQLCHAR> source_bytes = {0x01, 0x02, 0x03};
+  DSValue source_dsval;
+  BytesToDSValue(source_bytes, source_dsval);
+
+  std::vector<SQLCHAR> dest_buf(3);
+  DataBuffer dest_data;
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = -1;
+  dest_data.result_len = nullptr;
+  dest_data.type = SQL_C_BINARY;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
+                                  StrEq("Buffer length is negative")));
+}
+
+TEST(ConvertFromBytesDSValue, StringDataTruncated) {
+  std::vector<SQLCHAR> source_bytes = {'W', 'o', 'r', 'l', 'd'};
+  DSValue source_dsval;
+  BytesToDSValue(source_bytes, source_dsval);
+
+  DataBuffer dest_data;
+  std::vector<char> dest_buf(4);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = 4;
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_CHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(result_len, 4);
+  EXPECT_EQ(std::string(dest_buf.data()), "Wor");
+}
+
+TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
+  std::vector<SQLCHAR> source_bytes = {'H', 'i', '\0'};
+  DSValue source_dsval;
+  BytesToDSValue(source_bytes, source_dsval);
+
+  DataBuffer dest_data;
+  std::vector<wchar_t> dest_buf(3);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = 3 * sizeof(wchar_t);
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(dest_buf[0], L'H');
+  EXPECT_EQ(dest_buf[1], L'i');
+  EXPECT_EQ(dest_buf[2], L'\0');
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

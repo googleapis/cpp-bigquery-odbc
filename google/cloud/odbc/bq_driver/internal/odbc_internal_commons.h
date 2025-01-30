@@ -196,6 +196,15 @@ inline SQL_TIME_STRUCT DSValueToTime(DSValue const& value,
   return time_struct;
 }
 
+inline void BytesToDSValue(std::vector<SQLCHAR> const& bytes, DSValue& value) {
+  value.resize(bytes.size());
+  std::memcpy(value.data(), bytes.data(), bytes.size());
+}
+
+inline std::vector<SQLCHAR> DSValueToBytes(DSValue const& value) {
+  return std::vector<SQLCHAR>(value.begin(), value.end());
+}
+
 inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   char buffer[9];
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", time.hour, time.minute,

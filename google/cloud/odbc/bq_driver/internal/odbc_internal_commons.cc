@@ -369,6 +369,45 @@ SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
   return date_struct;
 }
 
+std::vector<uint8_t> Base64Decode(std::string const& str) {
+  static std::string const kBaseChars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  std::vector<uint8_t> decoded_data;
+  int val = 0;
+  int val_b = -8;
+
+  for (unsigned char c : str) {
+    if (!absl::StrContains(kBaseChars, c)) break;
+
+    val = (val << 6) + kBaseChars.find(c);
+    val_b += 6;
+
+    if (val_b >= 0) {
+      decoded_data.push_back((val >> val_b) & 0xFF);
+      val_b -= 8;
+    }
+  }
+
+  return decoded_data;
+}
+
+// Func to convert base64 encoded into its ASCII hexadecimal value
+std::vector<uint8_t> Base64ToASCIIHexFormat(std::vector<uint8_t> const& bytes) {
+  std::vector<uint8_t> output;
+
+  for (uint8_t byte : bytes) {
+    std::ostringstream hex_stream;
+    hex_stream << std::hex << std::uppercase << std::setfill('0')
+               << std::setw(2) << static_cast<int>(byte);
+
+    for (char ch : hex_stream.str()) {
+      output.push_back(static_cast<uint8_t>(ch));
+    }
+  }
+  return output;
+}
+
 StatusRecordOr<ResultSet> ProcessResultSetRows(
     TableSchema const& schema, std::vector<RowData> const& rows) {
   ResultSet result_set;
@@ -442,6 +481,12 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             SQL_TIMESTAMP_STRUCT time_struct =
                 ConvertStringToTimestampStruct(data);
             TimestampToDSValue(time_struct, row_val);
+            break;
+          }
+          case BQDataType::kBytes: {
+            std::vector<SQLCHAR> bytes = Base64Decode(data);
+            bytes = Base64ToASCIIHexFormat(bytes);
+            BytesToDSValue(bytes, row_val);
             break;
           }
           case BQDataType::kBool: {

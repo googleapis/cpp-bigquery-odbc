@@ -1058,6 +1058,7 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct BytesBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
@@ -1072,8 +1073,8 @@ std::vector<BytesBasicTestStruct> const kConversionFromBytesTestData{
     {SQL_C_BINARY, {0x01, 0x02}, SQL_SUCCESS},
     {SQL_C_CHAR, {'a', 'b', '\0'}, SQL_SUCCESS},
     {SQL_C_WCHAR, {'\0', 'a', '\0', 'b', '\0', '\0'}, SQL_SUCCESS},
-    {SQL_C_LONG, {}, SQL_ERROR},
-    {SQL_C_DOUBLE, {}, SQL_ERROR},
+    {SQL_C_LONG, {1}, SQL_ERROR},
+    {SQL_C_DOUBLE, {1}, SQL_ERROR},
 };
 
 void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
@@ -1122,7 +1123,7 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       }
 
       case SQL_C_WCHAR: {
-        std::string returned_val_utf8 =
+      std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
                                     strlen_or_ind / sizeof(SQLWCHAR));
         std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
@@ -1172,8 +1173,6 @@ TEST(DataTranslationTest, From_SQL_Bytes_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct DateBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to

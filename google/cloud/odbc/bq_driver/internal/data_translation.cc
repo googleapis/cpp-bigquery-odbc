@@ -322,4 +322,123 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+// This func converts a vector of SQLCHAR bytes (hex-encoded) to binary data,
+// handling truncation if needed.
+StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
+                                  DataBuffer& dest_data) {
+  std::vector<uint8_t> binary_data;
+  binary_data.reserve(conn_val.size() / 2);
+
+  StatusRecord status_record = StatusRecord::Ok();
+  // Convert each hex pair into a byte
+  for (size_t i = 0; i < conn_val.size(); i += 2) {
+    uint8_t byte = (conn_val[i] - '0') * 16 + (conn_val[i + 1] - '0');
+    binary_data.push_back(byte);
+  }
+
+  // Handle buffer truncation scenario
+  if (dest_data.buflen < binary_data.size()) {
+    std::memcpy(dest_data.buf, binary_data.data(), dest_data.buflen);
+    if (dest_data.result_len) {
+      *dest_data.result_len = dest_data.buflen;
+    }
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "Binary data, right truncated"};
+  } else {
+    std::memcpy(dest_data.buf, binary_data.data(), binary_data.size());
+    if (dest_data.result_len) {
+      *dest_data.result_len = binary_data.size();
+    }
+  }
+  return status_record;
+}
+
+// This func converts a vector of SQLCHAR bytes to a standard char string,
+// ensuring null termination and handling truncation.
+StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
+                                DataBuffer& dest_data) {
+  auto* dest = reinterpret_cast<char*>(dest_data.buf);
+  StatusRecord status_record = StatusRecord::Ok();
+
+  // Check for truncation and copy data accordingly
+  if (dest_data.buflen < static_cast<SQLLEN>(conn_val.size()) + 1) {
+    std::memcpy(dest, conn_val.data(), dest_data.buflen - 1);
+    dest[dest_data.buflen - 1] = '\0';
+    if (dest_data.result_len) {
+      *dest_data.result_len = dest_data.buflen;
+    }
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+  } else {
+    std::memcpy(dest, conn_val.data(), conn_val.size());
+    if (dest_data.result_len) {
+      *dest_data.result_len = conn_val.size();
+    }
+  }
+  return status_record;
+}
+
+// This func converts a vector of SQLCHAR bytes to a UTF-16 wchar_t string,
+// ensuring proper truncation handling.
+StatusRecord ConvertBytesToWChar(std::vector<SQLCHAR> const& conn_val,
+                                 DataBuffer& dest_data) {
+  auto* dest = reinterpret_cast<wchar_t*>(dest_data.buf);
+  StatusRecord status_record = StatusRecord::Ok();
+
+  // Interpret conn_val as UTF-16 encoded data
+  std::u16string utf16_data(reinterpret_cast<char16_t const*>(conn_val.data()),
+                            conn_val.size() / sizeof(char16_t));
+
+  SQLLEN utf16_length = static_cast<SQLLEN>(utf16_data.size());
+  SQLLEN available_length = dest_data.buflen / sizeof(wchar_t) - 1;
+  SQLLEN copy_length = std::min(utf16_length, available_length);
+
+  // Copy characters while splitting UTF-16 into wchar_t pairs
+  for (SQLLEN i = 0; i < copy_length; ++i) {
+    auto utf16_char = static_cast<uint16_t>(utf16_data[i]);
+    dest[i * 2] = static_cast<wchar_t>(utf16_char & 0xFF);
+    dest[i * 2 + 1] = static_cast<wchar_t>((utf16_char >> 8) & 0xFF);
+  }
+
+  // Null-terminate the output buffer
+  dest[copy_length * 2] = L'\0';
+
+  // Set the result length if applicable
+  if (dest_data.result_len) {
+    *dest_data.result_len = (copy_length * 2 + 1) * sizeof(wchar_t);
+  }
+
+  // Return truncation status if needed
+  if (utf16_length > available_length) {
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+  }
+
+  return status_record;
+}
+
+StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
+                                     DataBuffer& dest_data) {
+  std::vector<SQLCHAR> conn_val = DSValueToBytes(src_dsval);
+  SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+
+  if (!dest_data.buf) {
+    return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
+  }
+  if (dest_data.buflen < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  switch (dest_data.type) {
+    case SQL_C_BINARY:
+      return ConvertBytesToBinary(conn_val, dest_data);
+    case SQL_C_CHAR:
+      return ConvertBytesToChar(conn_val, dest_data);
+    case SQL_C_WCHAR:
+      return ConvertBytesToWChar(conn_val, dest_data);
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Unsupported conversion type"};
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
