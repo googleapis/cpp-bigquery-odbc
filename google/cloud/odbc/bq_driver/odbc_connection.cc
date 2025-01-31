@@ -35,6 +35,7 @@ using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
@@ -60,20 +61,20 @@ using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 // Internal Helper Functions
 /////////////////////////////
 
-Authentication CreateAuth(Section& dsn_section) {
+Authentication CreateAuth(Dsn const& dsn) {
   Authentication auth;
   int auth_int;
   try {
-    auth_int = stoi(dsn_section["OAUTHMECHANISM"]);
+    auth_int = stoi(dsn.o_auth_mechanism);
   } catch (std::exception const& ex) {
     auto& opts = *(*kTraceOption);
     TracePrintInternal(opts, ex.what());
     auth_int = 0;
   }
-  auth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  auth.email = dsn_section["EMAIL"];
-  auth.key_file_path = dsn_section["KEYFILEPATH"];
-  auth.refresh_token = dsn_section["REFRESHTOKEN"];
+  auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
+  auth.oauth.credentials_file_path = dsn.key_file_path;
+  auth.email = dsn.email;
+  auth.refresh_token = dsn.refresh_token;
   return auth;
 }
 
@@ -146,7 +147,7 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
                          {"DATASET", form.GetDatasetName()}};
 
   handle_ref->SetUp(dsn_section, form.GetDSN());
-  Authentication auth = CreateAuth(dsn_section);
+  Authentication auth = CreateAuth(handle_ref->GetDsn());
   auto status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {
@@ -249,8 +250,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
   handle_ref->SetUp(dsn_section, dsn_name);
-
-  Authentication auth = CreateAuth(dsn_section);
+  Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {
@@ -332,7 +332,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
   // This wasn't being called before.
   handle_ref.SetUp(dsn_section, dsn_name);
 
-  Authentication auth = CreateAuth(dsn_section);
+  Authentication auth = CreateAuth(handle_ref.GetDsn());
   StatusRecord status = handle_ref.Connect(auth);
   return LogAndReturnCode(handle_ref, status);
 }
@@ -481,7 +481,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                                    out_conn_str_len, *missing_att_str, false);
     return SQL_NEED_DATA;
   }
-  Authentication auth = CreateAuth(dsn_section);
+  Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {

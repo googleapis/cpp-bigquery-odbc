@@ -55,12 +55,8 @@ std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 
 SQLRETURN ConnectUsingRegistryDsn(Authentication auth) {
-  Oauth o_auth;
-  o_auth.auth_mechanism = auth.auth_mechanism;
-  o_auth.credentials_file_path = auth.key_file_path;
-
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
-      ODBCBQClient::CreateBQClient(o_auth);
+      ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
     return SQL_ERROR;
   }
@@ -80,10 +76,14 @@ Authentication CreateAuthentication(Section& dsn_section) {
   } catch (std::exception const& ex) {
     auth_int = 0;
   }
-  auth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  auth.email = dsn_section["Email"];
-  auth.key_file_path = dsn_section[kKeyFilePath];
-  auth.refresh_token = dsn_section["RefreshToken"];
+  auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
+  // DSN section entries should be capitalized to be consistent with
+  // ConnectionHandle::SetUp function.
+  auth.email = dsn_section["EMAIL"];
+  auth.oauth.credentials_file_path = dsn_section[kKeyFilePath];
+  // DSN section entries should be capitalized to be consistent with
+  // ConnectionHandle::SetUp function.
+  auth.refresh_token = dsn_section["REFRESHTOKEN"];
   return auth;
 }
 

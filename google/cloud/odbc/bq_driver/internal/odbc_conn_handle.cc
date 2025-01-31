@@ -63,7 +63,6 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
 
 }  // namespace
 
-// TODO(b/385136383): Change DSN Section Keys to Uppercase for Consistency
 void ConnectionHandle::SetUp(Section& dsn_section,
                              std::string const& dsn_name) {
   dsn_.description = dsn_section["DESCRIPTION"];
@@ -74,7 +73,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.dsn_name = dsn_name;
   dsn_.key_file_path = dsn_section["KEYFILEPATH"];
   dsn_.o_auth_mechanism = dsn_section["OAUTHMECHANISM"];
-
+  dsn_.email = dsn_section["EMAIL"];
+  dsn_.refresh_token = dsn_section["REFRESHTOKEN"];
   std::string sql_dialect = dsn_section["SQLDIALECT"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
@@ -150,12 +150,8 @@ ConnectionHandle& ConnectionHandle::operator=(
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {
-  Oauth oauth;
-  oauth.auth_mechanism = auth.auth_mechanism;
-  oauth.credentials_file_path = auth.key_file_path;
-
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
-      ODBCBQClient::CreateBQClient(oauth);
+      ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
     return response.GetStatusRecord();
   }

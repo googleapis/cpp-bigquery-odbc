@@ -31,11 +31,10 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
-  OauthMechanism auth_mechanism;
-  std::string key_file_path;
+  Oauth oauth;
+  // TODO(jsrinnn): Remove this if it is not being used.
   std::string email;
-  // NOTE: This should be removed if we decide that we will not support refresh
-  // tokens
+  // TODO(jsrinnn): Remove this if it is not being used.
   std::string refresh_token;
 };
 
@@ -50,6 +49,10 @@ struct Dsn {
   std::string key_file_path;
   std::string o_auth_mechanism;
   std::string list_projects_parent;
+  // TODO(jsrinnn): Remove this if it is not being used.
+  std::string email;
+  // TODO(jsrinnn): Remove this if it is not being used.
+  std::string refresh_token;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;

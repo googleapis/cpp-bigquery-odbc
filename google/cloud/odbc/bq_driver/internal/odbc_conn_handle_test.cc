@@ -31,6 +31,8 @@ std::string const kDsnDefaultDataset = "bigquery-test-dataset";
 std::string const kDsnDriver = "test-driver";
 std::string const kDsnName = "SampleDSN";
 std::string const kDsnListProjectsParent = "TestListProjectsParent";
+std::string const kEmail = "a@b.com";
+std::string const kRefreshToken = "test-token";
 
 TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string test_data_path =
@@ -38,8 +40,8 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
           .value_or("");
   std::string credentials_file_path = test_data_path + "random_file.json";
 
-  Authentication auth = {OauthMechanism::kServiceAndUserAccount,
-                         credentials_file_path};
+  Authentication auth = {
+      {OauthMechanism::kServiceAndUserAccount, credentials_file_path}};
   ConnectionHandle conn_handle;
   StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -47,7 +49,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
 }
 
 TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
-  Authentication auth = {OauthMechanism::kExternalUser, "path-to-the-file"};
+  Authentication auth = {{OauthMechanism::kExternalUser, "path-to-the-file"}};
   ConnectionHandle conn_handle;
   StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -56,7 +58,7 @@ TEST(ConnectionHandle, ConnectWithUnImplementedAuth) {
 }
 
 TEST(ConnectionHandle, ConnectWithInvalidAuth) {
-  Authentication auth = {static_cast<OauthMechanism>(7), "path-to-the-file"};
+  Authentication auth = {{static_cast<OauthMechanism>(7), "path-to-the-file"}};
   ConnectionHandle conn_handle;
   StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -73,6 +75,8 @@ TEST(ConnectionHandle, DsnSetup) {
   dsn_section["LISTPROJECTSPARENT"] = kDsnListProjectsParent;
   dsn_section["DEFAULTDATASET"] = kDsnDefaultDataset;
   dsn_section["SQLDIALECT"] = "0";
+  dsn_section["EMAIL"] = kEmail;
+  dsn_section["REFRESHTOKEN"] = kRefreshToken;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   Dsn actual = conn_handle.GetDsn();
@@ -83,6 +87,8 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.description, kDsnDescription);
   EXPECT_EQ(actual.list_projects_parent, kDsnListProjectsParent);
   EXPECT_EQ(actual.dsn_name, kDsnName);
+  EXPECT_EQ(actual.email, kEmail);
+  EXPECT_EQ(actual.refresh_token, kRefreshToken);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
   // `is_job_creation_required` is supposed to be false by default
   EXPECT_FALSE(actual.is_job_creation_required);
