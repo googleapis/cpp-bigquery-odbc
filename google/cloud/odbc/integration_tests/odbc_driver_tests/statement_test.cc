@@ -2241,7 +2241,7 @@ TEST(SQLCancel, Prepare_Execute_CancelNoOp) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLMoreResults, GetDataTest) {
+TEST(StatementTest, GetDataTest) {
   auto conn = std::make_shared<ODBCHandles>();
   auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
   Table table(table_name);
