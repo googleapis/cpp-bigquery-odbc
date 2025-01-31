@@ -1123,7 +1123,12 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       }
 
       case SQL_C_WCHAR: {
-      std::cout<<"DATA"<<data<<std::endl;
+      std::wcout << L"SQLWCHAR data in hexadecimal: ";
+  for (size_t i = 0; i < strlen_or_ind / sizeof(SQLWCHAR); ++i) {
+    std::wcout << std::hex << std::setw(4) << std::setfill(L'0')
+               << static_cast<int>(reinterpret_cast<SQLWCHAR*>(data)[i]) << L" ";
+  }
+  std::wcout << std::endl;
       std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
                                     strlen_or_ind / sizeof(SQLWCHAR));
