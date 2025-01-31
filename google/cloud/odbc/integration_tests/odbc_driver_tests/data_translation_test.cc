@@ -2225,7 +2225,7 @@ TEST(DataTranslationTest, SQLGetData_AllTypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string query = "SELECT * FROM " + table_name;
+  std::string query = "SELECT StringField,IntegerField,FloatField FROM " + table_name;
 
   auto results = *FetchResultsWithSqlGetData(conn, query);
 
