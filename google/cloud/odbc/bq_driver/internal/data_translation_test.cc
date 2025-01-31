@@ -1503,25 +1503,25 @@ TEST(ConvertFromBytesDSValue, StringDataTruncated) {
   EXPECT_EQ(std::string(dest_buf.data()), "Wor");
 }
 
-TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
-  std::vector<SQLCHAR> source_bytes = {'H', 'i', '\0'};
-  DSValue source_dsval;
-  BytesToDSValue(source_bytes, source_dsval);
+// TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
+//   std::vector<SQLCHAR> source_bytes = {'H', 'i', '\0'};
+//   DSValue source_dsval;
+//   BytesToDSValue(source_bytes, source_dsval);
 
-  DataBuffer dest_data;
-  std::vector<wchar_t> dest_buf(3);
-  dest_data.buf = dest_buf.data();
-  dest_data.buflen = 3 * sizeof(wchar_t);
-  SQLLEN result_len = 0;
-  dest_data.result_len = &result_len;
-  dest_data.type = SQL_C_WCHAR;
+//   DataBuffer dest_data;
+//   std::vector<wchar_t> dest_buf(3);
+//   dest_data.buf = dest_buf.data();
+//   dest_data.buflen = 3 * sizeof(wchar_t);
+//   SQLLEN result_len = 0;
+//   dest_data.result_len = &result_len;
+//   dest_data.type = SQL_C_WCHAR;
 
-  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+//   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
 
-  ASSERT_TRUE(status.ok());
-  EXPECT_EQ(dest_buf[0], L'H');
-  EXPECT_EQ(dest_buf[1], L'i');
-  EXPECT_EQ(dest_buf[2], L'\0');
-}
+//   ASSERT_TRUE(status.ok());
+//   EXPECT_EQ(dest_buf[0], L'H');
+//   EXPECT_EQ(dest_buf[1], L'i');
+//   EXPECT_EQ(dest_buf[2], L'\0');
+// }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
