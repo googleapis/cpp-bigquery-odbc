@@ -84,7 +84,9 @@ if (WIN32)
         bq_driver/internal/driver_log_form.cc
         bq_driver/internal/driver_log_form.h
         bq_driver/internal/driver_form_proxy.cc
-        bq_driver/internal/driver_form_proxy.h)
+        bq_driver/internal/driver_form_proxy.h
+        bq_driver/internal/driver_adv_opt_form.h
+        bq_driver/internal/driver_adv_opt_form.cc)
 endif ()
 
 # Create the library target
