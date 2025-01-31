@@ -884,10 +884,12 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       if (dest_data.result_len) {
         *dest_data.result_len = char_len * sizeof(SQLWCHAR);
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
+      // std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
+      // wstr_data.emplace_back(L'\0');
       auto* dest = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
-      std::memcpy(dest, wstr_data.data(), wstr_data.size() * sizeof(SQLWCHAR));
+      std::copy(wstr->begin(), wstr->end(), dest);
+      dest[wstr->size()] = L'\0';
+      // std::memcpy(dest, wstr_data.data(), wstr_data.size() * sizeof(SQLWCHAR));
       break;
     }
     default: {
