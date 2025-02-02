@@ -1089,6 +1089,7 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "Execute with Prepare", conn);
 
   for (auto const& expected : kConversionFromBytesTestData) {
+    std::cout<<"=======target_c_type:"<<expected.target_c_type<<std::endl;
     status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
                         kBufferLength, &strlen_or_ind);
     CheckError(status, "SQLBindCol", conn);
@@ -1124,21 +1125,24 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
 
       case SQL_C_WCHAR: {
       std::wcout << L"SQLWCHAR data in hexadecimal: ";
-  for (size_t i = 0; i < strlen_or_ind / sizeof(SQLWCHAR); ++i) {
-    std::wcout << std::hex << std::setw(4) << std::setfill(L'0')
-               << static_cast<int>(reinterpret_cast<SQLWCHAR*>(data)[i]) << L" ";
-  }
+      int lentyh= strlen_or_ind / sizeof(SQLWCHAR);
+      std::cout<<"lentyh========="<<lentyh<<std::endl;
+// Add debug printing of hex values
+
+SQLWCHAR* in_strs = reinterpret_cast<SQLWCHAR*>(data);
+for (int i = 0; i < lentyh; i++) {
+  std::wcout <<L"index : "<< i<< L"value :" << in_strs[i] << std::endl;;
+}
   std::wcout << std::endl;
+          std::wstring expected_val(expected.value.begin(), expected.value.end());
+         std::wcout<<"expected_val========="<<expected_val<<std::endl;
       std::string returned_val_utf8 =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
+            ConvertSQLWCHARToString(in_strs,
                                     strlen_or_ind / sizeof(SQLWCHAR));
-      std::cout<<"DATA2"<<returned_val_utf8<<std::endl;
+      std::cout<<"DATA2==="<<returned_val_utf8<<std::endl;
 
       std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
-      std::wcout<<"DATA3"<<returned_val<<std::endl;
-        returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
-        std::wstring expected_val(expected.value.begin(), expected.value.end());
-        expected_val.erase(expected_val.find_last_not_of(L'\0') + 1);
+      std::wcout<<"DATA3==="<<returned_val<<std::endl;
         EXPECT_EQ(returned_val, expected_val);
         break;
       }

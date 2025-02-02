@@ -326,6 +326,9 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
 // handling truncation if needed.
 StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
                                   DataBuffer& dest_data) {
+  std::cout << "ConvertBytesToBinary: Starting conversion of " << conn_val.size() 
+            << " bytes" << std::endl;
+  
   std::vector<uint8_t> binary_data;
   binary_data.reserve(conn_val.size() / 2);
 
@@ -335,6 +338,9 @@ StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
     uint8_t byte = (conn_val[i] - '0') * 16 + (conn_val[i + 1] - '0');
     binary_data.push_back(byte);
   }
+
+  std::cout << "ConvertBytesToBinary: Converted " << binary_data.size() 
+            << " bytes, buffer length = " << dest_data.buflen << std::endl;
 
   // Handle buffer truncation scenario
   if (dest_data.buflen < binary_data.size()) {
@@ -357,6 +363,10 @@ StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
 // ensuring null termination and handling truncation.
 StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
                                 DataBuffer& dest_data) {
+  std::cout << "ConvertBytesToChar: Starting conversion of " << conn_val.size() 
+            << " bytes to char" << std::endl;
+  std::cout << "ConvertBytesToChar: Buffer length = " << dest_data.buflen << std::endl;
+  
   auto* dest = reinterpret_cast<char*>(dest_data.buf);
   StatusRecord status_record = StatusRecord::Ok();
 
@@ -375,6 +385,10 @@ StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
       *dest_data.result_len = conn_val.size();
     }
   }
+
+  std::cout << "ConvertBytesToChar: Converted data length = " 
+            << (dest_data.result_len ? *dest_data.result_len : 0) << std::endl;
+            
   return status_record;
 }
 
@@ -382,88 +396,85 @@ StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
 // ensuring proper truncation handling.
 StatusRecord ConvertBytesToWChar(std::vector<SQLCHAR> const& conn_val,
                                  DataBuffer& dest_data) {
-  auto* dest = reinterpret_cast<uint8_t*>(dest_data.buf);  // Use uint8_t for byte-wise copying
-  StatusRecord status_record = StatusRecord::Ok();
 
-  // Interpret conn_val as UTF-16 encoded data
-  std::u16string utf16_data(reinterpret_cast<char16_t const*>(conn_val.data()),
-                            conn_val.size() / sizeof(char16_t));
+    StatusRecord status_record = StatusRecord::Ok();
+    
+    std::string utf8_str(conn_val.begin(), conn_val.end());
 
-  SQLLEN utf16_length = static_cast<SQLLEN>(utf16_data.size());
-  SQLLEN available_length ;
-  #ifdef _WIN32
-  available_length = dest_data.buflen / sizeof(wchar_t) - 1;
-  #endif
-  available_length= dest_data.buflen / sizeof(uint16_t);  // Use uint16_t size for buffer
-  SQLLEN copy_length = std::min(utf16_length, available_length);
+      StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
+   
+    const size_t required_size = utf16_str.GetValue().length() * sizeof(SQLWCHAR);
+    
 
+    SQLWCHAR* buffer = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
 
-  // Copy UTF-16 characters into the destination buffer
-  #ifdef _WIN32
-  for (SQLLEN i = 0; i < copy_length; ++i) {
-    auto utf16_char = static_cast<uint16_t>(utf16_data[i]);
-    dest[i * 2] = static_cast<wchar_t>(utf16_char & 0xFF);
-    dest[i * 2 + 1] = static_cast<wchar_t>((utf16_char >> 8) & 0xFF);
-  }
+    // Convert UTF-16 to 4-byte SQLWCHAR format with zero-padding
+    for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
+        buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
+    }
 
-  // Null-terminate the output buffer
-  dest[copy_length * 2] = L'\0';
+    // Set output length
+    if (dest_data.result_len) {
+        *dest_data.result_len = utf16_str.GetValue().size() * sizeof(SQLWCHAR);
+    }
 
-  if (dest_data.result_len) {
-    *dest_data.result_len = (copy_length * 2 + 1) * sizeof(wchar_t);
-  }
-
-  #endif
-
-  for (SQLLEN i = 0; i < copy_length; ++i) {
-    uint16_t utf16_char = static_cast<uint16_t>(utf16_data[i]);
-
-    // Copy the low byte first, followed by a zero byte, then the high byte, followed by a zero byte
-    dest[i * 4] = static_cast<uint8_t>(utf16_char & 0xFF);  // Low byte
-    dest[i * 4 + 1] = 0x00;  // Padding byte (0x00)
-    dest[i * 4 + 2] = static_cast<uint8_t>((utf16_char >> 8) & 0xFF);  // High byte
-    dest[i * 4 + 3] = 0x00;  // Padding byte (0x00)
-  }
-
-  // Null-terminate the output buffer
-  dest[copy_length * 4] = 0x00;
-
-  // Set the result length if applicable
-  if (dest_data.result_len) {
-    *dest_data.result_len = (copy_length * 4 ); 
-  }
-
-  // Return truncation status if needed
-  if (utf16_length > available_length) {
-    status_record =
-        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-  }
-
-  return status_record;
+ return status_record;
 }
+
 
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
+  std::cout << "ConvertFromBytesDSValue: Starting conversion" << std::endl;
+  
+  // Print source DSValue contents
+  std::cout << "ConvertFromBytesDSValue: Source DSValue contents: ";
+  for(size_t i = 0; i < src_dsval.size(); i++) {
+    std::cout << src_dsval[i] << " ";
+  }
+  
   std::vector<SQLCHAR> conn_val = DSValueToBytes(src_dsval);
   SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+  
+  std::cout << "ConvertFromBytesDSValue: Source length = " << src_length << std::endl;
+  std::cout << "ConvertFromBytesDSValue: First few bytes: ";
+  for(size_t i = 0; i < conn_val.size(); i++) {
+    std::cout << std::hex << (int)conn_val[i] << " ";
+  }
+  std::cout << std::dec << std::endl;
 
   if (!dest_data.buf) {
+    std::cout << "ConvertFromBytesDSValue: Error - Destination buffer is null" << std::endl;
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
   if (dest_data.buflen < 0) {
+    std::cout << "ConvertFromBytesDSValue: Error - Buffer length is negative (" 
+              << dest_data.buflen << ")" << std::endl;
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
+  std::cout << "ConvertFromBytesDSValue: Destination type = " << dest_data.type 
+            << ", buffer length = " << dest_data.buflen << std::endl;
+
+  StatusRecord result;
   switch (dest_data.type) {
     case SQL_C_BINARY:
-      return ConvertBytesToBinary(conn_val, dest_data);
+      std::cout << "ConvertFromBytesDSValue: Converting to binary" << std::endl;
+      result = ConvertBytesToBinary(conn_val, dest_data);
+      break;
     case SQL_C_CHAR:
-      return ConvertBytesToChar(conn_val, dest_data);
+      std::cout << "ConvertFromBytesDSValue: Converting to char" << std::endl;
+      result = ConvertBytesToChar(conn_val, dest_data);
+      break;
     case SQL_C_WCHAR:
-      return ConvertBytesToWChar(conn_val, dest_data);
+      std::cout << "ConvertFromBytesDSValue: Converting to wchar" << std::endl;
+      result = ConvertBytesToWChar(conn_val, dest_data);
+      break;
     default:
+      std::cout << "ConvertFromBytesDSValue: Error - Unsupported conversion type" << std::endl;
       return StatusRecord{SQLStates::k_HY000(), "Unsupported conversion type"};
   }
+  
+  return result;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
