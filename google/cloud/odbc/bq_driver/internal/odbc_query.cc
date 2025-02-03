@@ -76,7 +76,7 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       status_record = {SQLStates::k_HYC00(), "Data type not supported"};
   }
 
-  return StatusRecord::Ok();
+  return status_record;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
