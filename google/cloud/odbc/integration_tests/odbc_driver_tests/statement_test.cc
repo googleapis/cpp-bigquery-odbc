@@ -756,6 +756,7 @@ TEST(StatementTest, SQLFetchScroll) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
@@ -800,9 +801,8 @@ TEST(StatementTest, SQLGetData) {
   // Create Table
   conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
-      true);
+  table_ansi.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -827,7 +827,84 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLGetData_insufficientBuffer) {
+  auto conn = std::make_shared<ODBCHandles>();
+  auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
+  Table table(table_name);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(
+      conn,
+      "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64, "
+      "JsonField JSON,StructField STRUCT<int_value BIGINT, double_value "
+      "FLOAT64, string_value STRING>)");
+
+  // Insert test data
+  auto insert_query =
+      "INSERT INTO " + table_name +
+      " (StringField, IntegerField, FloatField, JsonField, StructField) VALUES "
+      "('TestString', 42, 3.14, JSON '{\"age\": 90, \"name\": \"Ram\"}', "
+      "STRUCT(1,2,'TestStruct'))";
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_query.c_str(),
+                        insert_query.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Prepare and execute select query
+  auto select_query =
+      "SELECT StringField, IntegerField, FloatField, JsonField, StructField "
+      "FROM " +
+      table_name;
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)select_query.c_str(),
+                        select_query.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Fetch and verify data
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  SQLCHAR string_data[256];
+  SQLCHAR json_data[256];
+  SQLCHAR json_data2[256];
+  SQLCHAR struct_data[256];
+  int int_data;
+  double float_data;
+  SQLLEN int_len, float_len, string_len, json_len, struct_len;
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, string_data,
+                       sizeof(string_data), &string_len),
+            SQL_SUCCESS);
+  EXPECT_STREQ((char*)string_data, "TestString");
+
+  EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_LONG, &int_data, 0, &int_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(int_data, 42);
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 3, SQL_C_DOUBLE, &float_data, 0, &float_len),
+      SQL_SUCCESS);
+  EXPECT_EQ(float_data, 3.14);
+
+  EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_CHAR, json_data, 10, &json_len),
+            SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)json_data, "{\"age\":90");
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 5, SQL_C_CHAR, struct_data, 20, &struct_len),
+      SQL_SUCCESS_WITH_INFO);
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_STREQ((char*)struct_data, "{\"f\":[{\"v\":\"1\"},{\"v");
+#else
+  EXPECT_STREQ((char*)struct_data, "{\"v\":{\"f\":[{\"v\":\"1\"");
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_CHAR, json_data2, 10, &json_len),
+            SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)json_data2, "{\"age\":90");
+
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();

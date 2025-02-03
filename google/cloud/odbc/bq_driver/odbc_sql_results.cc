@@ -567,18 +567,49 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
+  // Updating result_set.last_column_index with column_number and row_offset_ to
+  // 0 when last fetched column number and column_number passed here are
+  // different
+  if (result_set.last_column_index != column_number) {
+    result_set.row_offset_ = 0;
+    result_set.last_column_index = column_number;
+  }
+  result_set.last_column_index = column_number;
+
   SQLLEN offset = result_set.row_offset_;
+
+  // Translating complete data in case of less buffer length when SQLGetData
+  // called for the first time
+  //  and storing it in result_set.translated_data_ in case of
+  // variable length data type i.e. string and binary followed by copying into
+  // target_value in parts of buffer length.
+  if (offset == 0) {
+    if ((ds_val.size() > target_value_buffer_len) &&
+        (bq_data_type == BQDataType::kString ||
+         bq_data_type == BQDataType::kBytes ||
+         bq_data_type == BQDataType::kJson ||
+         bq_data_type == BQDataType::kStruct ||
+         bq_data_type == BQDataType::kArray)) {
+      result_set.translated_data_ =
+          reinterpret_cast<SQLPOINTER>(new char[ds_val.size() + 1]);
+      status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
+                                    result_set.translated_data_,
+                                    ds_val.size() + 1, target_value_string_len);
+      std::memset(target_value, '\0', target_value_buffer_len);
+    } else {
+      status_record =
+          GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
+                        target_value_buffer_len, target_value_string_len);
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
+  }
+
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
   if (ds_val.size() - offset >= target_value_buffer_len) {
-    SQLLEN chunk_size = std::min(target_value_buffer_len,
-                                 static_cast<SQLLEN>(ds_val.size() - offset));
-    DSValue temp_ds_val(ds_val.begin() + offset,
-                        ds_val.begin() + offset + chunk_size - 1);
-    temp_ds_val.emplace_back('\0');
-    status_record =
-        GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
-                      target_value_buffer_len, target_value_string_len);
+    std::memcpy(target_value,
+                reinterpret_cast<char*>(result_set.translated_data_) + offset,
+                target_value_buffer_len - 1);
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
@@ -588,17 +619,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (offset != 0) {
-    DSValue temp_ds_val(ds_val.begin() + offset, ds_val.end());
-    temp_ds_val.emplace_back('\0');
-    status_record =
-        GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
-                      target_value_buffer_len, target_value_string_len);
+    std::memcpy(target_value,
+                reinterpret_cast<char*>(result_set.translated_data_) + offset,
+                ds_val.size() - offset + 1);
+    delete[] reinterpret_cast<char*>(result_set.translated_data_);
     return LogAndReturnCode(stmt_handle, status_record);
   }
-  status_record =
-      GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
-                    target_value_buffer_len, target_value_string_len);
-  return LogAndReturnCode(stmt_handle, status_record);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
