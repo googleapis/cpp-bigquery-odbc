@@ -570,15 +570,25 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   SQLLEN offset = result_set.row_offset_;
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
+
+  if (offset == 0) {
+    if ((ds_val.size() - offset >= target_value_buffer_len) &&
+        bq_data_type == BQDataType::kString) {
+      status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
+                                    result_set.processed_data_,
+                                    ds_val.size() + 1, target_value_string_len);
+      std::memset(target_value, '\0', target_value_buffer_len);
+    } else {
+      status_record =
+          GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
+                        target_value_buffer_len, target_value_string_len);
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
+  }
+
   if (ds_val.size() - offset >= target_value_buffer_len) {
-    SQLLEN chunk_size = std::min(target_value_buffer_len,
-                                 static_cast<SQLLEN>(ds_val.size() - offset));
-    DSValue temp_ds_val(ds_val.begin() + offset,
-                        ds_val.begin() + offset + chunk_size - 1);
-    temp_ds_val.emplace_back('\0');
-    status_record =
-        GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
-                      target_value_buffer_len, target_value_string_len);
+    std::memcpy(target_value, result_set.processed_data_ + offset,
+                target_value_buffer_len - 1);
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
@@ -588,17 +598,10 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (offset != 0) {
-    DSValue temp_ds_val(ds_val.begin() + offset, ds_val.end());
-    temp_ds_val.emplace_back('\0');
-    status_record =
-        GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
-                      target_value_buffer_len, target_value_string_len);
+    std::memcpy(target_value, result_set.processed_data_ + offset,
+                ds_val.size() - offset + 1);
     return LogAndReturnCode(stmt_handle, status_record);
   }
-  status_record =
-      GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
-                    target_value_buffer_len, target_value_string_len);
-  return LogAndReturnCode(stmt_handle, status_record);
 }
 
 }  // namespace google::cloud::odbc_bq_driver

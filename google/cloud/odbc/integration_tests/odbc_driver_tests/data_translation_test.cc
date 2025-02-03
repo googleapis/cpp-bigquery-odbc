@@ -2486,6 +2486,86 @@ TEST(DataTranslationTest, SQLGetData_PartialData) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+void TestPartialDataFromSQLGetDataInt(std::shared_ptr<ODBCHandles> conn,
+                                      std::string query,
+                                      std::vector<SQLBIGINT> input_values) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  SQLSMALLINT buffer_len = 3;
+  std::vector<std::string> ret_values;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // Read all the rows using SQLFetch
+  while (1) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status_len;
+    char resp_status[10];
+    std::string returned_value;
+    while (1) {
+      status = SQLGetData(conn->hstmt, 1, SQL_C_CHAR, data, buffer_len,
+                          &strlen_or_ind);
+      EXPECT_EQ(status, SQL_ERROR);
+
+      status =
+          SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE,
+                          resp_status, 10, &resp_status_len);
+
+      CheckError(status, "SQLGetDiagField", conn);
+      EXPECT_STREQ(resp_status, "22003");
+      break;
+    }
+  }
+}
+
+TEST(DataTranslationTest, SQLGetData_PartialDataInt) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_GET_PARTIAL_DATA_TEST_INT";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INT64, IntegerField INT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<SQLBIGINT> int_data_to_insert = {123, 12345, 1234567, 123456789};
+  table.InsertInt64Data(conn, int_data_to_insert, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as
+  // expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT IntegerField FROM " + table_name + " ORDER BY index";
+
+  TestPartialDataFromSQLGetDataInt(conn, query, int_data_to_insert);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // TODO(Kanchan): Add testcase for SQL_ARD_TYPE and SQL_APD_TYPE in SQLGetData
 // PR Part 2.
 

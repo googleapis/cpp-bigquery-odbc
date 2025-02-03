@@ -178,6 +178,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       }
       return status_record;
     }
+    case SQL_C_LONG:
     case SQL_C_SLONG: {
       auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
       StatusRecord status_record =
@@ -210,6 +211,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       std::string str = std::to_string(src_val);
       StatusRecord status_record =
           StringValueToOutputBufferResponse(str.c_str(), dest_data);
+      if (status_record.sql_state == SQLStates::k_01004()) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
       return status_record;
     }
     case SQL_C_BIT: {

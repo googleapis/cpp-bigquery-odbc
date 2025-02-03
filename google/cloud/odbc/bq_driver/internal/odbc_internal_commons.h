@@ -117,6 +117,7 @@ struct ResultSet {
   mutable int cursor{-1};      // points before the next row to fetch
   mutable SQLLEN row_offset_;  // Offset to manage last fetch row index in case
                                // of partial data fetch in SQLGetData
+  SQLPOINTER processed_data_;
 };
 
 DSValue const kNullValue{0};

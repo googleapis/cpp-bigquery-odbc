@@ -756,6 +756,7 @@ TEST(StatementTest, SQLFetchScroll) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
@@ -800,9 +801,8 @@ TEST(StatementTest, SQLGetData) {
   // Create Table
   conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  table_ansi.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
-      true);
+  table_ansi.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -827,7 +827,60 @@ TEST(StatementTest, SQLGetData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+TEST(StatementTest, SQLGetData_insufficientBuffer) {
+  auto conn = std::make_shared<ODBCHandles>();
+  auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
+  Table table(table_name);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  // Insert test data
+  auto insert_query = "INSERT INTO " + table_name +
+                      " (StringField, IntegerField, FloatField) VALUES "
+                      "('TestString', 42, 3.14)";
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_query.c_str(),
+                        insert_query.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Prepare and execute select query
+  auto select_query =
+      "SELECT StringField, IntegerField, FloatField FROM " + table_name;
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)select_query.c_str(),
+                        select_query.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Fetch and verify data
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  SQLCHAR string_data[256];
+  int int_data;
+  double float_data;
+  SQLLEN int_len, float_len, string_len;
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, string_data,
+                       sizeof(string_data), &string_len),
+            SQL_SUCCESS);
+  std::cout << "Fetched StringField: " << string_data << std::endl;
+  EXPECT_STREQ((char*)string_data, "TestString");
+
+  EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_LONG, &int_data, 0, &int_len),
+            SQL_SUCCESS);
+  std::cout << "Fetched IntegerField: " << int_data << std::endl;
+  EXPECT_EQ(int_data, 42);
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 3, SQL_C_DOUBLE, &float_data, 0, &float_len),
+      SQL_SUCCESS);
+  std::cout << "Fetched FloatField: " << float_data << std::endl;
+  EXPECT_EQ(float_data, 3.14);
+
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(StatementTest, SQLSetCursorName) {
   auto conn = std::make_shared<ODBCHandles>();
