@@ -720,7 +720,12 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLBindParameter, BindWithExec) {
+class SQLBindParameterTest : public ::testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, SQLBindParameterTest,
+                         testing::Values(true, false));
+
+TEST_P(SQLBindParameterTest, BindStandardTypes) {
+  bool is_exec_direct = GetParam();
   SQLRETURN status;
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_BIND_PARAM_EXEC_DIRECT_TEST";
@@ -741,8 +746,10 @@ TEST(SQLBindParameter, BindWithExec) {
   std::string insert_stmt =
       "INSERT INTO " + table_name + " VALUES (?, ?, ?), (?, ?, ?)";
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
+  if (!is_exec_direct) {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+  }
 
   StdRow row1 = kBindParamTestData[0];
   status = SQLBindParameter(
@@ -773,8 +780,13 @@ TEST(SQLBindParameter, BindWithExec) {
                             SQL_DOUBLE, 0, 0, &row2.float_field, 0, NULL);
   CheckError(status, "SQLBindParameter(SQL_C_DOUBLE->SQL_DOUBLE)", conn);
 
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  if (is_exec_direct) {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLExecDirect", conn);
+  } else {
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+  }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 

@@ -299,7 +299,6 @@ inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
   return (sizeof(x) / sizeof(SQLCHAR));
 }
 
-
 // Copies a source <string> to a destination <char *>
 inline void StrToChar(char* dest, std::string src) {
   strcpy(dest, src.c_str());

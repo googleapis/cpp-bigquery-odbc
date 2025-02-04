@@ -104,9 +104,9 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
         << "Number of elements in row " << i << " mismatch";
 
     // Sort map elements for comparison to ensure ordering consistency
-    std::vector<std::pair<int, std::string> > sorted_actual_row(
+    std::vector<std::pair<int, std::string>> sorted_actual_row(
         actual_row.begin(), actual_row.end());
-    std::vector<std::pair<int, std::string> > sorted_expected_row(
+    std::vector<std::pair<int, std::string>> sorted_expected_row(
         expected_row.begin(), expected_row.end());
 
     std::sort(sorted_actual_row.begin(), sorted_actual_row.end());
@@ -120,10 +120,10 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
       if (isNumeric(actual) && isNumeric(expected)) {
         // Existing driver doesn't precicely return double values as string
         EXPECT_NEAR(std::stod(actual), std::stod(expected), 1e-6)
-          << "Value mismatch at row " << i << ", position " << j;
+            << "Value mismatch at row " << i << ", position " << j;
       } else {
         EXPECT_EQ(actual, expected)
-          << "Value mismatch at row " << i << ", position " << j;
+            << "Value mismatch at row " << i << ", position " << j;
       }
     }
   }
@@ -132,12 +132,10 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
 void VerifyRowWiseResults(RowWiseResults const& actual_results,
                           StdRows const& expected_results) {
   RowWiseResults expected_row_wise;
-  for (StdRow row: expected_results) {
-    expected_row_wise.emplace_back(Row{
-      {0, row.str_field},
-      {1, std::to_string(row.int_field)},
-      {2, std::to_string(row.float_field)}
-    });
+  for (StdRow row : expected_results) {
+    expected_row_wise.emplace_back(Row{{0, row.str_field},
+                                       {1, std::to_string(row.int_field)},
+                                       {2, std::to_string(row.float_field)}});
   }
   std::cout << "CP2::" << std::endl;
   VerifyRowWiseResults(actual_results, expected_row_wise);
@@ -164,8 +162,9 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
   // Execute insertion
   ExecuteStatement(conn, insert_stmt, use_ansi);
 
-  //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT num FROM UNNEST(GENERATE_ARRAY(1, 10)) AS num;", SQL_NTS);
-  //CheckError(status, "SQLPrepare(insert_stmt)", conn);
+  // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT num FROM
+  // UNNEST(GENERATE_ARRAY(1, 10)) AS num;", SQL_NTS); CheckError(status,
+  // "SQLPrepare(insert_stmt)", conn);
 
   // Drop Table
   table.Drop(conn, use_ansi);
@@ -315,9 +314,10 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
-RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn, std::string query) {
-  if(query.empty()) {
-    query =  "SELECT * FROM " + table_name_;
+RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
+                            std::string query) {
+  if (query.empty()) {
+    query = "SELECT * FROM " + table_name_;
   }
   SQLRETURN status;
 
@@ -330,10 +330,8 @@ RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn, std::string query
 
   std::vector<TestingDataBuffer> cols(num_cols);
   for (int i = 0; i < num_cols; i++) {
-    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i + 1,
-                        SQL_C_CHAR,
-                        cols[i].target_value,
-                        cols[i].buffer_length,
+    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i + 1, SQL_C_CHAR,
+                        cols[i].target_value, cols[i].buffer_length,
                         &(cols[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
@@ -355,9 +353,11 @@ RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn, std::string query
       if (data_len == -1) {
         continue;
       }
-      row[i_c] = std::string(reinterpret_cast<char*>(cols[i_c].target_value), data_len);
+      row[i_c] = std::string(reinterpret_cast<char*>(cols[i_c].target_value),
+                             data_len);
       std::cout << "data_len:: " << data_len << std::endl;
-      std::cout << "i_c:: " << i_c << ", row[i_c]:: " << row[i_c] << std::endl << std::endl;
+      std::cout << "i_c:: " << i_c << ", row[i_c]:: " << row[i_c] << std::endl
+                << std::endl;
     }
     results.emplace_back(row);
   }
@@ -378,24 +378,25 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
     CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
 
-
-    //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLExecDirect status:: " << status << std::endl;
+    // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt,
+    // strlen(read_stmt)); std::cout << "SQLExecDirect status:: " << status <<
+    // std::endl;
     ////CheckError(status, "SQLExecDirect", conn);
-    //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLExecDirect status:: " << status << std::endl;
-    //status = SQLExecute(conn->hstmt);
-    //std::cout << "SQLExecute status:: " << status << std::endl;
+    // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt,
+    // strlen(read_stmt)); std::cout << "SQLExecDirect status:: " << status <<
+    // std::endl; status = SQLExecute(conn->hstmt); std::cout << "SQLExecute
+    // status:: " << status << std::endl;
 
-    //status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLPrepare status:: " << status << std::endl;
+    // status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    // std::cout << "SQLPrepare status:: " << status << std::endl;
     ////CheckError(status, "SQLExecDirect", conn);
-    //status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLPrepare status:: " << status << std::endl;
-    //status = SQLExecute(conn->hstmt);
-    //std::cout << "SQLExecute status:: " << status << std::endl;
-    //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLExecDirect status:: " << status << std::endl;
+    // status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    // std::cout << "SQLPrepare status:: " << status << std::endl;
+    // status = SQLExecute(conn->hstmt);
+    // std::cout << "SQLExecute status:: " << status << std::endl;
+    // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt,
+    // strlen(read_stmt)); std::cout << "SQLExecDirect status:: " << status <<
+    // std::endl;
 
     ExponentialBackoffPolicy backoff(ms(10), ms(100), 2);
     if (use_ansi) {
@@ -405,13 +406,13 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
       status = PollODBC(SQLExecDirect, backoff, conn->hstmt,
                         (SQLCHAR*)read_stmt, strlen(read_stmt));
     }
-    //status = SQLExecute(conn->hstmt);
-    //std::cout << "SQLExecute status:: " << status << std::endl;
-    //CheckError(status, "SQLExecute", conn);
+    // status = SQLExecute(conn->hstmt);
+    // std::cout << "SQLExecute status:: " << status << std::endl;
+    // CheckError(status, "SQLExecute", conn);
 
-    //status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-    //std::cout << "SQLExecDirect status:: " << status << std::endl;
-    //CheckError(status, "SQLExecDirect", conn, use_ansi);
+    // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt,
+    // strlen(read_stmt)); std::cout << "SQLExecDirect status:: " << status <<
+    // std::endl; CheckError(status, "SQLExecDirect", conn, use_ansi);
   } else {
     if (use_ansi) {
       status =
@@ -637,7 +638,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
         results[col_name].emplace_back(std::string());
         continue;
       }
-      std::cout << "cols[i_c]->data_type:: " << cols[i_c]->data_type << std::endl;
+      std::cout << "cols[i_c]->data_type:: " << cols[i_c]->data_type
+                << std::endl;
       std::string val;
       switch (cols[i_c]->data_type) {
         case SQL_TYPE_DATE: {
@@ -667,7 +669,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
         }
       }
       std::cout << "data_len:: " << data_len << std::endl;
-      std::cout << "i_c:: " << i_c << ", val:: " << val << std::endl << std::endl;
+      std::cout << "i_c:: " << i_c << ", val:: " << val << std::endl
+                << std::endl;
       results[col_name].push_back(val);
     }
   }

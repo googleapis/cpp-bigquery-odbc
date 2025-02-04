@@ -32,17 +32,20 @@ StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
     std::vector<QueryParameter>& basic_query_params) {
   for (int param_ind = 0; param_ind < basic_query_params.size(); param_ind++) {
+    std::cout << "ConstructPositionalQueryParams CP1:: " << std::endl;
     if (!apd.HasDescriptorRecord(param_ind + 1)) {
       return StatusRecord{
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
     }
+    std::cout << "ConstructPositionalQueryParams CP2:: " << std::endl;
     DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_ind + 1);
     // SQL_NULL_DATA implies the application wants to use empty data.
     if (apd_rec.indicator_ptr != nullptr &&
         *apd_rec.indicator_ptr == SQL_NULL_DATA) {
       continue;
     }
+    std::cout << "ConstructPositionalQueryParams CP3:: " << std::endl;
     if (apd_rec.data_ptr == nullptr) {
       return StatusRecord{SQLStates::k_HY009(),
                           "The bound param buffer was null"};
@@ -50,6 +53,7 @@ StatusRecord ConstructPositionalQueryParams(
 
     DataBuffer data = {apd_rec.concise_type, apd_rec.data_ptr,
                        apd_rec.octet_length, apd_rec.octet_length_ptr};
+    std::cout << "ConstructPositionalQueryParams CP4:: " << std::endl;
 
     DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_ind + 1);
     if (!ipd.HasDescriptorRecord(param_ind + 1)) {
@@ -57,11 +61,13 @@ StatusRecord ConstructPositionalQueryParams(
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
     }
+    std::cout << "ConstructPositionalQueryParams CP5:: " << std::endl;
     SQLSMALLINT sql_type = ipd_rec.concise_type;
     StatusRecordOr<std::string> conv_status = ConvertFromBuffer(data, sql_type);
     if (!conv_status) {
       return conv_status.GetStatusRecord();
     }
+    std::cout << "ConstructPositionalQueryParams CP6:: " << std::endl;
     std::string& value_str = *conv_status;
     // "INT64" is a special case where a string like "23.000" will not be
     // accepted by the BQ Server. For ex, this may occur when translating from

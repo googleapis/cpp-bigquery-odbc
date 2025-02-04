@@ -178,7 +178,7 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
 
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
 // risk.
-StatusRecord StatementHandle::PrepareQuery(const std::string& query) {
+StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
   if (!transaction_status.ok()) {
     return transaction_status;
@@ -227,9 +227,9 @@ StatusRecord StatementHandle::PrepareQuery(const std::string& query) {
     return response.GetStatusRecord();
   }
 
-  nlohmann::json resp;
-  to_json(resp, *response);
-  std::cout << "InsertJobResp:: " << resp.dump(4) << std::endl;
+  // nlohmann::json resp;
+  // to_json(resp, *response);
+  // std::cout << "InsertJobResp:: " << resp.dump(4) << std::endl;
 
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);

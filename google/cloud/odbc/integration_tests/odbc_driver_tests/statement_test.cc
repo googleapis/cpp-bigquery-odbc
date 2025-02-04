@@ -334,17 +334,21 @@ TEST(StatementTest, SQLExecDirect) {
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
 
-  // This test doesn't work with existing driver. It fails with error:
-  // "Invalid query: Cannot set destination table in jobs with ASSERT statements (70) SQLSTATE=42000"
-  #ifdef BQ_DRIVER_INTEGRATION_TESTS
+// This test doesn't work with existing driver. It fails with error:
+// "Invalid query: Cannot set destination table in jobs with ASSERT statements
+// (70) SQLSTATE=42000"
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"ASSERT ((SELECT COUNT(*) > 5 FROM UNNEST([1, 2, 3, 4, 5, 6]))) AS 'Table must contain more than 5 rows.'", SQL_NTS);
   CheckError(status, "SQLExecDirect(ASSERT)", conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  #endif // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT num FROM UNNEST(GENERATE_ARRAY(1, 10)) AS num;", SQL_NTS);
+  status = SQLExecDirect(
+      conn->hstmt,
+      (SQLCHAR*)"SELECT num FROM UNNEST(GENERATE_ARRAY(1, 10)) AS num;",
+      SQL_NTS);
   CheckError(status, "SQLExecDirect(SELECT num)", conn);
   int num_rows_returned = 0;
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
@@ -2207,16 +2211,11 @@ TEST(SQLCancel, Prepare_Execute_CancelNoOp) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 // Integration tests for SQLCancel.
 
 /////////////////////////////////////////////////////////
 // 1. Tests for cancelling Asynchronous processing or
 // asynchronous operations that are still executing.
-//
-// TODO(b/308656304): Move this to common area once SQLExecDirect
-// API is implemented for BQ Driver.
 /////////////////////////////////////////////////////////
 TEST(SQLCancel, ExecDirect_CancelAsync_StillExecuting) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -2266,6 +2265,8 @@ TEST(SQLCancel, ExecDirect_CancelAsync_StillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 /////////////////////////////////////////////////////////
 // 2. Tests for cancelling operations that need more data
 // at execution.
@@ -2298,24 +2299,31 @@ TEST(SQLCancel, ExecDirect_Cancel_NeedData) {
       conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len_string_field,
       0, (SQLPOINTER)SQL_DATA_AT_EXEC, len_string_field, &len_data_at_exec);
   CheckError(status, "SQLBindParameter", conn);
+
+  std::cout << "ExecDirect_Cancel_NeedData  CP 5:: " << std::endl;
   // Call Execute with unbound params so we can get back a SQL_NEED_DATA status.
   status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt_wo_bnd_vals, SQL_NTS);
+  std::cout << "ExecDirect_Cancel_NeedData  CP 6:: " << std::endl;
   if (SQL_SUCCEEDED(status)) {
     // We can't cancel an operation that is not in the process of executing.
     CheckError(status, "SQLExecDirect", conn);
   } else if (status == SQL_NEED_DATA) {
+    std::cout << "ExecDirect_Cancel_NeedData  CP 7:: " << std::endl;
     // Cancel the operation
     status = SQLCancel(conn->hstmt);
     CheckError(status, "SQLCancel", conn);
     // Call Execute again with bound parameters.
     status = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt_with_bnd_values,
                            SQL_NTS);
+    std::cout << "ExecDirect_Cancel_NeedData  CP 8:: " << std::endl;
     if (SQL_SUCCEEDED(status)) {
+      std::cout << "ExecDirect_Cancel_NeedData  CP 9:: " << std::endl;
       // Operation could not be cancelled. Per spec, this is not an error as
       // execute can complete with success and the operation wasn't cancelled.
       CheckError(status, "SQLExecDirect", conn);
     } else {
+      std::cout << "ExecDirect_Cancel_NeedData  CP 10:: " << std::endl;
       // Per spec, make sure SQLState is HY008 and Message is 'Operation
       // canceled'.
       std::string error;
@@ -2327,9 +2335,12 @@ TEST(SQLCancel, ExecDirect_Cancel_NeedData) {
           << "SQLExecDirect failed with unexpected error: " << error;
     }
   } else {
+    std::cout << "ExecDirect_Cancel_NeedData  CP 11:: " << std::endl;
     // Any other error is a failure.
     CheckError(status, "SQLExecDirect", conn);
   }
+
+  std::cout << "ExecDirect_Cancel_NeedData  CP 12:: " << std::endl;
 
   // Drop Table
   table.Drop(conn, false);
@@ -3171,9 +3182,9 @@ class SQLRowCountTest : public ::testing::TestWithParam<bool> {
     EXPECT_EQ(row_count, expected_row_count);
   }
 };
-// TODO(b/308656304): Enable for true as well when SQLExecDirect is implemented.
+
 INSTANTIATE_TEST_SUITE_P(WithOrWithoutExecDirect, SQLRowCountTest,
-                         testing::Values(false));
+                         testing::Values(false, true));
 
 TEST_P(SQLRowCountTest, AllValidations) {
   SQLLEN row_count;

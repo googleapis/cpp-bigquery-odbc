@@ -269,7 +269,8 @@ struct DSResults {
     1) In async execution, PostQuery might not have finished.
     2) No job has been created using JOB_CREATION_OPTIONAL
   */
-  absl::optional<google::cloud::bigquery_v2_minimal_internal::JobReference> job_ref;
+  absl::optional<google::cloud::bigquery_v2_minimal_internal::JobReference>
+      job_ref;
 };
 
 //////////////////////////////////////////////////////////////////////

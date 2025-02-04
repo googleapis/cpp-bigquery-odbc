@@ -569,6 +569,7 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
 // TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+  std::cout << "FetchBQData called:: " << std::endl;
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
     return StatusRecord{SQLStates::k_08S01(),
@@ -581,9 +582,9 @@ StatusRecordOr<DSResults> FetchBQData(
         "Invalid or null BQ Client within the connection handle"};
   }
 
-  nlohmann::json req;
-  to_json(req, post_query_request);
-  std::cout << "PostQueryRequest:: " << req.dump(4) << std::endl;
+  // nlohmann::json req;
+  // to_json(req, post_query_request);
+  // std::cout << "PostQueryRequest:: " << req.dump(4) << std::endl;
 
   // For now , we use default options.
   // We can set timeout here as needed later.
@@ -592,10 +593,10 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
-  nlohmann::json resp;
-  to_json(resp, *pq_status);
-  std::cout << "PostQueryResults:: " << resp.dump(4) << std::endl;
-  
+  // nlohmann::json resp;
+  // to_json(resp, *pq_status);
+  // std::cout << "PostQueryResults:: " << resp.dump(4) << std::endl;
+
   DSResults results;
   results.dml_stats = pq_status->dml_stats;
   results.job_ref = pq_status->job_reference;

@@ -178,8 +178,8 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeCol;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDescribeParam;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDisconnect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLDriverConnect;
-using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLEndTran;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLForeignKeys;
@@ -2046,13 +2046,13 @@ SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
                                 SQLCHAR* statementText,
                                 SQLINTEGER statementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  
+
   bool is_tracing_enabled = IsTracingEnabled("SQLExecDirect");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (IsTracingEnabled)
     TraceFunctionEntry_SQLExecDirect(statementHandle, statementText,
-                                  statementTextLen, *(*kTraceOption));
+                                     statementTextLen, *(*kTraceOption));
 
   // Call to common internal function for SQLExecDirect and SQLExecDirectW
   // in odbc_sql_requests.h.
