@@ -723,7 +723,7 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
     {SQL_C_CHAR,
      {1, 2, 3, 4, 5},
@@ -992,13 +992,6 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
     if (expected.target_c_type == SQL_C_WCHAR) {
       str = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
     }
-     nlohmann::json array = nlohmann::json::parse(str);
-
-    // Create a JSON object with the key "v" and assign the array to it
-    nlohmann::json obj;
-    obj["v"] = array;
-str = obj.dump(4);
-std::cout<<"str_int here "<<str<<std::endl;
     try {
       // Parse JSON
       nlohmann::json json_object = nlohmann::json::parse(str);
@@ -1066,6 +1059,7 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // TODO(b/394015883): Add more cases of Struct into StructBasicTestStruct
 struct StructTestStruct {
   // The target C type SQLGetData will convert SQL type to

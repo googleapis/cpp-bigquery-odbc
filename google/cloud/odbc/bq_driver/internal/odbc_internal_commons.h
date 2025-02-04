@@ -83,6 +83,7 @@ enum BQDataType {
 struct ColumnSchema {
   int col_index;
   BQDataType col_type;
+  BQDataType array_type;
 };
 bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
@@ -119,6 +120,68 @@ inline bool IsDSValueNull(DSValue const& value) {
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());
+}
+
+inline std::vector<uint8_t> base64_decode(std::string const& encoded) {
+  static std::string const kBasE64Chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  std::vector<uint8_t> decoded;
+  int val = 0;
+  int valb = -8;
+
+  for (unsigned char c : encoded) {
+    if (!absl::StrContains(kBasE64Chars, c)) {
+      break;  // Stop at non-base64 characters (ignore padding)
+    }
+
+    val = (val << 6) + kBasE64Chars.find(c);
+    valb += 6;
+
+    if (valb >= 0) {
+      decoded.push_back((val >> valb) & 0xFF);
+      valb -= 8;
+    }
+  }
+
+  return decoded;
+}
+
+// Function to convert byte data to a hex string
+inline std::string bytes_to_hex(std::vector<uint8_t> const& data) {
+  std::stringstream ss;
+  for (auto byte : data) {
+    ss << "0x" << std::setw(2) << std::setfill('0') << std::hex
+       << static_cast<int>(byte);
+  }
+  return ss.str();
+}
+
+inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
+                               BQDataType array_type) {
+  nlohmann::json json_data = nlohmann::json::parse(str);
+
+  nlohmann::json obj;
+  obj["v"] = json_data;
+  if (array_type == BQDataType::kBytes) {
+    // Iterate through each element in the JSON array
+    for (auto& element : obj["v"]) {
+      // Extract base64-encoded string
+      std::string base64_str = element["v"];
+
+      // Decode base64 string to byte data
+      std::vector<uint8_t> decoded_data = base64_decode(base64_str);
+
+      // Convert the decoded byte data to hexadecimal
+      std::string hex_str = bytes_to_hex(decoded_data);
+
+      element["v"] = hex_str;
+    }
+  }
+
+  std::string str_data = obj.dump();
+  value.resize(str_data.size());
+  std::copy(str_data.begin(), str_data.end(), value.begin());
 }
 
 inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
