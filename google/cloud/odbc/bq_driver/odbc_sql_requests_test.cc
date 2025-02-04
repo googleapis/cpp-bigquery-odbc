@@ -776,4 +776,79 @@ TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(SQLMoreResultsInternal, Fail_NullHandle) {
+  SQLRETURN status = SQLMoreResultsInternal(nullptr);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLMoreResultsInternal, Fail_InvalidHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLRETURN status = SQLMoreResultsInternal(&conn_handle);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLMoreResultsInternal, Fail_StatementCanceled) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.EnableCancellation();
+
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY008(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Statement has been cancelled",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLMoreResultsInternal, Fail_ExecutionInProgress) {
+  // Create StatementHandle with state set to executing
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  // Call SQLMoreResultsInternal, which should detect the execution in progress
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+
+  // Verify that the status is SQL_ERROR since the statement is still executing
+  EXPECT_EQ(SQL_ERROR, status);
+
+  // Check if diagnostics have the expected error state and message
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Function sequence error - statement is still executing",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLMoreResultsInternal, AsyncExecution_StillExecuting) {
+  // Create the StatementHandle with async execution state
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementAsyncExecute);
+  stmt_handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
+
+  // Set up the deferred future for the async execute query.
+  stmt_handle.SetFutureExecuteQuery(std::async(std::launch::deferred, [] {
+    // Simulate query execution that's still running.
+    return StatusRecord{SQLStates::k_HY000(), "Query still executing"};
+  }));
+
+  // Call SQLMoreResultsInternal, which should detect the ongoing execution
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+
+  // Check if the status is still executing
+  EXPECT_EQ(SQL_STILL_EXECUTING, status);
+
+  // Verify that the statement state is still set to async execute
+  EXPECT_EQ(StmtStates::kStatementAsyncExecute, stmt_handle.GetStmtState());
+}
+
+TEST(SQLMoreResultsInternal, NoMoreResults) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.DeleteNextJobData();
+  EXPECT_FALSE(stmt_handle.HasJobData());
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+  EXPECT_EQ(SQL_NO_DATA, status);
+  EXPECT_EQ(StmtStates::kStatementExecutedWithoutRs,
+            stmt_handle.GetStmtState());
+}
+
 }  // namespace google::cloud::odbc_bq_driver

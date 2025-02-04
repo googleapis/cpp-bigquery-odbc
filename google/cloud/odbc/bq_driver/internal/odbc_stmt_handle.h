@@ -261,12 +261,12 @@ class StatementHandle : public Handle {
   // requests.
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
+  bool is_statement_prepared_ = false;
   // Needed for cancellation and re-execution of asynchronous more results
   // requests.
   std::optional<std::future<StatusRecord>> future_more_results_query_;
-  // stack of pair of jobs Ids and respective statement types.
+  // vector of pair of jobs Ids and respective statement types.
   std::vector<std::pair<std::string, std::string>> job_data_;
-  bool is_statement_prepared_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

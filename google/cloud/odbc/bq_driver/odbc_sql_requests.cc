@@ -18,7 +18,9 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <chrono>
@@ -313,6 +315,106 @@ StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
     return prepare_status;
   }
   return ActuallyProcessExecute(stmt_handle, StmtStates::kStatementNotPrepared);
+}
+
+SQLRETURN HandleAsyncGetResults(StatementHandle& handle_ref) {
+  // Just a precautionary check so we don't rely on the caller.
+  if (handle_ref.GetStmtState() != StmtStates::kStatementAsyncGetResults) {
+    // Nothing to do.
+    return SQL_SUCCESS;
+  }
+  if (!handle_ref.IsOperationCanceled()) {
+    std::optional<std::future<StatusRecord>> future_results =
+        handle_ref.GetPossibleFutureMoreResults();
+    if (future_results.has_value()) {
+      std::future_status fut_status =
+          future_results.value().wait_for(std::chrono::seconds(0));
+      if (fut_status == std::future_status::ready) {
+        // Block until the future is executed.
+        auto status = future_results.value().get();
+        if (!status.ok()) {
+          // Reset the state to handle further fetch operations.
+          handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
+        }
+        // Once the results future is executed, reset it so we don't try again.
+        handle_ref.SetNullFutureMoreResultsQuery();
+        return LogAndReturnCode(handle_ref, status);
+      }
+      // Return that we are still executing
+      return SQL_STILL_EXECUTING;
+    }
+    // If for any reason we don't have the future, reset the statement state.
+    handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    auto status_record =
+        StatusRecord{SQLStates::k_HY000(),
+                     "Internal error: cannot fetch results asynchronously"};
+    return LogAndReturnCode(handle_ref, status_record);
+  }
+  // User has requested cancellation of an ongoing fetch operation.
+  // We return the Cancel state for this request.
+  handle_ref.DisableCancellation();
+  handle_ref.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  // For the current fetch request, return operation canceled.
+  auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+  return LogAndReturnCode(handle_ref, status_record);
+}
+
+StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
+  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+
+  // Get connection handle.
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+
+  if (!stmt_handle.HasJobData()) {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+    return StatusRecord{SQLStates::k_HY000(), "No more result sets available"};
+  }
+
+  // Retrieve job data (job ID and statement type).
+  auto [job_id, statement_type] = stmt_handle.GetNextJobData();
+
+  // Fetch query results from BigQuery.
+  Options options;
+  std::chrono::milliseconds job_timeout(100000);
+  auto ds_status_record_or = conn_handle.GetClient()->GetAllQueryResults(
+      conn_handle.GetDsn().catalog, job_id, "", job_timeout, options);
+
+  if (!ds_status_record_or) {
+    return ds_status_record_or.GetStatusRecord();
+  }
+
+  // Prepare results.
+  DSResults results;
+  results.data_source_results = *ds_status_record_or;
+
+  // Assign affected row count based on statement type.
+  std::int64_t affected_rows = ds_status_record_or->num_dml_affected_rows;
+  if (statement_type == "INSERT") {
+    results.dml_stats.inserted_row_count = affected_rows;
+  } else if (statement_type == "UPDATE") {
+    results.dml_stats.updated_row_count = affected_rows;
+  } else if (statement_type == "DELETE") {
+    results.dml_stats.deleted_row_count = affected_rows;
+  }
+
+  stmt_handle.SetDSResults(results);
+
+  // Process query results into a result set if it's a SELECT statement.
+  auto rs_status_record_or = ProcessQueryResults(results);
+  if (!rs_status_record_or || statement_type != "SELECT") {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  } else {
+    stmt_handle.SetResultSet(*rs_status_record_or);
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  }
+
+  // Unbind previous descriptor records and populate IRD.
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.UnbindAllDescriptorRecordsFrom(0);
+  google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
+      ird, ds_status_record_or->schema);
+
+  return StatusRecord::Ok();
 }
 
 }  // namespace
@@ -947,6 +1049,105 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
   return LogAndReturnCode(stmt_handle, status);
+}
+
+SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
+  // Validate the statement handle
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  // At this point we are handling new  request for execute. It could sync or
+  // async based on statement attribute SQL_ATTR_SYNC_ENABLE.
+  if (!stmt_handle.IsOperationCanceled() &&
+      stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is still executing"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  // Handle statement cancellation
+  if (stmt_handle.IsOperationCanceled()) {
+    stmt_handle.DisableCancellation();
+    stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
+
+    DSResults& ds_results = stmt_handle.GetDSResults();
+    if (ds_results.job_ref.has_value()) {
+      ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+
+      StatusRecordOr<Job> server_cancel_status =
+          CancelBQJob(conn_handle, ds_results.job_ref.value().job_id);
+      ds_results.job_ref = std::nullopt;
+
+      if (!server_cancel_status) {
+        TracePrintInternal(*(*kTraceOption),
+                           server_cancel_status.GetStatusRecord().message);
+      }
+    }
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_HY008(), "Statement has been cancelled"});
+  }
+
+  // Check if asynchronous execution is enabled
+  StatusRecordOr<SQLULEN> async_enable_status =
+      stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
+  if (!async_enable_status) {
+    return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
+  }
+
+  // Check if the statement is still executing
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    return LogAndReturnCode(
+        stmt_handle,
+        {SQLStates::k_HY010(),
+         "Function sequence error - statement is still executing"});
+  }
+
+  // Handle asynchronous execution states
+  switch (stmt_handle.GetStmtState()) {
+    case StmtStates::kStatementAsyncExecute:
+      return HandleAsyncExecute(
+          stmt_handle);  // Handle async execution completion
+    case StmtStates::kStatementAsyncGetResults:
+      return HandleAsyncGetResults(
+          stmt_handle);  // Handle async result fetching
+    default:
+      break;
+  }
+
+  // If there are no more results to fetch, handle statement completion
+  stmt_handle.DeleteNextJobData();
+  if (!stmt_handle.HasJobData()) {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+    return SQL_NO_DATA;  // No more results or result set consumed
+  }
+
+  // Execute async execution if enabled
+  if (*async_enable_status == SQL_ASYNC_ENABLE_ON) {
+    std::future<StatusRecord> fut_get_more_results = std::async(
+        std::launch::async,
+        [&stmt_handle]() { return ActuallyGetMoreResults(stmt_handle); });
+
+    stmt_handle.SetFutureMoreResultsQuery(std::move(fut_get_more_results));
+    stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+    return SQL_STILL_EXECUTING;
+  }
+
+  // Fetch results synchronously
+  StatusRecord fetch_status = ActuallyGetMoreResults(stmt_handle);
+  if (!SQL_SUCCEEDED(fetch_status.CalculateReturnCode())) {
+    return LogAndReturnCode(stmt_handle,
+                            fetch_status);  // Error in fetching results
+  }
+
+  return SQL_SUCCESS;  // Successfully fetched all results
 }
 
 }  // namespace google::cloud::odbc_bq_driver

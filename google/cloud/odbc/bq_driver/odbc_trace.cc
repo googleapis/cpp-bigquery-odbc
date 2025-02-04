@@ -3136,6 +3136,7 @@ void TraceFunctionExit_SQLBulkOperations(SQLRETURN ret_code,
                                          TraceOptions& opts) {
   ExitInternal("SQLBulkOperations_Exit", ret_code, opts);
 }
+
 #ifdef _WIN32
 void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
                                   LPCSTR lpszDriver, LPCSTR lpszAttributes,
