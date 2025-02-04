@@ -53,6 +53,7 @@ std::string const kEncryptData = "EncryptData";
 std::string const kDescription = "Description";
 std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
+std::string const kRefreshToken = "RefreshToken";
 
 SQLRETURN ConnectUsingRegistryDsn(Authentication auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
@@ -77,13 +78,13 @@ Authentication CreateAuthentication(Section& dsn_section) {
     auth_int = 0;
   }
   auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  // DSN section entries should be capitalized to be consistent with
-  // ConnectionHandle::SetUp function.
-  auth.email = dsn_section["EMAIL"];
+  // TODO(shivamd-gpartner): DSN section entries should be capitalized
+  // to be consistent with ConnectionHandle::SetUp function.
+  auth.email = dsn_section[kEmail];
   auth.oauth.credentials_file_path = dsn_section[kKeyFilePath];
-  // DSN section entries should be capitalized to be consistent with
-  // ConnectionHandle::SetUp function.
-  auth.refresh_token = dsn_section["REFRESHTOKEN"];
+  // TODO(shivamd-gpartner): DSN section entries should be capitalized to be
+  // consistent with ConnectionHandle::SetUp function.
+  auth.refresh_token = dsn_section[kRefreshToken];
   return auth;
 }
 
