@@ -1607,4 +1607,92 @@ TEST(ConvertFromBytesDSValueTest, HandlesUnsupportedType) {
   EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
 }
 
+
+TEST(ConvertFromArrayDSValue, To_SQL_C_CHAR_success) {
+  char buf[100];
+  SQLLEN data_len;
+  DataBuffer data = {SQL_C_CHAR, buf, 100, &data_len};
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
+  std::string returned_val = (char*)data.buf;
+  EXPECT_EQ(returned_val, expected_val);
+  EXPECT_EQ(data_len, expected_val.length());
+}
+
+TEST(ConvertFromArrayDSValue, To_SQL_C_CHAR_InsufficientBuffer) {
+  char buf[10];
+  SQLLEN data_len;
+  SQLLEN buf_len = 10;
+  DataBuffer data = {SQL_C_CHAR, buf, buf_len, &data_len};
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
+  EXPECT_EQ(data_len, buf_len - 1);
+  EXPECT_THAT(
+      status_record,
+      StatusRecIs(SQLStates::k_01004(), StrEq("String data, right truncated")));
+}
+
+TEST(ConvertFromArrayDSValue, To_SQL_C_WCHAR_success) {
+  SQLWCHAR dest_buf[100] = {0};
+  SQLLEN data_len;
+  DataBuffer data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &data_len};
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
+  SQLINTEGER length = data_len / sizeof(SQLWCHAR);
+  StatusRecordOr<std::string> returned_val =
+      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), length);
+  EXPECT_EQ(length, expected_val.length());
+  EXPECT_STREQ(returned_val->c_str(), expected_val.c_str());
+}
+
+TEST(ConvertFromArrayDSValue, convertToWchar_InsufficientBuffer) {
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  StringToDSValue(src_val, ds_value);
+  char dest_buf[10];
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), nullptr};
+  auto status = ConvertFromArrayDSValue(ds_value, dest_data);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_22003());
+  ASSERT_FALSE(status.ok());
+}
+
+TEST(ConvertFromArrayDSValue, To_SQL_C_BINARY_success) {
+  char buf[100] = {0};
+  SQLLEN data_len;
+  DataBuffer data = {SQL_C_BINARY, buf, 100, &data_len};
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
+  std::string returned_val = (char*)data.buf;
+  EXPECT_EQ(returned_val, expected_val);
+  EXPECT_EQ(data_len, expected_val.length());
+}
+
+TEST(ConvertFromArrayDSValue, To_SQL_C_BINARY_InsufficientBuffer) {
+  char buf[10];
+  SQLLEN data_len;
+  SQLLEN buf_len = 10;
+  DataBuffer data = {SQL_C_BINARY, buf, buf_len, &data_len};
+  DSValue ds_value;
+  std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  StringToDSValue(src_val, ds_value);
+  StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
+  EXPECT_EQ(data_len, buf_len - 1);
+  EXPECT_THAT(
+      status_record,
+      StatusRecIs(SQLStates::k_01004(), StrEq("Binary data, right truncated")));
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
