@@ -28,6 +28,18 @@ SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
   return SQL_SUCCESS;
 }
 
+// During program execution out_buf is never NULL
+SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
+                           SQLSMALLINT* str_len_ptr) {
+  if (out_buf) {
+    *(static_cast<SQLPOINTER*>(out_buf)) = ptr;
+  }
+  if (str_len_ptr) {
+    *str_len_ptr = static_cast<SQLSMALLINT>(sizeof(SQLPOINTER));
+  }
+  return SQL_SUCCESS;
+}
+
 odbc_internal::StatusRecord IntervalToOutputBufferResponse(
     const SQL_INTERVAL_STRUCT& conn_interval, SQLPOINTER dest_buf,
     SQLLEN buffer_length, SQLLEN* result_len) {

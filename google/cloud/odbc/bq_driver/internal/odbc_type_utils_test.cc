@@ -278,7 +278,8 @@ TEST(AddressToPointer, SetPointer_NullStrLen) {
   SQLSMALLINT ptr[] = {1, 2, 3};
   SQLSMALLINT* out_buf = nullptr;
 
-  SQLRETURN return_code = AddressToPointer(ptr, &out_buf, nullptr);
+  SQLRETURN return_code =
+      AddressToPointer(ptr, &out_buf, static_cast<SQLSMALLINT*>(nullptr));
 
   ASSERT_EQ(SQL_SUCCESS, return_code);
   EXPECT_EQ(ptr, out_buf);

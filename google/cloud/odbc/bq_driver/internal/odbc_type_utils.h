@@ -249,6 +249,9 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLINTEGER* str_len_ptr);
 
+SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
+                           SQLSMALLINT* str_len_ptr);
+
 odbc_internal::StatusRecord IntervalToOutputBufferResponse(
     const SQL_INTERVAL_STRUCT& conn_interval, SQLPOINTER dest_buf,
     SQLLEN buffer_length, SQLLEN* result_len);
