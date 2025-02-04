@@ -694,6 +694,46 @@ TEST(ConvertFromJsonDSValue, convertToWchar_Failed) {
   ASSERT_FALSE(status.ok());
 }
 
+TEST(ConvertFromJsonDSValue, To_SQL_C_BINARY_success) {
+  SQLPOINTER buf = new char[100];
+  SQLLEN data_len;
+  DataBuffer data = {SQL_C_BINARY, buf, 100, &data_len};
+
+  DSValue ds_value;
+  json src_val = nlohmann::json({{"age", 30}, {"name", "Ravi"}});
+  std::string expected_val = "{\"age\":30,\"name\":\"Ravi\"}";
+
+  std::string str = src_val.dump();
+  StringToDSValue(str, ds_value);
+
+  StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
+
+  std::string returned_val(static_cast<char*>(buf), data_len);
+
+  EXPECT_EQ(returned_val, expected_val);
+  delete[] static_cast<char*>(buf);
+}
+
+TEST(ConvertFromJsonDSValue, To_SQL_C_BINARY_Failure) {
+  SQLPOINTER buf = new char[5];
+  SQLLEN data_len;
+  DataBuffer data = {SQL_C_BINARY, buf, 5, &data_len};
+
+  DSValue ds_value;
+  json src_val = nlohmann::json({{"age", 30}, {"name", "Ravi"}});
+  std::string expected_val = "{\"age\":30,\"name\":\"Ravi\"}";
+
+  std::string str = src_val.dump();
+  StringToDSValue(str, ds_value);
+
+  StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
+
+  EXPECT_THAT(
+      status_record,
+      StatusRecIs(SQLStates::k_01004(), StrEq("String data, right truncated")));
+  delete[] static_cast<char*>(buf);
+}
+
 TEST(ConvertFromTimestampDSValue, convertToDate_InsufficientBuffer) {
   SQL_TIMESTAMP_STRUCT Timestamp;
   Timestamp.year = 2020;

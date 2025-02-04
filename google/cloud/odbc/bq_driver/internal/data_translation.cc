@@ -574,7 +574,11 @@ StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
           src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
-    // TODO(b\367841053): SQL_C_BINARY to be done later
+    case SQL_C_BINARY: {
+      return StringValueToOutputBufferResponse<SQLLEN>(
+          src_str.c_str(), dest_buf, buffer_length, res_len);
+    }
+
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }

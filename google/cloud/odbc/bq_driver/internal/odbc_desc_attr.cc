@@ -188,6 +188,7 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
     case SQL_C_WCHAR:
     case SQL_C_SSHORT:
     case SQL_C_USHORT:
+    case SQL_C_SHORT:
     case SQL_C_SLONG:
     case SQL_C_ULONG:
     case SQL_C_LONG:

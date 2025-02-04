@@ -1058,6 +1058,7 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 // TODO(b/394015883): Add more cases of Struct into StructBasicTestStruct
 struct StructTestStruct {
@@ -1196,7 +1197,7 @@ TEST(DataTranslationTest, From_SQL_Struct_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 struct BytesBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -1585,7 +1586,7 @@ std::vector<JsonBasicTestStruct> const kConversionFromJsonTestData{
     {SQL_C_WCHAR, {{"age", 80}, {"name", "Ravi"}}, SQL_SUCCESS},
     {SQL_C_WCHAR, {{"age", 100}, {"name", "Shanti"}}, SQL_SUCCESS},
     {SQL_C_WCHAR, {{"age", 76}, {"name", "Sushma"}}, SQL_SUCCESS},
-
+    {SQL_C_BINARY, {{"age", 20}, {"name", "Anaya"}}, SQL_SUCCESS},
 };
 
 void TestTranslationsFromJsonToALL(std::shared_ptr<ODBCHandles> conn,
@@ -1621,6 +1622,13 @@ void TestTranslationsFromJsonToALL(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_SSHORT: {
         EXPECT_EQ(status, expected.status);
+        break;
+      }
+      case SQL_C_BINARY: {
+        std::string expected_str = expected.value.dump();
+        ASSERT_EQ(strlen_or_ind, static_cast<SQLLEN>(expected_str.size()));
+        std::string returned_str(reinterpret_cast<char*>(data), strlen_or_ind);
+        EXPECT_EQ(returned_str, expected_str);
         break;
       }
       default: {

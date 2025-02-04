@@ -413,7 +413,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
             break;
           }
-          case BQDataType::kJson: {
+          case BQDataType::kJson:
+          case BQDataType::kStruct: {
             StringToDSValue(data, row_val);
             break;
           }
