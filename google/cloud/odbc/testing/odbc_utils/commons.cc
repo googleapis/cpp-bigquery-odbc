@@ -722,54 +722,6 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 }
 
-void Table::InsertStructData(std::shared_ptr<ODBCHandles> conn,
-                             std::vector<StructBasicTestStruct> const& rows,
-                             bool insert_index) {
-  if (rows.empty()) {
-    return;
-  }
-
-  std::ostringstream insert_stmt;
-  insert_stmt << "INSERT INTO " << table_name_ << " VALUES ";
-
-  for (size_t i = 0; i < rows.size(); ++i) {
-    auto const& row = rows[i];
-    insert_stmt << "(";
-
-    if (insert_index) {
-      insert_stmt << i << ", ";
-    }
-
-    insert_stmt << "STRUCT(" << row.int_value << ", " << row.double_value
-                << ", '" << row.string_value << "', ";
-
-    if (row.int_array) {
-      insert_stmt << "ARRAY[";
-      for (size_t j = 0; j < row.int_array->size(); ++j) {
-        insert_stmt << (*row.int_array)[j];
-        if (j != row.int_array->size() - 1) {
-          insert_stmt << ", ";
-        }
-      }
-      insert_stmt << "]";
-    } else {
-      insert_stmt << "NULL";
-    }
-
-    insert_stmt << ")";
-    insert_stmt << ")";
-
-    if (i != rows.size() - 1) {
-      insert_stmt << ", ";
-    }
-  }
-
-  insert_stmt << ";";
-
-  SQLRETURN status = ExecWithPrepare(conn, insert_stmt.str());
-  CheckError(status, "Execute with Prepare", conn);
-}
-
 void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
                             StdArrayRows array_rows, bool insert_index) {
   if (array_rows.empty()) {

@@ -160,7 +160,6 @@ struct StructBasicTestStruct {
   SQLBIGINT int_value;
   SQLDOUBLE double_value;
   std::string string_value;
-  std::optional<std::vector<int>> int_array;
 };
 
 struct ArrayBasicTestStruct {
@@ -484,10 +483,6 @@ class Table {
   void InsertBytesData(std::shared_ptr<ODBCHandles> conn,
                        std::vector<std::vector<SQLCHAR>> const& bytes_data,
                        bool use_prepared_stmt);
-
-  void InsertStructData(std::shared_ptr<ODBCHandles> conn,
-                        std::vector<StructBasicTestStruct> const& rows,
-                        bool insert_index);
 
  private:
   std::string table_name_;
