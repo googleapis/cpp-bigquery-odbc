@@ -34,6 +34,23 @@ enum class OauthMechanism {
 struct Oauth {
   OauthMechanism auth_mechanism;
   std::string credentials_file_path;
+  /////////////////////////////////////////////////////////////////
+  // Optional BYOID Properties needed for external authentication.
+  /////////////////////////////////////////////////////////////////
+  // The audience which the token is intended for
+  std::string byoid_aud_url;
+  // A json object describing the file location of the subject token, or the URI
+  // to request it.
+  std::string byoid_creds_src;
+  // The project number associated with the workforce pool. Populated only for
+  // workforce authentication.
+  std::string byoid_pool_user_project;
+  // The subject token type (JWT/SAML/Id token..). Defaults to
+  // urn:ietf:params:oauth:tokentype:id_token.
+  std::string byoid_subj_token_type;
+  // The URI used to generate authentication tokens. Defaults to
+  // https://sts.googleapis.com/v1/token.
+  std::string byoid_token_url;
 };
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.

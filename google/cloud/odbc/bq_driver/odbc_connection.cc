@@ -75,6 +75,12 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.credentials_file_path = dsn.key_file_path;
   auth.email = dsn.email;
   auth.refresh_token = dsn.refresh_token;
+  // Populate BYOID Properties from Dsn.
+  auth.oauth.byoid_aud_url = dsn.byoid_aud_url;
+  auth.oauth.byoid_creds_src = dsn.byoid_creds_src;
+  auth.oauth.byoid_pool_user_project = dsn.byoid_pool_user_project;
+  auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
+  auth.oauth.byoid_token_url = dsn.byoid_token_url;
   return auth;
 }
 

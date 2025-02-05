@@ -33,6 +33,13 @@ std::string const kDsnName = "SampleDSN";
 std::string const kDsnListProjectsParent = "TestListProjectsParent";
 std::string const kEmail = "a@b.com";
 std::string const kRefreshToken = "test-token";
+// BYOID Properties
+
+std::string const kAudienceUrl = "test-aud";
+std::string const kCredsSource = "~/workload/tkn.txt";
+std::string const kTokenUrl = "https://test-token-url";
+std::string const kSubTokenType = kSubTokenTypeIdToken;
+std::string const kUserPoolProject = "test-project";
 
 TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string test_data_path =
@@ -94,6 +101,143 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_FALSE(actual.is_job_creation_required);
   EXPECT_FALSE(actual.sessions_enabled);
   EXPECT_FALSE(conn_handle.IsConnected());
+  // Aseert BYOID Default Property values.
+  EXPECT_EQ(actual.byoid_subj_token_type, kSubTokenTypeDefault);
+  EXPECT_EQ(actual.byoid_token_url, kDefaultTokenUrl);
+}
+
+TEST(ConnectionHandle, DsnSetup_BYOID) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
+
+  // `is_job_creation_required` is supposed to be false by default
+  EXPECT_FALSE(actual.is_job_creation_required);
+  EXPECT_FALSE(actual.sessions_enabled);
+  EXPECT_FALSE(conn_handle.IsConnected());
+  // BYOID Properties
+  EXPECT_EQ(actual.byoid_aud_url, kAudienceUrl);
+  EXPECT_EQ(actual.byoid_creds_src, kCredsSource);
+  EXPECT_EQ(actual.byoid_pool_user_project, kUserPoolProject);
+  EXPECT_EQ(actual.byoid_subj_token_type, kSubTokenType);
+  EXPECT_EQ(actual.byoid_token_url, kTokenUrl);
+}
+
+TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_AllPropertiesSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  EXPECT_TRUE(conn_handle.IsBYOIDPropertiesSet());
+}
+
+TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_NoPropertiesSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  EXPECT_TRUE(
+      conn_handle
+          .IsBYOIDPropertiesSet());  // default value for subject token type.
+}
+
+TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  EXPECT_TRUE(conn_handle.IsBYOIDPropertiesSet());
+}
+
+TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  EXPECT_TRUE(conn_handle.ValidateBYOIDProperties().ok());
+}
+
+TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  auto result = conn_handle.ValidateBYOIDProperties();
+
+  EXPECT_EQ(result.message, "Required BYOID properties not set");
+}
+
+TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_CredSrcNotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  auto result = conn_handle.ValidateBYOIDProperties();
+
+  EXPECT_EQ(result.message, "Required BYOID properties not set");
+}
+
+TEST(ConnectionHandle, ValidateBYOIDProperties_Success_SubTokenTypeNotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  auto result = conn_handle.ValidateBYOIDProperties();
+  EXPECT_TRUE(result.ok());
+}
+
+TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_InvalidSubTokenType) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  // BYOID Properties
+  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
+  dsn_section["BYOID_CredentialSource"] = kCredsSource;
+  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
+  dsn_section["BYOID_SubjectTokenType"] = "invalid";
+  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  auto result = conn_handle.ValidateBYOIDProperties();
+  EXPECT_EQ(result.message, "Invalid subject token type");
 }
 
 TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {

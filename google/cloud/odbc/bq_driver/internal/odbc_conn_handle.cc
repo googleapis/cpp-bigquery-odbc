@@ -89,6 +89,20 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {
     attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
   }
+
+  // Populate BYOID properties from DSN section.
+  dsn_.byoid_aud_url = dsn_section["BYOID_AudienceUrl"];
+  dsn_.byoid_creds_src = dsn_section["BYOID_CredentialSource"];
+  dsn_.byoid_pool_user_project = dsn_section["BYOID_PoolUserProject"];
+  dsn_.byoid_subj_token_type = dsn_section["BYOID_SubjectTokenType"];
+  dsn_.byoid_token_url = dsn_section["BYOID_TokenUrl"];
+  // Set default values for empty properties.
+  if (dsn_.byoid_subj_token_type.empty()) {
+    dsn_.byoid_subj_token_type = kSubTokenTypeDefault;
+  }
+  if (dsn_.byoid_token_url.empty()) {
+    dsn_.byoid_token_url = kDefaultTokenUrl;
+  }
 }
 
 ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle)
@@ -306,4 +320,27 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
 
   return StatusRecord::Ok();
 }
+
+StatusRecord ConnectionHandle::ValidateBYOIDProperties() {
+  // If BYOID properties are not set then we just return true.
+  if (!IsBYOIDPropertiesSet()) return StatusRecord::Ok();
+
+  // Required properties must be set.
+  if ((dsn_.byoid_aud_url.empty() || dsn_.byoid_subj_token_type.empty() ||
+       dsn_.byoid_creds_src.empty())) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Required BYOID properties not set"};
+  }
+
+  // Validate subject token type.
+  if (dsn_.byoid_subj_token_type != kSubTokenTypeJWT &&
+      dsn_.byoid_subj_token_type != kSubTokenTypeIdToken &&
+      dsn_.byoid_subj_token_type != kSubTokenTypeSaml2 &&
+      dsn_.byoid_subj_token_type != kSubTokenTypeAws4) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid subject token type"};
+  }
+
+  return StatusRecord::Ok();
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

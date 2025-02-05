@@ -29,6 +29,18 @@ using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
+// BYOID: Subject token types
+std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
+std::string const kSubTokenTypeIdToken =
+    "urn:ietf:params:oauth:token-type:id-token";
+std::string const kSubTokenTypeSaml2 = "urn:ietf:params:oauth:token-type:saml2";
+std::string const kSubTokenTypeAws4 =
+    "urn:ietf:params:aws:token-type:aws4_request";
+
+// Default BYOID properties.
+std::string const kSubTokenTypeDefault = kSubTokenTypeIdToken;
+std::string const kDefaultTokenUrl = "https://sts.googleapis.com/v1/token";
+
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
   Oauth oauth;
@@ -56,6 +68,23 @@ struct Dsn {
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
+  /////////////////////////////////////////////////////////////////
+  // Optional BYOID Properties needed for external authentication.
+  /////////////////////////////////////////////////////////////////
+  // The audience which the token is intended for
+  std::string byoid_aud_url;
+  // A json object describing the file location of the subject token, or the URI
+  // to request it.
+  std::string byoid_creds_src;
+  // The project number associated with the workforce pool. Populated only for
+  // workforce authentication.
+  std::string byoid_pool_user_project;
+  // The subject token type (JWT/SAML/Id token..). Defaults to
+  // urn:ietf:params:oauth:tokentype:id_token.
+  std::string byoid_subj_token_type;
+  // The URI used to generate authentication tokens. Defaults to
+  // https://sts.googleapis.com/v1/token.
+  std::string byoid_token_url;
 };
 
 class EnvironmentHandle;
@@ -111,6 +140,20 @@ class ConnectionHandle : public Handle {
   inline bool IsTransactionActive() const { return is_transaction_active_; }
   inline void SetTransactionActive(bool is_transaction_active) {
     is_transaction_active_ = is_transaction_active;
+  }
+
+  /////////////////////////////////////////////////////
+  // Helper functions with regards to BYOID properties.
+  /////////////////////////////////////////////////////
+
+  // Validates BYOID properties based on the design.
+  odbc_internal::StatusRecord ValidateBYOIDProperties();
+
+  // Returns true of required BYOID properties are set, false otherwise.
+  inline bool IsBYOIDPropertiesSet() {
+    // Return true if any of the required BYOID properties is set.
+    return (!dsn_.byoid_aud_url.empty() || !dsn_.byoid_creds_src.empty() ||
+            !dsn_.byoid_subj_token_type.empty());
   }
 
  protected:
