@@ -321,7 +321,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
   return StatusRecord::Ok();
 }
 
-StatusRecord ConnectionHandle::ValidateBYOIDProperties() {
+StatusRecord ConnectionHandle::ValidateBYOIDProperties() const {
   // If BYOID properties are not set then we just return true.
   if (!IsBYOIDPropertiesSet()) return StatusRecord::Ok();
 

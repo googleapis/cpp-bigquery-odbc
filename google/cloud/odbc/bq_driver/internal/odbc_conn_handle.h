@@ -147,7 +147,7 @@ class ConnectionHandle : public Handle {
   /////////////////////////////////////////////////////
 
   // Validates BYOID properties based on the design.
-  odbc_internal::StatusRecord ValidateBYOIDProperties();
+  odbc_internal::StatusRecord ValidateBYOIDProperties() const;
 
   // Returns true of required BYOID properties are set, false otherwise.
   inline bool IsBYOIDPropertiesSet() const {
