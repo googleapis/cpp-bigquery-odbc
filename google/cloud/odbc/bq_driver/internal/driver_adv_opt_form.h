@@ -14,7 +14,7 @@
 
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_ADV_OPT_FORM_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_ADV_OPT_FORM_H
-// TODO(@khushikathuria008): Adding testcases for this file in follow up PR.
+
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -49,6 +49,33 @@ class AdvanceOptions {
   void CreateButtons(HFONT h_font);
   void Show(HWND parent);
   HWND GetHwnd() const;
+
+  inline std::string const& GetLanguageDialect() const {
+    return language_dialect_;
+  }
+  inline std::string const& GetDatasetName() const { return adv_dataset_name_; }
+  inline std::string const& GetEncryptionKey() const { return encryption_key_; }
+  inline std::string const& GetSessionLocation() const {
+    return session_location_;
+  }
+  inline std::string const& GetAdditionalProjects() const {
+    return additional_projects_;
+  }
+  inline std::string const& GetQueryProperties() const {
+    return query_properties_;
+  }
+  inline std::string const& GetRowsPerBlock() const { return rows_per_block_; }
+  inline std::string const& GetDefaultStringLength() const {
+    return default_string_length_;
+  }
+  inline std::string const& GetTempTableExpiration() const {
+    return temp_expiration_;
+  }
+  inline std::string const& GetActivationThreshold() const {
+    return activation_threshold_;
+  }
+
+  void SetValues(Section const& attributes_map);
 
  private:
   HWND adv_hwnd;

@@ -60,7 +60,7 @@ cc_library(
         # `driver_log_form_test.cc` on non-Windows platforms to avoid compatibility
         # issues with platform-specific features like UI components.
         ":windows": [driver_internal_utils_test],
-        "//conditions:default": [] if driver_internal_utils_test.endswith(("driver_form_test.cc", "driver_log_form_test.cc", "driver_form_proxy_test.cc")) else [],
+        "//conditions:default": [] if driver_internal_utils_test.endswith(("driver_form_test.cc", "driver_log_form_test.cc", "driver_form_proxy_test.cc", "driver_adv_opt_form_test.cc")) else [],
     }),
     tags = ["unit-tests"],
     deps = [

@@ -32,6 +32,17 @@ std::string AdvanceOptions::query_properties_;
 std::string const KTempExpiration = "3600000";
 std::string const KRowsPerBlock = "100000";
 std::string const kDefaultString = "16384";
+std::string const kLanguageDialect = "SQLDialect";
+std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
+std::string const kEncryptionKey = "EncryptionKey";
+std::string const kRowsFetchedPerBlock = "RowsFetchedPerBlock";
+std::string const kDefaultStringColumnLength = "DefaultStringColumnLength";
+std::string const kLargeResultsTempTableExpirationTime =
+    "LargeResultsTempTableExpirationTime";
+std::string const kSessionLocation = "SessionLocation";
+std::string const kAdditionalProjects = "AdditionalProjects";
+std::string const kQueryProperties = "QueryProperties";
+std::string const kHTAPI_ActivationThreshold = "HTAPI_ActivationThreshold";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -197,13 +208,77 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
     case WM_COMMAND:
       switch (LOWORD(w_param)) {
         case kIdcOKButton: {
+          HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
+          char language_buffer[256] = {0};
+          GetWindowText(h_language_box, language_buffer,
+                        sizeof(language_buffer));
+          language_dialect_ = language_buffer;
+
+          HWND h_dataset_name_edit = GetDlgItem(hwnd, kIdcDatasetNameEdit);
+          char dataset_name_buffer[256] = {0};
+          GetWindowText(h_dataset_name_edit, dataset_name_buffer,
+                        sizeof(dataset_name_buffer));
+          adv_dataset_name_ = dataset_name_buffer;
+
+          HWND h_temp_expiration_edit =
+              GetDlgItem(hwnd, kIdcTempExpirationEdit);
+          char temp_expiration_buffer[256] = {0};
+          GetWindowText(h_temp_expiration_edit, temp_expiration_buffer,
+                        sizeof(temp_expiration_buffer));
+          temp_expiration_ = temp_expiration_buffer;
+
+          HWND h_encryption_key_edit = GetDlgItem(hwnd, kIdcEncryptionKeyEdit);
+          char encryption_key_buffer[256] = {0};
+          GetWindowText(h_encryption_key_edit, encryption_key_buffer,
+                        sizeof(encryption_key_buffer));
+          encryption_key_ = encryption_key_buffer;
+
+          HWND h_rows_per_block_edit = GetDlgItem(hwnd, kIdcRowsPerBlockEdit);
+          char rows_per_block_buffer[256] = {0};
+          GetWindowText(h_rows_per_block_edit, rows_per_block_buffer,
+                        sizeof(rows_per_block_buffer));
+          rows_per_block_ = rows_per_block_buffer;
+
+          HWND h_default_string_edit = GetDlgItem(hwnd, kIdcDefaultStringEdit);
+          char default_string_buffer[256] = {0};
+          GetWindowText(h_default_string_edit, default_string_buffer,
+                        sizeof(default_string_buffer));
+          default_string_length_ = default_string_buffer;
+
+          HWND h_session_location_edit =
+              GetDlgItem(hwnd, kIdcSessionLocationEdit);
+          char session_location_buffer[256] = {0};
+          GetWindowText(h_session_location_edit, session_location_buffer,
+                        sizeof(session_location_buffer));
+          session_location_ = session_location_buffer;
+
+          HWND h_additional_projects_edit =
+              GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
+          char additional_projects_buffer[1024] = {0};
+          GetWindowText(h_additional_projects_edit, additional_projects_buffer,
+                        sizeof(additional_projects_buffer));
+          additional_projects_ = additional_projects_buffer;
+
+          HWND h_query_properties_edit =
+              GetDlgItem(hwnd, kIdcQueryPropertiesEdit);
+          char query_properties_buffer[1024] = {0};
+          GetWindowText(h_query_properties_edit, query_properties_buffer,
+                        sizeof(query_properties_buffer));
+          query_properties_ = query_properties_buffer;
+
+          HWND h_activation_threshold =
+              GetDlgItem(hwnd, kIdcActivationThresholdEdit);
+          char activation_threshold_buffer[1024] = {0};
+          GetWindowText(h_activation_threshold, activation_threshold_buffer,
+                        sizeof(activation_threshold_buffer));
+          activation_threshold_ = activation_threshold_buffer;
+
           DestroyWindow(hwnd);
           break;
         }
-        case kIdcCancelButton: {
+        case kIdcCancelButton:
           DestroyWindow(hwnd);  // Close the window
           break;
-        }
       }
       break;
 
@@ -220,6 +295,23 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
   }
   return DefWindowProc(hwnd, u_msg, w_param, l_param);
 }
+
+void AdvanceOptions::SetValues(Section const& attribute_map) {
+  language_dialect_ = GetValueOrDefault(attribute_map, kLanguageDialect);
+  adv_dataset_name_ = GetValueOrDefault(attribute_map, kLargeResultsDatasetId);
+  encryption_key_ = GetValueOrDefault(attribute_map, kEncryptionKey);
+  rows_per_block_ = GetValueOrDefault(attribute_map, kRowsFetchedPerBlock);
+  default_string_length_ =
+      GetValueOrDefault(attribute_map, kDefaultStringColumnLength);
+  temp_expiration_ =
+      GetValueOrDefault(attribute_map, kLargeResultsTempTableExpirationTime);
+  session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
+  additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
+  query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
+  activation_threshold_ =
+      GetValueOrDefault(attribute_map, kHTAPI_ActivationThreshold);
+}
+
 void AdvanceOptions::Show(HWND hwnd) {
   if (adv_hwnd) {
     ShowWindow(adv_hwnd, SW_SHOW);

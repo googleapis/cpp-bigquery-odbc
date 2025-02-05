@@ -257,6 +257,7 @@ function (bq_driver_define_unit_tests)
             bq_driver/internal/driver_form_test.cc
             bq_driver/internal/driver_log_form_test.cc
             bq_driver/internal/driver_form_proxy_test.cc
+            bq_driver/internal/driver_adv_opt_form_test.cc
             bq_driver/odbc_windows_test.cc)
     endif ()
 

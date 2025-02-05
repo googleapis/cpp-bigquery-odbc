@@ -150,6 +150,19 @@ HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
 
 HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id);
+
+inline std::string GetValueOrDefault(Section const& attribute_map,
+                                     std::string const& key) {
+  auto it = std::find_if(
+      attribute_map.begin(), attribute_map.end(), [&](auto const& pair) {
+        return std::equal(
+            pair.first.begin(), pair.first.end(), key.begin(), key.end(),
+            [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+      });
+
+  return (it != attribute_map.end()) ? it->second : "";
+}
+
 #else
 
 odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(

@@ -736,6 +736,27 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           SetForegroundWindow(hwnd);
           break;
         }
+        case kIdcAdvanceOptBtn: {
+          AdvanceOptions adv_form;
+          if (IsWindowVisible(adv_form.GetHwnd())) {
+            SetForegroundWindow(adv_form.GetHwnd());
+            EnableWindow(hwnd, FALSE);
+            break;
+          }
+          if (!adv_form.GetHwnd()) {
+            adv_form = AdvanceOptions();
+            EnableWindow(hwnd, FALSE);
+          }
+          adv_form.Show(hwnd);
+          MSG msg = {};
+          while (GetMessage(&msg, NULL, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+          }
+          EnableWindow(hwnd, TRUE);
+          SetForegroundWindow(hwnd);
+          break;
+        }
         case kIdcCatlogBOX:
         case kIdcDatasetBOX: {
           EvaluateFields(hwnd);
