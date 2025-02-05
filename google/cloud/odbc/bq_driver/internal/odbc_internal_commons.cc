@@ -594,6 +594,7 @@ StatusRecordOr<DSResults> FetchBQData(
   }
   DSResults results;
   results.dml_stats = pq_status->dml_stats;
+  results.job_ref = pq_status->job_reference;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results
     results.data_source_results = *pq_status;
