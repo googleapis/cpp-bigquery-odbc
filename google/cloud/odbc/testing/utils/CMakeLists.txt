@@ -25,7 +25,7 @@ if (NOT COMMAND create_bazel_config)
 endif ()
 
 add_library(google_cloud_odbc_testing_utils # cmake-format: sort
-            STATIC env_vars.cc env_vars.h status_matchers.cc status_matchers.h)
+            env_vars.cc env_vars.h status_matchers.cc status_matchers.h)
 
 target_link_libraries(
     google_cloud_odbc_testing_utils

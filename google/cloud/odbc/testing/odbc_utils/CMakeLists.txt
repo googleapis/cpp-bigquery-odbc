@@ -27,7 +27,6 @@ endif ()
 
 add_library(
     google_cloud_odbc_testing_odbc_utils # cmake-format: sort
-    STATIC
     catalog.cc
     catalog.h
     commons.cc
@@ -60,10 +59,19 @@ if (NOT BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
     # static BQ Driver target
     target_link_libraries(google_cloud_odbc_testing_odbc_utils
                           google_cloud_odbc_bq_driver)
+elseif (BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
+    # Use google_cloud_odbc_bq_driver with shared target if we are building
+    # shared BQ Driver target.
+    if (WIN32)
+        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32
+                              google_cloud_odbc_bq_driver)
+    else ()
+        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc
+                              google_cloud_odbc_bq_driver)
+    endif ()
 else ()
-    # in case of dynamic linking no need to link with
-    # google_cloud_odbc_bq_driver, as driver will be loaded according to the DSN
-    # configuration. target
+    # Do not use google_cloud_odbc_bq_driver if we are not building BQ Driver
+    # target
     if (WIN32)
         target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32)
     else ()

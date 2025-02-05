@@ -64,11 +64,8 @@ function (odbc_define_tests)
 
     # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
     if (BQ_DRIVER_INTEGRATION_TESTS)
-        if (NOT BUILD_SHARED_LIBS)
-            set(odbc_driver_tests_src
-                ${odbc_driver_tests_src}
-                odbc_driver_tests/internal/connection_test.cc)
-        endif ()
+        set(odbc_driver_tests_src ${odbc_driver_tests_src}
+                                  odbc_driver_tests/internal/connection_test.cc)
         add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
     endif ()
 

@@ -15,7 +15,7 @@
 # ~~~
 
 add_library(
-    odbc_bq_client_interface STATIC
+    odbc_bq_client_interface
     datasets.cc
     datasets.h
     jobs.cc
