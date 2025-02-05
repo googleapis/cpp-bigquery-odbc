@@ -728,6 +728,8 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
 // so the tests can be run for both Simba and BQ drivers.
 ///////////////////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -744,6 +746,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
 }
 
 TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -758,6 +762,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
 }
 
 TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -772,6 +778,8 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
 }
 
 TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -792,6 +800,8 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
 // for both BQ and Simba drivers.
 /////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -815,6 +825,8 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -837,6 +849,8 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -859,6 +873,8 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -882,6 +898,8 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -903,6 +921,8 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
+  // TODO(b/394543371): Enable this when the bug is fixed
+  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
