@@ -1178,4 +1178,58 @@ TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
   StatusRecord status_record = ValidateAllowedAttributes(&conn_handle, section);
   EXPECT_TRUE(status_record.ok());
 }
+
+TEST(ArrayJsonToDSValue, String_ArrayType) {
+  char buf[100];
+  std::string src_val = R"([{"v":"apple"},{"v":"banana"},{"v":"peach"}])";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"apple\"},{\"v\":\"banana\"},{\"v\":\"peach\"}]}";
+  DSValue value;
+  ArrayJsonToDSValue(src_val, value, BQDataType::kString);
+
+  std::string returned;
+
+  DSValueToString(value, returned);
+
+  EXPECT_EQ(expected_val, returned);
+}
+
+TEST(ArrayJsonToDSValue, Int_ArrayType) {
+  char buf[100];
+  std::string src_val = R"([{"v":"121"},{"v":"123"},{"v":"1212"}])";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  DSValue value;
+  ArrayJsonToDSValue(src_val, value, BQDataType::kInt64);
+
+  std::string returned;
+
+  DSValueToString(value, returned);
+
+  EXPECT_EQ(expected_val, returned);
+}
+
+TEST(ArrayJsonToDSValue, Bytes_ArrayType) {
+  char buf[100];
+  std::string src_val = R"([{"v":"YQ=="},{"v":"Yg=="},{"v":"Yw=="}])";
+  std::string expected_val =
+      "{\"v\":[{\"v\":\"0x61\"},{\"v\":\"0x62\"},{\"v\":\"0x63\"}]}";
+  DSValue value;
+  ArrayJsonToDSValue(src_val, value, BQDataType::kBytes);
+
+  std::string returned;
+
+  DSValueToString(value, returned);
+
+  EXPECT_EQ(expected_val, returned);
+}
+
+TEST(ValidatingBinaryValues, Base64_To_Hex) {
+  std::string src_val = "YQ==";
+  std::string expected_val = "0x61";
+  std::vector<uint8_t> decoded_data = Base64Decode(src_val);
+  std::string returned = BytesToHex(decoded_data);
+
+  EXPECT_EQ(expected_val, returned);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
