@@ -586,14 +586,10 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
   std::string src_str;
   DSValueToString(src_dsval, src_str);
-  SQLSMALLINT dest_type = dest_data.type;
-  SQLPOINTER dest_buf = dest_data.buf;
-  SQLLEN buffer_length = dest_data.buflen;
-  SQLLEN* res_len = dest_data.result_len;
 
   StatusRecord status_record = StatusRecord::Ok();
 
-  switch (dest_type) {
+  switch (dest_data.type) {
     case SQL_C_CHAR: {
       status_record =
           StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
@@ -606,23 +602,23 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
         break;
       }
       status_record = WStrToOutputBufferResponse(
-          *wide_string, dest_buf, buffer_length, src_str.length(),
+          *wide_string, dest_data.buf, dest_data.buflen, src_str.length(),
           src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
     case SQL_C_BINARY: {
-      if (buffer_length < src_str.length()) {
-        std::memcpy(dest_buf, src_str.c_str(), buffer_length - 1);
-        if (res_len) {
-          *res_len = buffer_length - 1;
+      if (dest_data.buflen < src_str.length()) {
+        std::memcpy(dest_data.buf, src_str.c_str(), dest_data.buflen - 1);
+        if (dest_data.result_len) {
+          *dest_data.result_len = dest_data.buflen - 1;
         }
         status_record =
             StatusRecord{SQLStates::k_01004(), "Binary data, right truncated"};
         break;
       }
       std::memcpy(dest_data.buf, src_str.c_str(), src_str.length());
-      if (res_len) {
-        *res_len = src_str.length();
+      if (dest_data.result_len) {
+        *dest_data.result_len = src_str.length();
       }
 
       break;

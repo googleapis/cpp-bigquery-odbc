@@ -122,7 +122,13 @@ inline void StringToDSValue(std::string const& str, DSValue& value) {
   std::copy(str.begin(), str.end(), value.begin());
 }
 
-inline std::vector<uint8_t> base64_decode(std::string const& encoded) {
+// Func to decode a Base64-encoded string into a vector of bytes.
+inline std::vector<uint8_t> Base64Decode(std::string const& encoded) {
+  // The Base64 character set
+  // (ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/) is a
+  // well-defined, standardized string that doesn’t change across different
+  // implementations of Base64 encoding. The characters in this string represent
+  // the 64 possible values used in Base64 encoding.
   static std::string const kBasE64Chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -148,7 +154,7 @@ inline std::vector<uint8_t> base64_decode(std::string const& encoded) {
 }
 
 // Function to convert byte data to a hex string
-inline std::string bytes_to_hex(std::vector<uint8_t> const& data) {
+inline std::string BytesToHex(std::vector<uint8_t> const& data) {
   std::stringstream ss;
   for (auto byte : data) {
     ss << "0x" << std::setw(2) << std::setfill('0') << std::hex
@@ -170,16 +176,17 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
       std::string base64_str = element["v"];
 
       // Decode base64 string to byte data
-      std::vector<uint8_t> decoded_data = base64_decode(base64_str);
+      std::vector<uint8_t> decoded_data = Base64Decode(base64_str);
 
       // Convert the decoded byte data to hexadecimal
-      std::string hex_str = bytes_to_hex(decoded_data);
+      std::string hex_str = BytesToHex(decoded_data);
 
       element["v"] = hex_str;
     }
   }
 
   std::string str_data = obj.dump();
+  std::cout << "str_data " << str_data << std::endl;
   value.resize(str_data.size());
   std::copy(str_data.begin(), str_data.end(), value.begin());
 }
