@@ -317,6 +317,7 @@ inline std::string WStrToStr(std::wstring const& wstr) {
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
+  std::cout << "SqlToCdataTypes:: " << std::endl;
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
       col_ptr->data_type = SQL_C_SBIGINT;
@@ -332,7 +333,9 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
       break;
     case SQL_VARCHAR:
     case SQL_CHAR:
+      std::cout << "SqlToCdataTypes SQL_VARCHAR:: " << std::endl;
       col_ptr->data_type = SQL_C_CHAR;
+      std::cout << "SqlToCdataTypes col_ptr->data_type:: " << col_ptr->data_type << std::endl;
       break;
     case SQL_TYPE_TIMESTAMP:
       col_ptr->data_type = SQL_C_TYPE_TIMESTAMP;

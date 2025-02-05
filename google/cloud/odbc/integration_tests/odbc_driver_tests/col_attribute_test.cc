@@ -426,14 +426,15 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
                            &col_attr_int);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_OCTET_LENGTH),
              conn);
-  EXPECT_EQ(col_attr_row.octet_length, col_attr_int);
+  EXPECT_EQ(col_attr_row.octet_length, col_attr_int)
+      << "i:: " << i << std::endl;
 
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_PRECISION, NULL, 0, NULL,
                            &col_attr_int);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_PRECISION),
              conn);
-  EXPECT_EQ(col_attr_row.precision, col_attr_int);
+  EXPECT_EQ(col_attr_row.precision, col_attr_int) << "i:: " << i << std::endl;
 
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_SCALE, NULL, 0, NULL,

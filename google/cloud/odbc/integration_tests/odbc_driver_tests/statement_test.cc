@@ -629,6 +629,8 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_CHECK_RESULTS_TEST_" +
                           (use_ansi ? "ANSI_" : "NON_ANSI") +
                           (use_bind_col ? "true" : "false");
+
+  std::cout << "FetchDataTest CP1:: " << std::endl;
   Table table(table_name);
 
   // Create Table
@@ -639,19 +641,27 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
         conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)",
         true);
   } else {
+    std::cout << "FetchDataTest CP2:: " << std::endl;
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
     table.Create(
         conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   }
+  std::cout << "FetchDataTest CP3:: " << std::endl;
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  std::cout << "FetchDataTest CP4:: " << std::endl;
+
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
+  std::cout << "FetchDataTest CP5:: " << std::endl;
   table.InsertData(conn, kSampleData, use_ansi);
+  std::cout << "FetchDataTest CP6:: " << std::endl;
   SQLLEN rows_count = 0;
   auto status = SQLRowCount(conn->hstmt, &rows_count);
+  std::cout << "FetchDataTest CP7:: " << std::endl;
   CheckError(status, "SQLRowCount", conn);
+  std::cout << "FetchDataTest CP8:: " << std::endl;
   EXPECT_EQ(rows_count, kSampleData.size());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -659,7 +669,9 @@ void FetchDataTest(bool use_bind_col, bool use_ansi = false) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, use_ansi), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField FROM " + table_name;
-  auto results = *FetchResults(conn, query, use_bind_col);
+  std::cout << "FetchDataTest CP9:: " << std::endl;
+  auto results = *FetchResults(conn, query, true);
+  std::cout << "FetchDataTest CP10:: " << std::endl;
 
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 

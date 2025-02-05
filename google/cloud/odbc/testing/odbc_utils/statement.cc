@@ -301,11 +301,13 @@ RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
 std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
                                      std::string query, int num_cols,
                                      bool is_async, bool use_ansi) {
+  std::cout << "FetchDirect CP1:: " << std::endl;
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
   if (is_async) {
+    std::cout << "FetchDirect CP2:: " << std::endl;
     status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
                             (SQLPOINTER)SQL_ASYNC_ENABLE_ON,
                             0);  // Ansi version not supported by UniXODBC.
@@ -321,6 +323,7 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
                         (SQLCHAR*)read_stmt, strlen(read_stmt));
     }
   } else {
+    std::cout << "FetchDirect CP3:: " << std::endl;
     if (use_ansi) {
       status =
           SQLExecDirectA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
@@ -329,12 +332,14 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
           SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
     }
   }
+  std::cout << "FetchDirect CP4:: " << std::endl;
   CheckError(status, "SQLExecDirect", conn, use_ansi);
 
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
 
   for (int i = 0; i < num_cols; i++) {
+    std::cout << "FetchDirect CP5:: " << std::endl;
     auto col_ptr = std::make_shared<Column>();
     cols[i] = col_ptr;
 
@@ -349,24 +354,32 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     SqlToCdataTypes(col_ptr);
     // Allocating space for column data using dynamic memory
     col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    std::cout << "FetchDirect CP6:: " << std::endl;
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
 
+  std::cout << "FetchDirect cp7:: " << std::endl;
+
   // Read all the rows using SQLFetch
   while (1) {
+    std::cout << "SQLFetch while:: " << std::endl;
     if (is_async) {
       ExponentialBackoffPolicy backoff(ms(10), ms(100), 2.0);
       status = PollODBC(SQLFetch, backoff, conn->hstmt);  // No ANSI version
     } else {
+      std::cout << "SQLFetch called:: " << std::endl;
       status = SQLFetch(conn->hstmt);  // No ANSI version
     }
     if (status == SQL_NO_DATA) {
+      std::cout << "SQLFetch SQL_NO_DATA:: " << std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
+      std::cout << "SQLFetch failed:: " << std::endl;
       CheckError(status, "SQLFetch", conn);
       break;
     }
+    std::cout << "SQLFetch success:: " << std::endl;
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
       auto col_name = (char*)cols[i_c]->name;
@@ -506,12 +519,14 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     DescribeCol(conn, col_ptr, i + 1);
 
     std::string col_name = (char*)col_ptr->name;
+    std::cout << "col_ptr->data_type:: " << col_ptr->data_type << std::endl;
 
     // Initializing results
     std::vector<std::string> cols_data;
     results[col_name] = cols_data;
 
     SqlToCdataTypes(col_ptr);
+    std::cout << "SqlToCdataTypes col_ptr->data_type:: " << col_ptr->data_type << std::endl;
     // Allocate memory for column data using dynamic memory.
     col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
 
@@ -525,18 +540,24 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
   SQLExecute(conn->hstmt);  // No ansi version.
   CheckError(status, "SQLExecute", conn);
 
+  std::cout << "FetchResults CP1:: " << std::endl;
   // Read all the rows using SQLFetch
   while (1) {
+    std::cout << "FetchResults CP2:: " << std::endl;
     status = SQLFetch(conn->hstmt);  // No ansi version.
     if (status == SQL_NO_DATA) {
+      std::cout << "FetchResults CP3:: " << std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
+      std::cout << "FetchResults CP4:: " << std::endl;
       CheckError(status, "SQLFetch", conn);
       break;
     }
+    std::cout << "FetchResults CP5:: " << std::endl;
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
+      std::cout << "FetchResults CP6:: " << std::endl;
       auto col_name = (char*)cols[i_c]->name;
       SQLPOINTER data = cols[i_c]->data;
       SQLLEN data_len = cols[i_c]->data_len;
