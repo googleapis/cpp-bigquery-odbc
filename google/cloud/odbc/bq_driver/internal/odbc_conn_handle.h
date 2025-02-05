@@ -150,7 +150,7 @@ class ConnectionHandle : public Handle {
   odbc_internal::StatusRecord ValidateBYOIDProperties();
 
   // Returns true of required BYOID properties are set, false otherwise.
-  inline bool IsBYOIDPropertiesSet() {
+  inline bool IsBYOIDPropertiesSet() const {
     // Return true if any of the required BYOID properties is set.
     return (!dsn_.byoid_aud_url.empty() || !dsn_.byoid_creds_src.empty() ||
             !dsn_.byoid_subj_token_type.empty());
