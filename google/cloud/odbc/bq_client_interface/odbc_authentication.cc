@@ -57,6 +57,23 @@ CreateApplicationDefaultCredentials() {
   return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
+StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
+    std::string const& credentials_file_path) {
+  if (credentials_file_path.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "The path to the external auth JSON file can't be empty"};
+  }
+  // Client libraries MakeGoogleDefaultCredentials() processes the
+  // GOOGLE_APPLICATION_CREDENTIALS env var to get to the file with
+  // credentials. It parses the file and works for different authentication
+  // types including external authentication. For more details see the
+  // link below:
+  // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
+  return ::google::cloud::MakeGoogleDefaultCredentials();
+}
+
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
@@ -64,8 +81,16 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
       return CreateServiceCredentials(oauth.credentials_file_path);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials();
-    case OauthMechanism::kExternalUser:
-      return StatusRecord{SQLStates::k_HY000(), "Currently not implemented"};
+    case OauthMechanism::kExternalUser: {
+      if (!IsBYOIDPropsSet(oauth)) {
+        // Call creation of external auth via JSON file
+        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path);
+      }
+      // TODO(jsrinnn): Call creation of external auth via BYOID properties.
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "External Auth via BYOID properties is currently not implemented"};
+    }
   }
   return StatusRecord{SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
 }

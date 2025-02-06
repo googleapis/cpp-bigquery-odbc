@@ -104,4 +104,51 @@ TEST(GetOAuth2Token, Unauthenticated) {
             env_var);
 }
 
+TEST(ExternalAuthentication, Success_NoReqdBYOIDPropsSet) {
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kExternalUser, "path-to-the-json-file"});
+
+  ASSERT_STATUS_RECORD_OK(credentials);
+}
+
+TEST(ExternalAuthentication, Success_PartialReqdBYOIDPropsSet) {
+  auto credentials =
+      CreateCredentials({OauthMechanism::kExternalUser, "path-to-the-json-file",
+                         "test-aud-url", "test-creds-src"});
+
+  ASSERT_STATUS_RECORD_OK(credentials);
+}
+
+TEST(ExternalAuthentication, Fail_EmptyJsonPath_NoReqdBYOIDPropsSet) {
+  auto credentials = CreateCredentials({OauthMechanism::kExternalUser, ""});
+
+  EXPECT_THAT(
+      credentials,
+      StatusRecordIs(
+          odbc_internal::SQLStates::k_HY000(),
+          HasSubstr("The path to the external auth JSON file can't be empty")));
+}
+
+TEST(ExternalAuthentication, Fail_EmptyJsonPath_PartialReqdBYOIDPropsSet) {
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src"});
+
+  EXPECT_THAT(
+      credentials,
+      StatusRecordIs(
+          odbc_internal::SQLStates::k_HY000(),
+          HasSubstr("The path to the external auth JSON file can't be empty")));
+}
+
+TEST(ExternalAuthentication, Fail_NotImplemented_AllReqdBYOIDPropsSet) {
+  auto credentials =
+      CreateCredentials({OauthMechanism::kExternalUser, "", "test-aud-url",
+                         "test-creds-src", "", "test-sub-token-type"});
+
+  EXPECT_THAT(credentials,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("External Auth via BYOID properties is "
+                                       "currently not implemented")));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
