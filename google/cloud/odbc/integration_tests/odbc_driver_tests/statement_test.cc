@@ -863,18 +863,15 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, string_data,
                        sizeof(string_data), &string_len),
             SQL_SUCCESS);
-  std::cout << "Fetched StringField: " << string_data << std::endl;
   EXPECT_STREQ((char*)string_data, "TestString");
 
   EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_LONG, &int_data, 0, &int_len),
             SQL_SUCCESS);
-  std::cout << "Fetched IntegerField: " << int_data << std::endl;
   EXPECT_EQ(int_data, 42);
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 3, SQL_C_DOUBLE, &float_data, 0, &float_len),
       SQL_SUCCESS);
-  std::cout << "Fetched FloatField: " << float_data << std::endl;
   EXPECT_EQ(float_data, 3.14);
 
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);

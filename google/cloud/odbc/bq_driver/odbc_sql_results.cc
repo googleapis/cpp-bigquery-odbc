@@ -568,14 +568,20 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   DSValue const& ds_val = ds_row[column_number - 1];
 
   SQLLEN offset = result_set.row_offset_;
-  // Validating if data size is more then buffersize, SQLGetData will return
-  // partial Data
 
+  // Translating complete data in case of less buffer length when SQLGetData
+  // called for the first time
+  //  and storing it in result_set.translated_data_ in case of
+  // variable length data type i.e. string and binary followed by copying into
+  // target_value in parts of buffer length.
   if (offset == 0) {
-    if ((ds_val.size() - offset >= target_value_buffer_len) &&
-        bq_data_type == BQDataType::kString) {
+    if ((ds_val.size() > target_value_buffer_len) &&
+        (bq_data_type == BQDataType::kString ||
+         bq_data_type == BQDataType::kBytes)) {
+      result_set.translated_data_ =
+          static_cast<void*>(new char[ds_val.size() + 1]);
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
-                                    result_set.processed_data_,
+                                    result_set.translated_data_,
                                     ds_val.size() + 1, target_value_string_len);
       std::memset(target_value, '\0', target_value_buffer_len);
     } else {
@@ -586,8 +592,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     }
   }
 
+  // Validating if data size is more then buffersize, SQLGetData will return
+  // partial Data
   if (ds_val.size() - offset >= target_value_buffer_len) {
-    std::memcpy(target_value, result_set.processed_data_ + offset,
+    std::memcpy(target_value,
+                static_cast<char*>(result_set.translated_data_) + offset,
                 target_value_buffer_len - 1);
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
@@ -598,8 +607,10 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (offset != 0) {
-    std::memcpy(target_value, result_set.processed_data_ + offset,
+    std::memcpy(target_value,
+                static_cast<char*>(result_set.translated_data_) + offset,
                 ds_val.size() - offset + 1);
+    delete[] static_cast<char*>(result_set.translated_data_);
     return LogAndReturnCode(stmt_handle, status_record);
   }
 }
