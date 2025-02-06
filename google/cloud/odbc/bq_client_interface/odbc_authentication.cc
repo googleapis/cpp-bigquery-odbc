@@ -74,6 +74,52 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
+StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
+    std::string const& byoid_aud_url, std::string const& byoid_creds_source,
+    std::string const& byoid_pool_user_project,
+    std::string const& byoid_sub_token_type,
+    std::string const& byoid_token_url) {
+  auto constexpr kJsonCredsText = R"({
+    "type":"external_account",
+    "audience": "",
+    "credential_source": "",
+    "workforce_pool_user_project": "",
+    "subject_token_type": "",
+    "token_url": ""
+  })";
+  auto json = nlohmann::json::parse(kJsonCredsText, nullptr, false);
+  if (!json.is_object()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal error: Unable to parse Json text"};
+  }
+  json["audience"] = byoid_aud_url;
+  json["credential_source"] = byoid_creds_source;
+  json["subject_token_type"] = byoid_sub_token_type;
+  json["token_url"] = byoid_token_url;
+  if (!byoid_pool_user_project.empty()) {
+    json["workforce_pool_user_project"] = byoid_pool_user_project;
+  } else {
+    json.erase("workforce_pool_user_project");
+  }
+  return json;
+}
+
+StatusRecordOr<std::shared_ptr<Credentials>>
+CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
+  if (!IsBYOIDPropsSet(oauth)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Unable to create external auth credentials: Required "
+                        "BYOID Properties are not set "};
+  }
+  StatusRecordOr<nlohmann::json> json_creds = CreateJsonCredsObject(
+      oauth.byoid_aud_url, oauth.byoid_creds_src, oauth.byoid_pool_user_project,
+      oauth.byoid_subj_token_type, oauth.byoid_token_url);
+  if (!json_creds) {
+    return json_creds.GetStatusRecord();
+  }
+  return ::google::cloud::MakeExternalAccountCredentials((*json_creds).dump());
+}
+
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     Oauth const& oauth) {
   switch (oauth.auth_mechanism) {
@@ -86,10 +132,8 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
         // Call creation of external auth via JSON file
         return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path);
       }
-      // TODO(jsrinnn): Call creation of external auth via BYOID properties.
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "External Auth via BYOID properties is currently not implemented"};
+      // Call creation of external auth via BYOID properties.
+      return CreateExternalAccountAuthenticationBYOID(oauth);
     }
   }
   return StatusRecord{SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
@@ -98,10 +142,10 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
 StatusRecordOr<AccessToken> GetOAuth2Token(
     std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> const&
         generator) {
-  // We need to set env var for service account to force it to make a request to
-  // Google Cloud. Then we return the value of this env var to the previous
-  // state. If the env var is unset, token will be created locally, without any
-  // request to Google Cloud.
+  // We need to set env var for service account to force it to make a request
+  // to Google Cloud. Then we return the value of this env var to the previous
+  // state. If the env var is unset, token will be created locally, without
+  // any request to Google Cloud.
   auto self_signed_jwt_disabled = GetEnv(kSelfSignedJwtEnvVar);
   SetEnv(kSelfSignedJwtEnvVar, "true");
   StatusOr<AccessToken> access_token = generator->GetToken();

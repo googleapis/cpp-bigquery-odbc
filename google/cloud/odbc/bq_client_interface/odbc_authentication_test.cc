@@ -23,6 +23,9 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_internal::StatusRecordOr;
+
 class MockAccessTokenGenerator
     : public ::google::cloud::oauth2::AccessTokenGenerator {
  public:
@@ -151,4 +154,29 @@ TEST(ExternalAuthentication, Fail_NotImplemented_AllReqdBYOIDPropsSet) {
                                        "currently not implemented")));
 }
 
+TEST(CreateJsonCredsObject, WithPoolUser) {
+  StatusRecordOr<nlohmann::json> result =
+      CreateJsonCredsObject("test-aud", "test-creds", "test-pool-user_project",
+                            "test-subj-token", "test-token-url");
+  ASSERT_STATUS_RECORD_OK(result);
+  EXPECT_EQ(result->value("type", ""), "external_account");
+  EXPECT_EQ(result->value("audience", ""), "test-aud");
+  EXPECT_EQ(result->value("credential_source", ""), "test-creds");
+  EXPECT_EQ(result->value("subject_token_type", ""), "test-subj-token");
+  EXPECT_EQ(result->value("token_url", ""), "test-token-url");
+  EXPECT_EQ(result->value("workforce_pool_user_project", ""),
+            "test-pool-user_project");
+}
+
+TEST(CreateJsonCredsObject, WithoutPoolUser) {
+  StatusRecordOr<nlohmann::json> result = CreateJsonCredsObject(
+      "test-aud", "test-creds", "", "test-subj-token", "test-token-url");
+  ASSERT_STATUS_RECORD_OK(result);
+  EXPECT_EQ(result->value("type", ""), "external_account");
+  EXPECT_EQ(result->value("audience", ""), "test-aud");
+  EXPECT_EQ(result->value("credential_source", ""), "test-creds");
+  EXPECT_EQ(result->value("subject_token_type", ""), "test-subj-token");
+  EXPECT_EQ(result->value("token_url", ""), "test-token-url");
+  EXPECT_EQ(result->value("workforce_pool_user_project", "NotSet"), "NotSet");
+}
 }  // namespace google::cloud::odbc_bigquery_client_interface

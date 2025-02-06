@@ -20,6 +20,7 @@
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include "absl/strings/string_view.h"
+#include <nlohmann/json.hpp>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -67,6 +68,13 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
 odbc_internal::StatusRecordOr<AccessToken> GetOAuth2Token(
     std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> const&
         generator);
+
+// Helper functions for external authentication
+odbc_internal::StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
+    std::string const& byoid_aud_url, std::string const& byoid_creds_source,
+    std::string const& byoid_pool_user_project,
+    std::string const& byoid_sub_token_type,
+    std::string const& byoid_token_url);
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
