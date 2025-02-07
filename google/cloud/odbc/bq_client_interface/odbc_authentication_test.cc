@@ -143,17 +143,6 @@ TEST(ExternalAuthentication, Fail_EmptyJsonPath_PartialReqdBYOIDPropsSet) {
           HasSubstr("The path to the external auth JSON file can't be empty")));
 }
 
-TEST(ExternalAuthentication, Fail_NotImplemented_AllReqdBYOIDPropsSet) {
-  auto credentials =
-      CreateCredentials({OauthMechanism::kExternalUser, "", "test-aud-url",
-                         "test-creds-src", "", "test-sub-token-type"});
-
-  EXPECT_THAT(credentials,
-              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
-                             HasSubstr("External Auth via BYOID properties is "
-                                       "currently not implemented")));
-}
-
 TEST(CreateJsonCredsObject, WithPoolUser) {
   StatusRecordOr<nlohmann::json> result =
       CreateJsonCredsObject("test-aud", "test-creds", "test-pool-user_project",
@@ -178,5 +167,21 @@ TEST(CreateJsonCredsObject, WithoutPoolUser) {
   EXPECT_EQ(result->value("subject_token_type", ""), "test-subj-token");
   EXPECT_EQ(result->value("token_url", ""), "test-token-url");
   EXPECT_EQ(result->value("workforce_pool_user_project", "NotSet"), "NotSet");
+}
+
+TEST(ExternalAuthentication, Success_BYOIDPropsSet_WithPoolUser) {
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src",
+       "test-pool-user", "test-sub-token-type", "test-token-url"});
+
+  ASSERT_STATUS_RECORD_OK(credentials);
+}
+
+TEST(ExternalAuthentication, Success_BYOIDPropsSet_WithoutPoolUser) {
+  auto credentials = CreateCredentials(
+      {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src", "",
+       "test-sub-token-type", "test-token-url"});
+
+  ASSERT_STATUS_RECORD_OK(credentials);
 }
 }  // namespace google::cloud::odbc_bigquery_client_interface

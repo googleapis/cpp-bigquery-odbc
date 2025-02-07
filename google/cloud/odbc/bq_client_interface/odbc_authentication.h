@@ -78,9 +78,6 @@ odbc_internal::StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
     std::string const& byoid_sub_token_type,
     std::string const& byoid_token_url);
 
-odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>>
-CreateExternalAccountAuthenticationBYOID(Oauth const& oauth);
-
 }  // namespace google::cloud::odbc_bigquery_client_interface
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_ODBC_AUTHENTICATION_H
