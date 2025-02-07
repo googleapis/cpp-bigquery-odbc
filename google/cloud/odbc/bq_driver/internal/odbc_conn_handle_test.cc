@@ -110,11 +110,11 @@ TEST(ConnectionHandle, DsnSetup_BYOID) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   Dsn actual = conn_handle.GetDsn();
@@ -135,9 +135,9 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_AllPropertiesSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
@@ -158,10 +158,10 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   EXPECT_TRUE(conn_handle.IsBYOIDPropertiesSet());
@@ -171,11 +171,11 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   EXPECT_TRUE(conn_handle.ValidateBYOIDProperties().ok());
@@ -185,10 +185,10 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   auto result = conn_handle.ValidateBYOIDProperties();
@@ -200,10 +200,10 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_CredSrcNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_SubjectTokenType"] = kSubTokenType;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   auto result = conn_handle.ValidateBYOIDProperties();
@@ -215,10 +215,10 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success_SubTokenTypeNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   auto result = conn_handle.ValidateBYOIDProperties();
@@ -229,11 +229,11 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_InvalidSubTokenType) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
-  dsn_section["BYOID_AudienceUrl"] = kAudienceUrl;
-  dsn_section["BYOID_CredentialSource"] = kCredsSource;
-  dsn_section["BYOID_PoolUserProject"] = kUserPoolProject;
-  dsn_section["BYOID_SubjectTokenType"] = "invalid";
-  dsn_section["BYOID_TokenUrl"] = kTokenUrl;
+  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
+  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
+  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
+  dsn_section["BYOID_SUBJECTTOKENTYPE"] = "invalid";
+  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   auto result = conn_handle.ValidateBYOIDProperties();

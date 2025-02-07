@@ -91,11 +91,11 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   }
 
   // Populate BYOID properties from DSN section.
-  dsn_.byoid_aud_url = dsn_section["BYOID_AudienceUrl"];
-  dsn_.byoid_creds_src = dsn_section["BYOID_CredentialSource"];
-  dsn_.byoid_pool_user_project = dsn_section["BYOID_PoolUserProject"];
-  dsn_.byoid_subj_token_type = dsn_section["BYOID_SubjectTokenType"];
-  dsn_.byoid_token_url = dsn_section["BYOID_TokenUrl"];
+  dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
+  dsn_.byoid_creds_src = dsn_section["BYOID_CREDENTIALSOURCE"];
+  dsn_.byoid_pool_user_project = dsn_section["BYOID_POOLUSERPROJECT"];
+  dsn_.byoid_subj_token_type = dsn_section["BYOID_SUBJECTTOKENTYPE"];
+  dsn_.byoid_token_url = dsn_section["BYOID_TOKENURL"];
   // Set default values for empty properties.
   if (dsn_.byoid_subj_token_type.empty()) {
     dsn_.byoid_subj_token_type = kSubTokenTypeDefault;
