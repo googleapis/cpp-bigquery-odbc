@@ -30,6 +30,14 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// The Base64 character set
+// (ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/) is a
+// well-defined, standardized string that doesn’t change across different
+// implementations of Base64 encoding. The characters in this string represent
+// the 64 possible values used in Base64 encoding.
+static std::string const kBasE64Chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
 template <typename T>
 SQLRETURN LogAndReturnCode(
     Handle& handle, odbc_internal::StatusRecordOr<T> const& status_record_or) {
@@ -124,14 +132,6 @@ inline void StringToDSValue(std::string const& str, DSValue& value) {
 
 // Func to decode a Base64-encoded string into a vector of bytes.
 inline std::vector<uint8_t> Base64Decode(std::string const& encoded) {
-  // The Base64 character set
-  // (ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/) is a
-  // well-defined, standardized string that doesn’t change across different
-  // implementations of Base64 encoding. The characters in this string represent
-  // the 64 possible values used in Base64 encoding.
-  static std::string const kBasE64Chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
   std::vector<uint8_t> decoded;
   int val = 0;
   int valb = -8;
@@ -186,7 +186,6 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
   }
 
   std::string str_data = obj.dump();
-  std::cout << "str_data " << str_data << std::endl;
   value.resize(str_data.size());
   std::copy(str_data.begin(), str_data.end(), value.begin());
 }

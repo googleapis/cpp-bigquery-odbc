@@ -591,20 +591,16 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
 
   switch (dest_data.type) {
     case SQL_C_CHAR: {
-      status_record =
-          StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
-      break;
+      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
       if (!wide_string.Ok()) {
-        status_record = StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
-        break;
+        return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
-      status_record = WStrToOutputBufferResponse(
+      return WStrToOutputBufferResponse(
           *wide_string, dest_data.buf, dest_data.buflen, src_str.length(),
           src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
-      break;
     }
     case SQL_C_BINARY: {
       if (dest_data.buflen < src_str.length()) {
@@ -612,20 +608,17 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
         if (dest_data.result_len) {
           *dest_data.result_len = dest_data.buflen - 1;
         }
-        status_record =
-            StatusRecord{SQLStates::k_01004(), "Binary data, right truncated"};
-        break;
+        return StatusRecord{SQLStates::k_01004(),
+                            "Binary data, right truncated"};
       }
       std::memcpy(dest_data.buf, src_str.c_str(), src_str.length());
       if (dest_data.result_len) {
         *dest_data.result_len = src_str.length();
       }
-
       break;
     }
     default: {
-      status_record =
-          StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
   return status_record;
