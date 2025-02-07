@@ -149,7 +149,7 @@ class ConnectionHandle : public Handle {
 
   // Validates BYOID properties based on the design.
   odbc_internal::StatusRecord ValidateDsnBYOIDProperties();
-  odbc_internal::StatusRecord ValidateBYOIDProperties(
+  static odbc_internal::StatusRecord ValidateBYOIDProperties(
       std::string const& byoid_aud_url, std::string const& byoid_creds_src,
       std::string const& byoid_subj_token_type,
       std::string const& byoid_pool_user_project,
@@ -162,9 +162,9 @@ class ConnectionHandle : public Handle {
                                 dsn_.byoid_subj_token_type);
   }
   // Returns true of required BYOID properties are set, false otherwise.
-  inline bool IsBYOIDPropertiesSet(std::string const& byoid_aud_url,
-                                   std::string const& byoid_creds_src,
-                                   std::string const& byoid_subj_token_type) {
+  inline static bool IsBYOIDPropertiesSet(
+      std::string const& byoid_aud_url, std::string const& byoid_creds_src,
+      std::string const& byoid_subj_token_type) {
     // Return true if any of the required BYOID properties is set.
     return (!byoid_aud_url.empty() || !byoid_creds_src.empty() ||
             !byoid_subj_token_type.empty());
