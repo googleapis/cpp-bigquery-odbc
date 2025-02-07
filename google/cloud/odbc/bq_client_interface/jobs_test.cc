@@ -194,6 +194,126 @@ TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequest) {
   EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
+TEST(ListAllJobs, ListZeroJobsSuccessWithParentId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string parent_job_id = "parent_job_id";
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(parent_job_id, request.parent_job_id());
+    return mocks::MakeStreamRange<ListFormatJob>({});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  ASSERT_STATUS_RECORD_OK(jobs);
+  EXPECT_EQ(0, jobs->size());
+}
+
+TEST(ListAllJobs, ListAllJobsSuccessWithParentId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string parent_job_id = "parent_job_id";
+  ListFormatJob expected{"job_id"};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(parent_job_id, request.parent_job_id());
+    return mocks::MakeStreamRange<ListFormatJob>({expected});
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  ASSERT_STATUS_RECORD_OK(jobs);
+  EXPECT_EQ(1, jobs->size());
+  EXPECT_EQ(expected.id, jobs->at(0).id);
+}
+
+TEST(ListAllJobs, ListAllJobs_EmptyInputParamsWithParentId) {
+  Options options;
+  std::string project_id;     // Empty project_id
+  std::string parent_job_id;  // Empty parent_job_id
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+
+  EXPECT_CALL(*mock, options);            // Allow options() to be called
+  EXPECT_CALL(*mock, ListJobs).Times(0);  // Ensure ListJobs is never called
+
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  // Expect failure due to empty project_id
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_42000(),
+                                   HasSubstr("project_id cannot be empty")));
+}
+
+TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequestWithParentId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string parent_job_id = "parent_job_id";
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(parent_job_id, request.parent_job_id());
+    return mocks::MakeStreamRange<ListFormatJob>(
+        {}, Status(StatusCode::kUnauthenticated, "denied"));
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+}
+
+TEST(ListAllJobs, ListAllJobsFailure_WithParentId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string parent_job_id = "parent_job_id";
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, ListJobs).WillOnce([&](ListJobsRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(parent_job_id, request.parent_job_id());
+    return mocks::MakeStreamRange<ListFormatJob>(
+        {}, Status(StatusCode::kInternal, "Internal Server Error"));
+  });
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_HY000(),
+                                   HasSubstr("Internal Server Error")));
+}
+
+TEST(ListAllJobs, ListAllJobsFailure_EmptyParentId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string parent_job_id;  // Empty parent job ID
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock,
+              options);  // Allow options() to be called without restricting it.
+  EXPECT_CALL(*mock, ListJobs).Times(0);  // Ensure ListJobs is not called.
+
+  JobClient job_client(std::move(mock));
+
+  StatusRecordOr<std::vector<ListFormatJob>> jobs =
+      ListAllJobs(job_client, project_id, parent_job_id, options);
+
+  EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_42000(),
+                                   HasSubstr("parent_job_id cannot be empty")));
+}
+
 TEST(FilterJobs, FilterZeroJobsSuccess) {
   Options options;
   std::string project_id = "project_id";

@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
 #include <thread>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -31,12 +32,15 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using ::google::cloud::bigquery_v2_minimal_internal::ListJobsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using chrono_ms = std::chrono::milliseconds;
+
+constexpr int kMaxChildJobsResults = 1000;
 
 // When 'Job' object is created, all members are created with default values,
 // usually empty strings. Client library doesn't provide any validation around
@@ -117,9 +121,46 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
 
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
+    std::string const& parent_job_id, Options const& options) {
+  // Validate inputs
+  if (project_id.empty()) {
+    return StatusRecord::ConvertFrom(
+        Status(StatusCode::kInvalidArgument, "project_id cannot be empty"));
+  }
+  if (parent_job_id.empty()) {
+    return StatusRecord::ConvertFrom(
+        Status(StatusCode::kInvalidArgument, "parent_job_id cannot be empty"));
+  }
+
+  ListJobsRequest request;
+  request.set_project_id(project_id);
+  request.set_parent_job_id(parent_job_id);
+  request.set_all_users(false);
+  request.set_max_results(kMaxChildJobsResults);
+  request.set_projection(Projection::Full());
+
+  StreamRange<ListFormatJob> jobs_response =
+      job_client.ListJobs(request, options);
+
+  std::vector<ListFormatJob> jobs;
+  for (auto const& job : jobs_response) {
+    if (!job) {
+      return StatusRecord::ConvertFrom(job.status());
+    }
+    jobs.push_back(*job);
+  }
+
+  return jobs;
+}
+
+StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
+    JobClient& job_client, std::string const& project_id,
     Options const& options) {
   ListJobsRequest request;
   request.set_project_id(project_id);
+  request.set_all_users(false);
+  request.set_max_results(kMaxChildJobsResults);
+  request.set_projection(Projection::Full());
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);

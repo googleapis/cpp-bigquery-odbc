@@ -213,6 +213,13 @@ StatusRecordOr<Job> ODBCBQClient::GetJob(
 }
 
 StatusRecordOr<std::vector<ListFormatJob>> ODBCBQClient::ListAllJobs(
+    std::string const& project_id, std::string const& parent_job_id,
+    ::google::cloud::Options const& options) {
+  return ::google::cloud::odbc_bigquery_client_interface::ListAllJobs(
+      job_client_, project_id, parent_job_id, options);
+}
+
+StatusRecordOr<std::vector<ListFormatJob>> ODBCBQClient::ListAllJobs(
     std::string const& project_id, ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ListAllJobs(
       job_client_, project_id, options);

@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
+#include "google/cloud/odbc/testing/client_library_utils/common_functions.h"
 #include "google/cloud/odbc/testing/client_library_utils/util_constants.h"
 #include "google/cloud/odbc/testing/utils/env_vars.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
@@ -44,6 +45,7 @@ using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthWithClientIdAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateUserAccountAuthentication;
+using google::cloud::odbc_testing_client_library_utils::InsertJob;
 using google::cloud::odbc_testing_client_library_utils::
     kNameForNonExistingProject;
 using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
@@ -103,6 +105,33 @@ TEST(ODBCBQClient_ListJobs, DISABLED_UserAccountAuth) {
   }
 }
 
+TEST(ODBCBQClient_ListAllJobs, DISABLED_UserAccountAuth) {
+  StatusOr<Options> options = CreateUserAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
+  StatusOr<std::string> parent_job_id = InsertJob(job_client);
+  ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
+      (*odbc_bq_client)
+          ->ListAllJobs(project_id, *parent_job_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(list_jobs_response);
+
+  // We don't know how many (if any) jobs would be returned for this user.
+  // we go over the vector and make sure Job is valid.
+  for (auto const& job : (*list_jobs_response)) {
+    ASSERT_FALSE(job.id.empty());
+  }
+}
 #else
 
 TEST(ListJobs, ServiceAccountAuth) {
@@ -283,6 +312,60 @@ TEST(ListJobs, FilterProjectionIsWrong) {
                               HasSubstr("Invalid value at 'projection'")));
   }
 }
+
+// Caution: This test lists all jobs for the service account for the project
+// and maybe very slow hence is disabled by default. Please only run incase
+// its necessary.
+TEST(ODBCBQClient_ListAllJobs, DISABLED_ServiceAccountAuth) {
+  StatusOr<Options> options = CreateServiceAccountAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY");
+  StatusOr<std::string> parent_job_id = InsertJob(job_client);
+  ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+  StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
+      (*odbc_bq_client)
+          ->ListAllJobs(project_id, *parent_job_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(list_jobs_response);
+
+  // We don't know how many (if any) jobs would be returned for this user.
+  // we go over the vector and make sure Job is valid.
+  for (auto const& job : (*list_jobs_response)) {
+    ASSERT_FALSE(job.id.empty());
+  }
+}
+
+TEST(ODBCBQClient_ListAllJobs, DISABLED_ApplicationDefaultCredentials) {
+  StatusOr<Options> options = CreateApplicationDefaultAuthentication();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  StatusOr<std::string> parent_job_id = InsertJob(job_client);
+  ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kApplicationDefault});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
+      (*odbc_bq_client)
+          ->ListAllJobs(project_id, *parent_job_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(list_jobs_response);
+
+  std::vector<ListFormatJob> jobs = (*list_jobs_response);
+  ASSERT_FALSE(jobs.empty());
+}
+
 #endif  // USER_ACCOUNT_AUTH
 
 }  // namespace google::cloud::odbc_integration_tests_apis
