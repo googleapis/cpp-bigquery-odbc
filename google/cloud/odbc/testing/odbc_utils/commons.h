@@ -169,6 +169,7 @@ struct ArrayBasicTestStruct {
   std::vector<SQLDOUBLE> double_value;
   std::vector<std::string> string_value;
   std::vector<StructBasicTestStruct> struct_value;
+  std::vector<SQLCHAR> binary_value;
   SQLRETURN status;
 };
 

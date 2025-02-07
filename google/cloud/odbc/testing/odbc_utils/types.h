@@ -33,6 +33,27 @@
 
 namespace google::cloud::odbc_tests {
 
+enum columnType {
+  kArray,
+  kBigNumeric,
+  kNumeric,
+  kBytes,
+  kInt64,
+  kDate,
+  kFloat64,
+  kInterval,
+  kGeography,
+  kDatetime,
+  kTime,
+  kBool,
+  kString,
+  kRange,
+  kStruct,
+  kJson,
+  kTimeStamp,
+  kNull
+};
+
 struct TypeInfoRow {
   SQLCHAR* type_name;
   SQLSMALLINT data_type;

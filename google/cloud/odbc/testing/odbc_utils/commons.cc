@@ -784,6 +784,7 @@ void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
     auto const& double_row = array_row.double_value;
     auto const& string_row = array_row.string_value;
     auto const& struct_row = array_row.struct_value;
+    auto const& binary_row = array_row.binary_value;
 
     insert_stmt << "(";
     if (insert_index) {
@@ -828,6 +829,17 @@ void Table::InsertArrayData(std::shared_ptr<ODBCHandles> conn,
       insert_stmt << " STRUCT(" << var.int_value << ", " << var.double_value
                   << ", '" << var.string_value << "')";
       if (col_index != struct_row.size() - 1) {
+        insert_stmt << ", ";
+      }
+      col_index++;
+    }
+
+    insert_stmt << "], [";
+
+    col_index = 0;
+    for (auto const& var : binary_row) {
+      insert_stmt << " b'" << var << "'";
+      if (col_index != binary_row.size() - 1) {
         insert_stmt << ", ";
       }
       col_index++;

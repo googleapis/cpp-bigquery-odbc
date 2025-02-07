@@ -730,12 +730,14 @@ std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
      {1.1, 2.1, 3.1, 4.1, 5.1},
      {"This", "Is", "Array", "Test", "Data"},
      {{1, 1.1, "data1"}, {2, 2.2, "data2"}},
+     {'a', 'b', 'c'},
      SQL_SUCCESS},
-    {SQL_C_CHAR,
+    {SQL_C_BINARY,
      {12, 21, 32, 33},
      {12.2, 21.4, 32.22, 33.21},
      {"Apple", "Banana", "Mango", "Pear"},
      {{12, 12.1, "data12"}, {21, 21.2, "data22"}},
+     {'A', 'Q', 'E'},
      SQL_SUCCESS},
 
     {SQL_C_WCHAR,
@@ -743,16 +745,69 @@ std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
      {121.211, 123.1, 1.21},
      {"Apple", "Orange", "Cherry"},
      {{13, 13.1, "data13"}, {31, 31.2, "data32"}},
+     {'b', 'e'},
      SQL_SUCCESS},
+    {SQL_C_SSHORT,
+     {121, 123, 1212},
+     {121.211, 123.1, 1.21},
+     {"Apple", "Orange", "Cherry"},
+     {{13, 13.1, "data13"}, {31, 31.2, "data32"}},
+     {'q'},
+     SQL_ERROR},
 };
+
+void ValidateArrayData(std::string json_string, ArrayBasicTestStruct input_data,
+                       columnType column_type) {
+  std::vector<std::string> ret_array_data;
+  try {
+    // Parse JSON
+    nlohmann::json json_object_int = nlohmann::json::parse(json_string);
+
+    if (json_object_int["v"].is_array()) {
+      for (auto const& element : json_object_int["v"]) {
+        ret_array_data.emplace_back(element["v"]);
+      }
+    }
+
+  } catch (nlohmann::json::exception& e) {
+    std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+  }
+
+  switch (column_type) {
+    case columnType::kInt64:
+      EXPECT_EQ(ret_array_data.size(), input_data.int_value.size());
+      for (int i = 0; i < input_data.int_value.size(); i++) {
+        EXPECT_EQ(std::stoi(ret_array_data[i]), input_data.int_value[i]);
+      }
+      break;
+    case columnType::kFloat64:
+      EXPECT_EQ(ret_array_data.size(), input_data.double_value.size());
+      for (int i = 0; i < input_data.double_value.size(); i++) {
+        EXPECT_EQ(std::stod(ret_array_data[i]), input_data.double_value[i]);
+      }
+      break;
+    case columnType::kString:
+      EXPECT_EQ(ret_array_data.size(), input_data.string_value.size());
+      for (int i = 0; i < input_data.string_value.size(); i++) {
+        EXPECT_EQ(ret_array_data[i], input_data.string_value[i]);
+      }
+      break;
+    case columnType::kBytes:
+      EXPECT_EQ(ret_array_data.size(), input_data.binary_value.size());
+      for (int i = 0; i < input_data.binary_value.size(); i++) {
+        SQLCHAR returned_val =
+            static_cast<SQLCHAR>(std::stoi(ret_array_data[i], nullptr, 16));
+        EXPECT_EQ(returned_val, input_data.binary_value[i]);
+      }
+
+      break;
+  }
+}
 
 void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
                              std::string query) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
-  SQLCHAR data_int[kBufferLength];
-  SQLCHAR data_double[kBufferLength];
-  SQLCHAR data_string[kBufferLength];
   SQLLEN strlen_or_ind;
   StrToChar(read_stmt, query.c_str());
 
@@ -764,9 +819,11 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
 
   int row_count = 0;
   for (auto const& expected : kConversionFromArrayTestData) {
-    std::vector<std::string> ret_int_values;
-    std::vector<std::string> ret_double_values;
-    std::vector<std::string> ret_string_values;
+    SQLCHAR data_int[kBufferLength] = {0};
+    SQLCHAR data_double[kBufferLength] = {0};
+    SQLCHAR data_string[kBufferLength] = {0};
+    SQLCHAR data_binary[kBufferLength] = {0};
+
     status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data_int,
                         kBufferLength, &strlen_or_ind);
 
@@ -782,86 +839,65 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
 
     CheckError(status, "SQLBindColString", conn);
 
+    status = SQLBindCol(conn->hstmt, 4, expected.target_c_type, data_binary,
+                        kBufferLength, &strlen_or_ind);
+
+    CheckError(status, "SQLBindColBinary", conn);
+
     status = SQLFetch(conn->hstmt);
 
     if (status == SQL_NO_DATA) {
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
-      break;
+      EXPECT_EQ(SQL_ERROR, expected.status);
     }
 
-    EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string str_int(reinterpret_cast<char*>(data_int));
-    if (expected.target_c_type == SQL_C_WCHAR) {
-      str_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),
-                                        SQL_NTS);
-    }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_int = nlohmann::json::parse(str_int);
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR:
+      case SQL_C_BINARY: {
+        EXPECT_EQ(status, expected.status);
+        std::string str_int(reinterpret_cast<char*>(data_int));
+        ValidateArrayData(str_int, expected, columnType::kInt64);
 
-      if (json_object_int["v"].is_array()) {
-        for (auto const& element : json_object_int["v"]) {
-          ret_int_values.emplace_back(element["v"]);
-        }
+        std::string str_double(reinterpret_cast<char*>(data_double));
+        ValidateArrayData(str_double, expected, columnType::kFloat64);
+
+        std::string str_string(reinterpret_cast<char*>(data_string));
+        ValidateArrayData(str_string, expected, columnType::kString);
+
+        std::string str_binary(reinterpret_cast<char*>(data_binary));
+        ValidateArrayData(str_binary, expected, columnType::kBytes);
+
+        break;
       }
+      case SQL_C_WCHAR: {
+        EXPECT_EQ(status, expected.status);
+        std::string str_int = ConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR*>(data_int), SQL_NTS);
+        ValidateArrayData(str_int, expected, columnType::kInt64);
 
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
+        std::string str_double = ConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR*>(data_double), SQL_NTS);
+        ValidateArrayData(str_double, expected, columnType::kFloat64);
 
-    std::string str_double(reinterpret_cast<char*>(data_double));
-    if (expected.target_c_type == SQL_C_WCHAR) {
-      str_double = ConvertSQLWCHARToString(
-          reinterpret_cast<SQLWCHAR*>(data_double), SQL_NTS);
-    }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_double = nlohmann::json::parse(str_double);
+        std::string str_string = ConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR*>(data_string), SQL_NTS);
+        ValidateArrayData(str_string, expected, columnType::kString);
 
-      if (json_object_double["v"].is_array()) {
-        for (auto const& element : json_object_double["v"]) {
-          ret_double_values.emplace_back(element["v"]);
-        }
+        std::string str_binary = ConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR*>(data_binary), SQL_NTS);
+        ValidateArrayData(str_binary, expected, columnType::kBytes);
+
+        break;
       }
-
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    std::string str_string(reinterpret_cast<char*>(data_string));
-    if (expected.target_c_type == SQL_C_WCHAR) {
-      str_string = ConvertSQLWCHARToString(
-          reinterpret_cast<SQLWCHAR*>(data_string), SQL_NTS);
-    }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_string = nlohmann::json::parse(str_string);
-
-      if (json_object_string["v"].is_array()) {
-        for (auto const& element : json_object_string["v"]) {
-          ret_string_values.emplace_back(element["v"]);
-        }
+      case SQL_C_SSHORT: {
+        std::cout << "here kanchan\n";
+        EXPECT_EQ(status, expected.status);
+        break;
       }
-
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    EXPECT_EQ(ret_int_values.size(), expected.int_value.size());
-    EXPECT_EQ(ret_double_values.size(), expected.double_value.size());
-    EXPECT_EQ(ret_string_values.size(), expected.string_value.size());
-    for (int i = 0; i < expected.int_value.size(); i++) {
-      EXPECT_EQ(std::stoi(ret_int_values[i]), expected.int_value[i]);
-    }
-
-    for (int i = 0; i < expected.double_value.size(); i++) {
-      EXPECT_EQ(std::stod(ret_double_values[i]), expected.double_value[i]);
-    }
-
-    for (int i = 0; i < expected.string_value.size(); i++) {
-      EXPECT_EQ(ret_string_values[i], expected.string_value[i]);
+      default:
+        break;
     }
     row_count++;
   }
@@ -881,7 +917,8 @@ TEST(DataTranslationTest, From_SQL_Array_to_all) {
       "(index INTEGER, IntArrayField ARRAY<INT64>, DoubleArrayField "
       "ARRAY<FLOAT64>, StringArrayField ARRAY<STRING>, StructData "
       "ARRAY<STRUCT<int_value INT64, "
-      "float_value FLOAT64, string_value STRING>>)");
+      "float_value FLOAT64, string_value STRING>>, BinaryArrayField "
+      "ARRAY<BYTES>)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -893,7 +930,8 @@ TEST(DataTranslationTest, From_SQL_Array_to_all) {
   // expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
-      "SELECT IntArrayField, DoubleArrayField, StringArrayField FROM " +
+      "SELECT IntArrayField, DoubleArrayField, StringArrayField, "
+      "BinaryArrayField FROM " +
       table_name + " Order by index";
   TestArraySQLBindColData(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1037,7 +1075,8 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
       "(index INTEGER, IntArrayField ARRAY<INT64>, DoubleArrayField "
       "ARRAY<FLOAT64>, StringArrayField ARRAY<STRING>, StructData "
       "ARRAY<STRUCT<int_value INT64, "
-      "float_value FLOAT64, string_value STRING>>)");
+      "float_value FLOAT64, string_value STRING>>, BinaryArrayField "
+      "ARRAY<BYTES>)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
