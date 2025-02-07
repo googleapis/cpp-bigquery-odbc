@@ -169,10 +169,9 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
     if (IsBYOIDPropertiesSet(auth.oauth.byoid_aud_url,
                              auth.oauth.byoid_creds_src,
                              auth.oauth.byoid_subj_token_type)) {
-      return ValidateBYOIDProperties(
-          auth.oauth.byoid_aud_url, auth.oauth.byoid_creds_src,
-          auth.oauth.byoid_subj_token_type, auth.oauth.byoid_pool_user_project,
-          auth.oauth.byoid_token_url);
+      return ValidateBYOIDProperties(auth.oauth.byoid_aud_url,
+                                     auth.oauth.byoid_creds_src,
+                                     auth.oauth.byoid_subj_token_type);
     }
     // Credentials file must be set.
     if (auth.oauth.credentials_file_path.empty()) {
@@ -346,8 +345,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
 
 odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
     std::string const& byoid_aud_url, std::string const& byoid_creds_src,
-    std::string const& byoid_subj_token_type,
-    std::string const& byoid_pool_user_project, std::string const& token_url) {
+    std::string const& byoid_subj_token_type) {
   // If BYOID properties are not set then we just return true.
   if (!IsBYOIDPropertiesSet(byoid_aud_url, byoid_creds_src,
                             byoid_subj_token_type))
@@ -372,9 +370,8 @@ odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
 }
 
 StatusRecord ConnectionHandle::ValidateDsnBYOIDProperties() const {
-  return ValidateBYOIDProperties(
-      dsn_.byoid_aud_url, dsn_.byoid_creds_src, dsn_.byoid_subj_token_type,
-      dsn_.byoid_pool_user_project, dsn_.byoid_token_url);
+  return ValidateBYOIDProperties(dsn_.byoid_aud_url, dsn_.byoid_creds_src,
+                                 dsn_.byoid_subj_token_type);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

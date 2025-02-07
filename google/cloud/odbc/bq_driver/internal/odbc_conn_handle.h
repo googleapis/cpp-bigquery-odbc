@@ -151,10 +151,9 @@ class ConnectionHandle : public Handle {
   odbc_internal::StatusRecord ValidateDsnBYOIDProperties() const;
   static odbc_internal::StatusRecord ValidateBYOIDProperties(
       std::string const& byoid_aud_url, std::string const& byoid_creds_src,
-      std::string const& byoid_subj_token_type,
-      std::string const& byoid_pool_user_project,
-      std::string const& byoid_token_url);
-  odbc_internal::StatusRecord ValidateExternalUser(Authentication const& auth);
+      std::string const& byoid_subj_token_type);
+  static odbc_internal::StatusRecord ValidateExternalUser(
+      Authentication const& auth);
 
   // Returns true of required BYOID properties are set in DSN, false otherwise.
   inline bool IsDsnBYOIDPropertiesSet() const {
