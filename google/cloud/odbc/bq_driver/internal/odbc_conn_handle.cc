@@ -371,7 +371,7 @@ odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
   return StatusRecord::Ok();
 }
 
-StatusRecord ConnectionHandle::ValidateDsnBYOIDProperties() {
+StatusRecord ConnectionHandle::ValidateDsnBYOIDProperties() const {
   return ValidateBYOIDProperties(
       dsn_.byoid_aud_url, dsn_.byoid_creds_src, dsn_.byoid_subj_token_type,
       dsn_.byoid_pool_user_project, dsn_.byoid_token_url);
