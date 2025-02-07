@@ -1514,4 +1514,86 @@ TEST(ConvertFromGeographyDSValue, TO_SQL_C_Binary) {
   std::string returned_val = reinterpret_cast<char*>(dest_data.buf);
   EXPECT_EQ(returned_val, geo_str);
 }
+
+TEST(ConvertFromBytesDSValueTest, HandlesBinaryConversion) {
+  std::string input = "SGk=";  // "Hi" in Base64
+  DSValue src_dsval;
+  StringToDSValue(input, src_dsval);
+  DataBuffer dest_data;
+  std::vector<SQLCHAR> buffer(2);
+  dest_data.buf = buffer.data();
+  dest_data.buflen = buffer.size();
+  dest_data.type = SQL_C_BINARY;
+  dest_data.result_len = nullptr;
+
+  StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
+
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(std::string(reinterpret_cast<char*>(dest_data.buf), 2), "Hi");
+}
+
+TEST(ConvertFromBytesDSValueTest, HandlesCharConversion) {
+  std::string input = "VGVzdA==";  // "Test" in Base64
+  DSValue src_dsval;
+  StringToDSValue(input, src_dsval);
+  DataBuffer dest_data;
+  std::vector<char> buffer(22);
+  dest_data.buf = buffer.data();
+  dest_data.buflen = buffer.size();
+  dest_data.type = SQL_C_CHAR;
+  dest_data.result_len = nullptr;
+
+  StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
+
+  EXPECT_TRUE(status.ok());
+  EXPECT_STREQ(buffer.data(), "54657374");  // SQL_C_CHAR returns data is hex
+}
+
+TEST(ConvertFromBytesDSValueTest, HandlesNullBuffer) {
+  std::string input = "SEVMTE9XT1JMRA==";  // "Hello world" in Base64
+  DSValue src_dsval;
+  StringToDSValue(input, src_dsval);
+  DataBuffer dest_data;
+  dest_data.buf = nullptr;
+  dest_data.buflen = 20;
+  dest_data.type = SQL_C_BINARY;
+  dest_data.result_len = nullptr;
+
+  StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY090());
+}
+
+TEST(ConvertFromBytesDSValueTest, HandlesNegativeBufferLength) {
+  std::string input = "SEVMTE9XT1JMRA==";  // "Hello world" in Base64
+  DSValue src_dsval;
+  StringToDSValue(input, src_dsval);
+  DataBuffer dest_data;
+  std::vector<SQLCHAR> buffer(20);
+  dest_data.buf = buffer.data();
+  dest_data.buflen = -1;  // Invalid length
+  dest_data.type = SQL_C_BINARY;
+  dest_data.result_len = nullptr;
+
+  StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY090());
+}
+
+TEST(ConvertFromBytesDSValueTest, HandlesUnsupportedType) {
+  std::string input = "SEVMTE9XT1JMRA==";  // "Hello world" in Base64
+  DSValue src_dsval;
+  StringToDSValue(input, src_dsval);
+  DataBuffer dest_data;
+  std::vector<SQLCHAR> buffer(20);
+  dest_data.buf = buffer.data();
+  dest_data.buflen = buffer.size();
+  dest_data.type = SQL_C_DOUBLE;  // Unsupported type
+  dest_data.result_len = nullptr;
+
+  StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
