@@ -142,18 +142,33 @@ class ConnectionHandle : public Handle {
     is_transaction_active_ = is_transaction_active;
   }
 
-  /////////////////////////////////////////////////////
-  // Helper functions with regards to BYOID properties.
-  /////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////
+  // Helper functions with regards to BYOID properties and external
+  // authentication.
+  ////////////////////////////////////////////////////////////////////////////////
 
   // Validates BYOID properties based on the design.
-  odbc_internal::StatusRecord ValidateBYOIDProperties() const;
+  odbc_internal::StatusRecord ValidateDsnBYOIDProperties() const;
+  odbc_internal::StatusRecord ValidateBYOIDProperties(
+      std::string const& byoid_aud_url, std::string const& byoid_creds_src,
+      std::string const& byoid_subj_token_type,
+      std::string const& byoid_pool_user_project,
+      std::string const& byoid_token_url) const;
+  odbc_internal::StatusRecord ValidateExternalUser(
+      Authentication const& auth) const;
 
+  // Returns true of required BYOID properties are set in DSN, false otherwise.
+  inline bool IsDsnBYOIDPropertiesSet() const {
+    return IsBYOIDPropertiesSet(dsn_.byoid_aud_url, dsn_.byoid_creds_src,
+                                dsn_.byoid_subj_token_type);
+  }
   // Returns true of required BYOID properties are set, false otherwise.
-  inline bool IsBYOIDPropertiesSet() const {
+  inline bool IsBYOIDPropertiesSet(
+      std::string const& byoid_aud_url, std::string const& byoid_creds_src,
+      std::string const& byoid_subj_token_type) const {
     // Return true if any of the required BYOID properties is set.
-    return (!dsn_.byoid_aud_url.empty() || !dsn_.byoid_creds_src.empty() ||
-            !dsn_.byoid_subj_token_type.empty());
+    return (!byoid_aud_url.empty() || !byoid_creds_src.empty() ||
+            !byoid_subj_token_type.empty());
   }
 
  protected:

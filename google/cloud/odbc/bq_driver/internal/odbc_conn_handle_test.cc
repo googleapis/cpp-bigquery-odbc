@@ -141,7 +141,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_AllPropertiesSet) {
 
   conn_handle.SetUp(dsn_section, kDsnName);
 
-  EXPECT_TRUE(conn_handle.IsBYOIDPropertiesSet());
+  EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
 }
 
 TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_NoPropertiesSet) {
@@ -151,7 +151,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_NoPropertiesSet) {
   conn_handle.SetUp(dsn_section, kDsnName);
   EXPECT_TRUE(
       conn_handle
-          .IsBYOIDPropertiesSet());  // default value for subject token type.
+          .IsDsnBYOIDPropertiesSet());  // default value for subject token type.
 }
 
 TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
@@ -164,7 +164,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  EXPECT_TRUE(conn_handle.IsBYOIDPropertiesSet());
+  EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
 }
 
 TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
@@ -178,7 +178,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  EXPECT_TRUE(conn_handle.ValidateBYOIDProperties().ok());
+  EXPECT_TRUE(conn_handle.ValidateDsnBYOIDProperties().ok());
 }
 
 TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
@@ -191,7 +191,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  auto result = conn_handle.ValidateBYOIDProperties();
+  auto result = conn_handle.ValidateDsnBYOIDProperties();
 
   EXPECT_EQ(result.message, "Required BYOID properties not set");
 }
@@ -206,7 +206,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_CredSrcNotSet) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  auto result = conn_handle.ValidateBYOIDProperties();
+  auto result = conn_handle.ValidateDsnBYOIDProperties();
 
   EXPECT_EQ(result.message, "Required BYOID properties not set");
 }
@@ -221,7 +221,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success_SubTokenTypeNotSet) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  auto result = conn_handle.ValidateBYOIDProperties();
+  auto result = conn_handle.ValidateDsnBYOIDProperties();
   EXPECT_TRUE(result.ok());
 }
 
@@ -236,7 +236,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_InvalidSubTokenType) {
   dsn_section["BYOID_TOKENURL"] = kTokenUrl;
 
   conn_handle.SetUp(dsn_section, kDsnName);
-  auto result = conn_handle.ValidateBYOIDProperties();
+  auto result = conn_handle.ValidateDsnBYOIDProperties();
   EXPECT_EQ(result.message, "Invalid subject token type");
 }
 
@@ -622,6 +622,77 @@ TEST(ConnectionHandle, SetAttribute_SetTwice) {
   EXPECT_TRUE(status_record.ok());
   std::string actual_val_2(reinterpret_cast<char*>(buf_out_2));
   EXPECT_EQ(actual_val_2, "test_2");
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithPoolUser) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.oauth.byoid_pool_user_project = "test-pool-user-project";
+  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithoutPoolUser) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Success_JSON) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.credentials_file_path = "path-to-file";
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Success_NotExternalUser) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Fail_BYOID) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type = "invalid";
+  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_FALSE(status.ok());
+  EXPECT_EQ(status.message, "Invalid subject token type");
+}
+
+TEST(ConnectionHandle, ValidateExternalUser_Fail_JSON) {
+  ConnectionHandle handle;
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+
+  StatusRecord status = handle.ValidateExternalUser(auth);
+  EXPECT_FALSE(status.ok());
+  EXPECT_EQ(status.message,
+            "JSON Credentials File path is empty for external user");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

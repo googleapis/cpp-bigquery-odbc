@@ -163,7 +163,30 @@ ConnectionHandle& ConnectionHandle::operator=(
   return *this;
 }
 
+StatusRecord ConnectionHandle::ValidateExternalUser(
+    Authentication const& auth) const {
+  if (auth.oauth.auth_mechanism == OauthMechanism::kExternalUser) {
+    if (IsBYOIDPropertiesSet(auth.oauth.byoid_aud_url,
+                             auth.oauth.byoid_creds_src,
+                             auth.oauth.byoid_subj_token_type)) {
+      return ValidateBYOIDProperties(
+          auth.oauth.byoid_aud_url, auth.oauth.byoid_creds_src,
+          auth.oauth.byoid_subj_token_type, auth.oauth.byoid_pool_user_project,
+          auth.oauth.byoid_token_url);
+    }
+    // Credentials file must be set.
+    if (auth.oauth.credentials_file_path.empty()) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "JSON Credentials File path is empty for external user"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {
+  // For external authentication, make sure either BYOID or JSON file is set.
+  ValidateExternalUser(auth);
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
@@ -321,26 +344,38 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
   return StatusRecord::Ok();
 }
 
-StatusRecord ConnectionHandle::ValidateBYOIDProperties() const {
+odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
+    std::string const& byoid_aud_url, std::string const& byoid_creds_src,
+    std::string const& byoid_subj_token_type,
+    std::string const& byoid_pool_user_project,
+    std::string const& token_url) const {
   // If BYOID properties are not set then we just return true.
-  if (!IsBYOIDPropertiesSet()) return StatusRecord::Ok();
+  if (!IsBYOIDPropertiesSet(byoid_aud_url, byoid_creds_src,
+                            byoid_subj_token_type))
+    return StatusRecord::Ok();
 
   // Required properties must be set.
-  if ((dsn_.byoid_aud_url.empty() || dsn_.byoid_subj_token_type.empty() ||
-       dsn_.byoid_creds_src.empty())) {
+  if ((byoid_aud_url.empty() || byoid_subj_token_type.empty() ||
+       byoid_creds_src.empty())) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Required BYOID properties not set"};
   }
 
   // Validate subject token type.
-  if (dsn_.byoid_subj_token_type != kSubTokenTypeJWT &&
-      dsn_.byoid_subj_token_type != kSubTokenTypeIdToken &&
-      dsn_.byoid_subj_token_type != kSubTokenTypeSaml2 &&
-      dsn_.byoid_subj_token_type != kSubTokenTypeAws4) {
+  if (byoid_subj_token_type != kSubTokenTypeJWT &&
+      byoid_subj_token_type != kSubTokenTypeIdToken &&
+      byoid_subj_token_type != kSubTokenTypeSaml2 &&
+      byoid_subj_token_type != kSubTokenTypeAws4) {
     return StatusRecord{SQLStates::k_HY000(), "Invalid subject token type"};
   }
 
   return StatusRecord::Ok();
+}
+
+StatusRecord ConnectionHandle::ValidateDsnBYOIDProperties() const {
+  return ValidateBYOIDProperties(
+      dsn_.byoid_aud_url, dsn_.byoid_creds_src, dsn_.byoid_subj_token_type,
+      dsn_.byoid_pool_user_project, dsn_.byoid_token_url);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
