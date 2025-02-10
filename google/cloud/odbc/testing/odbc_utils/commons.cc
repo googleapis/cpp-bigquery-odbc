@@ -620,7 +620,11 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 }
-
+template void Table::InsertNumericData<int64_t>(std::shared_ptr<ODBCHandles> conn,
+                              std::vector<int64_t> rows, bool insert_index);
+template void Table::InsertNumericData<double>(std::shared_ptr<ODBCHandles> conn,
+                              std::vector<double> rows, bool insert_index);
+template<class TC>
 void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                               std::vector<std::string> rows,
                               bool insert_index) {
@@ -629,7 +633,6 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
   if (!num_rows) {
     return;
   }
-
   for (int i = 0; i < num_rows; i++) {
     std::string numeric_field = rows[i];
     std::string row_str = "( ";
@@ -644,7 +647,7 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
     }
     insert_stmt.append(row_str);
   }
-
+  
   SQLRETURN status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);

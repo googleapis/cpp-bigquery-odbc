@@ -462,6 +462,7 @@ class Table {
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
+  template<class TC>
   void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                          std::vector<std::string> rows,
                          bool insert_index = false);
