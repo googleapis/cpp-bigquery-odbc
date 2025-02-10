@@ -567,6 +567,15 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
+  // Updating result_set.last_column_index with column_number and row_offset_ to
+  // 0 when last fetched column number and column_number passed here are
+  // different
+  if (result_set.last_column_index != column_number) {
+    result_set.row_offset_ = 0;
+    result_set.last_column_index = column_number;
+  }
+  result_set.last_column_index = column_number;
+
   SQLLEN offset = result_set.row_offset_;
 
   // Translating complete data in case of less buffer length when SQLGetData
@@ -577,9 +586,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   if (offset == 0) {
     if ((ds_val.size() > target_value_buffer_len) &&
         (bq_data_type == BQDataType::kString ||
-         bq_data_type == BQDataType::kBytes)) {
+         bq_data_type == BQDataType::kBytes ||
+         bq_data_type == BQDataType::kJson ||
+         bq_data_type == BQDataType::kStruct ||
+         bq_data_type == BQDataType::kArray)) {
       result_set.translated_data_ =
-          static_cast<void*>(new char[ds_val.size() + 1]);
+          reinterpret_cast<SQLPOINTER>(new char[ds_val.size() + 1]);
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
                                     result_set.translated_data_,
                                     ds_val.size() + 1, target_value_string_len);
@@ -596,7 +608,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // partial Data
   if (ds_val.size() - offset >= target_value_buffer_len) {
     std::memcpy(target_value,
-                static_cast<char*>(result_set.translated_data_) + offset,
+                reinterpret_cast<char*>(result_set.translated_data_) + offset,
                 target_value_buffer_len - 1);
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
@@ -608,9 +620,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   if (offset != 0) {
     std::memcpy(target_value,
-                static_cast<char*>(result_set.translated_data_) + offset,
+                reinterpret_cast<char*>(result_set.translated_data_) + offset,
                 ds_val.size() - offset + 1);
-    delete[] static_cast<char*>(result_set.translated_data_);
+    delete[] reinterpret_cast<char*>(result_set.translated_data_);
     return LogAndReturnCode(stmt_handle, status_record);
   }
 }
