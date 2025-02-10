@@ -3310,4 +3310,36 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, FetchResultSet) {
+  auto conn = std::make_shared<ODBCHandles>();
+  auto table_name = kDatasetWithTablePrefix + "ODBC_FETCH_RESULT_SET_TEST";
+  Table table(table_name);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  auto const insert_query = "INSERT INTO " + table_name + " (StringField, IntegerField, FloatField) VALUES ('Test', 42, 3.14)";
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_query.c_str(), insert_query.size()),
+             "SQLPrepare", conn);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto const query = "SELECT StringField FROM " + table_name;
+  CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), query.size()),
+             "SQLPrepare", conn);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
