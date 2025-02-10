@@ -1068,9 +1068,7 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // TODO(b/394015883): Add more cases of Struct into StructBasicTestStruct
 struct StructTestStruct {
   // The target C type SQLGetData will convert SQL type to

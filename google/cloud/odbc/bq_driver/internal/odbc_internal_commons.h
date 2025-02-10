@@ -131,8 +131,8 @@ inline void StringToDSValue(std::string const& str, DSValue& value) {
 }
 
 // Func to decode a Base64-encoded string into a vector of bytes.
-inline std::vector<uint8_t> Base64Decode(std::string const& encoded) {
-  std::vector<uint8_t> decoded;
+inline void Base64Decode(std::string const& encoded,
+                         std::vector<uint8_t>& result) {
   int val = 0;
   int valb = -8;
 
@@ -145,22 +145,21 @@ inline std::vector<uint8_t> Base64Decode(std::string const& encoded) {
     valb += 6;
 
     if (valb >= 0) {
-      decoded.push_back((val >> valb) & 0xFF);
+      result.push_back((val >> valb) & 0xFF);
       valb -= 8;
     }
   }
-
-  return decoded;
 }
 
 // Function to convert byte data to a hex string
-inline std::string BytesToHex(std::vector<uint8_t> const& data) {
+inline void BytesToHex(std::vector<uint8_t> const& data,
+                       std::string& restult_str) {
   std::stringstream ss;
   for (auto byte : data) {
     ss << "0x" << std::setw(2) << std::setfill('0') << std::hex
        << static_cast<int>(byte);
   }
-  return ss.str();
+  restult_str = ss.str();
 }
 
 inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
@@ -176,10 +175,12 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
       std::string base64_str = element["v"];
 
       // Decode base64 string to byte data
-      std::vector<uint8_t> decoded_data = Base64Decode(base64_str);
+      std::vector<uint8_t> decoded_data;
+      Base64Decode(base64_str, decoded_data);
 
       // Convert the decoded byte data to hexadecimal
-      std::string hex_str = BytesToHex(decoded_data);
+      std::string hex_str;
+      BytesToHex(decoded_data, hex_str);
 
       element["v"] = hex_str;
     }

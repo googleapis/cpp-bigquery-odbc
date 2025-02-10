@@ -1227,8 +1227,10 @@ TEST(ArrayJsonToDSValue, Bytes_ArrayType) {
 TEST(ValidatingBinaryValues, Base64_To_Hex) {
   std::string src_val = "YQ==";
   std::string expected_val = "0x61";
-  std::vector<uint8_t> decoded_data = Base64Decode(src_val);
-  std::string returned = BytesToHex(decoded_data);
+  std::vector<uint8_t> decoded_data;
+  Base64Decode(src_val, decoded_data);
+  std::string returned;
+  BytesToHex(decoded_data, returned);
 
   EXPECT_EQ(expected_val, returned);
 }
