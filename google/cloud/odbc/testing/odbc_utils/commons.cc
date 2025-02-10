@@ -726,7 +726,7 @@ void Table::InsertRangeTimeStampData(
     std::shared_ptr<ODBCHandles> conn,
     std::vector<std::pair<SQL_TIMESTAMP_STRUCT, SQL_TIMESTAMP_STRUCT>> const&
         data,
-    bool insert_index) {
+    bool insert_index, std::string datatype) {
   if (data.empty()) {
     return;
   }
@@ -743,9 +743,9 @@ void Table::InsertRangeTimeStampData(
     }
 
     if (row.first.year != 0 && row.second.year != 0) {
-      insert_stmt << "RANGE(TIMESTAMP '" << FormatRangeTimeStamp(row.first)
-                  << "', "
-                  << "TIMESTAMP '" << FormatRangeTimeStamp(row.second) << "')";
+      insert_stmt << "RANGE(" << datatype << " '"
+                  << FormatRangeTimeStamp(row.first) << "', " << datatype
+                  << " '" << FormatRangeTimeStamp(row.second) << "')";
     } else {
       insert_stmt << "NULL";
     }

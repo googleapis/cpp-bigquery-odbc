@@ -493,7 +493,7 @@ class Table {
       std::shared_ptr<ODBCHandles> conn,
       std::vector<std::pair<SQL_TIMESTAMP_STRUCT, SQL_TIMESTAMP_STRUCT>> const&
           data,
-      bool insert_index);
+      bool insert_index, std::string datatype);
 
  private:
   std::string table_name_;

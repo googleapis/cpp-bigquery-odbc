@@ -2752,7 +2752,36 @@ TEST(DataTranslationTest, From_SQL_RangeTimeStamp_to_all) {
   for (auto const& test_case : kConversionFromRangeTimeStampTestData) {
     range_data.push_back(test_case.value);
   }
-  table.InsertRangeTimeStampData(conn, range_data, true);
+  table.InsertRangeTimeStampData(conn, range_data, true, "TIMESTAMP");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT RangeField FROM " + table_name + " Order by index";
+  TestTranslationsFromRangeTimestamp(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, From_SQL_RangeDatetime_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_RANGE_DATETIME";
+  Table table(table_name);
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, RangeField RANGE<DATETIME>)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<std::pair<SQL_TIMESTAMP_STRUCT, SQL_TIMESTAMP_STRUCT>> range_data;
+  for (auto const& test_case : kConversionFromRangeTimeStampTestData) {
+    range_data.push_back(test_case.value);
+  }
+  table.InsertRangeTimeStampData(conn, range_data, true, "DATETIME");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
