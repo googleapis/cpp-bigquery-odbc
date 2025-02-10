@@ -120,6 +120,8 @@ struct ResultSet {
   mutable SQLPOINTER
       translated_data_;  // To store translated data when buffer length is less
                          // and SQLGetData fetches partial data.
+  mutable int last_column_index{
+      -1};  // contains the column number fetched in last SQLGetData call
 };
 
 DSValue const kNullValue{0};
