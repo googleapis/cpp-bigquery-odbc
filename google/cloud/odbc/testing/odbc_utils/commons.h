@@ -462,8 +462,9 @@ class Table {
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
+  template<class TC>
   void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
-                         std::vector<double> rows, bool insert_index = false);
+                         std::vector<TC> rows, bool insert_index = false);
 
   // This is used to insert 'SQLBIGINT' into a table which only has a INT64
   // column. If `insert_index` is set to true, an additional column `index` will
