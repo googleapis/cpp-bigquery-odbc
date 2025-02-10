@@ -3310,4 +3310,58 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLColAttribute) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLCOLATTRIBUTE_TEST";
+  Table table(table_name);
+  table.DropWithPrepare(conn);
+
+  std::string create_stmt =
+      "CREATE OR REPLACE TABLE " + table_name +
+      " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
+  std::string insert_stmt = GetInsertionString(table_name, kSampleData);
+  std::string select_stmt = "SELECT * FROM " + table_name;
+
+  SQLRETURN status;
+
+  // Prepare and execute CREATE TABLE + INSERT statements
+  std::string query = create_stmt + insert_stmt;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare (Create + Insert)", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute (Create + Insert)", conn);
+
+  // Prepare and execute SELECT statement
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare (Select)", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute (Select)", conn);
+
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 3);
+
+  // Attribute validation for select_stmt
+ for (SQLSMALLINT i = 1; i <= num_cols; i++) {
+    SQLCHAR column_name[256];
+    SQLSMALLINT name_length;
+    SQLULEN column_size;
+    SQLLEN nullable;
+
+    // Validate column attributes
+    SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
+                    sizeof(column_name), &name_length, NULL);
+    SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
+                    &nullable);
+
+    EXPECT_GT(name_length, 0);  // Column name length should be > 0
+    EXPECT_GT(column_size, 0);  // Column size should be > 0
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
