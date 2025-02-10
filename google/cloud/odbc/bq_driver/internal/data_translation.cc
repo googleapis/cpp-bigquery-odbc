@@ -897,9 +897,9 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
 
 // This func converts a vector of SQLCHAR bytes (hex-encoded) to binary data,
 // handling truncation if needed.
-StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
+StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
                                   DataBuffer& dest_data) {
-  std::vector<uint8_t> binary_data;
+  DSValue binary_data;
 
   // Reserves space to optimize memory allocation as each hex pair forms one
   // byte.
@@ -932,7 +932,7 @@ StatusRecord ConvertBytesToBinary(std::vector<SQLCHAR> const& conn_val,
 
 // This func converts a vector of SQLCHAR bytes to a standard char string,
 // ensuring null termination and handling truncation.
-StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
+StatusRecord ConvertBytesToChar(DSValue const& conn_val,
                                 DataBuffer& dest_data) {
   auto* dest = reinterpret_cast<char*>(dest_data.buf);
   StatusRecord status_record = StatusRecord::Ok();
@@ -955,8 +955,7 @@ StatusRecord ConvertBytesToChar(std::vector<SQLCHAR> const& conn_val,
   return status_record;
 }
 
-StatusRecord Base64Decode(DSValue const& ascii_values,
-                          std::vector<uint8_t>& source) {
+StatusRecord Base64Decode(DSValue const& ascii_values, DSValue& source) {
   static std::string const kBaseChars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -982,8 +981,7 @@ StatusRecord Base64Decode(DSValue const& ascii_values,
 }
 
 // Func to convert base64 encoded into its ASCII hexadecimal value
-StatusRecord Base64ToASCIIHexFormat(std::vector<uint8_t> const& bytes,
-                                    std::vector<uint8_t>& output) {
+StatusRecord Base64ToASCIIHexFormat(DSValue const& bytes, DSValue& output) {
   output.clear();
 
   for (uint8_t byte : bytes) {
@@ -1000,10 +998,10 @@ StatusRecord Base64ToASCIIHexFormat(std::vector<uint8_t> const& bytes,
 
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
-  std::vector<uint8_t> base_value;
+  DSValue base_value;
   Base64Decode(src_dsval, base_value);
 
-  std::vector<uint8_t> conn_val;
+  DSValue conn_val;
   Base64ToASCIIHexFormat(base_value, conn_val);
 
   SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());

@@ -1520,7 +1520,7 @@ TEST(ConvertFromBytesDSValueTest, HandlesBinaryConversion) {
   DSValue src_dsval;
   StringToDSValue(input, src_dsval);
   DataBuffer dest_data;
-  std::vector<SQLCHAR> buffer(2);
+  DSValue buffer(2);
   dest_data.buf = buffer.data();
   dest_data.buflen = buffer.size();
   dest_data.type = SQL_C_BINARY;
@@ -1569,7 +1569,7 @@ TEST(ConvertFromBytesDSValueTest, HandlesNegativeBufferLength) {
   DSValue src_dsval;
   StringToDSValue(input, src_dsval);
   DataBuffer dest_data;
-  std::vector<SQLCHAR> buffer(20);
+  DSValue buffer(20);
   dest_data.buf = buffer.data();
   dest_data.buflen = -1;  // Invalid length
   dest_data.type = SQL_C_BINARY;
@@ -1585,7 +1585,7 @@ TEST(ConvertFromBytesDSValueTest, HandlesUnsupportedType) {
   DSValue src_dsval;
   StringToDSValue(input, src_dsval);
   DataBuffer dest_data;
-  std::vector<SQLCHAR> buffer(20);
+  DSValue buffer(20);
   dest_data.buf = buffer.data();
   dest_data.buflen = buffer.size();
   dest_data.type = SQL_C_DOUBLE;  // Unsupported type
