@@ -103,6 +103,9 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
   // Execute insertion
   ExecuteStatement(conn, insert_stmt, use_ansi);
 
+  // Should return error because it wasn't a SELECT statement
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+
   // Drop Table
   table.Drop(conn, use_ansi);
 

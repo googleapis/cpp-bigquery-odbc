@@ -159,7 +159,9 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   StatementHandle& handle = *(*handle_result);
 
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
-    return SQL_NO_DATA;
+    auto status_record =
+        StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    return LogAndReturnCode(handle, status_record);
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
@@ -260,13 +262,9 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
     }
   }
 
-  if (!result_set.rows.empty()) {
-    CreateTypeInfoRowSchema(result_set);
-    handle.SetResultSet(result_set);
-    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  } else {
-    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-  }
+  CreateTypeInfoRowSchema(result_set);
+  handle.SetResultSet(result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
 
   return SQL_SUCCESS;
 }

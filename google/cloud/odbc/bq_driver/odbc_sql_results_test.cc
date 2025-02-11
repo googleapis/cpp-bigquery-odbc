@@ -298,6 +298,7 @@ TEST(SQLBindColInternal, InvalidCType) {
   // If SQLBindColInternal has failed, SQL_DESC_COUNT should remain unchanged
   EXPECT_EQ(0, GetDescCount(ard));
 }
+
 TEST(SQLNumResultColsInternal, InvalidHandle) {
   StatementHandle* stmt_handle = nullptr;
   SQLSMALLINT column_count;
