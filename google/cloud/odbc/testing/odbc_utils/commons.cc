@@ -620,12 +620,12 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 }
-template void Table::InsertNumericData<int64_t>(std::shared_ptr<ODBCHandles> conn,
+template void Table::InsertDataIntoTable<int64_t>(std::shared_ptr<ODBCHandles> conn,
                               std::vector<int64_t> rows, bool insert_index);
-template void Table::InsertNumericData<double>(std::shared_ptr<ODBCHandles> conn,
+template void Table::InsertDataIntoTable<double>(std::shared_ptr<ODBCHandles> conn,
                               std::vector<double> rows, bool insert_index);
 template<class TC>
-void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+void Table::InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
                               std::vector<TC> rows, bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
@@ -639,7 +639,6 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
       row_str.append(std::to_string(i) + ", ");
     }
     row_str.append(std::to_string(numeric_field));
-
     row_str.append(")");
     if (i != (num_rows - 1)) {
       row_str.append(", ");
@@ -651,35 +650,6 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);
 }
-
-void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
-                            std::vector<SQLBIGINT> rows, bool insert_index) {
-  auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
-  int num_rows = rows.size();
-  if (!num_rows) {
-    return;
-  }
-
-  for (int i = 0; i < num_rows; i++) {
-    SQLBIGINT numeric_field = rows[i];
-    std::string row_str = "( ";
-    if (insert_index) {
-      row_str.append(std::to_string(i) + ", ");
-    }
-    row_str.append(std::to_string(numeric_field));
-
-    row_str.append(")");
-    if (i != (num_rows - 1)) {
-      row_str.append(", ");
-    }
-    insert_stmt.append(row_str);
-  }
-
-  SQLRETURN status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
-}
-
 void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
                                 std::vector<SQL_TIMESTAMP_STRUCT> rows,
                                 bool insert_index) {

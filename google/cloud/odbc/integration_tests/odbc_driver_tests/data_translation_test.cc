@@ -412,39 +412,32 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-template<class TC>
-void insertIntotable(std::shared_ptr<ODBCHandles> conn,Table &table,std::vector<CommonBasicTestStruct<TC>> const &ConvData
-                      ,bool insert_index = false)
-{
-  std::vector<TC> numeric_data_to_insert; 
-        for (auto elem : ConvData) {
-           numeric_data_to_insert.push_back(elem.value);
-        }
-        table.InsertNumericData<TC>(conn, numeric_data_to_insert, insert_index);
-}
-
 TEST(DataTranslationTest, From_NUMERICINT64_All) {
-   std::vector<std::string>typeNames;
-   typeNames.push_back("INT64");
-   typeNames.push_back("INT");
-   typeNames.push_back("SMALLINT");
-   typeNames.push_back("INTEGER");
-   typeNames.push_back("BIGINT");
-   typeNames.push_back("TINYINT");
-   typeNames.push_back("BYTEINT");
-   for(std::string tname : typeNames)
+   std::vector<std::string>type_names;
+   type_names.push_back("INT64");
+   type_names.push_back("INT");
+   type_names.push_back("SMALLINT");
+   type_names.push_back("INTEGER");
+   type_names.push_back("BIGINT");
+   type_names.push_back("TINYINT");
+   type_names.push_back("BYTEINT");
+   for(std::string t_name : type_names)
    { 
      auto const table_name =
-       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC"+tname;
+       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC"+t_name;
      Table table(table_name);
      // Create Table
      auto conn = std::make_shared<ODBCHandles>();
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     table.Create(conn, "(index INT64, NumericField " + tname + ")");
+     table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Insert data to read
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     insertIntotable<int64_t>(conn,table,kConversionFromNumericTestData_INT64,true);
+     std::vector<int64_t> numeric_data_to_insert; 
+     for (auto elem : kConversionFromNumericTestData_INT64) {
+        numeric_data_to_insert.push_back(elem.value);
+      }
+     table.InsertDataIntoTable<int64_t>(conn, numeric_data_to_insert, true);
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Execute a read query and check whether the results returned are as expected
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -463,22 +456,26 @@ TEST(DataTranslationTest, From_NUMERICINT64_All) {
 }
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
-   std::vector<std::string>typeNames;
-   typeNames.push_back("BIGNUMERIC");
-   typeNames.push_back("BIGDECIMAL");
-   for(std::string tname : typeNames)
+   std::vector<std::string>type_names;
+   type_names.push_back("BIGNUMERIC");
+   type_names.push_back("BIGDECIMAL");
+   for(std::string t_name : type_names)
    { 
      auto const table_name =
-       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + tname;
+       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
      Table table(table_name);
      // Create Table
      auto conn = std::make_shared<ODBCHandles>();
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     table.Create(conn, "(index INT64, NumericField " + tname + ")");
+     table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Insert data to read
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     insertIntotable<double>(conn,table,kConversionFromNumericTestData_bignumeric,true);
+     std::vector<double> numeric_data_to_insert; 
+     for (auto elem : kConversionFromNumericTestData_bignumeric) {
+           numeric_data_to_insert.push_back(elem.value);
+      }
+     table.InsertDataIntoTable<double>(conn, numeric_data_to_insert, true);
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Execute a read query and check whether the results returned are as expected
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -499,18 +496,18 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
-  std::vector<std::string>dataTypeNames;
-   dataTypeNames.push_back("NUMERIC");
-   dataTypeNames.push_back("DECIMAL");
-   for(std::string tname : dataTypeNames)
+  std::vector<std::string>data_type_names;
+   data_type_names.push_back("NUMERIC");
+   data_type_names.push_back("DECIMAL");
+   for(std::string t_name : data_type_names)
    {
      auto const table_name =
-        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + tname;
+        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
      Table table(table_name);
      // Create Table
      auto conn = std::make_shared<ODBCHandles>();
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     table.Create(conn, "(index INT64, NumericField " + tname + ")");
+     table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
     // Insert data to read
@@ -519,7 +516,7 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
     for (auto elem : kConversionFromNumericTestData) {
       numeric_data_to_insert.push_back(elem.value);
     }
-    table.InsertNumericData<double>(conn, numeric_data_to_insert, true);
+    table.InsertDataIntoTable<double>(conn, numeric_data_to_insert, true);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
     // Execute a read query and check whether the results returned are as expected
@@ -557,7 +554,7 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   for (auto elem : kConversionFromNumericTestData_INT64) {
     int64_data_to_insert.push_back(elem.value);
   }
-  table.InsertInt64Data(conn, int64_data_to_insert, true);
+  table.InsertDataIntoTable<SQLBIGINT>(conn, int64_data_to_insert, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected

@@ -35,7 +35,6 @@
 #include <thread>
 
 namespace google::cloud::odbc_tests {
-
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ::google::cloud::internal::GetEnv;
 // Column-wise results
@@ -463,14 +462,8 @@ class Table {
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
   template<class TC>
-  void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+  void InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
                          std::vector<TC> rows, bool insert_index = false);
-
-  // This is used to insert 'SQLBIGINT' into a table which only has a INT64
-  // column. If `insert_index` is set to true, an additional column `index` will
-  // be populated to order the values
-  void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
-                       std::vector<SQLBIGINT> rows, bool insert_index = false);
 
   void InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
                            std::vector<SQL_TIMESTAMP_STRUCT> rows,
