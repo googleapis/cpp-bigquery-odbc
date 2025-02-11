@@ -445,6 +445,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             TimestampToDSValue(time_struct, row_val);
             break;
           }
+          case BQDataType::kBytes: {
+            StringToDSValue(data, row_val);
+            break;
+          }
           case BQDataType::kBool: {
             bool bool_val = false;
             std::transform(data.begin(), data.end(), data.begin(), ::tolower);

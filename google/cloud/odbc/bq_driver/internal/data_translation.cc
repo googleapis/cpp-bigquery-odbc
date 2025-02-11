@@ -894,4 +894,134 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
   }
   return status_record;
 }
+
+// This func converts a vector of SQLCHAR bytes (hex-encoded) to binary data,
+// handling truncation if needed.
+StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
+                                  DataBuffer& dest_data) {
+  DSValue binary_data;
+
+  // Reserves space to optimize memory allocation as each hex pair forms one
+  // byte.
+  binary_data.reserve(conn_val.size() / 2);
+
+  StatusRecord status_record = StatusRecord::Ok();
+
+  // Convert each hex pair into a byte
+  for (auto i = 0; i < conn_val.size(); i += 2) {
+    uint8_t byte = (conn_val[i] - '0') * 16 + (conn_val[i + 1] - '0');
+    binary_data.push_back(byte);
+  }
+
+  // Handle buffer truncation scenario
+  if (dest_data.buflen < binary_data.size()) {
+    std::memcpy(dest_data.buf, binary_data.data(), dest_data.buflen);
+    if (dest_data.result_len) {
+      *dest_data.result_len = dest_data.buflen;
+    }
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "Binary data, right truncated"};
+  } else {
+    std::memcpy(dest_data.buf, binary_data.data(), binary_data.size());
+    if (dest_data.result_len) {
+      *dest_data.result_len = binary_data.size();
+    }
+  }
+  return status_record;
+}
+
+// This func converts a vector of SQLCHAR bytes to a standard char string,
+// ensuring null termination and handling truncation.
+StatusRecord ConvertBytesToChar(DSValue const& conn_val,
+                                DataBuffer& dest_data) {
+  auto* dest = reinterpret_cast<char*>(dest_data.buf);
+  StatusRecord status_record = StatusRecord::Ok();
+
+  // Check for truncation and copy data accordingly
+  if (dest_data.buflen < static_cast<SQLLEN>(conn_val.size()) + 1) {
+    std::memcpy(dest, conn_val.data(), dest_data.buflen - 1);
+    dest[dest_data.buflen - 1] = '\0';
+    if (dest_data.result_len) {
+      *dest_data.result_len = dest_data.buflen;
+    }
+    status_record =
+        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+  } else {
+    std::memcpy(dest, conn_val.data(), conn_val.size());
+    if (dest_data.result_len) {
+      *dest_data.result_len = conn_val.size();
+    }
+  }
+  return status_record;
+}
+
+StatusRecord Base64Decode(DSValue const& ascii_values, DSValue& source) {
+  static std::string const kBaseChars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  source.clear();
+  int val = 0;
+  int val_b = -8;
+
+  for (char c : ascii_values) {
+    if (!absl::StrContains(kBaseChars, c)) {
+      continue;  // Skip any non-Base64 characters
+    }
+
+    val = (val << 6) + kBaseChars.find(c);
+    val_b += 6;
+
+    if (val_b >= 0) {
+      source.push_back(static_cast<uint8_t>((val >> val_b) & 0xFF));
+      val_b -= 8;
+    }
+  }
+
+  return StatusRecord::Ok();
+}
+
+// Func to convert base64 encoded into its ASCII hexadecimal value
+StatusRecord Base64ToASCIIHexFormat(DSValue const& bytes, DSValue& output) {
+  output.clear();
+
+  for (uint8_t byte : bytes) {
+    std::ostringstream hex_stream;
+    hex_stream << std::hex << std::uppercase << std::setfill('0')
+               << std::setw(2) << static_cast<int>(byte);
+
+    for (char ch : hex_stream.str()) {
+      output.push_back(static_cast<uint8_t>(ch));
+    }
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
+                                     DataBuffer& dest_data) {
+  DSValue base_value;
+  Base64Decode(src_dsval, base_value);
+
+  DSValue conn_val;
+  Base64ToASCIIHexFormat(base_value, conn_val);
+
+  SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+
+  if (!dest_data.buf) {
+    return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
+  }
+  if (dest_data.buflen < 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  }
+
+  switch (dest_data.type) {
+    case SQL_C_BINARY:
+      return ConvertBytesToBinary(conn_val, dest_data);
+    case SQL_C_CHAR:
+      return ConvertBytesToChar(conn_val, dest_data);
+    // TODO(@khushikathuria008): SQL_C_WCHAR will come in part 2 of this PR.
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Unsupported conversion type"};
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
