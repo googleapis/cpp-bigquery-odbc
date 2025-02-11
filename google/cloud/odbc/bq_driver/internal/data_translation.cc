@@ -997,6 +997,51 @@ StatusRecord ConvertBytesToChar(DSValue const& conn_val,
   return status_record;
 }
 
+// This func converts a vector of SQLCHAR bytes to a UTF-16 wchar_t string,
+// ensuring proper truncation handling.
+StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
+                                 DataBuffer& dest_data) {
+  StatusRecord status_record = StatusRecord::Ok();
+
+  // Convert input bytes to a UTF-8 string
+  std::string utf8_str(conn_val.begin(), conn_val.end());
+
+  // Convert UTF-8 to UTF-16
+  StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
+  if (!utf16_str.Ok()) {
+    return StatusRecord{SQLStates::k_01004(),
+                        "UTF-8 to UTF-16 conversion failed."};
+  }
+
+  std::wstring const& utf16_value = utf16_str.GetValue();
+  size_t const required_size = utf16_str.GetValue().length() * sizeof(SQLWCHAR);
+
+  auto* buffer = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
+
+  // Handle truncation if buffer is insufficient
+  if (dest_data.buflen < required_size) {
+    size_t num_chars_to_copy = (dest_data.buflen / sizeof(SQLWCHAR)) - 1;
+    std::memcpy(buffer, utf16_value.data(),
+                num_chars_to_copy * sizeof(SQLWCHAR));
+    reinterpret_cast<wchar_t*>(buffer)[utf16_value.length()] = L'\0';
+
+    if (dest_data.result_len) {
+      *dest_data.result_len = dest_data.buflen;
+    }
+
+    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+  }
+  for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
+    buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
+  }
+
+  // Set output length
+  if (dest_data.result_len) {
+    *dest_data.result_len = utf16_str.GetValue().size() * sizeof(SQLWCHAR);
+  }
+  return status_record;
+}
+
 StatusRecord Base64Decode(DSValue const& ascii_values, DSValue& source) {
   static std::string const kBaseChars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -1060,7 +1105,8 @@ StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
       return ConvertBytesToBinary(conn_val, dest_data);
     case SQL_C_CHAR:
       return ConvertBytesToChar(conn_val, dest_data);
-    // TODO(@khushikathuria008): SQL_C_WCHAR will come in part 2 of this PR.
+    case SQL_C_WCHAR:
+      return ConvertBytesToWChar(conn_val, dest_data);
     default:
       return StatusRecord{SQLStates::k_HY000(), "Unsupported conversion type"};
   }

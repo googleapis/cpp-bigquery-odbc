@@ -1799,4 +1799,96 @@ TEST(ConvertFromRangeDSValueTest, BufferTooSmall) {
 
   EXPECT_FALSE(status.ok());
 }
+
+TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
+  std::string input = "YWIA";  // Base64 string
+  DSValue source_dsval;
+
+  StringToDSValue(input, source_dsval);
+  DataBuffer dest_data;
+  std::vector<SQLWCHAR> dest_buf(8, 0);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+  ASSERT_TRUE(status.ok());
+  ASSERT_EQ(std::wstring(reinterpret_cast<wchar_t*>(dest_buf.data())),
+            L"616200");  // SQL_C_WCHAR returns data is hex
+}
+
+TEST(ConvertFromBytesDSValue, WCharDataWithTruncation) {
+  std::string input = "SEVMTE9XT1JMRA==";  // "Hello world" in Base64
+  DSValue source_dsval;
+  StringToDSValue(input, source_dsval);
+
+  DataBuffer dest_data;
+  std::vector<SQLWCHAR> dest_buf(4);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = 4 * sizeof(SQLWCHAR);
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(status.sql_state, SQLStates::k_01004());
+}
+
+TEST(ConvertFromBytesDSValue, WCharDataEmptyInput) {
+  std::string input = "";  // Empty Base64 string
+  DSValue source_dsval;
+  StringToDSValue(input, source_dsval);
+
+  DataBuffer dest_data;
+  std::vector<SQLWCHAR> dest_buf(8, 0);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+  ASSERT_FALSE(status.ok());
+  ASSERT_EQ(status.sql_state, SQLStates::k_01004());
+}
+
+TEST(ConvertFromBytesDSValue, WCharDataNullBuffer) {
+  std::string input = "YWIA";  // Base64 string
+  DSValue source_dsval;
+  StringToDSValue(input, source_dsval);
+
+  DataBuffer dest_data;
+  dest_data.buf = nullptr;
+  dest_data.buflen = 8 * sizeof(SQLWCHAR);
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY090());  // Null buffer error
+}
+
+TEST(ConvertFromBytesDSValue, WCharDataNegativeBufferLength) {
+  std::string input = "YWIA";  // Base64 string
+  DSValue source_dsval;
+  StringToDSValue(input, source_dsval);
+
+  DataBuffer dest_data;
+  std::vector<SQLWCHAR> dest_buf(8, 0);
+  dest_data.buf = dest_buf.data();
+  dest_data.buflen = -1;  // Invalid buffer length
+  SQLLEN result_len = 0;
+  dest_data.result_len = &result_len;
+  dest_data.type = SQL_C_WCHAR;
+
+  auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(status.sql_state,
+            SQLStates::k_HY090());  // Negative buffer length error
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -1219,10 +1219,7 @@ struct BytesBasicTestStruct {
 std::vector<BytesBasicTestStruct> const kConversionFromBytesTestData{
     {SQL_C_BINARY, {0x01, 0x02}, SQL_SUCCESS},
     {SQL_C_CHAR, {'a', 'b', '\0'}, SQL_SUCCESS},
-// TODO(@khushikathuria008): SQL_C_WCHAR will come in part 2 of this PR.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_WCHAR, {'\0', 'a', '\0', 'b', '\0', '\0'}, SQL_SUCCESS},
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_LONG, {1}, SQL_ERROR},
     {SQL_C_DOUBLE, {1}, SQL_ERROR},
 };
