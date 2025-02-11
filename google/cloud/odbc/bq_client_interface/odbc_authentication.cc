@@ -79,19 +79,8 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
     std::string const& byoid_pool_user_project,
     std::string const& byoid_sub_token_type,
     std::string const& byoid_token_url) {
-  auto constexpr kJsonCredsText = R"({
-    "type":"external_account",
-    "audience": "",
-    "credential_source": "",
-    "workforce_pool_user_project": "",
-    "subject_token_type": "",
-    "token_url": ""
-  })";
-  auto json = nlohmann::json::parse(kJsonCredsText, nullptr, false);
-  if (!json.is_object()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal error: Unable to parse Json text"};
-  }
+  nlohmann::json json;
+  json["type"] = "external_account";
   json["audience"] = byoid_aud_url;
   json["credential_source"] = byoid_creds_source;
   json["subject_token_type"] = byoid_sub_token_type;
