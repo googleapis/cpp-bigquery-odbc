@@ -39,7 +39,7 @@ StdTimestampRows const kConversionFromTimestampTestData{
     {SQL_C_TYPE_TIMESTAMP, {2024, 01, 20, 12, 21, 22, 000000}, SQL_SUCCESS},
     {SQL_C_SLONG, {2024, 01, 20, 00, 00, 00, 000000}, SQL_ERROR},
 };
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 struct StrBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -134,7 +134,7 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
     {SQL_C_BIT, 1, SQL_SUCCESS},
     {SQL_C_BIT, 2, SQL_ERROR},
 };
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 StdAllTypesRows const kConversionFromDifferentTestData{
     {
         "",
@@ -182,7 +182,7 @@ StdAllTypesRows const kConversionFromDifferentTestData{
         {{"age", 32}, {"name", "Kapoor"}},
     },
 };
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
                                     std::string query,
@@ -198,77 +198,86 @@ void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
 
   // Read all the rows using SQLFetch
   int row_count = 0;
-  while (1) {
+  for (TestStruct expected : expected_config) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+
     status = SQLFetch(conn->hstmt);
+
     if (status == SQL_NO_DATA) {
       break;
     }
-    if (!SQL_SUCCEEDED(status)) {
-      CheckError(status, "SQLFetch", conn);
-    }
 
     SQLSMALLINT resp_status, resp_status_len;
-    while (1) {
-      TestStruct expected = expected_config[row_count];
-      status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
-                          kBufferLength, &strlen_or_ind);
-      std::cout << "Testing row: " << expected.target_c_type << ", "
-                << expected.value << ", " << expected.status << std::endl;
-      EXPECT_EQ(status, expected.status);
-      if (status != SQL_SUCCESS) {
-        row_count++;
-        break;
-      }
-      CheckError(status,
-                 "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
-                 conn);
-      if (SQL_SUCCEEDED(status)) {
-        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
-                                 &resp_status, SQL_INTEGER, &resp_status_len);
-        if (status == SQL_NO_DATA) {
-          if (strlen_or_ind >= 0) {
-            // Refer
-            // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
-            // to understand the expectations regarding typecasting applications
-            // buffers.
-            if (expected.target_c_type == SQL_C_CHAR) {
-              std::string returned_val = (char*)data;
-              EXPECT_EQ(std::stod(returned_val), expected.value);
-            } else if (expected.target_c_type == SQL_C_FLOAT) {
-              SQLREAL* returned_val = (SQLREAL*)data;
-              SQLREAL expected_val = expected.value;
-              EXPECT_EQ(*returned_val, expected_val);
-            } else if (expected.target_c_type == SQL_C_DOUBLE) {
-              SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_SLONG) {
-              SQLINTEGER* returned_val = (SQLINTEGER*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_SSHORT) {
-              SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_USHORT) {
-              SQLUSMALLINT* returned_val = (SQLUSMALLINT*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_ULONG) {
-              SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            } else if (expected.target_c_type == SQL_C_BIT) {
-              SQLCHAR* returned_val = (SQLCHAR*)data;
-              EXPECT_EQ(*returned_val, expected.value);
-            }
-            row_count++;
-          }
+    std::cout << "Testing row: " << expected.target_c_type << ", "
+              << expected.value << ", " << expected.status << std::endl;
+    EXPECT_EQ(status, expected.status);
+    if (status != SQL_SUCCESS) {
+      row_count++;
+      continue;
+    }
+    CheckError(status,
+               "SQLFetch(" + std::to_string(expected.target_c_type) + ")",
+               conn);
+    if (strlen_or_ind >= 0) {
+      row_count++;
+      // Refer
+      // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+      // to understand the expectations regarding typecasting applications
+      // buffers.
+      switch (expected.target_c_type) {
+        case SQL_C_CHAR: {
+          std::string returned_val = (char*)data;
+          EXPECT_EQ(std::stod(returned_val), expected.value);
           break;
         }
-        CheckError(status, "SQLGetDiagField", conn);
-      } else {
-        break;
+        case SQL_C_FLOAT: {
+          SQLREAL* returned_val = (SQLREAL*)data;
+          SQLREAL expected_val = expected.value;
+          EXPECT_EQ(*returned_val, expected_val);
+          break;
+        }
+        case SQL_C_DOUBLE: {
+          SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_SLONG: {
+          SQLINTEGER* returned_val = (SQLINTEGER*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_SSHORT: {
+          SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_USHORT: {
+          SQLUSMALLINT* returned_val = (SQLUSMALLINT*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_ULONG: {
+          SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_BIT: {
+          SQLCHAR* returned_val = (SQLCHAR*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        default: {
+          break;
+        }
       }
     }
   }
   EXPECT_EQ(row_count, expected_config.size());
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                                 std::string query) {
@@ -435,6 +444,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_INT64_to_all) {
@@ -476,7 +487,6 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                                    std::string query) {

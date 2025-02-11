@@ -229,6 +229,17 @@ TEST(ConvertFromArithmeticDSValue, To_SQL_C_CHAR) {
                                      SQL_C_CHAR);
 }
 
+TEST(ConvertFromArithmeticDSValue, To_SQL_C_BIT) {
+  FromArithmeticToArithmeticTest<int64_t, SQLCHAR>(1, 1, SQL_C_BIT);
+  FromArithmeticToArithmeticTest<int64_t, SQLCHAR>(0, 0, SQL_C_BIT);
+  FromArithmeticToArithmeticTest<int64_t, SQLCHAR>(
+      2, 42 /* doesn't matter */, SQL_C_BIT, SQLStates::k_22003(),
+      "Numeric value out of range");
+  FromArithmeticToArithmeticTest<int64_t, SQLCHAR>(
+      -1, 42 /* doesn't matter */, SQL_C_BIT, SQLStates::k_22003(),
+      "Numeric value out of range");
+}
+
 TEST(ConvertFromStringDSValue, To_SQL_C_CHAR_success) {
   SQLPOINTER buf = malloc(50);
   SQLLEN result_len = 0;
