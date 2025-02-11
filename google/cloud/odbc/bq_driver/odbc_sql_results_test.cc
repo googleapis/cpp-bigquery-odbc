@@ -554,11 +554,23 @@ TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
 TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  stmt_handle.SetStatementPrepared();
 
   SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(StmtStates::kStatementPrepared, stmt_handle.GetStmtState());
+  EXPECT_FALSE(stmt_handle.IsCursorOpen());
+}
+
+TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecDirect) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+
+  SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, stmt_handle.GetStmtState());
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 

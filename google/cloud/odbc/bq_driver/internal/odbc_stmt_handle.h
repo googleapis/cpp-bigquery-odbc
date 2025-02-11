@@ -149,10 +149,13 @@ class StatementHandle : public Handle {
 
   void SetNullPreparedJob() { prepared_job_ = std::nullopt; }
 
-  inline static bool WasStatementPrepared() {
-    // TODO(b/358002035) Implement this function
-    return true;
-  }
+  // `StmtStates` will get updated when SQLExecute is called.
+  // `is_statement_prepared_` is supposed to persist throughout the life of a
+  // query. This is used to differentiate (SQLPrepare + SQLExecute) vs
+  // SQLExecDirect.
+  void SetStatementPrepared() { is_statement_prepared_ = true; }
+
+  inline bool StatementPrepared() const { return is_statement_prepared_; }
 
   // Setters and Getters related to canceling an operation.
   inline bool IsOperationCanceled() const { return operation_canceled_; }
@@ -220,6 +223,7 @@ class StatementHandle : public Handle {
   // requests.
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
+  bool is_statement_prepared_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

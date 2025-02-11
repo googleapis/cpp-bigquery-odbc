@@ -593,6 +593,10 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
         [&handle_ref](std::string const& query_str) {
           StatusRecord status = handle_ref.PrepareQuery(query_str);
           handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+          // The states set through `SetStmtState` can be updated.
+          // SetStatementPrepared() persists the info that the stmt was
+          // prepared.
+          handle_ref.SetStatementPrepared();
           return status;
         },
         query_str);
@@ -605,6 +609,9 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   StatusRecord status = handle_ref.PrepareQuery(query_str);
   handle_ref.SetStmtState(StmtStates::kStatementPrepared);
+  // The states set through `SetStmtState` can be updated.
+  // SetStatementPrepared() persists the info that the stmt was prepared.
+  handle_ref.SetStatementPrepared();
   return LogAndReturnCode(handle_ref, status);
 }
 

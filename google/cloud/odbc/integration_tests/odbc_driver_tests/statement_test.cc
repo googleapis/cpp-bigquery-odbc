@@ -2473,7 +2473,8 @@ TEST(SQLCancel, Execute_Cancel_NeedData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/358002035) Remove BQ_DRIVER_INTEGRATION_TESTS flag
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2490,6 +2491,8 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST_P(MultiStatementTest, BasicScript) {
   bool use_prepare = GetParam();

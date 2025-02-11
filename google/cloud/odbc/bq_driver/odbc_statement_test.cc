@@ -1094,13 +1094,24 @@ TEST(SQLFreeStmtInternal, Fail_InvalidOption) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLFreeStmtInternal, CloseCursor) {
+TEST(SQLFreeStmtInternal, CloseCursor_AfterExecute) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  handle.SetStatementPrepared();
+
+  SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_CLOSE);
+
+  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
+}
+
+TEST(SQLFreeStmtInternal, CloseCursor_AfterExecuteDirect) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
   SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_CLOSE);
 
-  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 

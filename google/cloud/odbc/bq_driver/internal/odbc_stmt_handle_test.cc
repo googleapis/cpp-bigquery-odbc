@@ -369,18 +369,28 @@ TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
 
   handle.CloseCursor();
 
-  // TODO(b/358002035) Change to kStatementNotPrepared
-  EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
 TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+  handle.SetStatementPrepared();
 
   handle.CloseCursor();
 
   EXPECT_EQ(StmtStates::kStatementPrepared, handle.GetStmtState());
+  EXPECT_FALSE(handle.IsCursorOpen());
+}
+
+TEST(CloseCursor, CloseCursor_AfterSQLExecDirect) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
+
+  handle.CloseCursor();
+
+  EXPECT_EQ(StmtStates::kStatementNotPrepared, handle.GetStmtState());
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
