@@ -596,7 +596,7 @@ TEST(DataTranslationTest, From_NUMERICINT64_All) {
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Delete table
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     table.Drop(conn);
+     table.DropWithPrepare(conn);
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
    }
 }
@@ -634,7 +634,7 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
      // Delete table
      EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-     table.Drop(conn);
+     table.DropWithPrepare(conn);
      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
    }
 }
@@ -693,7 +693,7 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
 
     // Delete table
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.Drop(conn);
+    table.DropWithPrepare(conn);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
    }
 }
