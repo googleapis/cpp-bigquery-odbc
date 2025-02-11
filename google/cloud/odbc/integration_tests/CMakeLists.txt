@@ -44,6 +44,11 @@ function (define_client_library_integration_tests)
         add_definitions(-DUSER_ACCOUNT_AUTH)
     endif ()
 
+    option(EXTERNAL_ACCOUNT_AUTH "Run tests using External Authentication" OFF)
+    if (EXTERNAL_ACCOUNT_AUTH)
+        add_definitions(-EXTERNAL_ACCOUNT_AUTH)
+    endif ()
+
     include(GoogleTest)
     gtest_discover_tests(scheduled_integration_tests)
 endfunction ()

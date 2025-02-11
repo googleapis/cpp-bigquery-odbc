@@ -124,4 +124,46 @@ StatusOr<Options> CreateNoAccessAccountAuthentication() {
       google::cloud::MakeGoogleDefaultCredentials());
 }
 
+StatusOr<Options> CreateExternalAuthenticationJSONFile() {
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  if (path_to_file_with_credentials.empty()) {
+    return Status(
+        StatusCode::kInvalidArgument,
+        "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY environment "
+        "variable is not set");
+  }
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  if (!creds) {
+    return Status(StatusCode::kInternal,
+                  "Unable to create external credentials from JSON file");
+  }
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      *creds);
+}
+
+StatusOr<Options> CreateExternalAuthenticationBYOID(
+    std::string const& byoid_aud_url, std::string const& byoid_creds_source,
+    std::string const& byoid_pool_user_project,
+    std::string const& byoid_sub_token_type,
+    std::string const& byoid_token_url) {
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  oauth.byoid_aud_url = byoid_aud_url;
+  oauth.byoid_creds_src = byoid_creds_source;
+  oauth.byoid_pool_user_project = byoid_pool_user_project;
+  oauth.byoid_subj_token_type = byoid_sub_token_type;
+  oauth.byoid_token_url = byoid_token_url;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  if (!creds) {
+    return Status(StatusCode::kInternal,
+                  "Unable to create external credentials from JSON file");
+  }
+  return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
+      *creds);
+}
+
 }  // namespace google::cloud::odbc_testing_client_library_utils

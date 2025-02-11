@@ -48,6 +48,18 @@ StatusOr<Options> CreateNoAccessAccountAuthentication();
 // Authentication Authentication.
 StatusOr<Options> CreateApplicationDefaultAuthentication();
 
+// Creates Options object which has credentials for External Account
+// Authentication via JSON file.
+StatusOr<Options> CreateExternalAuthenticationJSONFile();
+
+// Creates Options object which has credentials for External Account
+// Authentication via JSON file.
+StatusOr<Options> CreateExternalAuthenticationBYOID(
+    std::string const& byoid_aud_url, std::string const& byoid_creds_source,
+    std::string const& byoid_pool_user_project,
+    std::string const& byoid_sub_token_type,
+    std::string const& byoid_token_url);
+
 }  // namespace google::cloud::odbc_testing_client_library_utils
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_CLIENT_LIBRARY_UTILS_AUTHENTICATION_H
