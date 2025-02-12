@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/odbc/testing/client_library_utils/common_functions.h"
@@ -37,6 +38,16 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationJSONFile;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthWithClientIdAuthentication;
@@ -49,6 +60,82 @@ using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
+#ifdef EXTERNAL_ACCOUNT_AUTH
+TEST(CancelJob, ExternalAccountAuth_JSONFile) {
+  // First we create a job, so later we could 'cancel' it
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+
+  auto job_client = JobClient(MakeBigQueryJobConnection(*options));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
+
+  // Cancelling previous Job via ODBC BQ Client
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> cancel_job_response =
+      (*odbc_bq_client)
+          ->CancelJob(project_id, *job_id, "", std::move(*options));
+  ASSERT_STATUS_RECORD_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response->status.state, "DONE");
+}
+
+TEST(CancelJob, ExternalAccountAuth_BYOID_Workload) {
+  // First we create a job, so later we could 'cancel' it
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  auto job_client = JobClient(MakeBigQueryJobConnection(*options));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> cancel_job_response =
+      (*odbc_bq_client)
+          ->CancelJob(project_id, *job_id, "", std::move(*options));
+  ASSERT_STATUS_RECORD_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response->status.state, "DONE");
+}
+
+TEST(CancelJob, ExternalAccountAuth_BYOID_Workforce) {
+  // First we create a job, so later we could 'cancel' it
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  auto job_client = JobClient(MakeBigQueryJobConnection(*options));
+  StatusOr<std::string> job_id = InsertJob(job_client);
+  ASSERT_FALSE(job_id->empty()) << job_id.status().message();
+
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<Job> cancel_job_response =
+      (*odbc_bq_client)
+          ->CancelJob(project_id, *job_id, "", std::move(*options));
+  ASSERT_STATUS_RECORD_OK(cancel_job_response);
+  EXPECT_EQ(cancel_job_response->status.state, "DONE");
+}
+
+#endif  // EXTERNAL_ACCOUNT_AUTH
 #ifdef USER_ACCOUNT_AUTH
 TEST(CancelJob, UserAccountAuth) {
   // First we create a job, so later we could 'cancel' it
