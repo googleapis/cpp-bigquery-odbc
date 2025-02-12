@@ -34,6 +34,16 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationJSONFile;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
@@ -46,6 +56,101 @@ using google::cloud::odbc_testing_client_library_utils::
 using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+#ifdef EXTERNAL_ACCOUNT_AUTH
+
+TEST(ListDatasets, ExternalAccountAuth_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
+
+  // Retrieving datasets via ODBC BQ Client
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
+      (*odbc_bq_client)->ListAllDatasets(project_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(datasets_response);
+
+  std::vector<ListFormatDataset> datasets = (*datasets_response);
+  ASSERT_FALSE(datasets.empty());
+  bool found = false;
+  for (auto const& dataset : datasets) {
+    found = dataset.dataset_reference.dataset_id == dataset_id;
+    if (found) break;
+  }
+  ASSERT_EQ(found, true);
+}
+
+TEST(ListDatasets, ExternalAccountAuth_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  // Retrieving datasets via ODBC BQ Client
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
+      (*odbc_bq_client)->ListAllDatasets(project_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(datasets_response);
+
+  std::vector<ListFormatDataset> datasets = (*datasets_response);
+  ASSERT_FALSE(datasets.empty());
+  bool found = false;
+  for (auto const& dataset : datasets) {
+    found = dataset.dataset_reference.dataset_id == dataset_id;
+    if (found) break;
+  }
+  ASSERT_EQ(found, true);
+}
+
+TEST(ListDatasets, ExternalAccountAuth_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+  auto dataset_client =
+      DatasetClient(MakeDatasetConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  // Retrieving datasets via ODBC BQ Client
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
+      (*odbc_bq_client)->ListAllDatasets(project_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(datasets_response);
+
+  std::vector<ListFormatDataset> datasets = (*datasets_response);
+  ASSERT_FALSE(datasets.empty());
+  bool found = false;
+  for (auto const& dataset : datasets) {
+    found = dataset.dataset_reference.dataset_id == dataset_id;
+    if (found) break;
+  }
+  ASSERT_EQ(found, true);
+}
+
+#endif  // EXTERNAL_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH
 TEST(ListDatasets, UserAccountAuth) {
