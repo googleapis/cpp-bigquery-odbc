@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/testing/client_library_utils/authentication.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/options.h"
@@ -24,6 +24,8 @@ namespace google::cloud::odbc_testing_client_library_utils {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::CreateCredentials;
+using google::cloud::odbc_bigquery_client_interface::kDefaultTokenUrl;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeJWT;
 using ::google::cloud::odbc_bigquery_client_interface::Oauth;
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_internal::StatusRecord;
@@ -164,6 +166,40 @@ StatusOr<Options> CreateExternalAuthenticationBYOID(
   }
   return google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
       *creds);
+}
+
+StatusOr<Options> CreateExternalAuthenticationBYOIDWorkload() {
+  return CreateExternalAuthenticationBYOID(
+      kWorkLoadAudUrl, kWorkLoadCredsSource,
+      "" /* pool_user_project empty for workload */, kWorkLoadSubTokenType,
+      kWorkLoadTokenUrl);
+}
+
+StatusOr<Options> CreateExternalAuthenticationBYOIDWorkforce() {
+  return CreateExternalAuthenticationBYOID(
+      kWorkForceAudUrl, kWorkForceCredsSource, kWorkForcePoolUserProject,
+      kWorkForceSubTokenType, kWorkForceTokenUrl);
+}
+
+Oauth CreateExternalUserOauthBYOIDWorkload() {
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  oauth.byoid_aud_url = kWorkLoadAudUrl;
+  oauth.byoid_creds_src = kWorkLoadCredsSource;
+  oauth.byoid_subj_token_type = kWorkLoadSubTokenType;
+  oauth.byoid_token_url = kWorkLoadTokenUrl;
+  return oauth;
+}
+
+Oauth CreateExternalUserOauthBYOIDWorkforce() {
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  oauth.byoid_aud_url = kWorkForceAudUrl;
+  oauth.byoid_creds_src = kWorkForceCredsSource;
+  oauth.byoid_subj_token_type = kWorkForceSubTokenType;
+  oauth.byoid_token_url = kWorkForceTokenUrl;
+  oauth.byoid_pool_user_project = kWorkForcePoolUserProject;
+  return oauth;
 }
 
 }  // namespace google::cloud::odbc_testing_client_library_utils

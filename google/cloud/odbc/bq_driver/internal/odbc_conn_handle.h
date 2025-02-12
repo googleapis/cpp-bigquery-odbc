@@ -29,18 +29,6 @@ using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
-// BYOID: Subject token types
-std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
-std::string const kSubTokenTypeIdToken =
-    "urn:ietf:params:oauth:token-type:id-token";
-std::string const kSubTokenTypeSaml2 = "urn:ietf:params:oauth:token-type:saml2";
-std::string const kSubTokenTypeAws4 =
-    "urn:ietf:params:aws:token-type:aws4_request";
-
-// Default BYOID properties.
-std::string const kSubTokenTypeDefault = kSubTokenTypeIdToken;
-std::string const kDefaultTokenUrl = "https://sts.googleapis.com/v1/token";
-
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
   Oauth oauth;

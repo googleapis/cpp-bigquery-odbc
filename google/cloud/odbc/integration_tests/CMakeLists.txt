@@ -46,7 +46,7 @@ function (define_client_library_integration_tests)
 
     option(EXTERNAL_ACCOUNT_AUTH "Run tests using External Authentication" OFF)
     if (EXTERNAL_ACCOUNT_AUTH)
-        add_definitions(-EXTERNAL_ACCOUNT_AUTH)
+        add_definitions(-DEXTERNAL_ACCOUNT_AUTH)
     endif ()
 
     include(GoogleTest)

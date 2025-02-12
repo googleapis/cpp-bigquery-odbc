@@ -18,6 +18,12 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bigquery_client_interface::kDefaultTokenUrl;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeAws4;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeDefault;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeIdToken;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeJWT;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeSaml2;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;

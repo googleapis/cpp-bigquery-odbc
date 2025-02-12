@@ -21,6 +21,9 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::internal::GetEnv;
+using google::cloud::odbc_bigquery_client_interface::kDefaultTokenUrl;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeDefault;
+using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeIdToken;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;

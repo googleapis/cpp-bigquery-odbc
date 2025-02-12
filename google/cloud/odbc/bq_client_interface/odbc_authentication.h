@@ -24,6 +24,18 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// BYOID: Subject token types
+std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
+std::string const kSubTokenTypeIdToken =
+    "urn:ietf:params:oauth:token-type:id-token";
+std::string const kSubTokenTypeSaml2 = "urn:ietf:params:oauth:token-type:saml2";
+std::string const kSubTokenTypeAws4 =
+    "urn:ietf:params:aws:token-type:aws4_request";
+
+// Default BYOID properties.
+std::string const kSubTokenTypeDefault = kSubTokenTypeIdToken;
+std::string const kDefaultTokenUrl = "https://sts.googleapis.com/v1/token";
+
 // NOTE: This should always specify the integral values with the type names
 //  because the driver layer is tightly coupled to the integer values.
 enum class OauthMechanism {
