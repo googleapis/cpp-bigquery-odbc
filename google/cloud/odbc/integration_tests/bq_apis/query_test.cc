@@ -39,6 +39,16 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationJSONFile;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
@@ -54,6 +64,168 @@ using ::testing::HasSubstr;
 
 static std::vector<std::string> const kKeysToFilter{
     "preserveNulls", "defaultDataset", "maximumBytesBilled"};
+
+#ifdef EXTERNAL_ACCOUNT_AUTH
+TEST(Query, ExternalAccountAuth_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string table_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  std::string column_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
+
+  // Query via ODBCBQClient
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", column_name, " FROM ", full_table_name);
+  QueryRequest query_request;
+  query_request.set_query(query_statement);
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  post_query_request.set_json_filter_keys(kKeysToFilter);
+
+  StatusRecordOr<PostQueryResults> query_response =
+      (*odbc_bq_client)->Query(project_id, query_request, *options);
+
+  ASSERT_STATUS_RECORD_OK(query_response);
+  EXPECT_TRUE((*query_response).job_complete);
+  EXPECT_EQ((*query_response).schema.fields.size(), 1);
+  EXPECT_GT((*query_response).total_rows, 1);
+
+  // Getting results of previous Query
+  std::string job_id = (*query_response).job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+
+  StatusRecordOr<GetQueryResults> query_results_response =
+      (*odbc_bq_client)
+          ->GetAllQueryResults(project_id, job_id, "",
+                               std::chrono::milliseconds(1000), *options);
+
+  ASSERT_STATUS_RECORD_OK(query_results_response);
+  EXPECT_TRUE((*query_results_response).job_complete);
+  EXPECT_EQ((*query_results_response).total_rows, (*query_response).total_rows);
+}
+
+TEST(Query, ExternalAccountAuth_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string table_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  std::string column_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+
+  // Query via ODBCBQClient
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", column_name, " FROM ", full_table_name);
+  QueryRequest query_request;
+  query_request.set_query(query_statement);
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  post_query_request.set_json_filter_keys(kKeysToFilter);
+
+  StatusRecordOr<PostQueryResults> query_response =
+      (*odbc_bq_client)->Query(project_id, query_request, *options);
+
+  ASSERT_STATUS_RECORD_OK(query_response);
+  EXPECT_TRUE((*query_response).job_complete);
+  EXPECT_EQ((*query_response).schema.fields.size(), 1);
+  EXPECT_GT((*query_response).total_rows, 1);
+
+  // Getting results of previous Query
+  std::string job_id = (*query_response).job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+
+  StatusRecordOr<GetQueryResults> query_results_response =
+      (*odbc_bq_client)
+          ->GetAllQueryResults(project_id, job_id, "",
+                               std::chrono::milliseconds(1000), *options);
+
+  ASSERT_STATUS_RECORD_OK(query_results_response);
+  EXPECT_TRUE((*query_results_response).job_complete);
+  EXPECT_EQ((*query_results_response).total_rows, (*query_response).total_rows);
+}
+
+TEST(Query, ExternalAccountAuth_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+  auto job_client = JobClient(MakeBigQueryJobConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string table_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_TABLE_NAME");
+  std::string column_name =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
+
+  // Query via ODBCBQClient
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
+  std::string query_statement =
+      absl::StrCat("SELECT ", column_name, " FROM ", full_table_name);
+  QueryRequest query_request;
+  query_request.set_query(query_statement);
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(query_request);
+  post_query_request.set_json_filter_keys(kKeysToFilter);
+
+  StatusRecordOr<PostQueryResults> query_response =
+      (*odbc_bq_client)->Query(project_id, query_request, *options);
+
+  ASSERT_STATUS_RECORD_OK(query_response);
+  EXPECT_TRUE((*query_response).job_complete);
+  EXPECT_EQ((*query_response).schema.fields.size(), 1);
+  EXPECT_GT((*query_response).total_rows, 1);
+
+  // Getting results of previous Query
+  std::string job_id = (*query_response).job_reference.job_id;
+  GetQueryResultsRequest get_query_results_request;
+  get_query_results_request.set_project_id(project_id);
+  get_query_results_request.set_job_id(job_id);
+
+  StatusRecordOr<GetQueryResults> query_results_response =
+      (*odbc_bq_client)
+          ->GetAllQueryResults(project_id, job_id, "",
+                               std::chrono::milliseconds(1000), *options);
+
+  ASSERT_STATUS_RECORD_OK(query_results_response);
+  EXPECT_TRUE((*query_results_response).job_complete);
+  EXPECT_EQ((*query_results_response).total_rows, (*query_response).total_rows);
+}
+#endif  // EXTERNAL_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH
 TEST(Query, UserAccountAuth) {
