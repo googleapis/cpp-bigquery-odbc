@@ -2631,4 +2631,89 @@ TEST(DataTranslationTest, From_Geography_To_All) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(DataTranslationTest, ComplexArrays) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"CREATE OR REPLACE TABLE ODBC_TEST_DATASET_SACHIN.ArrayOfBytes (index_col INT64, byte_array ARRAY<BYTES>);", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"INSERT INTO ODBC_TEST_DATASET_SACHIN.ArrayOfBytes (index_col, byte_array) VALUES (1, [CAST('Hello' AS BYTES), CAST('!' AS BYTES)]);", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLLEN strlen_or_ind;
+  SQLCHAR data_str[kBufferLength];
+
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, data_str, kBufferLength, &strlen_or_ind);
+  CheckError(status, "SQLBindCol", conn);
+  
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT byte_array FROM ODBC_TEST_DATASET_SACHIN.ArrayOfBytes ORDER BY index_col;", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  status = SQLFetch(conn->hstmt);
+  CheckError(status, "SQLFetch", conn);
+
+  if (strlen_or_ind >= 0) {
+    //data 1:: {"v":[{"v":"0x480x650x6c0x6c0x6f"},{"v":"0x21"}]} for our driver
+    // data 1:: {"v":[{"v":"0x48656C6C6F"},{"v":"0x21"}]} for existing driver
+    std::cout << "data 1:: " << data_str << std::endl; 
+  } else {
+    std::cout << "NO data 1:: " << std::endl; 
+  }
+
+  //status = SQLFetch(conn->hstmt);
+  //CheckError(status, "SQLFetch", conn);
+  //if (strlen_or_ind >= 0) {
+  //  // data:: {"v":[{"v":"0x480x650x6c0x6c0x6f"},{"v":"0x21"}]}
+  //  //data:: {"v":[{"v":"0x480x650x6c0x6c0x6f"},{"v":"0x21"}]}
+  //  // data:: {"v":[{"v":"0x48656C6C6F"},{"v":"0x21"}]}
+  //  std::cout << "data 2:: " << data << std::endl; 
+  //} else {
+  //  std::cout << "NO data 2:: " << std::endl; 
+  //}
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLCHAR data_binary[kBufferLength];
+
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_BINARY, data_binary, kBufferLength, &strlen_or_ind);
+  CheckError(status, "SQLBindCol", conn);
+  
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT byte_array FROM ODBC_TEST_DATASET_SACHIN.ArrayOfBytes ORDER BY index_col;", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  status = SQLFetch(conn->hstmt);
+  CheckError(status, "SQLFetch", conn);
+
+  if (strlen_or_ind >= 0) {
+    // data binary:: {"v":[{"v":"0x480x650x6c0x6c0x6f"},{"v":"0x21"}]} for our driver
+    // data binary:: {"v":[{"v":"0x48656C6C6F"},{"v":"0x21"}]}�"�� for existing driver
+    std::cout << "data binary:: " << data_binary << std::endl; 
+  } else {
+    std::cout << "NO data binary:: " << std::endl; 
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  //std::string str(reinterpret_cast<char*>(data_str));
+  //std::string bin(reinterpret_cast<char*>(data_binary));
+  //EXPECT_EQ(str, bin);
+
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"DROP TABLE ODBC_TEST_DATASET_SACHIN.ArrayOfBytes", SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
