@@ -34,6 +34,16 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationJSONFile;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
     CreateNoAccessAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
@@ -46,6 +56,106 @@ using google::cloud::odbc_testing_client_library_utils::
 using google::cloud::odbc_testing_utils::GetRequiredEnvVar;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
+
+#ifdef EXTERNAL_ACCOUNT_AUTH
+
+TEST(ListAllTables, ExternalAccountAuth_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+  std::string path_to_file_with_credentials =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
+
+  // Retrieving tables via ODBCBQClient.
+  Oauth oauth;
+  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatTable> > tables_response =
+      (*odbc_bq_client)
+          ->ListAllTables(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(tables_response);
+
+  std::vector<ListFormatTable> tables = (*tables_response);
+
+  ASSERT_FALSE(tables.empty());
+  bool expected_table = false;
+  for (auto const& table : tables) {
+    expected_table = (table.table_reference.project_id == project_id &&
+                      table.table_reference.dataset_id == dataset_id);
+    if (!expected_table) break;
+  }
+  ASSERT_TRUE(expected_table);
+}
+
+TEST(ListAllTables, ExternalAccountAuth_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  // Retrieving tables via ODBCBQClient.
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatTable> > tables_response =
+      (*odbc_bq_client)
+          ->ListAllTables(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(tables_response);
+
+  std::vector<ListFormatTable> tables = (*tables_response);
+
+  ASSERT_FALSE(tables.empty());
+  bool expected_table = false;
+  for (auto const& table : tables) {
+    expected_table = (table.table_reference.project_id == project_id &&
+                      table.table_reference.dataset_id == dataset_id);
+    if (!expected_table) break;
+  }
+  ASSERT_TRUE(expected_table);
+}
+
+TEST(ListAllTables, ExternalAccountAuth_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+  auto table_client = TableClient(MakeTableConnection(std::move(*options)));
+  std::string project_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::string dataset_id =
+      GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
+
+  // Retrieving tables via ODBCBQClient.
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr<std::vector<ListFormatTable> > tables_response =
+      (*odbc_bq_client)
+          ->ListAllTables(project_id, dataset_id, std::move(*options));
+  ASSERT_STATUS_RECORD_OK(tables_response);
+
+  std::vector<ListFormatTable> tables = (*tables_response);
+
+  ASSERT_FALSE(tables.empty());
+  bool expected_table = false;
+  for (auto const& table : tables) {
+    expected_table = (table.table_reference.project_id == project_id &&
+                      table.table_reference.dataset_id == dataset_id);
+    if (!expected_table) break;
+  }
+  ASSERT_TRUE(expected_table);
+}
+#endif  // EXTERNAL_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH
 TEST(ListAllTables, UserAccountAuth) {
