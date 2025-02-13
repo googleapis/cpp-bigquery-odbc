@@ -1607,7 +1607,6 @@ TEST(ConvertFromBytesDSValueTest, HandlesUnsupportedType) {
   EXPECT_EQ(status.sql_state, SQLStates::k_HY000());
 }
 
-
 TEST(ConvertFromArrayDSValue, To_SQL_C_CHAR_success) {
   char buf[100];
   SQLLEN data_len;

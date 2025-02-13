@@ -156,10 +156,10 @@ inline void BytesToHex(std::vector<uint8_t> const& data,
                        std::string& restult_str) {
   std::stringstream ss;
   for (auto byte : data) {
-    ss << "0x" << std::setw(2) << std::setfill('0') << std::hex
+    ss << std::hex << std::uppercase << std::setfill('0') << std::setw(2)
        << static_cast<int>(byte);
   }
-  restult_str = ss.str();
+  restult_str = "0x" + ss.str();
 }
 
 inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
