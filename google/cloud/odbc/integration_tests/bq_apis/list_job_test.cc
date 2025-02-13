@@ -134,7 +134,8 @@ TEST(ListJobs, DISABLED_ExternalAccountAuth_BYOID_Workforce) {
     ASSERT_FALSE(job.id.empty());
   }
 }
-#endif
+#endif  // EXTERNAL_ACCOUNT_AUTH
+
 #ifdef USER_ACCOUNT_AUTH
 
 TEST(ListJobs, UserAccountAuth) {

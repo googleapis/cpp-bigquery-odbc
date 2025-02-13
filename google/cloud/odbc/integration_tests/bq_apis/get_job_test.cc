@@ -129,7 +129,7 @@ TEST(GetJob, ExternalAccountAuth_BYOID_Workforce) {
   ASSERT_STATUS_RECORD_OK(get_job_response);
   EXPECT_EQ(get_job_response->status.state, "DONE");
 }
-#endif
+#endif  // EXTERNAL_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH
 TEST(GetJob, UserAccountAuth) {
