@@ -1513,7 +1513,7 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   return ts.str();
 }
 
-std::string Utf16ToUtf8(std::wstring utf_16_str) {
+std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (utf_16_str.empty()) {
     throw std::runtime_error(" utf16 string is empty/Null");
   }
@@ -1545,15 +1545,12 @@ std::string Utf16ToUtf8(std::wstring utf_16_str) {
         "iconv_open failed while converting wstring to string: " +
         std::string(strerror(errno)));
   }
-  std::wcout<<"utf_16_str "<<utf_16_str<<" ** "<<utf_16_str.size()<<std::endl;
-  utf_16_str.push_back(L'\0');
-  std::wcout<<"utf_16_str "<<utf_16_str<<" ** "<<utf_16_str.size()<<std::endl;
+
   std::vector<char> inbuf(
       reinterpret_cast<char const*>(utf_16_str.data()),
       reinterpret_cast<char const*>(utf_16_str.data() + utf_16_str.length()));
   size_t inbytesleft = inbuf.size();
   size_t outbytesleft = inbytesleft * 4;  // Allocate more space for utf8 output
-  std::cout<<"inbuf "<<inbuf.data()<<" ** "<<inbuf.size()<<std::endl;
 
   std::string utf8str(outbytesleft, '\0');
   char* inptr = inbuf.data();
@@ -1645,7 +1642,6 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
     }
   }
   stmt_txt_wstr.reserve(in_str_len);
-  std::cout<<"stmt_txt_wstr "<<in_str_len<<std::endl;
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
