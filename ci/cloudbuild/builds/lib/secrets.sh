@@ -28,6 +28,9 @@ fi # include guard
 # these keys are rotated.
 readonly KEY_DIR="/dev/odbc-auth"
 mkdir "${KEY_DIR}"
+# TODO(b/383592620): Update 'external-account-auth-keys' secret value
+# to the latest generated credentials especially the "CHANGE_ME" keys.
+gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="${KEY_DIR}/external_account_auth_keys.json"
 gcloud secrets versions access latest --secret=user-account-auth-keys --out-file="${KEY_DIR}/user_account_auth_keys.json"
 gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="${KEY_DIR}/service_account_auth_keys.json"
 # TODO(b/333011414) Enable it or remove
@@ -36,6 +39,7 @@ gcloud secrets versions access latest --secret=wrong-account-auth-keys --out-fil
 gcloud secrets versions access latest --secret=no-access-account-auth-keys --out-file="${KEY_DIR}/no_access_account_auth_keys.json"
 
 export CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY=${KEY_DIR}/user_account_auth_keys.json
+export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=${KEY_DIR}/external_account_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=${KEY_DIR}/service_account_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_CLIENT_ID_AUTH_KEY=${KEY_DIR}/client_id_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_WRONG_AUTH_KEY=${KEY_DIR}/wrong_account_auth_keys.json
@@ -46,6 +50,7 @@ function secrets::bazel_args() {
   declare -a args
   # Add auth keys
   args+=(
+    "--test_env=CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=${CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY}"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY=${CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY}"
     "--test_env=CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=${CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY}"
     "--test_env=GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}"
