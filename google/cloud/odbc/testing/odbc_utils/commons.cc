@@ -1645,6 +1645,7 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
     }
   }
   stmt_txt_wstr.reserve(in_str_len);
+  std::cout<<"stmt_txt_wstr "<<in_str_len<<std::endl;
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }

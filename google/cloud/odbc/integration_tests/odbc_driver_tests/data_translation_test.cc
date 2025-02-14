@@ -525,7 +525,7 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_WCHAR: {
         SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
-
+std::cout<<"length "<<length<<std::endl;
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
 
