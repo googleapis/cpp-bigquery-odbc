@@ -32,6 +32,16 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_client_library_utils::
     CreateApplicationDefaultAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalAuthenticationJSONFile;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkforce;
+using google::cloud::odbc_testing_client_library_utils::
+    CreateExternalUserOauthBYOIDWorkload;
+using google::cloud::odbc_testing_client_library_utils::
     CreateServiceAccountAuthentication;
 using google::cloud::odbc_testing_client_library_utils::
     CreateUserAccountAuthentication;
@@ -48,6 +58,278 @@ std::string const kRMProjectWithPrefix = "projects/" + kRMProjectWithoutPrefix;
 std::string const kParentFolder =
     "folders/329838888119";  // bq-partner-org.joonix.net/data
 std::string const kParentInvalidFolder = "folders/1234";
+
+#ifdef EXTERNAL_ACCOUNT_AUTH
+TEST(ResourceManager, ExternalAccountAuth_GetProjectRM_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kExternalUser, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects_status =
+          (*odbc_bq_client)->GetProject(kRMProjectWithPrefix, *options, true);
+
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  EXPECT_EQ((*projects_status).id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_GetProjectRM_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects_status =
+          (*odbc_bq_client)->GetProject(kRMProjectWithPrefix, *options, true);
+
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  EXPECT_EQ((*projects_status).id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_GetProjectRM_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  StatusRecordOr< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects_status =
+          (*odbc_bq_client)->GetProject(kRMProjectWithPrefix, *options, true);
+
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  EXPECT_EQ((*projects_status).id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_ListProjectsRM_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kExternalUser, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->ListAllProjectsRM(kParentFolder, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
+}
+
+TEST(ResourceManager, ExternalAccountAuth_ListProjectsRM_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->ListAllProjectsRM(kParentFolder, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
+}
+
+TEST(ResourceManager, ExternalAccountAuth_ListProjectsRM_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->ListAllProjectsRM(kParentFolder, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  ASSERT_TRUE((*projects_status).empty());
+}
+
+TEST(ResourceManager, ExternalAccountAuth_SearchProjectsRM_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kExternalUser, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->SearchAllProjectsRM("state:ACTIVE", *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_SearchProjectsRM_BYOID_Workload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->SearchAllProjectsRM("state:ACTIVE", *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_SearchProjectsRM_BYOID_Workforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  auto projects_status =
+      (*odbc_bq_client)->SearchAllProjectsRM("state:ACTIVE", *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMList_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kExternalUser, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMList(kParentFolder, project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMList_BYOIDWorkload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMList(kParentFolder, project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMList_BYOIDWorkforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMList(kParentFolder, project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMSearch_JSONFile) {
+  StatusOr<Options> options = CreateExternalAuthenticationJSONFile();
+  ASSERT_STATUS_OK(options);
+  std::string path_to_file_with_credentials =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(path_to_file_with_credentials.empty());
+
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+      {OauthMechanism::kExternalUser, path_to_file_with_credentials});
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMSearch("state:ACTIVE", project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager,
+     ExternalAccountAuth_FilterProjectsRMSearch_BYOIDWorkload) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMSearch("state:ACTIVE", project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+TEST(ResourceManager,
+     ExternalAccountAuth_FilterProjectsRMSearch_BYOIDWorkforce) {
+  StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
+  ASSERT_STATUS_OK(options);
+
+  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+
+  std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
+
+  auto projects_status =
+      (*odbc_bq_client)
+          ->FilterProjectsRMSearch("state:ACTIVE", project_ids, *options);
+  ASSERT_STATUS_RECORD_OK(projects_status);
+
+  std::vector< ::google::cloud::bigquery_v2_minimal_internal::Project>
+      projects = *projects_status;
+  ASSERT_FALSE(projects.empty());
+  EXPECT_EQ(projects[0].id, kRMProjectWithoutPrefix);
+}
+
+#endif  // EXTERNAL_ACCOUNT_AUTH
 
 #ifdef USER_ACCOUNT_AUTH
 TEST(ResourceManagerGetProject, UserAccountAuth_SuccessProjectWithPrefix) {
