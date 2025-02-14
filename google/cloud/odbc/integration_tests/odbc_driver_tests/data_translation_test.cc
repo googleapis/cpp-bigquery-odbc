@@ -287,7 +287,8 @@ TEST(DataTranslationTest, BIGNUMERIC_Invalid_Data_Test){
       row_str.append(")");
       insert_stmt.append(row_str);
       SQLRETURN status =
-       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+         SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+      status = SQLExecute(conn->hstmt);
       EXPECT_EQ(status,SQL_ERROR);
     }
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
