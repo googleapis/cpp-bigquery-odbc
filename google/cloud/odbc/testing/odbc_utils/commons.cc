@@ -1545,12 +1545,13 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
         "iconv_open failed while converting wstring to string: " +
         std::string(strerror(errno)));
   }
-
+  std::wcout<<"utf_16_str "<<utf_16_str<<" ** "<<utf_16_str.size()<<std::endl;
   std::vector<char> inbuf(
       reinterpret_cast<char const*>(utf_16_str.data()),
       reinterpret_cast<char const*>(utf_16_str.data() + utf_16_str.length()));
   size_t inbytesleft = inbuf.size();
   size_t outbytesleft = inbytesleft * 4;  // Allocate more space for utf8 output
+  std::cout<<"inbuf "<<inbuf.data()<<" ** "<<inbuf.size()<<std::endl;
 
   std::string utf8str(outbytesleft, '\0');
   char* inptr = inbuf.data();
