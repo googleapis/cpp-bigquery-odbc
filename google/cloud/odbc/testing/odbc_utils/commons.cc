@@ -1513,7 +1513,7 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   return ts.str();
 }
 
-std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
+std::string Utf16ToUtf8(std::wstring utf_16_str) {
   if (utf_16_str.empty()) {
     throw std::runtime_error(" utf16 string is empty/Null");
   }
@@ -1545,6 +1545,8 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
         "iconv_open failed while converting wstring to string: " +
         std::string(strerror(errno)));
   }
+  std::wcout<<"utf_16_str "<<utf_16_str<<" ** "<<utf_16_str.size()<<std::endl;
+  utf_16_str.push_back(L'\0');
   std::wcout<<"utf_16_str "<<utf_16_str<<" ** "<<utf_16_str.size()<<std::endl;
   std::vector<char> inbuf(
       reinterpret_cast<char const*>(utf_16_str.data()),
@@ -1646,7 +1648,6 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
-  stmt_txt_wstr.push_back(L'\0');
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 
