@@ -99,7 +99,7 @@ TEST(InsertJob, ExternalAccountAuth_JSONFile) {
   job.configuration = job_configuration;
 
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
   oauth.credentials_file_path = path_to_file_with_credentials;
   // Insert Job using BQ Client
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);

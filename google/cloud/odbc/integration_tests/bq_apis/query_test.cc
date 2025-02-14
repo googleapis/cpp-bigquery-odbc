@@ -83,7 +83,7 @@ TEST(Query, ExternalAccountAuth_JSONFile) {
 
   // Query via ODBCBQClient
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kExternalUser;
   oauth.credentials_file_path = path_to_file_with_credentials;
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
