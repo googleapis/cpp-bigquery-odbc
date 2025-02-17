@@ -3219,7 +3219,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_catalog_name;
-  if (catalogNameLen > 0 || catalogNameLen == SQL_NTS) {
+  if (catalogName && (catalogNameLen > 0 || catalogNameLen == SQL_NTS)) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3230,7 +3230,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   }
 
   StatusRecordOr<std::string> utf8_schema_name;
-  if (schemaNameLen > 0 || schemaNameLen == SQL_NTS) {
+  if (schemaName && (schemaNameLen > 0 || schemaNameLen == SQL_NTS)) {
     utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3241,7 +3241,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   }
 
   StatusRecordOr<std::string> utf8_table_name;
-  if (tableNameLen > 0 || tableNameLen == SQL_NTS) {
+  if (tableName && (tableNameLen > 0 || tableNameLen == SQL_NTS)) {
     utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3252,7 +3252,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   }
 
   StatusRecordOr<std::string> utf8_table_type;
-  if (tableTypeLen > 0 || tableTypeLen == SQL_NTS) {
+  if (tableType && (tableTypeLen > 0 || tableTypeLen == SQL_NTS)) {
     utf8_table_type = ConvertSQLWCHARToString(tableType, tableTypeLen);
     if (!utf8_table_type) {
       TracePrintInternal(*(*kTraceOption),
