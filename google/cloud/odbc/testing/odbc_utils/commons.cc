@@ -620,13 +620,15 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 }
-template void Table::InsertDataIntoTable<int64_t>(std::shared_ptr<ODBCHandles> conn,
-                              std::vector<int64_t> rows, bool insert_index);
-template void Table::InsertDataIntoTable<double>(std::shared_ptr<ODBCHandles> conn,
-                              std::vector<double> rows, bool insert_index);
-template<class TC>
+template void Table::InsertDataIntoTable<int64_t>(
+    std::shared_ptr<ODBCHandles> conn, std::vector<int64_t> rows,
+    bool insert_index);
+template void Table::InsertDataIntoTable<double>(
+    std::shared_ptr<ODBCHandles> conn, std::vector<double> rows,
+    bool insert_index);
+template <class TC>
 void Table::InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
-                              std::vector<TC> rows, bool insert_index) {
+                                std::vector<TC> rows, bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -645,7 +647,7 @@ void Table::InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
     }
     insert_stmt.append(row_str);
   }
-  
+
   SQLRETURN status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect", conn);

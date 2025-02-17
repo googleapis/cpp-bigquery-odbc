@@ -461,9 +461,9 @@ class Table {
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
-  template<class TC>
+  template <class TC>
   void InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
-                         std::vector<TC> rows, bool insert_index = false);
+                           std::vector<TC> rows, bool insert_index = false);
 
   void InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
                            std::vector<SQL_TIMESTAMP_STRUCT> rows,
