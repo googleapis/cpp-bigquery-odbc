@@ -2032,7 +2032,8 @@ void TraceFunctionEntry_SQLTablesW(
     SQLSMALLINT schema_name_len, SQLWCHAR* table_name,
     SQLSMALLINT table_name_len, SQLWCHAR* table_type,
     SQLSMALLINT table_type_len, TraceOptions& opts) {
-  StatusRecordOr<std::string> utf8_catalog_name;
+      std::string catalog_name_str(reinterpret_cast<char*>(catalog_name));
+  StatusRecordOr<std::string> utf8_catalog_name = catalog_name_str;
   if (catalog_name && (catalog_name_len > 0 || catalog_name_len == SQL_NTS)) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
     if (!utf8_catalog_name) {
@@ -2042,7 +2043,8 @@ void TraceFunctionEntry_SQLTablesW(
     catalog_name_len = utf8_catalog_name->length();
   }
 
-  StatusRecordOr<std::string> utf8_schema_name;
+std::string schema_name_str(reinterpret_cast<char*>(schema_name));
+  StatusRecordOr<std::string> utf8_schema_name = schema_name_str;
   if (schema_name && (schema_name_len > 0 || schema_name_len == SQL_NTS)) {
     utf8_schema_name = ConvertSQLWCHARToString(schema_name, schema_name_len);
     if (!utf8_schema_name) {
@@ -2052,7 +2054,8 @@ void TraceFunctionEntry_SQLTablesW(
     schema_name_len = utf8_schema_name->length();
   }
 
-  StatusRecordOr<std::string> utf8_table_name;
+std::string table_name_str(reinterpret_cast<char*>(table_name));
+  StatusRecordOr<std::string> utf8_table_name = table_name_str;
   if (table_name && (table_name_len > 0 || table_name_len == SQL_NTS)) {
     utf8_table_name = ConvertSQLWCHARToString(table_name, table_name_len);
     if (!utf8_table_name) {
@@ -2061,8 +2064,8 @@ void TraceFunctionEntry_SQLTablesW(
     }
     table_name_len = utf8_table_name->length();
   }
-
-  StatusRecordOr<std::string> utf8_table_type;
+std::string table_type_str(reinterpret_cast<char*>(table_type));
+  StatusRecordOr<std::string> utf8_table_type = table_type_str;
   if (table_type && (table_type_len > 0 || table_type_len == SQL_NTS)) {
     utf8_table_type = ConvertSQLWCHARToString(table_type, table_type_len);
     if (!utf8_table_type) {
