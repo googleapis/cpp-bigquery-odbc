@@ -2033,7 +2033,7 @@ void TraceFunctionEntry_SQLTablesW(
     SQLSMALLINT table_name_len, SQLWCHAR* table_type,
     SQLSMALLINT table_type_len, TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_catalog_name;
-  if (catalog_name_len > 0 || catalog_name_len == SQL_NTS) {
+  if ((catalog_name_len > 0 || catalog_name_len == SQL_NTS) && catalog_name[0]!='\0') {
     utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
     if (!utf8_catalog_name) {
       TracePrintInternal(opts, utf8_catalog_name.GetStatusRecord().message);
@@ -2046,7 +2046,7 @@ SQLCHAR* sqlchar_category_name = nullptr;
   sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
   
   StatusRecordOr<std::string> utf8_schema_name;
-  if (schema_name_len > 0 || schema_name_len == SQL_NTS) {
+  if ((schema_name_len > 0 || schema_name_len == SQL_NTS) && schema_name[0]!='\0') {
     utf8_schema_name = ConvertSQLWCHARToString(schema_name, schema_name_len);
     if (!utf8_schema_name) {
       TracePrintInternal(opts, utf8_schema_name.GetStatusRecord().message);
@@ -2059,7 +2059,7 @@ SQLCHAR* sqlchar_category_name = nullptr;
   sqlchar_schema_name = ToSqlChar(utf8_schema_name->data());
 
   StatusRecordOr<std::string> utf8_table_name;
-  if (table_name_len > 0 || table_name_len == SQL_NTS) {
+  if ((table_name_len > 0 || table_name_len == SQL_NTS) && table_name[0]!='\0') {
     utf8_table_name = ConvertSQLWCHARToString(table_name, table_name_len);
     if (!utf8_table_name) {
       TracePrintInternal(opts, utf8_table_name.GetStatusRecord().message);
@@ -2072,7 +2072,7 @@ SQLCHAR* sqlchar_category_name = nullptr;
   sqlchar_table_name = ToSqlChar(utf8_table_name->data());
 
   StatusRecordOr<std::string> utf8_table_type;
-  if (table_type_len > 0 || table_type_len == SQL_NTS) {
+  if ((table_type_len > 0 || table_type_len == SQL_NTS) && table_type[0]!='\0') {
     utf8_table_type = ConvertSQLWCHARToString(table_type, table_type_len);
     if (!utf8_table_type) {
       TracePrintInternal(opts, utf8_table_type.GetStatusRecord().message);
