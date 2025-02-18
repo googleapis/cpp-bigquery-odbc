@@ -2032,59 +2032,63 @@ void TraceFunctionEntry_SQLTablesW(
     SQLSMALLINT schema_name_len, SQLWCHAR* table_name,
     SQLSMALLINT table_name_len, SQLWCHAR* table_type,
     SQLSMALLINT table_type_len, TraceOptions& opts) {
-     
-  SQLCHAR* sql_char_catelog = nullptr;
-   if (catalog_name && (catalog_name_len > 0 || catalog_name_len == SQL_NTS)) {
-    StatusRecordOr<std::string> utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
+  StatusRecordOr<std::string> utf8_catalog_name;
+  if (catalog_name_len > 0 || catalog_name_len == SQL_NTS) {
+    utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
     if (!utf8_catalog_name) {
       TracePrintInternal(opts, utf8_catalog_name.GetStatusRecord().message);
       return;
     }
     catalog_name_len = utf8_catalog_name->length();
-    sql_char_catelog = ToSqlChar(utf8_catalog_name->data());
   }
-
-SQLCHAR* sql_char_schema = nullptr;
+SQLCHAR* sqlchar_category_name = nullptr;
+  if(catalog_name)
+  sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
   
-  if (schema_name && (schema_name_len > 0 || schema_name_len == SQL_NTS)) {
-    StatusRecordOr<std::string> utf8_schema_name = ConvertSQLWCHARToString(schema_name, schema_name_len);
+  StatusRecordOr<std::string> utf8_schema_name;
+  if (schema_name_len > 0 || schema_name_len == SQL_NTS) {
+    utf8_schema_name = ConvertSQLWCHARToString(schema_name, schema_name_len);
     if (!utf8_schema_name) {
       TracePrintInternal(opts, utf8_schema_name.GetStatusRecord().message);
       return;
     }
     schema_name_len = utf8_schema_name->length();
-    sql_char_schema = ToSqlChar(utf8_schema_name->data());
   }
+  SQLCHAR* sqlchar_schema_name = nullptr;
+  if(schema_name)
+  sqlchar_schema_name = ToSqlChar(utf8_schema_name->data());
 
- 
-  SQLCHAR* sql_char_table_name = nullptr;
-  if (table_name && (table_name_len > 0 || table_name_len == SQL_NTS)) {
-     StatusRecordOr<std::string> utf8_table_name = ConvertSQLWCHARToString(table_name, table_name_len);
+  StatusRecordOr<std::string> utf8_table_name;
+  if (table_name_len > 0 || table_name_len == SQL_NTS) {
+    utf8_table_name = ConvertSQLWCHARToString(table_name, table_name_len);
     if (!utf8_table_name) {
       TracePrintInternal(opts, utf8_table_name.GetStatusRecord().message);
       return;
     }
     table_name_len = utf8_table_name->length();
-    sql_char_table_name = ToSqlChar(utf8_table_name->data());
   }
+   SQLCHAR* sqlchar_table_name = nullptr;
+  if(table_name)
+  sqlchar_table_name = ToSqlChar(utf8_table_name->data());
 
-  
-  SQLCHAR* sql_char_table_type = nullptr;
-  if (table_type && (table_type_len > 0 || table_type_len == SQL_NTS)) {
-    StatusRecordOr<std::string> utf8_table_type = ConvertSQLWCHARToString(table_type, table_type_len);
+  StatusRecordOr<std::string> utf8_table_type;
+  if (table_type_len > 0 || table_type_len == SQL_NTS) {
+    utf8_table_type = ConvertSQLWCHARToString(table_type, table_type_len);
     if (!utf8_table_type) {
       TracePrintInternal(opts, utf8_table_type.GetStatusRecord().message);
       return;
     }
     table_type_len = utf8_table_type->length();
-    sql_char_table_type = ToSqlChar(utf8_table_type->data());
   }
+   SQLCHAR* sqlchar_table_type = nullptr;
+  if(table_type)
+  sqlchar_table_type = ToSqlChar(utf8_table_type->data());
 
   TraceFunctionEntry_SQLTables(
-      statement_handle, sql_char_catelog, catalog_name_len,
-      sql_char_schema, schema_name_len,
-      sql_char_table_name, table_name_len,
-      sql_char_table_type, table_type_len, opts);
+      statement_handle, sqlchar_category_name, catalog_name_len,
+      sqlchar_schema_name, schema_name_len,
+      sqlchar_table_name, table_name_len,
+      sqlchar_table_type, table_type_len, opts);
 }
 
 void TraceFunctionExit_SQLTablesW(SQLRETURN ret_code, TraceOptions& opts) {
