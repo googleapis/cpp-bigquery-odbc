@@ -1189,12 +1189,12 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                          updated_out_attr_status.GetStatusRecord().message);
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
-    *valueStringLen = wcslen(updated_out_attr_status->data());
+    *valueStringLen = wcslen(updated_out_attr_status->data()) * sizeof(SQLWCHAR);
     std::vector<SQLWCHAR> sql_w_str(
         updated_out_attr_status->c_str(),
-        updated_out_attr_status->c_str() + *valueStringLen / sizeof(SQLWCHAR));
+        updated_out_attr_status->c_str() + *valueStringLen);
     sql_w_str.emplace_back(L'\0');
-    std::memcpy(value, sql_w_str.data(), sql_w_str.size() * sizeof(SQLWCHAR));
+    std::memcpy(value, sql_w_str.data(), sql_w_str.size());
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
