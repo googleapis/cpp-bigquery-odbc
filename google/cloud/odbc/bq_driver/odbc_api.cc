@@ -1183,7 +1183,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
   if (SQL_SUCCEEDED(rc) && conn_attr.GetAttributeValueType(attribute) ==
                                ConnectionValueType::kSqlChr) {
     updated_out_attr_status =
-        ConvertSQLPointerToSQLWChar(updated_attrib_val, valueBufferLen);
+        ConvertSQLPointerToSQLWChar(updated_attrib_val, SQL_NTS);
     if (!updated_out_attr_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_out_attr_status.GetStatusRecord().message);
