@@ -40,33 +40,33 @@ std::string const kCatalogDatasetTableWithoutPKFull =
 RowWiseResults const kCatalogPrimaryKeysExpected{
     {{1, "bigquery-devtools-drivers"},
      {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
-     {3, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK"},
+     {3, kCatalogDatasetTableWithPK},
      {4, "StringField"},
      {5, "1"},
-     {6, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK.pk$"}},
+     {6, kCatalogDatasetTableWithPK + ".pk$"}},
     {{1, "bigquery-devtools-drivers"},
      {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
-     {3, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK"},
+     {3, kCatalogDatasetTableWithPK},
      {4, "IntField"},
      {5, "2"},
-     {6, "ODBC_SQLPrimaryKeys_TABLE_WITH_PK.pk$"}},
+     {6, kCatalogDatasetTableWithPK + ".pk$"}},
 };
 
 RowWiseResults const kCatalogForeignKeysExpected{
     {
         {1, "bigquery-devtools-drivers"},
         {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
-        {3, "ODBC_SQLForeignKeys_TABLE_CUSTOMER"},
+        {3, kTableCustomer},
         {4, "CustId"},
         {5, "bigquery-devtools-drivers"},
         {6, "ODBC_TEST_DATASET_CATALOG_FNS"},
-        {7, "ODBC_SQLForeignKeys_TABLE_ORDERS"},
+        {7, kTableOrders},
         {8, "CustId"},
         {9, "1"},
         {10, "NULL"},
         {11, "NULL"},
-        {12, "ODBC_SQLForeignKeys_TABLE_ORDERS.fk$1"},
-        {13, "ODBC_SQLForeignKeys_TABLE_CUSTOMER.pk$"},
+        {12, kTableOrders + ".fk$1"},
+        {13, kTableCustomer + ".pk$"},
         {14, "7"},
     },
 };
@@ -728,8 +728,6 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
 // so the tests can be run for both Simba and BQ drivers.
 ///////////////////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -745,9 +743,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
+// TODO(sb/397489325): Enable the test after the SQLFetch bug is fixed
+TEST(CatalogTest, DISABLED_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -762,8 +759,6 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
 }
 
 TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -777,9 +772,8 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
+// TODO(b/397489325): Enable the test after the SQLFetch bug is fixed.
+TEST(CatalogTest, DISABLED_ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -800,8 +794,6 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
 // for both BQ and Simba drivers.
 /////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -825,8 +817,6 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -849,8 +839,6 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -873,8 +861,6 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -898,8 +884,6 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName_ANSI) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -921,8 +905,6 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable_ANSI) {
 }
 
 TEST(CatalogTest, SQLForeignKeys_With_FkTableName_ANSI) {
-  // TODO(b/394543371): Enable this when the bug is fixed
-  GTEST_SKIP() << "Skipping this because of rate limits";
   auto conn = std::make_shared<ODBCHandles>();
   // Connect to DS
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
