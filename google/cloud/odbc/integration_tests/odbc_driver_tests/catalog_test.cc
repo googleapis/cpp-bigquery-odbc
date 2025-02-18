@@ -377,6 +377,7 @@ TEST(CatalogTest, SQLTables_AllProjects) {
       Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "");
 
   bool project_found = false;
+  std::cout<<"results size "<<results.size()<<std::endl;
   for (auto const& result : results) {
     std::cout<<"result.project_name.value() "<<result.project_name.value()<<std::endl;
     project_found =
