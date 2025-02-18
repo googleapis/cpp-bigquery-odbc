@@ -3218,8 +3218,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
         tableName, tableNameLen, tableType, tableTypeLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  std::string catalog_name_str(reinterpret_cast<char*>(catalogName));
-  StatusRecordOr<std::string> utf8_catalog_name = catalog_name_str;
+  StatusRecordOr<std::string> utf8_catalog_name;
  
   if (catalogName && (catalogNameLen > 0 || catalogNameLen == SQL_NTS)) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
@@ -3231,8 +3230,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     catalogNameLen = utf8_catalog_name->length();
   }
 
-  std::string schema_name_str(reinterpret_cast<char*>(schemaName));
-  StatusRecordOr<std::string> utf8_schema_name = schema_name_str;
+  StatusRecordOr<std::string> utf8_schema_name;
   if (schemaName && (schemaNameLen > 0 || schemaNameLen == SQL_NTS)) {
     utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
@@ -3243,8 +3241,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     schemaNameLen = utf8_schema_name->length();
   }
 
-  std::string table_name_str(reinterpret_cast<char*>(tableName));
-  StatusRecordOr<std::string> utf8_table_name = table_name_str;
+  StatusRecordOr<std::string> utf8_table_name;
   if (tableName && (tableNameLen > 0 || tableNameLen == SQL_NTS)) {
     utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
@@ -3255,8 +3252,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     tableNameLen = utf8_table_name->length();
   }
 
-  std::string table_type_str(reinterpret_cast<char*>(tableType));
-  StatusRecordOr<std::string> utf8_table_type = table_type_str;
+  StatusRecordOr<std::string> utf8_table_type;
   if (tableType && (tableTypeLen > 0 || tableTypeLen == SQL_NTS)) {
     utf8_table_type = ConvertSQLWCHARToString(tableType, tableTypeLen);
     if (!utf8_table_type) {
