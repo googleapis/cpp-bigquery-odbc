@@ -1194,6 +1194,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
         updated_out_attr_status->c_str(),
         updated_out_attr_status->c_str() + *valueStringLen);
     sql_w_str.emplace_back(L'\0');
+    std::memset(value, '\0', valueBufferLen);
     std::memcpy(value, sql_w_str.data(), sql_w_str.size());
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
@@ -2685,7 +2686,6 @@ SQLRETURN SQL_API SQLDescribeColW(
     std::vector<SQLWCHAR> sql_w_str(utf16_col_name->begin(),
                                     utf16_col_name->end());
     sql_w_str.emplace_back(L'\0');
-    std::cout<<"column_name_string_len "<<column_name_string_len<<" ** "<<sizeof(SQLWCHAR)<<std::endl;
     std::memset(columnName, '\0', columnNameBufferLen);
     std::memcpy(columnName, sql_w_str.data(),
                 column_name_string_len * sizeof(SQLWCHAR));
