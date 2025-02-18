@@ -378,6 +378,7 @@ TEST(CatalogTest, SQLTables_AllProjects) {
 
   bool project_found = false;
   for (auto const& result : results) {
+    std::cout<<"result.project_name.value() "<<result.project_name.value()<<std::endl;
     project_found =
         project_found || (kCatalogName == result.project_name.value());
     EXPECT_FALSE(result.dataset_name.has_value());
