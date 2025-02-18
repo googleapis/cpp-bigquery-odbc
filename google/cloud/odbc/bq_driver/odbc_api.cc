@@ -1189,7 +1189,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                          updated_out_attr_status.GetStatusRecord().message);
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
-    //*valueStringLen = wcslen(updated_out_attr_status->data()) * sizeof(SQLWCHAR);
+    *valueStringLen = wcslen(updated_out_attr_status->data()) * sizeof(SQLWCHAR);
     std::vector<SQLWCHAR> sql_w_str(
         updated_out_attr_status->c_str(),
         updated_out_attr_status->c_str() + *valueStringLen);
