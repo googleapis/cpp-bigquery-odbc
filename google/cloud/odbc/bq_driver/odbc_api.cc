@@ -867,7 +867,7 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   rc = ::google::cloud::odbc_bq_driver::SQLGetInfoInternal(
       connectionHandle, infoType, info_val_buffer, infoValueBufferLen,
       &info_val_buffer_len);
-
+std::cout<<"infoValue "<<infoValue<<std::endl;
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) && info_val_buffer_len > 0) {
     if (IsInfoTypeString(infoType)) {
