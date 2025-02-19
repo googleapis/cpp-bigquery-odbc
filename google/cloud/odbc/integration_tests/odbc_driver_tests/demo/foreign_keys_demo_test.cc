@@ -67,7 +67,7 @@ inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
 // TODO(b/397489325): Enable the test after the SQLFetch bug is fixed
 TEST(CatalogDemoTest, DISABLED_SQLForeignKeys) {
   int res_cols = 11;
-
+  // TODO(b/397489325) : Create the table.
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   // 1) Connect to the data source.
