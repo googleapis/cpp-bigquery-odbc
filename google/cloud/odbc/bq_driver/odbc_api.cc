@@ -3031,10 +3031,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
                          utf16_msg_txt.GetStatusRecord().message);
       return utf16_msg_txt.GetCalculatedReturnCode();
     }
-    // std::vector<SQLWCHAR> sql_w_str(utf16_msg_txt->begin(),
-    //                                 utf16_msg_txt->end());
-    // sql_w_str.emplace_back(L'\0');
-    // std::memset(messageText, '\0', messageTextBufferLen);
+    std::memset(messageText, '\0', messageTextBufferLen);
     std::memcpy(messageText, (SQLPOINTER)ToSqlWChar(utf16_msg_txt->data()),
                 message_text_buffer_len * sizeof(SQLWCHAR));
   }

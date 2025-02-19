@@ -50,7 +50,6 @@ TEST(DiagnosticsTest, SQLGetDiagRec) {
         actual_message,
         ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
-  std::cout<<"actual_message "<<actual_message<<std::endl;
   EXPECT_EQ(actual_message.size(), string_length_ptr);
 }
 
