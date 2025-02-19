@@ -304,10 +304,12 @@ void AssertBQDriverSQLGetInfo(std::shared_ptr<ODBCHandles> conn) {
   }
   for (auto elem : kUnsupportedEmptyCharMap) {
     auto info_type = elem.first;
+    std::cout<<"sqlCharBuf before "<<(char*)sqlCharBuf<<std::endl;
     status = SQLGetInfo(conn->hdbc, info_type,
                         reinterpret_cast<SQLPOINTER>(sqlCharBuf), kBufferLength,
                         &out_len);
     ASSERT_TRUE(SQL_SUCCEEDED(status));
+    std::cout<<"sqlCharBuf after "<<(char*)sqlCharBuf<<std::endl;
     std::string actual_val = (char*)sqlCharBuf;
     EXPECT_EQ("", actual_val);
   }
