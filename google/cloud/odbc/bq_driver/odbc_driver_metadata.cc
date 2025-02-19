@@ -270,13 +270,9 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
     return LogAndReturnCode(handle, rs_status_record_or);
   }
 
-  if (!rs_status_record_or->rows.empty()) {
-    // Store the resultset in statement handle.
-    handle.SetResultSet(*rs_status_record_or);
-    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  } else {
-    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-  }
+  // Store the resultset in statement handle.
+  handle.SetResultSet(*rs_status_record_or);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return rc;
 }
 
@@ -316,13 +312,9 @@ SQLRETURN SQLForeignKeysInternal(
     return LogAndReturnCode(handle, rs_status_record_or);
   }
 
-  if (!rs_status_record_or->rows.empty()) {
-    // Store the resultset in statement handle.
-    handle.SetResultSet(*rs_status_record_or);
-    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  } else {
-    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-  }
+  // Store the resultset in statement handle.
+  handle.SetResultSet(*rs_status_record_or);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return rc;
 }
 
@@ -396,12 +388,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, result_set_status);
   }
 
-  if (!result_set_status->rows.empty()) {
-    handle.SetResultSet(*result_set_status);
-    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  } else {
-    handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-  }
+  handle.SetResultSet(*result_set_status);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
 }
 

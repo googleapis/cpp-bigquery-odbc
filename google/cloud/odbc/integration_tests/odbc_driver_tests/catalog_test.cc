@@ -743,8 +743,7 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/397489325): Enable the test after the SQLFetch bug is fixed
-TEST(CatalogTest, DISABLED_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -772,8 +771,7 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/397489325): Enable the test after the SQLFetch bug is fixed.
-TEST(CatalogTest, DISABLED_ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
+TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
