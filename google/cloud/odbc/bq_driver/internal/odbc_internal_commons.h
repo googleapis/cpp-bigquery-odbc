@@ -22,6 +22,10 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "absl/types/variant.h"
+#include <arrow/api.h>
+#include <arrow/io/memory.h>
+#include <arrow/ipc/api.h>
+#include <arrow/ipc/reader.h>
 #include <chrono>
 #include <cstring>
 #include <sstream>
@@ -91,7 +95,7 @@ enum BQDataType {
 struct ColumnSchema {
   int col_index;
   BQDataType col_type;
-  bool is_mode_repeated;
+  bool is_mode_repeated = false;
 };
 bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
@@ -130,6 +134,8 @@ struct ResultSet {
   mutable int cursor{-1};  // points before the next row to fetch
   mutable TranslatedData translated_data;
 };
+
+using RowSchemaRead = std::vector<arrow::Type>;
 
 DSValue const kNullValue{0};
 

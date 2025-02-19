@@ -43,6 +43,8 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
+find_package(Arrow REQUIRED)
+
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
 if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT

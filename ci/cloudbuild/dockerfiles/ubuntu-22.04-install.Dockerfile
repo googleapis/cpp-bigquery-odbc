@@ -20,9 +20,13 @@ RUN apt-get update && \
         automake \
         autotools-dev \
         build-essential \
+        # Dependency for arrow
+        bison \
         clang \
         cmake \
         curl \
+        # Dependency for arrow
+        flex \
         gawk \
         git \
         gcc \
@@ -239,6 +243,11 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
   ./configure --enable-gui=no && \
   make && \
   make install -j "$(nproc)"
+
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh

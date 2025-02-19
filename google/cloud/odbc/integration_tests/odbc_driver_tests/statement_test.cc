@@ -440,6 +440,41 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecDirect_htapi) {
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(
+      Connect(kDefaultConnectionString + ";HTAPI_ActivationThreshold=0", conn),
+      SQL_SUCCESS);
+  std::string query =
+      R"(SELECT )"
+      R"(CAST(123 AS INT64) AS int_col1,)"
+      R"('example string' AS str_col,)"
+      R"(CAST(3.14 AS FLOAT64) AS float_col,)"
+      R"(TRUE AS bool_col,)"
+      R"(CAST('Hello, world!' AS BYTES) AS bytes_col,)"
+      R"(CURRENT_TIMESTAMP() AS timestamp_col,)"
+      R"(TIME(DATETIME '2024-06-01 12:34:56') AS time_col,)"
+      R"(DATETIME(TIMESTAMP '2024-05-01 08:00:00') AS datetime_col,)"
+      R"(DATE '2023-04-01' AS date_col,)"
+      R"(NUMERIC '12345.6789' AS numeric_col,)"
+      R"(BIGNUMERIC '9876543210987654321.123456789012345678' AS bignumeric_col,)"
+      R"(PARSE_JSON('{"name": "John", "age": 30}') AS json_col,)"
+      R"([3, 4, 5] AS array_int_col,)"
+      R"([b"hello", b"\x01\x02\x03"] AS array_binary_col,)"
+      R"(STRUCT(1 AS a, 'b' AS b) AS struct_col;)";
+  // status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  // CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  RowWiseResults const kValidationData{
+      {{1, "apple"}, {2, "ball"}},
+  };
+  // The table name here doesn't matter because we didn't create one.
+  Table table("Random_table_name");
+  RowWiseResults const& results = table.Fetch(conn, query);
+  VerifyRowWiseResults(results, kValidationData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLExecDirectW) {

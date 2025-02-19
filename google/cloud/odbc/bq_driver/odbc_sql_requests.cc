@@ -267,7 +267,6 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   } else {
     ds_status_record_or = FetchBQData(conn_handle, post_request);
   }
-
   if (!ds_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
     return ds_status_record_or.GetStatusRecord();
