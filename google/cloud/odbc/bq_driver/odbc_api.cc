@@ -3021,7 +3021,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
     return utf16_sql_state.GetCalculatedReturnCode();
   }
   std::memcpy(sqlState, ToSqlWChar(utf16_sql_state->data()),
-                utf16_sql_state->size());
+                utf16_sql_state->size() * sizeof(SQLWCHAR));
 
   if (message_text_buffer_len > 0) {
     StatusRecordOr<std::wstring> utf16_msg_txt =
