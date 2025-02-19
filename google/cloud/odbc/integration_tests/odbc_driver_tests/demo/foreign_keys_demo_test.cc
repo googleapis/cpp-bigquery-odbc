@@ -64,10 +64,8 @@ inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
 
 }  // namespace
 
-// TODO(b/397489325): Enable the test after the SQLFetch bug is fixed
-TEST(CatalogDemoTest, DISABLED_SQLForeignKeys) {
+TEST(CatalogDemoTest, SQLForeignKeys) {
   int res_cols = 11;
-  // TODO(b/397489325) : Create the table.
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   // 1) Connect to the data source.
@@ -75,11 +73,21 @@ TEST(CatalogDemoTest, DISABLED_SQLForeignKeys) {
   ASSERT_EQ(Connect("DSN=SampleDSN", conn, true), SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
-  // (2) Bind Columns
+  // 2) Create required tables for foreign keys.
+  // Create Customer Table.
+  CreateTableDirect(conn, kTableCustomerSchema);
+  // Create Orders Table.
+  CreateTableDirect(conn, kTableOrdersSchema);
+  // Create Lines Table.
+  CreateTableDirect(conn, kTableLinesSchema);
+  std::cout << "Successfully created foreign key tables" << std::endl
+            << std::endl;
+  // Currently tables are empty when doing demo some data should be inserted.
+  // (3) Bind Columns
   TestingDataBuffer columns[res_cols];
   std::cout << "Binding Columns..." << std::endl << std::endl;
   BindColumns(conn, columns, res_cols);
-  // (3) Fetching Foreign Keys.
+  // (4) Fetching Foreign Keys.
   std::cout << "Fetching Foreign Keys from the data source..." << std::endl
             << std::endl;
 

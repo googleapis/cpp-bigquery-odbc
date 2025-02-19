@@ -31,12 +31,6 @@ std::string const kMaterializedView =
     kIsBqDriver ? "MATERIALIZED VIEW" : "MATERIALIZED_VIEW";
 std::string const kSnapshot = "SNAPSHOT";
 
-// Tables and schema for SQLPrimaryKeys and SQLForeignKeys.
-std::string const kCatalogDatasetTableWithPKFull =
-    kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
-std::string const kCatalogDatasetTableWithoutPKFull =
-    kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
-
 RowWiseResults const kCatalogPrimaryKeysExpected{
     {{1, "bigquery-devtools-drivers"},
      {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
@@ -70,51 +64,6 @@ RowWiseResults const kCatalogForeignKeysExpected{
         {14, "7"},
     },
 };
-
-std::string const kTableWithPKSchema =
-    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
-    " "
-    "(StringField STRING, IntField INT64, FloatField FLOAT64, "
-    "PRIMARY KEY (StringField, IntField) NOT ENFORCED)";
-
-std::string const kTableWithOutPKSchema =
-    "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithoutPKFull +
-    " "
-    "(StringField STRING, IntField INT64, FloatField FLOAT64)";
-
-// Tables and schema for SQLForeignKeys.
-std::string const kTableOrdersFull = kCatalogFnsDataset + "." + kTableOrders;
-std::string const kTableLinesFull = kCatalogFnsDataset + "." + kTableLines;
-std::string const kTableCustomerFull =
-    kCatalogFnsDataset + "." + kTableCustomer;
-
-std::string const kTableCustomerSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableCustomerFull +
-    " "
-    "(CustId STRING, CustName STRING, CustAddress STRING, "
-    "PRIMARY KEY (CustId) NOT ENFORCED)";
-
-std::string const kTableOrdersSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableOrdersFull +
-    " "
-    "(OrderId STRING, CustId STRING, OrderName STRING, OrderStatus STRING, "
-    "PRIMARY KEY (OrderId) NOT ENFORCED, "
-    "FOREIGN KEY (CustId) "
-    "REFERENCES " +
-    kTableCustomerFull +
-    " (CustId) "
-    "NOT ENFORCED)";
-
-std::string const kTableLinesSchema =
-    "CREATE TABLE IF NOT EXISTS " + kTableLinesFull +
-    " "
-    "(LineItemId STRING, OrderId STRING, Quantity INT64, "
-    "PRIMARY KEY (LineItemId) NOT ENFORCED, "
-    "FOREIGN KEY (OrderId) "
-    "REFERENCES " +
-    kTableOrdersFull +
-    " (OrderId) "
-    "NOT ENFORCED)";
 
 // Table and Schema used to test SQLColumns API
 std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE_LATEST_2";
