@@ -96,6 +96,16 @@ void ConnectionHandle::SetUp(Section& dsn_section,
     attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
   }
 
+  // Populate HTAPI related configurations
+  std::string use_default_large_results_dataset =
+      dsn_section["USEDEFAULTLARGERESULTSDATASET"];
+  dsn_.use_default_large_results_dataset =
+      (use_default_large_results_dataset != "0");
+  dsn_.large_results_dataset_id = dsn_section["LARGERESULTSDATASETID"];
+  std::string allow_htapi = dsn_section["ALLOWHTAPIFORLARGERESULTS"];
+  dsn_.allow_htapi = (allow_htapi == "1");
+  dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
+
   // Populate BYOID properties from DSN section.
   dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
   dsn_.byoid_creds_src = dsn_section["BYOID_CREDENTIALSOURCE"];

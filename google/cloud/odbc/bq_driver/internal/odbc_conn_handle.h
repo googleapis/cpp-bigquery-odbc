@@ -57,6 +57,14 @@ struct Dsn {
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
   /////////////////////////////////////////////////////////////////
+  // Optional Properties needed for HTAPI.
+  /////////////////////////////////////////////////////////////////
+  bool use_default_large_results_dataset = true;
+  std::string large_results_dataset_id;
+  bool allow_htapi = false;
+  std::string htapi_activation_threshold;
+
+  /////////////////////////////////////////////////////////////////
   // Optional BYOID Properties needed for external authentication.
   /////////////////////////////////////////////////////////////////
   // The audience which the token is intended for

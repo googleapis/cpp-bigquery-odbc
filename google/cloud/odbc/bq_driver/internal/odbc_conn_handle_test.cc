@@ -109,6 +109,32 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.byoid_token_url, kDefaultTokenUrl);
 }
 
+TEST(ConnectionHandle, DsnSetup_HTAPI_DefaultValues) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.use_default_large_results_dataset);
+  EXPECT_FALSE(actual.allow_htapi);
+}
+
+TEST(ConnectionHandle, DsnSetup_HTAPI_Basic) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["USEDEFAULTLARGERESULTSDATASET"] = "0";
+  dsn_section["LARGERESULTSDATASETID"] = "large_dataset";
+  dsn_section["ALLOWHTAPIFORLARGERESULTS"] = "1";
+  dsn_section["HTAPI_ACTIVATIONTHRESHOLD"] = "4";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
+
+  EXPECT_FALSE(actual.use_default_large_results_dataset);
+  EXPECT_EQ(actual.large_results_dataset_id, "large_dataset");
+  EXPECT_TRUE(actual.allow_htapi);
+  EXPECT_EQ(actual.htapi_activation_threshold, "4");
+}
+
 TEST(ConnectionHandle, DsnSetup_BYOID) {
   ConnectionHandle conn_handle;
   Section dsn_section;
