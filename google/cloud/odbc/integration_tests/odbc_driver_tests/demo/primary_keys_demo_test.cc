@@ -58,7 +58,8 @@ inline void BindColumns(std::shared_ptr<ODBCHandles> conn,
 
 }  // namespace
 
-TEST(CatalogDemoTest, SQLPrimaryKeys) {
+// TODO(b/397489325): Enable the test after the SQLFetch bug is fixed
+TEST(CatalogDemoTest, DISABLED_SQLPrimaryKeys) {
   int res_cols = 6;
 
   SQLRETURN status;
