@@ -919,6 +919,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+<<<<<<< HEAD
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
    std::vector<std::string>type_names;
@@ -958,6 +959,9 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
    }
 }
 
+=======
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+>>>>>>> 78345d65 ( fix : compilation error fix)
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
