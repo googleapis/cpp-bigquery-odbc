@@ -59,6 +59,8 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
                      octet_length_ptr};
   StatusRecord status_record;
   switch (bq_data_type) {
+    case BQDataType::kNumeric:
+      return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
     case BQDataType::kBigNumeric:
       return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
     case BQDataType::kInt64:
