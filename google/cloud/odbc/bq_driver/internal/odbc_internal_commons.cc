@@ -407,6 +407,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
+          case BQDataType::kBigNumeric: {
+            SQLDOUBLE d_data = std::stod(data);
+            ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
+            break;
+          }
           case BQDataType::kString: {
             StringToDSValue(data, row_val);
             break;
