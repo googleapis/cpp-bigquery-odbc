@@ -40,6 +40,7 @@ enum class StmtStates {
   kStatementExecutedWithRs,
   kNeedsParams,
   kNeedsPutData,
+  kStatementReadyForExecution,
 };
 
 class ConnectionHandle;
@@ -196,6 +197,16 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
+  SQLUSMALLINT GetCurrentParameterIndex() {
+    return (current_param_index_ < buffered_parameters_.size())
+               ? current_param_index_
+               : -1;
+  }
+
+  std::vector<BufferedParameterData> GetBufferedParameters() {
+    return buffered_parameters_;
+  }
+
   inline void SetParamNum(int param_num) { param_num_ = param_num; }
   inline int GetParamNum() { return param_num_; }
 
@@ -203,6 +214,7 @@ class StatementHandle : public Handle {
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
+  SQLUSMALLINT current_param_index_ = -1;
 
  private:
   std::shared_ptr<Query> query_;
@@ -211,6 +223,7 @@ class StatementHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::string cursor_name_;
   DSResults ds_results_;
+  std::vector<BufferedParameterData> buffered_parameters_;
   mutable std::mutex statement_handle_mutex_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
