@@ -147,6 +147,11 @@ class StatementHandle : public Handle {
     return prepared_job_;
   }
 
+  void SetPreparedJob(
+      ::google::cloud::bigquery_v2_minimal_internal::Job const& job) {
+    prepared_job_ = job;
+  }
+
   void SetNullPreparedJob() { prepared_job_ = std::nullopt; }
 
   // `StmtStates` will get updated when SQLExecute is called.
@@ -196,10 +201,17 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
+  SQLUSMALLINT GetCurrentParamIndex() const { return current_param_index_; }
+
+  inline void SetCurrentParamIndex(SQLUSMALLINT param_index) {
+    current_param_index_ = param_index;
+  }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
+  SQLUSMALLINT current_param_index_ = 0;
 
  private:
   std::shared_ptr<Query> query_;
@@ -224,6 +236,8 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
   bool is_statement_prepared_ = false;
+
+  int param_num_ = 0;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
