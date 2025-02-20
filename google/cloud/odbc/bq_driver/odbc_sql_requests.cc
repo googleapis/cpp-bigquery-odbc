@@ -931,4 +931,124 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   return LogAndReturnCode(stmt_handle, status);
 }
 
+SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
+                             SQLLEN str_len_or_ind_ptr) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  // If in asynchronous mode, indicate data transfer is still ongoing
+  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
+    return SQL_STILL_EXECUTING;
+  }
+
+  // Validate Statement State
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error: Incorrect statement state."};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  // Get the current parameter index
+  SQLUSMALLINT param_index = stmt_handle.GetCurrentParameterIndex();
+  if (param_index == -1) {
+    StatusRecord status_record = {SQLStates::k_HY000(),
+                                  "No parameter currently expecting data."};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  auto buffered_params = stmt_handle.GetBufferedParameters();
+  if (param_index >= buffered_params.size()) {
+    return SQL_ERROR;  // Invalid index
+  }
+
+  auto& param = buffered_params[param_index];
+
+  // Ensure parameter was marked for deferred execution (SQL_DATA_AT_EXEC)
+  if (!param.is_deferred) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Invalid function sequence: Parameter not deferred."};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
+  // Retrieve APD descriptor handles
+  DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+
+  // Fetch existing descriptor record
+  DescriptorRecord temp_apd_record;
+  if (apd.HasDescriptorRecord(param_index)) {
+    temp_apd_record = apd.GetDescriptorRecord(param_index);
+  }
+
+  // Handle NULL Data
+  if (str_len_or_ind_ptr == SQL_NULL_DATA) {
+    param.is_null = true;
+    param.buffer.clear();
+    param.is_completed_ = true;  // Mark as completed with NULL
+    temp_apd_record.data_ptr = nullptr;
+    temp_apd_record.octet_length = 0;
+    temp_apd_record.indicator_ptr = nullptr;
+  } else {
+    param.is_null = false;
+
+    // Validate Length Indicator
+    if (str_len_or_ind_ptr < 0) {
+      StatusRecord status_record = {
+          SQLStates::k_HY090(), "Invalid string length or indicator value."};
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
+
+    // Ensure dynamic buffer allocation
+    if (param.buffer.capacity() < param.buffer.size() + str_len_or_ind_ptr) {
+      try {
+        param.buffer.reserve(param.buffer.size() + str_len_or_ind_ptr);
+      } catch (std::bad_alloc const&) {
+        StatusRecord status_record = {SQLStates::k_HY001(),
+                                      "Memory allocation error."};
+        return LogAndReturnCode(stmt_handle, status_record);
+      }
+    }
+
+    // Append Data to Buffer
+    param.buffer.insert(param.buffer.end(), static_cast<char*>(data),
+                        static_cast<char*>(data) + str_len_or_ind_ptr);
+
+    // Update Descriptor Record
+    temp_apd_record.data_ptr = data;
+    temp_apd_record.octet_length = str_len_or_ind_ptr;
+    temp_apd_record.indicator_ptr = &str_len_or_ind_ptr;
+
+    // Mark Parameter as Complete if Fully Buffered
+    if (param.buffer.size() >= param.expected_size) {
+      param.is_completed_ = true;
+    }
+  }
+
+  // Bind updated descriptor record
+  apd.BindNewDescriptorRecord(param_index, temp_apd_record);
+
+  // Check if All Parameters are Buffered
+  bool all_buffered = std::all_of(buffered_params.begin(), buffered_params.end(),
+    [](const auto& param) { return param.is_completed_; });
+
+  if (all_buffered) {
+    // Prepare Final Query Parameters for Execution
+    auto& query_params = stmt_handle.GetQueryParameters();
+    for (size_t i = 0; i < query_params.size(); ++i) {
+      query_params[i].parameter_value.value.assign(
+          buffered_params[i].buffer.begin(), buffered_params[i].buffer.end());
+    }
+    stmt_handle.SetStmtState(StmtStates::kStatementReadyForExecution);
+  }
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

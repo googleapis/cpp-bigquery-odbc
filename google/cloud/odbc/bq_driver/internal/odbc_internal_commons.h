@@ -429,6 +429,39 @@ enum class LanguageDialect {
   kLegacySQL = 0,
 };
 
+struct BufferedParameterData {
+  std::vector<char> buffer;
+  bool is_null = false;
+  bool is_deferred = false;
+  size_t expected_size = 0;
+  bool is_completed_ = false;
+
+  void mark_complete() { is_completed_ = true; }
+
+  void allocate(size_t size) {
+    expected_size = size;
+    buffer.reserve(size);
+  }
+
+  [[nodiscard]] bool is_completed() const { return is_completed_; }
+
+  void append(const char* data, size_t length) {
+    if (buffer.size() + length > expected_size) {
+      throw std::overflow_error("Buffer overflow: Data exceeds expected size");
+    }
+    buffer.insert(buffer.end(), data, data + length);
+    if (buffer.size() >= expected_size) {
+      mark_complete();
+    }
+  }
+
+  void set_null() {
+    is_null = true;
+    buffer.clear();
+    mark_complete();
+  }
+};
+    
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H
