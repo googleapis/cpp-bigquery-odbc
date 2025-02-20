@@ -144,8 +144,6 @@ void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
     CheckError(status, "SQLBindCol", conn);
 
     status = SQLFetch(conn->hstmt);
-    std::cout << "Testing row: " << expected.target_c_type << ", "
-              << expected.value << ", " << expected.status << std::endl;
     if (status == SQL_NO_DATA) {
       ++row_count;
       continue;
