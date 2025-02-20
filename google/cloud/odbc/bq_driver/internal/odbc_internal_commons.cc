@@ -537,11 +537,15 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
 StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
+    std::cout << "process query   1 " << std::endl;
+
     return ProcessPostQueryResults(
         absl::get<PostQueryResults>(query_results.data_source_results));
   }
   if (absl::holds_alternative<GetQueryResults>(
           query_results.data_source_results)) {
+    std::cout << "process query   2" << std::endl;
+
     return ProcessGetQueryResults(
         absl::get<GetQueryResults>(query_results.data_source_results));
   }

@@ -159,19 +159,19 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
                      std::string const& table_name) {
   // Prepare data
   SQLCHAR bool_data = SQL_TRUE;
-  SQLLEN bool_len = SQL_DATA_AT_EXEC;
+  SQLLEN bool_len = SQL_LEN_DATA_AT_EXEC(sizeof(bool_data));
 
   SQLLEN int_data = 42;
-  SQLLEN int_len = SQL_DATA_AT_EXEC;
+  SQLLEN int_len = SQL_LEN_DATA_AT_EXEC(sizeof(int_data));
 
   double float_data = 3.14;
-  SQLLEN float_len = SQL_DATA_AT_EXEC;
+  SQLLEN float_len = SQL_LEN_DATA_AT_EXEC(sizeof(float_data));
 
   std::string text_data = "";
-  SQLLEN string_len = SQL_DATA_AT_EXEC;
+  SQLLEN string_len = SQL_LEN_DATA_AT_EXEC(sizeof(text_data));
 
   std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
-  SQLLEN binary_len = SQL_DATA_AT_EXEC;
+  SQLLEN binary_len = SQL_LEN_DATA_AT_EXEC(binary_data.size());
 
   DataField fields[] = {
       {&bool_data, sizeof(bool_data), SQL_C_BIT, SQL_BIT, &bool_len},
@@ -188,7 +188,8 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  for (int i = 0; i < 5; ++i) {
+  int size_of_fields = sizeof(fields) / sizeof(fields[0]);
+  for (int i = 0; i < size_of_fields; ++i) {
     EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT,
                                fields[i].c_type, fields[i].sql_type, 0, 0,
                                nullptr, 0, fields[i].str_len_or_ind_ptr),
@@ -199,7 +200,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   SQLPOINTER param = nullptr;
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < size_of_fields; ++i) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param), SQL_NEED_DATA);
     EXPECT_EQ(SQLPutData(conn->hstmt, fields[i].data_ptr, fields[i].data_size),
               SQL_SUCCESS);
@@ -3101,6 +3102,65 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
   Table table(table_name);
 
+  Schema schema{{"TextField1", "STRING"}, {"TextField2", "STRING"},
+                {"TextField3", "STRING"}, {"TextField4", "STRING"},
+                {"TextField5", "STRING"}, {"TextField6", "STRING"}};
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Prepare and bind parameters
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?, ?, ?, ?)";
+
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  std::string data = "SomeData";
+  SQLULEN param_bytes = kBufferLength;
+  // Indicate that data will be provided with SQLPutData
+  SQLLEN indicator = SQL_LEN_DATA_AT_EXEC(param_bytes);
+  int num_params = schema.size();
+
+  // Use std::vector for dynamic allocation
+  std::vector<SQLLEN> indicator_ptrs(num_params);
+
+  // Bind parameters
+  for (int i = 0; i < schema.size(); i++) {
+    indicator_ptrs[i] = indicator;
+    EXPECT_EQ(
+        SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                         SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator_ptrs[i]),
+        SQL_SUCCESS);
+  }
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  // Scenario 1: Call SQLPutData with mismatched data type
+  int integerData = 10;
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+
+  // Scenario 3: Call SQLPutData with a null pointer but a valid size
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), -2), SQL_ERROR);
+
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+
+  // Cleanup before disconnecting
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLPutDataSpecialCases) {
+  // Test SQLPutData error scenarios with proper sequence and data validation
+
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
+  Table table(table_name);
+
   Schema schema{{"IntField1", "INT64"}, {"TextField2", "STRING"},
                 {"TextField3", "STRING"}, {"TextField4", "STRING"},
                 {"TextField5", "STRING"}, {"TextField6", "STRING"}};
@@ -3179,8 +3239,8 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
 
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA), SQL_SUCCESS);
 
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA), SQL_SUCCESS);
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
   // Cleanup before disconnecting
