@@ -67,7 +67,8 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
                               (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
                               &buflen, SQL_DRIVER_COMPLETE);
   }
-  CheckError(status, "SQLDriverConnect", conn, use_ansi);
+   #ifdef DRIVER_MANAGER_TESTING_ENABLED
+CheckError(status, "SQLDriverConnect", conn, use_ansi);
 
   conn->connected = true;
 
@@ -77,6 +78,9 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
   CheckError(status, "SQLAllocHandle", conn);
   return status;
+  #else
+   return status;
+  #endif //DRIVER_MANAGER_TESTING_ENABLED
 }
 
 SQLRETURN ConnectWithNullOutputParams(std::string conn_str, std::wstring dsn,

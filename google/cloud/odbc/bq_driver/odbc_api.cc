@@ -554,8 +554,6 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                     SQLSMALLINT* outConnectionStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
-  SQLCHAR out_connection_string[kBufferLength] = {0};
-  SQLSMALLINT out_connection_string_len = 0;
   bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
@@ -585,6 +583,14 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
   // in odbc_connection.h.
   // TODO: Internal call should be made with out_connection_string and
   // out_connection_string_len as the output parameters
+  SQLCHAR* out_connection_string = reinterpret_cast<SQLCHAR*>(outConnectionString);
+  SQLSMALLINT out_connection_string_len = 0;
+    rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(connectionHandle,
+                                   ToSqlChar(utf8_in_connection_str->data()),
+                                    inConnectionStringLen,
+                                   out_connection_string,
+                                    outConnectionStringBufferLen,
+                                   &out_connection_string_len);
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) && out_connection_string_len > 0) {
     StatusRecordOr<std::wstring> utf16_out_conn_str =
@@ -594,7 +600,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                          utf16_out_conn_str.GetStatusRecord().message);
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
-    outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
+    std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
+    std::memcpy(outConnectionString, (SQLPOINTER)ToSqlWChar(utf16_out_conn_str->data()),
+                out_connection_string_len * sizeof(SQLWCHAR));
   }
   if (outConnectionStringLen)
     *outConnectionStringLen = out_connection_string_len;
@@ -867,8 +875,9 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
   rc = ::google::cloud::odbc_bq_driver::SQLGetInfoInternal(
       connectionHandle, infoType, info_val_buffer, infoValueBufferLen,
       &info_val_buffer_len);
-std::memset(infoValue, '\0', infoValueBufferLen);
+
   // Handle Unicode conversion of output parameters.
+  std::memset(infoValue, '\0', infoValueBufferLen);
   if (SQL_SUCCEEDED(rc) && info_val_buffer_len > 0) {
     if (IsInfoTypeString(infoType)) {
       StatusRecordOr<std::wstring> utf16_info_val =
@@ -3234,9 +3243,9 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     }
     catalogNameLen = utf8_catalog_name->length();
   }
-  SQLCHAR* sqlchar_category_name = nullptr;
+  SQLCHAR* sqlcharCategoryName = nullptr;
   if(catalogName)
-  sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
+  sqlcharCategoryName = ToSqlChar(utf8_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_schema_name;
   if ((schemaNameLen > 0 || schemaNameLen == SQL_NTS) && schemaName[0] != '\0') {
@@ -3248,9 +3257,9 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     }
     schemaNameLen = utf8_schema_name->length();
   }
-   SQLCHAR* sqlchar_schema_name = nullptr;
+   SQLCHAR* sqlcharSchemaName = nullptr;
   if(schemaName)
-  sqlchar_schema_name = ToSqlChar(utf8_schema_name->data());
+  sqlcharSchemaName = ToSqlChar(utf8_schema_name->data());
 
   StatusRecordOr<std::string> utf8_table_name;
   if ((tableNameLen > 0 || tableNameLen == SQL_NTS) && tableName[0] != '\0') {
@@ -3262,9 +3271,9 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     }
     tableNameLen = utf8_table_name->length();
   }
-  SQLCHAR* sqlchar_table_name = nullptr;
+  SQLCHAR* sqlcharTableName = nullptr;
   if(tableName)
-  sqlchar_table_name = ToSqlChar(utf8_table_name->data());
+  sqlcharTableName = ToSqlChar(utf8_table_name->data());
 
   StatusRecordOr<std::string> utf8_table_type;
   if ((tableTypeLen > 0 || tableTypeLen == SQL_NTS) && tableType[0] != '\0') {
@@ -3276,17 +3285,17 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
     }
     tableTypeLen = utf8_table_type->length();
   }
-  SQLCHAR* sqlchar_table_type = nullptr;
+  SQLCHAR* sqlcharTableType = nullptr;
   if(tableType)
-  sqlchar_table_type = ToSqlChar(utf8_table_type->data());
+  sqlcharTableType = ToSqlChar(utf8_table_type->data());
 
   // Call to common internal function for SQLTables and SQLTablesW
   // in odbc_driver_metadata.h.
   rc = google::cloud::odbc_bq_driver::SQLTablesInternal(
-      statementHandle, sqlchar_category_name, catalogNameLen,
-      sqlchar_schema_name, schemaNameLen,
-      sqlchar_table_name, tableNameLen,
-      sqlchar_table_type, tableTypeLen);
+      statementHandle, sqlcharCategoryName, catalogNameLen,
+      sqlcharSchemaName, schemaNameLen,
+      sqlcharTableName, tableNameLen,
+      sqlcharTableType, tableTypeLen);
   // Handle Unicode conversion of output parameters.
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
