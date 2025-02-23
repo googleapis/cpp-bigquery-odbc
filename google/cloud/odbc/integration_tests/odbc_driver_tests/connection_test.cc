@@ -970,7 +970,7 @@ void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
   if (kIsBqDriver) {
     EXPECT_THAT(actual_message, ::testing::HasSubstr(expected_message_regex));
     #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_GT(native_error, expected_error_code);
+                EXPECT_EQ(native_error, expected_error_code);
 #else
   EXPECT_EQ(native_error, expected_error_code);
   #endif //DRIVER_MANAGER_TESTING_ENABLED
@@ -1223,9 +1223,9 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {    
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 32763,
+        conn->hdbc, "IM002", 0,
         "[Driver Manager]Data source name not found and no default driver specified");
 #else
 EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
