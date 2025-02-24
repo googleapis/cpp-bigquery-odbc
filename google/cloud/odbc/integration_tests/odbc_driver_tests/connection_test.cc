@@ -962,20 +962,14 @@ void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
 
   ASSERT_EQ(diag_status, SQL_SUCCESS);
   EXPECT_STREQ(reinterpret_cast<char*>(sqlstate), expected_sqlstate.c_str());
-  
+  EXPECT_EQ(native_error, expected_error_code);
 
   std::string actual_message(reinterpret_cast<char*>(buf));
   EXPECT_EQ(actual_message.size(), string_length_ptr);
 
   if (kIsBqDriver) {
     EXPECT_THAT(actual_message, ::testing::HasSubstr(expected_message_regex));
-    #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_EQ(native_error, expected_error_code);
-#else
-  EXPECT_EQ(native_error, expected_error_code);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
   } else {
-    EXPECT_EQ(native_error, expected_error_code);
     EXPECT_THAT(actual_message,
                 ::testing::ContainsRegex(expected_message_regex));
   }
@@ -1292,7 +1286,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
   if (kIsBqDriver) {
     #ifdef DRIVER_MANAGER_TESTING_ENABLED
     CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 32763,
+        conn->hdbc, "IM002", 0,
         "[Driver Manager]Data source name not found and no default driver specified");
 #else
 EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
@@ -1349,7 +1343,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
   if (kIsBqDriver) {    
     #ifdef DRIVER_MANAGER_TESTING_ENABLED
     CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 32763,
+        conn->hdbc, "IM002", 0,
         "[Driver Manager]Data source name not found and no default driver specified");
 #else
 CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
