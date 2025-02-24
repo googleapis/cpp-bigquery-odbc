@@ -22,5 +22,42 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                        LPCSTR lpsz_attributes);
 
 std::string ConvertLogLevel(std::string log_level);
+
+std::string const dsn_key = "DSN";
+std::string const email_key = "Email";
+std::string const key_file_path_key = "KeyFilePath";
+std::string const oauth_mechanism_key = "OAuthMechanism";
+std::string const catalog_key = "Catalog";
+std::string const dataset_key = "Dataset";
+std::string const encrypt_data_key = "EncryptData";
+std::string const trusted_certs_key = "TrustedCerts";
+std::string const min_tls_key = "Min_TLS";
+std::string const description_key = "Description";
+std::string const log_level_key = "LogLevel";
+std::string const log_file_key = "LogFile";
+std::string const sql_dialect_key = "SQLDialect";
+std::string const large_results_dataset_key = "LargeResultsDatasetId";
+std::string const encryption_key = "KMSKeyName";
+std::string const rows_per_block_key = "RowsFetchedPerBlock";
+std::string const default_string_length_key = "DefaultStringColumnLength";
+std::string const temp_expiration_key = "LargeResultsTempTableExpirationTime";
+std::string const session_location_key = "SessionLocation";
+std::string const additional_projects_key = "AdditionalProjects";
+std::string const query_properties_key = "QueryProperties";
+std::string const activation_threshold_key = "HTAPI_ActivationThreshold";
+std::string const use_wchar_key = "UseWVarChar";
+std::string const enable_session_key = "EnableSession";
+std::string const htapi_activation_threshold_check_key =
+    "AllowHtapiForLargeResults";
+std::string const allow_large_results_key = "AllowLargeResults";
+std::string const use_default_large_results_dataset_key =
+    "UseDefaultLargeResultsDataset";
+std::string const proxy_check_key = "ProxyEnable";
+std::string const proxy_host_key = "ProxyHost";
+std::string const proxy_port_key = "ProxyPort";
+std::string const proxy_username_key = "ProxyUid";
+std::string const proxy_pwd_key = "ProxyPwd";
+std::string const proxy_pwd_enc_key = "ProxyPwd_Enc";
+
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H

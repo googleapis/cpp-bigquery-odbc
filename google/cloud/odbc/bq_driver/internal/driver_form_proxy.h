@@ -35,8 +35,26 @@ class ProxyOptions {
   void Show(HWND parent);
   HWND GetHwnd() const;
 
+  void SetValues(Section const& attributes_map);
+  inline std::string const& GetProxyCheck() const { return proxy_check_; }
+  inline std::string const& GetProxyHost() const { return proxy_host_; }
+  inline std::string const& GetProxyPort() const { return proxy_port_; }
+  inline std::string const& GetProxyUsername() const { return proxy_username_; }
+  inline std::string const& GetProxyPass() const { return proxy_pwd_enc_; }
+
  private:
   HWND proxy_hwnd;
+
+  // The proxy options form is a child form, and only a single instance of it
+  // should exist at any time.
+  // Since UI interactions are generally not multithreaded and are handled
+  // manually, using a static instance is safe.
+  static std::string proxy_check_;
+  static std::string proxy_host_;
+  static std::string proxy_username_;
+  static std::string proxy_port_;
+  static std::string proxy_pwd_enc_;
+
   static LRESULT CALLBACK ProxyOptProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM ld_param);
   static char const CLASS_NAME[];

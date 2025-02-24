@@ -967,4 +967,43 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
   }
   return status_record;
 }
+#ifdef _WIN32
+std::string EncryptPassword(std::string const& password) {
+  DATA_BLOB input, output;
+  std::string hex_result;
+  input.pbData = (BYTE*)password.data();
+  input.cbData = static_cast<DWORD>(password.size());
+
+  if (CryptProtectData(&input, nullptr, nullptr, nullptr, nullptr, 0,
+                       &output)) {
+    std::vector<uint8_t> encrypted_data(output.pbData,
+                                        output.pbData + output.cbData);
+    BytesToHex(encrypted_data, hex_result);
+    LocalFree(output.pbData);  // Free memory allocated by CryptProtectData
+    hex_result = hex_result.substr(2);
+  } else {
+    hex_result.clear();  // Ensures an empty string in case of failure
+  }
+  return hex_result;
+}
+
+std::string DecryptPassword(std::string const& encrypted_hex) {
+  std::vector<uint8_t> encrypted_data = HexToBytes(encrypted_hex);
+  DATA_BLOB input, output;
+  std::string decrypted_password;
+  input.pbData = encrypted_data.data();
+  input.cbData = static_cast<DWORD>(encrypted_data.size());
+
+  if (CryptUnprotectData(&input, nullptr, nullptr, nullptr, nullptr, 0,
+                         &output)) {
+    decrypted_password.assign(reinterpret_cast<char*>(output.pbData),
+                              output.cbData);
+    LocalFree(output.pbData);  // Free memory allocated by CryptUnprotectData
+  } else {
+    decrypted_password.clear();  // Ensures an empty string in case of failure
+  }
+  return decrypted_password;
+}
+#endif  //_WIN32
+
 }  // namespace google::cloud::odbc_bq_driver_internal

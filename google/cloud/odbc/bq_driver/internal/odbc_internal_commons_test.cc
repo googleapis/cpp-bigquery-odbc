@@ -1327,4 +1327,33 @@ TEST(ConvertUnixTimestampToTimestampStructTest, FractionalTimestamp) {
   ASSERT_EQ(timestamp_struct.second, 0);
   ASSERT_EQ(timestamp_struct.fraction, 123456);  // Microseconds (fraction part)
 }
+
+#ifdef _WIN32
+TEST(EncryptPassword, EncryptAndDecryptPassword) {
+  std::string pass = "abc";
+  std::string encrypted_pass = EncryptPassword(pass);
+  std::string decrypted_pass = DecryptPassword(encrypted_pass);
+  EXPECT_EQ(pass, decrypted_pass);
+}
+
+TEST(EncryptPassword, DecryptionFailsForEmptyString) {
+  std::string empty_encrypted_pass = "";
+  std::string decrypted_pass = DecryptPassword(empty_encrypted_pass);
+  EXPECT_EQ(decrypted_pass, "");
+}
+
+TEST(EncryptPassword, DecryptionFailsForModifiedData) {
+  std::string pass = "abc";
+  std::string encrypted_pass = EncryptPassword(pass);
+  if (!encrypted_pass.empty()) {
+    encrypted_pass[0] =
+        (encrypted_pass[0] == '0') ? '1' : '0';  // Flip a hex character
+  }
+
+  std::string decrypted_pass = DecryptPassword(encrypted_pass);
+  EXPECT_NE(pass, decrypted_pass);
+  EXPECT_EQ(decrypted_pass, "");
+}
+#endif  //_WIN32
+
 }  // namespace google::cloud::odbc_bq_driver_internal

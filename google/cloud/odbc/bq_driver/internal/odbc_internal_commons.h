@@ -162,6 +162,24 @@ inline void BytesToHex(std::vector<uint8_t> const& data,
   restult_str = "0x" + ss.str();
 }
 
+// Function to convert hex string to byte data
+inline std::vector<uint8_t> HexToBytes(std::string const& hex) {
+  std::vector<uint8_t> bytes;
+  for (size_t i = 0; i < hex.length(); i += 2) {
+    std::string byte_string = hex.substr(i, 2);
+    bytes.push_back(static_cast<uint8_t>(std::stoul(byte_string, nullptr, 16)));
+  }
+  return bytes;
+}
+
+#ifdef _WIN32
+// Encrypt password using Windows DPAPI
+std::string EncryptPassword(std::string const& password);
+
+// Decrypt password using Windows DPAPI
+std::string DecryptPassword(std::string const& encrypted_hex);
+#endif  //_WIN32
+
 inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
                                BQDataType array_type) {
   nlohmann::json json_data = nlohmann::json::parse(str);
