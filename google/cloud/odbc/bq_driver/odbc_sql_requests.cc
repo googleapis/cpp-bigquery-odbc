@@ -733,6 +733,9 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
+  if (!execute_status.ok()) {
+    return SQL_NEED_DATA;
+  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 
@@ -929,6 +932,100 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
   return LogAndReturnCode(stmt_handle, status);
+}
+
+SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
+                               SQLPOINTER* param_or_target_value) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle* handle = *handle_result;
+
+  if (handle->GetStmtState() != StmtStates::kStatementPrepared &&
+      handle->GetStmtState() != StmtStates::kStatementStillExecuting) {
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "Function sequence error - statement is not executing or prepared"};
+    return LogAndReturnCode(*handle, status_record);
+  }
+  DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+
+  auto param_num = handle->GetParamNum();
+
+  if (param_num < 0 || param_num > handle->GetParamCount()) {
+    return LogAndReturnCode(*handle,
+                            {SQLStates::k_HY000(), "Parameter out of bounds"});
+  }
+
+  while (param_num < handle->GetParamCount()) {
+    auto param = apd.GetDescriptorRecord(param_num + 1);
+    if (param.indicator_ptr != nullptr ||
+        *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
+        *(param.indicator_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
+      *param_or_target_value = param.data_ptr;
+      handle->SetParamDataCalled(true);
+
+      handle->SetParamNum(param_num + 1);
+      return SQL_NEED_DATA;
+    } else {
+      return SQL_NO_DATA;  // when sql query for update or delete when any
+                           // rows not affect at the data source.
+    }
+  }
+
+// Creating sample data as SQLPutData is not implemented yet.
+struct DataField {
+  SQLPOINTER data_ptr;
+  SQLLEN data_size;
+  SQLSMALLINT c_type;
+  SQLSMALLINT sql_type;
+  SQLLEN* str_len_or_ind_ptr;
+};
+
+  SQLCHAR bool_data = SQL_TRUE;
+  SQLLEN bool_len = SQL_DATA_AT_EXEC;
+
+  SQLLEN int_data = 42;
+  SQLLEN int_len = SQL_DATA_AT_EXEC;
+
+  double float_data = 3.14;
+  SQLLEN float_len = SQL_DATA_AT_EXEC;
+
+  std::string text_data = "";
+  SQLLEN string_len = SQL_DATA_AT_EXEC;
+
+  std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
+  SQLLEN binary_len = SQL_DATA_AT_EXEC;
+
+    DataField fields[] = {
+      {&bool_data, sizeof(bool_data), SQL_C_BIT, SQL_BIT, &bool_len},
+      {&int_data, sizeof(int_data), SQL_C_SBIGINT, SQL_BIGINT, &int_len},
+      {&float_data, sizeof(float_data), SQL_C_DOUBLE, SQL_DOUBLE, &float_len},
+      {(SQLPOINTER)text_data.c_str(), static_cast<SQLLEN>(text_data.size()),
+       SQL_C_CHAR, SQL_LONGVARCHAR, &string_len},
+      {(SQLPOINTER)binary_data.data(), static_cast<SQLLEN>(binary_data.size()),
+       SQL_C_BINARY, SQL_LONGVARBINARY, &binary_len},
+  };
+
+  for (int i = 0; i < 5; ++i) {
+    std::cout << "data bind param "<< i+1<< std::endl;
+    SQLBindParameter(handle, i + 1, SQL_PARAM_INPUT,
+                               fields[i].c_type, fields[i].sql_type, 0, 0,
+                               fields[i].data_ptr, 0, &fields[i].data_size);
+      
+  }
+
+  auto temp_status = ActuallyProcessExecute(*handle, StmtStates::kStatementPrepared);
+
+  std::cout << " \n"<< temp_status.message<<std::endl;
+  std::cout << "insert here \n"<< std::endl;
+  handle->SetParamDataCalled(false);
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

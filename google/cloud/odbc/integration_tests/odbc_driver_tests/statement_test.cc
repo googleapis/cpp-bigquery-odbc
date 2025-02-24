@@ -249,12 +249,14 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   // Fetch and validate data
   for (int i = 0; i < 5; ++i) {
+    std::cout << "col num _> " <<validations[i].c_type << "    " <<i+1<< std::endl;
     EXPECT_EQ(SQLGetData(conn->hstmt, i + 1, validations[i].c_type,
-                         validations[i].data_ptr, validations[i].data_size,
+                         validations[i].data_ptr, kBufferLength,
                          validations[i].str_len_or_ind_ptr),
               SQL_SUCCESS);
   }
 
+std::cout << "Bool Value After: " << (int)result_bool << std::endl;
   // Assertions for validation
   EXPECT_EQ(result_bool, SQL_TRUE);
   EXPECT_EQ(result_int, 42);
@@ -263,6 +265,10 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   std::vector<uint8_t> expected_binary = {0xDE, 0xAD, 0xBE, 0xEF};
   EXPECT_EQ(result_binary_len, expected_binary.size());
+std::cout << "binalry val   " << result_binary << std::endl;
+std::cout << "binalry val  2  " << result_binary + result_binary_len << std::endl;
+std::cout << "binalry val  3  " << expected_binary.data() << std::endl;
+
   EXPECT_TRUE(std::equal(result_binary, result_binary + result_binary_len,
                          expected_binary.begin()));
 }
@@ -2862,52 +2868,6 @@ TEST(SQLMoreResults, ErrorHandling) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifdef _WIN32
-TEST(StatementTest, SQLPutDataStringDataChunks) {
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
-  Table table(table_name);
-
-  // TODO(#14): Add integer and floating point fields too
-  // Schema returned by the query
-  Schema schema{{"StringField1", "STRING"},
-                {"StringField2", "STRING"},
-                {"StringField3", "STRING"}};
-
-  // Create Table
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  // TODO(#14): Add integer and floating point fields too
-  table.Create(conn, getSchemaStr(schema));
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert a row
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
-  std::vector<std::string> data;
-  for (int i = 0; i < schema.size(); i++) {
-    data.emplace_back(GetRandomString(50));
-  }
-  InsertDataWithSqlPut(conn, query, data);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  query = "SELECT StringField1, StringField2, StringField3 FROM " + table_name;
-  auto results = *FetchResultsWithSqlGetData(conn, query);
-
-  for (int i = 0; i < schema.size(); i++) {
-    auto col_name = schema[i].name;
-    EXPECT_EQ(results[col_name][0], data[i]);
-  }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-#endif  // _WIN32
-
 TEST(StatementTest, SQLPutDataErrorTest) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
@@ -3003,40 +2963,6 @@ TEST(StatementTest, SQLPutDataErrorTest) {
             SQL_ERROR);  // Should fail due to invalid pointer
 
   // Disconnect
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Clean up
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(StatementTest, SQLPutDataMultipleDataTypes) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
-  Table table(table_name);
-
-  Schema schema{{"BoolField", "BOOL"},
-                {"IntField", "INT64"},
-                {"FloatField", "FLOAT64"},
-                {"StringField", "STRING"},
-                {"BinaryField", "BYTES"}};
-
-  // Create table
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, getSchemaStr(schema));
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert and validate data
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  PutAllDataTypes(conn, table_name);
-  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  ValidateAllPutData(conn, table_name);
-  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
@@ -3152,6 +3078,87 @@ TEST(SQLRowCount, NonExistentTable) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+TEST(StatementTest, SQLPutDataMultipleDataTypes) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
+  Table table(table_name);
+
+  Schema schema{{"BoolField", "BOOL"},
+                {"IntField", "INT64"},
+                {"FloatField", "FLOAT64"},
+                {"StringField", "STRING"},
+                {"BinaryField", "BYTES"}};
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert and validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  PutAllDataTypes(conn, table_name);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ValidateAllPutData(conn, table_name);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Clean up
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.DropWithPrepare(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#ifdef _WIN32
+TEST(StatementTest, SQLPutDataStringDataChunks) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
+  Table table(table_name);
+
+  // TODO(#14): Add integer and floating point fields too
+  // Schema returned by the query
+  Schema schema{{"StringField1", "STRING"},
+                {"StringField2", "STRING"},
+                {"StringField3", "STRING"}};
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // TODO(#14): Add integer and floating point fields too
+  table.Create(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::cout << "check_. 1 " << std::endl;
+
+  // Insert a row
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+  std::vector<std::string> data;
+  for (int i = 0; i < schema.size(); i++) {
+    data.emplace_back(GetRandomString(50));
+  }
+  InsertDataWithSqlPut(conn, query, data);
+  std::cout << "check_. last  " << std::endl;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  query = "SELECT StringField1, StringField2, StringField3 FROM " + table_name;
+  auto results = *FetchResultsWithSqlGetData(conn, query);
+
+  for (int i = 0; i < schema.size(); i++) {
+    auto col_name = schema[i].name;
+    EXPECT_EQ(results[col_name][0], data[i]);
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // _WIN32
 
 TEST(SQLRowCount, SameValueUpdate) {
   auto conn = std::make_shared<ODBCHandles>();

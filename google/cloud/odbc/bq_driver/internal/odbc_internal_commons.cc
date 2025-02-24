@@ -404,7 +404,14 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       std::string data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
-      } else if (!data.empty()) {
+      } else if(data.empty()){
+      std::cout << "here check data empty  "<< data<<std::endl;
+      DSValue test;
+      // test.emplace_back("");
+      
+      rs_row.emplace_back(test);
+      }
+      else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
           case BQDataType::kString: {

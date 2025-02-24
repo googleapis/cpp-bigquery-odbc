@@ -26,6 +26,10 @@ using odbc_internal::SQLStates;
 using odbc_internal::StatusRecord;
 using odbc_internal::StatusRecordOr;
 
+static const std::string base64_chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
 // Assuming src_data has c_type of SQL_C_CHAR or SQL_C_WCHAR, this function
 // returns a string which should be set to QueryParameter::parameter_value.
 StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
@@ -51,6 +55,7 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   }
   switch (sql_type) {
     case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
     case SQL_CHAR:
     case SQL_WCHAR: {
       return src_str;
@@ -77,11 +82,26 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   return StatusRecord::Ok();
 }
 
+std::string Base64Encode(const uint8_t* data, int len){
+      std::string encoded;
+    int val = 0, valb = -6;
+    for (size_t i = 0; i < len; i++) {
+        val = (val << 8) + data[i];
+        valb += 8;
+        while (valb >= 0) {
+            encoded.push_back(base64_chars[(val >> valb) & 0x3F]);
+            valb -= 6;
+        }
+    }
+    if (valb > -6) encoded.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
+    while (encoded.size() % 4) encoded.push_back('=');
+    return encoded;
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
   SQLLEN* res_len = src_data.result_len;
-
   switch (src_data.type) {
     case SQL_C_CHAR: {
       auto conv_status = ConvertFromCharBuffer(src_data, sql_type);
@@ -160,6 +180,23 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
+    }
+    case SQL_C_BIT: {
+      auto src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
+      if(src_val != 0 && src_val != 1){
+        return StatusRecord{SQLStates::k_22003(), "Invalid BIT value (must be 0 or 1)"};
+      }
+      std::string result = (src_val == 0) ?   "false" : "true";
+      return result;
+    }
+    case SQL_C_BINARY: {
+    std::cout << "binary  conversion   " << std::endl;
+      auto src_val = reinterpret_cast<uint8_t*>(src_buf);
+      if(!src_val || !res_len || *res_len <= 0){
+        return StatusRecord{SQLStates::k_HY000(), "Invalid binary data"};
+      }
+      std::string bas64_encoded = Base64Encode(src_val, *res_len);
+      return bas64_encoded;
     }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};

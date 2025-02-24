@@ -966,9 +966,12 @@ StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
   } else {
     std::memcpy(dest_data.buf, binary_data.data(), binary_data.size());
     if (dest_data.result_len) {
+      std::cout << "binary data size "<< binary_data.size();
       *dest_data.result_len = binary_data.size();
     }
   }
+      std::cout << "binary data  "<< binary_data.data();
+
   return status_record;
 }
 

@@ -117,6 +117,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
 odbc_internal::StatusRecordOr<std::string> ConvertFromBuffer(
     DataBuffer& src_data, SQLSMALLINT sql_type);
 
+std::string Base64Encode(const uint8_t* data, int length);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_INV_H

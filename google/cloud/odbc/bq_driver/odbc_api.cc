@@ -86,6 +86,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumResultCols;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLParamData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
@@ -199,6 +200,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetStmtAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetTypeInfo;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLParamData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLRowCount;
@@ -2236,12 +2238,18 @@ SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
                                SQLPOINTER* paramOrTargetValue) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLParamData");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLParamData(statementHandle, paramOrTargetValue,
+                                    *(*kTraceOption));
   // Call to internal function for SQLParamData in odbc_sql_requests.h.
+  rc = google::cloud::odbc_bq_driver::SQLParamDataInternal(statementHandle,
+                                                           paramOrTargetValue);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLParamData(rc, *(*kTraceOption));
 
   return rc;
 }
@@ -2313,6 +2321,8 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   bool is_tracing_enabled = IsTracingEnabled("SQLGetData");
+  std::cout << "odbc api col number  ->  "<<columnNumber<<std::endl;
+
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetData(statementHandle, columnNumber, targetCType,
                                   targetValue, targetValueBufferLen,
