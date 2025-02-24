@@ -3977,7 +3977,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_pk_catalog_name;
-  if (pkCatalogNameLen > 0 || pkCatalogNameLen == SQL_NTS) {
+  if ((pkCatalogNameLen > 0 || pkCatalogNameLen == SQL_NTS) && pkCatalogName[0] != '\0') {
     utf8_pk_catalog_name =
         ConvertSQLWCHARToString(pkCatalogName, pkCatalogNameLen);
     if (!utf8_pk_catalog_name) {
@@ -3987,9 +3987,12 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     pkCatalogNameLen = utf8_pk_catalog_name->length();
   }
+  SQLCHAR* sqlcharPKCategoryName = nullptr;
+  if(pkCatalogName)
+  sqlcharPKCategoryName = ToSqlChar(utf8_pk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_pk_schema_name;
-  if (pkSchemaNameLen > 0 || pkSchemaNameLen == SQL_NTS) {
+  if ((pkSchemaNameLen > 0 || pkSchemaNameLen == SQL_NTS) && pkSchemaName[0] != '\0') {
     utf8_pk_schema_name =
         ConvertSQLWCHARToString(pkSchemaName, pkSchemaNameLen);
     if (!utf8_pk_schema_name) {
@@ -3999,9 +4002,12 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     pkSchemaNameLen = utf8_pk_schema_name->length();
   }
+  SQLCHAR* sqlcharPKSchemaName = nullptr;
+  if(pkSchemaName)
+  sqlcharPKSchemaName = ToSqlChar(utf8_pk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_pk_table_name;
-  if (pkTableNameLen > 0 || pkTableNameLen == SQL_NTS) {
+  if ((pkTableNameLen > 0 || pkTableNameLen == SQL_NTS) && pkTableName[0] != '\0') {
     utf8_pk_table_name = ConvertSQLWCHARToString(pkTableName, pkTableNameLen);
     if (!utf8_pk_table_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -4010,9 +4016,12 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     pkTableNameLen = utf8_pk_table_name->length();
   }
+  SQLCHAR* sqlcharPKTableName = nullptr;
+  if(pkTableName)
+  sqlcharPKTableName = ToSqlChar(utf8_pk_table_name->data());
 
   StatusRecordOr<std::string> utf8_fk_catalog_name;
-  if (fkCatalogNameLen > 0 || fkCatalogNameLen == SQL_NTS) {
+  if ((fkCatalogNameLen > 0 || fkCatalogNameLen == SQL_NTS) && fkCatalogName[0] != '\0') {
     utf8_fk_catalog_name =
         ConvertSQLWCHARToString(fkCatalogName, fkCatalogNameLen);
     if (!utf8_fk_catalog_name) {
@@ -4022,9 +4031,12 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     fkCatalogNameLen = utf8_fk_catalog_name->length();
   }
+  SQLCHAR* sqlcharFKCategoryName = nullptr;
+  if(fkCatalogName)
+  sqlcharFKCategoryName = ToSqlChar(utf8_fk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_fk_schema_name;
-  if (fkSchemaNameLen > 0 || fkSchemaNameLen == SQL_NTS) {
+  if ((fkSchemaNameLen > 0 || fkSchemaNameLen == SQL_NTS) && fkSchemaName[0] != '\0') {
     utf8_fk_schema_name =
         ConvertSQLWCHARToString(fkSchemaName, fkSchemaNameLen);
     if (!utf8_fk_schema_name) {
@@ -4034,9 +4046,12 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     fkSchemaNameLen = utf8_fk_schema_name->length();
   }
+  SQLCHAR* sqlcharFKSchemaName = nullptr;
+  if(fkSchemaName)
+  sqlcharFKSchemaName = ToSqlChar(utf8_fk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_fk_table_name;
-  if (fkTableNameLen > 0 || fkTableNameLen == SQL_NTS) {
+  if ((fkTableNameLen > 0 || fkTableNameLen == SQL_NTS) && fkTableName[0] != '\0') {
     utf8_fk_table_name = ConvertSQLWCHARToString(fkTableName, fkTableNameLen);
     if (!utf8_fk_table_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -4045,16 +4060,19 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     }
     fkTableNameLen = utf8_fk_table_name->length();
   }
+  SQLCHAR* sqlcharFKTableName = nullptr;
+  if(fkTableName)
+  sqlcharFKTableName = ToSqlChar(utf8_fk_table_name->data());
 
   // Call to common internal function for SQLForeignKeys and SQLForeignKeysW
   // in odbc_driver_metadata.h.
   rc = google::cloud::odbc_bq_driver::SQLForeignKeysInternal(
-      statementHandle, ToSqlChar(utf8_pk_catalog_name->data()),
-      pkCatalogNameLen, ToSqlChar(utf8_pk_schema_name->data()), pkSchemaNameLen,
-      ToSqlChar(utf8_pk_table_name->data()), pkTableNameLen,
-      ToSqlChar(utf8_fk_catalog_name->data()), fkCatalogNameLen,
-      ToSqlChar(utf8_fk_schema_name->data()), fkSchemaNameLen,
-      ToSqlChar(utf8_fk_table_name->data()), fkTableNameLen);
+      statementHandle, sqlcharPKCategoryName,
+      pkCatalogNameLen, sqlcharPKSchemaName, pkSchemaNameLen,
+      sqlcharPKTableName, pkTableNameLen,
+      sqlcharFKCategoryName, fkCatalogNameLen,
+      sqlcharFKSchemaName, fkSchemaNameLen,
+      sqlcharFKTableName, fkTableNameLen);
 
   // Handle Unicode conversion of output parameters.
 

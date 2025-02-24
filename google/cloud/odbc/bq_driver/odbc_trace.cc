@@ -2699,7 +2699,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
     SQLSMALLINT fk_schema_name_len, SQLWCHAR* fk_table_name,
     SQLSMALLINT fk_table_name_len, TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_pk_catalog_name;
-  if (pk_catalog_name_len > 0 || pk_catalog_name_len == SQL_NTS) {
+  if ((pk_catalog_name_len > 0 || pk_catalog_name_len == SQL_NTS) && pk_catalog_name[0] != '\0') {
     utf8_pk_catalog_name =
         ConvertSQLWCHARToString(pk_catalog_name, pk_catalog_name_len);
     if (!utf8_pk_catalog_name) {
@@ -2708,9 +2708,12 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     pk_catalog_name_len = utf8_pk_catalog_name->length();
   }
+  SQLCHAR* sqlcharPKCategoryName = nullptr;
+  if(pk_catalog_name)
+  sqlcharPKCategoryName = ToSqlChar(utf8_pk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_pk_schema_name;
-  if (pk_schema_name_len > 0 || pk_schema_name_len == SQL_NTS) {
+  if ((pk_schema_name_len > 0 || pk_schema_name_len == SQL_NTS) && pk_schema_name[0] != '\0') {
     utf8_pk_schema_name =
         ConvertSQLWCHARToString(pk_schema_name, pk_schema_name_len);
     if (!utf8_pk_schema_name) {
@@ -2719,9 +2722,12 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     pk_schema_name_len = utf8_pk_schema_name->length();
   }
+  SQLCHAR* sqlcharPKSchemaName = nullptr;
+  if(pk_schema_name)
+  sqlcharPKSchemaName = ToSqlChar(utf8_pk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_pk_table_name;
-  if (pk_table_name_len > 0 || pk_table_name_len == SQL_NTS) {
+  if ((pk_table_name_len > 0 || pk_table_name_len == SQL_NTS) && pk_table_name[0] != '\0') {
     utf8_pk_table_name =
         ConvertSQLWCHARToString(pk_table_name, pk_table_name_len);
     if (!utf8_pk_table_name) {
@@ -2730,9 +2736,12 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     pk_table_name_len = utf8_pk_table_name->length();
   }
+  SQLCHAR* sqlcharPKTableName = nullptr;
+  if(pk_table_name)
+  sqlcharPKTableName = ToSqlChar(utf8_pk_table_name->data());
 
   StatusRecordOr<std::string> utf8_fk_catalog_name;
-  if (fk_catalog_name_len > 0 || fk_catalog_name_len == SQL_NTS) {
+  if ((fk_catalog_name_len > 0 || fk_catalog_name_len == SQL_NTS) && fk_catalog_name[0] != '\0') {
     utf8_fk_catalog_name =
         ConvertSQLWCHARToString(fk_catalog_name, fk_catalog_name_len);
     if (!utf8_fk_catalog_name) {
@@ -2741,9 +2750,12 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     fk_catalog_name_len = utf8_fk_catalog_name->length();
   }
+  SQLCHAR* sqlcharFKCategoryName = nullptr;
+  if(fk_catalog_name)
+  sqlcharFKCategoryName = ToSqlChar(utf8_fk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_fk_schema_name;
-  if (fk_schema_name_len > 0 || fk_schema_name_len == SQL_NTS) {
+  if ((fk_schema_name_len > 0 || fk_schema_name_len == SQL_NTS) && fk_schema_name[0] != '\0') {
     utf8_fk_schema_name =
         ConvertSQLWCHARToString(fk_schema_name, fk_schema_name_len);
     if (!utf8_fk_schema_name) {
@@ -2752,9 +2764,12 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     fk_schema_name_len = utf8_fk_schema_name->length();
   }
+  SQLCHAR* sqlcharFKSchemaName = nullptr;
+  if(fk_schema_name)
+  sqlcharFKSchemaName = ToSqlChar(utf8_fk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_fk_table_name;
-  if (fk_table_name_len > 0 || fk_table_name_len == SQL_NTS) {
+  if ((fk_table_name_len > 0 || fk_table_name_len == SQL_NTS) && fk_table_name[0] != '\0') {
     utf8_fk_table_name =
         ConvertSQLWCHARToString(fk_table_name, fk_table_name_len);
     if (!utf8_fk_table_name) {
@@ -2763,14 +2778,17 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     fk_table_name_len = utf8_fk_table_name->length();
   }
+  SQLCHAR* sqlcharFKTableName = nullptr;
+  if(fk_table_name)
+  sqlcharFKTableName = ToSqlChar(utf8_fk_table_name->data());
 
   TraceFunctionEntry_SQLForeignKeys(
-      statement_handle, ToSqlChar(utf8_pk_catalog_name->data()),
-      pk_catalog_name_len, ToSqlChar(utf8_pk_schema_name->data()),
-      pk_schema_name_len, ToSqlChar(utf8_pk_table_name->data()),
-      pk_table_name_len, ToSqlChar(utf8_fk_catalog_name->data()),
-      fk_catalog_name_len, ToSqlChar(utf8_fk_schema_name->data()),
-      fk_schema_name_len, ToSqlChar(utf8_fk_table_name->data()),
+      statement_handle, sqlcharPKCategoryName,
+      pk_catalog_name_len, sqlcharPKSchemaName,
+      pk_schema_name_len, sqlcharPKTableName,
+      pk_table_name_len, sqlcharFKCategoryName,
+      fk_catalog_name_len, sqlcharFKSchemaName,
+      fk_schema_name_len, sqlcharFKTableName,
       fk_table_name_len, opts);
 }
 
