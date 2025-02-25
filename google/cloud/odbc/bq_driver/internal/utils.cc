@@ -643,6 +643,39 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
   return StatusRecord::Ok();
 }
 
+std::string Base64Encode(uint8_t const* data, int length) {
+  std::string encoded_str;
+  int val = 0;
+  int val_b = -6;
+  for (size_t i = 0; i < length; i++) {
+    val = (val << 8) + data[i];
+    val_b += 8;
+    while (val_b >= 0) {
+      encoded_str.push_back(kBase64Chars[(val >> val_b) & 0x3F]);
+      val_b -= 6;
+    }
+  }
+  if (val_b > -6)
+    encoded_str.push_back(kBase64Chars[((val << 8) >> (val_b + 8)) & 0x3F]);
+  while (encoded_str.size() % 4) encoded_str.push_back('=');
+  return encoded_str;
+}
+
+std::string ToHexString(uint8_t const* data, int length) {
+  if (!data || length == 0) {
+    return "";
+  }
+
+  std::string hex_str;
+  hex_str.reserve(length * 2);  // Each byte becomes 2 hex characters
+
+  for (size_t i = 0; i < length; ++i) {
+    hex_str.push_back(kHexDigits[(data[i] >> 4) & 0xF]);
+    hex_str.push_back(kHexDigits[data[i] & 0xF]);
+  }
+  return hex_str;
+}
+
 #ifdef _WIN32
 std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
   if (lpszAttributes == nullptr) return "";

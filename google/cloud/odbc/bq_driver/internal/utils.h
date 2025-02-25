@@ -45,6 +45,13 @@ namespace google::cloud::odbc_bq_driver_internal {
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
 
+static std::string const kBase64Chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+static char const kHexDigits[] = "0123456789ABCDEF";
+
 // Converts a stringified double value into an integral string.
 odbc_internal::StatusRecord DoubleStrToInt(std::string& double_str);
 
@@ -255,6 +262,8 @@ odbc_internal::StatusRecord PopulateOutputConnectionString(
     SQLSMALLINT* out_conn_str_len, std::string& conn_string,
     bool is_conn_str_empty = true);
 
+std::string Base64Encode(uint8_t const* data, int length);
+std::string ToHexString(uint8_t const* data, int length);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
