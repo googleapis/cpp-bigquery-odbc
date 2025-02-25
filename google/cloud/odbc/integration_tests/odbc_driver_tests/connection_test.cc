@@ -630,7 +630,7 @@ TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_NOPROMPT) {
 TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
   auto conn = std::make_shared<ODBCHandles>();
 
-  std::string conn_str = "DSN=SampleDSN";
+  std::string conn_str = kDefaultConnectionString;
   SQLCHAR in_conn_str[kBufferLength];
   SQLCHAR out_conn_str[10] = {0};
   SQLSMALLINT out_conn_str_len;
@@ -651,16 +651,10 @@ TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
 TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
   auto conn = std::make_shared<ODBCHandles>();
   std::vector<std::string> const conn_string = {
-      "dsn=SampleDSN", "DSN=SampleDSN", "DsN=SampleDSN"};
+      "dsn="+ GetDefaultDSN(), "DSN="+ GetDefaultDSN(), "DsN="+ GetDefaultDSN()};
   for (auto const& conn_str : conn_string) {
-    
-     #ifndef DRIVER_MANAGER_TESTING_ENABLED
  EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  #else
- EXPECT_EQ(Connect(conn_str, conn, true), SQL_ERROR);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
-    
   }
 }
 
