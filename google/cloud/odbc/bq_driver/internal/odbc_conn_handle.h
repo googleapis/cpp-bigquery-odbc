@@ -63,6 +63,7 @@ struct Dsn {
   std::string large_results_dataset_id;
   bool allow_htapi = false;
   std::string htapi_activation_threshold;
+  std::string large_table_expiration_time;
 
   /////////////////////////////////////////////////////////////////
   // Optional BYOID Properties needed for external authentication.

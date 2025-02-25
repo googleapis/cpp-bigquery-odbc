@@ -105,6 +105,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string allow_htapi = dsn_section["ALLOWHTAPIFORLARGERESULTS"];
   dsn_.allow_htapi = (allow_htapi == "1");
   dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
+  dsn_.large_table_expiration_time =
+      dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
 
   // Populate BYOID properties from DSN section.
   dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
