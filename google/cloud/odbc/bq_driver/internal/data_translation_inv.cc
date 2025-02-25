@@ -41,7 +41,8 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   if (src_result_len != nullptr) {
     result_len = *src_result_len;
   }
-
+std::cout << "check 4 " << src_data.type<< std::endl;
+std::cout << "check 4.1 " << sql_type<< std::endl;
   std::string src_str;
   switch (src_data.type) {
     case SQL_C_CHAR: {
@@ -49,15 +50,40 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
       break;
     }
     // TODO(b/345194139): Support SQL_C_WCHAR here
+
+    // Need to check this 
+    case SQL_C_WCHAR:{
+      // std::wstring src_str = 
+      SQLWCHAR* wchar_buf = static_cast<SQLWCHAR*>(src_buf);
+      std::cout << " result len "<< result_len<<std::endl;
+      
+      size_t wchar_count;
+      if (result_len == SQL_NTS) {
+          wchar_count = wcslen(reinterpret_cast<const wchar_t*>(wchar_buf));  // Null-terminated string case
+      } else if (result_len > 0) {
+          wchar_count = result_len / sizeof(SQLWCHAR);  // Convert bytes to wchar count
+      } else {
+          return StatusRecord{SQLStates::k_HY000(), "Invalid buffer length"};
+      }
+
+      std::wstring wstr(reinterpret_cast<const wchar_t*>(wchar_buf), wchar_count);
+      auto utf8_res = Utf16ToUtf8(wstr);
+      src_str = utf8_res->c_str();
+      break;
+    }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
+  std::cout << "check 5 "<< sql_type <<std::endl; 
   switch (sql_type) {
     case SQL_VARCHAR:
+    case SQL_WLONGVARCHAR:
     case SQL_LONGVARCHAR:
     case SQL_CHAR:
     case SQL_WCHAR: {
+  std::cout << "check 6 "<< src_str <<std::endl;
+
       return src_str;
     }
     // TODO(b/345194139): Add conversion to complex data types
@@ -102,8 +128,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
   SQLLEN* res_len = src_data.result_len;
+    std::cout << "check 2 "<< src_data.type<<std::endl;
+
   switch (src_data.type) {
+    case SQL_C_WCHAR:
     case SQL_C_CHAR: {
+    std::cout << "check 3 "<< std::endl;
+
       auto conv_status = ConvertFromCharBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
