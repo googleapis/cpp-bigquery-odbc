@@ -48,6 +48,7 @@ struct CommonBasicTestStruct {
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 struct NumericBasicTestStruct {
@@ -82,6 +83,28 @@ std::vector<CommonBasicTestStruct<double>> const kConversionFromNumericTestData{
     {SQL_C_BIT, 1, SQL_SUCCESS},
     {SQL_C_BIT, 2, SQL_ERROR},
 };
+=======
+std::vector<CommonBasicTestStruct<int64_t>> const
+    kConversionFromNumericTestData_INT64{
+        {SQL_C_CHAR, 123, SQL_SUCCESS},
+        {SQL_C_FLOAT, 156, SQL_SUCCESS},
+        {SQL_C_FLOAT, -157, SQL_SUCCESS},
+        {SQL_C_FLOAT, 9223372036854775807 /* highest int64 */, SQL_SUCCESS},
+        {SQL_C_DOUBLE, -38, SQL_SUCCESS},
+        {SQL_C_SSHORT, 31, SQL_SUCCESS},
+        {SQL_C_SSHORT, -31, SQL_SUCCESS},
+        {SQL_C_USHORT, 3, SQL_SUCCESS},
+        {SQL_C_USHORT, 65537 /* 2^16 + 1 */, SQL_ERROR},
+        {SQL_C_USHORT, -3, SQL_ERROR},
+        {SQL_C_SSHORT, 9223372036854775807, SQL_ERROR},
+        {SQL_C_SLONG, -13, SQL_SUCCESS},
+        {SQL_C_ULONG, 81, SQL_SUCCESS},
+        {SQL_C_ULONG, -8, SQL_ERROR},
+        {SQL_C_BIT, 0, SQL_SUCCESS},
+        {SQL_C_BIT, 1, SQL_SUCCESS},
+        {SQL_C_BIT, 2, SQL_ERROR},
+    };
+>>>>>>> ae60543e (fix: resolving review comments and check failures)
 
 std::vector<CommonBasicTestStruct<
     double>> const kConversionFromNumericTestData_bignumeric{
@@ -111,27 +134,6 @@ std::vector<CommonBasicTestStruct<
     {SQL_C_BIT, 2, SQL_ERROR},
 };
 >>>>>>> ef8fb00b (fix: adding pr checks and indentations)
-
-std::vector<CommonBasicTestStruct<int64_t>> const
-    kConversionFromNumericTestData_INT64{
-        {SQL_C_CHAR, 123, SQL_SUCCESS},
-        {SQL_C_FLOAT, 156, SQL_SUCCESS},
-        {SQL_C_FLOAT, -157, SQL_SUCCESS},
-        {SQL_C_FLOAT, 9223372036854775807 /* highest int64 */, SQL_SUCCESS},
-        {SQL_C_DOUBLE, -38, SQL_SUCCESS},
-        {SQL_C_SSHORT, 31, SQL_SUCCESS},
-        {SQL_C_SSHORT, -31, SQL_SUCCESS},
-        {SQL_C_USHORT, 3, SQL_SUCCESS},
-        {SQL_C_USHORT, 65537 /* 2^16 + 1 */, SQL_ERROR},
-        {SQL_C_USHORT, -3, SQL_ERROR},
-        {SQL_C_SSHORT, 9223372036854775807, SQL_ERROR},
-        {SQL_C_SLONG, -13, SQL_SUCCESS},
-        {SQL_C_ULONG, 81, SQL_SUCCESS},
-        {SQL_C_ULONG, -8, SQL_ERROR},
-        {SQL_C_BIT, 0, SQL_SUCCESS},
-        {SQL_C_BIT, 1, SQL_SUCCESS},
-        {SQL_C_BIT, 2, SQL_ERROR},
-    };
 
 template <typename TestStruct>
 void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
@@ -350,6 +352,7 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
   }
 }
 
+<<<<<<< HEAD
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 
@@ -528,6 +531,8 @@ std::vector<CommonBasicTestStruct<int64_t>> const kConversionFromNumericTestData
 };
 
 =======
+=======
+>>>>>>> ae60543e (fix: resolving review comments and check failures)
 std::vector<CommonBasicTestStruct<std::string>> const
     kConversionFromStrTestData{
         {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
@@ -554,7 +559,27 @@ std::vector<CommonBasicTestStruct<std::string>> const
         {SQL_C_BIT, "1", SQL_SUCCESS},
         {SQL_C_BIT, "2", SQL_ERROR},
     };
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+std::vector<CommonBasicTestStruct<double>> const kConversionFromNumericTestData{
+    {SQL_C_CHAR, 123, SQL_SUCCESS},
+    {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
+    {SQL_C_FLOAT, -157.8, SQL_SUCCESS},
+    {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
+    {SQL_C_SSHORT, 31, SQL_SUCCESS},
+    {SQL_C_SSHORT, -31, SQL_SUCCESS},
+    {SQL_C_DOUBLE, -9.9999999999999999999999999999999999999E+28, SQL_SUCCESS},
+    {SQL_C_DOUBLE, 9.9999999999999999999999999999999999999E+28, SQL_SUCCESS},
+    {SQL_C_USHORT, 3, SQL_SUCCESS},
+    {SQL_C_USHORT, 65537 /* 2^16 + 1 */, SQL_ERROR},
+    {SQL_C_SLONG, -13, SQL_SUCCESS},
+    {SQL_C_SLONG, 13.3, SQL_SUCCESS},
+    {SQL_C_ULONG, 81, SQL_SUCCESS},
+    {SQL_C_ULONG, -8, SQL_ERROR},
+    {SQL_C_ULONG, 1.1, SQL_SUCCESS},
+    {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BIT, 1, SQL_SUCCESS},
+    {SQL_C_BIT, 2, SQL_ERROR},
+};
 StdAllTypesRows const kConversionFromDifferentTestData{
     {
         "",
@@ -920,6 +945,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
    std::vector<std::string>type_names;
@@ -1019,6 +1045,50 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
     table.DropWithPrepare(conn);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
    }
+=======
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+// This test should follow translations according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
+TEST(DataTranslationTest, From_NUMERIC_to_all) {
+  std::vector<std::string> data_type_names;
+  data_type_names.push_back("NUMERIC");
+  data_type_names.push_back("DECIMAL");
+  for (std::string t_name : data_type_names) {
+    auto const table_name =
+        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
+    Table table(table_name);
+    // Create Table
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Insert data to read
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::vector<double> numeric_data_to_insert;
+    for (auto elem : kConversionFromNumericTestData) {
+      numeric_data_to_insert.push_back(elem.value);
+    }
+    table.InsertDataIntoTable<double>(conn, numeric_data_to_insert, true);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Execute a read query and check whether the results returned are as
+    // expected
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::string query =
+        "SELECT NumericField FROM " + table_name + " ORDER BY index";
+    TestTranslationsFromNumeric<CommonBasicTestStruct<double>>(
+        conn, query, kConversionFromNumericTestData);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Delete table
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.DropWithPrepare(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+>>>>>>> ae60543e (fix: resolving review comments and check failures)
 }
 
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
@@ -1137,13 +1207,21 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-std::vector<CommonBasicTestStruct<SQLCHAR>> const
-    kConversionFromBooleanTestData{
-        {SQL_C_CHAR, '1', SQL_SUCCESS},  {SQL_C_BIT, 0, SQL_SUCCESS},
-        {SQL_C_BINARY, 1, SQL_SUCCESS},  {SQL_C_WCHAR, L'1', SQL_SUCCESS},
-        {SQL_C_DOUBLE, 0, SQL_SUCCESS},  {SQL_C_LONG, 1, SQL_SUCCESS},
-        {SQL_C_TYPE_DATE, 0, SQL_ERROR},
-    };
+struct BooleanBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQLCHAR value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<BooleanBasicTestStruct> const kConversionFromBooleanTestData{
+    {SQL_C_CHAR, '1', SQL_SUCCESS},  {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BINARY, 1, SQL_SUCCESS},  {SQL_C_WCHAR, L'1', SQL_SUCCESS},
+    {SQL_C_DOUBLE, 0, SQL_SUCCESS},  {SQL_C_LONG, 1, SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, 0, SQL_ERROR},
+};
 
 void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
                                  std::string query) {
