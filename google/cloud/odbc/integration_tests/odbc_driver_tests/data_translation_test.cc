@@ -135,6 +135,8 @@ std::vector<CommonBasicTestStruct<
 };
 >>>>>>> ef8fb00b (fix: adding pr checks and indentations)
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 template <typename TestStruct>
 void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
                                  std::string query,
@@ -353,6 +355,7 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 
@@ -533,6 +536,10 @@ std::vector<CommonBasicTestStruct<int64_t>> const kConversionFromNumericTestData
 =======
 =======
 >>>>>>> ae60543e (fix: resolving review comments and check failures)
+=======
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+>>>>>>> c23af93f (fix: adding only the simba test case for numeric and allias)
 std::vector<CommonBasicTestStruct<std::string>> const
     kConversionFromStrTestData{
         {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
@@ -1049,6 +1056,7 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
@@ -1090,7 +1098,7 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   }
 >>>>>>> ae60543e (fix: resolving review comments and check failures)
 }
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                                    std::string query) {
   SQLRETURN status;

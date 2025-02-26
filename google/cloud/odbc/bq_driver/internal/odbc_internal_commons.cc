@@ -416,8 +416,6 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
             break;
           }
-          case BQDataType::kNumeric:
-          case BQDataType::kBigNumeric:
           case BQDataType::kFloat64: {
             SQLDOUBLE d_data = std::stod(data);
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
