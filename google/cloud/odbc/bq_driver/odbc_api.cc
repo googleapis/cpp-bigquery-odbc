@@ -602,7 +602,8 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
     }
     std::wcout<<"utf16_out_conn_str "<<utf16_out_conn_str->data()<<std::endl;
 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
-std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()), out_connection_string_len);
+std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
+std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()), out_connection_string_len* sizeof(SQLWCHAR));
                 std::wcout<<"outConnectionString inn "<<(char*)outConnectionString<<std::endl;
                 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
   }
