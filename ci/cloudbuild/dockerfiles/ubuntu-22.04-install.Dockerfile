@@ -243,6 +243,7 @@ ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 ## BEGIN Installs pre-requisites for the ODBC Driver.
 
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
+COPY ./gha/builds/lib/odbcinst.ini /opt/odbc-driver/odbcinst.ini
 
 # glibc 2.17 or later
 RUN echo 'Installing glibc...'
