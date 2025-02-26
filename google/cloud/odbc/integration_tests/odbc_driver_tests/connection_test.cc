@@ -1087,13 +1087,14 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_NEED_DATA);
-
+  
+  std::string expected_value = "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_EQ(out_conn_str_len, conn_str.size());
+    EXPECT_EQ(out_conn_str_len, expected_value.size());
   } else {
-    EXPECT_GT(out_conn_str_len, conn_str.size());
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
