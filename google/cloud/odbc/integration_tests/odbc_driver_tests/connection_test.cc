@@ -1089,7 +1089,9 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_EQ(status, SQL_NEED_DATA);
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
+  std::cout<<"out_conn_str "<<(char*)out_conn_str<<std::endl;
+  std::cout<<"out_conn_str_len "<<out_conn_str_len<<std::endl;
+  std::cout<<"res_out_conn_str "<<res_out_conn_str<<std::endl;
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
     EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());

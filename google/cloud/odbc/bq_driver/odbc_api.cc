@@ -591,6 +591,8 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                    out_connection_string,
                                     outConnectionStringBufferLen,
                                    &out_connection_string_len);
+                                   std::cout<<"out_connection_string "<<(char*)out_connection_string<<std::endl;
+std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) && out_connection_string_len > 0) {
     StatusRecordOr<std::wstring> utf16_out_conn_str =
