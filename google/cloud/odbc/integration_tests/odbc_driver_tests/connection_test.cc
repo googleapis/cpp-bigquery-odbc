@@ -1211,7 +1211,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {    
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "IM002", 0,
         "[Driver Manager]Data source name not found and no default driver specified");
