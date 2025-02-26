@@ -309,12 +309,10 @@ void AssertBQDriverSQLGetInfo(std::shared_ptr<ODBCHandles> conn) {
   }
   for (auto elem : kUnsupportedEmptyCharMap) {
     auto info_type = elem.first;
-    std::cout<<"sqlCharBuf before "<<(char*)sqlCharBuf<<std::endl;
     status = SQLGetInfo(conn->hdbc, info_type,
                         reinterpret_cast<SQLPOINTER>(sqlCharBuf), kBufferLength,
                         &out_len);
     ASSERT_TRUE(SQL_SUCCEEDED(status));
-    std::cout<<"sqlCharBuf after "<<(char*)sqlCharBuf<<std::endl;
     std::string actual_val = (char*)sqlCharBuf;
     EXPECT_EQ("", actual_val);
   }
@@ -658,8 +656,8 @@ TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
   std::vector<std::string> const conn_string = {
       "dsn="+ GetDefaultDSN(), "DSN="+ GetDefaultDSN(), "DsN="+ GetDefaultDSN()};
   for (auto const& conn_str : conn_string) {
- EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
- EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+    EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   }
 }
 
@@ -1047,7 +1045,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
       "DRIVER={" + driver_name +
       "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
       ";OAuthMechanism=0;";
-std::cout<<"conn_str "<<conn_str<<std::endl;
+
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
   SQLCHAR out_conn_str[kBufferLength] = {0};
@@ -1088,11 +1086,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-  #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_EQ(status, SQL_ERROR);
-#else
   EXPECT_EQ(status, SQL_NEED_DATA);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
@@ -1186,11 +1180,8 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-                #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_EQ(status, SQL_ERROR);
-#else
+
   EXPECT_EQ(status, SQL_NEED_DATA);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
@@ -1214,18 +1205,11 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 #endif  // _WIN32
 
   // TODO(b/383449326): Add other connection attributes for the connection
-  if (kIsBqDriver) {    
-#ifdef DRIVER_MANAGER_TESTING_ENABLED
-    CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 0,
-        "[Driver Manager]Data source name not found and no default driver specified");
-#else
-EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+  if (kIsBqDriver) {
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 0,
         "[Google][ODBC BigQuery Driver] Invalid Connection String");
-#endif //DRIVER_MANAGER_TESTING_ENABLED
-        
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
@@ -1252,11 +1236,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
 
-  #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_EQ(status, SQL_ERROR);
-#else
   EXPECT_EQ(status, SQL_NEED_DATA);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
@@ -1282,16 +1262,10 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    #ifdef DRIVER_MANAGER_TESTING_ENABLED
-    CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 0,
-        "[Driver Manager]Data source name not found and no default driver specified");
-#else
-EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
                           "[Google][ODBC BigQuery Driver] Connection Error: "
                           "Non Requested connection attribute");
-#endif //DRIVER_MANAGER_TESTING_ENABLED
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
@@ -1318,11 +1292,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
 
-  #ifdef DRIVER_MANAGER_TESTING_ENABLED
-                EXPECT_EQ(status, SQL_ERROR);
-#else
   EXPECT_EQ(status, SQL_NEED_DATA);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
 
   // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
@@ -1338,16 +1308,10 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
                             sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_ERROR);
 
-  if (kIsBqDriver) {    
-    #ifdef DRIVER_MANAGER_TESTING_ENABLED
-    CheckDiagnosticRecord(
-        conn->hdbc, "IM002", 0,
-        "[Driver Manager]Data source name not found and no default driver specified");
-#else
-CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+  if (kIsBqDriver) {
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
                           "[Google][ODBC BigQuery Driver] Connection Error: "
                           "Connection Attribute 'CATALOG' already found!");
-#endif //DRIVER_MANAGER_TESTING_ENABLED
   } else {
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11590,
