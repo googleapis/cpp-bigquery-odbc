@@ -602,9 +602,13 @@ std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
                          utf16_out_conn_str.GetStatusRecord().message);
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
+    std::wcout<<"utf16_out_conn_str "<<utf16_out_conn_str->data()<<std::endl;
+std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
     std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
-    std::memcpy(outConnectionString, (SQLPOINTER)ToSqlWChar(utf16_out_conn_str->data()),
+    std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()),
                 out_connection_string_len * sizeof(SQLWCHAR));
+                std::wcout<<"outConnectionString inn "<<(char*)outConnectionString<<std::endl;
+                std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
   }
   if (outConnectionStringLen)
     *outConnectionStringLen = out_connection_string_len;
