@@ -24,7 +24,12 @@ std::string GetDriverName() {
 #ifdef _WIN32
   return "Simba ODBC Driver for Google BigQuery";
 #else
-  return "Simba Google BigQuery ODBC Connector";
+#ifdef DRIVER_MANAGER_TESTING_ENABLED
+return "Google BigQuery ODBC Driver";
+#else
+return "Simba Google BigQuery ODBC Connector";
+#endif
+  
 #endif  // _WIN32
 }
 
