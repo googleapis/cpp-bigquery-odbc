@@ -600,12 +600,8 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                          utf16_out_conn_str.GetStatusRecord().message);
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
-    std::wcout<<"utf16_out_conn_str "<<utf16_out_conn_str->data()<<std::endl;
-std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
-std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
-std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()), out_connection_string_len);
-                std::wcout<<"outConnectionString inn "<<(char*)outConnectionString<<std::endl;
-                std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
+std::memset(outConnectionString, '\0', outConnectionStringBufferLen * sizeof(SQLWCHAR));
+std::memcpy((SQLWCHAR*)outConnectionString, ToSqlWChar(utf16_out_conn_str->data()), utf16_out_conn_str->size() * sizeof(SQLWCHAR));
   }
   if (outConnectionStringLen)
     *outConnectionStringLen = out_connection_string_len;
