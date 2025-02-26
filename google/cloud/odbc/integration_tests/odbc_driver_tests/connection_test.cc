@@ -1042,7 +1042,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
       "DRIVER={" + driver_name +
       "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
       ";OAuthMechanism=0;";
-
+std::cout<<"conn_str "<<conn_str<<std::endl;
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
   SQLCHAR out_conn_str[kBufferLength] = {0};
