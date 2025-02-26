@@ -1047,7 +1047,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
 
   StrToChar((char*)in_conn_str, conn_str);
   SetAttributes(conn, 30);
-
+  std::cout<<"conn_str "<<conn_str<<std::endl;
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
