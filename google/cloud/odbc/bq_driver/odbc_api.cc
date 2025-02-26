@@ -604,8 +604,11 @@ std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
     }
     std::wcout<<"utf16_out_conn_str "<<utf16_out_conn_str->data()<<std::endl;
 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
+std::vector<SQLWCHAR> sqlWStr(utf16_out_conn_str->begin(),
+utf16_out_conn_str->end());
+sqlWStr.emplace_back(L'\0');
     std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
-    std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()),
+    std::memcpy(outConnectionString, sqlWStr.data(),
                 out_connection_string_len * sizeof(SQLWCHAR));
                 std::wcout<<"outConnectionString inn "<<(char*)outConnectionString<<std::endl;
                 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
