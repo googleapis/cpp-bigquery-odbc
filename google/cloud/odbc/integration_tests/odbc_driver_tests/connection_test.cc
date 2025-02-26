@@ -1119,6 +1119,7 @@ TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
+                                 std::cout<<"out_conn_str "<<(char*)out_conn_str<<std::endl;
   EXPECT_EQ(status, SQL_NEED_DATA);
 
   std::string const expected_conn_out_str = "DSN=Sampl";
