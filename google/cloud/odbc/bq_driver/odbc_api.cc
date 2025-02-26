@@ -591,8 +591,6 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                    out_connection_string,
                                     outConnectionStringBufferLen,
                                    &out_connection_string_len);
-                                   std::cout<<"out_connection_string "<<(char*)out_connection_string<<std::endl;
-std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
   // Handle Unicode conversion of output parameters.
   if ((SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) && out_connection_string_len > 0) {
     StatusRecordOr<std::wstring> utf16_out_conn_str =
@@ -604,12 +602,7 @@ std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
     }
     std::wcout<<"utf16_out_conn_str "<<utf16_out_conn_str->data()<<std::endl;
 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
-std::vector<SQLWCHAR> sqlWStr(utf16_out_conn_str->begin(),
-utf16_out_conn_str->end());
-sqlWStr.emplace_back(L'\0');
-    //std::memset(outConnectionString, '\0', outConnectionStringBufferLen);
-    std::memcpy(outConnectionString, ToSqlWChar(utf16_out_conn_str->data()),
-                out_connection_string_len * sizeof(SQLWCHAR));
+outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
                 std::wcout<<"outConnectionString inn "<<(char*)outConnectionString<<std::endl;
                 std::cout<<"out_connection_string_len "<<out_connection_string_len<<std::endl;
   }
