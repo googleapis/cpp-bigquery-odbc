@@ -104,7 +104,36 @@ std::vector<CommonBasicTestStruct<int64_t>> const
         {SQL_C_BIT, 1, SQL_SUCCESS},
         {SQL_C_BIT, 2, SQL_ERROR},
     };
+<<<<<<< HEAD
 >>>>>>> ae60543e (fix: resolving review comments and check failures)
+=======
+std::vector<CommonBasicTestStruct<std::string>> const
+    kConversionFromStrTestData{
+        {SQL_C_CHAR, "Test String 1", SQL_SUCCESS},
+        {SQL_C_FLOAT, "19.1", SQL_SUCCESS},
+        {SQL_C_FLOAT, "2a", SQL_ERROR},
+        {SQL_C_DOUBLE, "-38.3", SQL_SUCCESS},
+        {SQL_C_DOUBLE, "a3", SQL_ERROR},
+        {SQL_C_SSHORT, "31", SQL_SUCCESS},
+        {SQL_C_SSHORT, "9223372036854775807", SQL_ERROR},
+        {SQL_C_USHORT, "89", SQL_SUCCESS},
+        {SQL_C_USHORT, "-9", SQL_ERROR},
+        {SQL_C_USHORT, "65537" /* 2^16 + 1 */, SQL_ERROR},
+        {SQL_C_SLONG, "-934934934", SQL_SUCCESS},
+        {SQL_C_SLONG, "1.1",
+         SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss
+                                  // of precision
+        {SQL_C_SLONG, "b1", SQL_ERROR},
+        {SQL_C_ULONG, "934934934", SQL_SUCCESS},
+        {SQL_C_ULONG, "1.1",
+         SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss
+                                  // of precision
+        {SQL_C_ULONG, "b1", SQL_ERROR},
+        {SQL_C_BIT, "0", SQL_SUCCESS},
+        {SQL_C_BIT, "1", SQL_SUCCESS},
+        {SQL_C_BIT, "2", SQL_ERROR},
+    };
+>>>>>>> 43345bf5 (fix: resolving review comments and check failures)
 
 std::vector<CommonBasicTestStruct<
     double>> const kConversionFromNumericTestData_bignumeric{
@@ -355,6 +384,7 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 
@@ -568,6 +598,8 @@ std::vector<CommonBasicTestStruct<std::string>> const
         {SQL_C_BIT, "2", SQL_ERROR},
     };
 
+=======
+>>>>>>> 43345bf5 (fix: resolving review comments and check failures)
 std::vector<CommonBasicTestStruct<double>> const kConversionFromNumericTestData{
     {SQL_C_CHAR, 123, SQL_SUCCESS},
     {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
