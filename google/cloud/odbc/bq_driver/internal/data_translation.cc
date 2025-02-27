@@ -345,13 +345,13 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         }
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
-        dest[k_timestamp_src_len] = '\0';
+        dest[k_timestamp_src_len] = L'\0';
       } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = buffer_length * sizeof(SQLWCHAR);
         }
         std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
-        dest[buffer_length] = '\0';
+        dest[buffer_length - 1] = L'\0';
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
         status_record =

@@ -25,11 +25,11 @@ std::string GetDriverName() {
   return "Simba ODBC Driver for Google BigQuery";
 #else
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-return "Google BigQuery ODBC Driver";
+  return "Google BigQuery ODBC Driver";
 #else
-return "Simba Google BigQuery ODBC Connector";
+  return "Simba Google BigQuery ODBC Connector";
 #endif
-  
+
 #endif  // _WIN32
 }
 
@@ -653,8 +653,9 @@ TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
 
 TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::vector<std::string> const conn_string = {
-      "dsn="+ GetDefaultDSN(), "DSN="+ GetDefaultDSN(), "DsN="+ GetDefaultDSN()};
+  std::vector<std::string> const conn_string = {"dsn=" + GetDefaultDSN(),
+                                                "DSN=" + GetDefaultDSN(),
+                                                "DsN=" + GetDefaultDSN()};
   for (auto const& conn_str : conn_string) {
     EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

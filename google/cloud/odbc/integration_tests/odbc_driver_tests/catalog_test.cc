@@ -385,11 +385,11 @@ TEST(CatalogTest, SQLTables_AllProjects) {
     EXPECT_FALSE(result.table_type.has_value());
     EXPECT_FALSE(result.description.has_value());
   }
-  #ifndef DRIVER_MANAGER_TESTING_ENABLED
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_TRUE(project_found);
-  #else
+#else
   EXPECT_FALSE(project_found);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -412,11 +412,11 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
     EXPECT_FALSE(result.table_type.has_value());
     EXPECT_FALSE(result.description.has_value());
   }
-  #ifndef DRIVER_MANAGER_TESTING_ENABLED
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_TRUE(catalog_found);
-  #else
+#else
   EXPECT_FALSE(catalog_found);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -433,12 +433,12 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
 
   std::vector<std::string> expected_types = {kTable, kView, kExternal,
                                              kMaterializedView, kSnapshot};
-  
-   #ifndef DRIVER_MANAGER_TESTING_ENABLED
+
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(expected_types.size(), results.size());
-  #else
+#else
   EXPECT_EQ(results.size(), 0);
-  #endif //DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
   for (auto const& result : results) {
     EXPECT_FALSE(result.project_name.has_value());
     EXPECT_FALSE(result.dataset_name.has_value());

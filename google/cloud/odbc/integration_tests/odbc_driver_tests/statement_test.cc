@@ -2186,12 +2186,12 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
 // On Windows ththe SQLExecute api gives a Function Sequence error with SQLState
 // as (HY010) and no other operation is allowed after that.
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-std::cout<<"error111 "<<error<<std::endl;
-ASSERT_TRUE(absl::StrContains(error, "S1010"))
+      std::cout << "error111 " << error << std::endl;
+      ASSERT_TRUE(absl::StrContains(error, "S1010"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLExecute failed with unexpected error: " << error;
-#else 
+#else
 #ifndef _WIN32
       ASSERT_TRUE(absl::StrContains(error, "HY008"))
           << "SQLExecute failed with unexpected error: " << error;
