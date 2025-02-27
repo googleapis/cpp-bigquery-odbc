@@ -667,6 +667,46 @@ StdAllTypesRows const kConversionFromDifferentTestData{
         {{"age", 32}, {"name", "Kapoor"}},
     },
 };
+// This test should follow translations according to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
+TEST(DataTranslationTest, From_NUMERIC_to_all) {
+  std::vector<std::string> data_type_names;
+  data_type_names.push_back("NUMERIC");
+  data_type_names.push_back("DECIMAL");
+  for (std::string t_name : data_type_names) {
+    auto const table_name =
+        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
+    Table table(table_name);
+    // Create Table
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Insert data to read
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::vector<double> numeric_data_to_insert;
+    for (auto elem : kConversionFromNumericTestData) {
+      numeric_data_to_insert.push_back(elem.value);
+    }
+    table.InsertDataIntoTable<double>(conn, numeric_data_to_insert, true);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Execute a read query and check whether the results returned are as
+    // expected
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::string query =
+        "SELECT NumericField FROM " + table_name + " ORDER BY index";
+    TestTranslationsFromNumeric<CommonBasicTestStruct<double>>(
+        conn, query, kConversionFromNumericTestData);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+    // Delete table
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    table.DropWithPrepare(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
 
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
@@ -1088,22 +1128,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
 =======
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
-// This test should follow translations according to
-// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
-TEST(DataTranslationTest, From_NUMERIC_to_all) {
-  std::vector<std::string> data_type_names;
-  data_type_names.push_back("NUMERIC");
-  data_type_names.push_back("DECIMAL");
-  for (std::string t_name : data_type_names) {
-    auto const table_name =
-        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
-    Table table(table_name);
-    // Create Table
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+<<<<<<< HEAD
     // Insert data to read
     EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
     std::vector<double> numeric_data_to_insert;
@@ -1129,6 +1155,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   }
 >>>>>>> ae60543e (fix: resolving review comments and check failures)
 }
+=======
+>>>>>>> 5d472995 (fix: resolving review comments and check failures)
 void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
                                    std::string query) {
   SQLRETURN status;
