@@ -345,7 +345,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         }
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
-        dest[k_timestamp_src_len] = L'\0';
+        dest[k_timestamp_src_len] = '\0';
       } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = buffer_length * sizeof(SQLWCHAR);
