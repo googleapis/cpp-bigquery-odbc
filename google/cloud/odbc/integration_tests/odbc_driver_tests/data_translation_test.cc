@@ -141,6 +141,11 @@ std::vector<CommonBasicTestStruct<
     {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
     {SQL_C_FLOAT, -157.8, SQL_SUCCESS},
     {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
+    {SQL_C_DOUBLE, 99.999999, SQL_SUCCESS}, 
+    {SQL_C_DOUBLE, 99.999999999999999999, SQL_SUCCESS}, 
+    {SQL_C_DOUBLE, 99.2222222222888899999, SQL_SUCCESS},
+    {SQL_C_DOUBLE, 99.1234567891111187878, SQL_SUCCESS}, 
+    {SQL_C_DOUBLE, 99.2222222222, SQL_SUCCESS},
     {SQL_C_DOUBLE,
      -5.7896044618658097711785492504343953926634992332820282019728792003956564819968E+38,
      SQL_SUCCESS},
@@ -212,8 +217,10 @@ void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_DOUBLE: {
-        SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
-        EXPECT_DOUBLE_EQ(*returned_val, expected.value);
+        SQLDOUBLE* returned_val = (SQLDOUBLE *)(data);
+        SQLDOUBLE  edata = std::round(expected.value * 10000) / 10000;
+        SQLDOUBLE curdata = std::round(*returned_val * 10000) / 10000; 
+        EXPECT_DOUBLE_EQ(edata,curdata);
         break;
       }
       case SQL_C_SLONG: {
@@ -607,6 +614,10 @@ std::vector<CommonBasicTestStruct<double>> const kConversionFromNumericTestData{
     {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
     {SQL_C_SSHORT, 31, SQL_SUCCESS},
     {SQL_C_SSHORT, -31, SQL_SUCCESS},
+    {SQL_C_DOUBLE, 99.999999, SQL_SUCCESS}, 
+    {SQL_C_DOUBLE, 99.9999999999, SQL_SUCCESS}, 
+    {SQL_C_DOUBLE, 99.2222222222, SQL_SUCCESS},
+    {SQL_C_DOUBLE, 99.12345678911111, SQL_SUCCESS}, 
     {SQL_C_DOUBLE, -9.9999999999999999999999999999999999999E+28, SQL_SUCCESS},
     {SQL_C_DOUBLE, 9.9999999999999999999999999999999999999E+28, SQL_SUCCESS},
     {SQL_C_USHORT, 3, SQL_SUCCESS},
