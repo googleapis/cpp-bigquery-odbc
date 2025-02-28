@@ -3237,8 +3237,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_catalog_name;
-  if ((catalogNameLen > 0 || catalogNameLen == SQL_NTS) &&
-      catalogName[0] != '\0') {
+  if (catalogNameLen > 0 || catalogNameLen == SQL_NTS) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3251,8 +3250,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   if (catalogName) sqlcharCategoryName = ToSqlChar(utf8_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_schema_name;
-  if ((schemaNameLen > 0 || schemaNameLen == SQL_NTS) &&
-      schemaName[0] != '\0') {
+  if (schemaNameLen > 0 || schemaNameLen == SQL_NTS) {
     utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3265,7 +3263,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   if (schemaName) sqlcharSchemaName = ToSqlChar(utf8_schema_name->data());
 
   StatusRecordOr<std::string> utf8_table_name;
-  if ((tableNameLen > 0 || tableNameLen == SQL_NTS) && tableName[0] != '\0') {
+  if (tableNameLen > 0 || tableNameLen == SQL_NTS) {
     utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -3278,7 +3276,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   if (tableName) sqlcharTableName = ToSqlChar(utf8_table_name->data());
 
   StatusRecordOr<std::string> utf8_table_type;
-  if ((tableTypeLen > 0 || tableTypeLen == SQL_NTS) && tableType[0] != '\0') {
+  if (tableTypeLen > 0 || tableTypeLen == SQL_NTS) {
     utf8_table_type = ConvertSQLWCHARToString(tableType, tableTypeLen);
     if (!utf8_table_type) {
       TracePrintInternal(*(*kTraceOption),
@@ -3977,8 +3975,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_pk_catalog_name;
-  if ((pkCatalogNameLen > 0 || pkCatalogNameLen == SQL_NTS) &&
-      pkCatalogName[0] != '\0') {
+  if (pkCatalogNameLen > 0 || pkCatalogNameLen == SQL_NTS) {
     utf8_pk_catalog_name =
         ConvertSQLWCHARToString(pkCatalogName, pkCatalogNameLen);
     if (!utf8_pk_catalog_name) {
@@ -3993,8 +3990,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     sqlcharPKCategoryName = ToSqlChar(utf8_pk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_pk_schema_name;
-  if ((pkSchemaNameLen > 0 || pkSchemaNameLen == SQL_NTS) &&
-      pkSchemaName[0] != '\0') {
+  if (pkSchemaNameLen > 0 || pkSchemaNameLen == SQL_NTS) {
     utf8_pk_schema_name =
         ConvertSQLWCHARToString(pkSchemaName, pkSchemaNameLen);
     if (!utf8_pk_schema_name) {
@@ -4009,8 +4005,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     sqlcharPKSchemaName = ToSqlChar(utf8_pk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_pk_table_name;
-  if ((pkTableNameLen > 0 || pkTableNameLen == SQL_NTS) &&
-      pkTableName[0] != '\0') {
+  if (pkTableNameLen > 0 || pkTableNameLen == SQL_NTS) {
     utf8_pk_table_name = ConvertSQLWCHARToString(pkTableName, pkTableNameLen);
     if (!utf8_pk_table_name) {
       TracePrintInternal(*(*kTraceOption),
@@ -4023,8 +4018,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   if (pkTableName) sqlcharPKTableName = ToSqlChar(utf8_pk_table_name->data());
 
   StatusRecordOr<std::string> utf8_fk_catalog_name;
-  if ((fkCatalogNameLen > 0 || fkCatalogNameLen == SQL_NTS) &&
-      fkCatalogName[0] != '\0') {
+  if (fkCatalogNameLen > 0 || fkCatalogNameLen == SQL_NTS) {
     utf8_fk_catalog_name =
         ConvertSQLWCHARToString(fkCatalogName, fkCatalogNameLen);
     if (!utf8_fk_catalog_name) {
@@ -4039,8 +4033,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     sqlcharFKCategoryName = ToSqlChar(utf8_fk_catalog_name->data());
 
   StatusRecordOr<std::string> utf8_fk_schema_name;
-  if ((fkSchemaNameLen > 0 || fkSchemaNameLen == SQL_NTS) &&
-      fkSchemaName[0] != '\0') {
+  if (fkSchemaNameLen > 0 || fkSchemaNameLen == SQL_NTS) {
     utf8_fk_schema_name =
         ConvertSQLWCHARToString(fkSchemaName, fkSchemaNameLen);
     if (!utf8_fk_schema_name) {
@@ -4055,8 +4048,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
     sqlcharFKSchemaName = ToSqlChar(utf8_fk_schema_name->data());
 
   StatusRecordOr<std::string> utf8_fk_table_name;
-  if ((fkTableNameLen > 0 || fkTableNameLen == SQL_NTS) &&
-      fkTableName[0] != '\0') {
+  if (fkTableNameLen > 0 || fkTableNameLen == SQL_NTS) {
     utf8_fk_table_name = ConvertSQLWCHARToString(fkTableName, fkTableNameLen);
     if (!utf8_fk_table_name) {
       TracePrintInternal(*(*kTraceOption),

@@ -2033,8 +2033,7 @@ void TraceFunctionEntry_SQLTablesW(
     SQLSMALLINT table_name_len, SQLWCHAR* table_type,
     SQLSMALLINT table_type_len, TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_catalog_name;
-  if ((catalog_name_len > 0 || catalog_name_len == SQL_NTS) &&
-      catalog_name[0] != '\0') {
+  if (catalog_name_len > 0 || catalog_name_len == SQL_NTS) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
     if (!utf8_catalog_name) {
       TracePrintInternal(opts, utf8_catalog_name.GetStatusRecord().message);
@@ -2048,8 +2047,7 @@ void TraceFunctionEntry_SQLTablesW(
   }
 
   StatusRecordOr<std::string> utf8_schema_name;
-  if ((schema_name_len > 0 || schema_name_len == SQL_NTS) &&
-      schema_name[0] != '\0') {
+  if (schema_name_len > 0 || schema_name_len == SQL_NTS) {
     utf8_schema_name = ConvertSQLWCHARToString(schema_name, schema_name_len);
     if (!utf8_schema_name) {
       TracePrintInternal(opts, utf8_schema_name.GetStatusRecord().message);
@@ -2063,8 +2061,7 @@ void TraceFunctionEntry_SQLTablesW(
   }
 
   StatusRecordOr<std::string> utf8_table_name;
-  if ((table_name_len > 0 || table_name_len == SQL_NTS) &&
-      table_name[0] != '\0') {
+  if (table_name_len > 0 || table_name_len == SQL_NTS) {
     utf8_table_name = ConvertSQLWCHARToString(table_name, table_name_len);
     if (!utf8_table_name) {
       TracePrintInternal(opts, utf8_table_name.GetStatusRecord().message);
@@ -2078,8 +2075,7 @@ void TraceFunctionEntry_SQLTablesW(
   }
 
   StatusRecordOr<std::string> utf8_table_type;
-  if ((table_type_len > 0 || table_type_len == SQL_NTS) &&
-      table_type[0] != '\0') {
+  if (table_type_len > 0 || table_type_len == SQL_NTS) {
     utf8_table_type = ConvertSQLWCHARToString(table_type, table_type_len);
     if (!utf8_table_type) {
       TracePrintInternal(opts, utf8_table_type.GetStatusRecord().message);
@@ -2706,8 +2702,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
     SQLSMALLINT fk_schema_name_len, SQLWCHAR* fk_table_name,
     SQLSMALLINT fk_table_name_len, TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_pk_catalog_name;
-  if ((pk_catalog_name_len > 0 || pk_catalog_name_len == SQL_NTS) &&
-      pk_catalog_name[0] != '\0') {
+  if (pk_catalog_name_len > 0 || pk_catalog_name_len == SQL_NTS) {
     utf8_pk_catalog_name =
         ConvertSQLWCHARToString(pk_catalog_name, pk_catalog_name_len);
     if (!utf8_pk_catalog_name) {
@@ -2722,8 +2717,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
   }
 
   StatusRecordOr<std::string> utf8_pk_schema_name;
-  if ((pk_schema_name_len > 0 || pk_schema_name_len == SQL_NTS) &&
-      pk_schema_name[0] != '\0') {
+  if (pk_schema_name_len > 0 || pk_schema_name_len == SQL_NTS) {
     utf8_pk_schema_name =
         ConvertSQLWCHARToString(pk_schema_name, pk_schema_name_len);
     if (!utf8_pk_schema_name) {
@@ -2738,8 +2732,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
   }
 
   StatusRecordOr<std::string> utf8_pk_table_name;
-  if ((pk_table_name_len > 0 || pk_table_name_len == SQL_NTS) &&
-      pk_table_name[0] != '\0') {
+  if (pk_table_name_len > 0 || pk_table_name_len == SQL_NTS) {
     utf8_pk_table_name =
         ConvertSQLWCHARToString(pk_table_name, pk_table_name_len);
     if (!utf8_pk_table_name) {
@@ -2754,8 +2747,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
   }
 
   StatusRecordOr<std::string> utf8_fk_catalog_name;
-  if ((fk_catalog_name_len > 0 || fk_catalog_name_len == SQL_NTS) &&
-      fk_catalog_name[0] != '\0') {
+  if (fk_catalog_name_len > 0 || fk_catalog_name_len == SQL_NTS) {
     utf8_fk_catalog_name =
         ConvertSQLWCHARToString(fk_catalog_name, fk_catalog_name_len);
     if (!utf8_fk_catalog_name) {
@@ -2770,8 +2762,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
   }
 
   StatusRecordOr<std::string> utf8_fk_schema_name;
-  if ((fk_schema_name_len > 0 || fk_schema_name_len == SQL_NTS) &&
-      fk_schema_name[0] != '\0') {
+  if (fk_schema_name_len > 0 || fk_schema_name_len == SQL_NTS) {
     utf8_fk_schema_name =
         ConvertSQLWCHARToString(fk_schema_name, fk_schema_name_len);
     if (!utf8_fk_schema_name) {
@@ -2786,8 +2777,7 @@ void TraceFunctionEntry_SQLForeignKeysW(
   }
 
   StatusRecordOr<std::string> utf8_fk_table_name;
-  if ((fk_table_name_len > 0 || fk_table_name_len == SQL_NTS) &&
-      fk_table_name[0] != '\0') {
+  if (fk_table_name_len > 0 || fk_table_name_len == SQL_NTS) {
     utf8_fk_table_name =
         ConvertSQLWCHARToString(fk_table_name, fk_table_name_len);
     if (!utf8_fk_table_name) {
