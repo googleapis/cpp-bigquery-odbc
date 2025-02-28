@@ -1035,8 +1035,9 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   apd.BindNewDescriptorRecord(param_index, temp_apd_record);
 
   // Check if All Parameters are Buffered
-  bool all_buffered = std::all_of(buffered_params.begin(), buffered_params.end(),
-    [](const auto& param) { return param.is_completed_; });
+  bool all_buffered =
+      std::all_of(buffered_params.begin(), buffered_params.end(),
+                  [](auto const& param) { return param.is_completed_; });
 
   if (all_buffered) {
     // Prepare Final Query Parameters for Execution
