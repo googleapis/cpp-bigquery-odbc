@@ -622,7 +622,8 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
 }
 
 void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
-                              std::vector<double> rows, bool insert_index) {
+                              std::vector<std::string> rows,
+                              bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
@@ -630,12 +631,12 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
   }
 
   for (int i = 0; i < num_rows; i++) {
-    double numeric_field = rows[i];
+    std::string numeric_field = rows[i];
     std::string row_str = "( ";
     if (insert_index) {
       row_str.append(std::to_string(i) + ", ");
     }
-    row_str.append(std::to_string(numeric_field));
+    row_str.append(numeric_field);
 
     row_str.append(")");
     if (i != (num_rows - 1)) {
