@@ -445,7 +445,7 @@ struct BufferedParameterData {
 
   [[nodiscard]] bool is_completed() const { return is_completed_; }
 
-  void append(const char* data, size_t length) {
+  void append(char const* data, size_t length) {
     if (buffer.size() + length > expected_size) {
       throw std::overflow_error("Buffer overflow: Data exceeds expected size");
     }
@@ -461,7 +461,7 @@ struct BufferedParameterData {
     mark_complete();
   }
 };
-    
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H
