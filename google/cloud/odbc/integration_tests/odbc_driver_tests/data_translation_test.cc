@@ -362,7 +362,7 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
   }
   EXPECT_EQ(row_count, kConversionFromStrTestData.size());
 }
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16
 
@@ -403,6 +403,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
