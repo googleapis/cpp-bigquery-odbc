@@ -202,14 +202,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
     EXPECT_EQ(SQLPutData(conn->hstmt, fields[i].data_ptr, fields[i].data_size),
               SQL_SUCCESS);
   }
-  if (kIsBqDriver) {
-    for (int i = 0; i < 5; ++i) {
-      std::cout << "data bind param " << i + 1 << std::endl;
-      SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, fields[i].c_type,
-                       fields[i].sql_type, 0, 0, fields[i].data_ptr, 0,
-                       &fields[i].data_size);
-    }
-  }
+
 
   // Finalize data execution
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
@@ -3371,15 +3364,6 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
                          byte_to_put * sizeof(wchar_t)),
               SQL_SUCCESS);
   }
-  // adding sample data to remove sqlputdata dependency
-  if (kIsBqDriver) {
-    auto te = large_data.size() * sizeof(SQLWCHAR);
-
-    auto temp =
-        SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                         SQL_WLONGVARCHAR, large_data_size, 0,
-                         large_data.data(), 0, reinterpret_cast<SQLLEN*>(&te));
-  }
   // ------------------------------------------------------------------------------
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_SUCCESS);
   EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
@@ -3426,13 +3410,6 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_SUCCESS);
-  if (kIsBqDriver) {
-    SQLLEN data_le = static_cast<SQLLEN>(data.size());  // Safe conversion
-    EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                               SQL_LONGVARCHAR, 0, 0, (SQLPOINTER)data.c_str(),
-                               0, &data_le),
-              SQL_SUCCESS);
-  }
   if (strict_validation) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_ERROR);
   } else {
