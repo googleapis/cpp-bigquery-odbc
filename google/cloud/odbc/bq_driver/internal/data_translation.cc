@@ -949,9 +949,17 @@ StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
 
   StatusRecord status_record = StatusRecord::Ok();
 
+  auto HexCharToByte = [](char c) -> uint8_t {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return 0;  // Fallback case, should never happen if input is valid hex.
+  };
+
   // Convert each hex pair into a byte
-  for (auto i = 0; i < conn_val.size(); i += 2) {
-    uint8_t byte = (conn_val[i] - '0') * 16 + (conn_val[i + 1] - '0');
+  for (size_t i = 0; i + 1 < conn_val.size(); i += 2) {
+    uint8_t byte =
+        (HexCharToByte(conn_val[i]) << 4) | HexCharToByte(conn_val[i + 1]);
     binary_data.push_back(byte);
   }
 
