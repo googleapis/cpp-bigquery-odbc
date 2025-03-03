@@ -1330,6 +1330,7 @@ struct BytesBasicTestStruct {
 
 std::vector<BytesBasicTestStruct> const kConversionFromBytesTestData{
     {SQL_C_BINARY, {0x01, 0x02}, SQL_SUCCESS},
+    {SQL_C_BINARY, {0xDE, 0xAD, 0xBE, 0xEF}, SQL_SUCCESS},
     {SQL_C_CHAR, {'a', 'b', '\0'}, SQL_SUCCESS},
     {SQL_C_WCHAR, {'\0', 'a', '\0', 'b', '\0', '\0'}, SQL_SUCCESS},
     {SQL_C_LONG, {1}, SQL_ERROR},
