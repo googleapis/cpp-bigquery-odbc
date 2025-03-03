@@ -122,13 +122,11 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
     case SQL_LONGVARCHAR:
     case SQL_WCHAR:
     case SQL_WVARCHAR:
-    case SQL_WLONGVARCHAR: {
-      return Base64Encode(src_val, *src_result_len);
-    }
+    case SQL_WLONGVARCHAR: 
+    case SQL_LONGVARBINARY: 
     case SQL_BINARY:
-    case SQL_VARBINARY:
-    case SQL_LONGVARBINARY: {
-      return ToHexString(src_val, *src_result_len);
+    case SQL_VARBINARY:{
+      return Base64Encode(src_val, *src_result_len);
     }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};

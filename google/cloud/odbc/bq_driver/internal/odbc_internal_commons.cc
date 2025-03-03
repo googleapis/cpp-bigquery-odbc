@@ -405,13 +405,21 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
       } else if(data.empty()){
-      std::cout << "here check data empty  "<< data<<std::endl;
-      DSValue test;
-      // test.emplace_back("");
-      
-      rs_row.emplace_back(test);
-      }
-      else if (!data.empty()) {
+        switch (col_type){
+        case BQDataType::kString:
+        case BQDataType::kJson:
+        case BQDataType::kStruct:
+        case BQDataType::kArray:{
+          DSValue empty_val;
+          StringToDSValue("", empty_val);
+          rs_row.emplace_back(empty_val);
+          break;
+        }
+        // default:
+        // return StatusRecord{SQLStates::k_HY000(),
+        //                         "Empty value for non-string type"   };
+        }
+      }else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
           case BQDataType::kString: {
@@ -529,11 +537,15 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
 StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
+    std::cout << "process query   1 "<<std::endl;
+
     return ProcessPostQueryResults(
         absl::get<PostQueryResults>(query_results.data_source_results));
   }
   if (absl::holds_alternative<GetQueryResults>(
           query_results.data_source_results)) {
+    std::cout << "process query   2"<<std::endl;
+
     return ProcessGetQueryResults(
         absl::get<GetQueryResults>(query_results.data_source_results));
   }

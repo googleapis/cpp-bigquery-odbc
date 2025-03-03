@@ -264,7 +264,6 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
               SQL_SUCCESS);
   }
 
-std::cout << "Bool Value After: " << (int)result_bool << std::endl;
   // Assertions for validation
   EXPECT_EQ(result_bool, SQL_TRUE);
   EXPECT_EQ(result_int, 42);
@@ -273,9 +272,6 @@ std::cout << "Bool Value After: " << (int)result_bool << std::endl;
 
   std::vector<uint8_t> expected_binary = {0xDE, 0xAD, 0xBE, 0xEF};
   EXPECT_EQ(result_binary_len, expected_binary.size());
-std::cout << "binalry val   " << result_binary << std::endl;
-std::cout << "binalry val  2  " << result_binary + result_binary_len << std::endl;
-std::cout << "binalry val  3  " << expected_binary.data() << std::endl;
 
   EXPECT_TRUE(std::equal(result_binary, result_binary + result_binary_len,
                          expected_binary.begin()));
@@ -3436,10 +3432,7 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   }
   if (strict_validation) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_ERROR);
-    std::cout << "yes"<<std::endl;
   } else {
-    std::cout << "no"<<std::endl;
-
     EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_SUCCESS);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

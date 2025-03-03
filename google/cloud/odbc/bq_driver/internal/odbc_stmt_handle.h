@@ -199,11 +199,6 @@ class StatementHandle : public Handle {
   inline void SetParamNum(int param_num) { param_num_ = param_num; }
   inline int GetParamNum() { return param_num_; }
 
-  inline void SetParamDataCalled(bool param_data_called) {
-    param_data_called_ = param_data_called;
-  }
-  inline bool GetParamDataCalled() { return param_data_called_; }
-
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -234,7 +229,6 @@ class StatementHandle : public Handle {
   bool is_statement_prepared_ = false;
 
   int param_num_ = 0;
-  bool param_data_called_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
