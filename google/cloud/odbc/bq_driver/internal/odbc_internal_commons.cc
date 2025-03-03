@@ -404,22 +404,22 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       std::string data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
-      } else if(data.empty()){
-        switch (col_type){
-        case BQDataType::kString:
-        case BQDataType::kJson:
-        case BQDataType::kStruct:
-        case BQDataType::kArray:{
-          DSValue empty_val;
-          StringToDSValue("", empty_val);
-          rs_row.emplace_back(empty_val);
-          break;
+      } else if (data.empty()) {
+        switch (col_type) {
+          case BQDataType::kString:
+          case BQDataType::kJson:
+          case BQDataType::kStruct:
+          case BQDataType::kArray: {
+            DSValue empty_val;
+            StringToDSValue("", empty_val);
+            rs_row.emplace_back(empty_val);
+            break;
+          }
+            // default:
+            // return StatusRecord{SQLStates::k_HY000(),
+            //                         "Empty value for non-string type"   };
         }
-        // default:
-        // return StatusRecord{SQLStates::k_HY000(),
-        //                         "Empty value for non-string type"   };
-        }
-      }else if (!data.empty()) {
+      } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
           case BQDataType::kString: {
@@ -537,14 +537,14 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
 StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
-    std::cout << "process query   1 "<<std::endl;
+    std::cout << "process query   1 " << std::endl;
 
     return ProcessPostQueryResults(
         absl::get<PostQueryResults>(query_results.data_source_results));
   }
   if (absl::holds_alternative<GetQueryResults>(
           query_results.data_source_results)) {
-    std::cout << "process query   2"<<std::endl;
+    std::cout << "process query   2" << std::endl;
 
     return ProcessGetQueryResults(
         absl::get<GetQueryResults>(query_results.data_source_results));

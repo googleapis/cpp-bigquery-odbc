@@ -947,14 +947,15 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
 
-  if(handle->GetPreparedJob().has_value()){
+  if (handle->GetPreparedJob().has_value()) {
     Job prepared_job = handle->GetPreparedJob().value();
-    std::string stmt_type = prepared_job.statistics.job_query_stats.statement_type;
-    if(stmt_type == "UPDATE" || stmt_type == "DELETE"){
+    std::string stmt_type =
+        prepared_job.statistics.job_query_stats.statement_type;
+    if (stmt_type == "UPDATE" || stmt_type == "DELETE") {
       return SQL_NO_DATA;
     }
   }
-  
+
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
 
@@ -979,12 +980,12 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   ConnectionHandle& conn_handle = *(handle->GetConnectionHandle());
   StatusRecordOr<SQLULEN> query_timeout_status =
-        handle->GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
-    if (!query_timeout_status) {
-      return LogAndReturnCode(*handle, query_timeout_status);
-    }
-    int query_timeout = *query_timeout_status;
-    std::string query_str = handle->GetQueryString();
+      handle->GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+  if (!query_timeout_status) {
+    return LogAndReturnCode(*handle, query_timeout_status);
+  }
+  int query_timeout = *query_timeout_status;
+  std::string query_str = handle->GetQueryString();
 
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
@@ -994,23 +995,25 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     StatusRecord status =
         ConstructPositionalQueryParams(apd, ipd, query_params);
     if (!status.ok()) {
-     return LogAndReturnCode(*handle, status);
+      return LogAndReturnCode(*handle, status);
     }
     QueryRequest query_request = post_request.query_request();
     query_request.set_query_parameters(query_params);
     post_request.set_query_request(query_request);
   }
 
-  if(!conn_handle.IsConnected()){
-    return LogAndReturnCode(*handle, StatusRecord{SQLStates::k_08S01(),
-                        "Connection to the data source is broken"});
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        *handle, StatusRecord{SQLStates::k_08S01(),
+                              "Connection to the data source is broken"});
   }
 
   auto bq_client = conn_handle.GetClient();
-  if(!bq_client){
-    return LogAndReturnCode(*handle, StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"});
+  if (!bq_client) {
+    return LogAndReturnCode(
+        *handle,
+        StatusRecord{SQLStates::k_HY000(),
+                     "Invalid or null BQ Client within the connection handle"});
   }
   // For now , we use default options.
   // We can set timeout here as needed later.
@@ -1020,7 +1023,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(*handle, pq_status);
   }
 
-handle->SetStmtState(StmtStates::kStatementPrepared);
+  handle->SetStmtState(StmtStates::kStatementPrepared);
   return SQL_SUCCESS;
 }
 

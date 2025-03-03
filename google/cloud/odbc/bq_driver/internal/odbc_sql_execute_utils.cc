@@ -58,7 +58,7 @@ StatusRecord ConstructPositionalQueryParams(
           "Expected descriptor record does not exist during query execution."};
     }
     SQLSMALLINT sql_type = ipd_rec.concise_type;
-    std::cout << "check 1 "<< std::endl;
+    std::cout << "check 1 " << std::endl;
     StatusRecordOr<std::string> conv_status = ConvertFromBuffer(data, sql_type);
     if (!conv_status) {
       return conv_status.GetStatusRecord();

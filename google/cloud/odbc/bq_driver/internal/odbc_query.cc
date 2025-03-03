@@ -73,7 +73,7 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       status_record = ConvertFromIntervalDSValue(ds_val, data);
       break;
     case BQDataType::kBytes:
-      status_record = ConvertFromBytesDSValue(ds_val,data);
+      status_record = ConvertFromBytesDSValue(ds_val, data);
       break;
     case BQDataType::kBool:
       status_record = ConvertFromBooleanDSValue(ds_val, data);

@@ -2321,7 +2321,7 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   bool is_tracing_enabled = IsTracingEnabled("SQLGetData");
-  std::cout << "odbc api col number  ->  "<<columnNumber<<std::endl;
+  std::cout << "odbc api col number  ->  " << columnNumber << std::endl;
 
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLGetData(statementHandle, columnNumber, targetCType,
