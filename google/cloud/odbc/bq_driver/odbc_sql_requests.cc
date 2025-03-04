@@ -1080,7 +1080,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
 
-  auto param_num = handle->GetParamNum();
+  auto param_num = handle->GetCurrentParameterIndex();
 
   if (param_num < 0 || param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
@@ -1088,12 +1088,13 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   while (param_num < handle->GetParamCount()) {
-    auto param = apd.GetDescriptorRecord(param_num + 1);
+    param_num++;
+    auto param = apd.GetDescriptorRecord(param_num);
     if (param.indicator_ptr != nullptr ||
         *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
         *(param.indicator_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
       *param_or_target_value = param.data_ptr;
-      handle->SetParamNum(param_num + 1);
+      handle->SetCurrentParamIndex(param_num);
       handle->SetStmtState(StmtStates::kNeedsPutData);
       return SQL_NEED_DATA;
     }

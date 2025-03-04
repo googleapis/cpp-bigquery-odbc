@@ -203,12 +203,12 @@ class StatementHandle : public Handle {
                : -1;
   }
 
+  inline void SetCurrentParamIndex(SQLUSMALLINT param_index){
+    current_param_index_ = param_index;
+  }
   std::vector<BufferedParameterData> GetBufferedParameters() {
     return buffered_parameters_;
   }
-
-  inline void SetParamNum(int param_num) { param_num_ = param_num; }
-  inline int GetParamNum() { return param_num_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
@@ -241,7 +241,6 @@ class StatementHandle : public Handle {
       std::nullopt;
   bool is_statement_prepared_ = false;
 
-  int param_num_ = 0;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
