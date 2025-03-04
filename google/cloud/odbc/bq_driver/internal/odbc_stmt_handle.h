@@ -196,6 +196,9 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
+  inline void SetParamNum(int param_num) { param_num_ = param_num; }
+  inline int GetParamNum() { return param_num_; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
@@ -224,6 +227,8 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
   bool is_statement_prepared_ = false;
+
+  int param_num_ = 0;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

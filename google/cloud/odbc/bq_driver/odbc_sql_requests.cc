@@ -733,6 +733,10 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
+  if (!execute_status.ok()) {
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    return SQL_NEED_DATA;
+  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 
@@ -929,6 +933,98 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
   return LogAndReturnCode(stmt_handle, status);
+}
+
+SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
+                               SQLPOINTER* param_or_target_value) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle* handle = *handle_result;
+
+  if (handle->GetPreparedJob().has_value()) {
+    Job prepared_job = handle->GetPreparedJob().value();
+    std::string stmt_type =
+        prepared_job.statistics.job_query_stats.statement_type;
+    if (stmt_type == "UPDATE" || stmt_type == "DELETE") {
+      return SQL_NO_DATA;
+    }
+  }
+
+  DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+
+  auto param_num = handle->GetParamNum();
+  if (param_num < 0 || param_num > handle->GetParamCount()) {
+    return LogAndReturnCode(*handle,
+                            {SQLStates::k_HY000(), "Parameter out of bounds"});
+  }
+
+  while (param_num < handle->GetParamCount()) {
+    param_num++;
+    auto param = apd.GetDescriptorRecord(param_num);
+    if (param.indicator_ptr != nullptr ||
+        *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
+        *(param.indicator_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
+      *param_or_target_value = param.data_ptr;
+      handle->SetParamNum(param_num);
+      handle->SetStmtState(StmtStates::kNeedsPutData);
+      return SQL_NEED_DATA;
+    }
+  }
+
+  ConnectionHandle& conn_handle = *(handle->GetConnectionHandle());
+  StatusRecordOr<SQLULEN> query_timeout_status =
+      handle->GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+  if (!query_timeout_status) {
+    return LogAndReturnCode(*handle, query_timeout_status);
+  }
+  int query_timeout = *query_timeout_status;
+  std::string query_str = handle->GetQueryString();
+
+  PostQueryRequest post_request =
+      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
+
+  std::vector<QueryParameter>& query_params = handle->GetQueryParameters();
+  if (!query_params.empty()) {
+    StatusRecord status =
+        ConstructPositionalQueryParams(apd, ipd, query_params);
+    if (!status.ok()) {
+      return LogAndReturnCode(*handle, status);
+    }
+    QueryRequest query_request = post_request.query_request();
+    query_request.set_query_parameters(query_params);
+    post_request.set_query_request(query_request);
+  }
+
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        *handle, StatusRecord{SQLStates::k_08S01(),
+                              "Connection to the data source is broken"});
+  }
+
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    return LogAndReturnCode(
+        *handle,
+        StatusRecord{SQLStates::k_HY000(),
+                     "Invalid or null BQ Client within the connection handle"});
+  }
+  // For now , we use default options.
+  // We can set timeout here as needed later.
+  Options options;
+  auto pq_status = bq_client->PostQuery(post_request, options);
+  if (!pq_status) {
+    return LogAndReturnCode(*handle, pq_status);
+  }
+
+  handle->SetStmtState(StmtStates::kStatementPrepared);
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver
