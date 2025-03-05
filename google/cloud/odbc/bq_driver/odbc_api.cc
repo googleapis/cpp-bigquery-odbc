@@ -1586,7 +1586,9 @@ SQLRETURN SQL_API SQLGetDescRecW(
                          utf16_name.GetStatusRecord().message);
       return utf16_name.GetCalculatedReturnCode();
     }
-    std::memcpy(name, ToSqlWChar(utf16_name->data()), name_string_len);
+    std::memset(name, '\0', nameBufferLen * sizeof(SQLWCHAR));
+    std::memcpy(name, ToSqlWChar(utf16_name->data()),
+                name_string_len * sizeof(SQLWCHAR));
   }
   if (nameStringLen) *nameStringLen = name_string_len;
 
