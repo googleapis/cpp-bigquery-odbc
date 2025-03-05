@@ -58,11 +58,13 @@ odbc_internal::StatusRecord WStrIntervalBufferResponse(
       *res_len = char_len * sizeof(SQLWCHAR);
     }
     std::memcpy(dest, wstr_data.data(), (char_len) * sizeof(SQLWCHAR));
+    dest[char_len] = L'\0';
   } else if (buffer_length > whole_digits_count) {
     if (res_len) {
       *res_len = buffer_length * sizeof(SQLWCHAR);
     }
     std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
+    dest[buffer_length - 1] = L'\0';
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
   } else {
