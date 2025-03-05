@@ -189,8 +189,8 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length < 0) {
-    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  if (buffer_length <= 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
   StatusRecord status_record = StatusRecord::Ok();
@@ -299,8 +299,8 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length < 0) {
-    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  if (buffer_length <= 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
   StatusRecord status_record = StatusRecord::Ok();
@@ -345,11 +345,13 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         }
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
+        dest[k_timestamp_src_len] = L'\0';
       } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = buffer_length * sizeof(SQLWCHAR);
         }
         std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
+        dest[buffer_length - 1] = L'\0';
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
         status_record =
@@ -441,8 +443,8 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
-  if (buffer_length < 0) {
-    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  if (buffer_length <= 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
   DSValueToDate(src_dsval, conn_date);
@@ -668,8 +670,8 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length < 0) {
-    return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+  if (buffer_length <= 0) {
+    return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
   StatusRecord status_record = StatusRecord::Ok();

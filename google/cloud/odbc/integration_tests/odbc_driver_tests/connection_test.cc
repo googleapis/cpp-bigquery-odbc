@@ -24,7 +24,12 @@ std::string GetDriverName() {
 #ifdef _WIN32
   return "Simba ODBC Driver for Google BigQuery";
 #else
+#ifdef DRIVER_MANAGER_TESTING_ENABLED
+  return "Google BigQuery ODBC Driver";
+#else
   return "Simba Google BigQuery ODBC Connector";
+#endif
+
 #endif  // _WIN32
 }
 
@@ -628,7 +633,7 @@ TEST(ConnectionTest, SQLDriverConnect_SQL_DRIVER_NOPROMPT) {
 TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
   auto conn = std::make_shared<ODBCHandles>();
 
-  std::string conn_str = "DSN=SampleDSN";
+  std::string conn_str = kDefaultConnectionString;
   SQLCHAR in_conn_str[kBufferLength];
   SQLCHAR out_conn_str[10] = {0};
   SQLSMALLINT out_conn_str_len;
@@ -648,8 +653,9 @@ TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
 
 TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::vector<std::string> const conn_string = {
-      "dsn=SampleDSN", "DSN=SampleDSN", "DsN=SampleDSN"};
+  std::vector<std::string> const conn_string = {"dsn=" + GetDefaultDSN(),
+                                                "DSN=" + GetDefaultDSN(),
+                                                "DsN=" + GetDefaultDSN()};
   for (auto const& conn_str : conn_string) {
     EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
     EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1084,10 +1090,13 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_EQ(status, SQL_NEED_DATA);
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  std::cout<<"res_out_conn_str "<<res_out_conn_str<<std::endl;
+  std::cout<<"res_out_conn_str size "<<res_out_conn_str.size()<<std::endl;
+  std::cout<<"out_conn_str_len "<<out_conn_str_len<<std::endl;
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }

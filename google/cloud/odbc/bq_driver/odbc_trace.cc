@@ -2041,6 +2041,10 @@ void TraceFunctionEntry_SQLTablesW(
     }
     catalog_name_len = utf8_catalog_name->length();
   }
+  SQLCHAR* sqlchar_category_name = nullptr;
+  if (catalog_name) {
+    sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
+  }
 
   StatusRecordOr<std::string> utf8_schema_name;
   if (schema_name_len > 0 || schema_name_len == SQL_NTS) {
@@ -2050,6 +2054,10 @@ void TraceFunctionEntry_SQLTablesW(
       return;
     }
     schema_name_len = utf8_schema_name->length();
+  }
+  SQLCHAR* sqlchar_schema_name = nullptr;
+  if (schema_name) {
+    sqlchar_schema_name = ToSqlChar(utf8_schema_name->data());
   }
 
   StatusRecordOr<std::string> utf8_table_name;
@@ -2061,6 +2069,10 @@ void TraceFunctionEntry_SQLTablesW(
     }
     table_name_len = utf8_table_name->length();
   }
+  SQLCHAR* sqlchar_table_name = nullptr;
+  if (table_name) {
+    sqlchar_table_name = ToSqlChar(utf8_table_name->data());
+  }
 
   StatusRecordOr<std::string> utf8_table_type;
   if (table_type_len > 0 || table_type_len == SQL_NTS) {
@@ -2071,12 +2083,15 @@ void TraceFunctionEntry_SQLTablesW(
     }
     table_type_len = utf8_table_type->length();
   }
+  SQLCHAR* sqlchar_table_type = nullptr;
+  if (table_type) {
+    sqlchar_table_type = ToSqlChar(utf8_table_type->data());
+  }
 
   TraceFunctionEntry_SQLTables(
-      statement_handle, ToSqlChar(utf8_catalog_name->data()), catalog_name_len,
-      ToSqlChar(utf8_schema_name->data()), schema_name_len,
-      ToSqlChar(utf8_table_name->data()), table_name_len,
-      ToSqlChar(utf8_table_type->data()), table_type_len, opts);
+      statement_handle, sqlchar_category_name, catalog_name_len,
+      sqlchar_schema_name, schema_name_len, sqlchar_table_name, table_name_len,
+      sqlchar_table_type, table_type_len, opts);
 }
 
 void TraceFunctionExit_SQLTablesW(SQLRETURN ret_code, TraceOptions& opts) {
@@ -2696,6 +2711,10 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     pk_catalog_name_len = utf8_pk_catalog_name->length();
   }
+  SQLCHAR* sqlchar_pk_category_name = nullptr;
+  if (pk_catalog_name) {
+    sqlchar_pk_category_name = ToSqlChar(utf8_pk_catalog_name->data());
+  }
 
   StatusRecordOr<std::string> utf8_pk_schema_name;
   if (pk_schema_name_len > 0 || pk_schema_name_len == SQL_NTS) {
@@ -2706,6 +2725,10 @@ void TraceFunctionEntry_SQLForeignKeysW(
       return;
     }
     pk_schema_name_len = utf8_pk_schema_name->length();
+  }
+  SQLCHAR* sqlchar_pk_schema_name = nullptr;
+  if (pk_schema_name) {
+    sqlchar_pk_schema_name = ToSqlChar(utf8_pk_schema_name->data());
   }
 
   StatusRecordOr<std::string> utf8_pk_table_name;
@@ -2718,6 +2741,10 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     pk_table_name_len = utf8_pk_table_name->length();
   }
+  SQLCHAR* sqlchar_pk_table_name = nullptr;
+  if (pk_table_name) {
+    sqlchar_pk_table_name = ToSqlChar(utf8_pk_table_name->data());
+  }
 
   StatusRecordOr<std::string> utf8_fk_catalog_name;
   if (fk_catalog_name_len > 0 || fk_catalog_name_len == SQL_NTS) {
@@ -2728,6 +2755,10 @@ void TraceFunctionEntry_SQLForeignKeysW(
       return;
     }
     fk_catalog_name_len = utf8_fk_catalog_name->length();
+  }
+  SQLCHAR* sqlchar_fk_category_name = nullptr;
+  if (fk_catalog_name) {
+    sqlchar_fk_category_name = ToSqlChar(utf8_fk_catalog_name->data());
   }
 
   StatusRecordOr<std::string> utf8_fk_schema_name;
@@ -2740,6 +2771,10 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     fk_schema_name_len = utf8_fk_schema_name->length();
   }
+  SQLCHAR* sqlchar_fk_schema_name = nullptr;
+  if (fk_schema_name) {
+    sqlchar_fk_schema_name = ToSqlChar(utf8_fk_schema_name->data());
+  }
 
   StatusRecordOr<std::string> utf8_fk_table_name;
   if (fk_table_name_len > 0 || fk_table_name_len == SQL_NTS) {
@@ -2751,14 +2786,16 @@ void TraceFunctionEntry_SQLForeignKeysW(
     }
     fk_table_name_len = utf8_fk_table_name->length();
   }
+  SQLCHAR* sqlchar_fk_table_name = nullptr;
+  if (fk_table_name) {
+    sqlchar_fk_table_name = ToSqlChar(utf8_fk_table_name->data());
+  }
 
   TraceFunctionEntry_SQLForeignKeys(
-      statement_handle, ToSqlChar(utf8_pk_catalog_name->data()),
-      pk_catalog_name_len, ToSqlChar(utf8_pk_schema_name->data()),
-      pk_schema_name_len, ToSqlChar(utf8_pk_table_name->data()),
-      pk_table_name_len, ToSqlChar(utf8_fk_catalog_name->data()),
-      fk_catalog_name_len, ToSqlChar(utf8_fk_schema_name->data()),
-      fk_schema_name_len, ToSqlChar(utf8_fk_table_name->data()),
+      statement_handle, sqlchar_pk_category_name, pk_catalog_name_len,
+      sqlchar_pk_schema_name, pk_schema_name_len, sqlchar_pk_table_name,
+      pk_table_name_len, sqlchar_fk_category_name, fk_catalog_name_len,
+      sqlchar_fk_schema_name, fk_schema_name_len, sqlchar_fk_table_name,
       fk_table_name_len, opts);
 }
 
