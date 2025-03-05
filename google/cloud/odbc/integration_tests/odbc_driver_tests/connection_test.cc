@@ -1096,7 +1096,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
