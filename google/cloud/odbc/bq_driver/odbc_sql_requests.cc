@@ -587,6 +587,7 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   // Make this an asynchronous operation if the user has requested it
   // to be async.
+  // TODO(b/400632420): Validate and compare SQLPrepare return status
   if (*async_enable_status == SQL_ASYNC_ENABLE_ON) {
     std::future<StatusRecord> fut_prepare_query = std::async(
         std::launch::async,
