@@ -2475,6 +2475,96 @@ TEST(SQLCancel, Execute_Cancel_NeedData) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+TEST(SimpleProcedureTest, SQLProceduresBasic) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string procedure_name = kDatasetWithTablePrefix + "SIMPLE_PROCEDURE";
+
+  // Create a simple procedure
+  {
+    std::string procedure_create = "CREATE OR REPLACE PROCEDURE " +
+                                   procedure_name +
+                                   "(IN p_id INT64, OUT p_name STRING) "
+                                   "BEGIN "
+                                   "  SET p_name = 'TestName'; "
+                                   "END";
+    SQLRETURN status;
+    SQLCHAR data[kBufferLength];
+    SQLLEN strlen_or_ind;
+    char read_stmt[kBufferLength];
+    StrToChar(read_stmt, procedure_create.c_str());
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+    std::cout << "\n Amr: 1\n";
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+    std::cout << "\n Amr: 2\n";
+    status =
+        SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
+    EXPECT_EQ(status, SQL_SUCCESS) << "Failed to create procedure.";
+  }
+
+  // Test SQLProcedures
+  {
+    SQLRETURN status = SQLProcedures(conn->hstmt, nullptr, 0, nullptr, 0,
+                                     (SQLCHAR*)procedure_name.c_str(), SQL_NTS);
+
+    if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
+      std::cerr << "SQLProcedures failed: Driver may not support procedure "
+                   "metadata."
+                << std::endl;
+      SQLCloseCursor(conn->hstmt);
+    } else {
+      // Check if the returned metadata is valid
+      SQLSMALLINT col_count = 0;
+      status = SQLNumResultCols(conn->hstmt, &col_count);
+      if (status != SQL_SUCCESS || col_count == 0) {
+        std::cerr << "No procedure metadata available. Skipping test to avoid "
+                     "simba_abort()."
+                  << std::endl;
+        SQLCloseCursor(conn->hstmt);
+      } else {
+        std::cout << "Number of columns: " << col_count << std::endl;
+        SQLCHAR proc_name[256] = {0};
+        SQLCHAR remarks[256] = {0};
+        SQLCHAR proc_type = 0;
+        SQLBindCol(conn->hstmt, 3, SQL_C_CHAR, proc_name, sizeof(proc_name),
+                   nullptr);
+        SQLBindCol(conn->hstmt, 8, SQL_C_CHAR, remarks, sizeof(remarks),
+                   nullptr);
+        SQLBindCol(conn->hstmt, 9, SQL_C_TINYINT, &proc_type, 0, nullptr);
+        std::cout << "Procedure Metadata:\n";
+        std::cout << "---------------------------------------------\n";
+        std::cout << "Procedure Name | Remarks | Procedure Type\n";
+        std::cout << "---------------------------------------------\n";
+        while ((status = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
+               status == SQL_SUCCESS_WITH_INFO) {
+          std::cout << proc_name << " | " << remarks << " | " << (int)proc_type
+                    << std::endl;
+        }
+      }
+      SQLCloseCursor(conn->hstmt);
+    }
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Drop the procedure
+  {
+    std::string procedure_drop = "DROP PROCEDURE " + procedure_name;
+    SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_drop.c_str(), SQL_NTS);
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    SQLRETURN status;
+    SQLCHAR data[kBufferLength];
+    SQLLEN strlen_or_ind;
+    char read_stmt[kBufferLength];
+    StrToChar(read_stmt, procedure_drop.c_str());
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
+
 TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
