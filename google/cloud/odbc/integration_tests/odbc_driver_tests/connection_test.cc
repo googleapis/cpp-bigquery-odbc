@@ -1096,9 +1096,11 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
+    std::cout<<"here in true "<<res_out_conn_str<<std::endl;
     EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
   } else {
-    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+    std::cout<<"here in false "<<res_out_conn_str<<std::endl;
+    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
   }
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
