@@ -482,7 +482,7 @@ TEST(ConvertFromDateDSValue, NegativeBufferLength) {
 
   auto result = ConvertFromDateDSValue(ds_value, dest_data);
   EXPECT_THAT(result, StatusRecIs(SQLStates::k_HY090(),
-                                  StrEq("Buffer length is negative")));
+                                  StrEq("Invalid Buffer length")));
 }
 
 TEST(ConvertFromDateDSValue, SmallBufferForStringOutput) {
@@ -1293,7 +1293,7 @@ TEST(ConvertFromIntervalDSValue, Negative_Buffer_Length) {
                        -1};  // Negative buffer length
   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
   EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
-                                  StrEq("Buffer length is negative")));
+                                  StrEq("Invalid Buffer length")));
 }
 
 TEST(ConvertFromIntervalDSValue, Insufficient_Buffer_length) {
