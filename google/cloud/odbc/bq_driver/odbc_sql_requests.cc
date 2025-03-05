@@ -932,123 +932,89 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
-                             SQLLEN str_len_or_ind_ptr) {
+  SQLLEN str_len_or_ind_ptr) {
   StatusRecordOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
+  ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
 
-  // If in asynchronous mode, indicate data transfer is still ongoing
-  if (stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting) {
-    return SQL_STILL_EXECUTING;
-  }
-
-  // Validate Statement State
+  // Ensure statement is in kNeedsPutData state
   if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
-    StatusRecord status_record = {
-        SQLStates::k_HY010(),
-        "Function sequence error: Incorrect statement state."};
-    return LogAndReturnCode(stmt_handle, status_record);
+    return LogAndReturnCode(stmt_handle, 
+      {SQLStates::k_HY010(), "Function sequence error: Incorrect statement state."});
   }
 
-  // Get the current parameter index
+  // Get the current parameter index (set by SQLParamData)
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParameterIndex();
-  if (param_index == -1) {
-    StatusRecord status_record = {SQLStates::k_HY000(),
-                                  "No parameter currently expecting data."};
-    return LogAndReturnCode(stmt_handle, status_record);
+  if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
+    return LogAndReturnCode(stmt_handle, 
+      {SQLStates::k_HY000(), "No parameter currently expecting data."});
   }
 
-  auto buffered_params = stmt_handle.GetBufferedParameters();
-  if (param_index >= buffered_params.size()) {
-    return SQL_ERROR;  // Invalid index
-  }
-
-  auto& param = buffered_params[param_index];
-
-  // Ensure parameter was marked for deferred execution (SQL_DATA_AT_EXEC)
-  if (!param.is_deferred) {
-    StatusRecord status_record = {
-        SQLStates::k_HY010(),
-        "Invalid function sequence: Parameter not deferred."};
-    return LogAndReturnCode(stmt_handle, status_record);
-  }
-
-  // Retrieve APD descriptor handles
   DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
-
-  // Fetch existing descriptor record
-  DescriptorRecord temp_apd_record;
-  if (apd.HasDescriptorRecord(param_index)) {
-    temp_apd_record = apd.GetDescriptorRecord(param_index);
+  if (!apd.HasDescriptorRecord(param_index)) {
+    return LogAndReturnCode(stmt_handle, 
+      {SQLStates::k_07002(), "Descriptor record does not exist for parameter."});
   }
 
-  // Handle NULL Data
+  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
+
+  // Ensure parameter was marked for deferred execution
+  if (apd_rec.indicator_ptr == nullptr &&
+      *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC &&
+      *(apd_rec.indicator_ptr) != SQL_LEN_DATA_AT_EXEC(0)) {
+    return LogAndReturnCode(stmt_handle, 
+      {SQLStates::k_HY010(), "Invalid function sequence: Parameter not deferred."});
+  }
+
+  // Handle NULL data
   if (str_len_or_ind_ptr == SQL_NULL_DATA) {
-    param.is_null = true;
-    param.buffer.clear();
-    param.is_completed_ = true;  // Mark as completed with NULL
-    temp_apd_record.data_ptr = nullptr;
-    temp_apd_record.octet_length = 0;
-    temp_apd_record.indicator_ptr = nullptr;
+    apd_rec.data_ptr = nullptr;
+    apd_rec.octet_length = 0;
   } else {
-    param.is_null = false;
-
-    // Validate Length Indicator
     if (str_len_or_ind_ptr < 0) {
-      StatusRecord status_record = {
-          SQLStates::k_HY090(), "Invalid string length or indicator value."};
-      return LogAndReturnCode(stmt_handle, status_record);
+      return LogAndReturnCode(stmt_handle, 
+        {SQLStates::k_HY090(), "Invalid string length or indicator value."});
     }
 
-    // Ensure dynamic buffer allocation
-    if (param.buffer.capacity() < param.buffer.size() + str_len_or_ind_ptr) {
-      try {
-        param.buffer.reserve(param.buffer.size() + str_len_or_ind_ptr);
-      } catch (std::bad_alloc const&) {
-        StatusRecord status_record = {SQLStates::k_HY001(),
-                                      "Memory allocation error."};
-        return LogAndReturnCode(stmt_handle, status_record);
+  // Allocate a temporary buffer
+  SQLPOINTER temp_buffer = nullptr;
+  if (apd_rec.data_ptr == nullptr) {
+      // First chunk of data, allocate fresh buffer
+      temp_buffer = malloc(str_len_or_ind_ptr);
+      if (temp_buffer == nullptr) {
+          return LogAndReturnCode(stmt_handle, 
+              {SQLStates::k_HY001(), "Memory allocation error."});
       }
-    }
 
-    // Append Data to Buffer
-    param.buffer.insert(param.buffer.end(), static_cast<char*>(data),
-                        static_cast<char*>(data) + str_len_or_ind_ptr);
+      memcpy(temp_buffer, data, str_len_or_ind_ptr);
+  } else {
+      // Additional chunks: allocate new buffer large enough to hold old + new data
+      size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
+      temp_buffer = malloc(new_size);
+      if (temp_buffer == nullptr) {
+          return LogAndReturnCode(stmt_handle, 
+              {SQLStates::k_HY001(), "Memory allocation error."});
+      }
 
-    // Update Descriptor Record
-    temp_apd_record.data_ptr = data;
-    temp_apd_record.octet_length = str_len_or_ind_ptr;
-    temp_apd_record.indicator_ptr = &str_len_or_ind_ptr;
+      // Copy existing data
+      memcpy(temp_buffer, apd_rec.data_ptr, apd_rec.octet_length);
 
-    // Mark Parameter as Complete if Fully Buffered
-    if (param.buffer.size() >= param.expected_size) {
-      param.is_completed_ = true;
-    }
+      // Append new data
+      memcpy(static_cast<char*>(temp_buffer) + apd_rec.octet_length, data, str_len_or_ind_ptr);
   }
 
-  // Bind updated descriptor record
-  apd.BindNewDescriptorRecord(param_index, temp_apd_record);
+  // Update descriptor only after successful allocation
+  apd_rec.data_ptr = temp_buffer;
+  apd_rec.octet_length += str_len_or_ind_ptr;
+  apd_rec.octet_length_ptr = &apd_rec.octet_length;
 
-  // Check if All Parameters are Buffered
-  bool all_buffered =
-      std::all_of(buffered_params.begin(), buffered_params.end(),
-                  [](auto const& param) { return param.is_completed_; });
-
-  if (all_buffered) {
-    // Prepare Final Query Parameters for Execution
-    auto& query_params = stmt_handle.GetQueryParameters();
-    for (size_t i = 0; i < query_params.size(); ++i) {
-      query_params[i].parameter_value.value.assign(
-          buffered_params[i].buffer.begin(), buffered_params[i].buffer.end());
-    }
-    stmt_handle.SetStmtState(StmtStates::kStatementReadyForExecution);
   }
 
+  // Update descriptor record
+  apd.BindNewDescriptorRecord(param_index, apd_rec);
   return SQL_SUCCESS;
 }
 
