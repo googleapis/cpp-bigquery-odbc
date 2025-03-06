@@ -197,24 +197,20 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
-  SQLUSMALLINT GetCurrentParameterIndex() {
-    return (current_param_index_ < buffered_parameters_.size())
-               ? current_param_index_
-               : -1;
+
+  SQLUSMALLINT GetCurrentParameterIndex() const {
+     return current_param_index_; 
   }
 
-  inline void SetCurrentParamIndex(SQLUSMALLINT param_index){
+  inline void SetCurrentParamIndex(SQLUSMALLINT param_index) {
     current_param_index_ = param_index;
-  }
-  std::vector<BufferedParameterData> GetBufferedParameters() {
-    return buffered_parameters_;
   }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
-  SQLUSMALLINT current_param_index_ = -1;
+  SQLUSMALLINT current_param_index_ = 0;
 
  private:
   std::shared_ptr<Query> query_;
