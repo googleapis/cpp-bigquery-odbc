@@ -394,6 +394,7 @@ void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
   }
   EXPECT_EQ(row_count, kConversionFromNumericTestData.size());
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                                 std::string query) {
@@ -403,7 +404,11 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
 
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn, false);
+
+  status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 
   // Read all the rows using SQLFetch
@@ -490,7 +495,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(index INT64, StringField STRING)");
+  table.CreateWithPrepare(conn, "(index INT64, StringField STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -515,10 +520,11 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {

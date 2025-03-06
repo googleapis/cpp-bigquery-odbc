@@ -163,6 +163,14 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       }
       return status_record;
     }
+    case SQL_C_BIT: {
+      auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
+      if (src_val == 0 || src_val == 1) {
+        *dest_val = static_cast<SQLCHAR>(src_val);
+        return StatusRecord::Ok();
+      }
+      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
