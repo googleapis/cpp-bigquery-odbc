@@ -411,6 +411,20 @@ TEST(UnicodeConversion, Success_ConvertSQLWCHARToString) {
   EXPECT_STREQ(query.data(), result_wstr->data());
 }
 
+TEST(ConvertSQLWCHARToString, success_emptystring) {
+  std::wstring str(L"");
+  std::vector<SQLWCHAR> sqlWStr(str.begin(), str.end());
+  sqlWStr.emplace_back(L'\0');
+
+  SQLWCHAR* statementText = sqlWStr.data();
+
+  SQLSMALLINT length = sqlWStr.size();
+
+  auto result_str = ConvertSQLWCHARToString(statementText, length);
+
+  EXPECT_STREQ("", result_str->c_str());
+}
+
 TEST(UnicodeConversion, Success_Utf16ToUtf8) {
   std::wstring wstr = L"आपका स्वागत है";
   std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
