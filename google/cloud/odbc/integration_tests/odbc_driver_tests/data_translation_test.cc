@@ -405,10 +405,7 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn, false);
-
-  status = SQLExecute(conn->hstmt);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLExecDirect", conn, false);
 
   // Read all the rows using SQLFetch
@@ -495,7 +492,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, "(index INT64, StringField STRING)");
+  table.Create(conn, "(index INT64, StringField STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -520,7 +517,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
+  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
