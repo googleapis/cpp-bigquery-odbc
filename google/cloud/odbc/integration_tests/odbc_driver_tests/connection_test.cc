@@ -22,7 +22,11 @@ using ::testing::HasSubstr;
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
 #ifdef _WIN32
-  return "Simba ODBC Driver for Google BigQuery";
+#ifdef DRIVER_MANAGER_TESTING_ENABLED
+  return "ODBC Driver for Google BigQuery";
+#else
+   return "Simba ODBC Driver for Google BigQuery";
+  #endif
 #else
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
   return "Google BigQuery ODBC Driver";
@@ -1484,6 +1488,7 @@ TEST(BQDriverTest, SQLGetFunctions_ODBC3_FunctionIdNotSupported) {
   EXPECT_EQ(SQL_FALSE, supported);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(BQDriverTest, SQLGetFunctions_ODBC2_FunctionIdNotSupported) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -1508,6 +1513,7 @@ TEST(BQDriverTest, SQLGetFunctions_ODBC2_AllUnSupported) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif //DRIVER_MANAGER_TESTING_ENABLED
 // Negative test cases for SQLGetFunctions
 
 TEST(SQLGetFunctionsInternal, SQLGetFunctions_ODBC2_NullConnectionHandle) {
