@@ -19,6 +19,7 @@ namespace google::cloud::odbc_tests {
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
 // ODBC APIs
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerDriver) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -129,6 +130,8 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
+#endif //DRIVER_MANAGER_TESTING_ENABLED
+
 TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_OV_ODBC2;
@@ -161,6 +164,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC3) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_TRUE;
@@ -206,7 +210,7 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   EXPECT_EQ(get_val2, SQL_TRUE);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
-
+#endif //DRIVER_MANAGER_TESTING_ENABLED
 // Error Cases
 
 TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
