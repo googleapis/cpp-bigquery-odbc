@@ -23,9 +23,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
+using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 
 StatusRecord ConstructPositionalQueryParams(
@@ -78,6 +80,93 @@ StatusRecord ConstructPositionalQueryParams(
     basic_query_params[param_ind].parameter_value.value = value_str;
   }
   return StatusRecord::Ok();
+}
+
+StatusRecordOr<DSResults> ExecuteScript(
+    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
+  ConnectionHandle* conn_handle = stmt_handle.GetConnectionHandle();
+  if (!conn_handle) {
+    return StatusRecord{SQLStates::k_HY009(), "Invalid statement handle"};
+  }
+
+  // Validate connection handle
+  if (!conn_handle->IsConnected()) {
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+
+  auto bq_client = conn_handle->GetClient();
+  if (!bq_client) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+
+  // Execute the query
+  Options post_query_options;
+  auto pq_status = bq_client->PostQuery(post_query_request, post_query_options);
+  if (!pq_status) {
+    return pq_status.GetStatusRecord();
+  }
+
+  DSResults results;
+  results.dml_stats = pq_status->dml_stats;
+  results.data_source_results = *pq_status;
+
+  // Retrieve job information
+  Options list_job_options;
+  auto all_jobs_status =
+      bq_client->ListAllJobs(pq_status->job_reference.project_id,
+                             pq_status->job_reference.job_id, list_job_options);
+
+  for (auto const& job_status : all_jobs_status.GetValue()) {
+    if (job_status.statistics.job_query_stats.statement_type !=
+        "CREATE_PROCEDURE") {
+      stmt_handle.SetJobData(
+          job_status.job_reference.job_id,
+          job_status.statistics.job_query_stats.statement_type);
+    }
+  }
+
+  // Fetch query results if job data is available
+  if (!stmt_handle.HasJobData()) {
+    return results;
+  }
+
+  auto job_data = stmt_handle.GetNextJobData();
+  std::string job_id = job_data.first;
+  std::string statement_type = job_data.second;
+
+  Options query_results_options;
+  if (pq_status->job_complete) {
+    auto gq_status = bq_client->GetAllQueryResults(
+        pq_status->job_reference.project_id, job_id,
+        pq_status->job_reference.location,
+        post_query_request.query_request().timeout(), query_results_options);
+
+    if (!gq_status) {
+      return gq_status.GetStatusRecord();
+    }
+
+    // Assign DML row counts
+    std::int64_t dml_affected_rows = gq_status->num_dml_affected_rows;
+    if (statement_type == "INSERT") {
+      results.dml_stats.inserted_row_count = dml_affected_rows;
+    } else if (statement_type == "UPDATE") {
+      results.dml_stats.updated_row_count = dml_affected_rows;
+    } else if (statement_type == "DELETE") {
+      results.dml_stats.deleted_row_count = dml_affected_rows;
+    }
+    results.data_source_results = *gq_status;
+  }
+  stmt_handle.SetDSResults(results);
+
+  if (!conn_handle->IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle->SetSessionId(pq_status->session_info.session_id);
+  }
+
+  return results;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

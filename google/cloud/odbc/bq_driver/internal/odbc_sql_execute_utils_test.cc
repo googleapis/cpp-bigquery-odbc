@@ -13,13 +13,20 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
+#include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
+using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
+using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
+using ::google::cloud::odbc_testing_utils::StatusRecordIs;
 using odbc_internal::SQLStates;
+using ::testing::HasSubstr;
 
 void PopulateDescriptors(DescriptorHandle& apd, DescriptorHandle& ipd,
                          int col_ind, SQLSMALLINT c_type, SQLSMALLINT sql_type,
@@ -128,6 +135,61 @@ TEST(ConstructPositionalQueryParams, InvalidConversion) {
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
   EXPECT_EQ(status_record.message, "Conversion is unsupported");
+}
+
+TEST(ExecuteScript, Invalid_Statement_Handle) {
+  PostQueryRequest req;
+  StatementHandle stmt_handle;
+  auto status_record_or = ExecuteScript(stmt_handle, req);
+  EXPECT_FALSE(status_record_or.Ok());
+  EXPECT_THAT(status_record_or,
+              StatusRecordIs(SQLStates::k_HY009(), "Invalid statement handle"));
+}
+
+TEST(ExecuteScript, Failure_Not_Connected) {
+  PostQueryRequest req;
+
+  // Create a valid connection handle but mark it as disconnected
+  auto conn_handle = CreateConnectionHandle(false);
+
+  // Create a statement handle associated with this connection
+  StatementHandle stmt_handle(&conn_handle);
+
+  // Ensure the connection handle exists but is not connected
+  ASSERT_NE(stmt_handle.GetConnectionHandle(), nullptr);
+  ASSERT_FALSE(stmt_handle.GetConnectionHandle()->IsConnected());
+
+  // Execute and validate failure due to broken connection
+  auto status_record_or = ExecuteScript(stmt_handle, req);
+
+  EXPECT_FALSE(status_record_or.Ok());
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(SQLStates::k_08S01(),
+                     HasSubstr("Connection to the data source is broken")));
+}
+
+TEST(ExecuteScript, Failure_Null_BQClient) {
+  PostQueryRequest req;
+
+  // Create a valid connection handle
+  auto conn_handle = CreateConnectionHandle();
+
+  // Create a statement handle associated with this connection
+  StatementHandle stmt_handle(&conn_handle);
+
+  // Ensure the connection handle is valid
+  ASSERT_NE(stmt_handle.GetConnectionHandle(), nullptr);
+
+  // Execute and validate failure due to null BQ Client
+  auto status_record_or = ExecuteScript(stmt_handle, req);
+
+  EXPECT_FALSE(status_record_or.Ok());
+  EXPECT_THAT(
+      status_record_or,
+      StatusRecordIs(
+          SQLStates::k_HY000(),
+          HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

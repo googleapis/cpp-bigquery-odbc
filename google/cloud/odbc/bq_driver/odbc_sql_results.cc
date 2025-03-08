@@ -204,6 +204,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(*handle, status_record);
   }
 
+  *column_count_ptr = 0;
   auto stmt_state = handle->GetStmtState();
   switch (stmt_state) {
     case StmtStates::kStatementPrepared:
@@ -476,13 +477,17 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   }
   std::string operation =
       prepared_job->statistics.job_query_stats.statement_type;
+  std::string sub_operation_type;
+  if (stmt_handle.HasJobData()) {
+    sub_operation_type = stmt_handle.GetNextJobData().second;
+  }
 
   DmlStats dml_stats = stmt_handle.GetDSResults().dml_stats;
-  if (operation == "INSERT") {
+  if (operation == "INSERT" || sub_operation_type == "INSERT") {
     *row_count = dml_stats.inserted_row_count;
-  } else if (operation == "UPDATE") {
+  } else if (operation == "UPDATE" || sub_operation_type == "UPDATE") {
     *row_count = dml_stats.updated_row_count;
-  } else if (operation == "DELETE") {
+  } else if (operation == "DELETE" || sub_operation_type == "DELETE") {
     *row_count = dml_stats.deleted_row_count;
   } else {
     *row_count = -1;
@@ -547,7 +552,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
 
   ResultSet const& result_set = stmt_handle.GetResultSet();
-  if (result_set.cursor >= result_set.rows.size()) {
+  int cursor = result_set.cursor;
+  int row_size = result_set.rows.size();
+  if (cursor >= row_size) {
     return SQL_NO_DATA;
   }
 
@@ -557,7 +564,6 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                  nullptr);
   }
 
-  int cursor = result_set.cursor;
   DSRow const& ds_row = result_set.rows[cursor];
   RowSchema const& schema = result_set.row_schema;
   BQDataType bq_data_type;

@@ -39,11 +39,11 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSResults;
+using google::cloud::odbc_bq_driver_internal::ExecuteScript;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
-using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
@@ -216,13 +216,14 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  StatusRecordOr<SQLULEN> query_timeout_status =
-      stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+  std::string query_str = stmt_handle.GetQueryString();
+
+  // Retrieve query timeout
+  auto query_timeout_status = stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
   if (!query_timeout_status) {
     return query_timeout_status.GetStatusRecord();
   }
   int query_timeout = *query_timeout_status;
-  std::string query_str = stmt_handle.GetQueryString();
 
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
@@ -239,12 +240,31 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     if (!status.ok()) {
       return status;
     }
+
     QueryRequest query_request = post_request.query_request();
     query_request.set_query_parameters(query_params);
     post_request.set_query_request(query_request);
   }
 
-  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
+  // Ensure a prepared job exists
+  if (!stmt_handle.GetPreparedJob().has_value()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal state error when executing query"};
+  }
+
+  Job prepared_job = stmt_handle.GetPreparedJob().value();
+  std::string statement_type =
+      prepared_job.statistics.job_query_stats.statement_type;
+  std::string sub_statement_type;
+  StatusRecordOr<DSResults> ds_status_record_or;
+
+  // Execute the script or fetch data based on statement type
+  if (statement_type == "SCRIPT") {
+    ds_status_record_or = ExecuteScript(stmt_handle, post_request);
+  } else {
+    ds_status_record_or = FetchBQData(conn_handle, post_request);
+  }
+
   if (!ds_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
     return ds_status_record_or.GetStatusRecord();
@@ -252,28 +272,25 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
 
   stmt_handle.SetDSResults(*ds_status_record_or);
 
-  // Process the DSResults and convert to ResultSet.
-  StatusRecordOr<ResultSet> rs_status_record_or =
-      ProcessQueryResults(*ds_status_record_or);
+  // If the statement was a script, retrieve sub-statement type
+  if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
+    sub_statement_type = stmt_handle.GetNextJobData().second;
+  }
+
+  // Process DSResults into a ResultSet
+  auto rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
     return rs_status_record_or.GetStatusRecord();
   }
 
-  if (stmt_handle.GetPreparedJob().has_value()) {
-    Job prepared_job = stmt_handle.GetPreparedJob().value();
-    std::string statement_type =
-        prepared_job.statistics.job_query_stats.statement_type;
-    if (statement_type != "SELECT") {
-      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-    } else {
-      // Store the resultset in statement handle.
-      stmt_handle.SetResultSet(*rs_status_record_or);
-      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-    }
+  // Determine execution state based on statement type
+  if (statement_type == "SELECT" ||
+      (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    stmt_handle.SetResultSet(*rs_status_record_or);
   } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal state error when executing query"};
+    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
   return StatusRecord::Ok();

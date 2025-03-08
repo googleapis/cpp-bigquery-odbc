@@ -17,6 +17,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation_inv.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -28,6 +29,36 @@ odbc_internal::StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
     std::vector<::google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
         basic_query_params);
+
+/*
+ * @brief Executes a script (SQL query) using the given statement and connection
+ * handles.
+ *
+ * This function validates the connection handle, retrieves the BigQuery client,
+ * and executes the query. It then processes the results, retrieves job
+ * information, and fetches query results if applicable. DML statistics are
+ * updated based on the statement type, and session information is stored if
+ * necessary.
+ *
+ * @param stmt_handle Reference to the statement handle, used to store job data
+ * and results.
+ * @param conn_handle Reference to the connection handle, used to validate
+ * connection and retrieve BigQuery client.
+ * @param post_query_request The request object containing query details and
+ * execution options.
+ *
+ * @return StatusRecordOr<DSResults> Returns query execution results or an error
+ * status if execution fails.
+ *
+ * Error Cases:
+ * - Returns an error if the connection to the data source is broken.
+ * - Returns an error if the BigQuery client is null or invalid.
+ * - Returns an error if posting the query or fetching query results fails.
+ */
+odbc_internal::StatusRecordOr<DSResults> ExecuteScript(
+    StatementHandle& stmt_handle,
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+        post_query_request);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

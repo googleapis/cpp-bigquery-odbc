@@ -25,6 +25,7 @@
 #include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -40,6 +41,7 @@ enum class StmtStates {
   kStatementExecutedWithRs,
   kNeedsParams,
   kNeedsPutData,
+  kStatementAsyncGetResults,
 };
 
 class ConnectionHandle;
@@ -178,6 +180,10 @@ class StatementHandle : public Handle {
     return std::move(future_exec_direct_query_);
   }
 
+  std::optional<std::future<StatusRecord>> GetPossibleFutureMoreResults() {
+    return std::move(future_more_results_query_);
+  }
+
   void SetFuturePrepareQuery(std::future<StatusRecord> fut_prepare_query) {
     future_prepare_query_ = std::move(fut_prepare_query);
   }
@@ -194,6 +200,38 @@ class StatementHandle : public Handle {
   }
   void SetNullFutureExecDirectQuery() {
     future_exec_direct_query_ = std::nullopt;
+  }
+
+  void SetFutureMoreResultsQuery(
+      std::future<StatusRecord> fut_more_results_query) {
+    future_more_results_query_ = std::move(fut_more_results_query);
+  }
+
+  void SetNullFutureMoreResultsQuery() {
+    future_more_results_query_ = std::nullopt;
+  }
+
+  bool HasJobData() const { return !job_data_.empty(); }
+
+  void SetJobData(std::string const& job_id,
+                  std::string const& statement_type) {
+    // Store the job ID and statement type as a pair in the vector
+    job_data_.emplace_back(job_id, statement_type);
+  }
+
+  // Gets next the job ID and statement type as a pair in the vector
+  std::pair<std::string, std::string> GetNextJobData() const {
+    if (!job_data_.empty()) {
+      return job_data_.back();
+    }
+    throw std::runtime_error("No job data available");
+  }
+
+  // Deletes next the job ID and statement type as a pair in the vector
+  void DeleteNextJobData() {
+    if (!job_data_.empty()) {
+      job_data_.pop_back();
+    }
   }
 
  protected:
@@ -223,6 +261,11 @@ class StatementHandle : public Handle {
   // requests.
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
+  // Needed for cancellation and re-execution of asynchronous more results
+  // requests.
+  std::optional<std::future<StatusRecord>> future_more_results_query_;
+  // stack of pair of jobs Ids and respective statement types.
+  std::vector<std::pair<std::string, std::string>> job_data_;
   bool is_statement_prepared_ = false;
 };
 
