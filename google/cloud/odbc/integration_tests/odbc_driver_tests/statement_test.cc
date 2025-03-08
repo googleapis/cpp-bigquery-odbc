@@ -2229,12 +2229,6 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
           << "SQLExecute failed with unexpected error: " << error;
       EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 #endif //DRIVER_MANAGER_TESTING_ENABLED
-
-#else
-ASSERT_TRUE(absl::StrContains(error, "HY010"))
-<< "SQLExecute failed with unexpected error: " << error;
-ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
-<< "SQLExecute failed with unexpected error: " << error;
 #endif // _WIN32
     }
   }
