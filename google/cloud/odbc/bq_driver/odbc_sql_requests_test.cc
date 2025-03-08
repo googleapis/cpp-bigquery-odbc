@@ -18,9 +18,11 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using namespace google::cloud::odbc_bq_driver_internal;
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
