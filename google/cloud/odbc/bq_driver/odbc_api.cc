@@ -1074,7 +1074,11 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
   ConnectionAttr conn_attr;
   if (conn_attr.GetAttributeValueType(attribute) ==
       ConnectionValueType::kSqlChr) {
-    updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen/sizeof(SQLWCHAR));
+        if(valueStringLen && valueStringLen>0)
+    {updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen/sizeof(SQLWCHAR));}
+    else{
+      updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen);
+    }
     if (!updated_attrib_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_attrib_status.GetStatusRecord().message);

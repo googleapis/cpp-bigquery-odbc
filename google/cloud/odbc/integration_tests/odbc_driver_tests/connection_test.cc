@@ -1388,7 +1388,6 @@ TEST(BQDriverConnectionTest, SQLConnectA_DSNLess) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -1422,7 +1421,7 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_ENV)", conn);
 }
-
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 // This test should not be run for Simba Driver since different values are
 // returned between google and Simba for some information types. For more
 // details please look at design doc: http://goto.google.com/sql-get-info-design
