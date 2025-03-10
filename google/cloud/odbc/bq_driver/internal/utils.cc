@@ -29,6 +29,12 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
+#ifdef __APPLE__
+std::string const kFromCode = "UTF-32LE";
+#else
+std::string const kFromCode = "WCHAR_T";
+#endif
+
 StatusRecord DoubleStrToInt(std::string& double_str) {
   std::istringstream iss(double_str);
   int64_t int_value;
@@ -403,7 +409,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+  iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -460,8 +466,7 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
   }
   return utf16Str;
 #else
-
-  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
+  iconv_t cd = iconv_open(kFromCode.c_str(), "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {

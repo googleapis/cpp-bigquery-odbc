@@ -24,6 +24,12 @@ namespace google::cloud::odbc_tests {
 using ::google::cloud::internal::ExponentialBackoffPolicy;
 using ms = std::chrono::milliseconds;
 
+#ifdef __APPLE__
+std::string const kFromCode = "UTF-32LE";
+#else
+std::string const kFromCode = "WCHAR_T";
+#endif
+
 std::string GetRandomString(int len) {
   static constexpr char kChars[] =
       "0123456789"
@@ -1538,7 +1544,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+  iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -1592,8 +1598,7 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
   }
   return utf16Str;
 #else
-
-  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
+  iconv_t cd = iconv_open(kFromCode.c_str(), "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
