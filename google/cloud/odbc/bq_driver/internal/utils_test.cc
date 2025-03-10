@@ -600,6 +600,40 @@ TEST(PopulateOutputConnectionString, EmptyConnectionString) {
   EXPECT_EQ(result.message, "Invalid Connection String");
 }
 
+TEST(Base64Encode, Success) {
+  // Empty input (nullptr, length 0)
+  EXPECT_EQ(Base64Encode(nullptr, 0), "");
+
+  // Empty string
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>(""), 0), "");
+
+  // Single character
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("A"), 1), "QQ==");
+
+  // Two characters
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("AB"), 2), "QUI=");
+
+  // Three characters
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("ABC"), 3), "QUJD");
+
+  // Four characters
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("ABCD"), 4),
+            "QUJDRA==");
+
+  // Standard example
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("Man"), 3), "TWFu");
+
+  // Binary data
+  EXPECT_EQ(Base64Encode(reinterpret_cast<uint8_t const*>("\xFF\xEE\xDD"), 3),
+            "/+7d");
+}
+
+TEST(Base64Encode, Failure) {
+  EXPECT_NE(Base64Encode(reinterpret_cast<uint8_t const*>("ABC"), 3),
+            "WRONG_OUTPUT");
+  EXPECT_NE(Base64Encode(reinterpret_cast<uint8_t const*>("XYZ"), 3), "WFlh");
+}
+
 #ifdef _WIN32
 std::string kTestDsn = "TestDSN";
 std::string kDriver = "TestDriver";

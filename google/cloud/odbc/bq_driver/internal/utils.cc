@@ -664,21 +664,6 @@ std::string Base64Encode(uint8_t const* data, int length) {
   return encoded_str;
 }
 
-std::string ToHexString(uint8_t const* data, int length) {
-  if (!data || length == 0) {
-    return "";
-  }
-
-  std::string hex_str;
-  hex_str.reserve(length * 2);  // Each byte becomes 2 hex characters
-
-  for (size_t i = 0; i < length; ++i) {
-    hex_str.push_back(kHexDigits[(data[i] >> 4) & 0xF]);
-    hex_str.push_back(kHexDigits[data[i] & 0xF]);
-  }
-  return hex_str;
-}
-
 #ifdef _WIN32
 std::string ConvertLPCSTRToString(LPCSTR lpszAttributes) {
   if (lpszAttributes == nullptr) return "";
