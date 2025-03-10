@@ -1196,14 +1196,13 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   conn_str = "InvalidString";
   StrToChar((char*)in_conn_str, conn_str);
 
-  SQLCHAR out_conn_str1[kBufferLength] = {0};
-  SQLSMALLINT out_conn_str_len1 = 0;
-
   status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str1,
-                            sizeof(out_conn_str1), &out_conn_str_len1);
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_ERROR);
-  EXPECT_EQ(out_conn_str_len1, 0);
+  std::cout<<"out_conn_str "<<out_conn_str<<std::endl;
+  std::cout<<"out_conn_str_len "<<out_conn_str_len<<std::endl;
+  EXPECT_EQ(out_conn_str_len, 0);
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
