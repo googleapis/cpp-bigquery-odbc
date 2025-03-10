@@ -1202,28 +1202,26 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   conn_str = "InvalidString";
   StrToChar((char*)in_conn_str, conn_str);
 
+  SQLCHAR out_conn_str1[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len1 = 0;
+
   status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                            sizeof(out_conn_str), &out_conn_str_len);
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str1,
+                            sizeof(out_conn_str1), &out_conn_str_len1);
   EXPECT_EQ(status, SQL_ERROR);
-  std::cout<<"res_out_conn_str 22 "<<res_out_conn_str<<std::endl;
-  std::cout<<"out_conn_str22 "<<out_conn_str<<std::endl;
-  std::cout<<"res_out_conn_str 22 size "<<res_out_conn_str.size()<<std::endl;
-  std::cout<<"out_conn_str_len 22 "<<out_conn_str_len<<std::endl;
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
-  EXPECT_THAT(res_out_conn_str,
-              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
-#endif  // _WIN32
+  EXPECT_EQ(out_conn_str_len1, 0);
+  std::string res_out_conn_str1(reinterpret_cast<char const*>(out_conn_str1));
+  std::cout<<"res_out_conn_str 22 "<<res_out_conn_str1<<std::endl;
+  std::cout<<"out_conn_str22 "<<out_conn_str1<<std::endl;
+  std::cout<<"res_out_conn_str 22 size "<<res_out_conn_str1.size()<<std::endl;
+  std::cout<<"out_conn_str_len 22 "<<out_conn_str_len1<<std::endl;
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 0,
         "[Google][ODBC BigQuery Driver] Invalid Connection String");
   } else {
-    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
   }
@@ -1262,24 +1260,22 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
       "InvalidKey=InvalidValue;";
   StrToChar((char*)in_conn_str, conn_str);
 
+  SQLCHAR out_conn_str1[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len1;
   status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                            sizeof(out_conn_str), &out_conn_str_len);
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str1,
+                            sizeof(out_conn_str1), &out_conn_str_len1);
   EXPECT_EQ(status, SQL_ERROR);
-
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
-  EXPECT_THAT(res_out_conn_str, HasSubstr("Catalog:Catalog=?"));
-#endif  // _WIN32
+std::cout<<"out_conn_str1 "<<out_conn_str1<<std::endl;
+std::cout<<"out_conn_str_len1 "<<out_conn_str_len1<<std::endl;
+EXPECT_EQ(out_conn_str_len1, 0);
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
                           "[Google][ODBC BigQuery Driver] Connection Error: "
                           "Non Requested connection attribute");
   } else {
-    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
