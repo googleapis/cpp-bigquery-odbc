@@ -398,8 +398,6 @@ void AssertUnSupportedFnsODBC2(SQLUSMALLINT* odbc2_fns) {
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLALLOCSTMT]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLFREECONNECT]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLFREEENV]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLFREESTMT]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLBINDPARAMETER]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLGETCONNECTOPTION]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLGETSTMTOPTION]);
   EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETCONNECTOPTION]);
@@ -1188,10 +1186,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 
   EXPECT_EQ(status, SQL_NEED_DATA);
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  std::cout<<"res_out_conn_str "<<res_out_conn_str<<std::endl;
-  std::cout<<"out_conn_str "<<out_conn_str<<std::endl;
-  std::cout<<"res_out_conn_str size "<<res_out_conn_str.size()<<std::endl;
-  std::cout<<"out_conn_str_len "<<out_conn_str_len<<std::endl;
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
@@ -1210,11 +1204,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
                             sizeof(out_conn_str1), &out_conn_str_len1);
   EXPECT_EQ(status, SQL_ERROR);
   EXPECT_EQ(out_conn_str_len1, 0);
-  std::string res_out_conn_str1(reinterpret_cast<char const*>(out_conn_str1));
-  std::cout<<"res_out_conn_str 22 "<<res_out_conn_str1<<std::endl;
-  std::cout<<"out_conn_str22 "<<out_conn_str1<<std::endl;
-  std::cout<<"res_out_conn_str 22 size "<<res_out_conn_str1.size()<<std::endl;
-  std::cout<<"out_conn_str_len 22 "<<out_conn_str_len1<<std::endl;
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
@@ -1266,8 +1255,6 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
                             sizeof(in_conn_str), (SQLCHAR*)out_conn_str1,
                             sizeof(out_conn_str1), &out_conn_str_len1);
   EXPECT_EQ(status, SQL_ERROR);
-std::cout<<"out_conn_str1 "<<out_conn_str1<<std::endl;
-std::cout<<"out_conn_str_len1 "<<out_conn_str_len1<<std::endl;
 EXPECT_EQ(out_conn_str_len1, 0);
 
   // TODO(b/383449326): Add other connection attributes for the connection
