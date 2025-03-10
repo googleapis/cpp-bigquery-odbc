@@ -1074,7 +1074,12 @@ SQLRETURN SQL_API SQLSetConnectAttrW(SQLHDBC connectionHandle,
   ConnectionAttr conn_attr;
   if (conn_attr.GetAttributeValueType(attribute) ==
       ConnectionValueType::kSqlChr) {
-    updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen);
+    if (valueStringLen && valueStringLen > 0) {
+      updated_attrib_status =
+          ConvertSQLPointerToSQLChar(value, valueStringLen / sizeof(SQLWCHAR));
+    } else {
+      updated_attrib_status = ConvertSQLPointerToSQLChar(value, valueStringLen);
+    }
     if (!updated_attrib_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_attrib_status.GetStatusRecord().message);
@@ -1489,10 +1494,13 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
                            utf16_out_desc_val.GetStatusRecord().message);
         return utf16_out_desc_val.GetCalculatedReturnCode();
       }
+      out_desc_val_string_len =
+          wcslen(utf16_out_desc_val->data()) * sizeof(SQLWCHAR);
       std::vector<SQLWCHAR> sql_w_str(utf16_out_desc_val->begin(),
                                       utf16_out_desc_val->end());
       sql_w_str.emplace_back(L'\0');
-      std::memcpy(outDescValue, sql_w_str.data(), outDescValueBufferLen);
+      std::memset(outDescValue, '\0', outDescValueBufferLen);
+      std::memcpy(outDescValue, sql_w_str.data(), out_desc_val_string_len);
     } else {
       std::memcpy(outDescValue, (SQLPOINTER)out_desc_val,
                   out_desc_val_string_len);
@@ -2936,6 +2944,7 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
 
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) && diag_info_str_len > 0) {
+    std::memset(diagInfo, '\0', diagInfoBufferLen);
     if (IsDiagIdentifierString(diagIdentifier)) {
       updated_out_diag_info_status =
           ConvertSQLPointerToSQLWChar(updated_diag_info, diagInfoBufferLen);
@@ -2945,10 +2954,14 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
             updated_out_diag_info_status.GetStatusRecord().message);
         return updated_out_diag_info_status.GetCalculatedReturnCode();
       }
-      std::memcpy(diagInfo,
-                  (SQLPOINTER)ToSqlWChar(updated_out_diag_info_status->data()),
-                  diagInfoBufferLen);
-      diag_info_str_len = updated_out_diag_info_status->length();
+      diag_info_str_len =
+          wcslen(updated_out_diag_info_status->data()) * sizeof(SQLWCHAR);
+      std::vector<SQLWCHAR> sql_w_str(
+          updated_out_diag_info_status->c_str(),
+          updated_out_diag_info_status->c_str() + diag_info_str_len);
+      sql_w_str.emplace_back(L'\0');
+      std::memcpy(diagInfo, sql_w_str.data(), sql_w_str.size());
+
     } else {
       std::memcpy(diagInfo, updated_diag_info, diagInfoBufferLen);
     }
@@ -3019,7 +3032,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
   SQLCHAR sql_state_buffer[kBufferLength] = {0};
-  SQLCHAR message_text_buffer[kBufferLength] = {0};
+  SQLCHAR* message_text_buffer = reinterpret_cast<SQLCHAR*>(messageText);
+  ;
   SQLSMALLINT message_text_buffer_len = 0;
   bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRecW");
 
@@ -3041,17 +3055,20 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
       message_text_buffer, messageTextBufferLen, &message_text_buffer_len);
 
   // Handle Unicode conversion of output parameters.
-  StatusRecordOr<std::wstring> utf16_sql_state =
-      Utf8ToUtf16((char*)sql_state_buffer);
-  if (!utf16_sql_state) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf16_sql_state.GetStatusRecord().message);
-    return utf16_sql_state.GetCalculatedReturnCode();
-  }
-  std::memcpy(sqlState, ToSqlWChar(utf16_sql_state->data()),
-              utf16_sql_state->size() * sizeof(SQLWCHAR));
 
-  if (message_text_buffer_len > 0) {
+  if (sqlState) {
+    StatusRecordOr<std::wstring> utf16_sql_state =
+        Utf8ToUtf16((char*)sql_state_buffer);
+    if (!utf16_sql_state) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf16_sql_state.GetStatusRecord().message);
+      return utf16_sql_state.GetCalculatedReturnCode();
+    }
+    std::memcpy(sqlState, ToSqlWChar(utf16_sql_state->data()),
+                utf16_sql_state->size() * sizeof(SQLWCHAR));
+  }
+
+  if (messageText && message_text_buffer_len > 0) {
     StatusRecordOr<std::wstring> utf16_msg_txt =
         Utf8ToUtf16((char*)message_text_buffer);
     if (!utf16_msg_txt) {
@@ -3060,8 +3077,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
       return utf16_msg_txt.GetCalculatedReturnCode();
     }
     std::memset(messageText, '\0', messageTextBufferLen);
-    std::memcpy(messageText, (SQLPOINTER)ToSqlWChar(utf16_msg_txt->data()),
-                message_text_buffer_len * sizeof(SQLWCHAR));
+    std::memcpy(messageText, ToSqlWChar(utf16_msg_txt->data()),
+                utf16_msg_txt->size() * sizeof(SQLWCHAR));
   }
   if (messageTextLen) *messageTextLen = message_text_buffer_len;
 
