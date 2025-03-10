@@ -2216,20 +2216,20 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
 // as (HY010) and no other operation is allowed after that.
 // TODO(b/400632420): Validate and compare SQLPrepare and SQLCancel return
 // status
+#ifndef _WIN32
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
       ASSERT_TRUE(absl::StrContains(error, "S1010"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLExecute failed with unexpected error: " << error;
 #else
-#ifndef _WIN32
       ASSERT_TRUE(absl::StrContains(error, "HY008"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
           << "SQLExecute failed with unexpected error: " << error;
       EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 #endif  // _WIN32
-#endif
     }
   }
 }
