@@ -554,6 +554,7 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                     SQLWCHAR* outConnectionString,
                                     SQLSMALLINT outConnectionStringBufferLen,
                                     SQLSMALLINT* outConnectionStringLen) {
+                                      std::cout<<"outConnectionString "<<*(char*)outConnectionString<<std::endl;
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
   bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
@@ -593,8 +594,10 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
       inConnectionStringLen, out_connection_string,
       outConnectionStringBufferLen, &out_connection_string_len);
   // Handle Unicode conversion of output parameters.
-  if ((SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) &&
-      out_connection_string_len > 0) {
+  std::cout<<"out_conn_str "<<(char*)outConnectionString<<std::endl;
+  std::cout<<"rc "<<rc<<std::endl;
+  std::cout<<"out_conn_str_len "<<out_connection_string_len<<std::endl;
+  if (out_connection_string_len > 0) {
     StatusRecordOr<std::wstring> utf16_out_conn_str =
         Utf8ToUtf16((char*)out_connection_string);
     if (!utf16_out_conn_str) {
@@ -607,6 +610,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
     std::memcpy((SQLWCHAR*)outConnectionString,
                 ToSqlWChar(utf16_out_conn_str->data()),
                 utf16_out_conn_str->size() * sizeof(SQLWCHAR));
+                std::wcout<<"out_conn_str11 "<<utf16_out_conn_str->data()<<std::endl;
+  std::cout<<"rc "<<rc<<std::endl;
+  std::cout<<"out_conn_str_len11 "<<out_connection_string_len<<std::endl;
   }
   if (outConnectionStringLen)
     *outConnectionStringLen = out_connection_string_len;

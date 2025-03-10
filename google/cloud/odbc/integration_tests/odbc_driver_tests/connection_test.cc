@@ -1188,6 +1188,10 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 
   EXPECT_EQ(status, SQL_NEED_DATA);
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  std::cout<<"res_out_conn_str "<<res_out_conn_str<<std::endl;
+  std::cout<<"out_conn_str "<<out_conn_str<<std::endl;
+  std::cout<<"res_out_conn_str size "<<res_out_conn_str.size()<<std::endl;
+  std::cout<<"out_conn_str_len "<<out_conn_str_len<<std::endl;
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
@@ -1202,7 +1206,10 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
                             sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                             sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_ERROR);
-
+  std::cout<<"res_out_conn_str 22 "<<res_out_conn_str<<std::endl;
+  std::cout<<"out_conn_str22 "<<out_conn_str<<std::endl;
+  std::cout<<"res_out_conn_str 22 size "<<res_out_conn_str.size()<<std::endl;
+  std::cout<<"out_conn_str_len 22 "<<out_conn_str_len<<std::endl;
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
   EXPECT_THAT(res_out_conn_str,
