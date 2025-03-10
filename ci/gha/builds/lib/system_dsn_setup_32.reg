@@ -16,9 +16,15 @@ REGEDIT4
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba ODBC Driver for Google BigQuery]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for Google BigQuery]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\ODBC Drivers]
+"ODBC Driver for Google BigQuery"="Installed"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\ODBC Driver for Google BigQuery]
+"Description"="ODBC Driver for Google BigQuery"
+"Driver"="C:\\b\\google\\cloud\\odbc\\google_cloud_odbc_bq_driver.dll"
+"Setup"="C:\\b\\google\\cloud\\odbc\\google_cloud_odbc_bq_driver.dll"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\ODBC Data Sources]
 "SampleDSN"="Simba ODBC Driver for Google BigQuery"
