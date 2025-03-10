@@ -123,12 +123,6 @@ void AssociateDescriptorHandle(DescriptorHandle* descriptor_handle,
 
 StatusRecord StatementHandle::SetDescriptorHandle(
     DescriptorType type, DescriptorHandle* descriptor_handle) {
-  if (descriptor_handle &&
-      descriptor_handle->GetHeaderRecord().GetAllocType() !=
-          SQL_DESC_ALLOC_USER) {
-    return StatusRecord{SQLStates::k_HY017(),
-                        "Invalid setting of implicitly allocated descriptor"};
-  }
   switch (type) {
     case DescriptorType::kARD:
       DissociateDescriptorHandle(descriptors_.ard_expl_, type, this);
