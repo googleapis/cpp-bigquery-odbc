@@ -1658,7 +1658,7 @@ SQLRETURN SQL_API SQLSetDescFieldW(SQLHDESC descriptorHandle,
   SQLPOINTER updated_desc_val = descValue;
   StatusRecordOr<std::string> updated_desc_status;
   if (IsFieldIdentifierString(fieldIdentifier)) {
-    updated_desc_status = ConvertSQLPointerToSQLChar(descValue, NULL);
+    updated_desc_status = ConvertSQLPointerToSQLChar(descValue, SQL_NTS);
     if (!updated_desc_status) {
       TracePrintInternal(*(*kTraceOption),
                          updated_desc_status.GetStatusRecord().message);
