@@ -17,7 +17,9 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include <regex>
+#include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bigquery_client_interface::Oauth;
@@ -33,6 +35,7 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
+constexpr char kBigQueryDocsURL[] = "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 std::string DriverForm::dsn_name_;
 std::string DriverForm::email_;
 std::string DriverForm::key_file_path_;
@@ -54,6 +57,14 @@ std::string const kDescription = "Description";
 std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 std::string const kRefreshToken = "RefreshToken";
+
+// Control dimensions and positions
+int const kBtnWidth = 68;
+int const kBtnHeight = 17;
+int const kEditComboBoxWidth = 203;
+int const kEditComboBoxHeight = 17;
+int const kCheckboxWidth = 150;
+int const kCheckboxHeight = 20;
 
 SQLRETURN ConnectUsingRegistryDsn(Authentication auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
@@ -287,7 +298,7 @@ HFONT CreateCustomFont(int font_size) {
   HFONT h_font = NULL;
   log_font.lfHeight = -MulDiv(font_size, GetDeviceCaps(GetDC(NULL), LOGPIXELSY),
                               72);        // Negative height for screen fonts
-  lstrcpy(log_font.lfFaceName, "Arial");  // Font face name
+  lstrcpy(log_font.lfFaceName, "Inter");  // Font face name
 
   h_font = CreateFontIndirect(&log_font);
   return h_font;
@@ -299,92 +310,203 @@ void SetControlFont(HWND hwnd, HFONT font) {
 }
 
 void DriverForm::InitControls() {
-  HFONT h_font =
-      CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-                 DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+  // HFONT h_font =
+  //     CreateFont(10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+  //                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+  //                DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+  HFONT h_font = CreateFont(
+    -10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+    DEFAULT_PITCH | FF_SWISS, "Inter");
+  HBRUSH hBrushGrey = CreateSolidBrush(RGB(224, 224, 224)); // -10 is equal to 10px
 
-  HWND h_dsn_name_header = CreateLabel(m_hwnd, "Data Source Name:", 20, 20, 150,
+  HWND h_dsn_name_header = CreateLabel(m_hwnd, "Data source name:", 15, 15, 150,
                                        20, WS_VISIBLE | SS_LEFT);
-  HWND h_dsn_name_edit = CreateEditBox(m_hwnd, 180, 20, 220, 20, kIdcDSNEdit);
-
+  SendMessage(h_dsn_name_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+  HWND h_dsn_name_edit = CreateEditBox(m_hwnd, 185, 15, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDSNEdit);
+  SendMessage(h_dsn_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+  
   SetWindowText(h_dsn_name_edit, dsn_name_.c_str());
   if (!dsn_name_.empty()) {
     SendMessage(h_dsn_name_edit, EM_SETREADONLY, TRUE, 0);
   }
 
-  HWND h_description_header = CreateLabel(m_hwnd, "Description:", 20, 60, 100,
+  HWND h_description_header = CreateLabel(m_hwnd, "Description:", 15, 43, 100,
                                           20, WS_VISIBLE | SS_LEFT);
+   SendMessage(h_description_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+                                       
   HWND h_description_edit =
-      CreateEditBox(m_hwnd, 180, 60, 220, 20, kIdcDescriptionEdit);
+      CreateEditBox(m_hwnd, 185, 43, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDescriptionEdit);
+      SendMessage(h_description_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
 
   HWND h_encrypt_data_header =
-      CreateLabel(m_hwnd, "Encrypt Sensitive Data:", 20, 100, 180, 20,
+      CreateLabel(m_hwnd, "Encrypt sensitive data:", 15, 71, 150, 20,
                   WS_VISIBLE | SS_LEFT);
+      SendMessage(h_encrypt_data_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+            
   HWND h_encrypt_data_combo_box =
-      CreateComboBox(m_hwnd, 180, 100, 220, 100, kIdcEncryptDataComboBox);
+      CreateComboBox(m_hwnd, 185, 71, kEditComboBoxWidth, kEditComboBoxHeight, kIdcEncryptDataComboBox);
+      SendMessage(h_encrypt_data_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+   
+      HWND h_group_box = CreateWindowEx(0, "BUTTON", "Authentication",
+        WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 
+        10, 105, 468, 130, 
+        m_hwnd, (HMENU)kIdcGroupBox, GetModuleHandle(NULL), NULL);
+        SendMessage(h_group_box, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_auth_header = CreateLabel(m_hwnd, "OAuth Mechanism:", 20, 140, 180, 20,
+  HWND h_auth_header = CreateLabel(m_hwnd, "OAuth mechanism:", 20, 130, 150, 20,
                                    WS_VISIBLE | SS_LEFT);
+      SendMessage(h_auth_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
   HWND h_auth_combo_box =
-      CreateComboBox(m_hwnd, 180, 140, 220, 100, kIdcAuthBox);
+      CreateComboBox(m_hwnd, 185, 130, kEditComboBoxWidth, kEditComboBoxHeight, kIdcAuthBox);
+      SendMessage(h_auth_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      
+  // HWND h_email_header =
+  //     CreateLabel(m_hwnd, "Email:", 20, 170, 80, 20, WS_VISIBLE | SS_LEFT);
+  //     SendMessage(h_email_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
 
-  HWND h_email_header =
-      CreateLabel(m_hwnd, "Email:", 20, 180, 100, 20, WS_VISIBLE | SS_LEFT);
-  HWND h_email_edit = CreateEditBox(m_hwnd, 180, 180, 220, 20, kIdcEmailEdit);
+  // HWND h_email_edit = CreateEditBox(m_hwnd, 185, 170, kEditComboBoxWidth, kEditComboBoxHeight, kIdcEmailEdit);
+  // SendMessage(h_email_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
 
-  HWND h_key_file_path_header = CreateLabel(m_hwnd, "Key File Path:", 20, 220,
-                                            120, 20, WS_VISIBLE | SS_LEFT);
+  HWND h_key_file_path_header = CreateLabel(m_hwnd, "Key file path:", 20, 160,
+                                            100, 20, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+                                         
   HWND h_key_file_edit =
-      CreateEditBox(m_hwnd, 180, 220, 220, 20, kIdcKeyfileEdit);
+      CreateEditBox(m_hwnd, 185, 160, kEditComboBoxWidth, kEditComboBoxHeight, kIdcKeyfileEdit);
+      SendMessage(h_key_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
 
   HWND h_browse_button =
-      CreateButton(m_hwnd, "Browse", 420, 220, 80, 20, kIdcBrowseButton);
+      CreateButton(m_hwnd, "Browse...", 185, 185, 76, 16, kIdcBrowseButton);
+      SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+      
+  // New Checkbox for Google Drive Scope Access
+HWND h_drive_scope_checkbox =
+CreateWindowEx(0, "BUTTON", "", WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
+               20, 210, 15, 15, // Position and size of the checkbox
+               m_hwnd, (HMENU)kIdcDriveScopeCheckbox, GetModuleHandle(NULL), NULL);
+SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_ssl_header = CreateLabel(m_hwnd, "SSL Options:", 20, 260, 120, 20,
-                                  WS_VISIBLE | SS_LEFT);
+// New Label for Google Drive Scope Access
+HWND h_drive_scope_label = CreateLabel(m_hwnd, "Request Google Drive scope access", 
+                                   40, 210, 220, 20, WS_VISIBLE | SS_LEFT);
+SendMessage(h_drive_scope_label, WM_SETFONT, (WPARAM)h_font, TRUE);   
 
-  HWND h_min_tls_header = CreateLabel(m_hwnd, "Minimum TLS Version:", 20, 300,
-                                      180, 20, WS_VISIBLE | SS_LEFT);
+
+  // HWND h_ssl_header = CreateLabel(m_hwnd, "SSL Options:", 20, 260, 120, 20,
+  //                                 WS_VISIBLE | SS_LEFT);
+  //   SendMessage(h_ssl_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+       HWND h_ssl_header = CreateWindowEx(0, "BUTTON", "SSL Options",
+        WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 
+        10, 265, 468, 126, 
+        m_hwnd, (HMENU)kIdcGroupBox, GetModuleHandle(NULL), NULL);
+        SendMessage(h_ssl_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                        
+
+  HWND h_min_tls_header = CreateLabel(m_hwnd, "Minimum TLS version:", 20, 290,
+                                      150, 20, WS_VISIBLE | SS_LEFT);
+       SendMessage(h_min_tls_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+                               
   HWND h_min_tls_combo_box =
-      CreateComboBox(m_hwnd, 180, 300, 220, 100, kIdcMinTLSComboBox);
+      CreateComboBox(m_hwnd, 185, 290, kEditComboBoxWidth, kEditComboBoxHeight, kIdcMinTLSComboBox);
+      SendMessage(h_min_tls_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+      
+// New Checkbox for Use system trust store
+HWND h_system_trust_store_checkbox =
+CreateWindowEx(0, "BUTTON", "", WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
+               20, 315, 15, 15, // Position and size of the checkbox
+               m_hwnd, (HMENU)kIdcSystemTrustStoreCheckbox, GetModuleHandle(NULL), NULL);
+SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_trusted_cert_header = CreateLabel(m_hwnd, "Trusted Certificate:", 20,
+// New Label for Use system trust store
+HWND h_system_trust_label = CreateLabel(m_hwnd, "Use system trust store", 
+                                   40, 315, 220, 20, WS_VISIBLE | SS_LEFT);
+SendMessage(h_system_trust_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+      
+  HWND h_trusted_cert_header = CreateLabel(m_hwnd, "Trusted certificate:", 20,
                                            340, 150, 20, WS_VISIBLE | SS_LEFT);
+
+       SendMessage(h_trusted_cert_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+                                    
   HWND h_trusted_cert_edit =
-      CreateEditBox(m_hwnd, 180, 340, 220, 20, kIdcTrustedCertEdit);
+      CreateEditBox(m_hwnd, 185, 340, kEditComboBoxWidth, kEditComboBoxHeight, kIdcTrustedCertEdit);
+      SendMessage(h_trusted_cert_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
 
   HWND h_trusted_cert_browse_button = CreateButton(
-      m_hwnd, "Browse", 420, 340, 80, 20, kIdcTrustedCertBrowseButton);
+      m_hwnd, "Browse...", 185, 365, 76, 16, kIdcTrustedCertBrowseButton);
+      SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
 
   HWND h_catalog_header =
-      CreateLabel(m_hwnd, "Catalog:", 20, 380, 150, 20, WS_VISIBLE | SS_LEFT);
+      CreateLabel(m_hwnd, "Project* :", 15, 400, 150, 20, WS_VISIBLE | SS_LEFT);
+      SendMessage(h_catalog_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
   HWND h_catalog_box =
-      CreateComboBox(m_hwnd, 180, 380, 220, 100, kIdcCatlogBOX);
+      CreateComboBox(m_hwnd, 185, 400, kEditComboBoxWidth, kEditComboBoxHeight, kIdcCatlogBOX);
+      SendMessage(h_catalog_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
 
   HWND h_dataset_header =
-      CreateLabel(m_hwnd, "Dataset:", 20, 420, 150, 20, WS_VISIBLE | SS_LEFT);
-  HWND h_dataset_box =
-      CreateComboBox(m_hwnd, 180, 420, 220, 100, kIdcDatasetBOX);
+      CreateLabel(m_hwnd, "Dataset:", 15, 428, 150, 20, WS_VISIBLE | SS_LEFT);
+      SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_gcp_parent_folder_header = CreateLabel(
-      m_hwnd, "GCP Parent Folder:", 20, 460, 180, 20, WS_VISIBLE | SS_LEFT);
-  HWND h_gcp_parent_folder_text =
-      CreateEditBox(m_hwnd, 180, 460, 220, 20, kIdcGcpFolder);
+  HWND h_dataset_box =
+      CreateComboBox(m_hwnd, 185, 428, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDatasetBOX);
+      SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);  
+  
+    // Documentation Hyperlink
+    HWND h_doc_text = CreateLabel(m_hwnd, "Not sure what to select? See", 15,458 , 160, 20, 0);
+    SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+    
+    HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
+                                          WS_CHILD | WS_VISIBLE | SS_NOTIFY,
+                                          150, 458, 150, 20, m_hwnd,
+                                          (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
+    SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);    
+
+
+  // HWND h_gcp_parent_folder_header = CreateLabel(
+  //     m_hwnd, "GCP Parent Folder:", 20, 460, 150, 20, WS_VISIBLE | SS_LEFT);
+  //     SendMessage(h_gcp_parent_folder_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
+  // HWND h_gcp_parent_folder_text =
+  //     CreateEditBox(m_hwnd, 185, 460, kEditComboBoxWidth, kEditComboBoxHeight, kIdcGcpFolder);
+  //     SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
 
   HWND h_proxy_options_button = CreateButton(
-      m_hwnd, "Proxy Options...", 20, 500, 150, 30, kIdcProxyOptionsButton);
-  HWND h_login_button = CreateButton(m_hwnd, "Logging Options...", 190, 500,
-                                     150, 30, kIdcLoggingBtn);
-  HWND h_advance_opt_button = CreateButton(m_hwnd, "Advance Options...", 360,
-                                           500, 130, 30, kIdcAdvanceOptBtn);
+      m_hwnd, "Proxy Options...", 15, 488, 118, 17, kIdcProxyOptionsButton);
+      SendMessage(h_proxy_options_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+
+  HWND h_login_button = CreateButton(m_hwnd, "Logging Options...", 169, 488,
+                                     118, 17, kIdcLoggingBtn);     
+      SendMessage(h_login_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
+                                        
+
+
+  HWND h_advance_opt_button = CreateButton(m_hwnd, "Advance Options...", 323,
+    488, 118, 17, kIdcAdvanceOptBtn);
+      SendMessage(h_advance_opt_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+      
+  HWND h_version_text = CreateLabel(m_hwnd, "v3.0.5.1011 (64 bit)", 15,520 , 95, 12, 0);
+       SendMessage(h_version_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   HWND h_test_button =
-      CreateButton(m_hwnd, "Test...", 190, 560, 80, 30, kIdcButtonTest);
-  EnableWindow(h_test_button, FALSE);
-  HWND h_ok_button = CreateButton(m_hwnd, "OK", 280, 560, 80, 30, kIdcButtonOk);
+      CreateButton(m_hwnd, "Test...", 216, 520, kBtnWidth, kBtnHeight, kIdcButtonTest);
+      SendMessage(h_test_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      EnableWindow(h_test_button, FALSE);
+      
+  HWND h_ok_button = CreateButton(m_hwnd, "OK", 306, 520, kBtnWidth, kBtnHeight, kIdcButtonOk);
+  SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);                           
   EnableWindow(h_ok_button, FALSE);
+
   HWND h_cancel_button =
-      CreateButton(m_hwnd, "Cancel", 370, 560, 80, 30, kIdcButtonCancel);
+      CreateButton(m_hwnd, "Cancel", 396, 520, kBtnWidth, kBtnHeight, kIdcButtonCancel);
+      SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
+
 
   SendMessage(h_encrypt_data_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "For Current User Only");
@@ -403,7 +525,7 @@ void DriverForm::InitControls() {
   SendMessage(h_min_tls_combo_box, CB_ADDSTRING, 0, (LPARAM) "1.2");
   SendMessage(h_min_tls_combo_box, CB_SETCURSEL, 2, 0);
 
-  SetWindowText(h_email_edit, email_.c_str());
+  // SetWindowText(h_email_edit, email_.c_str());
   SetWindowText(h_key_file_edit, key_file_path_.c_str());
   SetWindowText(h_catalog_box, catalog_.c_str());
   SetWindowText(h_dataset_box, dataset_.c_str());
@@ -425,11 +547,10 @@ void DriverForm::Show() {
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = GetModuleHandle(NULL);
   wc.lpszClassName = CLASS_NAME;
-  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);  // Sets background to white
 
   RegisterClass(&wc);
-  int window_width = 520;
-  int window_height = 650;
+  int window_width = 506;
+  int window_height = 588;
 
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
@@ -438,8 +559,7 @@ void DriverForm::Show() {
   int yPos = (screen_height - window_height) / 2;
 
   m_hwnd = CreateWindowEx(
-      WS_EX_TOPMOST,  // Ensures the window stays on top
-      CLASS_NAME, "Google ODBC Driver for Google BigQuery DSN Setup",
+      0, CLASS_NAME, "BigQuery ODBC Driver data source setup",
       WS_OVERLAPPEDWINDOW, xPos, yPos, window_width, window_height, NULL, NULL,
       GetModuleHandle(NULL), this);
 
@@ -548,16 +668,93 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
   DriverForm* p_this =
       reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-
+      static HBRUSH hBrush = CreateSolidBrush(RGB(224, 224, 224)); // #E0E0E0 color         
+      
   switch (u_msg) {
     case WM_CREATE:
       // Set the instance pointer in the window's user data
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
       break;
+    case WM_CTLCOLORBTN: {
+        HDC hdcButton = (HDC)w_param;
+        SetBkMode(hdcButton, TRANSPARENT);
+        return (LRESULT)hBrush; // Set button background color
+      }
+    case WM_ERASEBKGND: {
+        HDC hdc = (HDC)w_param;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+    
+        // Define a custom background color (#F0F0F0)
+        HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
+    
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+        return 1; // Indicate we handled the background redraw
+    }
+    case WM_LBUTTONDOWN: {
+      POINT pt;
+      GetCursorPos(&pt);
+      ScreenToClient(hwnd, &pt);
+  
+      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink);
+      RECT rect;
+      GetClientRect(h_hyperlink, &rect);
+      MapWindowPoints(h_hyperlink, hwnd, (LPPOINT)&rect, 2);
+  
+      if (PtInRect(&rect, pt)) {
+        ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+      }
+      break;
+    }
+    case WM_CTLCOLORSTATIC: {
+      HDC hdcStatic = (HDC)w_param;
+      HWND hwndStatic = (HWND)l_param;
+  
+      if (GetDlgCtrlID(hwndStatic) == kIdcHyperlink) {
+          SetTextColor(hdcStatic, RGB(0, 0, 255));  // Set text color to blue
+          SetBkMode(hdcStatic, TRANSPARENT);  // Transparent background
+  
+          static HFONT hFontUnderline = NULL;
+          if (!hFontUnderline) {
+              LOGFONT lf;
+              HFONT hFont = (HFONT)SendMessage(hwndStatic, WM_GETFONT, 0, 0);
+              if (hFont && GetObject(hFont, sizeof(LOGFONT), &lf)) {
+                  lf.lfUnderline = TRUE;  // Enable underline
+                  hFontUnderline = CreateFontIndirect(&lf);
+              }
+          }
+  
+          if (hFontUnderline) {
+              SelectObject(hdcStatic, hFontUnderline);
+          }
+  
+          return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
+      }
+      break;
+  }
+    case WM_KEYDOWN:
+      if (w_param == VK_ESCAPE) {
+        SendMessage(hwnd, WM_CLOSE, 0, 0);
+        return 0;
+      }
+      if (w_param == VK_RETURN) {
+        SendMessage(hwnd, WM_COMMAND, kIdcButtonOk, 0);
+        return 0;
+      }
+      if (w_param == VK_TAB) {
+        return 0;
+      }
+      break;  
 
     case WM_COMMAND:
       if (HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE) {
         EvaluateFields(hwnd);
+      }
+     // Handle hyperlink click event
+     if (LOWORD(w_param) == kIdcHyperlink && HIWORD(w_param) == STN_CLICKED) {
+      ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+      break;
       }
       switch (LOWORD(w_param)) {
         case kIdcAuthBox:

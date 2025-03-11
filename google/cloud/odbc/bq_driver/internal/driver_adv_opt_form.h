@@ -18,7 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:145
+// NEXTID:148
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -36,6 +36,9 @@ static int const kIdcOKButton = 141;
 static int const kIdcCancelButton = 142;
 static int const kIdcLanguageDialectComboBox = 143;
 static int const kIdcVariableCheckbox = 144;
+static int const KIdcLargeResultHeader = 145;
+static int const kIdcEncryptionKeyComboBox = 146;
+static int const kIdcHyperlink = 147;
 
 class AdvanceOptions {
  public:
