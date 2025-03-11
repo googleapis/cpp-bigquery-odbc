@@ -1215,7 +1215,7 @@ EXPECT_THAT(res_out_conn_str,
 
 // TODO(b/383449326): Add other connection attributes for the connection
 if (kIsBqDriver) {
-  #ifndef DRIVER_MANAGER_TESTING_ENABLED
+  #ifdef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   #else
   EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
@@ -1276,7 +1276,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   if (kIsBqDriver) {
-    #ifndef DRIVER_MANAGER_TESTING_ENABLED
+    #ifdef DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   #else
   EXPECT_EQ(out_conn_str_len, res_out_conn_str.size());
