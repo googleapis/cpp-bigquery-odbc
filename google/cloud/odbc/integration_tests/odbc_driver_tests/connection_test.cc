@@ -19,6 +19,7 @@ namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
+
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
 #ifdef _WIN32
