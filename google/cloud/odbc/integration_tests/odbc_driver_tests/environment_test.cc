@@ -130,7 +130,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
-#endif //DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -210,7 +210,7 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   EXPECT_EQ(get_val2, SQL_TRUE);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
-#endif //DRIVER_MANAGER_TESTING_ENABLED
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 // Error Cases
 
 TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {

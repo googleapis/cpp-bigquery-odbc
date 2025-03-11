@@ -2228,8 +2228,8 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
       ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
           << "SQLExecute failed with unexpected error: " << error;
       EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-#endif //DRIVER_MANAGER_TESTING_ENABLED
-#endif // _WIN32
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
+#endif  // _WIN32
     }
   }
 }
