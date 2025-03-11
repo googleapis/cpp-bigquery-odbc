@@ -587,14 +587,13 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
   // out_connection_string_len as the output parameters
   SQLCHAR* out_connection_string =
       reinterpret_cast<SQLCHAR*>(outConnectionString);
-  SQLSMALLINT out_connection_string_len = 0;
   rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
       connectionHandle, ToSqlChar(utf8_in_connection_str->data()),
       inConnectionStringLen, out_connection_string,
-      outConnectionStringBufferLen, &out_connection_string_len);
+      outConnectionStringBufferLen, outConnectionStringLen);
+
   // Handle Unicode conversion of output parameters.
-  if ((SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) &&
-      out_connection_string_len > 0) {
+  if (SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) {
     StatusRecordOr<std::wstring> utf16_out_conn_str =
         Utf8ToUtf16((char*)out_connection_string);
     if (!utf16_out_conn_str) {
@@ -608,8 +607,6 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                 ToSqlWChar(utf16_out_conn_str->data()),
                 utf16_out_conn_str->size() * sizeof(SQLWCHAR));
   }
-  if (outConnectionStringLen)
-    *outConnectionStringLen = out_connection_string_len;
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionExit_SQLBrowseConnectW(rc, *(*kTraceOption));
@@ -3033,7 +3030,6 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN status;
   SQLCHAR sql_state_buffer[kBufferLength] = {0};
   SQLCHAR* message_text_buffer = reinterpret_cast<SQLCHAR*>(messageText);
-  ;
   SQLSMALLINT message_text_buffer_len = 0;
   bool is_tracing_enabled = IsTracingEnabled("SQLGetDiagRecW");
 
