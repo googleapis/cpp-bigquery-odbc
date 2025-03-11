@@ -461,7 +461,7 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   if (in_str == nullptr) {
     return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
   }
-  if (in_str[0] == '\0') {
+  if (in_str_len == 0 || in_str[0] == '\0') {
     return std::string();
   }
   std::wstring stmt_txt_wstr;

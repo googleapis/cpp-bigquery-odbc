@@ -20,10 +20,12 @@ using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
+// TODO(b/402379435): Update '#ifdef DRIVER_MANAGER_TESTING_ENABLED' after
+// driver manager enabled.
 std::string GetDriverName() {
 #ifdef _WIN32
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-  return "ODBC Driver for Google BigQuery";
+  return "Google BigQuery ODBC Driver";
 #else
   return "Simba ODBC Driver for Google BigQuery";
 #endif
@@ -1094,6 +1096,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
   // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
   if (kIsBqDriver) {
     EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
   } else {
@@ -1207,6 +1210,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 #endif  // _WIN32
 
   // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
   if (kIsBqDriver) {
     EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
@@ -1263,6 +1267,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 #endif  // _WIN32
 
   // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
   if (kIsBqDriver) {
     EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
