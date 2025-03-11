@@ -24,11 +24,7 @@ using ::testing::HasSubstr;
 // driver manager enabled.
 std::string GetDriverName() {
 #ifdef _WIN32
-#ifdef DRIVER_MANAGER_TESTING_ENABLED
-  return "Google BigQuery ODBC Driver";
-#else
   return "Simba ODBC Driver for Google BigQuery";
-#endif
 #else
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
   return "Google BigQuery ODBC Driver";

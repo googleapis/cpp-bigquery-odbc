@@ -76,6 +76,11 @@ jobs:
           export ODBC_INCLUDE_PATH="/usr/local/opt/libiodbc/include"
         fi
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
+        export PATH=$VCPKG_ROOT:$PATH
+        export PATH=/opt/homebrew/bin:$PATH
+        export CPPFLAGS="-I$(brew --prefix libiodbc)/include"
+        export LDFLAGS="-L$(brew --prefix libiodbc)/lib"
+        export LDFLAGS="$LDFLAGS -L/opt/homebrew/opt/libiconv/lib -liconv"
         bash ci/gha/builds/macos-cmake.sh
     env:
       USE_BAZEL_VERSION: 7.0.0

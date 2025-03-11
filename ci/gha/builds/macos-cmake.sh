@@ -21,9 +21,18 @@ source module ci/gha/builds/lib/macos.sh
 source module ci/gha/builds/lib/cmake.sh
 
 mapfile -t args < <(cmake::common_args)
+mapfile -t args < <(cmake::common_args)
 args+=(
-  -DODBC_INTEGRATION_TESTING=OFF
+  -DODBC_UNIT_TESTING=OFF
+  -DODBC_INTEGRATION_TESTING=ON
+  -DBQ_DRIVER_INTEGRATION_TESTS=ON
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DBUILD_SHARED_LIBS=ON
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+  -DCMAKE_CXX_FLAGS="-I$(brew --prefix libiodbc)/include"
+  -DCMAKE_CXX_STANDARD=17
 )
+
 mapfile -t vcpkg_args < <(cmake::vcpkg_args)
 mapfile -t ctest_args < <(ctest::common_args)
 
