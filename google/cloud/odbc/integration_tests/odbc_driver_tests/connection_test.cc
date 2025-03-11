@@ -1196,12 +1196,9 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
   conn_str = "InvalidString";
   StrToChar((char*)in_conn_str, conn_str);
 
-  SQLCHAR out_conn_str1[kBufferLength] = {0};
-  SQLSMALLINT out_conn_str_len1 = 0;
-
   status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str1,
-                            sizeof(out_conn_str1), &out_conn_str_len1);
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_ERROR);
   // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
