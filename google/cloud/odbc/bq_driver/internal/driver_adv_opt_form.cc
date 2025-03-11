@@ -393,23 +393,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
         }
         break;
-        case IDOK: {
-          // Retrieve values from input fields
-          HWND h_activation_threshold = GetDlgItem(hwnd, kIdcActivationThresholdEdit);
-          char activation_threshold_buffer[1024] = {0};
-          GetWindowText(h_activation_threshold, activation_threshold_buffer, sizeof(activation_threshold_buffer));
-          activation_threshold_ = activation_threshold_buffer;
-
-          // Retrieve checkbox states
-          use_wchar_ = (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED) ? "1" : "0";
-          enable_session_ = (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) == BST_CHECKED) ? "1" : "0";
-          activation_threshold_checkbox_ = (IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox) == BST_CHECKED) ? "1" : "0";
-          allow_large_results_ = (IsDlgButtonChecked(hwnd, kIdcAllowLargeResultsCheckbox) == BST_CHECKED) ? "1" : "0";
-          use_default_large_results_ = (IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox) == BST_CHECKED) ? "1" : "0";
-
-          DestroyWindow(hwnd);
-          break;
-        }
         case kIdcOKButton: {
           HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
           char language_buffer[256] = {0};
@@ -577,28 +560,18 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
 }
 
 void AdvanceOptions::SetValues(Section const& attribute_map) {
-  // language_dialect_ = GetValueOrDefault(attribute_map, kLanguageDialect);
-  // std::string lang_dialect_value =
-  //     GetValueOrDefault(attribute_map, kLanguageDialect);
-  // if (lang_dialect_value ==
-  //     std::to_string(static_cast<int>(LanguageDialect::kStandardSQL))) {
-  //   language_dialect_ = "GoogleSQL";
-  // } else if (lang_dialect_value ==
-  //            std::to_string(static_cast<int>(LanguageDialect::kLegacySQL))) {
-  //   language_dialect_ = "LegacySQL";
-  // } else {
-  //   language_dialect_ = "";
-  // }
-
-  std::string lang_dialect_value = GetValueOrDefault(attribute_map, kLanguageDialect);
-if (lang_dialect_value == std::to_string(static_cast<int>(LanguageDialect::kStandardSQL))) {
-  language_dialect_ = "GoogleSQL";
-} else if (lang_dialect_value == std::to_string(static_cast<int>(LanguageDialect::kLegacySQL))) {
-  language_dialect_ = "LegacySQL";
-} else {
-  language_dialect_ = "";
-}
-
+  language_dialect_ = GetValueOrDefault(attribute_map, kLanguageDialect);
+  std::string lang_dialect_value =
+      GetValueOrDefault(attribute_map, kLanguageDialect);
+  if (lang_dialect_value ==
+      std::to_string(static_cast<int>(LanguageDialect::kStandardSQL))) {
+    language_dialect_ = "GoogleSQL";
+  } else if (lang_dialect_value ==
+             std::to_string(static_cast<int>(LanguageDialect::kLegacySQL))) {
+    language_dialect_ = "LegacySQL";
+  } else {
+    language_dialect_ = "";
+  }
   adv_dataset_name_ = GetValueOrDefault(attribute_map, kLargeResultsDatasetId);
   encryption_key_ = GetValueOrDefault(attribute_map, kEncryptionKey);
   rows_per_block_ = GetValueOrDefault(attribute_map, kRowsFetchedPerBlock);
