@@ -197,7 +197,6 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
-
   SQLUSMALLINT GetCurrentParameterIndex() const {
      return current_param_index_; 
   }

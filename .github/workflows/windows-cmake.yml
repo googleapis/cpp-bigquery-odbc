@@ -19,7 +19,7 @@ jobs:
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
     permissions:
       contents: 'read'
-      id-token: 'write'
+      id-token: 'none'
     strategy:
       # Continue other builds even if one fails
       fail-fast: false

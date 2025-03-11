@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+
+	<String Id="Company">Google</String>
+
+	<String Id="ProductNameFolder">Google BQDriver</String>
+
+	<String Id="ProductName_x86">Google BQDriver 32</String>
+	<String Id="ProductName_x64">Google BQDriver 64</String>
+
+	<String Id="Description">This is a description</String>
+	<String Id="Comments">Some comment</String>
+	<String Id="Keywords">bq driver,installer</String>
+
+	<String Id="DowngradeErrorMessage">A newer version of driver is already installed.</String>
+    <String Id="DsnNameDlg_Title">DSN Configuration</String>
+	<String Id="DsnNameDlgDescription">Enter the DSN name for the driver.</String>
+	<String Id="DsnNameLabel">Please enter the DSN name:</String>
+	<String Id="DsnNameDlgTitle">DSN Configuration</String>
+	<String Id="Language">1033</String>
+    <String Id="DriverName">Google BQ Driver</String>
+    <String Id="DLLName">google_cloud_odbc_bq_driver</String>
+
+</WixLocalization>

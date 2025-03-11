@@ -800,9 +800,23 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           }
           break;
         }
-        case kIdcButtonCancel:
-          DestroyWindow(hwnd);  // Close the window
-          break;
+        case kIdcButtonCancel: {
+          // Retains previous values in the child form if OK is clicked there
+          // but Cancel is clicked in the main form. Ensures no data entered in
+          // either form is saved in such cases.
+          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
+          char dsn_buffer[256];
+          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
+
+          std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_buffer;
+          auto res = GetSectionWin(registry_key);
+          Section prev_section = *res.GetValue();
+          AdvanceOptions adv_form = AdvanceOptions();
+          ProxyOptions proxy_form = ProxyOptions();
+          adv_form.SetValues(prev_section);
+          proxy_form.SetValues(prev_section);
+          DestroyWindow(hwnd);
+        }
       }
       break;
     case WM_CLOSE:

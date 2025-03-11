@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <Fragment>
+        <!-- Product Components -->
+        <ComponentGroup Id="ProductComponents">
+            <ComponentRef Id="DriverFilesComponent" />
+            <ComponentRef Id="ODBCRegistrySettings" />
+        </ComponentGroup>
+    <CustomAction Id="RemoveAllDriverDSNs"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$dsns = Get-OdbcDsn -DriverName '!(loc.DriverName)' -DsnType 'System'; foreach($dsn in $dsns) { Remove-OdbcDsn -Name $dsn.Name -DsnType 'System' -Confirm:$false; }&quot;"
+                  Return="ignore"
+                  Execute="deferred"
+                  Impersonate="no" />
+
+    <InstallExecuteSequence>
+
+    <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+  </InstallExecuteSequence>
+        <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
+
+            <!-- Combined Driver Files Component -->
+            <Component Id="DriverFilesComponent" Guid="0b6e6271-38da-4c8c-8897-f675ff1e702d">
+                <File Id="abseil_dll.dll" Name="abseil_dll.dll" />
+                <File Id="cares.dll" Name="cares.dll" />
+                <File Id="google_cloud_odbc_bq_driver.dll" Name="google_cloud_odbc_bq_driver.dll" />
+                <File Id="libcrypto_3_x64.dll" Name="libcrypto-3-x64.dll" />
+                <File Id="libcurl.dll" Name="libcurl.dll" />
+                <File Id="libprotobuf.dll" Name="libprotobuf.dll" />
+                <File Id="libssl_3_x64.dll" Name="libssl-3-x64.dll" />
+                <File Id="re2.dll" Name="re2.dll" />
+                <File Id="zlib1.dll" Name="zlib1.dll" />
+            </Component>
+
+            <Component Id="CreateAndRemoveFolder" Guid="*">
+                <CreateFolder />
+                <RemoveFolder Id="INSTALLFOLDER" On="uninstall" />
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+
+            <Component Id="ODBCRegistrySettings" Guid="*">
+                <!-- ODBC Data Sources -->
+                <RegistryValue Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources" Name="[DSNNAME]" Type="string" Value="!(loc.DriverName)" />
+                <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]" Action="removeOnUninstall" />
+
+                <!-- Additional Google-specific registry entries -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver">
+                     <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+                </RegistryKey>
+                <RemoveRegistryKey Root="HKLM"
+                                   Key="SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver"
+                                   Action="removeOnUninstall" />
+
+                
+                <!-- DSN Configuration -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]">
+                    <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="Catalog" Type="string" Value="your_catalog_id" />
+                    <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="SQLDialect" Type="string" Value="1" />
+                    <RegistryValue Name="OAuthMechanism" Type="string" Value="1" />
+                    <RegistryValue Name="AllowLargeResults" Type="string" Value="0" />
+                    <RegistryValue Name="LargeResultsDataSetId" Type="string" Value="_odbc_temp_tables" />
+                    <RegistryValue Name="LargeResultsTempTableExpirationTime" Type="string" Value="3600000" />
+                </RegistryKey>
+
+                <!-- ODBC Drivers -->
+                <RegistryValue Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" Name="!(loc.DriverName)" Type="string" Value="Installed" />
+
+                <!-- ODBC Driver Configuration -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)">
+                    <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
+                    <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
+                </RegistryKey>
+            </Component>
+        </DirectoryRef>
+    </Fragment>
+
+</Wix>

@@ -52,10 +52,12 @@ struct StrBasicTestStruct {
 struct NumericBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
-  // The value that should be returned by SQLGetData if it succeeds
-  double value;
+  // The value that is inserted into the table
+  std::string value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
+  // The str that should be returned by SQLGetData if it succeeds
+  std::string expected_str;
 };
 
 struct Int64BasicTestStruct {
@@ -94,25 +96,43 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
-    {SQL_C_CHAR, 123, SQL_SUCCESS},
-    {SQL_C_FLOAT, 156.1, SQL_SUCCESS},
-    {SQL_C_FLOAT, -157.8, SQL_SUCCESS},
-    {SQL_C_DOUBLE, -38.3, SQL_SUCCESS},
-    {SQL_C_SSHORT, 31, SQL_SUCCESS},
-    {SQL_C_SSHORT, -31, SQL_SUCCESS},
-    {SQL_C_USHORT, 3, SQL_SUCCESS},
-    {SQL_C_USHORT, 65537 /* 2^16 + 1 */, SQL_ERROR},
-    {SQL_C_SLONG, -13, SQL_SUCCESS},
-    {SQL_C_SLONG, 13.3,
+    {SQL_C_NUMERIC, "1234567891234567891", SQL_SUCCESS,
+     "1234567891234567891"},  // NUMERIC(38,9) allows only 19 digits for
+                              // integral value. Weird!
+    {SQL_C_NUMERIC, "-1234567891234567891", SQL_SUCCESS,
+     "-1234567891234567891"},
+    // TODO(b/345194139): check if digits after decimal are expected to be
+    // omitted
+    {SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,
+     "-123456789123456"},
+// TODO(b/345194139): Check why this string is returned as
+// "16208844614347859008"
+// {SQL_C_NUMERIC, "12345678912345678912345678912.345678912",
+//  SQL_SUCCESS_WITH_INFO},
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+    // Existing driver returns "123.000000000" here
+    {SQL_C_CHAR, "123", SQL_SUCCESS},
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+    {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
+    {SQL_C_FLOAT, "-157.8", SQL_SUCCESS},
+    {SQL_C_DOUBLE, "-38.3", SQL_SUCCESS},
+    {SQL_C_SSHORT, "31", SQL_SUCCESS},
+    {SQL_C_SSHORT, "-31", SQL_SUCCESS},
+    {SQL_C_USHORT, "3", SQL_SUCCESS},
+    {SQL_C_USHORT, "65537" /* 2^16 + 1 */, SQL_ERROR},
+    {SQL_C_SLONG, "-13", SQL_SUCCESS},
+    {SQL_C_SLONG, "13.3",
      SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
                               // precision
-    {SQL_C_ULONG, 81, SQL_SUCCESS},
-    {SQL_C_ULONG, -8, SQL_ERROR},
-    {SQL_C_ULONG, 1.1, SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because
-                                                // there is loss of precision
-    {SQL_C_BIT, 0, SQL_SUCCESS},
-    {SQL_C_BIT, 1, SQL_SUCCESS},
-    {SQL_C_BIT, 2, SQL_ERROR},
+    {SQL_C_ULONG, "81", SQL_SUCCESS},
+    {SQL_C_ULONG, "-8", SQL_ERROR},
+    {SQL_C_ULONG, "1.1",
+     SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because
+                              // there is loss of precision
+    {SQL_C_BIT, "0", SQL_SUCCESS},
+    {SQL_C_BIT, "1", SQL_SUCCESS},
+    {SQL_C_BIT, "2", SQL_ERROR},
+
 };
 
 std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
@@ -279,6 +299,102 @@ void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
+void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
+                                 std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  // Read all the rows using SQLFetch
+  int row_count = 0;
+  for (NumericBasicTestStruct expected : kConversionFromNumericTestData) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+
+    SQLSMALLINT resp_status, resp_status_len;
+    status = SQLGetData(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    std::cout << "Testing row: " << expected.target_c_type << ", "
+              << expected.value << ", " << expected.status << std::endl;
+    EXPECT_EQ(status, expected.status);
+    if (!SQL_SUCCEEDED(status)) {
+      row_count++;
+      continue;
+    }
+    CheckError(status,
+               "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
+               conn);
+    if (strlen_or_ind >= 0) {
+      // Refer
+      // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
+      // to understand the expectations regarding typecasting applications
+      // buffers.
+      switch (expected.target_c_type) {
+        case SQL_C_CHAR: {
+          std::string returned_val = (char*)data;
+          EXPECT_EQ(returned_val, expected.value);
+          break;
+        }
+        case SQL_C_FLOAT: {
+          SQLREAL* returned_val = (SQLREAL*)data;
+          EXPECT_EQ(*returned_val, std::stof(expected.value));
+          break;
+        }
+        case SQL_C_DOUBLE: {
+          SQLDOUBLE* returned_val = (SQLDOUBLE*)data;
+          EXPECT_EQ(*returned_val, std::stod(expected.value));
+          break;
+        }
+        case SQL_C_SSHORT: {
+          SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_USHORT: {
+          SQLUSMALLINT* returned_val = (SQLUSMALLINT*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_SLONG: {
+          SQLINTEGER* returned_val = (SQLINTEGER*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_ULONG: {
+          SQLUINTEGER* returned_val = (SQLUINTEGER*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_BIT: {
+          SQLCHAR* returned_val = (SQLCHAR*)data;
+          EXPECT_EQ(*returned_val, std::stod(expected.value));
+          break;
+        }
+        case SQL_C_NUMERIC: {
+          SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
+          EXPECT_EQ(SQLNumericToString(returned_val), expected.expected_str);
+          break;
+        }
+        default: {
+          FAIL() << "case not handled!" << std::endl;
+        }
+      }
+      row_count++;
+    }
+  }
+  EXPECT_EQ(row_count, kConversionFromNumericTestData.size());
+}
+
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                                 std::string query) {
   SQLRETURN status;
@@ -413,12 +529,12 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(index INT64, NumericField NUMERIC)");
+  table.Create(conn, "(index INT64, NumericField NUMERIC(38,9))");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<double> numeric_data_to_insert;
+  std::vector<std::string> numeric_data_to_insert;
   for (auto elem : kConversionFromNumericTestData) {
     numeric_data_to_insert.push_back(elem.value);
   }
@@ -430,12 +546,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
   std::string query =
       "SELECT NumericField FROM " + table_name + " ORDER BY index";
 
-#ifndef _WIN32
-  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
-  // SQL_DIAG_RETURNCODE not returning values.
-  TestTranslationsFromArithmetic<NumericBasicTestStruct>(
-      conn, query, kConversionFromNumericTestData);
-#endif  // _WIN32
+  TestTranslationsFromNumeric(conn, query);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

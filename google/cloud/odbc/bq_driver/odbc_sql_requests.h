@@ -74,6 +74,7 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
                              SQLLEN str_len_or_ind_ptr);
+
 SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
                                SQLPOINTER* param_or_target_value);
 }  // namespace google::cloud::odbc_bq_driver

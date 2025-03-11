@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -28,6 +29,7 @@ using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
+using google::cloud::odbc_bq_driver_internal::EncryptPassword;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetTraceLogRegistryPath;
@@ -37,6 +39,7 @@ using ::google::cloud::odbc_bq_driver_internal::LanguageDialect;
 using google::cloud::odbc_bq_driver_internal::LogLevel;
 using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
+using google::cloud::odbc_bq_driver_internal::ProxyOptions;
 using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::Trim;
@@ -91,88 +94,103 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string attribute = ConvertLPCSTRToString(lpsz_attributes);
   StatusRecordOr<Section> status_or_section = ParseConnectionString(attribute);
   Section section = *status_or_section;
-  // TODO(@khushikathuria008): Make "DSN" and other key as constants in single
-  // file.
-  std::string dsn_value = GetValueOrDefault(section, "DSN");
+
+  std::string dsn_value = GetValueOrDefault(section, dsn_key);
   if (dsn_value.empty()) {
     dsn_value = "Default DSN";
   }
 
   std::string dsn_name;
-  std::string email = GetValueOrDefault(section, "Email");
-  std::string key_file_path = GetValueOrDefault(section, "KeyFilePath");
+  std::string email = GetValueOrDefault(section, email_key);
+  std::string key_file_path = GetValueOrDefault(section, key_file_path_key);
   std::string o_auth_mechanism =
-      ConvertOAuthMechanism(GetValueOrDefault(section, "OAuthMechanism"));
-  std::string catalog = GetValueOrDefault(section, "Catalog");
-  std::string dataset_name = GetValueOrDefault(section, "Dataset");
-  std::string encrypt_data = GetValueOrDefault(section, "EncryptData");
-  std::string trusted_certs = GetValueOrDefault(section, "TrustedCerts");
-  std::string min_tls_version = GetValueOrDefault(section, "Min_TLS");
-  std::string description = GetValueOrDefault(section, "Description");
+      ConvertOAuthMechanism(GetValueOrDefault(section, oauth_mechanism_key));
+  std::string catalog = GetValueOrDefault(section, catalog_key);
+  std::string dataset_name = GetValueOrDefault(section, dataset_key);
+  std::string encrypt_data = GetValueOrDefault(section, encrypt_data_key);
+  std::string trusted_certs = GetValueOrDefault(section, trusted_certs_key);
+  std::string min_tls_version = GetValueOrDefault(section, min_tls_key);
+  std::string description = GetValueOrDefault(section, description_key);
   std::string log_level =
-      ConvertLogLevel(GetValueOrDefault(section, "LogLevel").empty()
+      ConvertLogLevel(GetValueOrDefault(section, log_level_key).empty()
                           ? "0"
-                          : GetValueOrDefault(section, "LogLevel"));
-  std::string log_file = GetValueOrDefault(section, "LogFile");
+                          : GetValueOrDefault(section, log_level_key));
+  std::string log_file = GetValueOrDefault(section, log_file_key);
   std::string language_dialect =
-      ConvertLanguageDialect(GetValueOrDefault(section, "SQLDialect"));
+      ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
-      GetValueOrDefault(section, "LargeResultsDatasetId");
-  std::string encryption_key = GetValueOrDefault(section, "KMSKeyName");
-  std::string rows_per_block =
-      GetValueOrDefault(section, "RowsFetchedPerBlock");
+      GetValueOrDefault(section, large_results_dataset_key);
+  std::string encryption_key_value = GetValueOrDefault(section, encryption_key);
+  std::string rows_per_block = GetValueOrDefault(section, rows_per_block_key);
   std::string default_string_length =
-      GetValueOrDefault(section, "DefaultStringColumnLength");
-  std::string temp_expiration =
-      GetValueOrDefault(section, "LargeResultsTempTableExpirationTime");
-  std::string session_location = GetValueOrDefault(section, "SessionLocation");
+      GetValueOrDefault(section, default_string_length_key);
+  std::string temp_expiration = GetValueOrDefault(section, temp_expiration_key);
+  std::string session_location =
+      GetValueOrDefault(section, session_location_key);
   std::string additional_projects =
-      GetValueOrDefault(section, "AdditionalProjects");
-  std::string query_properties = GetValueOrDefault(section, "QueryProperties");
+      GetValueOrDefault(section, additional_projects_key);
+  std::string query_properties =
+      GetValueOrDefault(section, query_properties_key);
   std::string activation_threshold =
-      GetValueOrDefault(section, "HTAPI_ActivationThreshold");
-  std::string use_wchar = GetValueOrDefault(section, "UseWVarChar");
-  std::string enable_session = GetValueOrDefault(section, "EnableSession");
+      GetValueOrDefault(section, activation_threshold_key);
+  std::string use_wchar = GetValueOrDefault(section, use_wchar_key);
+  std::string enable_session = GetValueOrDefault(section, enable_session_key);
   std::string htapi_activation_threshold_check =
-      GetValueOrDefault(section, "AllowHtapiForLargeResults");
+      GetValueOrDefault(section, htapi_activation_threshold_check_key);
   std::string allow_large_results =
-      GetValueOrDefault(section, "AllowLargeResults");
+      GetValueOrDefault(section, allow_large_results_key);
   std::string use_default_large_results_dataset =
-      GetValueOrDefault(section, "UseDefaultLargeResultsDataset");
+      GetValueOrDefault(section, use_default_large_results_dataset_key);
+  std::string proxy_check = GetValueOrDefault(section, proxy_check_key);
+  std::string proxy_host = GetValueOrDefault(section, proxy_host_key);
+  std::string proxy_port = GetValueOrDefault(section, proxy_port_key);
+  std::string proxy_username = GetValueOrDefault(section, proxy_username_key);
+  std::string proxy_pwd = GetValueOrDefault(section, proxy_pwd_key);
+  std::string proxy_pwd_enc =
+      EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
 
   DriverForm form;
   AdvanceOptions advance_form;
+  ProxyOptions proxy_form;
 
   auto CreateSectionFromForm = [&]() -> Section {
     return {
-        {"Email", email},
-        {"KeyFilePath", key_file_path},
-        {"OAuthMechanism", o_auth_mechanism},
-        {"Catalog", catalog},
-        {"Dataset", dataset_name},
-        {"EncryptData", encrypt_data},
-        {"TrustedCerts", trusted_certs},
-        {"Min_TLS", min_tls_version},
-        {"Description", description},
-        {"SQLDialect", language_dialect},
-        {"LargeResultsDatasetId", large_dataset_name},
-        {"KMSKeyName", encryption_key},
-        {"RowsFetchedPerBlock", rows_per_block},
-        {"DefaultStringColumnLength", default_string_length},
-        {"LargeResultsTempTableExpirationTime", temp_expiration},
-        {"SessionLocation", session_location},
-        {"AdditionalProjects", additional_projects},
-        {"QueryProperties", query_properties},
-        {"HTAPI_ActivationThreshold", activation_threshold},
-        {"UseWVarChar", use_wchar},
-        {"EnableSession", enable_session},
-        {"AllowHtapiForLargeResults", htapi_activation_threshold_check},
-        {"AllowLargeResults", allow_large_results},
-        {"UseDefaultLargeResultsDataset", use_default_large_results_dataset}};
+        {email_key, email},
+        {key_file_path_key, key_file_path},
+        {oauth_mechanism_key, o_auth_mechanism},
+        {catalog_key, catalog},
+        {dataset_key, dataset_name},
+        {encrypt_data_key, encrypt_data},
+        {trusted_certs_key, trusted_certs},
+        {min_tls_key, min_tls_version},
+        {description_key, description},
+        {sql_dialect_key, language_dialect},
+        {large_results_dataset_key, large_dataset_name},
+        {encryption_key, encryption_key_value},
+        {rows_per_block_key, rows_per_block},
+        {default_string_length_key, default_string_length},
+        {temp_expiration_key, temp_expiration},
+        {session_location_key, session_location},
+        {additional_projects_key, additional_projects},
+        {query_properties_key, query_properties},
+        {activation_threshold_key, activation_threshold},
+        {use_wchar_key, use_wchar},
+        {enable_session_key, enable_session},
+        {htapi_activation_threshold_check_key,
+         htapi_activation_threshold_check},
+        {allow_large_results_key, allow_large_results},
+        {use_default_large_results_dataset_key,
+         use_default_large_results_dataset},
+        {proxy_check_key, proxy_check},
+        {proxy_host_key, proxy_host},
+        {proxy_port_key, proxy_port},
+        {proxy_username_key, proxy_username},
+        {proxy_pwd_key, proxy_pwd},
+        {proxy_pwd_enc_key, proxy_pwd_enc},
+    };
   };
-
   auto CreateSectionFromLogForm = [&]() -> Section {
-    return {{"LogLevel", log_level}, {"LogFile", log_file}};
+    return {{log_level_key, log_level}, {log_file_key, log_file}};
   };
 
   auto ShowFormAndReturnValues = [&]() -> std::string {
@@ -199,7 +217,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     language_dialect =
         ConvertLanguageDialect(advance_form.GetLanguageDialect());
     large_dataset_name = advance_form.GetDatasetName();
-    encryption_key = advance_form.GetEncryptionKey();
+    encryption_key_value = advance_form.GetEncryptionKey();
     rows_per_block = advance_form.GetRowsPerBlock();
     default_string_length = advance_form.GetDefaultStringLength();
     temp_expiration = advance_form.GetTempTableExpiration();
@@ -214,7 +232,11 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     allow_large_results = advance_form.GetAllowLargeResults();
     use_default_large_results_dataset =
         advance_form.GetUseDefaultLargeResults();
-
+    proxy_check = proxy_form.GetProxyCheck();
+    proxy_host = proxy_form.GetProxyHost();
+    proxy_port = proxy_form.GetProxyPort();
+    proxy_username = proxy_form.GetProxyUsername();
+    proxy_pwd_enc = EncryptPassword(proxy_form.GetProxyPass());
     return dsn_name;
   };
 
@@ -251,10 +273,11 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       auto section = res.GetValue();
       auto trace_section = trace_result.GetValue();
 
-      (*section)["DSN"] = dsn_value;
+      (*section)[dsn_key] = dsn_value;
 
       form.SetValues(*section);
       advance_form.SetValues(*section);
+      proxy_form.SetValues(*section);
       form.SetLogTraceValues(*trace_section);
       dsn_name = ShowFormAndReturnValues();
 
