@@ -35,6 +35,7 @@ RUN apt-get update && \
         libssl-dev \
         libtool \
         llvm \
+        locales \
         lsb-release \
         make \
         ninja-build \
@@ -54,6 +55,12 @@ RUN apt-get update && \
         ca-certificates \
         apt-transport-https \
         clang-tidy
+
+# Needed for the existing driver v3.1.2.1004+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10

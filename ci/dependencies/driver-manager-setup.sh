@@ -25,10 +25,11 @@ CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR="$(pwd)"
 export CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR
 
 export GCS_BUCKET=bq-dev-tools-testing-drivers
+export DRIVER_VERSION=3.1.2.1004
 
 # Check gcloud is installed.
 echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-if [ "$(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip)" -eq 0 ]; then
+if [ "$(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.${DRIVER_VERSION}.zip)" -eq 0 ]; then
   echo 'ODBC driver not found for download: exiting...'
   exit 1
 fi
@@ -46,8 +47,8 @@ fi
 
 # Install the ODBC Driver
 echo 'Installing ODBC Driver...'
-gsutil -m cp gs://${GCS_BUCKET}/odbc/odbc-driver.zip .
-unzip -qq odbc-driver.zip
+gsutil -m cp gs://${GCS_BUCKET}/odbc/odbc-driver.${DRIVER_VERSION}.zip .
+unzip -qq odbc-driver.${DRIVER_VERSION}.zip
 echo 'Verifying Driver Install Directory...'
 if [ "$(
   shopt -s nullglob

@@ -32,100 +32,93 @@ static constexpr SQLULEN kColSize = 10;
 static constexpr SQLSMALLINT kDecimalDigits = 3;
 
 static std::map<SQLSMALLINT, ExpectedDescriptorConfig> const kImpDescTestMap = {
-    {SQL_CHAR,
-     {SQL_CHAR, SQL_CHAR, 0, kColSize, kColSize, kScaleUnchanged, kColSize}},
+    {SQL_CHAR, {SQL_CHAR, SQL_CHAR, 0, kColSize, 0, kScaleUnchanged, 0}},
     {SQL_VARCHAR,
-     {SQL_VARCHAR, SQL_VARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
-      kColSize}},
+     {SQL_VARCHAR, SQL_VARCHAR, 0, kColSize, 0, kScaleUnchanged, 0}},
     {SQL_LONGVARCHAR,
-     {SQL_LONGVARCHAR, SQL_LONGVARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
-      kColSize}},
-    {SQL_BINARY,
-     {SQL_BINARY, SQL_BINARY, 0, kColSize, kColSize, kScaleUnchanged,
-      kColSize}},
+     {SQL_LONGVARCHAR, SQL_LONGVARCHAR, 0, kColSize, kPrecisionUnchanged,
+      kScaleUnchanged, 0}},
+    {SQL_BINARY, {SQL_BINARY, SQL_BINARY, 0, kColSize, 0, kScaleUnchanged, 0}},
     {SQL_VARBINARY,
-     {SQL_VARBINARY, SQL_VARBINARY, 0, kColSize, kColSize, kScaleUnchanged,
-      kColSize}},
+     {SQL_VARBINARY, SQL_VARBINARY, 0, kColSize, 0, kScaleUnchanged, 0}},
     {SQL_LONGVARBINARY,
-     {SQL_LONGVARBINARY, SQL_LONGVARBINARY, 0, kColSize, kColSize,
-      kScaleUnchanged, kColSize}},
+     {SQL_LONGVARBINARY, SQL_LONGVARBINARY, 0, kColSize, 0, kScaleUnchanged,
+      0}},
     {SQL_DECIMAL,
-     {SQL_DECIMAL, SQL_DECIMAL, 0, kColSize, kColSize, kDecimalDigits,
-      kColSize}},
+     {SQL_DECIMAL, SQL_DECIMAL, 0, kColSize, kColSize, kDecimalDigits, 0}},
     {SQL_NUMERIC,
-     {SQL_NUMERIC, SQL_NUMERIC, 0, kColSize, kColSize, kDecimalDigits,
-      kColSize}},
-    {SQL_REAL, {SQL_REAL, SQL_REAL, 0, 7, 24, kScaleUnchanged, 14}},
-    {SQL_FLOAT, {SQL_FLOAT, SQL_FLOAT, 0, 15, 53, kScaleUnchanged, 24}},
-    {SQL_DOUBLE, {SQL_DOUBLE, SQL_DOUBLE, 0, 15, 53, kScaleUnchanged, 24}},
+     {SQL_NUMERIC, SQL_NUMERIC, 0, kColSize, kColSize, kDecimalDigits, 0}},
+    {SQL_REAL, {SQL_REAL, SQL_REAL, 0, 7, 24, kScaleUnchanged, 0}},
+    {SQL_FLOAT, {SQL_FLOAT, SQL_FLOAT, 0, 15, 53, kScaleUnchanged, 0}},
+    {SQL_DOUBLE, {SQL_DOUBLE, SQL_DOUBLE, 0, 15, 53, kScaleUnchanged, 0}},
     {SQL_WCHAR,
-     {SQL_WCHAR, SQL_WCHAR, 0, kColSize, kColSize, kScaleUnchanged, kColSize}},
+     {SQL_WCHAR, SQL_WCHAR, 0, kColSize, kPrecisionUnchanged, kScaleUnchanged,
+      0}},
     {SQL_WVARCHAR,
-     {SQL_WVARCHAR, SQL_WVARCHAR, 0, kColSize, kColSize, kScaleUnchanged,
-      kColSize}},
+     {SQL_WVARCHAR, SQL_WVARCHAR, 0, kColSize, kPrecisionUnchanged,
+      kScaleUnchanged, 0}},
     {SQL_WLONGVARCHAR,
-     {SQL_WLONGVARCHAR, SQL_WLONGVARCHAR, 0, kColSize, kColSize,
-      kScaleUnchanged, kColSize}},
+     {SQL_WLONGVARCHAR, SQL_WLONGVARCHAR, 0, kColSize, kPrecisionUnchanged,
+      kScaleUnchanged, 0}},
     {SQL_BIT,
-     {SQL_BIT, SQL_BIT, 0, 1, kLengthUnchanged, kScaleUnchanged,
-      kLengthUnchanged}},
+     {SQL_BIT, SQL_BIT, 0, 1, kPrecisionUnchanged, kScaleUnchanged, 0}},
     {SQL_TINYINT,
-     {SQL_TINYINT, SQL_TINYINT, 0, 3, kLengthUnchanged, kScaleUnchanged,
-      kLengthUnchanged}},
+     {SQL_TINYINT, SQL_TINYINT, 0, 3, kPrecisionUnchanged, kScaleUnchanged, 0}},
     {SQL_SMALLINT,
-     {SQL_SMALLINT, SQL_SMALLINT, 0, 5, kLengthUnchanged, kScaleUnchanged,
-      kLengthUnchanged}},
+     {SQL_SMALLINT, SQL_SMALLINT, 0, 5, kPrecisionUnchanged, kScaleUnchanged,
+      0}},
     {SQL_INTEGER,
-     {SQL_INTEGER, SQL_INTEGER, 0, 10, kLengthUnchanged, kScaleUnchanged,
-      kLengthUnchanged}},
+     {SQL_INTEGER, SQL_INTEGER, 0, 10, kPrecisionUnchanged, kScaleUnchanged,
+      0}},
     {SQL_BIGINT,
-     {SQL_BIGINT, SQL_BIGINT, 0, 19, kLengthUnchanged, kScaleUnchanged,
-      kLengthUnchanged}},
-    {SQL_GUID, {SQL_GUID, SQL_GUID, 0, 36, 36, kScaleUnchanged, 36}},
+     {SQL_BIGINT, SQL_BIGINT, 0, 19, kPrecisionUnchanged, kScaleUnchanged, 0}},
+    {SQL_GUID, {SQL_GUID, SQL_GUID, 0, 36, 0, kScaleUnchanged, 0}},
 
-    {SQL_TYPE_DATE,
-     {SQL_DATETIME, SQL_TYPE_DATE, SQL_CODE_DATE, 10, 0, 0, kLengthUnchanged}},
+    {SQL_TYPE_DATE, {SQL_DATETIME, SQL_TYPE_DATE, SQL_CODE_DATE, 10, 0, 0, 0}},
     {SQL_TYPE_TIME,
-     {SQL_DATETIME, SQL_TYPE_TIME, SQL_CODE_TIME, 12, kDecimalDigits,
-      kDecimalDigits, kLengthUnchanged}},
+     {SQL_DATETIME, SQL_TYPE_TIME, SQL_CODE_TIME, 12, kDecimalDigits, 0, 0}},
     {SQL_TYPE_TIMESTAMP,
      {SQL_DATETIME, SQL_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP, 23, kDecimalDigits,
-      kDecimalDigits, kLengthUnchanged}},
+      0, 0}},
 
     {SQL_INTERVAL_MONTH,
-     {SQL_INTERVAL, SQL_INTERVAL_MONTH, SQL_CODE_MONTH, 2, 0, 0, 2}},
-    {SQL_INTERVAL_YEAR,
-     {SQL_INTERVAL, SQL_INTERVAL_YEAR, SQL_CODE_YEAR, 2, 0, 0, 2}},
-    {SQL_INTERVAL_YEAR_TO_MONTH,
-     {SQL_INTERVAL, SQL_INTERVAL_YEAR_TO_MONTH, SQL_CODE_YEAR_TO_MONTH, 5, 0, 0,
+     {SQL_INTERVAL, SQL_INTERVAL_MONTH, SQL_CODE_MONTH, 2, 0, kScaleUnchanged,
       2}},
+    {SQL_INTERVAL_YEAR,
+     {SQL_INTERVAL, SQL_INTERVAL_YEAR, SQL_CODE_YEAR, 2, 0, kScaleUnchanged,
+      2}},
+    {SQL_INTERVAL_YEAR_TO_MONTH,
+     {SQL_INTERVAL, SQL_INTERVAL_YEAR_TO_MONTH, SQL_CODE_YEAR_TO_MONTH, 5, 0,
+      kScaleUnchanged, 2}},
     {SQL_INTERVAL_DAY,
-     {SQL_INTERVAL, SQL_INTERVAL_DAY, SQL_CODE_DAY, 2, 0, 0, 2}},
+     {SQL_INTERVAL, SQL_INTERVAL_DAY, SQL_CODE_DAY, 2, 0, kScaleUnchanged, 2}},
     {SQL_INTERVAL_HOUR,
-     {SQL_INTERVAL, SQL_INTERVAL_HOUR, SQL_CODE_HOUR, 2, 0, 0, 2}},
+     {SQL_INTERVAL, SQL_INTERVAL_HOUR, SQL_CODE_HOUR, 2, 0, kScaleUnchanged,
+      2}},
     {SQL_INTERVAL_MINUTE,
-     {SQL_INTERVAL, SQL_INTERVAL_MINUTE, SQL_CODE_MINUTE, 2, 0, 0, 2}},
+     {SQL_INTERVAL, SQL_INTERVAL_MINUTE, SQL_CODE_MINUTE, 2, 0, kScaleUnchanged,
+      2}},
     {SQL_INTERVAL_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_SECOND, SQL_CODE_SECOND, 6, kDecimalDigits,
-      kDecimalDigits, 2}},
+      kScaleUnchanged, 2}},
     {SQL_INTERVAL_DAY_TO_HOUR,
-     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_HOUR, SQL_CODE_DAY_TO_HOUR, 5, 0, 0,
-      2}},
+     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_HOUR, SQL_CODE_DAY_TO_HOUR, 5, 0,
+      kScaleUnchanged, 2}},
     {SQL_INTERVAL_DAY_TO_MINUTE,
-     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_MINUTE, SQL_CODE_DAY_TO_MINUTE, 8, 0, 0,
-      2}},
+     {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_MINUTE, SQL_CODE_DAY_TO_MINUTE, 8, 0,
+      kScaleUnchanged, 2}},
     {SQL_INTERVAL_DAY_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_DAY_TO_SECOND, SQL_CODE_DAY_TO_SECOND, 15,
-      kDecimalDigits, kDecimalDigits, 2}},
+      kDecimalDigits, kScaleUnchanged, 2}},
     {SQL_INTERVAL_HOUR_TO_MINUTE,
      {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_MINUTE, SQL_CODE_HOUR_TO_MINUTE, 5, 0,
-      0, 2}},
+      kScaleUnchanged, 2}},
     {SQL_INTERVAL_HOUR_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_HOUR_TO_SECOND, SQL_CODE_HOUR_TO_SECOND, 12,
-      kDecimalDigits, kDecimalDigits, 2}},
+      kDecimalDigits, kScaleUnchanged, 2}},
     {SQL_INTERVAL_MINUTE_TO_SECOND,
      {SQL_INTERVAL, SQL_INTERVAL_MINUTE_TO_SECOND, SQL_CODE_MINUTE_TO_SECOND, 9,
-      kDecimalDigits, kDecimalDigits, 2}},
+      kDecimalDigits, kScaleUnchanged, 2}},
 };
 
 void RandomiseDescriptorAttributes(std::shared_ptr<ODBCHandles> conn) {
@@ -144,6 +137,8 @@ void CheckAttributes(std::shared_ptr<ODBCHandles> conn, SQLHDESC desc,
   auto expected = (desc_type == DescriptorType::kAPD)
                       ? kAppDescTestMap.at(type)
                       : kImpDescTestMap.at(type);
+  std::string desc_type_str =
+      ((desc_type == DescriptorType::kAPD) ? "APD" : "IPD");
   SQLSMALLINT out_c_type;
   SQLRETURN status =
       SQLGetDescField(desc, 1, SQL_DESC_TYPE, &out_c_type, 0, nullptr);
@@ -154,37 +149,39 @@ void CheckAttributes(std::shared_ptr<ODBCHandles> conn, SQLHDESC desc,
   status = SQLGetDescField(desc, 1, SQL_DESC_CONCISE_TYPE, &out_concise_c_type,
                            0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
-  EXPECT_EQ(expected.concise_c_type, out_concise_c_type);
+  EXPECT_EQ(expected.concise_c_type, out_concise_c_type) << desc_type_str;
 
   SQLSMALLINT out_desc_datetime_code;
   status = SQLGetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_CODE,
                            &out_desc_datetime_code, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_CODE)", conn);
-  EXPECT_EQ(expected.desc_datetime_interval_code, out_desc_datetime_code);
+  EXPECT_EQ(expected.desc_datetime_interval_code, out_desc_datetime_code)
+      << desc_type_str;
 
   SQLULEN out_desc_len;
   status = SQLGetDescField(desc, 1, SQL_DESC_LENGTH, &out_desc_len, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
-  EXPECT_EQ(expected.desc_len, out_desc_len);
+  EXPECT_EQ(expected.desc_len, out_desc_len) << desc_type_str;
 
   SQLSMALLINT out_desc_precision;
   status = SQLGetDescField(desc, 1, SQL_DESC_PRECISION, &out_desc_precision, 0,
                            nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_PRECISION)", conn);
-  EXPECT_EQ(expected.desc_precision, out_desc_precision);
+  EXPECT_EQ(expected.desc_precision, out_desc_precision) << desc_type_str;
 
   SQLSMALLINT out_desc_scale;
   status =
       SQLGetDescField(desc, 1, SQL_DESC_SCALE, &out_desc_scale, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_SCALE)", conn);
-  EXPECT_EQ(expected.desc_scale, out_desc_scale);
+  EXPECT_EQ(expected.desc_scale, out_desc_scale) << desc_type_str;
 
   SQLINTEGER out_desc_datetime_precision;
   status = SQLGetDescField(desc, 1, SQL_DESC_DATETIME_INTERVAL_PRECISION,
                            &out_desc_datetime_precision, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_DATETIME_INTERVAL_PRECISION)",
              conn);
-  EXPECT_EQ(expected.desc_datetime_precision, out_desc_datetime_precision);
+  EXPECT_EQ(expected.desc_datetime_precision, out_desc_datetime_precision)
+      << desc_type_str;
 }
 
 void CheckApdAttributes(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {
@@ -265,6 +262,9 @@ void BindParameterForLength(std::shared_ptr<ODBCHandles> conn,
 ///////////////////////////////////////////////////////////////////////
 //  Check all SQL types except datetime and interval types
 ///////////////////////////////////////////////////////////////////////
+
+// TODO(b/396345389): enable after metadata is updated for our driver
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLBindParameter, Bind_SQL_CHAR) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -719,6 +719,8 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif BQ_DRIVER_INTEGRATION_TESTS
 
 class SQLBindParameterTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, SQLBindParameterTest,

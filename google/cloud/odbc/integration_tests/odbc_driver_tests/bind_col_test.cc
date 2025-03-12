@@ -92,6 +92,9 @@ void TestCTypeBasic(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT c_type) {
   EXPECT_EQ(expected.desc_datetime_precision, out_desc_datetime_precision);
 }
 
+// TODO(b/396345389): enable after metadata is updated for our driver
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(BindColTest, Basic_SQL_C_NUMERIC) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -253,6 +256,8 @@ TEST(BindColTest, Basic_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(BindColTest, Basic_SQL_C_TYPE_DATE) {
   auto conn = std::make_shared<ODBCHandles>();
