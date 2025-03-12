@@ -79,6 +79,11 @@ time {
   io::run cmake --build "${CMAKE_OUT}"
 }
 
+if [ "$BUILD_SHARD" == "BqDriver" ]; then
+    copy "${CMAKE_OUT}\google\cloud\odbc\google_cloud_odbc_bq_driver.dll" "C:\a\cpp-bigquery-odbc\cpp-bigquery-odbc\GoogleBigQueryODBC_sb64.dll"
+fi
+
+
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
   io::run ctest "${ctest_args[@]}" --test-dir "${CMAKE_OUT}" -LE integration-test
