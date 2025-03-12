@@ -16,25 +16,19 @@ REGEDIT4
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba ODBC Driver for Google BigQuery]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\ODBC Drivers]
-"Simba ODBC Driver for Google BigQuery"="Installed"
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\Simba ODBC Driver for Google BigQuery]
-"Description"="Simba ODBC Driver for Google BigQuery"
-"Driver"="C:\\b\\google\\cloud\\odbc\\google_cloud_odbc_bq_driver.dll"
-"Setup"="C:\\b\\google\\cloud\\odbc\\google_cloud_odbc_bq_driver.dll"
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for Google BigQuery]
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\ODBC Data Sources]
-"SampleDSN"="Simba Simba ODBC Driver for Google BigQuery"
-"ODBCTransactionsTestsDSN"="Simba Simba ODBC Driver for Google BigQuery"
+"SampleDSN"="Simba ODBC Driver for Google BigQuery"
+"ODBCTransactionsTestsDSN"="Simba ODBC Driver for Google BigQuery"
 
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\SampleDSN]
-"Description"="Simba ODBC Driver for Google BigQuery 1"
+"Description"="ODBC Driver for Google BigQuery 1"
 "Catalog"="bigquery-devtools-drivers"
-"Driver"="Simba Simba ODBC Driver for Google BigQuery"
+"Driver"="Simba ODBC Driver for Google BigQuery"
 "SQLDialect"="1"
 "OAuthMechanism"="0"
 "Email"="bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam.gserviceaccount.com"
@@ -44,9 +38,9 @@ REGEDIT4
 "LargeResultsTempTableExpirationTime"="3600000"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\ODBCTransactionsTestsDSN]
-"Description"="Simba ODBC Driver for Google BigQuery 2"
+"Description"="ODBC Driver for Google BigQuery 2"
 "Catalog"="bigquery-devtools-drivers"
-"Driver"="Simba Simba ODBC Driver for Google BigQuery"
+"Driver"="Simba ODBC Driver for Google BigQuery"
 "SQLDialect"="1"
 "OAuthMechanism"="0"
 "Email"="bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam.gserviceaccount.com"
@@ -56,10 +50,10 @@ REGEDIT4
 "LargeResultsDataSetId"="_odbc_temp_tables"
 "LargeResultsTempTableExpirationTime"="3600000"
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba Simba ODBC Driver for Google BigQuery\Driver]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba ODBC Driver for Google BigQuery\Driver]
 "LogLevel"="1"
 "LogFile"="C:\\b\\trace.log"
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\Simba ODBC Driver for Google BigQuery\Driver]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for Google BigQuery\Driver]
 "LogLevel"="1"
 "LogFile"="C:\\b\\trace.log"

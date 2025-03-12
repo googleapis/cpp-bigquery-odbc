@@ -59,6 +59,8 @@ else
   args+=("-DBUILD_SHARED_LIBS=ON")
 fi
 
+echo "DRIVER_ARCH: ${DRIVER_ARCH}"
+
 io::log_h1 "Starting Build"
 TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
 time {
@@ -78,6 +80,13 @@ time {
   # no unit tests.
   io::run cmake --build "${CMAKE_OUT}"
 }
+
+if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
+     for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+        cp "$file" "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
+    done
+    cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
+fi
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
