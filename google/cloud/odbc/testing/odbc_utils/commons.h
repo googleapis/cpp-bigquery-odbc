@@ -457,16 +457,15 @@ class Table {
   // populated to order the values
   void InsertStrData(std::shared_ptr<ODBCHandles> conn,
                      std::vector<std::string> rows, bool insert_index = false);
-
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
   template <class TC>
   void InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
-                         std::vector<TC> rows, bool insert_index = false);
-void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
-                          std::vector<std::string> rows,
-                          bool insert_index = false);
+                           std::vector<TC> rows, bool insert_index = false);
+  void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+                         std::vector<std::string> rows,
+                         bool insert_index = false);
 
   void InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
                            std::vector<SQL_TIMESTAMP_STRUCT> rows,
@@ -563,6 +562,8 @@ std::string GetIntervalTypeStr(const SQLINTERVAL type);
 std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval);
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric);
+std::string SQLNumericStructureToStrData(const SQL_NUMERIC_STRUCT& numeric);
+double GetExactPrecision(std::string const& str, std::size_t const p);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);

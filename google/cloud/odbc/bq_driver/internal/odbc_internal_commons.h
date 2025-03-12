@@ -124,6 +124,67 @@ DSValue const kNullValue{0};
 inline bool IsDSValueNull(DSValue const& value) {
   return value.size() == 1 && value[0] == 0;
 }
+inline void NumericToDSValue(const SQL_NUMERIC_STRUCT& numst, DSValue& value) {
+  value.resize(sizeof(SQL_NUMERIC_STRUCT));
+  std::memcpy(value.data(), &numst, sizeof(SQL_NUMERIC_STRUCT));
+}
+inline void GetNumericDetailsFromStr(std::string const& src_dsval,
+                                     SQL_NUMERIC_STRUCT& numst) {
+  int sign = 1;
+  int precision = 0;
+  int scale;
+  std::string num;
+  int integralcount = 0;
+  int fractionalcount = 0;
+
+  // Handle leading whitespace
+  size_t i = 0;
+  while (isspace(src_dsval[i])) {
+    i++;
+  }
+  // Check for sign
+  if (src_dsval[i] == '-') {
+    sign = 0;
+    i++;
+  }
+
+  // Extract digits before decimal point
+  while (isdigit(src_dsval[i])) {
+    num = num + src_dsval[i];
+    integralcount++;
+    i++;
+  }
+
+  // Find decimal point
+  if (src_dsval[i] == '.') {
+    i++;
+  }
+
+  // Extract digits after decimal point
+  while (isdigit(src_dsval[i])) {
+    num = num + src_dsval[i];
+    fractionalcount++;
+    i++;
+  }
+  if (integralcount >= SQL_MAX_NUMERIC_LEN) {
+    scale = 0;
+    precision = SQL_MAX_NUMERIC_LEN;
+  } else {
+    int limitScale = SQL_MAX_NUMERIC_LEN - integralcount;
+    precision = integralcount + fractionalcount;
+    scale = fractionalcount;
+    if (scale >= limitScale) scale = limitScale;
+    if (precision >= SQL_MAX_NUMERIC_LEN) precision = SQL_MAX_NUMERIC_LEN;
+  }
+  // scale = fractionalcount;
+  // precision = fractionalcount + integralcount;
+  numst.scale = scale;
+  numst.precision = precision;
+  numst.sign = sign;
+  memcpy(
+      numst.val, num.c_str(),
+      SQL_MAX_NUMERIC_LEN);  // sizeof(SQL_NUMERIC_STRUCT));//SQL_MAX_NUMERIC_LEN);
+}
 
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
@@ -241,7 +302,6 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
 }
-
 inline void DateToDSValue(const SQL_DATE_STRUCT& date, DSValue& value) {
   value.resize(sizeof(SQL_DATE_STRUCT));
   std::memcpy(value.data(), &date, sizeof(SQL_DATE_STRUCT));
