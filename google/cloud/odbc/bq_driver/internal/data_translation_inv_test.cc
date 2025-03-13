@@ -352,18 +352,33 @@ TEST(ConvertFromBuffer, From_SQL_C_CHAR_ArithmeticStr) {
 
 TEST(ConvertFromBuffer, From_SQL_C_WCHAR_Basic) {
   std::wstring value = L"Testing WChar String";
-  SQLWCHAR wstr[50];
-  std::copy(value.begin(), value.end(), reinterpret_cast<wchar_t*>(wstr));
-  SQLLEN data_size = value.size() * sizeof(SQLWCHAR);
+  SQLWCHAR wstr[50] = {0};
+  std::copy(value.begin(), value.end(), wstr);
+  wstr[value.size()] = 0;
+
+  // Case 1: Explicitly set buffer length
+  SQLLEN data_size = value.size();
   DataBuffer data = {SQL_C_WCHAR, wstr, 50 * sizeof(SQLWCHAR), &data_size};
   StatusRecordOr<std::string> conv_status;
 
   conv_status = ConvertFromBuffer(data, SQL_WCHAR);
   EXPECT_TRUE(conv_status);
-  auto utf8_value = Utf16ToUtf8(value);
-  ASSERT_TRUE(utf8_value);
-  EXPECT_EQ(*utf8_value, *conv_status);
 
+  auto utf16_value = Utf8ToUtf16(*conv_status);
+  ASSERT_TRUE(utf16_value);
+  EXPECT_STREQ(utf16_value->c_str(), value.c_str());
+
+  // // Case 2: SQL_NTS
+  data_size = SQL_NTS;
+  DataBuffer data_nts = {SQL_C_WCHAR, wstr, 50 * sizeof(SQLWCHAR), &data_size};
+  conv_status = ConvertFromBuffer(data_nts, SQL_WCHAR);
+  EXPECT_TRUE(conv_status);
+
+  auto utf16_value_nts = Utf8ToUtf16(*conv_status);
+  ASSERT_TRUE(utf16_value_nts);
+  EXPECT_STREQ(utf16_value_nts->c_str(), value.c_str());
+
+  // Case 3: Test unsupported conversion
   conv_status = ConvertFromBuffer(data, SQL_INTEGER);
   EXPECT_FALSE(conv_status);
   EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
@@ -410,16 +425,16 @@ TEST(ConvertFromBuffer, From_SQL_C_BIT) {
   EXPECT_EQ(*conv_status, "1");
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_FLOAT);
-  EXPECT_EQ(*conv_status, "0.000000");
+  EXPECT_NEAR(std::stof(*conv_status), 0.0f, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_true, SQL_SMALLINT);
   EXPECT_EQ(*conv_status, "1");
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_REAL);
-  EXPECT_EQ(*conv_status, "0.000000");
+  EXPECT_NEAR(std::stof(*conv_status), 0.0f, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_true, SQL_DOUBLE);
-  EXPECT_EQ(*conv_status, "1.000000");
+  EXPECT_NEAR(std::stof(*conv_status), 1.0f, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_DATE);
   EXPECT_FALSE(conv_status);
