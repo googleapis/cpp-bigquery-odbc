@@ -255,9 +255,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     case SQL_C_NUMERIC: {
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_buf);
       *dest_val = static_cast<SQL_NUMERIC_STRUCT>(num_struct);
-      int p = dest_val->precision;
-      int sc=dest_val->scale;
-      int sgn= dest_val->sign;
       if (res_len) {
         *res_len = sizeof(SQL_NUMERIC_STRUCT);
       }

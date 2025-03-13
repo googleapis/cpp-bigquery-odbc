@@ -410,10 +410,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
-          // #ifdef BQ_DRIVER_INTEGRATION_TESTS
           case BQDataType::kNumeric:
           case BQDataType::kBigNumeric: {
-            // #endif
             SQL_NUMERIC_STRUCT numst;
             GetNumericDetailsFromStr(data, numst);
             NumericToDSValue(numst, row_val);

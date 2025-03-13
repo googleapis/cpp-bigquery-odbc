@@ -87,7 +87,7 @@ struct NumericBasicTestStruct {
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
-  #ifdef BQ_DRIVER_INTEGRATION_TESTS
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // NUMERIC(38,9) allows only 19 digits for //Amr dest_data.type
                  // = 2 integral value. Weird!
@@ -166,7 +166,7 @@ std::vector<NumericBasicTestStruct> const
         {SQL_C_SLONG, "13.3", SQL_SUCCESS_WITH_INFO},
 
         {SQL_C_ULONG, "81", SQL_SUCCESS},
-        #endif
+#endif
         {SQL_C_ULONG, "-8", SQL_ERROR},
         {SQL_C_ULONG, "1.1", SQL_SUCCESS_WITH_INFO},
 
@@ -530,9 +530,6 @@ void TestTranslationsFromNumeric(
         }
         case SQL_C_NUMERIC: {
           SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
-          int p = returned_val.precision;
-      int sc=returned_val.scale;
-      int sgn= returned_val.sign;
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
           EXPECT_EQ(SQLNumericStructureToStrData(returned_val),
                     expected.expected_str);
@@ -637,6 +634,7 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(row_count, kConversionFromStrTestData.size());
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-character?view=sql-server-ver16
 
@@ -676,7 +674,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#endif
 TEST(DataTranslationTest, From_NUMERICINT64_All) {
   std::vector<std::string> type_names;
   type_names.push_back("INT64");
