@@ -53,23 +53,15 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
     }
     case SQL_C_WCHAR: {
       auto* wchar_buf = static_cast<SQLWCHAR*>(src_buf);
-      size_t wchar_count;
-
-      if (result_len == SQL_NTS) {
-        wchar_count = wcslen(reinterpret_cast<wchar_t*>(wchar_buf));
-      } else if (result_len > 0) {
-        wchar_count =
-            result_len / sizeof(SQLWCHAR);  // Convert bytes to wchar count
-      } else {
-        return StatusRecord{SQLStates::k_HY000(), "Invalid buffer length"};
+      if ((result_len > 0) || (result_len == SQL_NTS)) {
+        auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
+        if (!utf8_res) {
+          return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
+        }
+        src_str = *utf8_res;
+        break;
       }
-      std::wstring w_str(reinterpret_cast<wchar_t*>(wchar_buf), wchar_count);
-      auto utf8_res = Utf16ToUtf8(w_str);
-      if (!utf8_res) {
-        return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
-      }
-      src_str = *utf8_res;
-      break;
+      return StatusRecord{SQLStates::k_HY000(), "Invalid buffer length"};
     }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
@@ -135,8 +127,11 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
   }
 }
 
-StatusRecordOr<std::string> ConvertFromBitBuffer(SQLCHAR src_val,
+StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
                                                  SQLSMALLINT sql_type) {
+  SQLPOINTER src_buf = src_data.buf;
+  SQLCHAR src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
+
   if (src_val != 0 && src_val != 1) {
     return StatusRecord{SQLStates::k_22003(),
                         "Invalid BIT value (must be 0 or 1)"};
@@ -261,8 +256,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       return *conv_status;
     }
     case SQL_C_BIT: {
-      auto src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
-      auto conv_status = ConvertFromBitBuffer(src_val, sql_type);
+      auto conv_status = ConvertFromBitBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }
