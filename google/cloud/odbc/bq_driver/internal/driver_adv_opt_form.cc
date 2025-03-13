@@ -118,11 +118,9 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
     adv_hwnd, (HMENU)KIdcLargeResultHeader, GetModuleHandle(NULL), NULL);
       SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_allow_large_results_checkbox =
+      HWND h_allow_large_results_checkbox =
       CreateCheckBox(adv_hwnd, "Allow large result sets", kXAxis+5, kYAxis+50,
-      0, "BUTTON", "Large results options", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-      kXAxis, kYAxis + 25, 435, 173, adv_hwnd, (HMENU)KIdcLargeResultHeader,
-      GetModuleHandle(NULL), NULL);
+                     kWidth * 6, kHeight, kIdcAllowLargeResultsCheckbox);
   SendMessage(h_allow_large_results_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_allow_large_results_checkbox, FALSE);
   CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox,
@@ -284,10 +282,6 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
       CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 465,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
-
-  HWND h_query_properties_edit = CreateScrollableEditBox(
-      adv_hwnd, kXAxis, kYAxis + 485, 430, 33, kIdcQueryPropertiesEdit);
-  SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_query_properties_edit =
       CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis+485, kWidth+380 ,
