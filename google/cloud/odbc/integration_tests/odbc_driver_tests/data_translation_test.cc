@@ -87,6 +87,12 @@ struct NumericBasicTestStruct {
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
+  //{SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
+   // "123.78"},
+  {SQL_C_NUMERIC, "1234567891", SQL_SUCCESS, "1234567891"},
+  {SQL_C_DOUBLE, "-9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
+  {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
+  {SQL_C_CHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // NUMERIC(38,9) allows only 19 digits for //Amr dest_data.type
@@ -95,14 +101,15 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_NUMERIC, "123.7835", SQL_SUCCESS, "123.7835"},
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123456789", SQL_SUCCESS, "123456789"},
-    // a failure case overflow
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS,
      "1234567891234567"},  // NUMERIC(38,9) allows only 19 digits for
                            // integral value. Weird!
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
+    {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-    {SQL_C_CHAR, "-123", SQL_SUCCESS},
-    {SQL_C_CHAR, "123.222", SQL_SUCCESS},
+    {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
+    {SQL_C_CHAR, "-123", SQL_SUCCESS},  // in simba it returns "-123.000000000"
+    {SQL_C_CHAR, "123.222", SQL_SUCCESS}, //in simba it returns "123.222000000"
     {SQL_C_CHAR, "-123.222", SQL_SUCCESS},
 #endif
     {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
@@ -110,7 +117,6 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
 
     {SQL_C_DOUBLE, "38.3", SQL_SUCCESS},
     {SQL_C_DOUBLE, "-38.3", SQL_SUCCESS},
-
     {SQL_C_SSHORT, "31", SQL_SUCCESS},
     {SQL_C_SSHORT, "-31", SQL_SUCCESS},
 
@@ -131,6 +137,15 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
 
 std::vector<NumericBasicTestStruct> const
     kConversionFromNumericTestData_bignumeric{
+      {SQL_C_DOUBLE,
+        "-5.7896044618658097711785492504343953926634992332820282019728792003956564819968E+38",
+        SQL_SUCCESS},
+       {SQL_C_DOUBLE,
+        "5.7896044618658097711785492504343953926634992332820282019728792003956564819967E+38",
+        SQL_SUCCESS},
+        {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+29", SQL_SUCCESS},
+        {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
+        {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
         {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
          "123.78"},  // NUMERIC(38,9) allows only 19 digits for //Amr
@@ -145,9 +160,11 @@ std::vector<NumericBasicTestStruct> const
                                // integral value. Weird!
         {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-        {SQL_C_CHAR, "-123", SQL_SUCCESS},
+        {SQL_C_CHAR, "-123", SQL_SUCCESS},  //simba returns "-123.00000000000000000000000000000000000000" 
         {SQL_C_CHAR, "123.222", SQL_SUCCESS},
         {SQL_C_CHAR, "-123.222", SQL_SUCCESS},
+        {SQL_C_CHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
+        {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
 #endif
         {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
         {SQL_C_FLOAT, "-157.8", SQL_SUCCESS},
@@ -471,22 +488,13 @@ void TestTranslationsFromNumeric(
     EXPECT_EQ(status, expected.status);
     if (!SQL_SUCCEEDED(status)) {
       row_count++;
-      SQLCHAR newmsg[kBufferLength];
-      status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
-                               SQL_DIAG_MESSAGE_TEXT, &newmsg, kBufferLength,
-                               &resp_status_len);
-      std::cout << "Testing FAIL: " << newmsg << std::endl;
+      std::cout << "Testing FAIL: " << std::endl;
       continue;
     }
     CheckError(status,
                "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
                conn);
     if (strlen_or_ind >= 0) {
-      // Refer
-      // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-data-types?view=sql-server-ver16
-      // to understand the expectations regarding typecasting applications
-      // buffers.
-
       switch (expected.target_c_type) {
         case SQL_C_CHAR: {
           std::string returned_val = (char*)data;
@@ -529,7 +537,7 @@ void TestTranslationsFromNumeric(
           break;
         }
         case SQL_C_NUMERIC: {
-          SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
+          SQL_NUMERIC_STRUCT returned_val =*(SQL_NUMERIC_STRUCT*)data;
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
           EXPECT_EQ(SQLNumericStructureToStrData(returned_val),
                     expected.expected_str);
@@ -539,7 +547,6 @@ void TestTranslationsFromNumeric(
           break;
         }
         default: {
-          std::cout << "\n FAIL ------\n";
           FAIL() << "case not handled!" << std::endl;
         }
       }

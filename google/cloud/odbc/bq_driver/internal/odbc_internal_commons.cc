@@ -412,9 +412,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
         switch (col_type) {
           case BQDataType::kNumeric:
           case BQDataType::kBigNumeric: {
-            SQL_NUMERIC_STRUCT numst;
-            GetNumericDetailsFromStr(data, numst);
-            NumericToDSValue(numst, row_val);
+            NumericToDSValue(data, row_val);
             break;
           }
           case BQDataType::kString: {

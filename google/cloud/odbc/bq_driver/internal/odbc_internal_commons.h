@@ -124,7 +124,7 @@ DSValue const kNullValue{0};
 inline bool IsDSValueNull(DSValue const& value) {
   return value.size() == 1 && value[0] == 0;
 }
-inline void NumericToDSValue(const SQL_NUMERIC_STRUCT& numst, DSValue& value) {
+inline void NumericStructToDSValue(const SQL_NUMERIC_STRUCT& numst, DSValue& value) {
   value.resize(sizeof(SQL_NUMERIC_STRUCT));
   std::memcpy(value.data(), &numst, sizeof(SQL_NUMERIC_STRUCT));
 }
@@ -212,6 +212,10 @@ inline void Base64Decode(std::string const& encoded,
   }
 }
 
+inline void NumericToDSValue(std::string const& str, DSValue& DSval) {
+  DSval.resize(str.size());
+  std::copy(str.begin(), str.end(), DSval.begin());
+}
 // Function to convert byte data to a hex string
 inline void BytesToHex(std::vector<uint8_t> const& data,
                        std::string& restult_str) {
