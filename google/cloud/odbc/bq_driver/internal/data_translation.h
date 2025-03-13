@@ -265,8 +265,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_FLOAT: {
       auto* dest_val = reinterpret_cast<SQLREAL*>(dest_buf);
-       status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(numeric_no);
+      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
@@ -279,8 +278,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_DOUBLE: {
       auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_buf);
-       status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(numeric_no);
+      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
@@ -293,8 +291,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_SSHORT: {
       auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
-       status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(numeric_no);
+      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
@@ -307,7 +304,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_USHORT: {
       auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
-       status_record =
+      status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffe
@@ -321,8 +318,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_SLONG: {
       auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
-       status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(numeric_no);
+      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
@@ -335,7 +331,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     }
     case SQL_C_ULONG: {
       auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_buf);
-       status_record =
+      status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer

@@ -124,7 +124,8 @@ DSValue const kNullValue{0};
 inline bool IsDSValueNull(DSValue const& value) {
   return value.size() == 1 && value[0] == 0;
 }
-inline void NumericStructToDSValue(const SQL_NUMERIC_STRUCT& numst, DSValue& value) {
+inline void NumericStructToDSValue(const SQL_NUMERIC_STRUCT& numst,
+                                   DSValue& value) {
   value.resize(sizeof(SQL_NUMERIC_STRUCT));
   std::memcpy(value.data(), &numst, sizeof(SQL_NUMERIC_STRUCT));
 }
