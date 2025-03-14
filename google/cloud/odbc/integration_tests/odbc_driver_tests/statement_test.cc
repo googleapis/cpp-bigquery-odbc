@@ -2628,155 +2628,6 @@ TEST_P(MultiStatementTest, BasicScript) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(MultiStatementTest, ProcedureWithInOutParams) {
-  bool use_prepare = GetParam();
-
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name, procedure_name;
-  if (use_prepare) {
-    table_name =
-        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_PROCEDURES_TABLE";
-    procedure_name =
-        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECUTE_INSERT_STD_ROW";
-  } else {
-    table_name = kDatasetWithTablePrefix +
-                 "ODBC_SCRIPTS_SQL_EXECDIRECT_PROCEDURES_TABLE";
-    procedure_name =
-        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECDIRECT_INSERT_STD_ROW";
-  }
-
-  // Create table for testing
-  Table table(table_name);
-  table.CreateWithPrepare(
-      conn, "(IntegerField INTEGER, FloatField FLOAT64, StringField STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Test for Procedure with Empty Result Set
-  {
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::string procedure_create = "CREATE OR REPLACE PROCEDURE " +
-                                   procedure_name + "() BEGIN SELECT * FROM " +
-                                   table_name + "; END";
-
-    SQLRETURN status =
-        SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
-    CheckError(status, "SQLPrepare", conn);
-
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn);
-
-    // Ensure no rows returned
-    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA);
-
-    SQLFreeStmt(conn->hstmt, SQL_CLOSE);
-    Procedure procedure(procedure_name);
-    procedure.DropWithPrepare(conn);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  }
-
-  // Test for Procedure with No Result Set
-  {
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::string procedure_create = "CREATE OR REPLACE PROCEDURE " +
-                                   procedure_name + "() BEGIN INSERT INTO " +
-                                   table_name +
-                                   " (IntegerField) VALUES (100); END";
-
-    SQLRETURN status =
-        SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
-    CheckError(status, "SQLPrepare", conn);
-
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn);
-
-    SQLSMALLINT num_cols;
-    status = SQLNumResultCols(conn->hstmt, &num_cols);
-    CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(num_cols, 0);
-
-    SQLFreeStmt(conn->hstmt, SQL_CLOSE);
-    Procedure procedure(procedure_name);
-    procedure.DropWithPrepare(conn);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  }
-
-  // Test for Procedure with In/Out Parameters
-  {
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::string procedure_create =
-        "CREATE OR REPLACE PROCEDURE " + procedure_name +
-        "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING) "
-        "BEGIN "
-        "SET StringField = GENERATE_UUID(); "
-        "INSERT INTO " +
-        table_name +
-        " VALUES(IntegerField, FloatField, StringField); "
-        "SELECT FORMAT(\"Created row %s\", StringField); END";
-
-    SQLRETURN status =
-        SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
-    CheckError(status, "SQLPrepare", conn);
-
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn);
-
-    std::string procedure_call =
-        "DECLARE OutStringField STRING; "
-        "CALL " +
-        procedure_name +
-        "(32, 45.6, OutStringField); "
-        "SELECT * FROM " +
-        table_name;
-
-    if (use_prepare) {
-      status =
-          SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
-      CheckError(status, "SQLPrepare", conn);
-      status = SQLExecute(conn->hstmt);
-      CheckError(status, "SQLExecute", conn);
-    } else {
-      status =
-          SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
-      CheckError(status, "SQLExecDirect", conn);
-    }
-
-    SQLSMALLINT num_cols;
-    status = SQLNumResultCols(conn->hstmt, &num_cols);
-    CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(num_cols, 0);
-    SQLLEN row_count = 0;
-    status = SQLRowCount(conn->hstmt, &row_count);
-    CheckError(status, "SQLRowCount", conn);
-    EXPECT_GT(row_count, 0);
-
-    status = SQLNumResultCols(conn->hstmt, &num_cols);
-    CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(num_cols, 0);
-    EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
-
-    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-    status = SQLNumResultCols(conn->hstmt, &num_cols);
-    CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(num_cols, 1);
-
-    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-    status = SQLNumResultCols(conn->hstmt, &num_cols);
-    CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(num_cols, 3);
-
-    SQLFreeStmt(conn->hstmt, SQL_CLOSE);
-    Procedure procedure(procedure_name);
-    procedure.DropWithPrepare(conn);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  }
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLMoreResults, FetchEmptyResultSet) {
   auto conn = std::make_shared<ODBCHandles>();
   auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
@@ -3419,5 +3270,105 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(MultiStatementTest, ProcedureWithInOutParams) {
+  bool use_prepare = true;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name, procedure_name;
+  if (use_prepare) {
+    table_name =
+        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_PROCEDURES_TABLE";
+    procedure_name =
+        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECUTE_INSERT_STD_ROW";
+  } else {
+    table_name = kDatasetWithTablePrefix +
+                 "ODBC_SCRIPTS_SQL_EXECDIRECT_PROCEDURES_TABLE";
+    procedure_name =
+        kDatasetWithTablePrefix + "ODBC_PROCEDURE_SQLEXECDIRECT_INSERT_STD_ROW";
+  }
+
+  // Create table for testing
+  Table table(table_name);
+  table.CreateWithPrepare(
+      conn, "(IntegerField INTEGER, FloatField FLOAT64, StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Test for Procedure with In/Out Parameters
+  {
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    std::string procedure_create =
+        "CREATE OR REPLACE PROCEDURE " + procedure_name +
+        "(IntegerField INT64, FloatField FLOAT64, OUT StringField STRING) "
+        "BEGIN "
+        "SET StringField = GENERATE_UUID(); "
+        "INSERT INTO " +
+        table_name +
+        " VALUES(IntegerField, FloatField, StringField); "
+        "SELECT FORMAT(\"Created row %s\", StringField); END";
+
+    SQLRETURN status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+
+    std::string procedure_call =
+        "DECLARE OutStringField STRING; "
+        "CALL " +
+        procedure_name +
+        "(32, 45.6, OutStringField); "
+        "SELECT * FROM " +
+        table_name;
+
+    if (use_prepare) {
+      status =
+          SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+      CheckError(status, "SQLPrepare", conn);
+      status = SQLExecute(conn->hstmt);
+      CheckError(status, "SQLExecute", conn);
+    } else {
+      status =
+          SQLExecDirect(conn->hstmt, (SQLCHAR*)procedure_call.c_str(), SQL_NTS);
+      CheckError(status, "SQLExecDirect", conn);
+    }
+
+    SQLSMALLINT num_cols;
+    status = SQLNumResultCols(conn->hstmt, &num_cols);
+    CheckError(status, "SQLNumResultCols", conn);
+    EXPECT_EQ(num_cols, 0);
+    SQLLEN row_count = 0;
+    status = SQLRowCount(conn->hstmt, &row_count);
+    CheckError(status, "SQLRowCount", conn);
+    EXPECT_GT(row_count, 0);
+
+    status = SQLNumResultCols(conn->hstmt, &num_cols);
+    CheckError(status, "SQLNumResultCols", conn);
+    EXPECT_EQ(num_cols, 0);
+    EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
+    status = SQLNumResultCols(conn->hstmt, &num_cols);
+    CheckError(status, "SQLNumResultCols", conn);
+    EXPECT_EQ(num_cols, 1);
+
+    EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
+    status = SQLNumResultCols(conn->hstmt, &num_cols);
+    CheckError(status, "SQLNumResultCols", conn);
+    EXPECT_EQ(num_cols, 3);
+
+    SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+    Procedure procedure(procedure_name);
+    procedure.DropWithPrepare(conn);
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests

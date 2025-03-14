@@ -26,6 +26,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::Job;
+using ::google::cloud::bigquery_v2_minimal_internal::ListFormatJob;
 using google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
@@ -178,93 +179,141 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
 
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
 // risk.
+std::string generateJobId() {
+  // Prefix for the job ID
+  const std::string prefix = "bqOdbcJob_";
+
+  // Generate a random 16-byte value for the unique part
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, 255);
+
+  std::ostringstream oss;
+  for (int i = 0; i < 16; ++i) {
+      oss << std::hex << std::setw(2) << std::setfill('0') << dis(gen);
+  }
+
+  return prefix + oss.str();
+}
+
 StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
-  StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
-  if (!transaction_status.ok()) {
-    return transaction_status;
-  }
+  // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
+// risk.
+if (query.size()<=0) {
+  return StatusRecord{SQLStates::k_HY000(), "Query text is null"};
+}
 
-  Job req;
-  req.configuration.query.query = query;
-  req.configuration.query.use_query_cache = true;
-  req.configuration.dry_run = true;
-  req.configuration.query.use_legacy_sql = false;
+StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
+if (!transaction_status.ok()) {
+  return transaction_status;
+}
 
-  // Add default dataset from the config
-  ConnectionHandle& conn_handle = *GetConnectionHandle();
-  std::string catalog_name = conn_handle.GetDsn().catalog;
-  std::string default_dataset = conn_handle.GetDsn().default_dataset;
-  if (!default_dataset.empty()) {
-    req.configuration.query.default_dataset.project_id = catalog_name;
-    req.configuration.query.default_dataset.dataset_id = default_dataset;
-  }
+Job req;
+req.configuration.query.query = query;
+req.configuration.query.use_query_cache = true;
+req.configuration.dry_run = false;
+req.configuration.query.use_legacy_sql = false;
+std::string job_id = generateJobId();
+req.job_reference.job_id = job_id;
+req.job_reference.project_id = "bigquery-devtools-drivers";
 
-  std::regex positional_pattern(R"(\?)");
-  std::regex named_pattern(R"([:@]\w+)");
 
-  // Check for positional parameters
-  if (std::regex_search(query, positional_pattern)) {
-    req.configuration.query.parameter_mode = "POSITIONAL";
-  }
+// Add default dataset from the config
+ConnectionHandle& conn_handle = *GetConnectionHandle();
+std::string catalog_name = conn_handle.GetDsn().catalog;
+std::string default_dataset = conn_handle.GetDsn().default_dataset;
+if (!default_dataset.empty()) {
+  req.configuration.query.default_dataset.project_id = catalog_name;
+  req.configuration.query.default_dataset.dataset_id = default_dataset;
+}
 
-  // Check for named parameters
-  if (std::regex_search(query, named_pattern)) {
-    req.configuration.query.parameter_mode = "NAMED";
-  }
-  if (conn_handle.IsSessionStarted()) {
-    req.configuration.query.connection_properties.push_back(
-        {"session_id", conn_handle.GetSessionId()});
-  } else if (conn_handle.GetDsn().sessions_enabled) {
-    req.configuration.query.create_session = true;
-  }
+std::regex positional_pattern(R"(\?)");
+std::regex named_pattern(R"([:@]\w+)");
 
-  Options opt;
+// Check for positional parameters
+if (std::regex_search(query, positional_pattern)) {
+  req.configuration.query.parameter_mode = "POSITIONAL";
+}
 
-  auto response = conn_handle.GetClient()->InsertJob(
-      conn_handle.GetDsn().catalog, req, opt);
+// Check for named parameters
+if (std::regex_search(query, named_pattern)) {
+  req.configuration.query.parameter_mode = "NAMED";
+}
+if (conn_handle.IsSessionStarted()) {
+  req.configuration.query.connection_properties.push_back(
+      {"session_id", conn_handle.GetSessionId()});
+} else if (conn_handle.GetDsn().sessions_enabled) {
+  req.configuration.query.create_session = true;
+}
+std::cout<<"Query: "<<query<<std::endl;
 
-  if (!response.Ok()) {
-    return response.GetStatusRecord();
-  }
+Options opt1;
+std::cout<<"\n\nInsert Job Request:\n\n"<<std::endl;
+nlohmann::json jsonObj = req; // Calls `to_json`
+std::cout << jsonObj.dump() << std::endl;
 
-  auto& schema = response.GetValue().statistics.job_query_stats.schema;
-  auto pop_response = PopulateResultSet(schema);
-  if (!pop_response.ok()) {
-    return pop_response;
-  }
+StatusRecordOr<Job> response = conn_handle.GetClient()->InsertJob(
+    conn_handle.GetDsn().catalog, req, opt1);
+std::cout<<"\n\nInsert Job Response:\n\n"<<std::endl;
+jsonObj = *response; // Calls `to_json`
+std::cout << jsonObj.dump() << std::endl;
 
-  SetQueryParameters(
-      response.GetValue()
-          .statistics.job_query_stats.undeclared_query_parameters);
+Options opt2;
+StatusRecordOr<std::vector<ListFormatJob>> response1 =
+    conn_handle.GetClient()->ListAllJobs(conn_handle.GetDsn().catalog, job_id,
+                                         opt2);
 
-  if (!pop_response.ok()) {
-    return pop_response;
-  }
+for (auto &res : response1.GetValue())
+{
+  std::cout << "\n\ListAllJobs Response:\n\n" << std::endl;
+  jsonObj = res;  // Calls `to_json`
+  std::cout << jsonObj.dump() << std::endl;
+}
 
-  DescriptorHandle& desc_handle =
-      this->GetDescriptorHandle(DescriptorType::kIRD);
-  desc_handle.ClearDescriptorRecordsMap();
-  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
-  if (!ird_response.ok()) {
-    return ird_response;
-  }
+if (!response.Ok()) {
+  return response.GetStatusRecord();
+}
 
-  DescriptorHandle& ipd_desc_handle =
-      this->GetDescriptorHandle(DescriptorType::kIPD);
-  ipd_desc_handle.ClearDescriptorRecordsMap();
-  auto job_statistics = (*response).statistics;
-  StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
-  if (!ipd_response.ok()) {
-    return ipd_response;
-  }
-  if (!conn_handle.IsSessionStarted() &&
-      !response->statistics.session_info.session_id.empty()) {
-    conn_handle.SetSessionId(response->statistics.session_info.session_id);
-  }
+auto& schema = response.GetValue().statistics.job_query_stats.schema;
+auto pop_response = PopulateResultSet(schema);
+if (!pop_response.ok()) {
+  return pop_response;
+}
 
-  query_str_ = query;
-  prepared_job_ = *response;
-  return StatusRecord::Ok();
+SetQueryParameters(
+    response.GetValue()
+        .statistics.job_query_stats.undeclared_query_parameters);
+
+if (!pop_response.ok()) {
+  return pop_response;
+}
+
+DescriptorHandle& desc_handle =
+    this->GetDescriptorHandle(DescriptorType::kIRD);
+desc_handle.ClearDescriptorRecordsMap();
+StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+if (!ird_response.ok()) {
+  return ird_response;
+}
+
+DescriptorHandle& ipd_desc_handle =
+    this->GetDescriptorHandle(DescriptorType::kIPD);
+ipd_desc_handle.ClearDescriptorRecordsMap();
+auto job_statistics = (*response).statistics;
+StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
+if (!ipd_response.ok()) {
+  return ipd_response;
+}
+if (!conn_handle.IsSessionStarted() &&
+    !response->statistics.session_info.session_id.empty()) {
+  conn_handle.SetSessionId(response->statistics.session_info.session_id);
+}
+
+query_str_ = query;
+prepared_job_ = *response;
+stmt_state_ = StmtStates::kStatementPrepared;
+
+return StatusRecord::Ok();
 }
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
