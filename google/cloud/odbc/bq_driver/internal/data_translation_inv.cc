@@ -46,7 +46,9 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   std::string src_str;
   switch (src_data.type) {
     case SQL_C_CHAR: {
-      src_str = std::string(static_cast<char*>(src_buf), result_len);
+      src_str = (src_buf && result_len > 0)
+                    ? std::string(static_cast<char*>(src_buf), result_len)
+                    : "";
       break;
     }
     case SQL_C_WCHAR: {

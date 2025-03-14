@@ -197,9 +197,7 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
-  SQLUSMALLINT GetCurrentParameterIndex() const {
-     return current_param_index_; 
-  }
+  SQLUSMALLINT GetCurrentParameterIndex() const { return current_param_index_; }
 
   inline void SetCurrentParamIndex(SQLUSMALLINT param_index) {
     current_param_index_ = param_index;
@@ -209,7 +207,7 @@ class StatementHandle : public Handle {
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
-  SQLUSMALLINT current_param_index_ = 0;
+  SQLUSMALLINT current_param_index_ = 1;
 
  private:
   std::shared_ptr<Query> query_;
@@ -235,7 +233,6 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
   bool is_statement_prepared_ = false;
-
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal
