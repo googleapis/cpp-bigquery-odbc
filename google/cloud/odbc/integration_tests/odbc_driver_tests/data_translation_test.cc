@@ -96,6 +96,15 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
+
+  {SQL_C_CHAR, "-123", SQL_SUCCESS},
+  {SQL_C_CHAR, "-123.0", SQL_SUCCESS},
+  {SQL_C_CHAR, "-123.65", SQL_SUCCESS}, 
+  {SQL_C_CHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
+ {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
+ {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS,
+     "1234567891234567"}, 
+
     {SQL_C_NUMERIC, "1234567891234567891", SQL_SUCCESS,
      "1234567891234567891"},  // NUMERIC(38,9) allows only 19 digits for
                               // integral value. Weird!
@@ -381,8 +390,22 @@ void TestTranslationsFromNumeric(std::shared_ptr<ODBCHandles> conn,
           break;
         }
         case SQL_C_NUMERIC: {
+          /*
           SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
-          EXPECT_EQ(SQLNumericToString(returned_val), expected.expected_str);
+
+          std::string strng((char*)returned_val.val);
+          std::cout<<"Amr: "<<strng.c_str()<<"-> "<<returned_val.precision<<" -> "<<returned_val.scale<<" -> "<<returned_val.sign<<" -> "<<(char*)returned_val.val<<"\n";
+          */
+         SQL_NUMERIC_STRUCT* ret_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(data);
+         std::string strng((char*)ret_val->val);
+         std::cout<<"\n  amr val = ";
+         for(int i=0;i<ret_val->precision;i++)
+         std::cout<<ret_val->val[i];
+         std::cout<<"\n";
+          std::cout<<"Amr: "<<strng.c_str()<<" -> "<<ret_val->precision<<" -> "<<ret_val->scale<<" -> "<<ret_val->sign<<" -> "<<ret_val->val<<"\n";
+          EXPECT_EQ(SQLNumericToString(*ret_val), expected.expected_str);
+          //EXPECT_EQ(SQLNumericToString(returned_val), expected.expected_str);
+
           break;
         }
         default: {
