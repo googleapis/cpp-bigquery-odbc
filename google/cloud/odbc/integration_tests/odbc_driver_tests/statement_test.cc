@@ -3344,24 +3344,30 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   std::string data = "SomeData";
   // Indicate that data will be provided with SQLPutData
-  SQLLEN indicator = SQL_DATA_AT_EXEC;
+  SQLLEN indicator1 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator2 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator3 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator4 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator5 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator6 = SQL_DATA_AT_EXEC;
+
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG,
-                             SQL_INTEGER, 0, 0, nullptr, 0, &indicator),
+                             SQL_INTEGER, 0, 0, nullptr, 0, &indicator1),
             SQL_SUCCESS);
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator2),
             SQL_SUCCESS);
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator3),
             SQL_SUCCESS);
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator4),
             SQL_SUCCESS);
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator5),
             SQL_SUCCESS);
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator6),
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
 

@@ -1073,6 +1073,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Get the current parameter index (set by SQLParamData)
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParameterIndex();
+  std::cout<<"Current Param Index: "<<param_index<<std::endl;
   if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
     return LogAndReturnCode(
         stmt_handle,
@@ -1080,17 +1081,14 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
-  DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
 
-  if (!apd.HasDescriptorRecord(param_index) &&
-      !ipd.HasDescriptorRecord(param_index)) {
+  if (!apd.HasDescriptorRecord(param_index)) {
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_07002(),
                       "Descriptor record does not exist for parameter."});
   }
 
   DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
-  DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_index);
 
   // Ensure parameter was marked for deferred execution
   if (apd_rec.indicator_ptr == nullptr &&
@@ -1115,7 +1113,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
       str_len_or_ind_ptr == SQL_NULL_DATA) {
     apd_rec.data_ptr = &empty_buffer;
     apd_rec.octet_length = 0;
-    *apd_rec.indicator_ptr = SQL_NTS;
+    *(apd_rec.indicator_ptr) = SQL_NTS;
     return SQL_SUCCESS;
   }
 
@@ -1158,7 +1156,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   apd_rec.data_ptr = temp_buffer;
   apd_rec.octet_length += str_len_or_ind_ptr;
   apd_rec.octet_length_ptr = &apd_rec.octet_length;
-  *apd_rec.indicator_ptr = SQL_NTS;
+  *(apd_rec.indicator_ptr) = SQL_NTS;
 
   // Update descriptor record
   apd.BindNewDescriptorRecord(param_index, apd_rec);
