@@ -246,6 +246,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
   DSValueToString(src_dsval, str_input);
   StatusRecord status_record = StatusRecord::Ok();
   SQLDOUBLE numeric_no = std::stod(str_input);
+
   switch (dest_type) {
     case SQL_C_NUMERIC: {
       SQL_NUMERIC_STRUCT numst;

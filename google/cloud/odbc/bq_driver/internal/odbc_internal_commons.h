@@ -131,9 +131,9 @@ inline void NumericStructToDSValue(const SQL_NUMERIC_STRUCT& numst,
 }
 inline void GetNumericDetailsFromStr(std::string const& src_dsval,
                                      SQL_NUMERIC_STRUCT& numst) {
-  int sign = 1;
-  int precision = 0;
-  int scale;
+  SQLCHAR sign = 1;
+  SQLCHAR precision = 0;
+  SQLSCHAR scale;
   std::string num;
   int integralcount = 0;
   int fractionalcount = 0;
@@ -177,14 +177,11 @@ inline void GetNumericDetailsFromStr(std::string const& src_dsval,
     if (scale >= limitScale) scale = limitScale;
     if (precision >= SQL_MAX_NUMERIC_LEN) precision = SQL_MAX_NUMERIC_LEN;
   }
-  // scale = fractionalcount;
-  // precision = fractionalcount + integralcount;
-  numst.scale = scale;
-  numst.precision = precision;
-  numst.sign = sign;
-  memcpy(
-      numst.val, num.c_str(),
-      SQL_MAX_NUMERIC_LEN);  // sizeof(SQL_NUMERIC_STRUCT));//SQL_MAX_NUMERIC_LEN);
+  memcpy(&numst.scale, &scale, sizeof(SQLSCHAR));
+  memcpy(&numst.precision, &precision, sizeof(SQLSCHAR));
+  memcpy(&numst.sign, &sign, sizeof(SQLCHAR));
+  unsigned long long dd = std::stoull(num);
+  memcpy((char*)numst.val, &dd, sizeof(unsigned long long));
 }
 
 inline void StringToDSValue(std::string const& str, DSValue& value) {

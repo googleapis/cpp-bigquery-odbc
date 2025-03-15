@@ -562,7 +562,6 @@ std::string GetIntervalTypeStr(const SQLINTERVAL type);
 std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval);
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric);
-std::string SQLNumericStructureToStrData(const SQL_NUMERIC_STRUCT& numeric);
 double GetExactPrecision(std::string const& str, std::size_t const p);
 
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
