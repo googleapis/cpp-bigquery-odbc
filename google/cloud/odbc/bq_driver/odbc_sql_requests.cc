@@ -959,7 +959,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
 
-  auto param_num = handle->GetCurrentParameterIndex();
+  auto param_num = handle->GetCurrentParamIndex();
   if (param_num < 0 || param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
@@ -1072,7 +1072,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Get the current parameter index (set by SQLParamData)
-  SQLUSMALLINT param_index = stmt_handle.GetCurrentParameterIndex();
+  SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
   std::cout<<"Current Param Index: "<<param_index<<std::endl;
   if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
     return LogAndReturnCode(
