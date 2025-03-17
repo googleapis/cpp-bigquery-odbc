@@ -14,10 +14,8 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
-#ifdef _WIN32
 #include <shlobj.h>
 #include <shellapi.h>
-#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
@@ -117,47 +115,43 @@ void LogTraceDialog::InitControls() {
   HWND h_log_browse_btn = CreateButton(parent_hwnd, "Browse...", KAxisX + 205, KAxisY+55,
                                        kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
       SendMessage(h_log_browse_btn, WM_SETFONT, (WPARAM)hFont, TRUE);
-  // Log Rotation Group Box
-  // Create Log Rotation Group Box
-HWND h_group_box = CreateWindowEx(0, "BUTTON", "Log rotation",
-  WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 
-  KAxisX-10, KLabelWidth+5, 427, 75, 
-  parent_hwnd, (HMENU)kIdcGroupBox, GetModuleHandle(NULL), NULL);
-  SendMessage(h_group_box, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+  HWND h_group_box = CreateGroupBox(parent_hwnd, "Log rotation", 
+        KAxisX - 10, KLabelWidth + 5, 427, 75, 
+        kIdcGroupBox);
+      SendMessage(h_group_box, WM_SETFONT, (WPARAM)hFont, TRUE);
 
 // Max Number of Files Label and Edit Box
 HWND h_max_files_label =
   CreateLabel(parent_hwnd, "Max number of files:", KAxisX, KAxisY+95, KLabelWidth+60, kLabelHeight, 0);
   SendMessage(h_max_files_label, WM_SETFONT, (WPARAM)hFont, TRUE);
-// HWND h_max_files_edit = CreateEditBox(parent_hwnd, 225, 105, kEditBoxWidth, 
-//                                   kEditBoxHeight, kIdcMaxFilesEdit);
-   HWND h_max_files_edit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "50",
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER | ES_RIGHT,  // Added ES_RIGHT
-                                    KAxisX+205, KAxisY+95, kEditBoxWidth, kEditBoxHeight, 
-                                    parent_hwnd, (HMENU)kIdcMaxFilesEdit, GetModuleHandle(NULL), NULL);
-                                                                  
+
+  HWND h_max_files_edit = CreateNumericEditBox(
+    parent_hwnd, "50",
+    KAxisX + 205, KAxisY + 95, kEditBoxWidth, kEditBoxHeight,
+    kIdcMaxFilesEdit);                                                                 
     SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)hFont, TRUE); 
 
 // Max File Size (MB) Label and Edit Box
 HWND h_max_size_label =
   CreateLabel(parent_hwnd, "Max file size (MB):", KAxisX, KAxisY+125, KLabelWidth+60, kLabelHeight, 0);
   SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)hFont, TRUE);
-// HWND h_max_size_edit = CreateEditBox(parent_hwnd, 225, 135, kEditBoxWidth, 
-//                                   kEditBoxHeight, kIdcMaxSizeEdit);
-HWND h_max_size_edit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "20",
-  WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER | ES_RIGHT,  // Added ES_RIGHT
-  KAxisX + 205, KAxisY+125, kEditBoxWidth, kEditBoxHeight, 
-  parent_hwnd, (HMENU)kIdcMaxSizeEdit, GetModuleHandle(NULL), NULL);
+
+  HWND h_max_size_edit = CreateNumericEditBox(
+    parent_hwnd, "20",
+    KAxisX + 205, KAxisY + 125, kEditBoxWidth, kEditBoxHeight,
+    kIdcMaxSizeEdit);
+
 SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
 
     // Documentation Hyperlink
     HWND h_doc_text = CreateLabel(parent_hwnd, "Not sure what to select? See", KAxisX-10, KAxisY+160, KLabelWidth+80, kLabelHeight, 0);
     SendMessage(h_doc_text, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-    HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
-                                      WS_CHILD | WS_VISIBLE | SS_NOTIFY,
-                                      KAxisX + 125, KAxisY+160, KLabelWidth+70, kLabelHeight, parent_hwnd,
-                                      (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
+    HWND h_hyperlink = CreateHyperlinkLabel(
+      parent_hwnd, "BigQuery documentation",
+      KAxisX + 125, KAxisY + 160, KLabelWidth + 70, kLabelHeight,
+      kIdcHyperlink);  
     SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)hFont, TRUE);
                                      
 
@@ -170,11 +164,6 @@ SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
                                        kBtnWidth, kOkCancelHeight, kIdcLogBtnCancel);
       SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-    
-  // // Populate dropdowns
-  // SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
-  // SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
-  // SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
 
 std::vector<std::string> log_levels = {
     kLogOff, kLogFatal, kLogError, kLogWarning, kLogInfo, kLogDebug, kLogTrace};
@@ -296,7 +285,13 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
     }
     break;
   }
-  
+      // Ensure Esc works globally even when inside input/combo box
+      case WM_GETDLGCODE:
+      if (w_param == VK_ESCAPE || w_param == VK_RETURN) {
+        return DLGC_WANTALLKEYS;  // Ensure we receive Esc/Enter key
+      }
+      break;
+
     case WM_KEYDOWN:  // Capture global key presses
     if (w_param == VK_ESCAPE) {
       DestroyWindow(hwnd);  // Close dialog when ESC is pressed

@@ -14,9 +14,8 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
-#ifdef _WIN32
 #include <shellapi.h>
-#endif
+
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 
@@ -113,12 +112,12 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
-  HWND h_large_results_header = CreateWindowEx(
-    0, "BUTTON", "Large results options",      
-    WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-    kXAxis, kYAxis+25, kWidth+385, kHeight+153,
-    adv_hwnd, (HMENU)KIdcLargeResultHeader, GetModuleHandle(NULL), NULL);
-      SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_large_results_header = CreateGroupBox(
+    adv_hwnd, "Large results options",
+    kXAxis, kYAxis + 25, kWidth + 385, kHeight + 153,
+    KIdcLargeResultHeader);
+  SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+
 
       HWND h_allow_large_results_checkbox =
       CreateCheckBox(adv_hwnd, "Allow large result sets", kXAxis+5, kYAxis+50,
@@ -296,10 +295,10 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis, kButtonY+10, kWidth+110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
     
-  HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
-                                          WS_CHILD | WS_VISIBLE | SS_NOTIFY,
-                                          144, kButtonY+10, kWidth+100, kHeight, adv_hwnd,
-                                          (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
+  HWND h_hyperlink = CreateHyperlinkLabel(
+    adv_hwnd, "BigQuery documentation",
+    144, kButtonY + 10, kWidth + 100, kHeight,
+    kIdcHyperlink);
     SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 

@@ -15,9 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
-#ifdef _WIN32
 #include <shellapi.h>
-#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -129,10 +127,10 @@ void ProxyOptions::InitControls() {
  HWND h_doc_text = CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight-8, kButtonY, kLabelWidth-20 , kLabelHeight, 0);
  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
  
- HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
-                                       WS_CHILD | WS_VISIBLE | SS_NOTIFY,
-                                       kLabelWidth-36 , kButtonY, kLabelWidth-30, kLabelHeight, proxy_hwnd,
-                                       (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
+ HWND h_hyperlink = CreateHyperlinkLabel(
+  proxy_hwnd, "BigQuery documentation",
+  kLabelWidth - 36, kButtonY, kLabelWidth - 30, kLabelHeight,
+  kIdcHyperlink);
  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
  HWND h_ok_button = CreateButton(proxy_hwnd, "OK", kOkButtonX, kButtonY,

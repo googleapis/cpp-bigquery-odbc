@@ -225,6 +225,34 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                         WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
                         height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
+// Helper function to create a group box
+HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width, int height, int id) {
+  return CreateWindowEx(0, "BUTTON", text, 
+                        WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 
+                        x, y, width, height, 
+                        parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+}
+HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y, int width, int height, int id) {
+  HWND hEditBox = CreateWindowEx(
+      WS_EX_CLIENTEDGE, "EDIT", text,
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER | ES_RIGHT, // ES_NUMBER restricts input to numbers
+      x, y, width, height,
+      parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+
+  if (hEditBox) {
+      SendMessage(hEditBox, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+  }
+
+  return hEditBox;
+}
+HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y, int width, int height, int id) {
+  HWND h_hyperlink = CreateWindowEx(
+      0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY,
+      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+
+  return h_hyperlink;
+}
+
 #else
 
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
