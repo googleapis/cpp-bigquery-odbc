@@ -14,8 +14,10 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
+#ifdef _WIN32
 #include <shlobj.h>
 #include <shellapi.h>
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
@@ -41,6 +43,9 @@ int const kLabelHeight = 16;
 int const kEditBoxWidth = 203;
 int const kEditBoxHeight = 17;
 int const kOkCancelHeight=17;
+int const KAxisX=20;
+int const KAxisY=10;
+int const KLabelWidth=80;
 
 HWND LogTraceDialog::GetHwnd() const { return parent_hwnd; }
 LogTraceDialog::LogTraceDialog() : parent_hwnd(NULL) {}
@@ -94,74 +99,74 @@ void LogTraceDialog::InitControls() {
     DEFAULT_PITCH | FF_SWISS, "Inter");
 
   HWND h_log_level_head =
-      CreateLabel(parent_hwnd, "Log level:", 20, 10, 80, 20, 0);
+      CreateLabel(parent_hwnd, "Log level:", KAxisX, KAxisY, KLabelWidth, kLabelHeight, 0);
       SendMessage(h_log_level_head, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-  HWND h_log_level_box = CreateComboBox(parent_hwnd, 225, 10, kComboBoxWidth,
-                                        16, kIdclogTraceBox);
+  HWND h_log_level_box = CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
+                        kLabelHeight, kIdclogTraceBox);
       SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)hFont, TRUE);
 
   HWND h_log_file_add =
-      CreateLabel(parent_hwnd, "Log path:", 20, 40, 80, kLabelHeight, 0);
+      CreateLabel(parent_hwnd, "Log path:", KAxisX, KAxisY+30, KLabelWidth, kLabelHeight, 0);
       SendMessage(h_log_file_add, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-  HWND h_log_file_edit = CreateEditBox(parent_hwnd, 225, 40, kEditBoxWidth,
+  HWND h_log_file_edit = CreateEditBox(parent_hwnd, KAxisX + 205, KAxisY+30, kEditBoxWidth,
                                        kEditBoxHeight, kIdcLogFileEdit);
       SendMessage(h_log_file_edit, WM_SETFONT, (WPARAM)hFont, TRUE);                                 
 
-  HWND h_log_browse_btn = CreateButton(parent_hwnd, "Browse...", 225, 65,
+  HWND h_log_browse_btn = CreateButton(parent_hwnd, "Browse...", KAxisX + 205, KAxisY+55,
                                        kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
       SendMessage(h_log_browse_btn, WM_SETFONT, (WPARAM)hFont, TRUE);
   // Log Rotation Group Box
   // Create Log Rotation Group Box
 HWND h_group_box = CreateWindowEx(0, "BUTTON", "Log rotation",
   WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 
-  10, 85, 427, 75, 
+  KAxisX-10, KLabelWidth+5, 427, 75, 
   parent_hwnd, (HMENU)kIdcGroupBox, GetModuleHandle(NULL), NULL);
   SendMessage(h_group_box, WM_SETFONT, (WPARAM)hFont, TRUE);
 
 // Max Number of Files Label and Edit Box
 HWND h_max_files_label =
-  CreateLabel(parent_hwnd, "Max number of files:", 20, 105, 140, kLabelHeight, 0);
+  CreateLabel(parent_hwnd, "Max number of files:", KAxisX, KAxisY+95, KLabelWidth+60, kLabelHeight, 0);
   SendMessage(h_max_files_label, WM_SETFONT, (WPARAM)hFont, TRUE);
 // HWND h_max_files_edit = CreateEditBox(parent_hwnd, 225, 105, kEditBoxWidth, 
 //                                   kEditBoxHeight, kIdcMaxFilesEdit);
    HWND h_max_files_edit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "50",
                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER | ES_RIGHT,  // Added ES_RIGHT
-                                    225, 105, kEditBoxWidth, kEditBoxHeight, 
+                                    KAxisX+205, KAxisY+95, kEditBoxWidth, kEditBoxHeight, 
                                     parent_hwnd, (HMENU)kIdcMaxFilesEdit, GetModuleHandle(NULL), NULL);
                                                                   
     SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)hFont, TRUE); 
 
 // Max File Size (MB) Label and Edit Box
 HWND h_max_size_label =
-  CreateLabel(parent_hwnd, "Max file size (MB):", 20, 135, 140, kLabelHeight, 0);
+  CreateLabel(parent_hwnd, "Max file size (MB):", KAxisX, KAxisY+125, KLabelWidth+60, kLabelHeight, 0);
   SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)hFont, TRUE);
 // HWND h_max_size_edit = CreateEditBox(parent_hwnd, 225, 135, kEditBoxWidth, 
 //                                   kEditBoxHeight, kIdcMaxSizeEdit);
 HWND h_max_size_edit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "20",
   WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER | ES_RIGHT,  // Added ES_RIGHT
-  225, 135, kEditBoxWidth, kEditBoxHeight, 
+  KAxisX + 205, KAxisY+125, kEditBoxWidth, kEditBoxHeight, 
   parent_hwnd, (HMENU)kIdcMaxSizeEdit, GetModuleHandle(NULL), NULL);
 SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
 
     // Documentation Hyperlink
-    HWND h_doc_text = CreateLabel(parent_hwnd, "Not sure what to select? See", 10, 170, 160, 20, 0);
+    HWND h_doc_text = CreateLabel(parent_hwnd, "Not sure what to select? See", KAxisX-10, KAxisY+160, KLabelWidth+80, kLabelHeight, 0);
     SendMessage(h_doc_text, WM_SETFONT, (WPARAM)hFont, TRUE);
 
     HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
                                       WS_CHILD | WS_VISIBLE | SS_NOTIFY,
-                                      145, 170, 150, 20, parent_hwnd,
+                                      KAxisX + 125, KAxisY+160, KLabelWidth+70, kLabelHeight, parent_hwnd,
                                       (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
     SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)hFont, TRUE);
                                      
 
-  HWND h_log_btn_ok = CreateButton(parent_hwnd, "OK", 282, 170, kBtnWidth,
+  HWND h_log_btn_ok = CreateButton(parent_hwnd, "OK", KAxisX + 262, KAxisY+160, kBtnWidth,
     kOkCancelHeight, kIdcLogBtnOk);
   SendMessage(h_log_btn_ok, WM_SETFONT, (WPARAM)hFont, TRUE);
 
 
-  HWND h_log_btn_cancel = CreateButton(parent_hwnd, "Cancel", 361, 170,
+  HWND h_log_btn_cancel = CreateButton(parent_hwnd, "Cancel",KAxisX+341, KAxisY+160,
                                        kBtnWidth, kOkCancelHeight, kIdcLogBtnCancel);
       SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
 
@@ -211,7 +216,7 @@ void LogTraceDialog::Show() {
   int y_pos = (screen_height - window_height) / 2;
 
   parent_hwnd = CreateWindowEx(0, CLASS_NAME, "Logging options",
-                               WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos, y_pos, 462, 240,
+                               WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos, y_pos, window_width, window_height,
                                parent_hwnd, NULL, GetModuleHandle(NULL), this);
 
   if (parent_hwnd) {
@@ -245,16 +250,6 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
                SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
             }
             return TRUE;
-
-  //   case WM_ERASEBKGND: {
-  //     HDC hdc = (HDC)w_param;
-  //     RECT rc;
-  //     GetClientRect(hwnd, &rc);
-  //     HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_3DFACE)); // Default dialog background color
-  //     FillRect(hdc, &rc, hBrush);
-  //     DeleteObject(hBrush);
-  //     return 1; // Indicate we handled the background redraw
-  // }
   case WM_ERASEBKGND: {
     HDC hdc = (HDC)w_param;
     RECT rc;

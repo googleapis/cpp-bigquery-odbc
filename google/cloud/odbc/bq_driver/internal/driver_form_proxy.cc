@@ -15,7 +15,9 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
+#ifdef _WIN32
 #include <shellapi.h>
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -59,80 +61,8 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-
-// void ProxyOptions::InitControls() {
-//   HFONT h_font =
-//       CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-//                  OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-//                  DEFAULT_PITCH | FF_SWISS, "Segoe UI");
-
-//   HWND h_proxy_checkbox = CreateCheckBox(
-//       proxy_hwnd, "Use Proxy Server", kControlStartX, kControlStartX,
-//       kCheckboxWidth, kCheckboxHeight, kIdcProxyCheckbox);
-//   CheckDlgButton(proxy_hwnd, kIdcProxyCheckbox,
-//                  (proxy_check_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-
-//   HWND h_proxy_host_label =
-//       CreateLabel(proxy_hwnd, "Proxy Host:", kControlStartX, kControlSpacing,
-//                   kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-
-//   HWND h_proxy_host_edit =
-//       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing, kEditBoxWidth,
-//                     kEditBoxHeight, kIdcProxyHostName);
-//   SetWindowText(h_proxy_host_edit, proxy_host_.c_str());
-
-//   HWND h_proxy_port_label = CreateLabel(
-//       proxy_hwnd, "Proxy Port:", kControlStartX, kControlSpacing * 2,
-//       kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-
-//   HWND h_proxy_port_edit =
-//       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing * 2,
-//                     kEditBoxWidth, kEditBoxHeight, kIdcProxyPortEdit);
-//   SetWindowLong(h_proxy_port_edit, GWL_STYLE,
-//                 GetWindowLong(h_proxy_port_edit, GWL_STYLE) | ES_NUMBER);
-//   SetWindowText(h_proxy_port_edit, proxy_port_.c_str());
-
-//   HWND h_proxy_username_label = CreateLabel(
-//       proxy_hwnd, "Proxy Username:", kControlStartX, kControlSpacing * 3,
-//       kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-
-//   HWND h_proxy_username_edit =
-//       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing * 3,
-//                     kEditBoxWidth, kEditBoxHeight, kIdcProxyUsernameEdit);
-//   SetWindowText(h_proxy_username_edit, proxy_username_.c_str());
-
-//   HWND h_proxy_password_label = CreateLabel(
-//       proxy_hwnd, "Proxy Password:", kControlStartX, kControlSpacing * 4,
-//       kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-
-//   HWND h_proxy_password_edit =
-//       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing * 4,
-//                     kEditBoxWidth, kEditBoxHeight, kIdcProxyPasswordEdit);
-//   SetWindowLong(h_proxy_password_edit, GWL_STYLE,
-//                 GetWindowLong(h_proxy_password_edit, GWL_STYLE) | WS_TABSTOP);
-//   SendMessage(h_proxy_password_edit, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
-//   SetWindowText(h_proxy_password_edit, proxy_pwd_enc_.c_str());
-
-//   HWND h_ok_button = CreateButton(proxy_hwnd, "OK", kOkButtonX, kButtonY,
-//                                   kBtnWidth, kBtnHeight, kIdcProxyOKButton);
-
-//   HWND h_cancel_button =
-//       CreateButton(proxy_hwnd, "Cancel", kCancelButtonX, kButtonY, kBtnWidth,
-//                    kBtnHeight, kIdcProxyCancelButton);
-
-//   if (proxy_check_ == "0") {
-//     EnableWindow(h_proxy_host_edit, FALSE);
-//     EnableWindow(h_proxy_port_edit, FALSE);
-//     EnableWindow(h_proxy_username_edit, FALSE);
-//     EnableWindow(h_proxy_password_edit, FALSE);
-//   }
-// }
 void ProxyOptions::InitControls() {
-  // HFONT h_font =
-     // CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-     //            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-     //            DEFAULT_PITCH | FF_SWISS, "Segoe UI");          
-   
+            
      HFONT h_font = CreateFont(
        -10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
        OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
@@ -140,7 +70,7 @@ void ProxyOptions::InitControls() {
 
 
  HWND h_proxy_checkbox = CreateCheckBox(
-     proxy_hwnd, "Use proxy server", kControlStartX, 10,
+     proxy_hwnd, "Use proxy server", kControlStartX, kLabelHeight-10,
      kCheckboxWidth, kCheckboxHeight, kIdcProxyCheckbox);
      SendMessage(h_proxy_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
  HWND h_proxy_host_label =
@@ -196,12 +126,12 @@ void ProxyOptions::InitControls() {
  EnableWindow(h_proxy_password_edit, FALSE);
 
  // Documentation Hyperlink
- HWND h_doc_text = CreateLabel(proxy_hwnd, "Not sure what to enter? See", 12, kButtonY, 160, 20, 0);
+ HWND h_doc_text = CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight-8, kButtonY, kLabelWidth-20 , kLabelHeight, 0);
  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
  
  HWND h_hyperlink = CreateWindowEx(0, "STATIC", "BigQuery documentation",
                                        WS_CHILD | WS_VISIBLE | SS_NOTIFY,
-                                       144, kButtonY, 150, 20, proxy_hwnd,
+                                       kLabelWidth-36 , kButtonY, kLabelWidth-30, kLabelHeight, proxy_hwnd,
                                        (HMENU)kIdcHyperlink, GetModuleHandle(NULL), NULL);
  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -240,7 +170,7 @@ void ProxyOptions::Show(HWND hwnd) {
 
   proxy_hwnd =
       CreateWindowEx(WS_EX_CONTROLPARENT, CLASS_NAME, "Proxy options", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos,
-                     y_pos, 462, 213, NULL, NULL, GetModuleHandle(NULL), this);
+                     y_pos, window_width, window_height+6, NULL, NULL, GetModuleHandle(NULL), this);
 
   if (proxy_hwnd) {
     InitControls();
@@ -326,22 +256,7 @@ return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
 }
 break;
 }
-// case WM_COMMAND: {
-//   int wm_id = LOWORD(w_param);
-//   if (wm_id == kIdcProxyCheckbox && HIWORD(w_param) == BN_CLICKED) {
-//     BOOL is_checked =
-//         IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED;
-//     EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
-//     EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
-//     EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
-//     EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
-//   } else if (wm_id == kIdcProxyOKButton) {
-//     DestroyWindow(hwnd);
-//   } else if (wm_id == kIdcProxyCancelButton) {
-//     DestroyWindow(hwnd);
-//   }
-//   return 0;
-// }
+
 case WM_COMMAND: {
 int wm_id = LOWORD(w_param);
 

@@ -14,7 +14,9 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#ifdef _WIN32
 #include <shellapi.h>
+#endif
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 
