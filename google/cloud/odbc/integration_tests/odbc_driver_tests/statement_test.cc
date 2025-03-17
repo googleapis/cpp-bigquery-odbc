@@ -760,6 +760,102 @@ TEST(StatementTest, SQLFetchScroll) {
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+TEST(StatementTest, SQLFetchScroll_All) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_TEST";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertData(conn, kSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const query = "SELECT StringField FROM " + table_name;
+
+  SQLRETURN status;
+  SQLCHAR buf_sql_fetch_absolute[kBufferLength];
+  SQLCHAR buf_sql_fetch_relative[kBufferLength];
+  SQLCHAR buf_sql_fetch_prior[kBufferLength];
+  SQLCHAR buf_sql_fetch_first[kBufferLength];
+  SQLCHAR buf_sql_fetch_last[kBufferLength];
+  SQLSMALLINT string_length_ptr;
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);  // No ANSI version
+  CheckError(status, "SQLExecute", conn);
+
+  // Absolute position
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_ABSOLUTE, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
+                           SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_absolute,
+                           kBufferLength, &string_length_ptr);
+
+  std::string actual_message = reinterpret_cast<char*>(buf_sql_fetch_absolute);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+
+  // Fetch the next row
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
+  CheckError(status, "SQLFetchScroll - SQL_FETCH_NEXT", conn);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  // Fetch Relative
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_RELATIVE, 2);
+  EXPECT_EQ(status, SQL_ERROR);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
+                           SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_relative,
+                           kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_relative);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+
+  // Fetch row backward
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_PRIOR, 3);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_prior, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_prior);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+
+  // Fetch First Row
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_FIRST, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_first, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_first);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+
+  // Fetch Last Row
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_FIRST, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_last, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_last);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
   Table table(table_name);
