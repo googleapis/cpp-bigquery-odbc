@@ -805,7 +805,7 @@ TEST(StatementTest, SQLFetchScroll_All) {
                            kBufferLength, &string_length_ptr);
 
   std::string actual_message = reinterpret_cast<char*>(buf_sql_fetch_absolute);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   // Fetch the next row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
@@ -819,7 +819,7 @@ TEST(StatementTest, SQLFetchScroll_All) {
                            SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_relative,
                            kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_relative);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   // Fetch row backward
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_PRIOR, 3);
@@ -828,7 +828,7 @@ TEST(StatementTest, SQLFetchScroll_All) {
       SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
                       &buf_sql_fetch_prior, kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_prior);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   // Fetch First Row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_FIRST, 0);
@@ -837,7 +837,7 @@ TEST(StatementTest, SQLFetchScroll_All) {
       SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
                       &buf_sql_fetch_first, kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_first);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   // Fetch Last Row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_FIRST, 0);
@@ -846,7 +846,7 @@ TEST(StatementTest, SQLFetchScroll_All) {
       SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
                       &buf_sql_fetch_last, kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_last);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("FetchTypeNotSupported"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
