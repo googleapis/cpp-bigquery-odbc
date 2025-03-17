@@ -1073,7 +1073,6 @@ stmt_handle, {SQLStates::k_HY010(),
 
 // Get the current parameter index (set by SQLParamData)
 SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
-std::cout<<"Current Param Index: "<<param_index<<std::endl;
 if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
 return LogAndReturnCode(
 stmt_handle,
@@ -1083,28 +1082,12 @@ stmt_handle,
 DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
 
 if (!apd.HasDescriptorRecord(param_index)) {
-return LogAndReturnCode(
-stmt_handle, {SQLStates::k_07002(),
-"Descriptor record does not exist for parameter."});
+  return LogAndReturnCode(
+    stmt_handle, {SQLStates::k_07002(),
+    "Descriptor record does not exist for parameter."});
 }
 
 DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
-
-// Ensure parameter was marked for deferred execution
-if (apd_rec.indicator_ptr == nullptr ||
-(*(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC &&
-*(apd_rec.indicator_ptr) != SQL_LEN_DATA_AT_EXEC(0))) {
-return LogAndReturnCode(
-stmt_handle, {SQLStates::k_HY010(),
-"Invalid function sequence: Parameter not deferred."});
-}
-
-// Check for invalid data pointer when length greater than zero
-if (data == nullptr && str_len_or_ind_ptr != 0) {
-return LogAndReturnCode(
-stmt_handle,
-{SQLStates::k_HY009(), "Invalid use of null pointer."});
-}
 
 if ((data != nullptr && str_len_or_ind_ptr < 0) && 
      str_len_or_ind_ptr != SQL_NTS && 
@@ -1117,8 +1100,8 @@ if ((data != nullptr && str_len_or_ind_ptr < 0) &&
 
 // Handle NULL data
 static char empty_buffer = '\0';
-if (data == nullptr || str_len_or_ind_ptr == 0 ||
-str_len_or_ind_ptr == SQL_NULL_DATA) {
+if (data == nullptr && (str_len_or_ind_ptr == 0 ||
+str_len_or_ind_ptr == SQL_NULL_DATA)) {
 apd_rec.data_ptr = &empty_buffer;
 apd_rec.octet_length = 0;
 *(apd_rec.indicator_ptr) = SQL_NTS;

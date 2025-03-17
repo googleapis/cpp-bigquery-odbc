@@ -15,6 +15,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <chrono>
+#include <queue>
 
 namespace google::cloud::odbc_tests {
 
@@ -760,9 +761,9 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   SQLULEN bytes_left;
   SQLLEN batch_size = 8;
   SQLCHAR* data_ptr;
-  std::vector<SQLCHAR*> data_to_insert;
+  std::queue<SQLCHAR*> data_to_insert;
   for (int i = 0; i < data.size(); i++) {
-    data_to_insert.push_back((SQLCHAR*)data[i].c_str());
+    data_to_insert.push((SQLCHAR*)data[i].c_str());
   }
 
   char insert_stmt[kBufferLength];
@@ -779,19 +780,20 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   status = SQLNumParams(conn->hstmt, &num_params);  // No ANSI version.
   CheckError(status, "SQLNumParams", conn);
 
+  SQLULEN param_bytes = kBufferLength;
+  SQLLEN chunk_size = SQL_LEN_DATA_AT_EXEC(param_bytes);
+  std::vector<SQLLEN> indicator_ptrs(num_params);
   for (int i = 0; i < num_params; i++) {
     status = SQLDescribeParam(conn->hstmt, i + 1, &data_type, &bytes_left,
                               &decimal_digits, &nullable);  // No ANSI version.
     CheckError(status, "SQLDescribeParam", conn);
 
-    SQLULEN param_bytes = kBufferLength;
-    SQLLEN chunk_size = SQL_LEN_DATA_AT_EXEC(param_bytes);
-    data_ptr = data_to_insert[i];
+    indicator_ptrs[i] = chunk_size;
     // TODO(b/391091200): This should ideally be done based on the parameter
     // descriptions: data_type and bytes_left
     status = SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                               SQL_LONGVARCHAR, param_bytes, 0, nullptr, 0,
-                              &chunk_size);  // No ANSI version.
+                              &indicator_ptrs[i]);  // No ANSI version.
     CheckError(status, "SQLBindParameter", conn);
   }
 
@@ -805,8 +807,11 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
-    data_ptr = (SQLCHAR*)bounded_data_ptr;
-    bytes_left = strlen((char*)data_ptr);
+    if (!data_to_insert.empty()) {
+      data_ptr = data_to_insert.front();
+      data_to_insert.pop();
+      bytes_left = strlen((char*)data_ptr);
+    }
   }
   while (status == SQL_NEED_DATA) {
     while (bytes_left > 0) {
@@ -822,7 +827,10 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
-    data_ptr = (SQLCHAR*)bounded_data_ptr;
+    if (!data_to_insert.empty()) {
+      data_ptr = data_to_insert.front();
+      data_to_insert.pop();
+    }
     if (status == SQL_NEED_DATA) {
       bytes_left = strlen((char*)data_ptr);
     }
