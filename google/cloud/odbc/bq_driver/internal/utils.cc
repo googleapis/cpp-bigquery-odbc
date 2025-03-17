@@ -19,8 +19,10 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
 #include <sstream>
-#include <windows.h>
+#ifdef _WIN32
+#include <windows.h> 
 #include <uxtheme.h>  // Required for SetWindowTheme
+#endif
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 
 

@@ -23,6 +23,10 @@ static int const kIdcLogBtnOk = 101;
 static int const kIdcLogBtnCancel = 102;
 static int const kIdcLogFileEdit = 103;
 static int const kIdclogTraceBox = 104;
+static int const kIdcMaxFilesEdit = 105;   // Max Number Files Edit Box
+static int const kIdcMaxSizeEdit = 106;    // Max File Size (MB) Edit Box
+static int const kIdcGroupBox = 107;       // Group Box for Log Rotation
+
 
 class LogTraceDialog {
  public:
