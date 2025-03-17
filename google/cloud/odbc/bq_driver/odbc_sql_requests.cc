@@ -1057,110 +1057,118 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
 // --------------------------------------------------------------------------------
 SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
-                             SQLLEN str_len_or_ind_ptr) {
-  StatusRecordOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result) {
-    return handle_result.GetCalculatedReturnCode();
+  SQLLEN str_len_or_ind_ptr) {
+StatusRecordOr<StatementHandle*> handle_result =
+ValidateStatementHandle(statement_handle);
+if (!handle_result) {
+return handle_result.GetCalculatedReturnCode();
+}
+StatementHandle& stmt_handle = *(*handle_result);
+// Ensure statement is in kNeedsPutData state
+if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+return LogAndReturnCode(
+stmt_handle, {SQLStates::k_HY010(),
+"Function sequence error: Incorrect statement state."});
+}
+
+// Get the current parameter index (set by SQLParamData)
+SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
+std::cout<<"Current Param Index: "<<param_index<<std::endl;
+if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
+return LogAndReturnCode(
+stmt_handle,
+{SQLStates::k_HY000(), "No parameter currently expecting data."});
+}
+
+DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+
+if (!apd.HasDescriptorRecord(param_index)) {
+return LogAndReturnCode(
+stmt_handle, {SQLStates::k_07002(),
+"Descriptor record does not exist for parameter."});
+}
+
+DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
+
+// Ensure parameter was marked for deferred execution
+if (apd_rec.indicator_ptr == nullptr ||
+(*(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC &&
+*(apd_rec.indicator_ptr) != SQL_LEN_DATA_AT_EXEC(0))) {
+return LogAndReturnCode(
+stmt_handle, {SQLStates::k_HY010(),
+"Invalid function sequence: Parameter not deferred."});
+}
+
+// Check for invalid data pointer when length greater than zero
+if (data == nullptr && str_len_or_ind_ptr != 0) {
+return LogAndReturnCode(
+stmt_handle,
+{SQLStates::k_HY009(), "Invalid use of null pointer."});
+}
+
+if ((data != nullptr && str_len_or_ind_ptr < 0) && 
+     str_len_or_ind_ptr != SQL_NTS && 
+     str_len_or_ind_ptr != SQL_NULL_DATA) {
+  return LogAndReturnCode(
+  stmt_handle,
+  {SQLStates::k_HY090(), "Invalid string or buffer length."});
   }
-  StatementHandle& stmt_handle = *(*handle_result);
-  // Ensure statement is in kNeedsPutData state
-  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
-    return LogAndReturnCode(
-        stmt_handle, {SQLStates::k_HY010(),
-                      "Function sequence error: Incorrect statement state."});
-  }
+  
 
-  // Get the current parameter index (set by SQLParamData)
-  SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
-  std::cout<<"Current Param Index: "<<param_index<<std::endl;
-  if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
-    return LogAndReturnCode(
-        stmt_handle,
-        {SQLStates::k_HY000(), "No parameter currently expecting data."});
-  }
+// Handle NULL data
+static char empty_buffer = '\0';
+if (data == nullptr || str_len_or_ind_ptr == 0 ||
+str_len_or_ind_ptr == SQL_NULL_DATA) {
+apd_rec.data_ptr = &empty_buffer;
+apd_rec.octet_length = 0;
+*(apd_rec.indicator_ptr) = SQL_NTS;
+return SQL_SUCCESS;
+}
 
-  DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+// Check if total size exceeds column limit
+// if ((apd_rec.octet_length + str_len_or_ind_ptr) >= ipd_rec.length) {
+//  return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
+//                                        "Data size exceeds column limit."});
+//}
 
-  if (!apd.HasDescriptorRecord(param_index)) {
-    return LogAndReturnCode(
-        stmt_handle, {SQLStates::k_07002(),
-                      "Descriptor record does not exist for parameter."});
-  }
+// Allocate a temporary buffer
+SQLPOINTER temp_buffer = nullptr;
+if (apd_rec.data_ptr == nullptr) {
+// First chunk of data, allocate fresh buffer
+temp_buffer = malloc(str_len_or_ind_ptr);
+if (temp_buffer == nullptr) {
+return LogAndReturnCode(
+stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
+}
 
-  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
+memcpy(temp_buffer, data, str_len_or_ind_ptr);
+} else {
+// Additional chunks: allocate new buffer large enough to hold old + new
+// data
+size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
+temp_buffer = malloc(new_size);
+if (temp_buffer == nullptr) {
+return LogAndReturnCode(
+stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
+}
 
-  // Ensure parameter was marked for deferred execution
-  if (apd_rec.indicator_ptr == nullptr &&
-      *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC &&
-      *(apd_rec.indicator_ptr) != SQL_LEN_DATA_AT_EXEC(0)) {
-    return LogAndReturnCode(
-        stmt_handle, {SQLStates::k_HY010(),
-                      "Invalid function sequence: Parameter not deferred."});
-  }
+// Copy existing data
+memcpy(temp_buffer, apd_rec.data_ptr, apd_rec.octet_length);
 
-  // Check for invalid data pointer when length greater than zero
-  if ((data == nullptr && str_len_or_ind_ptr > 0) ||
-      str_len_or_ind_ptr < SQL_NULL_DATA) {
-    return LogAndReturnCode(
-        stmt_handle,
-        {SQLStates::k_HY009(), "Invalid string length or indicator value."});
-  }
+// Append new data
+memcpy(static_cast<char*>(temp_buffer) + apd_rec.octet_length, data,
+str_len_or_ind_ptr);
+}
 
-  // Handle NULL data
-  static char empty_buffer = '\0';
-  if (str_len_or_ind_ptr == 0 || data == nullptr ||
-      str_len_or_ind_ptr == SQL_NULL_DATA) {
-    apd_rec.data_ptr = &empty_buffer;
-    apd_rec.octet_length = 0;
-    *(apd_rec.indicator_ptr) = SQL_NTS;
-    return SQL_SUCCESS;
-  }
+// Update descriptor only after successful allocation
+apd_rec.data_ptr = temp_buffer;
+apd_rec.octet_length += str_len_or_ind_ptr;
+apd_rec.octet_length_ptr = &apd_rec.octet_length;
+*(apd_rec.indicator_ptr) = SQL_NTS;
 
-  // Check if total size exceeds column limit
-  // if ((apd_rec.octet_length + str_len_or_ind_ptr) >= ipd_rec.length) {
-  //  return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
-  //                                        "Data size exceeds column limit."});
-  //}
-
-  // Allocate a temporary buffer
-  SQLPOINTER temp_buffer = nullptr;
-  if (apd_rec.data_ptr == nullptr) {
-    // First chunk of data, allocate fresh buffer
-    temp_buffer = malloc(str_len_or_ind_ptr);
-    if (temp_buffer == nullptr) {
-      return LogAndReturnCode(
-          stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
-    }
-
-    memcpy(temp_buffer, data, str_len_or_ind_ptr);
-  } else {
-    // Additional chunks: allocate new buffer large enough to hold old + new
-    // data
-    size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
-    temp_buffer = malloc(new_size);
-    if (temp_buffer == nullptr) {
-      return LogAndReturnCode(
-          stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
-    }
-
-    // Copy existing data
-    memcpy(temp_buffer, apd_rec.data_ptr, apd_rec.octet_length);
-
-    // Append new data
-    memcpy(static_cast<char*>(temp_buffer) + apd_rec.octet_length, data,
-           str_len_or_ind_ptr);
-  }
-
-  // Update descriptor only after successful allocation
-  apd_rec.data_ptr = temp_buffer;
-  apd_rec.octet_length += str_len_or_ind_ptr;
-  apd_rec.octet_length_ptr = &apd_rec.octet_length;
-  *(apd_rec.indicator_ptr) = SQL_NTS;
-
-  // Update descriptor record
-  apd.BindNewDescriptorRecord(param_index, apd_rec);
-  return SQL_SUCCESS;
+// Update descriptor record
+apd.BindNewDescriptorRecord(param_index, apd_rec);
+return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver

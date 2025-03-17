@@ -776,4 +776,111 @@ TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
+TEST(SQLPutDataInternal, InvalidStatementState) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
+
+  const char* test_data = "test_data";
+  SQLLEN data_length = strlen(test_data);
+  
+  SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
+  EXPECT_EQ(SQLStates::k_HY010(), stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Function sequence error: Incorrect statement state.", stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLPutDataInternal, NoParameterExpectingData) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
+
+  const char* test_data = "test_data";
+  SQLLEN data_length = strlen(test_data);
+
+  // Simulate a case where no parameter is expecting data
+  stmt_handle.SetCurrentParamIndex(0);
+
+  SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
+  EXPECT_EQ(SQLStates::k_HY000(), stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("No parameter currently expecting data.", stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
+
+  const char* test_data = "test_data";
+  SQLLEN data_length = strlen(test_data);
+  google::cloud::bigquery_v2_minimal_internal::QueryParameter
+      query_parameters;
+  query_parameters.parameter_value.value = "";
+  // Simulate no descriptor record for the
+  // current parameter
+  stmt_handle.SetCurrentParamIndex(1);
+  stmt_handle.SetQueryParameters({query_parameters});
+
+  SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
+  EXPECT_EQ(SQLStates::k_07002(), stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Descriptor record does not exist for parameter.", stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLPutDataInternal, ParameterNotDeferred) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
+
+  const char* test_data = "test_data";
+  SQLLEN data_length = strlen(test_data);
+  google::cloud::bigquery_v2_minimal_internal::QueryParameter
+      query_parameters;
+  query_parameters.parameter_value.value = "";
+  // Simulate no descriptor record for the
+  // current parameter
+  stmt_handle.SetCurrentParamIndex(1);
+  stmt_handle.SetQueryParameters({query_parameters});
+  // Simulate a case where the parameter is not deferred
+  DescriptorRecord param_record;
+  param_record.indicator_ptr = nullptr;  // Not deferred
+  stmt_handle.GetDescriptorHandle(DescriptorType::kAPD).BindNewDescriptorRecord(1, param_record);
+  
+  SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
+  EXPECT_EQ(SQLStates::k_HY010(), stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid function sequence: Parameter not deferred.", stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLPutDataInternal, InvalidNullData) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
+
+  // Simulate the condition for invalid null data
+  const char* test_data = "test_data";
+  SQLLEN data_length = -2;
+  google::cloud::bigquery_v2_minimal_internal::QueryParameter
+      query_parameters;
+  query_parameters.parameter_value.value = "";
+  // Simulate no descriptor record for the
+  // current parameter
+  stmt_handle.SetCurrentParamIndex(1);
+  stmt_handle.SetQueryParameters({query_parameters});
+  DescriptorRecord param_record;
+  SQLLEN binary_len = SQL_DATA_AT_EXEC;
+  param_record.indicator_ptr = &binary_len;
+  stmt_handle.GetDescriptorHandle(DescriptorType::kAPD).BindNewDescriptorRecord(1, param_record);
+  SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
+  EXPECT_EQ(SQLStates::k_HY090(), stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Invalid string or buffer length.", stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
 }  // namespace google::cloud::odbc_bq_driver
