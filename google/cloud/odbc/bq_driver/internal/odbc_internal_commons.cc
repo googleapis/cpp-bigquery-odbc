@@ -406,7 +406,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
         rs_row.emplace_back(kNullValue);
       } else if (data.empty()) {
         // TODO(b/399582413): Handle empty string case when inserting data in
-        // ResultSet. Added a temporary solution, needs to be handled properly.
+        // ResultSet.
+        //  Added a temporary solution, needs to be handled properly.
         switch (col_type) {
           case BQDataType::kString:
           case BQDataType::kJson:
