@@ -119,27 +119,28 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
 
-      HWND h_allow_large_results_checkbox =
-      CreateCheckBox(adv_hwnd, "Allow large result sets", kXAxis+5, kYAxis+50,
-                     kWidth * 6, kHeight, kIdcAllowLargeResultsCheckbox);
+  HWND h_allow_large_results_checkbox = CreateCheckBox(
+      adv_hwnd, "Allow large result sets", kXAxis + 5, kYAxis + 50, kWidth * 6,
+      kHeight, kIdcAllowLargeResultsCheckbox);
   SendMessage(h_allow_large_results_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_allow_large_results_checkbox, FALSE);
   CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox,
                  (allow_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_use_default_checkbox = CreateCheckBox(
-      adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset", kXAxis+5,
-      kYAxis+75, kWidth * 6 +15, kHeight, kIdcUseDefaultCheckbox);
-      SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+      adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset",
+      kXAxis + 5, kYAxis + 75, kWidth * 6 + 15, kHeight,
+      kIdcUseDefaultCheckbox);
+  SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   CheckDlgButton(
       adv_hwnd, kIdcUseDefaultCheckbox,
       (use_default_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_dataset_name_label =
-      CreateLabel(adv_hwnd, "Dataset name for large result sets:", kXAxis+5,
-        kYAxis+100, kWidth * 4, kHeight, WS_VISIBLE | SS_LEFT);
-     SendMessage(h_dataset_name_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+      CreateLabel(adv_hwnd, "Dataset name for large result sets:", kXAxis + 5,
+                  kYAxis + 100, kWidth * 4, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_dataset_name_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_dataset_name_edit =
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 100, kEditBoxWidth,
@@ -147,22 +148,23 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SendMessage(h_dataset_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_temp_expiration_label = CreateLabel(
-      adv_hwnd, "Default temp table expiration time (ms):",kXAxis+5,
-      kYAxis+125, kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_temp_expiration_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+      adv_hwnd, "Default temp table expiration time (ms):", kXAxis + 5,
+      kYAxis + 125, kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_temp_expiration_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_temp_expiration_edit =
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 125, kEditBoxWidth,
                     kEditBoxHeight, kIdcTempExpirationEdit);
   SendMessage(h_temp_expiration_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   HWND h_allow_high_throughput_checkbox = CreateCheckBox(
-      adv_hwnd, "Allow BigQuery Storage API for large results queries:", kXAxis+5,
-      kYAxis+150, kWidth * 7 + 20, kHeight, kIdcAllowHighThroughputCheckbox);
-      SendMessage(h_allow_high_throughput_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+      adv_hwnd,
+      "Allow BigQuery Storage API for large results queries:", kXAxis + 5,
+      kYAxis + 150, kWidth * 7 + 20, kHeight, kIdcAllowHighThroughputCheckbox);
+  SendMessage(h_allow_high_throughput_checkbox, WM_SETFONT, (WPARAM)h_font,
+              TRUE);
   CheckDlgButton(
       adv_hwnd, kIdcAllowHighThroughputCheckbox,
       (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
@@ -179,10 +181,10 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Google-managed encryption key");
 
-  HWND h_activation_threshold_label =
-      CreateLabel(adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis+5,
-                  kYAxis+175, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_activation_threshold_label = CreateLabel(
+      adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
+      kYAxis + 175, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_activation_threshold_edit =
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
@@ -193,8 +195,8 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
   HWND h_encryption_key_header =
       CreateLabel(adv_hwnd, "Customer-managed encryption key:", kXAxis,
-                  kYAxis+235, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_encryption_key_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+                  kYAxis + 235, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_encryption_key_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_encryption_key_edit =
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 235, kEditBoxWidth,
@@ -273,8 +275,8 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis+405, kWidth+380,
-        kHeight+32, kIdcAdditionalProjectsEdit);
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 405, kWidth + 380,
+                              kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SetWindowText(h_additional_projects_edit, additional_projects_.c_str());
@@ -285,14 +287,15 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis+485, kWidth+380 ,
-                              kHeight+13, kIdcQueryPropertiesEdit);
-      SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-                                
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 380,
+                              kHeight + 13, kIdcQueryPropertiesEdit);
+  SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   SetWindowText(h_query_properties_edit, query_properties_.c_str());
 
-    // Documentation Hyperlink
-  HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis, kButtonY+10, kWidth+110, kHeight, 0);
+  // Documentation Hyperlink
+  HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
+                                kButtonY + 10, kWidth + 110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
     
   HWND h_hyperlink = CreateHyperlinkLabel(
@@ -616,11 +619,11 @@ void AdvanceOptions::Show(HWND hwnd) {
       window_width, window_height, hwnd, NULL, GetModuleHandle(NULL), this);
 
   if (adv_hwnd) {
-    HFONT h_font = CreateFont(
-      -10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-      OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-      DEFAULT_PITCH | FF_SWISS, "Inter");
-      
+    HFONT h_font =
+        CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                   DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                   CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Inter");
+
     CreateLanguageControls(h_font);
     CreateLargeResultsControls(h_font);
     CreateHighThroughputControls(h_font);
