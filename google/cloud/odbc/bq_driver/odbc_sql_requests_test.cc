@@ -872,8 +872,8 @@ TEST(SQLPutDataInternal, InvalidNullData) {
   stmt_handle.SetCurrentParamIndex(1);
   stmt_handle.SetQueryParameters({query_parameters});
   DescriptorRecord param_record;
-  SQLLEN binary_len = SQL_DATA_AT_EXEC;
-  param_record.indicator_ptr = &binary_len;
+  SQLLEN indicator_len = SQL_DATA_AT_EXEC;
+  param_record.indicator_ptr = &indicator_len;
   stmt_handle.GetDescriptorHandle(DescriptorType::kAPD).BindNewDescriptorRecord(1, param_record);
   SQLRETURN status = SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
 
