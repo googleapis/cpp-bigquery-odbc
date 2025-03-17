@@ -1040,13 +1040,15 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string key_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-
+std::cout<<"=========key_path:"<<key_path<<std::endl;
   std::string driver_name = GetDriverName();
+  std::cout<<"===============driver_name=====:"<<driver_name<<std::endl;
   std::string conn_str =
       "DRIVER={" + driver_name +
       "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
       ";OAuthMechanism=0;";
 
+      std::cout<<"===============conn_str=====:"<<conn_str<<std::endl;
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
   SQLCHAR out_conn_str[kBufferLength] = {0};
