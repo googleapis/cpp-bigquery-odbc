@@ -20,11 +20,10 @@
 #include "google/cloud/internal/getenv.h"
 #include <sstream>
 #ifdef _WIN32
-#include <windows.h> 
 #include <uxtheme.h>  // Required for SetWindowTheme
+#include <windows.h>
 #endif
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
-
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
@@ -173,49 +172,49 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 
 // Helper function to create a static label
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
-  int height, int id) {
-return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT|SS_NOTIFY, x,
-         y, width, height, parent, (HMENU)id,
-         GetModuleHandle(NULL), NULL);
+                 int height, int id) {
+  return CreateWindowEx(
+      0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
+      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 // Helper function to create an edit box
 HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
-      0, "EDIT", "", WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, x, y, width,
-      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      0, "EDIT", "",
+      WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id) {
-  return CreateWindowEx(
-      0, "EDIT", "",
-      WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
-          ES_AUTOVSCROLL | ES_WANTRETURN ,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(0, "EDIT", "",
+                        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT |
+                            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
+                        x, y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
 }
- 
 
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
-  return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(0, "COMBOBOX", NULL,
+                        WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST,
+                        x, y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
 }
 
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
-  int height, int id) {
-HWND hButton = CreateWindowEx(
-0, "BUTTON", text, 
-WS_TABSTOP | WS_VISIBLE | WS_CHILD  | BS_FLAT,  
-x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+                  int height, int id) {
+  HWND hButton = CreateWindowEx(
+      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_FLAT, x, y,
+      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 
-// Disable Windows theme to remove any rounding
-if (hButton) {
-SetWindowTheme(hButton, L"", L"");
-}
+  // Disable Windows theme to remove any rounding
+  if (hButton) {
+    SetWindowTheme(hButton, L"", L"");
+  }
 
-return hButton;
+  return hButton;
 }
 
 // Helper function to create a checkbox

@@ -27,10 +27,10 @@ static int const kIdcProxyCheckbox = 128;
 static int const kIdcProxyPortEdit = 129;
 static int const kIdcProxyUsernameEdit = 130;
 static int const kIdcProxyPasswordEdit = 131;
-static int const kIdcProxyGroupBox = 132;  
-static int const kIdcProxyPortErrorLabel = 133;  // Unique ID for the error label
-static int const hFontHyperlink = 134;  
-
+static int const kIdcProxyGroupBox = 132;
+static int const kIdcProxyPortErrorLabel =
+    133;  // Unique ID for the error label
+static int const hFontHyperlink = 134;
 
 class ProxyOptions {
  public:
@@ -49,8 +49,8 @@ class ProxyOptions {
 
  private:
   // HWND proxy_hwnd;
-  HWND proxy_hwnd = nullptr;  // **Fixed: Initialized to nullptr**
-  HWND parent_hwnd = nullptr; // **Fixed: Ensures parent handle is set**
+  HWND proxy_hwnd = nullptr;   // **Fixed: Initialized to nullptr**
+  HWND parent_hwnd = nullptr;  // **Fixed: Ensures parent handle is set**
 
   // // Static function to handle subclassing of EditBox controls
   // static LRESULT CALLBACK EditBoxProc(HWND hwnd, UINT msg, WPARAM w_param,
@@ -61,7 +61,6 @@ class ProxyOptions {
   static std::string proxy_username_;
   static std::string proxy_port_;
   static std::string proxy_pwd_enc_;
-
 
   static LRESULT CALLBACK ProxyOptProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM ld_param);
