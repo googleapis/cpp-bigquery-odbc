@@ -285,13 +285,7 @@ void DriverForm::SetValues(Section const& attributes_map) {
   description_ = GetValueOrDefault(attributes_map, kDescription);
   min_tls_version_ = GetValueOrDefault(attributes_map, kMinTlsVersion);
   trusted_cert_ = GetValueOrDefault(attributes_map, kTrustedCerts);
-  // Construct a message string to display
-std::string message = "Catalog Retrieved: " + catalog_ + "\nDataset Retrieved: " + dataset_;
-
-// Convert to LPCSTR for MessageBox
-MessageBox(NULL, message.c_str(), "Debug Info", MB_OK | MB_ICONINFORMATION);
-
-
+  
   std::string oauth_value = GetValueOrDefault(attributes_map, kOAuthMechanism);
   if (oauth_value == std::to_string(static_cast<int>(
                          OauthMechanism::kServiceAndUserAccount))) {

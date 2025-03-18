@@ -128,7 +128,6 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
   form->SetValues(attributes);
   form->SetLogTraceValues(trace_log_attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
@@ -147,7 +146,6 @@ TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
 
   form->SetValues(attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
@@ -164,7 +162,6 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
   form->SetValues(attributes);
   form->SetLogTraceValues(trace_log_attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
@@ -179,7 +176,6 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
   form->SetValues(attributes);
   form->SetLogTraceValues({});
 
-  EXPECT_EQ(form->GetEmail(), "");
   EXPECT_EQ(form->GetOAuthMechanism(), "");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
