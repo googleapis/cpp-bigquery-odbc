@@ -361,7 +361,7 @@ SQLRETURN SQLBindParameterInternal(
     auto param_value = reinterpret_cast<size_t>(parameter_value_ptr);
     auto data_at_exec = static_cast<SQLINTEGER>(param_value);
     if (data_at_exec == SQL_DATA_AT_EXEC) {
-      handle->SetStmtState(StmtStates::kNeedsData);
+      handle->SetStmtState(StmtStates::kNeedsParams);
     }
   }
 
@@ -735,7 +735,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (!execute_status.ok()) {
-    stmt_handle.SetStmtState(StmtStates::kNeedsData);
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
     return SQL_NEED_DATA;
   }
   return LogAndReturnCode(stmt_handle, execute_status);
@@ -944,8 +944,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
-  // Ensure statement is in kNeedsData state
-  if (stmt_handle.GetStmtState() != StmtStates::kNeedsData) {
+  // Ensure statement is in kNeedsPutData state
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_HY010(),
                       "Function sequence error: Incorrect statement state."});
@@ -1048,7 +1048,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
 
-  if (handle->GetStmtState() != StmtStates::kNeedsData) {
+  if (handle->GetStmtState() != StmtStates::kNeedsParams) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1091,7 +1091,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
         *param_or_target_value = param.data_ptr;
       }
       handle->SetCurrentParamIndex(param_num);
-      handle->SetStmtState(StmtStates::kNeedsData);
+      handle->SetStmtState(StmtStates::kNeedsPutData);
       return SQL_NEED_DATA;
     }
   }

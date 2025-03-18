@@ -215,7 +215,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
     case StmtStates::kStatementStillExecuting:
       status_record = {SQLStates::k_HY010(), "Statement is still executing"};
       break;
-    case StmtStates::kNeedsData:
+    case StmtStates::kNeedsPutData:
       status_record = {SQLStates::k_HY010(),
                        "Statement needs Data to be executed"};
       break;
@@ -459,7 +459,7 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
     case StmtStates::kStatementStillExecuting:
       status_record = {SQLStates::k_HY010(), "Function sequence error"};
       break;
-    case StmtStates::kNeedsData:
+    case StmtStates::kNeedsPutData:
       status_record = {SQLStates::k_HY010(),
                        "Statement needs Data to be executed"};
       break;

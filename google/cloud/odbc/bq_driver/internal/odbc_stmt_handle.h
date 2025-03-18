@@ -38,7 +38,8 @@ enum class StmtStates {
   kStatementStillExecuting,
   kStatementExecutedWithoutRs,
   kStatementExecutedWithRs,
-  kNeedsData,
+  kNeedsParams,
+  kNeedsPutData,
 };
 
 class ConnectionHandle;
