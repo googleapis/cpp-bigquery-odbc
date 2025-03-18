@@ -591,9 +591,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kStruct ||
          bq_data_type == BQDataType::kArray)) {
       result_set.translated_data_ =
-          reinterpret_cast<SQLPOINTER>(new char[ds_val.size() + 1]);
+          std::shared_ptr<char[]>(new char[ds_val.size() + 1]);
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
-                                    result_set.translated_data_,
+                                    result_set.translated_data_.get(),
                                     ds_val.size() + 1, target_value_string_len);
       std::memset(target_value, '\0', target_value_buffer_len);
     } else {
@@ -607,8 +607,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
   if (ds_val.size() - offset >= target_value_buffer_len) {
-    std::memcpy(target_value,
-                reinterpret_cast<char*>(result_set.translated_data_) + offset,
+    std::memcpy(target_value, result_set.translated_data_.get() + offset,
                 target_value_buffer_len - 1);
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
@@ -619,10 +618,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (offset != 0) {
-    std::memcpy(target_value,
-                reinterpret_cast<char*>(result_set.translated_data_) + offset,
+    std::memcpy(target_value, result_set.translated_data_.get() + offset,
                 ds_val.size() - offset + 1);
-    delete[] reinterpret_cast<char*>(result_set.translated_data_);
     return LogAndReturnCode(stmt_handle, status_record);
   }
 }

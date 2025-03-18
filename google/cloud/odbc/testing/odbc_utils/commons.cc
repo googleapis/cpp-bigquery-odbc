@@ -673,11 +673,9 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
     insert_stmt.append(row_str);
   }
 
-  SQLRETURN status;
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
 }
 
 void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
