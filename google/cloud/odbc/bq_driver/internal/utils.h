@@ -154,10 +154,12 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id);
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
-                              int height, int id);
-HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y, int width, int height, int id);
+                    int height, int id);
+HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
+                          int width, int height, int id);
 
-HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y, int width, int height, int id);
+HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
+                          int width, int height, int id);
 
 inline std::string GetValueOrDefault(Section const& attribute_map,
                                      std::string const& key) {

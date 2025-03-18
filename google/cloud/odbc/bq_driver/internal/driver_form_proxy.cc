@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
-#include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -121,15 +120,16 @@ void ProxyOptions::InitControls() {
   SendMessage(h_proxy_password_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_proxy_password_edit, FALSE);
 
- // Documentation Hyperlink
- HWND h_doc_text = CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight-8, kButtonY, kLabelWidth-20 , kLabelHeight, 0);
- SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
- 
- HWND h_hyperlink = CreateHyperlinkLabel(
-  proxy_hwnd, "BigQuery documentation",
-  kLabelWidth - 36, kButtonY, kLabelWidth - 30, kLabelHeight,
-  kIdcHyperlink);
- SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // Documentation Hyperlink
+  HWND h_doc_text =
+      CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight - 8,
+                  kButtonY, kLabelWidth - 20, kLabelHeight, 0);
+  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_hyperlink = CreateHyperlinkLabel(
+      proxy_hwnd, "BigQuery documentation", kLabelWidth - 36, kButtonY,
+      kLabelWidth - 30, kLabelHeight, kIdcHyperlink);
+  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_ok_button = CreateButton(proxy_hwnd, "OK", kOkButtonX, kButtonY,
                                   kBtnWidth, kBtnHeight, kIdcProxyOKButton);

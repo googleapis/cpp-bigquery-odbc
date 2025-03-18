@@ -112,12 +112,10 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
-  HWND h_large_results_header = CreateGroupBox(
-    adv_hwnd, "Large results options",
-    kXAxis, kYAxis + 25, kWidth + 385, kHeight + 153,
-    KIdcLargeResultHeader);
+  HWND h_large_results_header =
+      CreateGroupBox(adv_hwnd, "Large results options", kXAxis, kYAxis + 25,
+                     kWidth + 385, kHeight + 153, KIdcLargeResultHeader);
   SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
-
 
   HWND h_allow_large_results_checkbox = CreateCheckBox(
       adv_hwnd, "Allow large result sets", kXAxis + 5, kYAxis + 50, kWidth * 6,
@@ -297,12 +295,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
                                 kButtonY + 10, kWidth + 110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-    
-  HWND h_hyperlink = CreateHyperlinkLabel(
-    adv_hwnd, "BigQuery documentation",
-    144, kButtonY + 10, kWidth + 100, kHeight,
-    kIdcHyperlink);
-    SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_hyperlink =
+      CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
+                           kButtonY + 10, kWidth + 100, kHeight, kIdcHyperlink);
+  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
