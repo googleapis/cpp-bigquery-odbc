@@ -939,6 +939,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+
 // This func converts a vector of SQLCHAR bytes (hex-encoded) to binary data,
 // handling truncation if needed.
 StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
