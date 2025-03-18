@@ -2494,140 +2494,6 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 
-TEST_P(MultiStatementTest, BasicScript) {
-  bool use_prepare = GetParam();
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name;
-  if (use_prepare) {
-    table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_TEST_TABLE";
-  } else {
-    table_name =
-        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECDIRECT_TEST_TABLE";
-  }
-
-  std::string create_stmt =
-      "CREATE OR REPLACE TABLE " + table_name +
-      " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
-  std::string insert_stmt = GetInsertionString(table_name, kSampleData);
-  std::string select_stmt_1 = "SELECT * FROM " + table_name;
-  std::string select_stmt_2 = "SELECT StringField FROM " + table_name +
-                              " WHERE StringField = \"Test String 5\"";
-
-  std::string query =
-      create_stmt + insert_stmt + ";" + select_stmt_1 + ";" + select_stmt_2;
-
-  SQLRETURN status;
-  if (use_prepare) {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-    CheckError(status, "SQLPrepare", conn);
-    status = SQLExecute(conn->hstmt);
-    CheckError(status, "SQLExecute", conn);
-  } else {
-    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-    CheckError(status, "SQLExecDirect", conn);
-  }
-
-  SQLSMALLINT num_cols;
-
-  // Validations for create_stmt
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 0);
-  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
-
-  SQLLEN row_count;
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount after CREATE", conn);
-  EXPECT_EQ(row_count, -1);
-
-  // Validations for insert_stmt
-  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 0);
-  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
-
-  // Check rows affected by the insert_stmt
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount after INSERT", conn);
-  EXPECT_EQ(row_count, kSampleData.size());
-
-  // Validations for select_stmt_1
-  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 3);
-  int num_rows_returned = 0;
-  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
-    num_rows_returned++;
-  }
-  EXPECT_EQ(num_rows_returned, kSampleData.size());
-
-  // Attribute validation for select_stmt_1
-  for (SQLSMALLINT i = 1; i <= num_cols; i++) {
-    SQLCHAR column_name[256];
-    SQLSMALLINT name_length;
-    SQLULEN column_size;
-    SQLLEN nullable;
-
-    // Validate column attributes
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
-                    sizeof(column_name), &name_length, NULL);
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                    &nullable);
-
-    EXPECT_GT(name_length, 0);  // Column name length should be > 0
-    EXPECT_GT(column_size, 0);  // Column size should be > 0
-  }
-
-  // Check rows returned by select_stmt_1
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount after SELECT 1", conn);
-  EXPECT_EQ(row_count, -1);
-
-  // Validations for select_stmt_2
-  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(num_cols, 1);
-  num_rows_returned = 0;
-  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
-    num_rows_returned++;
-  }
-  EXPECT_EQ(num_rows_returned, 1);
-
-  // Attribute validation for select_stmt_2
-  for (SQLSMALLINT i = 1; i <= num_cols; i++) {
-    SQLCHAR column_name[256];
-    SQLSMALLINT name_length;
-    SQLULEN column_size;
-    SQLLEN nullable;
-
-    // Validate column attributes
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
-                    sizeof(column_name), &name_length, NULL);
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                    &nullable);
-
-    EXPECT_GT(name_length, 0);  // Column name length should be > 0
-    EXPECT_GT(column_size, 0);  // Column size should be > 0
-  }
-
-  // Check rows returned by select_stmt_2
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount after SELECT 2", conn);
-  EXPECT_EQ(row_count, -1);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLMoreResults, FetchEmptyResultSet) {
   auto conn = std::make_shared<ODBCHandles>();
   auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
@@ -3270,6 +3136,101 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(MultiStatementTest, BasicScript) {
+  bool use_prepare = true;
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name;
+  if (use_prepare) {
+    table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECUTE_TEST_TABLE";
+  } else {
+    table_name =
+        kDatasetWithTablePrefix + "ODBC_SCRIPTS_SQLEXECDIRECT_TEST_TABLE";
+  }
+
+  std::string create_stmt =
+      "CREATE OR REPLACE TABLE " + table_name +
+      " (StringField STRING, IntegerField INTEGER, FloatField FLOAT64);";
+  std::string insert_stmt = GetInsertionString(table_name, kSampleData);
+  std::string select_stmt_1 = "SELECT * FROM " + table_name;
+  std::string select_stmt_2 = "SELECT StringField FROM " + table_name +
+                              " WHERE StringField = \"Test String 5\"";
+
+  std::string query =
+      create_stmt + insert_stmt + ";" + select_stmt_1 + ";" + select_stmt_2;
+
+  SQLRETURN status;
+  if (use_prepare) {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+    status = SQLExecute(conn->hstmt);
+    CheckError(status, "SQLExecute", conn);
+  } else {
+    status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQLSMALLINT num_cols;
+
+  // Validations for create_stmt
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 0);
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount after CREATE", conn);
+  EXPECT_EQ(row_count, -1);
+
+  // Validations for insert_stmt
+  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 0);
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
+
+  // Check rows affected by the insert_stmt
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount after INSERT", conn);
+  EXPECT_EQ(row_count, kSampleData.size());
+
+  // Validations for select_stmt_1
+  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 3);
+  int num_rows_returned = 0;
+  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+    num_rows_returned++;
+  }
+  EXPECT_EQ(num_rows_returned, kSampleData.size());
+
+  // Check rows returned by select_stmt_1
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount after SELECT 1", conn);
+  EXPECT_EQ(row_count, -1);
+
+  // Validations for select_stmt_2
+  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 1);
+  num_rows_returned = 0;
+  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+    num_rows_returned++;
+  }
+  EXPECT_EQ(num_rows_returned, 1);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(MultiStatementTest, ProcedureWithInOutParams) {
   bool use_prepare = true;
