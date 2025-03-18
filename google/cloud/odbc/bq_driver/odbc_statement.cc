@@ -460,8 +460,7 @@ SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle) {
       stmt_handle.GetStmtState() == StmtStates::kStatementAsyncPrepare ||
       stmt_handle.GetStmtState() == StmtStates::kStatementAsyncExecute ||
       stmt_handle.GetStmtState() == StmtStates::kStatementStillExecuting ||
-      stmt_handle.GetStmtState() == StmtStates::kNeedsParams ||
-      stmt_handle.GetStmtState() == StmtStates::kNeedsPutData) {
+      stmt_handle.GetStmtState() == StmtStates::kNeedsData) {
     stmt_handle.EnableCancellation();
   }
 

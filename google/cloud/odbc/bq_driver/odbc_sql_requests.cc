@@ -361,7 +361,7 @@ SQLRETURN SQLBindParameterInternal(
     auto param_value = reinterpret_cast<size_t>(parameter_value_ptr);
     auto data_at_exec = static_cast<SQLINTEGER>(param_value);
     if (data_at_exec == SQL_DATA_AT_EXEC) {
-      handle->SetStmtState(StmtStates::kNeedsParams);
+      handle->SetStmtState(StmtStates::kNeedsData);
     }
   }
 
@@ -735,7 +735,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (!execute_status.ok()) {
-    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    stmt_handle.SetStmtState(StmtStates::kNeedsData);
     return SQL_NEED_DATA;
   }
   return LogAndReturnCode(stmt_handle, execute_status);
@@ -944,8 +944,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
-  // Ensure statement is in kNeedsPutData state
-  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+  // Ensure statement is in kNeedsData state
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsData) {
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_HY010(),
                       "Function sequence error: Incorrect statement state."});
@@ -953,7 +953,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Get the current parameter index (set by SQLParamData)
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
-  if (param_index < 1 || param_index > stmt_handle.GetParamCount()) {
+  if (param_index == 0 || param_index > stmt_handle.GetParamCount()) {
     return LogAndReturnCode(
         stmt_handle,
         {SQLStates::k_HY000(), "No parameter currently expecting data."});
@@ -977,8 +977,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Handle NULL data
   static char empty_buffer = '\0';
-  if (data == nullptr &&
-      (str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA)) {
+  if ((str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA)) {
     apd_rec.data_ptr = &empty_buffer;
     apd_rec.octet_length = 0;
     *(apd_rec.indicator_ptr) = SQL_NTS;
@@ -986,39 +985,51 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Allocate a temporary buffer
-  SQLPOINTER temp_buffer = nullptr;
+  SQLPOINTER buffer = nullptr;
+
   if (apd_rec.data_ptr == nullptr) {
+    if (str_len_or_ind_ptr <= 0) {
+      return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
+                                            "Invalid buffer allocation size."});
+    }
+
     // First chunk of data, allocate fresh buffer
-    temp_buffer = malloc(str_len_or_ind_ptr);
-    if (temp_buffer == nullptr) {
+    buffer = malloc(str_len_or_ind_ptr);
+    if (buffer == nullptr) {
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
     }
 
-    memcpy(temp_buffer, data, str_len_or_ind_ptr);
+    memcpy(buffer, data, str_len_or_ind_ptr);
   } else {
     // Additional chunks: allocate new buffer large enough to hold old + new
     // data
     size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
-    temp_buffer = malloc(new_size);
-    if (temp_buffer == nullptr) {
+
+    void* new_buffer = realloc(apd_rec.data_ptr, new_size);
+    if (new_buffer == nullptr) {
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
     }
-
-    // Copy existing data
-    memcpy(temp_buffer, apd_rec.data_ptr, apd_rec.octet_length);
+    buffer = new_buffer;
 
     // Append new data
-    memcpy(static_cast<char*>(temp_buffer) + apd_rec.octet_length, data,
+    memcpy(static_cast<char*>(buffer) + apd_rec.octet_length, data,
            str_len_or_ind_ptr);
   }
 
   // Update descriptor only after successful allocation
-  apd_rec.data_ptr = temp_buffer;
+  apd_rec.data_ptr = buffer;
   apd_rec.octet_length += str_len_or_ind_ptr;
-  apd_rec.octet_length_ptr = &apd_rec.octet_length;
-  *(apd_rec.indicator_ptr) = SQL_NTS;
+
+  // 🔹 **Fix Updating octet_length_ptr**
+  if (apd_rec.octet_length_ptr) {
+    *(apd_rec.octet_length_ptr) = apd_rec.octet_length;
+  }
+
+  if (apd_rec.indicator_ptr) {
+    *(apd_rec.indicator_ptr) = SQL_NTS;
+  }
 
   // Update descriptor record
   apd.BindNewDescriptorRecord(param_index, apd_rec);
@@ -1037,7 +1048,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
 
-  if (handle->GetStmtState() != StmtStates::kNeedsParams) {
+  if (handle->GetStmtState() != StmtStates::kNeedsData) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1062,10 +1073,6 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   for (; param_num <= handle->GetParamCount(); param_num++) {
-    if (param_num > handle->GetParamCount()) {
-      break;
-    }
-
     auto param = apd.GetDescriptorRecord(param_num);
     if (!param.indicator_ptr) {
       handle->SetCurrentParamIndex(param_num + 1);
@@ -1084,7 +1091,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
         *param_or_target_value = param.data_ptr;
       }
       handle->SetCurrentParamIndex(param_num);
-      handle->SetStmtState(StmtStates::kNeedsPutData);
+      handle->SetStmtState(StmtStates::kNeedsData);
       return SQL_NEED_DATA;
     }
   }
