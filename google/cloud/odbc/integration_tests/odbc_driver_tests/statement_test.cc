@@ -159,19 +159,19 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
                      std::string const& table_name) {
   // Prepare data
   SQLCHAR bool_data = SQL_TRUE;
-  SQLLEN bool_len = SQL_LEN_DATA_AT_EXEC(sizeof(bool_data));
+  SQLLEN bool_len = SQL_DATA_AT_EXEC;
 
   SQLLEN int_data = 42;
-  SQLLEN int_len = SQL_LEN_DATA_AT_EXEC(sizeof(int_data));
+  SQLLEN int_len = SQL_DATA_AT_EXEC;
 
   double float_data = 3.14;
-  SQLLEN float_len = SQL_LEN_DATA_AT_EXEC(sizeof(float_data));
+  SQLLEN float_len = SQL_DATA_AT_EXEC;
 
   std::string text_data = "";
-  SQLLEN string_len = SQL_LEN_DATA_AT_EXEC(sizeof(text_data));
+  SQLLEN string_len = SQL_DATA_AT_EXEC;
 
   std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
-  SQLLEN binary_len = SQL_LEN_DATA_AT_EXEC(binary_data.size());
+  SQLLEN binary_len = SQL_DATA_AT_EXEC;
 
   DataField fields[] = {
       {&bool_data, sizeof(bool_data), SQL_C_BIT, SQL_BIT, &bool_len},
@@ -3121,21 +3121,15 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  std::string data = "SomeData";
-  SQLULEN param_bytes = kBufferLength;
-  // Indicate that data will be provided with SQLPutData
-  SQLLEN indicator = SQL_LEN_DATA_AT_EXEC(param_bytes);
+  // TODO(b/404480454): Issue with SQLBindParameter When Using 
+  // the Same Indicator Pointer for Multiple Parameters
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
   int num_params = schema.size();
-
-  // Use std::vector for dynamic allocation
-  std::vector<SQLLEN> indicator_ptrs(num_params);
-
   // Bind parameters
   for (int i = 0; i < schema.size(); i++) {
-    indicator_ptrs[i] = indicator;
     EXPECT_EQ(
         SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                         SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator_ptrs[i]),
+                         SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
         SQL_SUCCESS);
   }
 
@@ -3144,7 +3138,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   // Scenario 1: Call SQLPutData with mismatched data type
   int integerData = 10;
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)integerData, sizeof(integerData)),
             SQL_SUCCESS);
 
   // Scenario 2: Large data
@@ -3167,6 +3161,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, 0), SQL_SUCCESS);
 
   // Scenario 5: Call SQLPutData with a negative size
+  std::string data = "SomeData";
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
 
