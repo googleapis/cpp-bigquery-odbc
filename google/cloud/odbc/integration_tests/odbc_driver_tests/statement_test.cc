@@ -903,6 +903,7 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
       SQLGetData(conn->hstmt, 5, SQL_C_CHAR, struct_data, 20, &struct_len),
       SQL_SUCCESS_WITH_INFO);
 
+// TODO(b/404489913): Handle BQ API response data format for Struct data type
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_STREQ((char*)struct_data, "{\"f\":[{\"v\":\"1\"},{\"v");
 #else
