@@ -433,6 +433,7 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                  "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
                  conn);
       if (SQL_SUCCEEDED(status)) {
+        
         status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
                                  &resp_status, SQL_INTEGER, &resp_status_len);
         if (status == SQL_NO_DATA) {
