@@ -361,7 +361,7 @@ SQLRETURN SQLBindParameterInternal(
     auto param_value = reinterpret_cast<size_t>(parameter_value_ptr);
     auto data_at_exec = static_cast<SQLINTEGER>(param_value);
     if (data_at_exec == SQL_DATA_AT_EXEC) {
-      handle->SetStmtState(StmtStates::kNeedsData);
+      handle->SetStmtState(StmtStates::kNeedsParams);
     }
   }
 
@@ -735,7 +735,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (!execute_status.ok()) {
-    stmt_handle.SetStmtState(StmtStates::kNeedsData);
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
     return SQL_NEED_DATA;
   }
   return LogAndReturnCode(stmt_handle, execute_status);

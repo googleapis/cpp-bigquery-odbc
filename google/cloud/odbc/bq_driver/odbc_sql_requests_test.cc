@@ -77,7 +77,7 @@ TEST(SQLBindParameterInternal, Fail_ParameterNumberIsZero) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
-  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsData);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
@@ -99,7 +99,7 @@ TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
-  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsData);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
@@ -117,7 +117,7 @@ TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
                            param_type, col_size, decimal_digits,
                            (SQLPOINTER)SQL_DATA_AT_EXEC, buff_len, &str_len);
 
-  EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsData);
+  EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal,
@@ -143,7 +143,7 @@ TEST(SQLBindParameterInternal,
   EXPECT_EQ(0, stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
                    .GetHeaderRecord()
                    .count);
-  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsData);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal,
@@ -169,7 +169,7 @@ TEST(SQLBindParameterInternal,
   EXPECT_EQ(0, stmt_handle.GetDescriptorHandle(DescriptorType::kIPD)
                    .GetHeaderRecord()
                    .count);
-  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsData);
+  EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 void AssertDescribeParamResults(SQLRETURN status,
@@ -797,7 +797,7 @@ TEST(SQLPutDataInternal, InvalidStatementState) {
 
 TEST(SQLPutDataInternal, NoParameterExpectingData) {
   StatementHandle stmt_handle = CreateStatementHandle();
-  stmt_handle.SetStmtState(StmtStates::kNeedsData);
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
 
   char const* test_data = "test_data";
   SQLLEN data_length = strlen(test_data);
@@ -818,7 +818,7 @@ TEST(SQLPutDataInternal, NoParameterExpectingData) {
 
 TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
   StatementHandle stmt_handle = CreateStatementHandle();
-  stmt_handle.SetStmtState(StmtStates::kNeedsData);
+  stmt_handle.SetStmtState(StmtStates::kNeedsPutData);
 
   char const* test_data = "test_data";
   SQLLEN data_length = strlen(test_data);
@@ -842,7 +842,7 @@ TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
 
 TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
   StatementHandle stmt_handle =
-      CreateStmtHandleWithState(StmtStates::kNeedsData);
+      CreateStmtHandleWithState(StmtStates::kNeedsPutData);
   SQLPOINTER param_or_target_value = nullptr;
   SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
 
@@ -855,7 +855,7 @@ TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
 
 TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
   StatementHandle stmt_handle =
-      CreateStmtHandleWithState(StmtStates::kNeedsData);
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
   SQLPOINTER param_or_target_value = nullptr;
 
   SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
@@ -868,7 +868,7 @@ TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
 
 TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
   StatementHandle stmt_handle =
-      CreateStmtHandleWithState(StmtStates::kNeedsData);
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
 
   DescriptorRecord param_record;
   SQLLEN indicator_value = SQL_DATA_AT_EXEC;
@@ -888,12 +888,12 @@ TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
   SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
 
   EXPECT_EQ(SQL_NEED_DATA, status);
-  EXPECT_EQ(stmt_handle.GetStmtState(), StmtStates::kNeedsData);
+  EXPECT_EQ(stmt_handle.GetStmtState(), StmtStates::kNeedsPutData);
 }
 
 TEST(SQLParamDataInternal, Success_SQL_NO_Data) {
   StatementHandle stmt_handle =
-      CreateStmtHandleWithState(StmtStates::kNeedsData);
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
 
   Job mock_job;
   mock_job.statistics.job_query_stats.statement_type = "UPDATE";

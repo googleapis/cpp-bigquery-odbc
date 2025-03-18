@@ -1211,7 +1211,7 @@ TEST(SQLCancelInternal, OperationCanceledStillExecutingState) {
 
 TEST(SQLCancelInternal, OperationCanceledNeedsParamState) {
   StatementHandle handle = CreateStatementHandle();
-  handle.SetStmtState(StmtStates::kNeedsData);
+  handle.SetStmtState(StmtStates::kNeedsParams);
 
   SQLRETURN status = SQLCancelInternal(&handle);
 
@@ -1221,7 +1221,7 @@ TEST(SQLCancelInternal, OperationCanceledNeedsParamState) {
 
 TEST(SQLCancelInternal, OperationCanceledNeedsPutDataState) {
   StatementHandle handle = CreateStatementHandle();
-  handle.SetStmtState(StmtStates::kNeedsData);
+  handle.SetStmtState(StmtStates::kNeedsPutData);
 
   SQLRETURN status = SQLCancelInternal(&handle);
 
