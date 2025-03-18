@@ -989,17 +989,19 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Data Length Mismatch Handling
-  if(*(apd_rec.octet_length_ptr) == SQL_LEN_DATA_AT_EXEC(0)){
-    if (apd_rec.octet_length + str_len_or_ind_ptr > *(apd_rec.octet_length_ptr)) {
-      return LogAndReturnCode(stmt_handle, {SQLStates::k_22001(),
-                                            "String data, length mismatch."});
+  if (*(apd_rec.octet_length_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
+    if (apd_rec.octet_length + str_len_or_ind_ptr >
+        *(apd_rec.octet_length_ptr)) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
 
     // Check if full parameter data is received & update state
-    if ((apd_rec.octet_length + str_len_or_ind_ptr) == *(apd_rec.octet_length_ptr)) {
+    if ((apd_rec.octet_length + str_len_or_ind_ptr) ==
+        *(apd_rec.octet_length_ptr)) {
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
     }
-}
+  }
 
   // Allocate a temporary buffer for new data
   SQLPOINTER buffer = nullptr;
@@ -1018,7 +1020,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     memcpy(buffer, data, str_len_or_ind_ptr);
   } else {
-    // Additional chunks: allocate new buffer large enough to hold old + new data
+    // Additional chunks: allocate new buffer large enough to hold old + new
+    // data
     size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
 
     void* new_buffer = realloc(apd_rec.data_ptr, new_size);
@@ -1051,7 +1054,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   return SQL_SUCCESS;
 }
 
-
 SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
                                SQLPOINTER* param_or_target_value) {
   StatusRecordOr<StatementHandle*> handle_result =
@@ -1071,7 +1073,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_num);
 
   if (handle->GetStmtState() != StmtStates::kNeedsParams &&
-    *(apd_rec.indicator_ptr) != SQL_NTS) {
+      *(apd_rec.indicator_ptr) != SQL_NTS) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
