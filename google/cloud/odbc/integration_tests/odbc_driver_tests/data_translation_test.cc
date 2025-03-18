@@ -433,8 +433,9 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                  "SQLGetData(" + std::to_string(expected.target_c_type) + ")",
                  conn);
       if (SQL_SUCCEEDED(status)) {
-        status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, 1,
-                                 &resp_status, SQL_INTEGER, &resp_status_len);
+        status =
+            SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE,
+                            &resp_status, SQL_INTEGER, &resp_status_len);
         if (status == SQL_NO_DATA) {
           if (strlen_or_ind >= 0) {
             // Refer
@@ -506,11 +507,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
       "SELECT StringField FROM " + table_name + " ORDER BY index";
-#ifndef _WIN32
-  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
-  // SQL_DIAG_RETURNCODE not returning values.
   TestTranslationsFromString(conn, query);
-#endif  // _WIN32
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
@@ -584,14 +581,8 @@ TEST(DataTranslationTest, From_INT64_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query = "SELECT IntField FROM " + table_name + " ORDER BY index";
 
-#ifndef _WIN32
-  // TODO(b/357794952): Simba Driver For Windows, SQLGetDiagField API for
-  // SQL_DIAG_RETURNCODE not
-  //  returning
-  // values..
   TestTranslationsFromArithmetic<Int64BasicTestStruct>(
       conn, query, kConversionFromInt64TestData);
-#endif  // _WIN32
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
