@@ -151,7 +151,7 @@ inline void GetNumericDetailsFromStr(std::string const& src_dsval,
 
   // Extract digits before decimal point
   while (isdigit(src_dsval[i])) {
-    num = num + src_dsval[i];
+    num += src_dsval[i];
     integralcount++;
     i++;
   }
@@ -163,7 +163,7 @@ inline void GetNumericDetailsFromStr(std::string const& src_dsval,
 
   // Extract digits after decimal point
   while (isdigit(src_dsval[i])) {
-    num = num + src_dsval[i];
+    num += src_dsval[i];
     fractionalcount++;
     i++;
   }
@@ -171,17 +171,18 @@ inline void GetNumericDetailsFromStr(std::string const& src_dsval,
     scale = 0;
     precision = SQL_MAX_NUMERIC_LEN;
   } else {
-    int limitScale = SQL_MAX_NUMERIC_LEN - integralcount;
+    int maxlen = SQL_MAX_NUMERIC_LEN;
+    int limit_scale = maxlen - integralcount;
     precision = integralcount + fractionalcount;
     scale = fractionalcount;
-    if (scale >= limitScale) scale = limitScale;
+    if (scale >= limit_scale) scale = limit_scale;
     if (precision >= SQL_MAX_NUMERIC_LEN) precision = SQL_MAX_NUMERIC_LEN;
   }
   memcpy(&numst.scale, &scale, sizeof(SQLSCHAR));
   memcpy(&numst.precision, &precision, sizeof(SQLSCHAR));
   memcpy(&numst.sign, &sign, sizeof(SQLCHAR));
-  unsigned long long dd = std::stoull(num);
-  memcpy((char*)numst.val, &dd, sizeof(unsigned long long));
+  uint64_t dd = std::stoull(num);
+  memcpy(reinterpret_cast<char*>(numst.val), &dd, sizeof(uint64_t));
 }
 
 inline void StringToDSValue(std::string const& str, DSValue& value) {

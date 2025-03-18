@@ -353,6 +353,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
   }
+  return status_record;
 }
 // Converts a string to SQLDOUBLE and returns StatusRecord if it failed
 // TODO(sachinpro): Make sure double is a good enough container during
