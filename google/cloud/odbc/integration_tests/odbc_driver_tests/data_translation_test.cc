@@ -417,7 +417,6 @@ void TestTranslationsFromNumeric(
     EXPECT_EQ(status, expected.status);
     if (!SQL_SUCCEEDED(status)) {
       row_count++;
-      std::cout << "Testing FAIL: " << std::endl;
       continue;
     }
     CheckError(status,
