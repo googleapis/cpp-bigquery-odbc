@@ -211,7 +211,7 @@ if (!transaction_status.ok()) {
 Job req;
 req.configuration.query.query = query;
 req.configuration.query.use_query_cache = true;
-req.configuration.dry_run = false;
+req.configuration.dry_run = true;
 req.configuration.query.use_legacy_sql = false;
 std::string job_id = generateJobId();
 req.job_reference.job_id = job_id;
@@ -247,27 +247,44 @@ if (conn_handle.IsSessionStarted()) {
 }
 std::cout<<"Query: "<<query<<std::endl;
 
+if (query.find("DECLARE OutStringField STRING") != std::string::npos)
+{
+    req.configuration.dry_run = false;
+}
+
 Options opt1;
 std::cout<<"\n\nInsert Job Request:\n\n"<<std::endl;
 nlohmann::json jsonObj = req; // Calls `to_json`
 std::cout << jsonObj.dump() << std::endl;
 
 StatusRecordOr<Job> response = conn_handle.GetClient()->InsertJob(
-    conn_handle.GetDsn().catalog, req, opt1);
-std::cout<<"\n\nInsert Job Response:\n\n"<<std::endl;
-jsonObj = *response; // Calls `to_json`
-std::cout << jsonObj.dump() << std::endl;
+  conn_handle.GetDsn().catalog, req, opt1);
 
-Options opt2;
-StatusRecordOr<std::vector<ListFormatJob>> response1 =
-    conn_handle.GetClient()->ListAllJobs(conn_handle.GetDsn().catalog, job_id,
-                                         opt2);
-
-for (auto &res : response1.GetValue())
-{
-  std::cout << "\n\ListAllJobs Response:\n\n" << std::endl;
-  jsonObj = res;  // Calls `to_json`
+  if (query.find("DECLARE OutStringField STRING") != std::string::npos){
+  std::cout << "\n\nInsert Job Response:\n\n" << std::endl;
+  jsonObj = *response;  // Calls `to_json`
   std::cout << jsonObj.dump() << std::endl;
+
+  Options opt2;
+  while (response->status.state != "DONE") {
+    std::cout << "Job state is not DONE yet. Waiting..." << std::endl;
+    // Wait for a few seconds before checking the status again
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
+  // You may need to re-fetch the job status here, depending on how your API works.
+  response = conn_handle.GetClient()->InsertJob(
+        conn_handle.GetDsn().catalog, req, opt2);
+
+  // Once the job state is "DONE", proceed with ListAllJobs API
+  std::cout << "\nJob state is DONE, fetching all jobs..." << std::endl;
+  StatusRecordOr<std::vector<ListFormatJob>> response1 =
+    conn_handle.GetClient()->ListAllJobs(conn_handle.GetDsn().catalog, job_id, opt2);
+
+  for (auto &res : response1.GetValue()) {
+    std::cout << "\n\nListAllJobs Response:\n\n" << std::endl;
+    jsonObj = res;  // Calls `to_json`
+    std::cout << jsonObj.dump() << std::endl;
+  }
 }
 
 if (!response.Ok()) {
