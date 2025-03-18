@@ -6,8 +6,8 @@ github:
     branch: ^main$
 name: integration-bq-driver-unixODBC-ci
 substitutions:
-  _BUILD_NAME: integration-bq-driver
-  _DEPENDENCIES: 'BAZEL,unixODBC,DRIVER_MANAGER_SETUP'
+  _BUILD_NAME: integration-production-bq-driver-dm
+  _DEPENDENCIES: 'BAZEL,unixODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
