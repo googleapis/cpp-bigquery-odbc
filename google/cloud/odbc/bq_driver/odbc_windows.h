@@ -24,7 +24,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 std::string ConvertLogLevel(std::string log_level);
 
 std::string const dsn_key = "DSN";
-std::string const email_key = "Email";
 std::string const key_file_path_key = "KeyFilePath";
 std::string const oauth_mechanism_key = "OAuthMechanism";
 std::string const catalog_key = "Catalog";

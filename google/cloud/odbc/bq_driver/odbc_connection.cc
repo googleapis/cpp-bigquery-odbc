@@ -146,7 +146,6 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
 
   // Retrieve user inputs and configure the connection.
   Section dsn_section = {{"DSN", form.GetDSN()},
-                         {"EMAIL", form.GetEmail()},
                          {"KEYFILEPATH", form.GetKeyFilePath()},
                          {"OAUTHMECHANISM", form.GetOAuthMechanism()},
                          {"CATALOG", form.GetCatalogName()},

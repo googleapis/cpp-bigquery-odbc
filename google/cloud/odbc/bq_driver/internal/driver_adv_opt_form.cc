@@ -144,6 +144,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 100, kEditBoxWidth,
                     kEditBoxHeight, kIdcDatasetNameEdit);
   SendMessage(h_dataset_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowText(h_dataset_name_edit, adv_dataset_name_.c_str());
 
   HWND h_temp_expiration_label = CreateLabel(
       adv_hwnd, "Default temp table expiration time (ms):", kXAxis + 5,
@@ -154,6 +155,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 125, kEditBoxWidth,
                     kEditBoxHeight, kIdcTempExpirationEdit);
   SendMessage(h_temp_expiration_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {

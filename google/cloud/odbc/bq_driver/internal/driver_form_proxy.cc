@@ -70,6 +70,9 @@ void ProxyOptions::InitControls() {
       proxy_hwnd, "Use proxy server", kControlStartX, kLabelHeight - 10,
       kCheckboxWidth, kCheckboxHeight, kIdcProxyCheckbox);
   SendMessage(h_proxy_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  CheckDlgButton(proxy_hwnd, kIdcProxyCheckbox,
+    (proxy_check_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+
   HWND h_proxy_host_label = CreateLabel(
       proxy_hwnd, "Proxy host:", kControlStartX, kControlSpacing + 3,
       kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
@@ -79,7 +82,7 @@ void ProxyOptions::InitControls() {
       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing + 3,
                     kEditBoxWidth, kEditBoxHeight, kIdcProxyHostName);
   SendMessage(h_proxy_host_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  EnableWindow(h_proxy_host_edit, FALSE);
+  SetWindowText(h_proxy_host_edit, proxy_host_.c_str());
 
   HWND h_proxy_port_label = CreateLabel(
       proxy_hwnd, "Proxy port:", kControlStartX, kControlSpacing * 1.6 + 3,
@@ -92,7 +95,7 @@ void ProxyOptions::InitControls() {
   SetWindowLong(h_proxy_port_edit, GWL_STYLE,
                 GetWindowLong(h_proxy_port_edit, GWL_STYLE) | ES_NUMBER);
   SendMessage(h_proxy_port_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  EnableWindow(h_proxy_port_edit, FALSE);
+  SetWindowText(h_proxy_port_edit, proxy_port_.c_str());
 
   HWND h_proxy_username_label = CreateLabel(
       proxy_hwnd, "Proxy username:", kControlStartX, kControlSpacing * 2.2 + 3,
@@ -103,8 +106,7 @@ void ProxyOptions::InitControls() {
       CreateEditBox(proxy_hwnd, kEditBoxStartX, kControlSpacing * 2.2 + 3,
                     kEditBoxWidth, kEditBoxHeight, kIdcProxyUsernameEdit);
   SendMessage(h_proxy_username_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-
-  EnableWindow(h_proxy_username_edit, FALSE);
+  SetWindowText(h_proxy_username_edit, proxy_username_.c_str());
 
   HWND h_proxy_password_label = CreateLabel(
       proxy_hwnd, "Proxy password:", kControlStartX, kControlSpacing * 2.8 + 3,
@@ -118,7 +120,7 @@ void ProxyOptions::InitControls() {
                 GetWindowLong(h_proxy_password_edit, GWL_STYLE) | WS_TABSTOP);
   SendMessage(h_proxy_password_edit, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
   SendMessage(h_proxy_password_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  EnableWindow(h_proxy_password_edit, FALSE);
+  SetWindowText(h_proxy_password_edit, proxy_pwd_enc_.c_str());
 
   // Documentation Hyperlink
   HWND h_doc_text =
@@ -141,6 +143,13 @@ void ProxyOptions::InitControls() {
       CreateButton(proxy_hwnd, "Cancel", kCancelButtonX, kButtonY, kBtnWidth,
                    kBtnHeight, kIdcProxyCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  if (proxy_check_ == "0") {
+    EnableWindow(h_proxy_host_edit, FALSE);
+    EnableWindow(h_proxy_port_edit, FALSE);
+    EnableWindow(h_proxy_username_edit, FALSE);
+    EnableWindow(h_proxy_password_edit, FALSE);
+  }
 }
 
 void ProxyOptions::Show(HWND hwnd) {
@@ -252,44 +261,118 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
       break;
     }
 
+    // case WM_COMMAND: {
+    //   int wm_id = LOWORD(w_param);
+
+      // if (wm_id == kIdcHyperlink && HIWORD(w_param) == STN_CLICKED) {
+      //   ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+      //   break;
+      // }
+
+    //   if (wm_id == kIdcProxyCheckbox && HIWORD(w_param) == BN_CLICKED) {
+    //     BOOL is_checked =
+    //         IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED;
+
+    //     HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
+    //     HWND h_host_edit = GetDlgItem(hwnd, kIdcProxyHostName);
+    //     HWND h_port_edit = GetDlgItem(hwnd, kIdcProxyPortEdit);
+    //     HWND h_username_edit = GetDlgItem(hwnd, kIdcProxyUsernameEdit);
+    //     HWND h_password_edit = GetDlgItem(hwnd, kIdcProxyPasswordEdit);
+
+    //     // Enable/disable input fields
+    //     EnableWindow(h_host_edit, is_checked);
+    //     EnableWindow(h_port_edit, is_checked);
+    //     EnableWindow(h_username_edit, is_checked);
+    //     EnableWindow(h_password_edit, is_checked);
+
+    //     if (is_checked) {
+    //       // Disable OK button and remove blue border
+    //       EnableWindow(h_ok_button, FALSE);
+    //       LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
+    //       SetWindowLong(h_ok_button, GWL_STYLE, style & ~BS_DEFPUSHBUTTON);
+    //     } else {
+    //       // Enable OK button with default push button style
+    //       EnableWindow(h_ok_button, TRUE);
+    //       LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
+    //       SetWindowLong(h_ok_button, GWL_STYLE, style | BS_DEFPUSHBUTTON);
+    //     }
+    //   } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
+    //              HIWORD(w_param) == EN_CHANGE) {
+    //     // Check if both fields are filled
+    //     char host_text[256], port_text[10];
+    //     GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
+    //                   sizeof(host_text));
+    //     GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
+    //                   sizeof(port_text));
+
+    //     HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
+
+    //     if (strlen(host_text) > 0 && strlen(port_text) > 0) {
+    //       // Enable OK button and add blue border
+    //       EnableWindow(h_ok_button, TRUE);
+    //       LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
+    //       SetWindowLong(h_ok_button, GWL_STYLE, style | BS_DEFPUSHBUTTON);
+    //     } else {
+    //       // Disable OK button and remove blue border
+    //       EnableWindow(h_ok_button, FALSE);
+    //       LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
+    //       SetWindowLong(h_ok_button, GWL_STYLE, style & ~BS_DEFPUSHBUTTON);
+    //     }
+    //   } else if (wm_id == kIdcProxyOKButton) {
+    //     DestroyWindow(hwnd);
+    //   } else if (wm_id == kIdcProxyCancelButton) {
+    //     DestroyWindow(hwnd);
+    //   }
+    //   return 0;
+    // }
     case WM_COMMAND: {
       int wm_id = LOWORD(w_param);
+      int wm_event = HIWORD(w_param);
 
-      if (wm_id == kIdcHyperlink && HIWORD(w_param) == STN_CLICKED) {
-        ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
-        break;
-      }
-
-      if (wm_id == kIdcProxyCheckbox && HIWORD(w_param) == BN_CLICKED) {
+      if (wm_id == kIdcProxyCheckbox && wm_event == BN_CLICKED) {
         BOOL is_checked =
             IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED;
 
-        HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
-        HWND h_host_edit = GetDlgItem(hwnd, kIdcProxyHostName);
-        HWND h_port_edit = GetDlgItem(hwnd, kIdcProxyPortEdit);
-        HWND h_username_edit = GetDlgItem(hwnd, kIdcProxyUsernameEdit);
-        HWND h_password_edit = GetDlgItem(hwnd, kIdcProxyPasswordEdit);
-
-        // Enable/disable input fields
-        EnableWindow(h_host_edit, is_checked);
-        EnableWindow(h_port_edit, is_checked);
-        EnableWindow(h_username_edit, is_checked);
-        EnableWindow(h_password_edit, is_checked);
-
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
         if (is_checked) {
-          // Disable OK button and remove blue border
-          EnableWindow(h_ok_button, FALSE);
-          LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
-          SetWindowLong(h_ok_button, GWL_STYLE, style & ~BS_DEFPUSHBUTTON);
-        } else {
-          // Enable OK button with default push button style
-          EnableWindow(h_ok_button, TRUE);
-          LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
-          SetWindowLong(h_ok_button, GWL_STYLE, style | BS_DEFPUSHBUTTON);
+          EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), FALSE);
         }
+        if (!is_checked) {
+          // Reset fields when checkbox is unchecked
+          EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), TRUE);
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), "");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyPasswordEdit), "");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), "0");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyUsernameEdit), "");
+
+          proxy_host_.clear();
+          proxy_port_.clear();
+          proxy_username_.clear();
+          proxy_pwd_enc_.clear();
+        }
+
+      } else if (wm_id == kIdcProxyOKButton) {
+        // Save values and close window
+        proxy_check_ =
+            (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED) ? "1"
+                                                                         : "0";
+
+        GetControlText(hwnd, kIdcProxyPortEdit, proxy_port_);
+        GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
+        GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
+        GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
+
+        DestroyWindow(hwnd);
+
+      } else if (wm_id == kIdcProxyCancelButton) {
+        DestroyWindow(hwnd);
+
       } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
                  HIWORD(w_param) == EN_CHANGE) {
-        // Check if both fields are filled
+        // Check if both fields are filled then only enable OK button
         char host_text[256], port_text[10];
         GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
                       sizeof(host_text));
@@ -299,23 +382,20 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
 
         if (strlen(host_text) > 0 && strlen(port_text) > 0) {
-          // Enable OK button and add blue border
           EnableWindow(h_ok_button, TRUE);
-          LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
-          SetWindowLong(h_ok_button, GWL_STYLE, style | BS_DEFPUSHBUTTON);
         } else {
-          // Disable OK button and remove blue border
           EnableWindow(h_ok_button, FALSE);
-          LONG style = GetWindowLong(h_ok_button, GWL_STYLE);
-          SetWindowLong(h_ok_button, GWL_STYLE, style & ~BS_DEFPUSHBUTTON);
         }
-      } else if (wm_id == kIdcProxyOKButton) {
-        DestroyWindow(hwnd);
-      } else if (wm_id == kIdcProxyCancelButton) {
-        DestroyWindow(hwnd);
+
       }
+          // Insert hyperlink click handler
+    else if (wm_id == kIdcHyperlink && wm_event == STN_CLICKED) {
+      ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+  }
       return 0;
     }
+
+
 
     case WM_KEYDOWN: {
       if (w_param == VK_ESCAPE) {

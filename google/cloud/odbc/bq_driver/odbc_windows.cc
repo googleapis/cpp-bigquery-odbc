@@ -101,7 +101,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   }
 
   std::string dsn_name;
-  std::string email = GetValueOrDefault(section, email_key);
   std::string key_file_path = GetValueOrDefault(section, key_file_path_key);
   std::string o_auth_mechanism =
       ConvertOAuthMechanism(GetValueOrDefault(section, oauth_mechanism_key));
@@ -155,7 +154,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
 
   auto CreateSectionFromForm = [&]() -> Section {
     return {
-        {email_key, email},
         {key_file_path_key, key_file_path},
         {oauth_mechanism_key, o_auth_mechanism},
         {catalog_key, catalog},
@@ -203,7 +201,6 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     }
 
     dsn_name = form.GetDSN();
-    email = form.GetEmail();
     key_file_path = form.GetKeyFilePath();
     o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
     catalog = form.GetCatalogName();
