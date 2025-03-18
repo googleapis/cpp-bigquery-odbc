@@ -944,6 +944,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
+
   // Ensure statement is in kNeedsPutData state
   if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
     return LogAndReturnCode(
@@ -969,6 +970,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
 
+  // Validate string/buffer length
   if ((data != nullptr && str_len_or_ind_ptr < 0) &&
       str_len_or_ind_ptr != SQL_NTS && str_len_or_ind_ptr != SQL_NULL_DATA) {
     return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
@@ -977,16 +979,30 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Handle NULL data
   static char empty_buffer = '\0';
-  if ((str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA)) {
+  if (str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA) {
     apd_rec.data_ptr = &empty_buffer;
     apd_rec.octet_length = 0;
-    *(apd_rec.indicator_ptr) = SQL_NTS;
+    if (apd_rec.indicator_ptr) {
+      *(apd_rec.indicator_ptr) = SQL_NTS;
+    }
     return SQL_SUCCESS;
   }
 
-  // Allocate a temporary buffer
-  SQLPOINTER buffer = nullptr;
+  // tring Data Length Mismatch Handling
+  if(*(apd_rec.octet_length_ptr) == SQL_LEN_DATA_AT_EXEC(0)){
+    if (apd_rec.octet_length + str_len_or_ind_ptr > *(apd_rec.octet_length_ptr)) {
+      return LogAndReturnCode(stmt_handle, {SQLStates::k_22001(),
+                                            "String data, length mismatch."});
+    }
 
+    // Check if full parameter data is received & update state
+    if ((apd_rec.octet_length + str_len_or_ind_ptr) == *(apd_rec.octet_length_ptr)) {
+      stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    }
+}
+
+  // Allocate a temporary buffer for new data
+  SQLPOINTER buffer = nullptr;
   if (apd_rec.data_ptr == nullptr) {
     if (str_len_or_ind_ptr <= 0) {
       return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
@@ -1002,8 +1018,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     memcpy(buffer, data, str_len_or_ind_ptr);
   } else {
-    // Additional chunks: allocate new buffer large enough to hold old + new
-    // data
+    // Additional chunks: allocate new buffer large enough to hold old + new data
     size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
 
     void* new_buffer = realloc(apd_rec.data_ptr, new_size);
@@ -1022,7 +1037,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   apd_rec.data_ptr = buffer;
   apd_rec.octet_length += str_len_or_ind_ptr;
 
-  // 🔹 **Fix Updating octet_length_ptr**
+  // Fix Updating octet_length_ptr
   if (apd_rec.octet_length_ptr) {
     *(apd_rec.octet_length_ptr) = apd_rec.octet_length;
   }
@@ -1036,6 +1051,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   return SQL_SUCCESS;
 }
 
+
 SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
                                SQLPOINTER* param_or_target_value) {
   StatusRecordOr<StatementHandle*> handle_result =
@@ -1048,7 +1064,14 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
 
-  if (handle->GetStmtState() != StmtStates::kNeedsParams) {
+  DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+
+  auto param_num = handle->GetCurrentParamIndex();
+  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_num);
+
+  if (handle->GetStmtState() != StmtStates::kNeedsParams &&
+    *(apd_rec.indicator_ptr) != SQL_NTS) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1063,10 +1086,6 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     }
   }
 
-  DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
-  DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
-
-  auto param_num = handle->GetCurrentParamIndex();
   if (param_num < 0 || param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
