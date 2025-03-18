@@ -1009,6 +1009,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     // Check if full parameter data is received & update state
     if ((buffered_data_len) == *(apd_rec.octet_length_ptr)) {
+
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
       apd_rec.octet_length_ptr = &apd_rec.octet_length;
 
@@ -1043,7 +1044,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     memcpy(buffer, data, str_len_or_ind_ptr);
   } else {
-    // Additional chunks: allocate new buffer large enough to hold old + new data
+    // Additional chunks: allocate new buffer large enough to hold old + new
+    // data
     size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
 
     void* new_buffer = realloc(apd_rec.data_ptr, new_size);
@@ -1092,7 +1094,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   apd.BindNewDescriptorRecord(param_index, apd_rec);
   return SQL_SUCCESS;
 }
-
 
 SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
                                SQLPOINTER* param_or_target_value) {

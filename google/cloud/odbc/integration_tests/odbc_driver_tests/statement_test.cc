@@ -3119,16 +3119,15 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  // TODO(b/404480454): Issue with SQLBindParameter When Using 
+  // TODO(b/404480454): Issue with SQLBindParameter When Using
   // the Same Indicator Pointer for Multiple Parameters
   SQLLEN indicator = SQL_DATA_AT_EXEC;
   int num_params = schema.size();
   // Bind parameters
   for (int i = 0; i < schema.size(); i++) {
-    EXPECT_EQ(
-        SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                         SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
-        SQL_SUCCESS);
+    EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                               SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+              SQL_SUCCESS);
   }
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
@@ -3136,6 +3135,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   // Scenario 1: Call SQLPutData with mismatched data type
   int integerData = 10;
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+<<<<<<< HEAD
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)integerData, sizeof(integerData)),
             SQL_SUCCESS);
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
@@ -3203,6 +3203,10 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   std::string data = "SomeData";
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+=======
+  EXPECT_EQ(
+      SQLPutData(conn->hstmt, (SQLPOINTER)integerData, sizeof(integerData)),
+>>>>>>> 02310efc (impl(bq_driver) update checkers)
       SQL_SUCCESS);
 
   // Scenario 2: Large data
