@@ -988,7 +988,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return SQL_SUCCESS;
   }
 
-  // tring Data Length Mismatch Handling
+  // Data Length Mismatch Handling
   if(*(apd_rec.octet_length_ptr) == SQL_LEN_DATA_AT_EXEC(0)){
     if (apd_rec.octet_length + str_len_or_ind_ptr > *(apd_rec.octet_length_ptr)) {
       return LogAndReturnCode(stmt_handle, {SQLStates::k_22001(),
