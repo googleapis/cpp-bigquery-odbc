@@ -101,7 +101,6 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
                               // integral value. Weird!
     {SQL_C_NUMERIC, "-1234567891234567891", SQL_SUCCESS,
      "-1234567891234567891"},
-// TODO(b/345194139): check if digits after decimal are expected to be
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS, "123.78"},
@@ -193,17 +192,12 @@ std::vector<
      SQL_SUCCESS},  // simba returns 123.22200000000000000000000000000000000000
     {SQL_C_CHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
     {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
-    {SQL_C_SSHORT, "31",
-     SQL_SUCCESS},  // fails in simba  gives SQL_SUCCESS_WITH_INFO
-    {SQL_C_SSHORT, "-31",
-     SQL_SUCCESS},  // fails in simba  gives SQL_SUCCESS_WITH_INFO
-    {SQL_C_USHORT, "3",
-     SQL_SUCCESS},  // fails in simba  gives SQL_SUCCESS_WITH_INFO
-    {SQL_C_SLONG, "-13",
-     SQL_SUCCESS},  // fails in simba  gives SQL_SUCCESS_WITH_INFO
-    {SQL_C_ULONG, "81",
-     SQL_SUCCESS},  // fails in simba  gives SQL_SUCCESS_WITH_INFO
 #endif
+    {SQL_C_SSHORT, "31", SQL_SUCCESS_WITH_INFO},
+    {SQL_C_SSHORT, "-31", SQL_SUCCESS_WITH_INFO},
+    {SQL_C_USHORT, "3", SQL_SUCCESS_WITH_INFO},
+    {SQL_C_SLONG, "-13", SQL_SUCCESS_WITH_INFO},
+    {SQL_C_ULONG, "81", SQL_SUCCESS_WITH_INFO},
     {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
     {SQL_C_FLOAT, "-157.8", SQL_SUCCESS},
 
