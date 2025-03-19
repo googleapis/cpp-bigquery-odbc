@@ -104,22 +104,22 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
-     "123.78"},  // returns 123- scale value is always 0 for simba
+     "123.78"},  // returns 123- scale value is always 0 for existing Driver
     {SQL_C_NUMERIC, "999.78354", SQL_SUCCESS,
-     "999.78354"},  // simba returns 999 - scale value is always 0 for simba
+     "999.78354"},  // Existing driver returns 999 - scale value is always 0 for Existing Driver
     {SQL_C_NUMERIC, "123.7835", SQL_SUCCESS,
-     "123.7835"},  // simba returns 123 - scale value is always 0 for simba
-    {SQL_C_CHAR, "-123", SQL_SUCCESS},  // in simba it returns "-123.000000000"
+     "123.7835"},  // Existing Driver returns 123 - scale value is always 0 for Existing Driver
+    {SQL_C_CHAR, "-123", SQL_SUCCESS},  // in Existing Driver it returns "-123.000000000"
     {SQL_C_CHAR, "123.222",
-     SQL_SUCCESS},  // in simba it returns "123.222000000"
+     SQL_SUCCESS},  // in Existing Driver it returns "123.222000000"
     {SQL_C_CHAR, "-123.222", SQL_SUCCESS},
     {SQL_C_CHAR, "123123123123123123123.222",
-     SQL_SUCCESS},  // simba returns  123123123123123123123.222000000
+     SQL_SUCCESS},  // Existing Driver returns  123123123123123123123.222000000
 #endif
     {SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,
      "-123456789123456"},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-    // Existing driver returns "123.000000000" here
+    // Existing Driver returns "123.000000000" here
     {SQL_C_CHAR, "123", SQL_SUCCESS},
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
@@ -181,11 +181,11 @@ std::vector<
     {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_CHAR, "-123",
-     SQL_SUCCESS},  // simba returns -123.00000000000000000000000000000000000000
+     SQL_SUCCESS},  // Existing Driver returns -123.00000000000000000000000000000000000000
     {SQL_C_CHAR, "123.222",
-     SQL_SUCCESS},  // simba returns 123.22200000000000000000000000000000000000
+     SQL_SUCCESS},  // Existing Driver returns 123.22200000000000000000000000000000000000
     {SQL_C_CHAR, "-123.222",
-     SQL_SUCCESS},  // simba returns 123.22200000000000000000000000000000000000
+     SQL_SUCCESS},  // Existing Driver returns 123.22200000000000000000000000000000000000
     {SQL_C_CHAR, "99999999999999999999999999999.999999999",
      SQL_SUCCESS},  //"99999999999999999999999999999.99999999900000000000000000000000000000"
     {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
