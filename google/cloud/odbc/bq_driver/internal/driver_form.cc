@@ -69,10 +69,8 @@ int const kCheckboxHeight = 15;
 int const kAxisY = 15;
 int const kAxisX = 15;
 int const KOptionsBtnHeight = 105;
-int const KGroupBoxWidth = 478;
+int const KGroupBoxWidth = 470;
 int const KGroupBoxHeight = 129;
-
-
 SQLRETURN ConnectUsingRegistryDsn(Authentication auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.oauth);
@@ -192,7 +190,6 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   }
 
   ODBCBQClient& bq_client = **bq_client_ptr;
-
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
     result_set_status = GetResultSetForProjects(bq_client, metadata_id);
@@ -220,7 +217,6 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
 
   return row_string;
 }
-
 int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
                     PWSTR p_cmd_line, int n_cmd_show) {
   DriverForm DriverForm;
@@ -235,7 +231,6 @@ int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
 
   return 0;
 }
-
 HWND DriverForm::GetHwnd() const { return m_hwnd; }
 DriverForm::DriverForm(HWND parent_hwnd)
     : m_hwnd(NULL), m_parent_hwnd(parent_hwnd) {}
@@ -245,7 +240,6 @@ DriverForm::~DriverForm() {
     DestroyWindow(m_hwnd);
   }
 }
-
 void OpenFileDialog(HWND hwnd, HWND h_edit,
                     char const* mock_file_path = nullptr) {
   if (mock_file_path) {
@@ -275,7 +269,6 @@ void OpenFileDialog(HWND hwnd, HWND h_edit,
     SetWindowText(h_edit, sz_file);
   }
 }
-
 void DriverForm::SetValues(Section const& attributes_map) {
   dsn_name_ = GetValueOrDefault(attributes_map, kDsnName);
   key_file_path_ = GetValueOrDefault(attributes_map, kKeyFilePath);
@@ -285,7 +278,7 @@ void DriverForm::SetValues(Section const& attributes_map) {
   description_ = GetValueOrDefault(attributes_map, kDescription);
   min_tls_version_ = GetValueOrDefault(attributes_map, kMinTlsVersion);
   trusted_cert_ = GetValueOrDefault(attributes_map, kTrustedCerts);
-  
+
   std::string oauth_value = GetValueOrDefault(attributes_map, kOAuthMechanism);
   if (oauth_value == std::to_string(static_cast<int>(
                          OauthMechanism::kServiceAndUserAccount))) {
@@ -297,7 +290,6 @@ void DriverForm::SetValues(Section const& attributes_map) {
     o_auth_mechanism_ = "";
   }
 }
-
 HFONT CreateCustomFont(int font_size) {
   LOGFONT log_font = {};
   HFONT h_font = NULL;
@@ -325,7 +317,6 @@ void DriverForm::InitControls() {
   SendMessage(h_dsn_name_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
   HWND h_dsn_name_edit = CreateEditBox(m_hwnd, kAxisX+170, kAxisY, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDSNEdit);
   SendMessage(h_dsn_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-  
   SetWindowText(h_dsn_name_edit, dsn_name_.c_str());
   if (!dsn_name_.empty()) {
     SendMessage(h_dsn_name_edit, EM_SETREADONLY, TRUE, 0);
@@ -333,8 +324,7 @@ void DriverForm::InitControls() {
 
   HWND h_description_header = CreateLabel(m_hwnd, "Description:", kAxisX,kAxisY+28, kLabelWidth-50,
     kLabelHeight, WS_VISIBLE | SS_LEFT);
-   SendMessage(h_description_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-                                       
+   SendMessage(h_description_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                           
   HWND h_description_edit =
       CreateEditBox(m_hwnd, kAxisX+170, kAxisY+28, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDescriptionEdit);
       SendMessage(h_description_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
@@ -342,8 +332,7 @@ void DriverForm::InitControls() {
   HWND h_encrypt_data_header =
       CreateLabel(m_hwnd, "Encrypt sensitive data:", kAxisX, kAxisY+56, kLabelWidth, kLabelHeight,
                   WS_VISIBLE | SS_LEFT);
-      SendMessage(h_encrypt_data_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-            
+      SendMessage(h_encrypt_data_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                               
   HWND h_encrypt_data_combo_box =
       CreateComboBox(m_hwnd, kAxisX+170, kAxisY+56, kEditComboBoxWidth, kEditComboBoxHeight, kIdcEncryptDataComboBox);
       SendMessage(h_encrypt_data_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
@@ -364,8 +353,7 @@ void DriverForm::InitControls() {
 
   HWND h_key_file_path_header = CreateLabel(m_hwnd, "Key file path:", kAxisX+5, kAxisY+145,
     kLabelWidth-50, kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-                                         
+  SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                             
   HWND h_key_file_edit =
       CreateEditBox(m_hwnd,kAxisX+170, kAxisY+145, kEditComboBoxWidth, kEditComboBoxHeight, kIdcKeyfileEdit);
       SendMessage(h_key_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
@@ -387,90 +375,79 @@ SendMessage(h_drive_scope_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 HWND h_ssl_header = CreateGroupBox(
   m_hwnd, "SSL Options", kAxisX - 5, kAxisY + 250, KGroupBoxWidth, KGroupBoxHeight - 4, kIdcGroupBox);
  SendMessage(h_ssl_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                        
-
   HWND h_min_tls_header = CreateLabel(m_hwnd, "Minimum TLS version:", kAxisX+5, kAxisY+275,
     kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-       SendMessage(h_min_tls_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-                               
+       SendMessage(h_min_tls_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                  
   HWND h_min_tls_combo_box =
       CreateComboBox(m_hwnd, kAxisX+170, kAxisY+275, kEditComboBoxWidth, kEditComboBoxHeight, kIdcMinTLSComboBox);
       SendMessage(h_min_tls_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
-      
 // New Checkbox for Use system trust store
 HWND h_system_trust_store_checkbox = CreateCheckBox(
   m_hwnd, "", kAxisX+5, kAxisY+300, kCheckboxWidth, kCheckboxHeight, kIdcSystemTrustStoreCheckbox);
-
 SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-
 // New Label for Use system trust store
 HWND h_system_trust_label = CreateLabel(m_hwnd, "Use system trust store", 
   kAxisX+25, kAxisY+300, kLabelWidth+70, kLabelHeight, WS_VISIBLE | SS_LEFT);
 SendMessage(h_system_trust_label, WM_SETFONT, (WPARAM)h_font, TRUE);
-      
+
   HWND h_trusted_cert_header = CreateLabel(m_hwnd, "Trusted certificate:", kAxisX+5,
     kAxisY+325, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
       SendMessage(h_trusted_cert_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-                                    
+
   HWND h_trusted_cert_edit =
       CreateEditBox(m_hwnd, kAxisX+170, kAxisY+325, kEditComboBoxWidth, kEditComboBoxHeight, kIdcTrustedCertEdit);
-      SendMessage(h_trusted_cert_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-
-
+      SendMessage(h_trusted_cert_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                          
   HWND h_trusted_cert_browse_button = CreateButton(
       m_hwnd, "Browse...", kAxisX+170, kAxisY+350, kBtnWidth+8, kBtnHeight, kIdcTrustedCertBrowseButton);
       SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
-
   HWND h_catalog_header =
       CreateLabel(m_hwnd, "Project* :", kAxisX, kAxisY+385, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
       SendMessage(h_catalog_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-
   HWND h_catalog_box =
       CreateComboBox(m_hwnd, kAxisX+170, kAxisY+385, kEditComboBoxWidth, kEditComboBoxHeight, kIdcCatlogBOX);
       SendMessage(h_catalog_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-
   HWND h_dataset_header =
       CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY+413, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
       SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
-
+  HWND h_gcp_parent_folder_header = CreateLabel(m_hwnd, "GCP Parent Folder:", kAxisX, kAxisY+441, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_gcp_parent_folder_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_gcp_parent_folder_text = CreateEditBox(m_hwnd,  kAxisX+170,  kAxisY+441, kEditComboBoxWidth, kEditComboBoxHeight, kIdcGcpFolder);
+  SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_dataset_box =
       CreateComboBox(m_hwnd, kAxisX+170, kAxisY+413, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDatasetBOX);
       SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);  
-  
+
     // Documentation Hyperlink
-    HWND h_doc_text = CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX,kAxisY+443 , kLabelWidth+10, kLabelHeight, 0);
+    HWND h_doc_text = CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX,kAxisY+470 , kLabelWidth+10, kLabelHeight, 0);
     SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
     
     HWND h_hyperlink = CreateHyperlinkLabel(m_hwnd, "BigQuery documentation",
-      kAxisX+135, kAxisY+443, kLabelWidth, kLabelHeight, 
+      kAxisX+135, kAxisY+470, kLabelWidth, kLabelHeight, 
       kIdcHyperlink);
     SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);    
-
   HWND h_proxy_options_button = CreateButton(
-      m_hwnd, "Proxy options...", kAxisX, kAxisY+473, KOptionsBtnHeight, kBtnHeight, kIdcProxyOptionsButton);
+      m_hwnd, "Proxy options...", kAxisX, kAxisY+500, KOptionsBtnHeight, kBtnHeight, kIdcProxyOptionsButton);
       SendMessage(h_proxy_options_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-
-  HWND h_login_button = CreateButton(m_hwnd, "Logging options...", kAxisX+154, kAxisY+473,
+  HWND h_login_button = CreateButton(m_hwnd, "Logging options...", kAxisX+154, kAxisY+500,
                                      KOptionsBtnHeight, kBtnHeight, kIdcLoggingBtn);     
       SendMessage(h_login_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
                                         
   HWND h_advance_opt_button = CreateButton(m_hwnd, "Advance options...", kAxisX+308,
-    kAxisY+473, KOptionsBtnHeight, kBtnHeight, kIdcAdvanceOptBtn);
+    kAxisY+500, KOptionsBtnHeight, kBtnHeight, kIdcAdvanceOptBtn);
       SendMessage(h_advance_opt_button, WM_SETFONT, (WPARAM)h_font, TRUE);
-      
-  HWND h_version_text = CreateLabel(m_hwnd, "v3.0.5.1011 (64 bit)", kAxisX,kAxisY+505 , kLabelWidth-55, kLabelHeight-8, 0);
-       SendMessage(h_version_text, WM_SETFONT, (WPARAM)h_font, TRUE);
 
+  HWND h_version_text = CreateLabel(m_hwnd, "v3.0.5.1011 (64 bit)", kAxisX,kAxisY+530 , kLabelWidth-55, kLabelHeight-8, 0);
+       SendMessage(h_version_text, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_test_button =
-      CreateButton(m_hwnd, "Test...", kAxisX+201, kAxisY+505, kBtnWidth, kBtnHeight, kIdcButtonTest);
+      CreateButton(m_hwnd, "Test...", kAxisX+201, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonTest);
       SendMessage(h_test_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
       EnableWindow(h_test_button, FALSE);
-      
-  HWND h_ok_button = CreateButton(m_hwnd, "OK",kAxisX+291, kAxisY+505, kBtnWidth, kBtnHeight, kIdcButtonOk);
+
+  HWND h_ok_button = CreateButton(m_hwnd, "OK",kAxisX+291, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonOk);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);                           
   EnableWindow(h_ok_button, FALSE);
-
   HWND h_cancel_button =
-      CreateButton(m_hwnd, "Cancel", kAxisX+381, kAxisY+505, kBtnWidth, kBtnHeight, kIdcButtonCancel);
+      CreateButton(m_hwnd, "Cancel", kAxisX+381, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonCancel);
       SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
 
   SendMessage(h_encrypt_data_combo_box, CB_ADDSTRING, 0,
@@ -514,7 +491,7 @@ void DriverForm::Show() {
 
   RegisterClass(&wc);
   int window_width = 506;
-  int window_height = 588;
+  int window_height = 611;
 
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
@@ -636,7 +613,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       
   switch (u_msg) {
     case WM_CREATE:
-      // Set the instance pointer in the window's user data
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
       break;
     case WM_CTLCOLORBTN: {
@@ -648,8 +624,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         HDC hdc = (HDC)w_param;
         RECT rc;
         GetClientRect(hwnd, &rc);
-    
-        // Define a custom background color (#F0F0F0)
+
         HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
     
         FillRect(hdc, &rc, hBrush);
@@ -688,7 +663,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                   hFontUnderline = CreateFontIndirect(&lf);
               }
           }
-  
+
           if (hFontUnderline) {
               SelectObject(hdcStatic, hFontUnderline);
           }
@@ -710,7 +685,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         return 0;
       }
       break;  
-
     case WM_COMMAND:
       if (HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE) {
         EvaluateFields(hwnd);

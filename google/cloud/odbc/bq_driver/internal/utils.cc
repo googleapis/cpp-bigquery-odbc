@@ -198,7 +198,7 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(0, "COMBOBOX", NULL,
-                        WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST,
+                        WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN,
                         x, y, width, height, parent, (HMENU)id,
                         GetModuleHandle(NULL), NULL);
 }
