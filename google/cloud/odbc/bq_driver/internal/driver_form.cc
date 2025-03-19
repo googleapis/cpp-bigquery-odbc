@@ -609,8 +609,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
   DriverForm* p_this =
       reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-      static HBRUSH hBrush = CreateSolidBrush(RGB(224, 224, 224)); // #E0E0E0 color         
-      
+      static HBRUSH hBrush = CreateSolidBrush(RGB(224, 224, 224)); // #E0E0E0 color              
   switch (u_msg) {
     case WM_CREATE:
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
@@ -624,9 +623,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         HDC hdc = (HDC)w_param;
         RECT rc;
         GetClientRect(hwnd, &rc);
-
-        HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
-    
+        HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));   
         FillRect(hdc, &rc, hBrush);
         DeleteObject(hBrush);
         return 1; // Indicate we handled the background redraw
@@ -634,13 +631,11 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
     case WM_LBUTTONDOWN: {
       POINT pt;
       GetCursorPos(&pt);
-      ScreenToClient(hwnd, &pt);
-  
+      ScreenToClient(hwnd, &pt);  
       HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink);
       RECT rect;
       GetClientRect(h_hyperlink, &rect);
       MapWindowPoints(h_hyperlink, hwnd, (LPPOINT)&rect, 2);
-  
       if (PtInRect(&rect, pt)) {
         ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
       }
@@ -649,11 +644,10 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
     case WM_CTLCOLORSTATIC: {
       HDC hdcStatic = (HDC)w_param;
       HWND hwndStatic = (HWND)l_param;
-  
+
       if (GetDlgCtrlID(hwndStatic) == kIdcHyperlink) {
           SetTextColor(hdcStatic, RGB(0, 0, 255));  // Set text color to blue
           SetBkMode(hdcStatic, TRANSPARENT);  // Transparent background
-  
           static HFONT hFontUnderline = NULL;
           if (!hFontUnderline) {
               LOGFONT lf;
@@ -663,12 +657,10 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                   hFontUnderline = CreateFontIndirect(&lf);
               }
           }
-
           if (hFontUnderline) {
               SelectObject(hdcStatic, hFontUnderline);
           }
-  
-          return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
+            return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
       }
       break;
   }
@@ -689,11 +681,9 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       if (HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE) {
         EvaluateFields(hwnd);
       }
-     // Handle hyperlink click event
      if (LOWORD(w_param) == kIdcHyperlink && HIWORD(w_param) == STN_CLICKED) {
       ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
-      break;
-      }
+      break; }
       switch (LOWORD(w_param)) {
         case kIdcAuthBox:
         case kIdcDSNEdit:
@@ -775,7 +765,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             min_tls_version_ = "";
             return 0;
           }
-
           HWND h_trusted_cert_box = GetDlgItem(hwnd, kIdcTrustedCertEdit);
           char trusted_cert_buffer[256];
           GetWindowText(h_trusted_cert_box, trusted_cert_buffer,
@@ -899,7 +888,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             RetrieveFieldText(hwnd, kIdcDatasetBOX, data_buffer,
                               sizeof(data_buffer));
           }
-
           switch (HIWORD(w_param)) {
             case CBN_DROPDOWN:
               if (LOWORD(w_param) == kIdcCatlogBOX) {
