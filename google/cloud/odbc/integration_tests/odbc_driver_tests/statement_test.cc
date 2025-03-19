@@ -2346,7 +2346,9 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
 // status
 #ifndef _WIN32
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
-      ASSERT_TRUE(absl::StrContains(error, "S1010"))
+      // In unixODBC, the status code is `HY010`, but in other Driver Managers,
+      // it is `S1010`. Updating it to match.
+      ASSERT_TRUE(absl::StrContains(error, "010"))
           << "SQLExecute failed with unexpected error: " << error;
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLExecute failed with unexpected error: " << error;
