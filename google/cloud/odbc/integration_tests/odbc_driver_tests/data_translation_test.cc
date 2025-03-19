@@ -671,6 +671,11 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
   }
 }
 
+// This test case is to make sure if the column type is NUMERIC or BIGNUMERIC
+//Then the column must not accept any value beyond its legitimate range 
+//For range of data types refer : 
+//https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#numeric_types
+
 TEST(DataTranslationTest, BIGNUMERIC_Invalid_Data_Test) {
   std::string data_big_numeric = "BIGNUMERIC";
   std::string data_numeric = "NUMERIC";
