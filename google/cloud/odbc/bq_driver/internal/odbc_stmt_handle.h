@@ -217,7 +217,7 @@ class StatementHandle : public Handle {
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
-  SQLUSMALLINT current_param_index_ = 1;
+  SQLUSMALLINT current_param_index_ = 0;
 
  private:
   std::shared_ptr<Query> query_;

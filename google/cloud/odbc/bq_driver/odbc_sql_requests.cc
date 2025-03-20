@@ -1009,7 +1009,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     // Check if full parameter data is received & update state
     if ((buffered_data_len) == *(apd_rec.octet_length_ptr)) {
-
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
       apd_rec.octet_length_ptr = &apd_rec.octet_length;
 
