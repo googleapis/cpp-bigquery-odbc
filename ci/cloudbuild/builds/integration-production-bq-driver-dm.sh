@@ -40,6 +40,17 @@ BUILD_DIR="/opt/odbc-driver"
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
+# Check if unixODBC is installed
+if command -v odbcinst &> /dev/null; then
+  # unixODBC is installed, export environment variable
+  export UNIXODBC_INSTALLED=true
+  echo "unixODBC is installed."
+else
+  # unixODBC is not installed
+  export UNIXODBC_INSTALLED=false
+  echo "unixODBC is not installed."
+fi
+
 io::run cmake -B "$BUILD_DIR" \
   "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
