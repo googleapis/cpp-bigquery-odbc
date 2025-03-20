@@ -22,8 +22,8 @@
 #ifdef _WIN32
 #include <uxtheme.h>  // Required for SetWindowTheme
 #include <windows.h>
-#endif
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
