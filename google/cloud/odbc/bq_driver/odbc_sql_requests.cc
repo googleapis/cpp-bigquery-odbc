@@ -1109,7 +1109,6 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
 
-  auto param_num = handle->GetCurrentParamIndex();
   bool is_need_data = handle->GetNeedData();
   if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
     return LogAndReturnCode(
@@ -1125,7 +1124,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       return SQL_NO_DATA;
     }
   }
-
+      
+  auto param_num = handle->GetCurrentParamIndex();
   if (param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
@@ -1141,7 +1141,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
     if (param.indicator_ptr != nullptr ||
         *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
-        *(param.indicator_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
+        *(param.indicator_ptr) <= SQL_LEN_DATA_AT_EXEC(0)) {
       if (param_or_target_value != nullptr) {
         *param_or_target_value = param.data_ptr;
       }

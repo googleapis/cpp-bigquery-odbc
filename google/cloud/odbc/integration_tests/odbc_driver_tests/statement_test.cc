@@ -3001,7 +3001,6 @@ TEST(SQLMoreResults, ErrorHandling) {
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
-#ifdef _WIN32
 TEST(StatementTest, SQLPutDataStringDataChunks) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
   Table table(table_name);
@@ -3045,7 +3044,6 @@ TEST(StatementTest, SQLPutDataStringDataChunks) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // _WIN32
 
 TEST(StatementTest, SQLPutDataErrorTest) {
   // Test SQLPutData error scenarios with proper sequence and data validation
