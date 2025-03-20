@@ -174,7 +174,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 
   ResultSet const& result_set = handle.GetResultSet();
   result_set.cursor++;
-  result_set.row_offset_ = 0;
+  result_set.translated_data.row_offset = 0;
   if (result_set.cursor >= result_set.rows.size()) {
     return SQL_NO_DATA;
   }
@@ -567,20 +567,20 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
-  // Updating result_set.last_column_index with column_number and row_offset_ to
-  // 0 when last fetched column number and column_number passed here are
-  // different
-  if (result_set.last_column_index != column_number) {
-    result_set.row_offset_ = 0;
-    result_set.last_column_index = column_number;
+  // Updating result_set.translated_data.last_column_index with column_number
+  // and row_offset_ to 0 when last fetched column number and column_number
+  // passed here are different
+  if (result_set.translated_data.last_column_index != column_number) {
+    result_set.translated_data.row_offset = 0;
+    result_set.translated_data.last_column_index = column_number;
   }
-  result_set.last_column_index = column_number;
+  result_set.translated_data.last_column_index = column_number;
 
-  SQLLEN offset = result_set.row_offset_;
+  SQLLEN offset = result_set.translated_data.row_offset;
 
   // Translating complete data in case of less buffer length when SQLGetData
   // called for the first time
-  //  and storing it in result_set.translated_data_ in case of
+  //  and storing it in result_set.translated_data.data in case of
   // variable length data type i.e. string and binary followed by copying into
   // target_value in parts of buffer length.
   if (offset == 0) {
@@ -590,11 +590,17 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kJson ||
          bq_data_type == BQDataType::kStruct ||
          bq_data_type == BQDataType::kArray)) {
-      result_set.translated_data_ =
-          std::shared_ptr<char[]>(new char[ds_val.size() + 1]);
+      result_set.translated_data.last_target_c_type = target_c_type;
+      result_set.translated_data.data.resize(ds_val.size());
+      SQLLEN target_value_len = 0;
+
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
-                                    result_set.translated_data_.get(),
-                                    ds_val.size() + 1, target_value_string_len);
+                                    result_set.translated_data.data.data(),
+                                    ds_val.size() + 1, &target_value_len);
+      if (target_value_string_len) {
+        *target_value_string_len = target_value_len;
+      }
+      result_set.translated_data.data.resize(target_value_len);
       std::memset(target_value, '\0', target_value_buffer_len);
     } else {
       status_record =
@@ -604,12 +610,30 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     }
   }
 
+  // Check if the target data type has changed from the last fetch.
+  // If the target data type is different from the last fetched type, return an
+  // error because changing data types in a multipart fetch operation is not
+  // supported.
+  if (result_set.translated_data.last_target_c_type != target_c_type) {
+    status_record = {SQLStates::k_HY000(),
+                     "ChangeTypesInMultipartSQLGetDataNotSupported"};
+    return LogAndReturnCode(stmt_handle, status_record);
+  }
+
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
-  if (ds_val.size() - offset >= target_value_buffer_len) {
-    std::memcpy(target_value, result_set.translated_data_.get() + offset,
-                target_value_buffer_len - 1);
-    result_set.row_offset_ = offset + target_value_buffer_len - 1;
+  if (result_set.translated_data.data.size() - offset >=
+      target_value_buffer_len) {
+    if (target_c_type == SQL_C_BINARY) {
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  target_value_buffer_len);
+      result_set.translated_data.row_offset = offset + target_value_buffer_len;
+    } else {
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  target_value_buffer_len - 1);
+      result_set.translated_data.row_offset =
+          offset + target_value_buffer_len - 1;
+    }
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
     if (target_value_string_len) {
@@ -618,8 +642,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (offset != 0) {
-    std::memcpy(target_value, result_set.translated_data_.get() + offset,
-                ds_val.size() - offset + 1);
+    if (target_c_type == SQL_C_BINARY) {
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  result_set.translated_data.data.size() - offset);
+    } else {
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  result_set.translated_data.data.size() - offset + 1);
+    }
     return LogAndReturnCode(stmt_handle, status_record);
   }
 }

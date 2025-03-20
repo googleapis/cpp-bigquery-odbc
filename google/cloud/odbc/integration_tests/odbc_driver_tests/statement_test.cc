@@ -837,15 +837,15 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
       conn,
       "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64, "
       "JsonField JSON,StructField STRUCT<int_value BIGINT, double_value "
-      "FLOAT64, string_value STRING>, ByteField BYTES)");
+      "FLOAT64, string_value STRING>, ByteField1 BYTES, ByteField2 BYTES)");
 
   // Insert test data
   auto insert_query =
       "INSERT INTO " + table_name +
       " (StringField, IntegerField, FloatField, JsonField, StructField, "
-      "ByteField) VALUES "
+      "ByteField1, ByteField2) VALUES "
       "('TestString', 42, 3.14, JSON '{\"age\": 90, \"name\": \"Ram\"}', "
-      "STRUCT(1,2,'TestStruct'), B'0x48656C6C6F')";
+      "STRUCT(1,2,'TestStruct'), B'0x48656C6C6F', B'0x48656C6C6F')";
   CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_query.c_str(),
                         insert_query.size()),
              "SQLPrepare", conn);
@@ -854,7 +854,7 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   // Prepare and execute select query
   auto select_query =
       "SELECT StringField, IntegerField, FloatField, JsonField, StructField, "
-      "ByteField "
+      "ByteField1, ByteField2 "
       "FROM " +
       table_name;
   CheckError(SQLPrepare(conn->hstmt, (SQLCHAR*)select_query.c_str(),
@@ -869,7 +869,8 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   SQLCHAR json_data[256];
   SQLCHAR json_data2[256];
   SQLCHAR struct_data[256];
-  SQLCHAR byte_data[256];
+  SQLCHAR byte_data_char[256];
+  SQLCHAR byte_data_binary[256];
   int int_data;
   double float_data;
   SQLLEN int_len, float_len, string_len, json_len, struct_len, byte_len;
@@ -913,13 +914,30 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
             SQL_SUCCESS_WITH_INFO);
   EXPECT_STREQ((char*)json_data2, "{\"age\":90");
 
-  EXPECT_EQ(SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data, 5, &byte_len),
-            SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data, "3078");
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
+      SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)byte_data_char, "3078");
 
-  EXPECT_EQ(SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data, 5, &byte_len),
-            SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data, "3438");
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
+      SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)byte_data_char, "3438");
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
+      SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)byte_data_binary, "0x486\x7F");
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
+      SQL_SUCCESS_WITH_INFO);
+  EXPECT_STREQ((char*)byte_data_binary, "56C6C\x7F");
+
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
+      SQL_SUCCESS);
+  EXPECT_STREQ((char*)byte_data_binary, "6FC6C\x7F");
 
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
   table.DropWithPrepare(conn);

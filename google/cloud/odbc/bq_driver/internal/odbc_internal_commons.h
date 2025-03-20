@@ -110,18 +110,25 @@ using ResultSetRows = std::vector<DSRow>;
 // data source row columns.
 using RowSchema = std::vector<ColumnSchema>;
 
+struct TranslatedData {
+  SQLLEN row_offset;  // Offset to manage last fetch row index in case
+  // of partial data fetch in SQLGetData
+  DSValue data;  // To store translated data when buffer length is less
+  // and SQLGetData fetches partial data.
+  SQLSMALLINT last_target_c_type;  // Holds the last fetched target data type
+                                   // (SQL C data type) for the column.
+  // This is used to track the type of the data fetched in the previous
+  // SQLGetData call.
+  int last_column_index{
+      -1};  // contains the column number fetched in last SQLGetData call
+};
+
 // ResultSet structure representing the data from the BQ DataSource.
 struct ResultSet {
   RowSchema row_schema;
   ResultSetRows rows;
-  mutable int cursor{-1};      // points before the next row to fetch
-  mutable SQLLEN row_offset_;  // Offset to manage last fetch row index in case
-                               // of partial data fetch in SQLGetData
-  mutable std::shared_ptr<char[]>
-      translated_data_;  // To store translated data when buffer length is less
-                         // and SQLGetData fetches partial data.
-  mutable int last_column_index{
-      -1};  // contains the column number fetched in last SQLGetData call
+  mutable int cursor{-1};  // points before the next row to fetch
+  mutable TranslatedData translated_data;
 };
 
 DSValue const kNullValue{0};
