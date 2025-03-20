@@ -50,6 +50,9 @@ bool const kIsBqDriver = true;
 bool const kIsBqDriver = false;
 #endif
 
+bool const kIsUnixODBC =
+    GetEnv("UNIXODBC_DRIVER_MANAGER_TESTING_ENABLE").value_or("") == "false";
+
 constexpr SQLSMALLINT kBufferLength = 1024;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
