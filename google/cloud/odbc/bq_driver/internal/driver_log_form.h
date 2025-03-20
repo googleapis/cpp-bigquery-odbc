@@ -45,6 +45,8 @@ class LogTraceDialog {
   HWND parent_hwnd;
   static std::string log_level_;
   static std::string log_file_path_;
+  static std::string original_log_level;
+  static std::string original_log_file_path;
 
   static LRESULT CALLBACK LogTraceProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM l_param);

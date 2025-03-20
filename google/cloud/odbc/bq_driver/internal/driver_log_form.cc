@@ -24,14 +24,11 @@ constexpr char kBigQueryDocsURL[] =
 std::string const kLogLevel = "LogLevel";
 std::string const kLogFile = "LogFile";
 std::string const kLogOff = "LOG_OFF";
-std::string const kLogFatal = "LOG_FATAL";
-std::string const kLogError = "LOG_ERROR";
-std::string const kLogWarning = "LOG_WARNING";
-std::string const kLogInfo = "LOG_INFO";
-std::string const kLogDebug = "LOG_DEBUG";
 std::string const kLogTrace = "LOG_TRACE";
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
+std::string LogTraceDialog::original_log_level = kLogOff;
+std::string LogTraceDialog::original_log_file_path = "";
 int const kBtnWidth = 66;
 int const kBtnHeight = 16;
 int const kComboBoxWidth = 202;
@@ -164,14 +161,9 @@ void LogTraceDialog::InitControls() {
       CreateButton(parent_hwnd, "Cancel", KAxisX + 341, KAxisY + 160, kBtnWidth,
                    kOkCancelHeight, kIdcLogBtnCancel);
   SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
-
-  std::vector<std::string> log_levels = {kLogOff,     kLogFatal, kLogError,
-                                         kLogWarning, kLogInfo,  kLogDebug,
-                                         kLogTrace};
-
-  for (auto const& log_level : log_levels) {
-    SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)log_level.c_str());
-  }
+  
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
   SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
 
   // Set initial selection based on stored log_level_
@@ -182,6 +174,8 @@ void LogTraceDialog::InitControls() {
   BOOL enable_controls = (log_level_ == kLogTrace.c_str());
   EnableWindow(h_log_file_edit, enable_controls);
   EnableWindow(h_log_browse_btn, enable_controls);
+  EnableWindow(h_max_files_edit, enable_controls);  // Disable max files edit
+  EnableWindow(h_max_size_edit, enable_controls);   // Disable max size edit
 }
 
 void LogTraceDialog::Show() {
@@ -213,8 +207,6 @@ void LogTraceDialog::Show() {
   if (parent_hwnd) {
     InitControls();
   }
-  // Set the OK button as the default (blue border)
-  SendMessage(parent_hwnd, DM_SETDEFID, (WPARAM)kIdcLogBtnOk, 0);
   ShowWindow(parent_hwnd, SW_SHOW);
   UpdateWindow(parent_hwnd);
 }
@@ -231,16 +223,26 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
     p_this = (LogTraceDialog*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   }
   switch (u_msg) {
-    case WM_INITDIALOG:
+    case WM_INITDIALOG: {
+      p_this->parent_hwnd = hwnd;  // Store parent window handle
+  
+      // ✅ Store the original values from saved settings
+      original_log_level = log_level_;  
+      original_log_file_path = log_file_path_;  
+  
+      // Initialize UI controls
+      p_this->InitControls();
+  
       // Ensure the hyperlink control has SS_NOTIFY style
-      {
-        // Ensure the hyperlink control has SS_NOTIFY style
-        HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink);
-        LONG_PTR hyperlink_style = GetWindowLongPtr(h_hyperlink, GWL_STYLE);
-        SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
-      }
+      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink);
+      LONG_PTR hyperlink_style = GetWindowLongPtr(h_hyperlink, GWL_STYLE);
+      SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
+  
       return TRUE;
-    case WM_ERASEBKGND: {
+  }
+  
+  
+   case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
       GetClientRect(hwnd, &rc);
@@ -325,20 +327,16 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
 
               HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
               HWND h_log_browse_btn = GetDlgItem(hwnd, kIdcLogBrowseBtn);
-              HWND h_log_btn_ok = GetDlgItem(hwnd, kIdcLogBtnOk);
+              HWND h_max_files_edit = GetDlgItem(hwnd, kIdcMaxFilesEdit);  // Get max files edit
+              HWND h_max_size_edit = GetDlgItem(hwnd, kIdcMaxSizeEdit);    // Get max size edit
 
               // Enable Browse button for all log levels except LOG_OFF
               BOOL enable_controls =
-                  (strcmp(selected_value, kLogOff.c_str()) != 0);
+                  (strcmp(selected_value, kLogTrace.c_str()) == 0);
               EnableWindow(h_log_file_edit, enable_controls);
               EnableWindow(h_log_browse_btn, enable_controls);
-
-              // Disable OK button if Browse is enabled but file path is empty
-              char log_path[256];
-              GetWindowText(h_log_file_edit, log_path, sizeof(log_path));
-              EnableWindow(h_log_btn_ok,
-                           enable_controls && strlen(log_path) > 0);
-
+              EnableWindow(h_max_files_edit, enable_controls);  // Disable max files if LOG_OFF
+              EnableWindow(h_max_size_edit, enable_controls);   // Disable max size if LOG_OFF
               log_level_ = selected_value;
             }
           }
@@ -347,16 +345,6 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
         case kIdcLogBrowseBtn: {
           HWND h_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
           OpenFolderDialog(hwnd, h_edit);
-
-          // After selecting the file, re-enable the OK button if a path is
-          // entered
-          HWND h_log_btn_ok = GetDlgItem(hwnd, kIdcLogBtnOk);
-          char log_path[256];
-          GetWindowText(h_edit, log_path, sizeof(log_path));
-          EnableWindow(h_log_btn_ok, strlen(log_path) > 0);
-
-          // Remove default focus (blue border) from OK button
-          SendMessage(hwnd, DM_SETDEFID, 0, 0);
           break;
         }
         case kIdcLogBtnOk: {
@@ -375,18 +363,50 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           char log_file_buf[256];
           GetWindowText(h_log_file_path, log_file_buf, sizeof(log_file_buf));
           log_file_path_ = log_file_buf;
+             // ✅ Save the final selection only when OK is clicked
+            original_log_level = log_level_;
+            original_log_file_path = log_file_path_;
 
           DestroyWindow(hwnd);
           break;
         }
         case kIdcLogBtnCancel:
-          DestroyWindow(hwnd);
-          break;
+        // ✅ Restore previous values before closing the window
+        log_level_ = original_log_level;
+        log_file_path_ = original_log_file_path;
+    
+        // ✅ Also update the UI to reflect the restored values
+        HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
+        HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+    
+        // Set dropdown back to original selection
+        int original_index = (original_log_level == kLogTrace) ? 1 : 0;
+        SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
+    
+        // Set the file path edit box back to original value
+        SetWindowText(h_log_file_edit, original_log_file_path.c_str());
+    
+        DestroyWindow(hwnd);
+        break;
+    
+    
       }
       break;
-    case WM_CLOSE:
-      DestroyWindow(hwnd);
-      return 0;
+      case WM_CLOSE: {
+        log_level_ = original_log_level;
+        log_file_path_ = original_log_file_path;
+        
+        HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
+        HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+    
+        int original_index = (original_log_level == kLogTrace) ? 1 : 0;
+        SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
+        SetWindowText(h_log_file_edit, original_log_file_path.c_str());
+    
+        DestroyWindow(hwnd);
+        return 0;
+    }   
+    
     case WM_DESTROY:
       if (p_this) {
         p_this->parent_hwnd = NULL;
