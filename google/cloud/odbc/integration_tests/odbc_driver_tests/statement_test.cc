@@ -927,17 +927,17 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data_binary, "0x486\x7F");
+  EXPECT_STREQ((char*)byte_data_binary, "0x486");
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data_binary, "56C6C\x7F");
+  EXPECT_STREQ((char*)byte_data_binary, "56C6C");
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS);
-  EXPECT_STREQ((char*)byte_data_binary, "6FC6C\x7F");
+  EXPECT_STREQ((char*)byte_data_binary, "6FC6C");
 
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
   table.DropWithPrepare(conn);
