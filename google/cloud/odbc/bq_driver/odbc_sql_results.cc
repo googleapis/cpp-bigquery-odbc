@@ -591,7 +591,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kStruct ||
          bq_data_type == BQDataType::kArray)) {
       result_set.translated_data.last_target_c_type = target_c_type;
-      result_set.translated_data.data.resize(ds_val.size());
+
+      // Use reserve to prevent excessive reallocations
+      if (result_set.translated_data.data.capacity() < ds_val.size() + 1) {
+        result_set.translated_data.data.reserve(ds_val.size() + 1);
+      }
+      result_set.translated_data.data.resize(ds_val.size() + 1);
+
       SQLLEN target_value_len = 0;
 
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
@@ -600,7 +606,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       if (target_value_string_len) {
         *target_value_string_len = target_value_len;
       }
-      result_set.translated_data.data.resize(target_value_len);
+
+      // Ensure resizing does not shrink below the required buffer size
+      if (target_value_len < result_set.translated_data.data.capacity()) {
+        result_set.translated_data.data.resize(target_value_len);
+      }
+
       std::memset(target_value, '\0', target_value_buffer_len);
     } else {
       status_record =
