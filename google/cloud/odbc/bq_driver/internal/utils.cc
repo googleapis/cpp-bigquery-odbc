@@ -19,6 +19,11 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
 #include <sstream>
+#ifdef _WIN32
+#include <uxtheme.h>  // Required for SetWindowTheme
+#include <windows.h>
+#endif
+#pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
@@ -168,25 +173,26 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 // Helper function to create a static label
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id) {
-  return CreateWindowEx(0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT, x,
-                        y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(
+      0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
+      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 // Helper function to create an edit box
 HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
-      0, "EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT, x, y, width,
-      height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      0, "EDIT", "",
+      WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id) {
-  return CreateWindowEx(
-      0, "EDIT", "",
-      WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
-          ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(0, "EDIT", "",
+                        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT |
+                            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
+                        x, y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
 }
 
 // Helper function to create a combo box (dropdown)
@@ -196,12 +202,18 @@ HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
       y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
-// Helper function to create a button
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
                   int height, int id) {
-  return CreateWindowEx(
-      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  HWND hButton = CreateWindowEx(
+      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_FLAT, x, y,
+      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+
+  // Disable Windows theme to remove any rounding
+  if (hButton) {
+    SetWindowTheme(hButton, L"", L"");
+  }
+
+  return hButton;
 }
 
 // Helper function to create a checkbox
@@ -211,6 +223,37 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                         WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
                         height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
+// Helper function to create a group box
+HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
+                    int height, int id) {
+  return CreateWindowEx(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                        x, y, width, height, parent, (HMENU)id,
+                        GetModuleHandle(NULL), NULL);
+}
+HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
+                          int width, int height, int id) {
+  HWND hEditBox = CreateWindowEx(
+      WS_EX_CLIENTEDGE, "EDIT", text,
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER |
+          ES_RIGHT,  // ES_NUMBER restricts input to numbers
+      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+
+  if (hEditBox) {
+    SendMessage(hEditBox, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT),
+                TRUE);
+  }
+
+  return hEditBox;
+}
+HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
+                          int width, int height, int id) {
+  HWND h_hyperlink = CreateWindowEx(
+      0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y, width, height,
+      parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+
+  return h_hyperlink;
+}
+
 #else
 
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
