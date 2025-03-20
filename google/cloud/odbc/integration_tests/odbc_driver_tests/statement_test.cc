@@ -873,6 +873,8 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   SQLCHAR struct_data[256];
   SQLCHAR byte_data_char[256];
   SQLCHAR byte_data_binary[256];
+  SQLCHAR buf[kBufferLength];
+  SQLSMALLINT string_length_ptr;
   int int_data;
   double float_data;
   SQLLEN int_len, float_len, string_len, json_len, struct_len, byte_len;
@@ -915,6 +917,15 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_CHAR, json_data2, 10, &json_len),
             SQL_SUCCESS_WITH_INFO);
   EXPECT_STREQ((char*)json_data2, "{\"age\":90");
+
+  EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_BINARY, json_data2, 10, &json_len),
+            SQL_ERROR);
+
+  auto status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf, kBufferLength, &string_length_ptr);
+  EXPECT_THAT((char*)buf,
+              HasSubstr("ChangeTypesInMultipartSQLGetDataNotSupported"));
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
