@@ -246,19 +246,19 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
       GetClientRect(hwnd, &rc);
 
       // Define a custom background color (#F0F0F0)
-      HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
+      HBRUSH h_brush = CreateSolidBrush(RGB(240, 240, 240));
 
-      FillRect(hdc, &rc, hBrush);
-      DeleteObject(hBrush);
+      FillRect(hdc, &rc, h_brush);
+      DeleteObject(h_brush);
       return 1;  // Indicate we handled the background redraw
     }
     case WM_CTLCOLORSTATIC: {
-      HDC hdcStatic = (HDC)w_param;
-      HWND hControl = (HWND)l_param;
+      HDC hdc_static = (HDC)w_param;
+      HWND h_control = (HWND)l_param;
 
-      if (GetDlgCtrlID(hControl) == kIdcHyperlink) {
-        SetTextColor(hdcStatic, RGB(0, 0, 255));
-        SetBkMode(hdcStatic, TRANSPARENT);
+      if (GetDlgCtrlID(h_control) == kIdcHyperlink) {
+        SetTextColor(hdc_static, RGB(0, 0, 255));
+        SetBkMode(hdc_static, TRANSPARENT);
 
         if (!hFontHyperlink) {
           hFontHyperlink = CreateFont(
@@ -266,7 +266,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
               OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
               VARIABLE_PITCH, "Inter");
         }
-        SelectObject(hdcStatic, hFontHyperlink);
+        SelectObject(hdc_static, hFontHyperlink);
         return (LRESULT)GetStockObject(NULL_BRUSH);
       }
       break;
