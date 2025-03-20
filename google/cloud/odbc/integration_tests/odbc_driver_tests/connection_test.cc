@@ -568,13 +568,16 @@ TEST(ConnectionTest, SQLDriverConnectW_NULLOutput) {
 
 // Duplicate DSNs are not functioning properly(WIN).
 #ifndef _WIN32
-if (!kIsUnixODBC) {
-  TEST(ConnectionTest, SQLDriverConnect_DuplicateDsn) {
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString + ";DSN=InvalidDsn", conn),
-              SQL_SUCCESS);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+TEST(ConnectionTest, SQLDriverConnect_DuplicateDsn) {
+  if (kIsUnixODBC) {
+    // Skipping this test as unixODBC driver manager does not allow duplicate
+    // DSN connection strings.
+    GTEST_SKIP() << "Skipping test";
   }
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString + ";DSN=InvalidDsn", conn),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif
 
@@ -1025,7 +1028,8 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-
+  std::cout << "debug: driver name = " << conn.get()->metadata.driver_name
+            << std::endl;
   PrintDriverVerName(conn);
   EXPECT_EQ(status, SQL_SUCCESS);
 
@@ -1042,293 +1046,324 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   }
 }
 
-if (!kIsUnixODBC) {
-  TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string key_path =
-        GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-
-    std::string driver_name = GetDriverName();
-    std::string conn_str =
-        "DRIVER={" + driver_name +
-        "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
-        ";OAuthMechanism=0;";
-
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLSMALLINT out_conn_str_len;
-    SQLCHAR out_conn_str[kBufferLength] = {0};
-
-    StrToChar((char*)in_conn_str, conn_str);
-    SetAttributes(conn, 30);
-
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-
-    PrintDriverVerName(conn);
-    EXPECT_EQ(status, SQL_SUCCESS);
-
-    std::string const expected_out_conn_str =
-        "DRIVER={" + driver_name +
-        "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
-        ";OAuthMechanism=0;";
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
-    EXPECT_EQ(res_out_conn_str, expected_out_conn_str);
-    EXPECT_EQ(sizeof(res_out_conn_str), sizeof(expected_out_conn_str));
-    EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
+TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
   }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
 
-  TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string const driver_name = GetDriverName();
-    std::string conn_str = "DRIVER={" + driver_name + "}";
+  std::string driver_name = GetDriverName();
+  std::string conn_str =
+      "DRIVER={" + driver_name +
+      "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
+      ";OAuthMechanism=0;";
 
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLSMALLINT out_conn_str_len;
-    SQLCHAR out_conn_str[1024] = {0};
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLSMALLINT out_conn_str_len;
+  SQLCHAR out_conn_str[kBufferLength] = {0};
 
-    StrToChar((char*)in_conn_str, conn_str);
-    SetAttributes(conn, 30);
+  StrToChar((char*)in_conn_str, conn_str);
+  SetAttributes(conn, 30);
 
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-    EXPECT_EQ(status, SQL_NEED_DATA);
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
 
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  PrintDriverVerName(conn);
+  EXPECT_EQ(status, SQL_SUCCESS);
 
-    // TODO(b/383449326): Add other connection attributes for the connection
-    // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-    if (kIsBqDriver) {
-      EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-    } else {
-      EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-    }
+  std::string const expected_out_conn_str =
+      "DRIVER={" + driver_name +
+      "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
+      ";OAuthMechanism=0;";
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+
+  EXPECT_EQ(res_out_conn_str, expected_out_conn_str);
+  EXPECT_EQ(sizeof(res_out_conn_str), sizeof(expected_out_conn_str));
+  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
+}
+
+TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
+  }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name + "}";
+
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLSMALLINT out_conn_str_len;
+  SQLCHAR out_conn_str[1024] = {0};
+
+  StrToChar((char*)in_conn_str, conn_str);
+  SetAttributes(conn, 30);
+
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_NEED_DATA);
+
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+
+  // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
+  if (kIsBqDriver) {
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+  }
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-    EXPECT_THAT(res_out_conn_str,
-                HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+}
+
+TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
   }
+  auto conn = std::make_shared<ODBCHandles>();
 
-  TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
-    auto conn = std::make_shared<ODBCHandles>();
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLSMALLINT out_conn_str_len;
+  SQLCHAR out_conn_str[10] = {0};
 
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLSMALLINT out_conn_str_len;
-    SQLCHAR out_conn_str[10] = {0};
+  StrToChar((char*)in_conn_str, kDefaultConnectionString);
+  SetAttributes(conn, 30);
 
-    StrToChar((char*)in_conn_str, kDefaultConnectionString);
-    SetAttributes(conn, 30);
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_NEED_DATA);
 
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-    EXPECT_EQ(status, SQL_NEED_DATA);
-
-    std::string const expected_conn_out_str = "DSN=Sampl";
-    EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
+  std::string const expected_conn_out_str = "DSN=Sampl";
+  EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-    EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
-    EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
-    EXPECT_EQ(res_out_conn_str.size(), expected_conn_out_str.size());
+  EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
+  EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
+  EXPECT_EQ(res_out_conn_str.size(), expected_conn_out_str.size());
 #endif  // _WIN32
+}
+
+TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
   }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string conn_str =
+      "DRIVER={" + driver_name + "};" + "InvalidKey=InvalidValue;";
 
-  TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string const driver_name = GetDriverName();
-    std::string conn_str =
-        "DRIVER={" + driver_name + "};" + "InvalidKey=InvalidValue;";
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLSMALLINT out_conn_str_len;
+  SQLCHAR out_conn_str[kBufferLength] = {0};
 
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLSMALLINT out_conn_str_len;
-    SQLCHAR out_conn_str[kBufferLength] = {0};
+  StrToChar((char*)in_conn_str, conn_str);
+  SetAttributes(conn, 30);
 
-    StrToChar((char*)in_conn_str, conn_str);
-    SetAttributes(conn, 30);
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
-    // TODO(b/383449326): Add other connection attributes for the connection
-    if (kIsBqDriver) {
-      EXPECT_EQ(status, SQL_ERROR);
-    } else {
-      EXPECT_EQ(status, SQL_NEED_DATA);
-      EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
-      EXPECT_THAT(
-          res_out_conn_str,
-          HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
-#endif  // _WIN32
-    }
-  }
-
-  TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string const driver_name = GetDriverName();
-    std::string conn_str = "DRIVER={" + driver_name + "}";
-
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLCHAR out_conn_str[kBufferLength] = {0};
-    SQLSMALLINT out_conn_str_len;
-
-    StrToChar((char*)in_conn_str, conn_str);
-    SetAttributes(conn, 30);
-
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-
-    EXPECT_EQ(status, SQL_NEED_DATA);
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
-    EXPECT_THAT(res_out_conn_str,
-                HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
-#endif  // _WIN32
-
-    conn_str = "InvalidString";
-    StrToChar((char*)in_conn_str, conn_str);
-
-    status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                              sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                              sizeof(out_conn_str), &out_conn_str_len);
+  // TODO(b/383449326): Add other connection attributes for the connection
+  if (kIsBqDriver) {
     EXPECT_EQ(status, SQL_ERROR);
-    // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
-    EXPECT_THAT(res_out_conn_str,
-                HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
-#endif  // _WIN32
-
-    // TODO(b/383449326): Add other connection attributes for the connection
-    // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-    if (kIsBqDriver) {
-      EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-      CheckDiagnosticRecord(
-          conn->hdbc, "HY000", 0,
-          "[Google][ODBC BigQuery Driver] Invalid Connection String");
-    } else {
-      EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-      CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
-                            "Invalid connection string");
-    }
-  }
-
-  TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string const driver_name = GetDriverName();
-    std::string key_path =
-        GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-
-    std::string conn_str = "DRIVER={" + driver_name + "}";
-
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLCHAR out_conn_str[kBufferLength] = {0};
-    SQLSMALLINT out_conn_str_len;
-
-    StrToChar((char*)in_conn_str, conn_str);
-    SetAttributes(conn, 30);
-
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-
+  } else {
     EXPECT_EQ(status, SQL_NEED_DATA);
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
     EXPECT_THAT(res_out_conn_str,
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+  }
+}
 
-    conn_str =
-        ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
-        "InvalidKey=InvalidValue;";
-    StrToChar((char*)in_conn_str, conn_str);
+TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
+  }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name + "}";
 
-    status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                              sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                              sizeof(out_conn_str), &out_conn_str_len);
-    EXPECT_EQ(status, SQL_ERROR);
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  StrToChar((char*)in_conn_str, conn_str);
+  SetAttributes(conn, 30);
+
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(status, SQL_NEED_DATA);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-    EXPECT_THAT(res_out_conn_str, HasSubstr("Catalog:Catalog=?"));
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
 
-    // TODO(b/383449326): Add other connection attributes for the connection
-    // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-    if (kIsBqDriver) {
-      EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-      CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
-                            "[Google][ODBC BigQuery Driver] Connection Error: "
-                            "Non Requested connection attribute");
-    } else {
-      EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-      CheckDiagnosticRecord(
-          conn->hdbc, "HY000", 11600,
-          "Connection Error: Non Requested connection attribute");
-    }
-  }
+  conn_str = "InvalidString";
+  StrToChar((char*)in_conn_str, conn_str);
 
-  TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
-    auto conn = std::make_shared<ODBCHandles>();
-    std::string const driver_name = GetDriverName();
-    std::string conn_str = "DRIVER={" + driver_name +
-                           "};"
-                           "Catalog=bigquery-devtools-drivers";
-
-    SQLCHAR in_conn_str[kBufferLength];
-    SQLCHAR out_conn_str[kBufferLength] = {0};
-    SQLSMALLINT out_conn_str_len;
-
-    StrToChar((char*)in_conn_str, conn_str);
-    google::cloud::odbc_tests::SetAttributes(conn, 30);
-
-    auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                   sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                   sizeof(out_conn_str), &out_conn_str_len);
-
-    EXPECT_EQ(status, SQL_NEED_DATA);
-
-    // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+  status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_ERROR);
+  // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
-    std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-    EXPECT_THAT(res_out_conn_str,
-                HasSubstr("OAuthMechanism:OAuthMechanism=?;"));
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
 
-    conn_str = "Catalog=bigquery-devtools-drivers;OAuthMechanism=0;";
+  // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
+  if (kIsBqDriver) {
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 0,
+        "[Google][ODBC BigQuery Driver] Invalid Connection String");
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
+                          "Invalid connection string");
+  }
+}
 
-    StrToChar((char*)in_conn_str, conn_str);
-    status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                              sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                              sizeof(out_conn_str), &out_conn_str_len);
-    EXPECT_EQ(status, SQL_ERROR);
+TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
+  }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string key_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
 
-    if (kIsBqDriver) {
-      CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
-                            "[Google][ODBC BigQuery Driver] Connection Error: "
-                            "Connection Attribute 'CATALOG' already found!");
-    } else {
-      CheckDiagnosticRecord(
-          conn->hdbc, "HY000", 11590,
-          "Connection Error: Connection Attribute Catalog already found!");
-    }
+  std::string conn_str = "DRIVER={" + driver_name + "}";
+
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  StrToChar((char*)in_conn_str, conn_str);
+  SetAttributes(conn, 30);
+
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(status, SQL_NEED_DATA);
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+
+// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+#ifdef _WIN32
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+#endif  // _WIN32
+
+  conn_str =
+      ";Catalog=bigquery-devtools-drivers;OAuthMechanism=0;"
+      "InvalidKey=InvalidValue;";
+  StrToChar((char*)in_conn_str, conn_str);
+
+  status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_ERROR);
+
+// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+#ifdef _WIN32
+  EXPECT_THAT(res_out_conn_str, HasSubstr("Catalog:Catalog=?"));
+#endif  // _WIN32
+
+  // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
+  if (kIsBqDriver) {
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+                          "[Google][ODBC BigQuery Driver] Connection Error: "
+                          "Non Requested connection attribute");
+  } else {
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 11600,
+        "Connection Error: Non Requested connection attribute");
+  }
+}
+
+TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
+  if (kIsUnixODBC) {
+    // Skipping this test as the unixODBC driver manager closes the connection
+    // when calling the SQLBrowseConnect API.
+    GTEST_SKIP() << "Skipping test";
+  }
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name +
+                         "};"
+                         "Catalog=bigquery-devtools-drivers";
+
+  SQLCHAR in_conn_str[kBufferLength];
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len;
+
+  StrToChar((char*)in_conn_str, conn_str);
+  google::cloud::odbc_tests::SetAttributes(conn, 30);
+
+  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                                 sizeof(out_conn_str), &out_conn_str_len);
+
+  EXPECT_EQ(status, SQL_NEED_DATA);
+
+  // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+#ifdef _WIN32
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  EXPECT_THAT(res_out_conn_str, HasSubstr("OAuthMechanism:OAuthMechanism=?;"));
+#endif  // _WIN32
+
+  conn_str = "Catalog=bigquery-devtools-drivers;OAuthMechanism=0;";
+
+  StrToChar((char*)in_conn_str, conn_str);
+  status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
+                            sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
+                            sizeof(out_conn_str), &out_conn_str_len);
+  EXPECT_EQ(status, SQL_ERROR);
+
+  if (kIsBqDriver) {
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+                          "[Google][ODBC BigQuery Driver] Connection Error: "
+                          "Connection Attribute 'CATALOG' already found!");
+  } else {
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 11590,
+        "Connection Error: Connection Attribute Catalog already found!");
   }
 }
 

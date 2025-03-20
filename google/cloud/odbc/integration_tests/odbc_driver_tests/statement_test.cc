@@ -1621,84 +1621,85 @@ TEST(StatementTest, Get_SQL_ATTR_ROW_NUMBER) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-if (!kIsUnixODBC) {
-  TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-    SQLRETURN status;
+TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  SQLRETURN status;
 
-    // Get descriptor using statement handle and check it's implicit
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
-    SQLSMALLINT alloc_type = 0;
-    GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
-                 GetParam());
+  // Get descriptor using statement handle and check it's implicit
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  SQLSMALLINT alloc_type = 0;
+  GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
 
-    EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
 
-    // Set descriptor field to check it after
-    SQLULEN arr_size_implicit = 45;
-    status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE,
-                             (SQLPOINTER)arr_size_implicit, 0);
-    CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  // Set descriptor field to check it after
+  SQLULEN arr_size_implicit = 45;
+  status = SQLSetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE,
+                           (SQLPOINTER)arr_size_implicit, 0);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
 
-    // Create an explicit descriptor handle
-    HSTMT desc_expl = nullptr;
-    status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &desc_expl);
-    CheckError(status, "SQLAllocHandle", conn);
+  // Create an explicit descriptor handle
+  HSTMT desc_expl = nullptr;
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &desc_expl);
+  CheckError(status, "SQLAllocHandle", conn);
 
-    // Set explicit descriptor as statement attribute
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, desc_expl, 0);
-    CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  // Set explicit descriptor as statement attribute
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, desc_expl, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
 
-    // Check explicit descriptor is set
-    HSTMT desc_expl_new = nullptr;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &desc_expl_new, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
-    alloc_type = 0;
-    GetDescField(desc_expl_new, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
-                 GetParam());
+  // Check explicit descriptor is set
+  HSTMT desc_expl_new = nullptr;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &desc_expl_new, 0,
+                       NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  alloc_type = 0;
+  GetDescField(desc_expl_new, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
 
-    EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
-    EXPECT_EQ(desc_expl, desc_expl_new);
+  EXPECT_EQ(SQL_DESC_ALLOC_USER, alloc_type);
+  EXPECT_EQ(desc_expl, desc_expl_new);
 
-    // Set a header field of explicit descriptor
-    SQLULEN arr_size_explicit = 5;
-    status = SQLSetDescField(desc_expl, 0, SQL_DESC_ARRAY_SIZE,
-                             (SQLPOINTER)arr_size_explicit, 0);
-    CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
+  // Set a header field of explicit descriptor
+  SQLULEN arr_size_explicit = 5;
+  status = SQLSetDescField(desc_expl, 0, SQL_DESC_ARRAY_SIZE,
+                           (SQLPOINTER)arr_size_explicit, 0);
+  CheckError(status, "SQLSetDescField(SQL_DESC_ARRAY_SIZE)", conn);
 
-    // Get attribute of an explicit descriptor using statement handle
-    SQLULEN arr_size_stmt_handle = 0;
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                         &arr_size_stmt_handle, 0, NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+  // Get attribute of an explicit descriptor using statement handle
+  SQLULEN arr_size_stmt_handle = 0;
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                       &arr_size_stmt_handle, 0, NULL, GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
 
-    EXPECT_EQ(arr_size_explicit, arr_size_stmt_handle);
+  EXPECT_EQ(arr_size_explicit, arr_size_stmt_handle);
 
-    // Dissociate explicit descriptor from a statement handle
-    status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, NULL, 0);
-    CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  // Dissociate explicit descriptor from a statement handle
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, NULL, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
 
-    // Get descriptor using statement handle and check it's implicit again
-    status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0,
-                         NULL, GetParam());
-    CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
-    alloc_type = 0;
-    GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
-                 GetParam());
-    SQLULEN arr_size_new = 0;
-    GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0, NULL,
-                 GetParam());
+  // Get descriptor using statement handle and check it's implicit again
+  status = GetStmtAttr(conn->hstmt, SQL_ATTR_APP_ROW_DESC, &conn->ard, 0, NULL,
+                       GetParam());
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_APP_ROW_DESC)", conn);
+  alloc_type = 0;
+  GetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL,
+               GetParam());
+  SQLULEN arr_size_new = 0;
+  GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0, NULL,
+               GetParam());
 
+  if (!kIsUnixODBC) {
+    // Skipping this, as unixODBC does not reset descriptors.
     EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
     EXPECT_EQ(arr_size_implicit, arr_size_new);
-
-    EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   }
+
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLPrepare, SimpleStatementTest) {

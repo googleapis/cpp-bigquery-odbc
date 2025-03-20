@@ -211,29 +211,32 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 #endif  // DRIVER_MANAGER_TESTING_ENABLED
-// Error Cases
+        // Error Cases
 
-if (!kIsUnixODBC) {
-  TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
-    auto conn = std::make_shared<ODBCHandles>();
-    SQLINTEGER set_val1 = -1;
-    SQLUINTEGER set_val2 = 12345;
-
-    EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-    EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
-                            (SQLPOINTER)set_val1, 0),
-              SQL_ERROR);
-    EXPECT_EQ(
-        SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, (SQLPOINTER)set_val1, 0),
-        SQL_ERROR);
-    EXPECT_EQ(
-        SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val2, 0),
-        SQL_ERROR);
-    EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
-                            (SQLPOINTER)set_val2, 0),
-              SQL_ERROR);
-    EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
+TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
+  if (kIsUnixODBC) {
+    // Skipping this test as it returns success for both the existing driver and
+    // the internal driver.
+    GTEST_SKIP() << "Skipping test";
   }
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLINTEGER set_val1 = -1;
+  SQLUINTEGER set_val2 = 12345;
+
+  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)set_val1, 0),
+      SQL_ERROR);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, (SQLPOINTER)set_val1, 0),
+      SQL_ERROR);
+  EXPECT_EQ(
+      SQLSetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, (SQLPOINTER)set_val2, 0),
+      SQL_ERROR);
+  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
+                          (SQLPOINTER)set_val2, 0),
+            SQL_ERROR);
+  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {

@@ -51,7 +51,8 @@ bool const kIsBqDriver = false;
 #endif
 
 bool const kIsUnixODBC =
-    GetEnv("UNIXODBC_DRIVER_MANAGER_TESTING_ENABLE").value_or("") == "false";
+    google::cloud::internal::GetEnv("UNIXODBC_INSTALLED").value_or("false") ==
+    "true";
 
 constexpr SQLSMALLINT kBufferLength = 1024;
 
