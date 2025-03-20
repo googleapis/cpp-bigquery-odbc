@@ -27,7 +27,8 @@ static int const kIdcProxyPortEdit = 129;
 static int const kIdcProxyUsernameEdit = 130;
 static int const kIdcProxyPasswordEdit = 131;
 static int const kIdcProxyGroupBox = 132;
-static int const kIdcProxyPortErrorLabel=133;  // Unique ID for the error label
+static int const kIdcProxyPortErrorLabel =
+    133;  // Unique ID for the error label
 static int const hFontHyperlink = 134;
 static int const kIdcHyperlink1 = 135;
 

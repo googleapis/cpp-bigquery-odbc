@@ -70,7 +70,7 @@ void ProxyOptions::InitControls() {
       kCheckboxWidth, kCheckboxHeight, kIdcProxyCheckbox);
   SendMessage(h_proxy_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   CheckDlgButton(proxy_hwnd, kIdcProxyCheckbox,
-    (proxy_check_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+                 (proxy_check_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_proxy_host_label = CreateLabel(
       proxy_hwnd, "Proxy host:", kControlStartX, kControlSpacing + 3,
@@ -260,74 +260,82 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
     case WM_COMMAND: {
       int wm_id = LOWORD(w_param);
       int wm_event = HIWORD(w_param);
-  
+
       if (wm_id == kIdcProxyCheckbox && wm_event == BN_CLICKED) {
-          BOOL is_checked = (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
-               
-          EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
-          EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
-          EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
-          EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
-         
-          if (is_checked) {
-              // OK button remains disabled initially when checkbox is checked
-              EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), FALSE);
-          } else {
-              // Enable OK button when checkbox is unchecked
-              EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), TRUE);
-  
-              // Reset fields when checkbox is unchecked
-              SetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), "");
-              SetWindowText(GetDlgItem(hwnd, kIdcProxyPasswordEdit), "");
-              SetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), "0");
-              SetWindowText(GetDlgItem(hwnd, kIdcProxyUsernameEdit), "");
-  
-              proxy_host_.clear();
-              proxy_port_.clear();
-              proxy_username_.clear();
-              proxy_pwd_enc_.clear();
-          }
-  
+        BOOL is_checked =
+            (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
+
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
+        EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
+
+        if (is_checked) {
+          // OK button remains disabled initially when checkbox is checked
+          EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), FALSE);
+        } else {
+          // Enable OK button when checkbox is unchecked
+          EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), TRUE);
+
+          // Reset fields when checkbox is unchecked
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), "");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyPasswordEdit), "");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), "0");
+          SetWindowText(GetDlgItem(hwnd, kIdcProxyUsernameEdit), "");
+
+          proxy_host_.clear();
+          proxy_port_.clear();
+          proxy_username_.clear();
+          proxy_pwd_enc_.clear();
+        }
+
       } else if (wm_id == kIdcProxyOKButton) {
-          // Save values and close window
-          proxy_check_ = (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED) ? "1" : "0";
-  
-          GetControlText(hwnd, kIdcProxyPortEdit, proxy_port_);
-          GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
-          GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
-          GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
-  
-          DestroyWindow(hwnd);
-  
+        // Save values and close window
+        proxy_check_ =
+            (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED) ? "1"
+                                                                         : "0";
+
+        GetControlText(hwnd, kIdcProxyPortEdit, proxy_port_);
+        GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
+        GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
+        GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
+
+        DestroyWindow(hwnd);
+
       } else if (wm_id == kIdcProxyCancelButton) {
-          DestroyWindow(hwnd);
-  
-      } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) && HIWORD(w_param) == EN_CHANGE) {
-          // Ensure the OK button is enabled when the checkbox is unchecked
-          BOOL is_checked = (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
-          HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
-  
-          if (is_checked) { // Only check the fields if the proxy checkbox is checked
-              char host_text[256], port_text[10];
-              GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text, sizeof(host_text));
-              GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text, sizeof(port_text));
-  
-              if (strlen(host_text) > 0 && strlen(port_text) > 0) {
-                  EnableWindow(h_ok_button, TRUE);
-              } else {
-                  EnableWindow(h_ok_button, FALSE);
-              }
+        DestroyWindow(hwnd);
+
+      } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
+                 HIWORD(w_param) == EN_CHANGE) {
+        // Ensure the OK button is enabled when the checkbox is unchecked
+        BOOL is_checked =
+            (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
+        HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
+
+        if (is_checked) {  // Only check the fields if the proxy checkbox is
+                           // checked
+          char host_text[256], port_text[10];
+          GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
+                        sizeof(host_text));
+          GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
+                        sizeof(port_text));
+
+          if (strlen(host_text) > 0 && strlen(port_text) > 0) {
+            EnableWindow(h_ok_button, TRUE);
           } else {
-              // If the checkbox is unchecked, always enable OK button
-              EnableWindow(h_ok_button, TRUE);
+            EnableWindow(h_ok_button, FALSE);
           }
-      } 
+        } else {
+          // If the checkbox is unchecked, always enable OK button
+          EnableWindow(h_ok_button, TRUE);
+        }
+      }
       // Insert hyperlink click handler
       else if (wm_id == kIdcHyperlink1 && wm_event == STN_CLICKED) {
-          ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+        ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
       }
       return 0;
-  } 
+    }
     case WM_KEYDOWN: {
       if (w_param == VK_ESCAPE) {
         DestroyWindow(hwnd);
