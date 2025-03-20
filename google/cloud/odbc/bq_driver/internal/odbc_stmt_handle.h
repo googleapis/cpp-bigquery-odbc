@@ -207,11 +207,17 @@ class StatementHandle : public Handle {
     current_param_index_ = param_index;
   }
 
+  inline void SetNeedData(SQLUSMALLINT need_data) {
+    is_need_data_ = need_data;
+  }
+
+  bool GetNeedData() const { return is_need_data_; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
-  SQLUSMALLINT current_param_index_ = 1;
+  SQLUSMALLINT current_param_index_ = 0;
 
  private:
   std::shared_ptr<Query> query_;
@@ -238,6 +244,7 @@ class StatementHandle : public Handle {
   bool is_statement_prepared_ = false;
 
   int param_num_ = 0;
+  bool is_need_data_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

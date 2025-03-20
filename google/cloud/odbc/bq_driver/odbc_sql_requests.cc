@@ -954,7 +954,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Get the current parameter index (set by SQLParamData)
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
-  if (param_index == 0 || param_index > stmt_handle.GetParamCount()) {
+  if (param_index > stmt_handle.GetParamCount()) {
     return LogAndReturnCode(
         stmt_handle,
         {SQLStates::k_HY000(), "No parameter currently expecting data."});
@@ -978,37 +978,60 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Handle NULL data
-  static char empty_buffer = '\0';
+  std::string empty_data = "\0";
   if (str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA) {
-    apd_rec.data_ptr = &empty_buffer;
+    apd_rec.data_ptr = &empty_data;
     apd_rec.octet_length = 0;
-    if (apd_rec.indicator_ptr) {
+    apd_rec.octet_length_ptr = &apd_rec.octet_length;
+    stmt_handle.SetNeedData(true);
+    if (apd_rec.indicator_ptr && str_len_or_ind_ptr == 0) {
       *(apd_rec.indicator_ptr) = SQL_NTS;
+    }
+
+    if (apd_rec.indicator_ptr && str_len_or_ind_ptr == SQL_NULL_DATA) {
+      *(apd_rec.indicator_ptr) = SQL_NULL_DATA;
     }
     return SQL_SUCCESS;
   }
 
   // Data Length Mismatch Handling
-  if (*(apd_rec.octet_length_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
-    if (apd_rec.octet_length + str_len_or_ind_ptr >
-        *(apd_rec.octet_length_ptr)) {
-      return LogAndReturnCode(
+  if (apd_rec.indicator_ptr &&
+      *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC) {
+        SQLLEN buffered_data_len = 
+        apd_rec.octet_length + str_len_or_ind_ptr;
+        if (*(apd_rec.indicator_ptr) != SQL_NTS){
+            apd_rec.length = -(*(apd_rec.indicator_ptr)) + SQL_LEN_DATA_AT_EXEC_OFFSET;
+          }
+        if (buffered_data_len > apd_rec.length) {
+          return LogAndReturnCode(
           stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
 
     // Check if full parameter data is received & update state
-    if ((apd_rec.octet_length + str_len_or_ind_ptr) ==
-        *(apd_rec.octet_length_ptr)) {
+    if ((buffered_data_len) == *(apd_rec.octet_length_ptr)) {
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+      apd_rec.octet_length_ptr = &apd_rec.octet_length;
+
+      if (apd_rec.indicator_ptr && ((apd_rec.type == SQL_C_CHAR) ||
+       (apd_rec.type == SQL_C_WCHAR))) {
+         *(apd_rec.indicator_ptr) = SQL_NTS;
+      }
+
+      if(apd_rec.type == SQL_C_BINARY){
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        apd_rec.octet_length_ptr = &apd_rec.octet_length;
+
+      }
     }
   }
 
   // Allocate a temporary buffer for new data
   SQLPOINTER buffer = nullptr;
   if (apd_rec.data_ptr == nullptr) {
-    if (str_len_or_ind_ptr <= 0) {
+
+    if (str_len_or_ind_ptr <= 0 || data == nullptr) {
       return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
-                                            "Invalid buffer allocation size."});
+                                            "Invalid buffer allocation size or data pointer."});
     }
 
     // First chunk of data, allocate fresh buffer
@@ -1040,16 +1063,33 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   apd_rec.data_ptr = buffer;
   apd_rec.octet_length += str_len_or_ind_ptr;
 
-  // Fix Updating octet_length_ptr
-  if (apd_rec.octet_length_ptr) {
-    *(apd_rec.octet_length_ptr) = apd_rec.octet_length;
-  }
-
   if (apd_rec.indicator_ptr) {
-    *(apd_rec.indicator_ptr) = SQL_NTS;
+    switch (apd_rec.type) {
+        case SQL_C_CHAR:
+        case SQL_C_WCHAR:
+            *(apd_rec.indicator_ptr) = SQL_NTS;
+            break;
+        case SQL_C_BINARY:
+            *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+            break;
+        case SQL_C_LONG:
+            *(apd_rec.indicator_ptr) = sizeof(SQLINTEGER);
+            break;
+        case SQL_C_DOUBLE:
+            *(apd_rec.indicator_ptr) = sizeof(SQLDOUBLE);
+            break;
+        case SQL_C_TYPE_TIMESTAMP:
+            *(apd_rec.indicator_ptr) = sizeof(SQL_TIMESTAMP_STRUCT);
+            break;
+        default:
+            *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+            break;
+    }
   }
 
+  apd_rec.octet_length_ptr = &apd_rec.octet_length;
   // Update descriptor record
+  stmt_handle.SetNeedData(true);
   apd.BindNewDescriptorRecord(param_index, apd_rec);
   return SQL_SUCCESS;
 }
@@ -1070,10 +1110,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
 
   auto param_num = handle->GetCurrentParamIndex();
-  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_num);
-
-  if (handle->GetStmtState() != StmtStates::kNeedsParams &&
-      *(apd_rec.indicator_ptr) != SQL_NTS) {
+  bool is_need_data = handle->GetNeedData();
+  if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1088,31 +1126,28 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     }
   }
 
-  if (param_num < 0 || param_num > handle->GetParamCount()) {
+  if (param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
   }
 
-  for (; param_num <= handle->GetParamCount(); param_num++) {
+  param_num++;
+  while(param_num <= handle->GetParamCount()) {
     auto param = apd.GetDescriptorRecord(param_num);
-    if (!param.indicator_ptr) {
-      handle->SetCurrentParamIndex(param_num + 1);
+    if ((!param.indicator_ptr) || (*(param.indicator_ptr) == SQL_NTS)) {
+      param_num++;
       continue;
     }
 
-    SQLLEN indicator_value = *(param.indicator_ptr);
-    if (indicator_value == SQL_NTS) {
-      handle->SetCurrentParamIndex(param_num + 1);
-      continue;
-    }
-
-    if (param.indicator_ptr != nullptr || indicator_value == SQL_DATA_AT_EXEC ||
-        indicator_value == SQL_LEN_DATA_AT_EXEC(0)) {
+    if (param.indicator_ptr != nullptr ||
+        *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
+        *(param.indicator_ptr) == SQL_LEN_DATA_AT_EXEC(0)) {
       if (param_or_target_value != nullptr) {
         *param_or_target_value = param.data_ptr;
       }
       handle->SetCurrentParamIndex(param_num);
       handle->SetStmtState(StmtStates::kNeedsPutData);
+      handle->SetNeedData(false);
       return SQL_NEED_DATA;
     }
   }

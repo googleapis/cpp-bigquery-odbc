@@ -167,7 +167,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   double float_data = 3.14;
   SQLLEN float_len = SQL_DATA_AT_EXEC;
 
-  std::string text_data = "";
+  std::string text_data = "testData";
   SQLLEN string_len = SQL_DATA_AT_EXEC;
 
   std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
@@ -188,8 +188,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  int size_of_fields = sizeof(fields) / sizeof(fields[0]);
-  for (int i = 0; i < size_of_fields; ++i) {
+  for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT,
                                fields[i].c_type, fields[i].sql_type, 0, 0,
                                nullptr, 0, fields[i].str_len_or_ind_ptr),
@@ -200,7 +199,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   SQLPOINTER param = nullptr;
 
-  for (int i = 0; i < size_of_fields; ++i) {
+  for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param), SQL_NEED_DATA);
     EXPECT_EQ(SQLPutData(conn->hstmt, fields[i].data_ptr, fields[i].data_size),
               SQL_SUCCESS);
@@ -3104,7 +3103,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
   Table table(table_name);
 
-  Schema schema{{"TextField1", "STRING"}, {"TextField2", "STRING"},
+  Schema schema{{"IntField1", "INT64"}, {"TextField2", "STRING"},
                 {"TextField3", "STRING"}, {"TextField4", "STRING"},
                 {"TextField5", "STRING"}, {"TextField6", "STRING"}};
 
@@ -3123,22 +3122,39 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   // TODO(b/404480454): Issue with SQLBindParameter When Using
   // the Same Indicator Pointer for Multiple Parameters
-  SQLLEN indicator = SQL_DATA_AT_EXEC;
+  SQLLEN indicator1 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator2 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator3 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator4 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator5 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator6 = SQL_DATA_AT_EXEC;
+
   int num_params = schema.size();
   // Bind parameters
-  for (int i = 0; i < schema.size(); i++) {
-    EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                               SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
-              SQL_SUCCESS);
-  }
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+    SQL_BIGINT, 0, 0, nullptr, 0, &indicator1), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator2), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_WCHAR,
+    SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator3), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR,
+    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator4), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR,
+    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator5), SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_CHAR,
+    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator6), SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
 
   // Scenario 1: Call SQLPutData with mismatched data type
-  int integerData = 10;
+  std::string data = "SomeData";
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  EXPECT_EQ(
-      SQLPutData(conn->hstmt, (SQLPOINTER)integerData, sizeof(integerData)),
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
       SQL_SUCCESS);
 
   // Scenario 2: Large data
@@ -3150,8 +3166,8 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   // Scenario 3: Invalid Data in Different Encoding
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  std::string latin1_data =
-      "Latin-1 data \xE9";  // Character 'é' in Latin-1 encoding
+  std::wstring latin1_data =
+      L"Latin-1 data \xE9";  // Character 'é' in Latin-1 encoding
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)latin1_data.c_str(),
                        latin1_data.size()),
             SQL_SUCCESS);
@@ -3161,12 +3177,11 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, 0), SQL_SUCCESS);
 
   // Scenario 5: Call SQLPutData with a negative size
-  std::string data = "SomeData";
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
 
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, -1), SQL_SUCCESS);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA), SQL_SUCCESS);
 
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
@@ -3508,7 +3523,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
                              SQL_WLONGVARCHAR, large_data.size(), 0,
-                             (SQLPOINTER)1, 0, &param_size),
+                             nullptr, 0, &param_size),
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
 
