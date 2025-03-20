@@ -161,7 +161,7 @@ void LogTraceDialog::InitControls() {
       CreateButton(parent_hwnd, "Cancel", KAxisX + 341, KAxisY + 160, kBtnWidth,
                    kOkCancelHeight, kIdcLogBtnCancel);
   SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
-  
+
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
   SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
@@ -225,24 +225,23 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
   switch (u_msg) {
     case WM_INITDIALOG: {
       p_this->parent_hwnd = hwnd;  // Store parent window handle
-  
+
       // ✅ Store the original values from saved settings
-      original_log_level = log_level_;  
-      original_log_file_path = log_file_path_;  
-  
+      original_log_level = log_level_;
+      original_log_file_path = log_file_path_;
+
       // Initialize UI controls
       p_this->InitControls();
-  
+
       // Ensure the hyperlink control has SS_NOTIFY style
       HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink);
       LONG_PTR hyperlink_style = GetWindowLongPtr(h_hyperlink, GWL_STYLE);
       SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
-  
+
       return TRUE;
-  }
-  
-  
-   case WM_ERASEBKGND: {
+    }
+
+    case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
       GetClientRect(hwnd, &rc);
@@ -327,16 +326,20 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
 
               HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
               HWND h_log_browse_btn = GetDlgItem(hwnd, kIdcLogBrowseBtn);
-              HWND h_max_files_edit = GetDlgItem(hwnd, kIdcMaxFilesEdit);  // Get max files edit
-              HWND h_max_size_edit = GetDlgItem(hwnd, kIdcMaxSizeEdit);    // Get max size edit
+              HWND h_max_files_edit =
+                  GetDlgItem(hwnd, kIdcMaxFilesEdit);  // Get max files edit
+              HWND h_max_size_edit =
+                  GetDlgItem(hwnd, kIdcMaxSizeEdit);  // Get max size edit
 
               // Enable Browse button for all log levels except LOG_OFF
               BOOL enable_controls =
                   (strcmp(selected_value, kLogTrace.c_str()) == 0);
               EnableWindow(h_log_file_edit, enable_controls);
               EnableWindow(h_log_browse_btn, enable_controls);
-              EnableWindow(h_max_files_edit, enable_controls);  // Disable max files if LOG_OFF
-              EnableWindow(h_max_size_edit, enable_controls);   // Disable max size if LOG_OFF
+              EnableWindow(h_max_files_edit,
+                           enable_controls);  // Disable max files if LOG_OFF
+              EnableWindow(h_max_size_edit,
+                           enable_controls);  // Disable max size if LOG_OFF
               log_level_ = selected_value;
             }
           }
@@ -363,50 +366,48 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           char log_file_buf[256];
           GetWindowText(h_log_file_path, log_file_buf, sizeof(log_file_buf));
           log_file_path_ = log_file_buf;
-             // ✅ Save the final selection only when OK is clicked
-            original_log_level = log_level_;
-            original_log_file_path = log_file_path_;
+          // ✅ Save the final selection only when OK is clicked
+          original_log_level = log_level_;
+          original_log_file_path = log_file_path_;
 
           DestroyWindow(hwnd);
           break;
         }
         case kIdcLogBtnCancel:
-        // ✅ Restore previous values before closing the window
-        log_level_ = original_log_level;
-        log_file_path_ = original_log_file_path;
-    
-        // ✅ Also update the UI to reflect the restored values
-        HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
-        HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
-    
-        // Set dropdown back to original selection
-        int original_index = (original_log_level == kLogTrace) ? 1 : 0;
-        SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
-    
-        // Set the file path edit box back to original value
-        SetWindowText(h_log_file_edit, original_log_file_path.c_str());
-    
-        DestroyWindow(hwnd);
-        break;
-    
-    
+          // ✅ Restore previous values before closing the window
+          log_level_ = original_log_level;
+          log_file_path_ = original_log_file_path;
+
+          // ✅ Also update the UI to reflect the restored values
+          HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
+          HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+
+          // Set dropdown back to original selection
+          int original_index = (original_log_level == kLogTrace) ? 1 : 0;
+          SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
+
+          // Set the file path edit box back to original value
+          SetWindowText(h_log_file_edit, original_log_file_path.c_str());
+
+          DestroyWindow(hwnd);
+          break;
       }
       break;
-      case WM_CLOSE: {
-        log_level_ = original_log_level;
-        log_file_path_ = original_log_file_path;
-        
-        HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
-        HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
-    
-        int original_index = (original_log_level == kLogTrace) ? 1 : 0;
-        SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
-        SetWindowText(h_log_file_edit, original_log_file_path.c_str());
-    
-        DestroyWindow(hwnd);
-        return 0;
-    }   
-    
+    case WM_CLOSE: {
+      log_level_ = original_log_level;
+      log_file_path_ = original_log_file_path;
+
+      HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
+      HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+
+      int original_index = (original_log_level == kLogTrace) ? 1 : 0;
+      SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
+      SetWindowText(h_log_file_edit, original_log_file_path.c_str());
+
+      DestroyWindow(hwnd);
+      return 0;
+    }
+
     case WM_DESTROY:
       if (p_this) {
         p_this->parent_hwnd = NULL;
