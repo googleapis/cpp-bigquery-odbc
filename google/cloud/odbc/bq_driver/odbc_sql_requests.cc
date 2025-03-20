@@ -978,7 +978,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Handle NULL data
-  std::string empty_data = "\0";
+  static char empty_data = '\0';
   if (str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA) {
     apd_rec.data_ptr = &empty_data;
     apd_rec.octet_length = 0;
