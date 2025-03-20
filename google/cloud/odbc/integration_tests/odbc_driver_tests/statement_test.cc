@@ -3098,7 +3098,7 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_SPECIAL_CASES_TEST";
   Table table(table_name);
 
   Schema schema{{"IntField1", "INT64"},   {"TextField2", "STRING"},
@@ -3197,7 +3197,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_DATA_TYPES_TEST";
   Table table(table_name);
 
   Schema schema{{"BoolField", "BOOL"},
