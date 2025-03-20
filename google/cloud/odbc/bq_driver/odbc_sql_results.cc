@@ -615,8 +615,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // error because changing data types in a multipart fetch operation is not
   // supported.
   if (result_set.translated_data.last_target_c_type != target_c_type) {
-    status_record = {SQLStates::k_HY000(),
-                     "ChangeTypesInMultipartSQLGetDataNotSupported"};
+    status_record = {
+        SQLStates::k_HY000(),
+        "Changing types between multipart SQLGetData() calls is not supported"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 

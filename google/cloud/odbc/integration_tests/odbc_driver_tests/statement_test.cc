@@ -924,8 +924,8 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   auto status =
       SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
                       &buf, kBufferLength, &string_length_ptr);
-  EXPECT_THAT((char*)buf,
-              HasSubstr("ChangeTypesInMultipartSQLGetDataNotSupported"));
+  EXPECT_THAT((char*)buf, HasSubstr("Changing types between multipart "
+                                    "SQLGetData() calls is not supported"));
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
