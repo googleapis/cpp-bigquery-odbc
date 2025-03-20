@@ -167,7 +167,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   double float_data = 3.14;
   SQLLEN float_len = SQL_DATA_AT_EXEC;
 
-  std::string text_data = "testData";
+  std::string text_data = "";
   SQLLEN string_len = SQL_DATA_AT_EXEC;
 
   std::vector<uint8_t> binary_data = {0xDE, 0xAD, 0xBE, 0xEF};
