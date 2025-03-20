@@ -207,9 +207,7 @@ class StatementHandle : public Handle {
     current_param_index_ = param_index;
   }
 
-  inline void SetNeedData(SQLUSMALLINT need_data) {
-    is_need_data_ = need_data;
-  }
+  inline void SetNeedData(bool need_data) { is_need_data_ = need_data; }
 
   bool GetNeedData() const { return is_need_data_; }
 

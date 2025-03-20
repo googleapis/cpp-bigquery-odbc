@@ -995,15 +995,14 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Data Length Mismatch Handling
-  if (apd_rec.indicator_ptr &&
-      *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC) {
-        SQLLEN buffered_data_len = 
-        apd_rec.octet_length + str_len_or_ind_ptr;
-        if (*(apd_rec.indicator_ptr) != SQL_NTS){
-            apd_rec.length = -(*(apd_rec.indicator_ptr)) + SQL_LEN_DATA_AT_EXEC_OFFSET;
-          }
-        if (buffered_data_len > apd_rec.length) {
-          return LogAndReturnCode(
+  if (apd_rec.indicator_ptr && *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC) {
+    SQLLEN buffered_data_len = apd_rec.octet_length + str_len_or_ind_ptr;
+    if (*(apd_rec.indicator_ptr) != SQL_NTS) {
+      apd_rec.length =
+          -(*(apd_rec.indicator_ptr)) + SQL_LEN_DATA_AT_EXEC_OFFSET;
+    }
+    if (buffered_data_len > apd_rec.length) {
+      return LogAndReturnCode(
           stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
 
@@ -1012,15 +1011,14 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
       apd_rec.octet_length_ptr = &apd_rec.octet_length;
 
-      if (apd_rec.indicator_ptr && ((apd_rec.type == SQL_C_CHAR) ||
-       (apd_rec.type == SQL_C_WCHAR))) {
-         *(apd_rec.indicator_ptr) = SQL_NTS;
+      if (apd_rec.indicator_ptr &&
+          ((apd_rec.type == SQL_C_CHAR) || (apd_rec.type == SQL_C_WCHAR))) {
+        *(apd_rec.indicator_ptr) = SQL_NTS;
       }
 
-      if(apd_rec.type == SQL_C_BINARY){
+      if (apd_rec.type == SQL_C_BINARY) {
         *(apd_rec.indicator_ptr) = apd_rec.octet_length;
         apd_rec.octet_length_ptr = &apd_rec.octet_length;
-
       }
     }
   }
@@ -1028,10 +1026,10 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Allocate a temporary buffer for new data
   SQLPOINTER buffer = nullptr;
   if (apd_rec.data_ptr == nullptr) {
-
     if (str_len_or_ind_ptr <= 0 || data == nullptr) {
-      return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
-                                            "Invalid buffer allocation size or data pointer."});
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_HY090(),
+                        "Invalid buffer allocation size or data pointer."});
     }
 
     // First chunk of data, allocate fresh buffer
@@ -1065,25 +1063,25 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   if (apd_rec.indicator_ptr) {
     switch (apd_rec.type) {
-        case SQL_C_CHAR:
-        case SQL_C_WCHAR:
-            *(apd_rec.indicator_ptr) = SQL_NTS;
-            break;
-        case SQL_C_BINARY:
-            *(apd_rec.indicator_ptr) = apd_rec.octet_length;
-            break;
-        case SQL_C_LONG:
-            *(apd_rec.indicator_ptr) = sizeof(SQLINTEGER);
-            break;
-        case SQL_C_DOUBLE:
-            *(apd_rec.indicator_ptr) = sizeof(SQLDOUBLE);
-            break;
-        case SQL_C_TYPE_TIMESTAMP:
-            *(apd_rec.indicator_ptr) = sizeof(SQL_TIMESTAMP_STRUCT);
-            break;
-        default:
-            *(apd_rec.indicator_ptr) = apd_rec.octet_length;
-            break;
+      case SQL_C_CHAR:
+      case SQL_C_WCHAR:
+        *(apd_rec.indicator_ptr) = SQL_NTS;
+        break;
+      case SQL_C_BINARY:
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        break;
+      case SQL_C_LONG:
+        *(apd_rec.indicator_ptr) = sizeof(SQLINTEGER);
+        break;
+      case SQL_C_DOUBLE:
+        *(apd_rec.indicator_ptr) = sizeof(SQLDOUBLE);
+        break;
+      case SQL_C_TYPE_TIMESTAMP:
+        *(apd_rec.indicator_ptr) = sizeof(SQL_TIMESTAMP_STRUCT);
+        break;
+      default:
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        break;
     }
   }
 
@@ -1124,7 +1122,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       return SQL_NO_DATA;
     }
   }
-      
+
   auto param_num = handle->GetCurrentParamIndex();
   if (param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
@@ -1132,7 +1130,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   param_num++;
-  while(param_num <= handle->GetParamCount()) {
+  while (param_num <= handle->GetParamCount()) {
     auto param = apd.GetDescriptorRecord(param_num);
     if ((!param.indicator_ptr) || (*(param.indicator_ptr) == SQL_NTS)) {
       param_num++;

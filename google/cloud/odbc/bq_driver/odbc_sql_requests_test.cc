@@ -803,7 +803,7 @@ TEST(SQLPutDataInternal, NoParameterExpectingData) {
   SQLLEN data_length = strlen(test_data);
 
   // Simulate a case where no parameter is expecting data
-  stmt_handle.SetCurrentParamIndex(0);
+  stmt_handle.SetCurrentParamIndex(1);
 
   SQLRETURN status =
       SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
@@ -856,8 +856,9 @@ TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
 TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kNeedsParams);
-  SQLPOINTER param_or_target_value = nullptr;
 
+  stmt_handle.SetCurrentParamIndex(1);
+  SQLPOINTER param_or_target_value = nullptr;
   SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY000(),
@@ -881,7 +882,6 @@ TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
 
   stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
       .BindNewDescriptorRecord(1, param_record);
-  stmt_handle.SetCurrentParamIndex(1);
   stmt_handle.SetQueryParameters(query_parameters);
 
   SQLPOINTER param_or_target_value = nullptr;

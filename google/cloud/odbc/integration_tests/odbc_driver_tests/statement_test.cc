@@ -3101,7 +3101,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
   Table table(table_name);
 
-  Schema schema{{"IntField1", "INT64"}, {"TextField2", "STRING"},
+  Schema schema{{"IntField1", "INT64"},   {"TextField2", "STRING"},
                 {"TextField3", "STRING"}, {"TextField4", "STRING"},
                 {"TextField5", "STRING"}, {"TextField6", "STRING"}};
 
@@ -3130,22 +3130,28 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   int num_params = schema.size();
   // Bind parameters
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-    SQL_BIGINT, 0, 0, nullptr, 0, &indicator1), SQL_SUCCESS);
+                             SQL_BIGINT, 0, 0, nullptr, 0, &indicator1),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
-    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator2), SQL_SUCCESS);
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator2),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_WCHAR,
-    SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator3), SQL_SUCCESS);
+                             SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator3),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR,
-    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator4), SQL_SUCCESS);
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator4),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR,
-    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator5), SQL_SUCCESS);
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator5),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 6, SQL_PARAM_INPUT, SQL_C_CHAR,
-    SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator6), SQL_SUCCESS);
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator6),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
 
@@ -3219,14 +3225,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   std::string data = "SomeData";
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
-=======
-  EXPECT_EQ(
-      SQLPutData(conn->hstmt, (SQLPOINTER)integerData, sizeof(integerData)),
->>>>>>> 02310efc (impl(bq_driver) update checkers)
-=======
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
->>>>>>> 3cc73eb9 (impl(bq_driver): Fix flow issues between SQLParamData and SQLPutData)
-      SQL_SUCCESS);
+            SQL_SUCCESS);
 
   // Scenario 2: Large data
   std::string large_data(50000, 'Z');
@@ -3252,7 +3251,9 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
 
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA), SQL_SUCCESS);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA),
+            SQL_SUCCESS);
+
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
   // Cleanup before disconnecting
@@ -3592,8 +3593,8 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data.size(), 0,
-                             nullptr, 0, &param_size),
+                             SQL_WLONGVARCHAR, large_data.size(), 0, nullptr, 0,
+                             &param_size),
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
 
