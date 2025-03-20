@@ -268,31 +268,46 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     req.configuration.query.create_session = true;
   }
   std::cout<<"Query: "<<query<<std::endl;
-  req.configuration.dry_run = false;
 
   Options opt1;
-  std::cout<<"\n\nInsert Job Request:\n\n"<<std::endl;
+  std::cout<<"\n\nInsert Job Request with dry run as true:\n\n"<<std::endl;
   nlohmann::json jsonObj = req; // Calls `to_json`
   std::cout << jsonObj.dump() << std::endl;
 
   StatusRecordOr<Job> response = conn_handle.GetClient()->InsertJob(
     conn_handle.GetDsn().catalog, req, opt1);
 
-  std::cout << "\n\nInsert Job Response:\n\n" << std::endl;
+  std::cout << "\n\nInsert Job Response with dry run as true:\n\n" << std::endl;
   jsonObj = *response;  // Calls `to_json`
   std::cout << jsonObj.dump() << std::endl;
 
+  req.configuration.dry_run = false;
+  req.configuration.query.maximum_bytes_billed = response->configuration.query.maximum_bytes_billed;
+
   Options opt2;
-  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
-  PollJobComplete(conn_handle, job_id, "US", opt2, backoff);
+  std::cout<<"\n\nInsert Job Request with dry run as false:\n\n"<<std::endl;
+  jsonObj = req; // Calls `to_json`
+  std::cout << jsonObj.dump() << std::endl;
+
+  StatusRecordOr<Job> response2 = conn_handle.GetClient()->InsertJob(
+    conn_handle.GetDsn().catalog, req, opt2);
+
+  std::cout << "\n\nInsert Job Response with dry run as false:\n\n" << std::endl;
+  jsonObj = *response2;  // Calls `to_json`
+  std::cout << jsonObj.dump() << std::endl;
+
 
   Options opt3;
+  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
+  PollJobComplete(conn_handle, job_id, "US", opt3, backoff);
+
+  Options opt4;
   // Once the job state is "DONE", proceed with ListAllJobs API
   std::cout << "\nJob state is DONE, fetching all jobs..." << std::endl;
-  StatusRecordOr<std::vector<ListFormatJob>> response1 =
-    conn_handle.GetClient()->ListAllJobs(conn_handle.GetDsn().catalog, job_id, opt3);
+  StatusRecordOr<std::vector<ListFormatJob>> response3 =
+    conn_handle.GetClient()->ListAllJobs(conn_handle.GetDsn().catalog, job_id, opt4);
 
-  for (auto &res : response1.GetValue()) {
+  for (auto &res : response3.GetValue()) {
     std::cout << "\n\nListAllJobs Response:\n\n" << std::endl;
     jsonObj = res;  // Calls `to_json`
     std::cout << jsonObj.dump() << std::endl;
