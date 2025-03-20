@@ -242,8 +242,6 @@ class StatementHandle : public Handle {
   std::optional<std::future<StatusRecord>> future_exec_direct_query_ =
       std::nullopt;
   bool is_statement_prepared_ = false;
-
-  int param_num_ = 0;
   bool is_need_data_ = false;
 };
 
