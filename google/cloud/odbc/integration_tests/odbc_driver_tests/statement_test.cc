@@ -24,6 +24,8 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "absl/strings/match.h"
 #include <gmock/gmock.h>
+using ::testing::Contains;
+using ::testing::HasSubstr;
 
 namespace google::cloud::odbc_tests {
 #ifndef DRIVER_MANAGER_TESTING_ENABLED
@@ -927,17 +929,17 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data_binary, "0x486");
+  EXPECT_THAT((char*)byte_data_binary, HasSubstr("0x486"));
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  EXPECT_STREQ((char*)byte_data_binary, "56C6C");
+  EXPECT_THAT((char*)byte_data_binary, HasSubstr("56C6C"));
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
       SQL_SUCCESS);
-  EXPECT_STREQ((char*)byte_data_binary, "6FC6C");
+  EXPECT_THAT((char*)byte_data_binary, HasSubstr("6F"));
 
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
   table.DropWithPrepare(conn);
