@@ -86,81 +86,81 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
 }
 
 void LogTraceDialog::InitControls() {
-  HFONT hFont =
+  HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                  OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                  DEFAULT_PITCH | FF_SWISS, "Inter");
 
   HWND h_log_level_head = CreateLabel(parent_hwnd, "Log level:", KAxisX, KAxisY,
                                       KLabelWidth, kLabelHeight, 0);
-  SendMessage(h_log_level_head, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_level_head, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_level_box =
       CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
                      kLabelHeight, kIdclogTraceBox);
-  SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
                                     KAxisY + 30, KLabelWidth, kLabelHeight, 0);
-  SendMessage(h_log_file_add, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_file_add, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_file_edit =
       CreateEditBox(parent_hwnd, KAxisX + 205, KAxisY + 30, kEditBoxWidth,
                     kEditBoxHeight, kIdcLogFileEdit);
-  SendMessage(h_log_file_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_browse_btn =
       CreateButton(parent_hwnd, "Browse...", KAxisX + 205, KAxisY + 55,
                    kBtnWidth, kBtnHeight, kIdcLogBrowseBtn);
-  SendMessage(h_log_browse_btn, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_browse_btn, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_group_box = CreateGroupBox(parent_hwnd, "Log rotation", KAxisX - 10,
                                     KLabelWidth + 5, 427, 75, kIdcGroupBox);
-  SendMessage(h_group_box, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_group_box, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   // Max Number of Files Label and Edit Box
   HWND h_max_files_label =
       CreateLabel(parent_hwnd, "Max number of files:", KAxisX, KAxisY + 95,
                   KLabelWidth + 60, kLabelHeight, 0);
-  SendMessage(h_max_files_label, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_max_files_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_max_files_edit =
       CreateNumericEditBox(parent_hwnd, "50", KAxisX + 205, KAxisY + 95,
                            kEditBoxWidth, kEditBoxHeight, kIdcMaxFilesEdit);
-  SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   // Max File Size (MB) Label and Edit Box
   HWND h_max_size_label =
       CreateLabel(parent_hwnd, "Max file size (MB):", KAxisX, KAxisY + 125,
                   KLabelWidth + 60, kLabelHeight, 0);
-  SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_max_size_edit =
       CreateNumericEditBox(parent_hwnd, "20", KAxisX + 205, KAxisY + 125,
                            kEditBoxWidth, kEditBoxHeight, kIdcMaxSizeEdit);
 
-  SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   // Documentation Hyperlink
   HWND h_doc_text =
       CreateLabel(parent_hwnd, "Not sure what to select? See", KAxisX - 10,
                   KAxisY + 160, KLabelWidth + 80, kLabelHeight, 0);
-  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_hyperlink = CreateHyperlinkLabel(
       parent_hwnd, "BigQuery documentation", KAxisX + 125, KAxisY + 160,
       KLabelWidth + 70, kLabelHeight, kIdcHyperlink);
-  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_btn_ok =
       CreateButton(parent_hwnd, "OK", KAxisX + 262, KAxisY + 160, kBtnWidth,
                    kOkCancelHeight, kIdcLogBtnOk);
-  SendMessage(h_log_btn_ok, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_btn_ok, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_btn_cancel =
       CreateButton(parent_hwnd, "Cancel", KAxisX + 341, KAxisY + 160, kBtnWidth,
                    kOkCancelHeight, kIdcLogBtnCancel);
-  SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
+  SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
