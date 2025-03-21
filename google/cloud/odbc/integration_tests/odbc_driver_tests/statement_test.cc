@@ -1693,6 +1693,7 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
                GetParam());
 
   if (!kIsUnixODBC) {
+    // Skipping this, as unixODBC does not reset descriptors.
     EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
     EXPECT_EQ(arr_size_implicit, arr_size_new);
   }

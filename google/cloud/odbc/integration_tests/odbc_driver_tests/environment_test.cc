@@ -215,7 +215,8 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
 
 TEST(BQDriverTest, SQLSetEnvAttr_UnSupportedAttributeValues) {
   if (kIsUnixODBC) {
-    GTEST_SKIP() << "Skipping test: Not working in UNIXODBC";
+    // Skipping this test as it returns success for both the existing driver and the internal driver.
+    GTEST_SKIP() << "Skipping test";
   }
   auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val1 = -1;

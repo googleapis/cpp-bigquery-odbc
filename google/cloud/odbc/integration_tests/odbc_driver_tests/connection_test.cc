@@ -570,7 +570,8 @@ TEST(ConnectionTest, SQLDriverConnectW_NULLOutput) {
 #ifndef _WIN32
 TEST(ConnectionTest, SQLDriverConnect_DuplicateDsn) {
   if (kIsUnixODBC) {
-    GTEST_SKIP() << "Skipping test: Not working in UNIXODBC";
+    // Skipping this test as unixODBC driver manager does not allow duplicate DSN connection strings.
+    GTEST_SKIP() << "Skipping test";
   }
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString + ";DSN=InvalidDsn", conn),
@@ -1026,7 +1027,7 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-
+  std::cout << "debug: driver name = "<< conn.get()->metadata.driver_name<<std::endl;
   PrintDriverVerName(conn);
   EXPECT_EQ(status, SQL_SUCCESS);
 
@@ -1045,7 +1046,8 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   if (kIsUnixODBC) {
-    GTEST_SKIP() << "Skipping test: Not working in UNIXODBC";
+    // skiping this
+    GTEST_SKIP() << "Skipping test";
   }
   auto conn = std::make_shared<ODBCHandles>();
   std::string key_path =
