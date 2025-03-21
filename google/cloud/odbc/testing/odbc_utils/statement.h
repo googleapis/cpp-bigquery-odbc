@@ -63,6 +63,9 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                                        std::string query, int rs_size,
                                        bool use_ansi = false);
+std::shared_ptr<Results> FetchScrollResultsAllColumns(
+    std::shared_ptr<ODBCHandles> conn, std::string query, bool use_bind_col,
+    bool use_ansi = false);
 
 // Fetches results of a read query using SQLFetch and SQLGetData
 // Returns the results as a map with the column as keys

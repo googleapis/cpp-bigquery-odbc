@@ -760,8 +760,9 @@ TEST(StatementTest, SQLFetchScroll) {
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
-TEST(StatementTest, SQLFetchScroll_All) {
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_TEST";
+TEST(StatementTest, SQLFetchScroll_All_Columns) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SCROLL_All_COLUMNS_TEST";
   Table table(table_name);
 
   // Create Table
@@ -779,6 +780,36 @@ TEST(StatementTest, SQLFetchScroll_All) {
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
+  auto const query =
+      "SELECT StringField, IntegerField, FloatField  FROM " + table_name;
+  auto results = *FetchScrollResultsAllColumns(conn, query, true);
+  VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLFetchScroll_All_Types) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_ALL_TYPE_TEST";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertData(conn, kSampleData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto const query = "SELECT StringField FROM " + table_name;
 
   SQLRETURN status;
