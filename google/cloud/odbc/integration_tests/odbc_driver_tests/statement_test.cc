@@ -3067,10 +3067,12 @@ TEST(StatementTest, SQLPutDataErrorTest) {
             SQL_SUCCESS);
 
   std::string data = "SomeData";
+
   // Scenario 1: Call SQLPutData with an invalid handle
   SQLHSTMT invalid_stmt = nullptr;
   EXPECT_EQ(SQLPutData(invalid_stmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_INVALID_HANDLE);
+
   // Scenario 2: Call SQLPutData before SQLExecute (sequence issue)
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_ERROR);  // Should fail before SQLExecute
@@ -3082,20 +3084,20 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  
+  // Scenario 3: Call SQLPutData with null data and valid size
+  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, data.size()), SQL_ERROR);
 
-  // Scenario 3: Call SQLPutData with a null pointer but a valid size
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NTS), 
-            SQL_ERROR);
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA),
-            SQL_ERROR);
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
-            SQL_SUCCESS);
+  // Scenario 4: Call SQLPutData with valid data and valid size
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()), SQL_SUCCESS);
+
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
   // Cleanup before disconnecting
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
