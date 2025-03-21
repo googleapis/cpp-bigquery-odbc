@@ -14,7 +14,6 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
 #include <shellapi.h>
-#include <shellapi.h>
 #include <shlobj.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -33,7 +32,7 @@ std::string LogTraceDialog::original_log_file_path = "";
 int const kBtnWidth = 66;
 int const kBtnHeight = 16;
 int const kComboBoxWidth = 202;
-int const KComboBoxHeight = 16;
+int const KComboBoxHeight = 100;
 int const kLabelHeight = 16;
 int const kEditBoxWidth = 203;
 int const kEditBoxHeight = 17;
@@ -98,7 +97,7 @@ void LogTraceDialog::InitControls() {
 
   HWND h_log_level_box =
       CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
-                     kLabelHeight, kIdclogTraceBox);
+        KComboBoxHeight, kIdclogTraceBox);
   SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
@@ -227,7 +226,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
     case WM_INITDIALOG: {
       p_this->parent_hwnd = hwnd;  // Store parent window handle
 
-      // ✅ Store the original values from saved settings
+      // Store the original values from saved settings
       original_log_level = log_level_;
       original_log_file_path = log_file_path_;
 
@@ -240,8 +239,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
       SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
 
       return TRUE;
-    }
-
+    }    
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
@@ -313,7 +311,6 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
                          SW_SHOWNORMAL);
           }
           break;
-
         case kIdclogTraceBox: {
           if (HIWORD(w_param) == CBN_SELCHANGE) {
             HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
@@ -367,7 +364,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           char log_file_buf[256];
           GetWindowText(h_log_file_path, log_file_buf, sizeof(log_file_buf));
           log_file_path_ = log_file_buf;
-          // ✅ Save the final selection only when OK is clicked
+          // Save the final selection only when OK is clicked
           original_log_level = log_level_;
           original_log_file_path = log_file_path_;
 
@@ -375,11 +372,11 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           break;
         }
         case kIdcLogBtnCancel:
-          // ✅ Restore previous values before closing the window
+          //Restore previous values before closing the window
           log_level_ = original_log_level;
           log_file_path_ = original_log_file_path;
 
-          // ✅ Also update the UI to reflect the restored values
+          //Also update the UI to reflect the restored values
           HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
           HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
 
