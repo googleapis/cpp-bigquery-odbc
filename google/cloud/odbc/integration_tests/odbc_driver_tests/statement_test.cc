@@ -3084,8 +3084,10 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
 
   // Scenario 3: Call SQLPutData with a null pointer but a valid size
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), -2), SQL_ERROR);
-
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NTS), 
+            SQL_ERROR);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA),
+            SQL_ERROR);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_SUCCESS);
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
