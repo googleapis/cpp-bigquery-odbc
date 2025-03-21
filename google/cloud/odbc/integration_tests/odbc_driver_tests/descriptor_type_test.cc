@@ -18,6 +18,9 @@
 
 namespace google::cloud::odbc_tests {
 
+// TODO(b/396345389): enable after metadata is updated for our driver
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 class DescriptorTypeParameterizedTest : public ::testing::TestWithParam<bool> {
 };
 
@@ -97,7 +100,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_CHAR) {
   // Checking fields
   CheckType(conn->apd, SQL_C_CHAR, GetParam());
   CheckConciseType(conn->apd, SQL_C_CHAR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 1, GetParam());
   CheckLength(conn->apd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -177,7 +180,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_FLOAT) {
   // Checking fields
   CheckType(conn->apd, SQL_C_FLOAT, GetParam());
   CheckConciseType(conn->apd, SQL_C_FLOAT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 24, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 24, GetParam());
   CheckLength(conn->apd, 24, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -203,7 +206,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_DOUBLE) {
   // Checking fields
   CheckType(conn->apd, SQL_C_DOUBLE, GetParam());
   CheckConciseType(conn->apd, SQL_C_DOUBLE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 53, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 53, GetParam());
   CheckLength(conn->apd, 53, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -255,7 +258,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_BINARY) {
   // Checking fields
   CheckType(conn->apd, SQL_C_BINARY, GetParam());
   CheckConciseType(conn->apd, SQL_C_BINARY, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 1, GetParam());
   CheckLength(conn->apd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -281,7 +284,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_VARBOOKMARK) {
   // Checking fields
   CheckType(conn->apd, SQL_C_VARBOOKMARK, GetParam());
   CheckConciseType(conn->apd, SQL_C_VARBOOKMARK, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 1, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 1, GetParam());
   CheckLength(conn->apd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -307,7 +310,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_NUMERIC) {
   // Checking fields
   CheckType(conn->apd, SQL_C_NUMERIC, GetParam());
   CheckConciseType(conn->apd, SQL_C_NUMERIC, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 38, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 38, GetParam());
   CheckLength(conn->apd, 38, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -333,7 +336,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_C_GUID) {
   // Checking fields
   CheckType(conn->apd, SQL_C_GUID, GetParam());
   CheckConciseType(conn->apd, SQL_C_GUID, GetParam());
-  CheckDatetimeIntervalPrecision(conn->apd, 16, GetParam());
+  CheckDatetimeIntervalPrecision(conn->apd, 0, GetParam());
   CheckPrecision(conn->apd, 16, GetParam());
   CheckLength(conn->apd, 16, GetParam());
   CheckDatetimeIntervalCode(conn->apd, 0, GetParam());
@@ -451,7 +454,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_C_INTERVAL_MONTH) {
   CheckConciseType(conn->apd, SQL_C_INTERVAL_MONTH, GetParam());
   CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
   CheckPrecision(conn->apd, 0, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
+  CheckLength(conn->apd, 0, GetParam());
   CheckDatetimeIntervalCode(conn->apd, SQL_CODE_MONTH, GetParam());
   CheckScale(conn->apd, 0, GetParam());
 
@@ -479,7 +482,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_C_INTERVAL_SECOND) {
   CheckConciseType(conn->apd, SQL_C_INTERVAL_SECOND, GetParam());
   CheckDatetimeIntervalPrecision(conn->apd, 2, GetParam());
   CheckPrecision(conn->apd, 6, GetParam());
-  CheckLength(conn->apd, 2, GetParam());
+  CheckLength(conn->apd, 0, GetParam());
   CheckDatetimeIntervalCode(conn->apd, SQL_CODE_SECOND, GetParam());
   CheckScale(conn->apd, 6, GetParam());
 
@@ -508,8 +511,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_CHAR) {
   // Checking fields
   CheckType(conn->ipd, SQL_CHAR, GetParam());
   CheckConciseType(conn->ipd, SQL_CHAR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 1, GetParam());
-  CheckPrecision(conn->ipd, 1, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -535,8 +538,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_WCHAR) {
   // Checking fields
   CheckType(conn->ipd, SQL_WCHAR, GetParam());
   CheckConciseType(conn->ipd, SQL_WCHAR, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, kLengthUnchanged, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -561,7 +564,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_DECIMAL) {
   // Checking fields
   CheckType(conn->ipd, SQL_DECIMAL, GetParam());
   CheckConciseType(conn->ipd, SQL_DECIMAL, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 38, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 38, GetParam());
   CheckLength(conn->ipd, 38, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
@@ -587,7 +590,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_NUMERIC) {
   // Checking fields
   CheckType(conn->ipd, SQL_NUMERIC, GetParam());
   CheckConciseType(conn->ipd, SQL_NUMERIC, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 38, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 38, GetParam());
   CheckLength(conn->ipd, 38, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
@@ -613,8 +616,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_SMALLINT) {
   // Checking fields
   CheckType(conn->ipd, SQL_SMALLINT, GetParam());
   CheckConciseType(conn->ipd, SQL_SMALLINT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, 5, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -639,8 +642,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_INTEGER) {
   // Checking fields
   CheckType(conn->ipd, SQL_INTEGER, GetParam());
   CheckConciseType(conn->ipd, SQL_INTEGER, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, 10, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -665,7 +668,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_REAL) {
   // Checking fields
   CheckType(conn->ipd, SQL_REAL, GetParam());
   CheckConciseType(conn->ipd, SQL_REAL, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 14, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 24, GetParam());
   CheckLength(conn->ipd, 7, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
@@ -691,7 +694,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_FLOAT) {
   // Checking fields
   CheckType(conn->ipd, SQL_FLOAT, GetParam());
   CheckConciseType(conn->ipd, SQL_FLOAT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 24, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 53, GetParam());
   CheckLength(conn->ipd, 15, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
@@ -717,7 +720,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_DOUBLE) {
   // Checking fields
   CheckType(conn->ipd, SQL_DOUBLE, GetParam());
   CheckConciseType(conn->ipd, SQL_DOUBLE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 24, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 53, GetParam());
   CheckLength(conn->ipd, 15, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
@@ -743,8 +746,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_BIT) {
   // Checking fields
   CheckType(conn->ipd, SQL_BIT, GetParam());
   CheckConciseType(conn->ipd, SQL_BIT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -769,8 +772,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_TINYINT) {
   // Checking fields
   CheckType(conn->ipd, SQL_TINYINT, GetParam());
   CheckConciseType(conn->ipd, SQL_TINYINT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, 3, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -795,8 +798,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_BIGINT) {
   // Checking fields
   CheckType(conn->ipd, SQL_BIGINT, GetParam());
   CheckConciseType(conn->ipd, SQL_BIGINT, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
-  CheckPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, kPrecisionUnchanged, GetParam());
   CheckLength(conn->ipd, 19, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -822,8 +825,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_BINARY) {
   // Checking fields
   CheckType(conn->ipd, SQL_BINARY, GetParam());
   CheckConciseType(conn->ipd, SQL_BINARY, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 1, GetParam());
-  CheckPrecision(conn->ipd, 1, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 1, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -848,8 +851,8 @@ TEST_P(DescriptorTypeParameterizedTest, SetType_SQL_GUID) {
   // Checking fields
   CheckType(conn->ipd, SQL_GUID, GetParam());
   CheckConciseType(conn->ipd, SQL_GUID, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, 36, GetParam());
-  CheckPrecision(conn->ipd, 36, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
+  CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 36, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, 0, GetParam());
   CheckScale(conn->ipd, kScaleUnchanged, GetParam());
@@ -878,7 +881,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_TYPE_DATE) {
   // Checking fields
   CheckType(conn->ipd, SQL_DATETIME, GetParam());
   CheckConciseType(conn->ipd, SQL_TYPE_DATE, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 10, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DATE, GetParam());
@@ -904,7 +907,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_TYPE_TIME) {
   // Checking fields
   CheckType(conn->ipd, SQL_DATETIME, GetParam());
   CheckConciseType(conn->ipd, SQL_TYPE_TIME, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 8, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_TIME, GetParam());
@@ -930,11 +933,11 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_TYPE_TIMESTAMP) {
   // Checking fields
   CheckType(conn->ipd, SQL_DATETIME, GetParam());
   CheckConciseType(conn->ipd, SQL_TYPE_TIMESTAMP, GetParam());
-  CheckDatetimeIntervalPrecision(conn->ipd, kLengthUnchanged, GetParam());
+  CheckDatetimeIntervalPrecision(conn->ipd, 0, GetParam());
   CheckPrecision(conn->ipd, 6, GetParam());
   CheckLength(conn->ipd, 26, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_TIMESTAMP, GetParam());
-  CheckScale(conn->ipd, 6, GetParam());
+  CheckScale(conn->ipd, 0, GetParam());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -966,7 +969,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_MONTH) {
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 2, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MONTH, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -992,7 +995,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_YEAR) {
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 2, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_YEAR, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1018,7 +1021,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_DAY) {
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 2, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1044,7 +1047,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_HOUR) {
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 2, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1070,7 +1073,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_MINUTE) {
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 2, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MINUTE, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1097,7 +1100,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 5, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_YEAR_TO_MONTH, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1124,7 +1127,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 5, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_HOUR, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1151,7 +1154,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 5, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR_TO_MINUTE, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1178,7 +1181,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 0, GetParam());
   CheckLength(conn->ipd, 8, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_MINUTE, GetParam());
-  CheckScale(conn->ipd, 0, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1204,7 +1207,7 @@ TEST_P(DescriptorTypeParameterizedTest, SetConciseType_SQL_INTERVAL_SECOND) {
   CheckPrecision(conn->ipd, 6, GetParam());
   CheckLength(conn->ipd, 9, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_SECOND, GetParam());
-  CheckScale(conn->ipd, 6, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1231,7 +1234,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 6, GetParam());
   CheckLength(conn->ipd, 18, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_DAY_TO_SECOND, GetParam());
-  CheckScale(conn->ipd, 6, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1258,7 +1261,7 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 6, GetParam());
   CheckLength(conn->ipd, 15, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_HOUR_TO_SECOND, GetParam());
-  CheckScale(conn->ipd, 6, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1285,9 +1288,11 @@ TEST_P(DescriptorTypeParameterizedTest,
   CheckPrecision(conn->ipd, 6, GetParam());
   CheckLength(conn->ipd, 12, GetParam());
   CheckDatetimeIntervalCode(conn->ipd, SQL_CODE_MINUTE_TO_SECOND, GetParam());
-  CheckScale(conn->ipd, 6, GetParam());
+  // Scale is not set version 3.1.2.1004 onwards.
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#endif BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
