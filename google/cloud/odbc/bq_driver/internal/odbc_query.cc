@@ -79,6 +79,9 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
     case BQDataType::kBytes:
       status_record = ConvertFromBytesDSValue(ds_val, data);
       break;
+    case BQDataType::kBool:
+      status_record = ConvertFromBooleanDSValue(ds_val, data);
+      break;
     default:
       status_record = {SQLStates::k_HYC00(), "Data type not supported"};
   }
