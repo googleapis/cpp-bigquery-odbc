@@ -373,16 +373,13 @@ SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
 }
 
 StatusRecordOr<ResultSet> ProcessResultSetRows(
-    TableSchema const& schema,
-    std::vector<RowData> const&
-        rows) {  // rows[i] is a vector of column{string val}
+    TableSchema const& schema, std::vector<RowData> const& rows) {
   ResultSet result_set;
   // Populate the schema for each row. The row schema
   // indicates how they should converted back for the application buffers in
   // SQLFetch.
   for (int i = 0; i < schema.fields.size(); i++) {
-    TableFieldSchema table_field_schema =
-        schema.fields[i];  // field[i] is i th colume of table
+    TableFieldSchema table_field_schema = schema.fields[i];
     ColumnSchema col_schema;
     col_schema.col_index = i;
     StatusRecordOr<BQDataType> type_status_record =
@@ -410,11 +407,6 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
-          case BQDataType::kNumeric:
-          case BQDataType::kBigNumeric: {
-            NumericToDSValue(data, row_val);
-            break;
-          }
           case BQDataType::kString: {
             StringToDSValue(data, row_val);
             break;

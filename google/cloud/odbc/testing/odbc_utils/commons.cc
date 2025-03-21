@@ -201,14 +201,6 @@ std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval) {
   return std::string(buffer);
 }
 
-double GetExactPrecision(std::string const& str, std::size_t const p) {
-  std::stringstream sstrm;
-  sstrm << std::setprecision(p) << std::fixed << str << std::endl;
-  double d;
-  sstrm >> d;
-  return d;
-}
-
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric) {
   unsigned long long value = 0;
 
@@ -628,6 +620,7 @@ void Table::InsertStrData(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecDirect", conn, false);
 }
+
 void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
                               std::vector<std::string> rows,
                               bool insert_index) {
@@ -657,27 +650,22 @@ void Table::InsertNumericData(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecDirect", conn);
 }
 
-template void Table::InsertDataIntoTable<int64_t>(
-    std::shared_ptr<ODBCHandles> conn, std::vector<int64_t> rows,
-    bool insert_index);
-template void Table::InsertDataIntoTable<double>(
-    std::shared_ptr<ODBCHandles> conn, std::vector<double> rows,
-    bool insert_index);
-template <class TC>
-void Table::InsertDataIntoTable(std::shared_ptr<ODBCHandles> conn,
-                                std::vector<TC> rows, bool insert_index) {
+void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+                            std::vector<SQLBIGINT> rows, bool insert_index) {
   auto insert_stmt = "INSERT INTO " + table_name_ + " VALUES ";
   int num_rows = rows.size();
   if (!num_rows) {
     return;
   }
+
   for (int i = 0; i < num_rows; i++) {
-    TC numeric_field = rows[i];
+    SQLBIGINT numeric_field = rows[i];
     std::string row_str = "( ";
     if (insert_index) {
       row_str.append(std::to_string(i) + ", ");
     }
     row_str.append(std::to_string(numeric_field));
+
     row_str.append(")");
     if (i != (num_rows - 1)) {
       row_str.append(", ");

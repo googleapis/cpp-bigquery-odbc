@@ -124,66 +124,6 @@ DSValue const kNullValue{0};
 inline bool IsDSValueNull(DSValue const& value) {
   return value.size() == 1 && value[0] == 0;
 }
-inline void NumericStructToDSValue(const SQL_NUMERIC_STRUCT& numst,
-                                   DSValue& value) {
-  value.resize(sizeof(SQL_NUMERIC_STRUCT));
-  std::memcpy(value.data(), &numst, sizeof(SQL_NUMERIC_STRUCT));
-}
-inline void GetNumericDetailsFromStr(std::string const& src_dsval,
-                                     SQL_NUMERIC_STRUCT& numst) {
-  SQLCHAR sign = 1;
-  SQLCHAR precision = 0;
-  SQLSCHAR scale;
-  std::string num;
-  int integralcount = 0;
-  int fractionalcount = 0;
-
-  // Handle leading whitespace
-  size_t i = 0;
-  while (isspace(src_dsval[i])) {
-    i++;
-  }
-  // Check for sign
-  if (src_dsval[i] == '-') {
-    sign = 0;
-    i++;
-  }
-
-  // Extract digits before decimal point
-  while (isdigit(src_dsval[i])) {
-    num += src_dsval[i];
-    integralcount++;
-    i++;
-  }
-
-  // Find decimal point
-  if (src_dsval[i] == '.') {
-    i++;
-  }
-
-  // Extract digits after decimal point
-  while (isdigit(src_dsval[i])) {
-    num += src_dsval[i];
-    fractionalcount++;
-    i++;
-  }
-  if (integralcount >= SQL_MAX_NUMERIC_LEN) {
-    scale = 0;
-    precision = SQL_MAX_NUMERIC_LEN;
-  } else {
-    int maxlen = SQL_MAX_NUMERIC_LEN;
-    int limit_scale = maxlen - integralcount;
-    precision = integralcount + fractionalcount;
-    scale = fractionalcount;
-    if (scale >= limit_scale) scale = limit_scale;
-    if (precision >= SQL_MAX_NUMERIC_LEN) precision = SQL_MAX_NUMERIC_LEN;
-  }
-  memcpy(&numst.scale, &scale, sizeof(SQLSCHAR));
-  memcpy(&numst.precision, &precision, sizeof(SQLSCHAR));
-  memcpy(&numst.sign, &sign, sizeof(SQLCHAR));
-  uint64_t dd = std::stoull(num);
-  memcpy(reinterpret_cast<char*>(numst.val), &dd, sizeof(uint64_t));
-}
 
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
@@ -211,10 +151,6 @@ inline void Base64Decode(std::string const& encoded,
   }
 }
 
-inline void NumericToDSValue(std::string const& str, DSValue& DSval) {
-  DSval.resize(str.size());
-  std::copy(str.begin(), str.end(), DSval.begin());
-}
 // Function to convert byte data to a hex string
 inline void BytesToHex(std::vector<uint8_t> const& data,
                        std::string& restult_str) {
@@ -305,6 +241,7 @@ inline int64_t DSValueToInt(DSValue& ds_value) {
   std::memcpy(&int_val, ds_value.data(), sizeof(int_val));
   return int_val;
 }
+
 inline void DateToDSValue(const SQL_DATE_STRUCT& date, DSValue& value) {
   value.resize(sizeof(SQL_DATE_STRUCT));
   std::memcpy(value.data(), &date, sizeof(SQL_DATE_STRUCT));
