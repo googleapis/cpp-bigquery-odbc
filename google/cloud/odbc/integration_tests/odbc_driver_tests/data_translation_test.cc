@@ -608,12 +608,12 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + "NUMERIC";
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC";
   Table table(table_name);
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, "(index INT64, NumericField NUMERIC)");
+  table.Create(conn, "(index INT64, NumericField NUMERIC(38,9))");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
@@ -640,8 +640,8 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
 }
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
-  auto const table_name = kDatasetWithTablePrefix +
-                          "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + "BIGNUMERIC";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC";
   Table table(table_name);
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
