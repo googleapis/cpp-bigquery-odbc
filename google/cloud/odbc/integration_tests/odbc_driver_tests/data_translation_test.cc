@@ -156,8 +156,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_BIT, "2", SQL_ERROR},
 };
 
-std::vector<
-    NumericBasicTestStruct> const kConversionFromNumericTestData_bignumeric{
+std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // SQLNumericToString returns 123 as the scale info is not
@@ -608,75 +607,66 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
-  std::vector<std::string> data_type_names;
-  data_type_names.push_back("NUMERIC");
-  for (std::string t_name : data_type_names) {
-    auto const table_name =
-        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
-    Table table(table_name);
-    // Create Table
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + "NUMERIC";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INT64, NumericField NUMERIC)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-    // Insert data to read
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::vector<std::string> numeric_data_to_insert;
-    for (auto elem : kConversionFromNumericTestData) {
-      numeric_data_to_insert.push_back(elem.value);
-    }
-    table.InsertNumericData(conn, numeric_data_to_insert, true);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-    // Execute a read query and check whether the results returned are as
-    // expected
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::string query =
-        "SELECT NumericField FROM " + table_name + " ORDER BY index";
-    TestTranslationsFromNumeric(conn, query, kConversionFromNumericTestData);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-    // Delete table
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.DropWithPrepare(conn);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<std::string> numeric_data_to_insert;
+  for (auto elem : kConversionFromNumericTestData) {
+    numeric_data_to_insert.push_back(elem.value);
   }
+  table.InsertNumericData(conn, numeric_data_to_insert, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as
+  // expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT NumericField FROM " + table_name + " ORDER BY index";
+  TestTranslationsFromNumeric(conn, query, kConversionFromNumericTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
-  std::vector<std::string> type_names;
-  type_names.push_back("BIGNUMERIC");
-  for (std::string t_name : type_names) {
-    auto const table_name =
-        kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + t_name;
-    Table table(table_name);
-    // Create Table
-    auto conn = std::make_shared<ODBCHandles>();
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.CreateWithPrepare(conn, "(index INT64, NumericField " + t_name + ")");
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-    // Insert data to read
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::vector<std::string> numeric_data_to_insert;
-    for (auto elem : kConversionFromNumericTestData_bignumeric) {
-      numeric_data_to_insert.push_back(elem.value);
-    }
-    table.InsertNumericData(conn, numeric_data_to_insert, true);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-    // Execute a read query and check whether the results returned are as
-    // expected
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    std::string query =
-        "SELECT NumericField FROM " + table_name + " ORDER BY index";
-    TestTranslationsFromNumeric(conn, query,
-                                kConversionFromNumericTestData_bignumeric);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-    // Delete table
-    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-    table.DropWithPrepare(conn);
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + "BIGNUMERIC";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INT64, NumericField BIGNUMERIC)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::vector<std::string> numeric_data_to_insert;
+  for (auto elem : kConversionFromBigNumericTestData) {
+    numeric_data_to_insert.push_back(elem.value);
   }
+  table.InsertNumericData(conn, numeric_data_to_insert, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Execute a read query and check whether the results returned are as
+  // expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT NumericField FROM " + table_name + " ORDER BY index";
+  TestTranslationsFromNumeric(conn, query, kConversionFromBigNumericTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
