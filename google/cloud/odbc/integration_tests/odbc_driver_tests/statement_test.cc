@@ -3084,12 +3084,13 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
-  
+
   // Scenario 3: Call SQLPutData with null data and valid size
   EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, data.size()), SQL_ERROR);
 
   // Scenario 4: Call SQLPutData with valid data and valid size
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()), SQL_SUCCESS);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
@@ -3097,7 +3098,6 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
