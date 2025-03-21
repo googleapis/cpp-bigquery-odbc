@@ -1622,9 +1622,6 @@ TEST(StatementTest, Get_SQL_ATTR_ROW_NUMBER) {
 }
 
 TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
-  if (kIsUnixODBC) {
-    GTEST_SKIP() << "Skipping test: Not working in UNIXODBC";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   SQLRETURN status;
@@ -1695,8 +1692,10 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
   GetDescField(conn->ard, 0, SQL_DESC_ARRAY_SIZE, &arr_size_new, 0, NULL,
                GetParam());
 
-  EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
-  EXPECT_EQ(arr_size_implicit, arr_size_new);
+  if (!kIsUnixODBC) {
+    EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
+    EXPECT_EQ(arr_size_implicit, arr_size_new);
+  }
 
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, desc_expl), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
