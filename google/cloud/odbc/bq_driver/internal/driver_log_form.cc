@@ -97,7 +97,7 @@ void LogTraceDialog::InitControls() {
 
   HWND h_log_level_box =
       CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
-        KComboBoxHeight, kIdclogTraceBox);
+                     KComboBoxHeight, kIdclogTraceBox);
   SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
@@ -239,7 +239,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
       SetWindowLongPtr(h_hyperlink, GWL_STYLE, hyperlink_style | SS_NOTIFY);
 
       return TRUE;
-    }    
+    }
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
@@ -372,11 +372,11 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           break;
         }
         case kIdcLogBtnCancel:
-          //Restore previous values before closing the window
+          // Restore previous values before closing the window
           log_level_ = original_log_level;
           log_file_path_ = original_log_file_path;
 
-          //Also update the UI to reflect the restored values
+          // Also update the UI to reflect the restored values
           HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
           HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
 

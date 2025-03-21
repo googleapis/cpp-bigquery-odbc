@@ -20,7 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <sstream>
 #ifdef _WIN32
-#include <uxtheme.h>  // Required for SetWindowTheme
+#include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 #endif
 
