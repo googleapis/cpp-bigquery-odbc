@@ -635,13 +635,13 @@ TEST(DataTranslationTest, From_NUMERIC_to_all) {
 
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
+  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DataTranslationTest, From_BIGNUMERIC_All) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_NUMERIC";
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_DATA_TRANSLATION_SQL_NUMERIC" + "BIGNUMERIC";
   Table table(table_name);
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
