@@ -3100,7 +3100,8 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_SPECIAL_CASES_TEST";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_SPECIAL_CASES_TEST";
   Table table(table_name);
 
   Schema schema{{"IntField1", "INT64"},   {"TextField2", "STRING"},
