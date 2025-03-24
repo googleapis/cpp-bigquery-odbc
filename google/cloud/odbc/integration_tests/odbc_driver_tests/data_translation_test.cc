@@ -135,7 +135,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_SSHORT, "31", SQL_SUCCESS},
     {SQL_C_SSHORT, "-31", SQL_SUCCESS},
     {SQL_C_USHORT, "3", SQL_SUCCESS},
-    {SQL_C_USHORT, "65537"/* 2^16 + 1 */, SQL_ERROR},
+    {SQL_C_USHORT, "65537" /* 2^16 + 1 */, SQL_ERROR},
     {SQL_C_SLONG, "-13", SQL_SUCCESS},
     {SQL_C_SLONG, "13.3",
      SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
