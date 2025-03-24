@@ -15,9 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <shellapi.h>
-#include <windows.h>
-#include <string>
-#include <filesystem>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -78,24 +75,28 @@ void setWindowIcon(HWND proxy_hwnd) {
 
 =======
 void SetWindowIcon(HWND proxy_hwnd) {
-    // Get the absolute path of the current source file
-    std::filesystem::path sourcePath(__FILE__);
-    std::filesystem::path absolutePath = std::filesystem::absolute(sourcePath);
-
-    std::filesystem::path projectDir = absolutePath;
-    for (int i = 0; i < 6; ++i) {
-        projectDir = projectDir.parent_path();
-    }
-    std::filesystem::path iconPath = projectDir / "ci" / "installer" / "InstallerProj" / "Assets" / "bq.ico";
-    HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-    
-    if (!h_icon) {
-        MessageBoxA(NULL, ("Failed to load icon from: " + iconPath.string()).c_str(), "Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    // Set the icon for the window
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+  // Get the environment variable
+  char repo_path[MAX_PATH];
+  DWORD result = GetEnvironmentVariableA("CPP_BIGQUERY_ODBC_REPO_PATH",
+                                         repo_path, MAX_PATH);
+  if (result == 0) {
+    MessageBoxA(NULL, "Failed to get environment variable", "Error",
+                MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Construct the full icon path
+  std::string icon_path =
+      std::string(repo_path) + "\\ci\\installer\\InstallerProj\\Assets\\bq.ico";
+  // Load the icon
+  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.c_str(), IMAGE_ICON, 32, 32,
+                                   LR_LOADFROMFILE);
+  if (!h_icon) {
+    MessageBoxA(NULL, "Failed to load icon", "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Set the icon for the window
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
 }
 >>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
 void ProxyOptions::InitControls() {
