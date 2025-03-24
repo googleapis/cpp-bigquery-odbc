@@ -68,11 +68,8 @@ void SetWindowIcon(HWND proxy_hwnd) {
   char repo_path[MAX_PATH];
   DWORD result = GetEnvironmentVariableA("CPP_BIGQUERY_ODBC_REPO_PATH",
                                          repo_path, MAX_PATH);
-  if (result == 0) {
-    MessageBoxA(NULL, "Failed to get environment variable", "Error",
-                MB_OK | MB_ICONERROR);
-    return;
-  }
+std::cout << "CPP_BIGQUERY_ODBC_REPO_PATH: " << repo_path << std::endl;                                   
+
   // Construct the full icon path
   std::string icon_path =
       std::string(repo_path) + "\\ci\\installer\\InstallerProj\\Assets\\bq.ico";
