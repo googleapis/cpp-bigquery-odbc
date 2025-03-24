@@ -31,8 +31,11 @@ static int const kIdcProxyPortErrorLabel =
     133;  // Unique ID for the error label
 static int const hFontHyperlink = 134;
 static int const kIdcHyperlink1 = 135;
+<<<<<<< HEAD
 
 void setWindowIcon(HWND hwnd);
+=======
+>>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
 
 class ProxyOptions {
  public:
