@@ -59,6 +59,7 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
+<<<<<<< HEAD
 void setWindowIcon(HWND proxy_hwnd) {
   // Get the loaded icon handle
   HICON h_icon = google::cloud::odbc_bq_driver_internal::getWindowIcon();
@@ -70,6 +71,32 @@ void setWindowIcon(HWND proxy_hwnd) {
   }
 }
 
+=======
+void SetWindowIcon(HWND proxy_hwnd) {
+  // Get the environment variable
+  char repo_path[MAX_PATH];
+  DWORD result = GetEnvironmentVariableA("CPP_BIGQUERY_ODBC_REPO_PATH",
+                                         repo_path, MAX_PATH);
+  if (result == 0) {
+    MessageBoxA(NULL, "Failed to get environment variable", "Error",
+                MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Construct the full icon path
+  std::string icon_path =
+      std::string(repo_path) + "\\ci\\installer\\InstallerProj\\Assets\\bq.ico";
+  // Load the icon
+  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.c_str(), IMAGE_ICON, 32, 32,
+                                   LR_LOADFROMFILE);
+  if (!h_icon) {
+    MessageBoxA(NULL, "Failed to load icon", "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Set the icon for the window
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+}
+>>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -215,7 +242,11 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {
     case WM_CREATE:
+<<<<<<< HEAD
       setWindowIcon(hwnd);
+=======
+      SetWindowIcon(hwnd);
+>>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
       break;
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
