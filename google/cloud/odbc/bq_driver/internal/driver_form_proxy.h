@@ -18,7 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:132
+// NEXTID:136
 static int const kIdcProxyOKButton = 125;
 static int const kIdcProxyCancelButton = 126;
 static int const kIdcProxyHostName = 127;
@@ -26,6 +26,11 @@ static int const kIdcProxyCheckbox = 128;
 static int const kIdcProxyPortEdit = 129;
 static int const kIdcProxyUsernameEdit = 130;
 static int const kIdcProxyPasswordEdit = 131;
+static int const kIdcProxyGroupBox = 132;
+static int const kIdcProxyPortErrorLabel =
+    133;  // Unique ID for the error label
+static int const hFontHyperlink = 134;
+static int const kIdcHyperlink1 = 135;
 
 class ProxyOptions {
  public:
