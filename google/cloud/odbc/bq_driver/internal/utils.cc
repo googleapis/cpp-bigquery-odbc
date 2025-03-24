@@ -21,7 +21,6 @@
 #include <sstream>
 #ifdef _WIN32
 #include <uxtheme.h>  // Required for SetWindowTheme
-#include <windows.h>
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 #endif
 

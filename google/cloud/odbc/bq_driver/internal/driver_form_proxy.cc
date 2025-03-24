@@ -59,6 +59,26 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
+void SetWindowIcon(HWND proxy_hwnd) {
+    // Get the environment variable
+    char repo_path[MAX_PATH];
+    DWORD result = GetEnvironmentVariableA("CPP_BIGQUERY_ODBC_REPO_PATH", repo_path, MAX_PATH);
+    if (result == 0) {
+        MessageBoxA(NULL, "Failed to get environment variable", "Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    // Construct the full icon path
+    std::string icon_path = std::string(repo_path) + "\\ci\\installer\\InstallerProj\\Assets\\bq.ico";
+    // Load the icon
+    HICON h_icon = (HICON)LoadImageA(NULL, icon_path.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+    if (!h_icon) {
+        MessageBoxA(NULL, "Failed to load icon", "Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    // Set the icon for the window
+    SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+    SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+}
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -203,19 +223,18 @@ void ProxyOptions::SetValues(Section const& attribute_map) {
 LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {
+    case WM_CREATE:
+    SetWindowIcon(hwnd);
+    break;
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
       GetClientRect(hwnd, &rc);
-
-      // Define a custom background color (#F0F0F0)
       HBRUSH h_brush = CreateSolidBrush(RGB(240, 240, 240));
-
       FillRect(hdc, &rc, h_brush);
       DeleteObject(h_brush);
       return 1;  // Indicate we handled the background redraw
     }
-
     case WM_LBUTTONDOWN: {
       POINT pt;
       GetCursorPos(&pt);
@@ -311,9 +330,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         BOOL is_checked =
             (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
         HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
-
-        if (is_checked) {  // Only check the fields if the proxy checkbox is
-                           // checked
+        if (is_checked) {  // Only check the fields if the proxy checkbox is checked
           char host_text[256], port_text[10];
           GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
                         sizeof(host_text));
