@@ -610,6 +610,43 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
   return StatusRecord::Ok();
 }
 
+StatusRecord ValidateProcedureParameters(const SQLCHAR* catalog_name,
+                                         SQLSMALLINT catalog_name_len,
+                                         const SQLCHAR* schema_name,
+                                         SQLSMALLINT schema_name_len,
+                                         const SQLCHAR* procedure_name,
+                                         SQLSMALLINT procedure_name_len,
+                                         SQLULEN metadata_id) {
+  if (catalog_name_len < 0 && catalog_name_len != SQL_NTS) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid buffer length - catalog length is invalid"};
+  }
+  if (schema_name_len < 0 && schema_name_len != SQL_NTS) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid buffer length - schema length is invalid"};
+  }
+  if (procedure_name_len < 0 && procedure_name_len != SQL_NTS) {
+    return StatusRecord{
+        SQLStates::k_HY090(),
+        "Invalid buffer length - procedure name length is invalid"};
+  }
+  if (metadata_id == SQL_TRUE) {
+    if (!catalog_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for catalog name"};
+    }
+    if (!schema_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for schema name"};
+    }
+    if (!procedure_name) {
+      return StatusRecord{SQLStates::k_HY009(),
+                          "Invalid use of NULL pointer for procedure name"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
                                             SQLSMALLINT out_conn_str_buflen,
                                             SQLSMALLINT* out_conn_str_len,

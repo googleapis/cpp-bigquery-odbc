@@ -593,45 +593,80 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
 // TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
-  // Validate the  connection handle.
+  std::cout << "Starting FetchBQData..." << std::endl;
+
+  // Validate the connection handle.
   if (!conn_handle.IsConnected()) {
+    std::cout << "Error: Connection to the data source is broken." << std::endl;
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
+
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    std::cout
+        << "Error: Invalid or null BQ Client within the connection handle."
+        << std::endl;
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
-  // For now , we use default options.
-  // We can set timeout here as needed later.
+
+  std::cout << "Posting query request to BigQuery..." << std::endl;
+
+  // For now, we use default options.
   Options options;
   auto pq_status = bq_client->PostQuery(post_query_request, options);
   if (!pq_status) {
+    std::cout << "Error: PostQuery failed with status: "
+              << pq_status.GetStatusRecord().message << std::endl;
     return pq_status.GetStatusRecord();
   }
+
+  std::cout << "PostQuery successful. Job ID: "
+            << pq_status->job_reference.job_id
+            << ", Project: " << pq_status->job_reference.project_id
+            << ", Location: " << pq_status->job_reference.location << std::endl;
+
   DSResults results;
   results.dml_stats = pq_status->dml_stats;
   results.job_ref = pq_status->job_reference;
+
   if (pq_status->job_complete && pq_status->page_token.empty()) {
-    // we have gotten all the results
+    std::cout << "Query job is complete. No additional pages of results."
+              << std::endl;
     results.data_source_results = *pq_status;
   } else {
-    // Call GetAllQueryResults to get all the query results.
+    std::cout << "Fetching all query results for job ID: "
+              << pq_status->job_reference.job_id << std::endl;
+
     auto gq_status = bq_client->GetAllQueryResults(
         pq_status->job_reference.project_id, pq_status->job_reference.job_id,
         pq_status->job_reference.location,
         post_query_request.query_request().timeout(), options);
+
     if (!gq_status) {
+      std::cout << "Error: GetAllQueryResults failed with status: "
+                << std::endl;
       return gq_status.GetStatusRecord();
     }
     results.data_source_results = *gq_status;
+    std::cout << "DATA2" << gq_status->DebugString(" ") << std::endl;
   }
+
   if (!conn_handle.IsSessionStarted() &&
       !pq_status->session_info.session_id.empty()) {
+    std::cout << "Setting session ID: " << pq_status->session_info.session_id
+              << std::endl;
     conn_handle.SetSessionId(pq_status->session_info.session_id);
   }
+  auto status = bq_client->GetJob(pq_status->job_reference.project_id,
+                                  pq_status->job_reference.job_id,
+                                  pq_status->job_reference.location, options);
+  std::cout << "DATA" << status.GetValue().DebugString("") << std::endl;
+  std::cout << "Successfully fetched all query results." << std::endl;
+
+  std::cout << "FetchBQData completed successfully." << std::endl;
   return results;
 }
 

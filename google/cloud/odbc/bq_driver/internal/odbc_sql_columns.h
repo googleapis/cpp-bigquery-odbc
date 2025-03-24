@@ -93,6 +93,110 @@ odbc_internal::StatusRecordOr<DSRow> CreateResultSetDSRow(
         field_schema,
     SQLSMALLINT field_pos);
 
+struct SQLProcedureColumn {
+  std::string procedure_catalog;
+  std::string procedure_schema;
+  std::string procedure_name;
+  std::string column_name;
+  SQLSMALLINT column_type;  // IN, OUT, INOUT, or NULL
+  SQLSMALLINT data_type;
+  std::string type_name;
+  SQLINTEGER column_size;
+  SQLINTEGER buffer_length;
+  SQLSMALLINT decimal_digits;
+  SQLSMALLINT num_prec_radix;
+  SQLSMALLINT nullable;
+  std::string remarks;
+  std::string column_def;
+  SQLSMALLINT sql_data_type;
+  SQLSMALLINT sql_datetime_sub;
+  SQLINTEGER char_octet_length;
+  SQLINTEGER ordinal_position;
+  std::string is_nullable;
+  std::string DebugString(absl::string_view name,
+                          TracingOptions const& options = {},
+                          int indent = 0) const;
+};
+
+struct ProcedureFieldSchema {
+  std::string catalog;
+  std::string dataset;
+  std::string procedure;
+  std::string ordinal_number;
+  std::string name;
+  std::string type_name;
+  std::string nullable;
+  SQLSMALLINT column_type;
+
+  std::string DebugString(absl::string_view fname,
+                          TracingOptions const& options = {},
+                          int indent = 0) const {
+    std::ostringstream os;
+    std::string indent_str(indent, ' ');
+    os << indent_str << fname << "ProcedureFieldSchema {\n"
+       << indent_str << "  catalog: " << catalog << "\n"
+       << indent_str << "  dataset: " << dataset << "\n"
+       << indent_str << "  procedure: " << procedure << "\n"
+       << indent_str << "  ordinal_number: " << ordinal_number << "\n"
+       << indent_str << "  name: " << name << "\n"
+       << indent_str << "  type_name: " << type_name << "\n"
+       << indent_str << "  nullable: " << nullable << "\n"
+       << indent_str << "  column_type: " << column_type << "\n"
+       << indent_str << "}";
+    return os.str();
+  }
+};
+
+struct ProcedureSchema {
+  std::vector<ProcedureFieldSchema> fields;
+
+  std::string DebugString(absl::string_view name,
+                          TracingOptions const& options = {},
+                          int indent = 0) const {
+    std::ostringstream os;
+    std::string indent_str(indent, ' ');
+    os << indent_str << name << "ProcedureSchema {\n";
+    for (auto const& field : fields) {
+      os << field.DebugString("  ", options, indent + 2) << "\n";
+    }
+    os << indent_str << "}";
+    return os.str();
+  }
+};
+
+struct Procedure {
+  std::string catalog;
+  std::string dataset;
+  std::string procedure_name;
+  ProcedureSchema schema;
+
+  std::string DebugString(absl::string_view name,
+                          TracingOptions const& options = {},
+                          int indent = 0) const {
+    std::ostringstream os;
+    std::string indent_str(indent, ' ');
+    os << indent_str << name << "Procedure {\n"
+       << indent_str << "  catalog: " << catalog << "\n"
+       << indent_str << "  dataset: " << dataset << "\n"
+       << indent_str << "  procedure_name: " << procedure_name << "\n"
+       << schema.DebugString("  schema: ", options, indent + 2) << "\n"
+       << indent_str << "}";
+    return os.str();
+  }
+};
+StatusRecordOr<ResultSet> ProcessProcedureResults(
+    Procedure const& bq_procedure, std::string const& bq_procedure_column,
+    SQLULEN metadata_id);
+
+StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
+    ConnectionHandle& conn_handle, std::string const& catalog,
+    std::string const& dataset_pattern, std::string const& procedure_pattern,
+    SQLULEN metadata_id);
+
+// void FetchBQProcedureData(
+//             ConnectionHandle& conn_handle, std::string const& catalog,
+//             std::string const& dataset, std::string const& proc_name);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_COLUMNS_H

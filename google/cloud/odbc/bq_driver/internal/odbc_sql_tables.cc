@@ -33,6 +33,11 @@ std::string const kTableTypeParam = "table_type";
 std::string const kBasicQuery =
     "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES";
 
+std::string const kProcedureNameParam = "procedure_name";
+std::string const kSchemaParam = "schema_name";
+std::string const kProcedureQuery =
+    "SELECT procedure_name, schema_name FROM INFORMATION_SCHEMA.ROUTINES";
+
 std::vector<ColumnSchema> const kSchema = {{0, BQDataType::kString},
                                            {1, BQDataType::kString},
                                            {2, BQDataType::kString},
@@ -117,11 +122,30 @@ std::string ConstructTableNameWhereClause(std::string const& tables_filter,
   }
   return "";
 }
+std::string ConstructProcedureNameWhereClause(
+    std::string const& procedures_filter, SQLULEN metadata_id) {
+  if (metadata_id == SQL_TRUE) {
+    return "LOWER(routine_name) = LOWER(@" + kProcedureNameParam + ")";
+  }
+  if (procedures_filter != "%") {
+    return "routine_name LIKE @" + kProcedureNameParam;
+  }
+  return "";
+}
 
 std::string ConstructTableTypeWhereClause(std::string table_types_filter) {
   Trim(table_types_filter);
   if (table_types_filter != "%") {
     return "table_type IN UNNEST (@" + kTableTypeParam + ")";
+  }
+  return "";
+}
+
+std::string ConstructProcedureTypeWhereClause(
+    std::string procedure_types_filter) {
+  Trim(procedure_types_filter);
+  if (procedure_types_filter != "%") {
+    return "procedure_type IN UNNEST(@{" + kSchemaParam + ")";
   }
   return "";
 }
@@ -164,40 +188,232 @@ StatusRecordOr<std::string> ConstructQuery(
   return kBasicQuery;
 }
 
+// StatusRecordOr<std::string> ConstructProcedureQuery(
+//   std::string procedures_filter, std::string const& schema_filter,
+//   SQLULEN metadata_id, std::vector<QueryParameter>& named_query_params) {
+
+// if (metadata_id == SQL_TRUE) {
+//   RTrim(procedures_filter);
+// }
+
+// std::string procedure_name_where_clause =
+//     ConstructProcedureNameWhereClause(procedures_filter, metadata_id);
+// std::string schema_where_clause =
+// ConstructProcedureTypeWhereClause(schema_filter);
+
+// if (!procedure_name_where_clause.empty()) {
+//   auto query_param =
+//       ConstructStringQueryParameter(kProcedureNameParam, procedures_filter);
+//   if (!query_param) {
+//     return query_param.GetStatusRecord();
+//   }
+//   named_query_params.push_back(*query_param);
+// }
+
+// if (!schema_where_clause.empty()) {
+//   auto query_param =
+//       ConstructStringQueryParameter(kSchemaParam, schema_filter);
+//   if (!query_param) {
+//     return query_param.GetStatusRecord();
+//   }
+//   named_query_params.push_back(*query_param);
+// }
+
+// if (!procedure_name_where_clause.empty() && !schema_where_clause.empty()) {
+//   return kProcedureQuery + " WHERE " + procedure_name_where_clause + " AND "
+//   +
+//          schema_where_clause;
+// }
+
+// if (!procedure_name_where_clause.empty() || !schema_where_clause.empty()) {
+//   return kProcedureQuery + " WHERE " + procedure_name_where_clause +
+//          schema_where_clause;
+// }
+
+// return kProcedureQuery;
+// }
+
+StatusRecordOr<std::string> ConstructProcedureQuery(
+    std::string const& procedures_filter,
+    std::string const& procedure_types_filter, SQLULEN metadata_id,
+    std::vector<QueryParameter>& named_query_params) {
+  std::string query = R"(
+  SELECT procedure_name, schema_name
+  FROM INFORMATION_SCHEMA.ROUTINES
+  WHERE routine_name LIKE @procedure_name
+  AND procedure_type IN UNNEST(@procedure_types)
+)";
+
+  // Set parameters correctly
+  named_query_params.push_back({"procedure_name", procedures_filter});
+  named_query_params.push_back({"procedure_types", procedure_types_filter});
+
+  return query;
+}
+
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     ConnectionHandle& conn_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
+  // Print input parameters
+  std::cout << "GetFilteredTables called with:\n"
+            << "  Project ID: " << project_id << "\n"
+            << "  Dataset ID: " << dataset_id << "\n"
+            << "  Tables Filter: " << tables_filter << "\n"
+            << "  Table Types Filter: " << table_types_filter << "\n"
+            << "  Metadata ID: " << metadata_id << "\n";
+
   std::vector<QueryParameter> named_query_params;
   auto query_tables = ConstructQuery(tables_filter, table_types_filter,
                                      metadata_id, named_query_params);
+
   if (!query_tables) {
+    std::cout << "ConstructQuery failed: "
+              << query_tables.GetStatusRecord().message << std::endl;
     return query_tables.GetStatusRecord();
   }
 
+  std::cout << "ConstructQuery result: " << *query_tables << std::endl;
+
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       project_id, dataset_id, *query_tables, named_query_params);
+
   if (!post_query_request_status) {
+    std::cout << "ConstructNamedParametersPostQueryRequest failed: "
+              << post_query_request_status.GetStatusRecord().message
+              << std::endl;
     return post_query_request_status.GetStatusRecord();
   }
 
+  std::cout << "ConstructNamedParametersPostQueryRequest successful.\n";
+
   auto fetch_status_record_or =
       FetchBQData(conn_handle, *post_query_request_status);
+
   if (!fetch_status_record_or) {
+    std::cout << "FetchBQData failed: "
+              << fetch_status_record_or.GetStatusRecord().message << std::endl;
     return fetch_status_record_or.GetStatusRecord();
   }
 
+  std::cout << "FetchBQData successful.\n";
+
   StatusRecordOr<std::vector<RowData>> rows =
       GetRowsResults(*fetch_status_record_or);
+
   if (!rows) {
+    std::cout << "GetRowsResults failed: " << rows.GetStatusRecord().message
+              << std::endl;
     return rows.GetStatusRecord();
   }
 
+  std::cout << "GetRowsResults returned " << rows->size() << " rows.\n";
+
   std::vector<FilteredTableResponse> table_response;
   for (auto const& row : *rows) {
+    std::cout << "Processing row: col0=" << row.columns[0].value
+              << ", col1=" << row.columns[1].value << std::endl;
     table_response.push_back({row.columns[0].value, row.columns[1].value});
   }
+
+  std::cout << "Final table response size: " << table_response.size()
+            << std::endl;
+
   return table_response;
+}
+
+StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
+    ConnectionHandle& conn_handle, std::string const& project_id,
+    std::string const& dataset_id, std::string const& procedures_filter,
+    std::string const& procedure_types_filter, SQLULEN metadata_id) {
+  std::cout << "Entering GetFilteredProcedures function" << std::endl;
+  std::cout << "Project ID: " << project_id << ", Dataset ID: " << dataset_id
+            << std::endl;
+  std::cout << "Procedures Filter: " << procedures_filter
+            << ", Procedure Types Filter: " << procedure_types_filter
+            << std::endl;
+  std::cout << "Metadata ID: " << metadata_id << std::endl;
+
+  std::vector<QueryParameter> named_query_params;
+  QueryParameter param;
+  param.name = "procedure_name";
+  param.parameter_type.type = "STRING";  // Ensure correct type if required
+  param.parameter_value.value = procedures_filter;  // Assign value
+
+  named_query_params.push_back(param);
+
+  std::string query = R"(
+  SELECT routine_name, routine_schema
+  FROM `)" + project_id +
+                      "." + dataset_id + R"(.INFORMATION_SCHEMA.ROUTINES`
+  WHERE routine_name LIKE @procedure_name
+  AND routine_type = 'PROCEDURE'
+)";
+
+  std::cout << "Query constructed successfully: " << query << std::endl;
+
+  // Debug: Print parameters
+  for (auto const& param : named_query_params) {
+    std::cout << "Query Parameter - Name: " << param.name
+              << ", Type: " << param.parameter_type.type
+              << ", Value: " << param.parameter_value.value << std::endl;
+  }
+
+  // Construct Post Query Request
+  auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
+      project_id, dataset_id, query, named_query_params);
+
+  if (!post_query_request_status) {
+    std::cout << "ConstructNamedParametersPostQueryRequest failed" << std::endl;
+    return post_query_request_status.GetStatusRecord();
+  }
+
+  std::cout << "Post Query Request constructed successfully" << std::endl;
+
+  // Debug: Print Post Query Request details
+  std::cout << "Post Query Request Details:" << std::endl;
+  std::cout << "Project ID: " << post_query_request_status->project_id()
+            << std::endl;
+  std::cout << "Dataset ID: " << dataset_id << std::endl;
+  std::cout << "Query: " << query << std::endl;
+
+  for (auto const& param : named_query_params) {
+    std::cout << "Query Param - Name: " << param.name
+              << ", Value: " << param.parameter_value.value << std::endl;
+  }
+
+  // Ensure Connection Handle is Valid
+  if (!conn_handle.IsConnected()) {
+    std::cout << "Error: Connection to BigQuery is not established!"
+              << std::endl;
+    return StatusRecord{SQLStates::k_08S01(), "Connection lost"};
+  }
+
+  // Fetch Data
+  std::cout << "Starting FetchBQData..." << std::endl;
+  auto fetch_status_record_or =
+      FetchBQData(conn_handle, *post_query_request_status);
+  if (!fetch_status_record_or) {
+    std::cout << "FetchBQData failed" << std::endl;
+    return fetch_status_record_or.GetStatusRecord();
+  }
+
+  std::cout << "Fetched BQ Data successfully" << std::endl;
+
+  StatusRecordOr<std::vector<RowData>> rows =
+      GetRowsResults(*fetch_status_record_or);
+  std::cout << "ROWS:" << rows.GetValue().data()->DebugString("") << std::endl;
+  if (!rows) {
+    return rows.GetStatusRecord();
+  }
+  std::vector<FilteredProcedureResponse> procedure_response;
+  for (auto const& row : *rows) {
+    procedure_response.push_back({row.columns[0].value, row.columns[1].value});
+  }
+  std::cout << "Returning filtered procedures. Total procedures: "
+            << procedure_response.size() << std::endl;
+
+  return procedure_response;
 }
 
 ResultSet CreateResultSetForProjects(

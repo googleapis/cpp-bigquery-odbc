@@ -148,34 +148,46 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   }
   return SQL_SUCCESS;
 }
-
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
+  std::cout << "Entering SQLFetchInternal" << std::endl;
+
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
+    std::cout << "Invalid statement handle: "
+              << handle_result.GetStatusRecord().message << std::endl;
     TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
+
   StatementHandle& handle = *(*handle_result);
+  std::cout << "Statement Handle Validated" << std::endl;
 
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
+    std::cout << "Invalid cursor state encountered" << std::endl;
     auto status_record =
         StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
     return LogAndReturnCode(handle, status_record);
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
+    std::cout << "No statement has been executed" << std::endl;
     StatusRecord status_record = {SQLStates::k_HY010(),
                                   "No statement has been executed"};
     return LogAndReturnCode(handle, status_record);
   }
 
+  std::cout << "Fetching descriptor handle (ARD)" << std::endl;
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
   ResultSet const& result_set = handle.GetResultSet();
   result_set.cursor++;
   result_set.row_offset_ = 0;
+
+  std::cout << "Cursor moved to position: " << result_set.cursor << std::endl;
+
   if (result_set.cursor >= result_set.rows.size()) {
+    std::cout << "No more rows to fetch, returning SQL_NO_DATA" << std::endl;
     return SQL_NO_DATA;
   }
 
@@ -183,8 +195,14 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (!rowset_size) {
     rowset_size = 1;
   }
+
+  std::cout << "Rowset size: " << rowset_size << std::endl;
+
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+
+  std::cout << "WriteRowset completed, returning status code" << std::endl;
+
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -490,27 +508,35 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
 
   return status_record.CalculateReturnCode();
 }
-
 SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLUSMALLINT column_number,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_string_len) {
+  std::cout << "Entering SQLGetDataInternal" << std::endl;
+
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
+    std::cout << "Invalid statement handle: "
+              << handle_result.GetStatusRecord().message << std::endl;
     TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
+
   StatementHandle& stmt_handle = *(*handle_result);
+  std::cout << "Statement Handle Validated" << std::endl;
 
   StatusRecord status_record;
   if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
+    std::cout << "Statement is not prepared" << std::endl;
     status_record = {SQLStates::k_HY007(),
                      "Associated statement is not prepared"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
+
   if (column_number < 0) {
+    std::cout << "Invalid column number: " << column_number << std::endl;
     status_record = {SQLStates::k_HY000(),
                      "Invalid ColumnNumber parameter - should not be < 0"};
     return LogAndReturnCode(stmt_handle, status_record);
@@ -519,40 +545,54 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       stmt_handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
+    std::cout << "Error retrieving bookmark status" << std::endl;
     return LogAndReturnCode(stmt_handle, use_bookmarks_status);
   }
+
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
+    std::cout << "Invalid descriptor index (bookmarks off, column 0)"
+              << std::endl;
     status_record = {SQLStates::k_07009(), "Invalid descriptor index"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (target_value == nullptr) {
+    std::cout << "Target value is a null pointer" << std::endl;
     status_record = {SQLStates::k_HY009(), "Invalid use of null pointer"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (target_value_buffer_len < 0) {
+    std::cout << "Invalid buffer length: " << target_value_buffer_len
+              << std::endl;
     status_record = {SQLStates::k_HY090(), "Invalid string or buffer length"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (!CheckTargetType(target_c_type)) {
+    std::cout << "Invalid target type: " << target_c_type << std::endl;
     status_record = {SQLStates::k_HY003(), "Program type out of range"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (column_number > stmt_handle.GetResultSet().row_schema.size()) {
+    std::cout << "Invalid column number in result set: " << column_number
+              << std::endl;
     status_record = {SQLStates::k_07009(), "Invalid Column In Result Set"};
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   ResultSet const& result_set = stmt_handle.GetResultSet();
   if (result_set.cursor >= result_set.rows.size()) {
+    std::cout << "No more data, cursor at end: " << result_set.cursor
+              << std::endl;
     return SQL_NO_DATA;
   }
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   if (target_c_type == SQL_ARD_TYPE) {
+    std::cout << "Resolving SQL_ARD_TYPE for column: " << column_number
+              << std::endl;
     GetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE, &target_c_type, 0,
                  nullptr);
   }
@@ -561,43 +601,61 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   DSRow const& ds_row = result_set.rows[cursor];
   RowSchema const& schema = result_set.row_schema;
   BQDataType bq_data_type;
-  for (auto const& col_schema : schema) {
-    if (col_schema.col_index == column_number - 1)
-      bq_data_type = col_schema.col_type;
-  }
-  DSValue const& ds_val = ds_row[column_number - 1];
 
+  for (auto const& col_schema : schema) {
+    if (col_schema.col_index == column_number - 1) {
+      bq_data_type = col_schema.col_type;
+      std::cout << "Detected column type: " << static_cast<int>(bq_data_type)
+                << std::endl;
+    }
+  }
+
+  DSValue const& ds_val = ds_row[column_number - 1];
   SQLLEN offset = result_set.row_offset_;
-  // Validating if data size is more then buffersize, SQLGetData will return
-  // partial Data
+
+  std::cout << "Processing column " << column_number << " at cursor position "
+            << cursor << " with offset " << offset << std::endl;
+
   if (ds_val.size() - offset >= target_value_buffer_len) {
+    std::cout << "Buffer too small, returning partial data" << std::endl;
+    std::cout << ds_val.data() << std::endl;
     SQLLEN chunk_size = std::min(target_value_buffer_len,
                                  static_cast<SQLLEN>(ds_val.size() - offset));
     DSValue temp_ds_val(ds_val.begin() + offset,
                         ds_val.begin() + offset + chunk_size - 1);
     temp_ds_val.emplace_back('\0');
+
     status_record =
         GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
                       target_value_buffer_len, target_value_string_len);
+
     result_set.row_offset_ = offset + target_value_buffer_len - 1;
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+
     if (target_value_string_len) {
       *target_value_string_len = SQL_SUCCESS_WITH_INFO;
     }
+
     return LogAndReturnCode(stmt_handle, status_record);
   }
+
   if (offset != 0) {
+    std::cout << "Handling remaining data from offset " << offset << std::endl;
     DSValue temp_ds_val(ds_val.begin() + offset, ds_val.end());
     temp_ds_val.emplace_back('\0');
+
     status_record =
         GetColumnData(temp_ds_val, bq_data_type, target_c_type, target_value,
                       target_value_buffer_len, target_value_string_len);
     return LogAndReturnCode(stmt_handle, status_record);
   }
+
+  std::cout << "Retrieving full column data" << std::endl;
   status_record =
       GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
                     target_value_buffer_len, target_value_string_len);
+
   return LogAndReturnCode(stmt_handle, status_record);
 }
 

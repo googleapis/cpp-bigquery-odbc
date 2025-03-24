@@ -77,6 +77,12 @@ odbc_internal::StatusRecord ValidateColumnParameters(
     const SQLCHAR* column_name, SQLSMALLINT column_name_len,
     SQLULEN metadata_id);
 
+odbc_internal::StatusRecord ValidateProcedureColumnParameters(
+    const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
+    const SQLCHAR* procedure_name, SQLSMALLINT procedure_name_len,
+    const SQLCHAR* column_name, SQLSMALLINT column_name_len,
+    SQLULEN metadata_id);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_COLUMNS_UTILS_H

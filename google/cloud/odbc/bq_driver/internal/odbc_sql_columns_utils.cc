@@ -251,6 +251,35 @@ odbc_internal::StatusRecord ValidateColumnParameters(
   return StatusRecord::Ok();
 }
 
+odbc_internal::StatusRecord ValidateProcedureColumnParameters(
+    const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
+    const SQLCHAR* procedure_name, SQLSMALLINT procedure_name_len,
+    const SQLCHAR* column_name, SQLSMALLINT column_name_len,
+    SQLULEN metadata_id) {
+  // Validate procedure and related parameters.
+  auto status_record = ValidateProcedureParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len,
+      procedure_name, procedure_name_len, metadata_id);
+  if (!status_record.ok()) {
+    return status_record;
+  }
+
+  if (column_name_len < 0 && column_name_len != SQL_NTS) {
+    return StatusRecord{
+        SQLStates::k_HY090(),
+        "Invalid buffer length - procedure column name length is invalid"};
+  }
+
+  // Validate SQLProcedureColumns specific parameters.
+  if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Catalog name cannot be a search pattern"};
+  }
+
+  return StatusRecord::Ok();
+}
+
 StatusRecordOr<std::string> GetTypeDescription(
     std::string const& field_schema_type) {
   auto type_status = ConvertDSType(field_schema_type);
@@ -263,6 +292,9 @@ StatusRecordOr<std::string> GetTypeDescription(
     }
     case BQDataType::kBool: {
       return std::string("BOOL");
+    }
+    case BQDataType::kString: {
+      return std::string("STRING");
     }
     default: {
       return field_schema_type;

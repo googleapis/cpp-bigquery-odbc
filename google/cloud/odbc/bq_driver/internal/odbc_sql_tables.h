@@ -31,6 +31,11 @@ struct FilteredTableResponse {
   std::string table_type;
 };
 
+struct FilteredProcedureResponse {
+  std::string proc_name;
+  std::string proc_type;
+};
+
 struct TablesResult {
   std::string project_id;
   std::string dataset_id;
@@ -76,6 +81,14 @@ GetFilteredTables(ConnectionHandle& conn_handle, std::string const& project_id,
                   std::string const& dataset_id,
                   std::string const& tables_filter,
                   std::string const& table_types_filter, SQLULEN metadata_id);
+
+odbc_internal::StatusRecordOr<std::vector<FilteredProcedureResponse>>
+GetFilteredProcedures(ConnectionHandle& conn_handle,
+                      std::string const& project_id,
+                      std::string const& dataset_id,
+                      std::string const& procedures_filter,
+                      std::string const& procedure_types_filter,
+                      SQLULEN metadata_id);
 
 // Creates ResultSet populating input arguments for project ids and NULL for
 // other values.
