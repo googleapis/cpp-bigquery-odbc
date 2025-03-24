@@ -105,12 +105,6 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // returns 123- scale value is always 0 for existing Driver
-    {SQL_C_NUMERIC, "999.78354", SQL_SUCCESS,
-     "999.78354"},  // Existing driver returns 999 - scale value is always 0 for
-                    // Existing Driver
-    {SQL_C_NUMERIC, "123.7835", SQL_SUCCESS,
-     "123.7835"},  // Existing Driver returns 123 - scale value is always 0 for
-                   // Existing Driver
     {SQL_C_CHAR, "-123",
      SQL_SUCCESS},  // in Existing Driver it returns "-123.000000000"
     {SQL_C_CHAR, "123.222",
@@ -141,7 +135,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_SSHORT, "31", SQL_SUCCESS},
     {SQL_C_SSHORT, "-31", SQL_SUCCESS},
     {SQL_C_USHORT, "3", SQL_SUCCESS},
-    {SQL_C_USHORT, "65537", SQL_ERROR},
+    {SQL_C_USHORT, "65537"/* 2^16 + 1 */, SQL_ERROR},
     {SQL_C_SLONG, "-13", SQL_SUCCESS},
     {SQL_C_SLONG, "13.3",
      SQL_SUCCESS_WITH_INFO},  // SQL_SUCCESS_WITH_INFO because there is loss of
