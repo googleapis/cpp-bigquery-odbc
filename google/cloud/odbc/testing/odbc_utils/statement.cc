@@ -677,8 +677,8 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
 }
 
 std::shared_ptr<Results> FetchScrollResultsAllColumns(
-    std::shared_ptr<ODBCHandles> conn, std::string query, bool use_bind_col,
-    bool use_ansi) {
+    std::shared_ptr<ODBCHandles> conn, std::string query,
+    SQLSMALLINT fetch_orientation, bool use_bind_col, bool use_ansi) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
@@ -726,7 +726,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
   // Read all the rows using SQLFetchScroll
   while (1) {
     status =
-        SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);  // No ansi version.
+        SQLFetchScroll(conn->hstmt, fetch_orientation, 0);  // No ansi version.
     if (status == SQL_NO_DATA) {
       break;
     }

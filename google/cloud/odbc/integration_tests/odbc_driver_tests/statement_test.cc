@@ -781,7 +781,8 @@ TEST(StatementTest, SQLFetchScroll_All_Columns) {
 
   auto const query =
       "SELECT StringField, IntegerField, FloatField  FROM " + table_name;
-  auto results = *FetchScrollResultsAllColumns(conn, query, true);
+  auto results =
+      *FetchScrollResultsAllColumns(conn, query, SQL_FETCH_NEXT, true);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
