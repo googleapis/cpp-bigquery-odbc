@@ -102,7 +102,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_NUMERIC, "-1234567891234567891", SQL_SUCCESS,
      "-1234567891234567891"},
     {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+//#ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // returns 123- scale value is always 0 for existing Driver
     {SQL_C_CHAR, "-123",
@@ -114,10 +114,9 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
      SQL_SUCCESS},  // Existing Driver returns  123123123123123123123.222000000
     {SQL_C_CHAR, "123",
      SQL_SUCCESS},  // Existing Driver returns "123.000000000" here
-#endif              // BQ_DRIVER_INTEGRATION_TESTS
+//#endif              // BQ_DRIVER_INTEGRATION_TESTS
 
-    {SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,
-     "-123456789123456"},
+    {SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,"-123456789123456"},
 
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
@@ -151,7 +150,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+//#ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_NUMERIC, "123.78", SQL_SUCCESS,
      "123.78"},  // SQLNumericToString returns 123 as the scale info is not
                  // correct
@@ -171,7 +170,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
     {SQL_C_CHAR, "99999999999999999999999999999.999999999",
      SQL_SUCCESS},  //"99999999999999999999999999999.99999999900000000000000000000000000000"
     {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
-#endif
+//#endif
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
 
@@ -374,7 +373,7 @@ void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(row_count, expected_config.size());
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+//#ifndef BQ_DRIVER_INTEGRATION_TESTS
 
 void TestTranslationsFromNumeric(
     std::shared_ptr<ODBCHandles> conn, std::string query,
@@ -435,6 +434,7 @@ void TestTranslationsFromNumeric(
         }
         case SQL_C_SSHORT: {
           SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+          std::cout<<"\n AMR1 : "<<*returned_val<<"\n";
           EXPECT_EQ(*returned_val, std::stoi(expected.value));
           break;
         }
@@ -473,7 +473,7 @@ void TestTranslationsFromNumeric(
   }
   EXPECT_EQ(row_count, kFromNumericTestData.size());
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+//#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
                                 std::string query) {
@@ -597,7 +597,7 @@ TEST(DataTranslationTest, From_SQL_CHAR_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+//#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
 TEST(DataTranslationTest, From_NUMERIC_to_all) {
@@ -663,7 +663,7 @@ TEST(DataTranslationTest, From_BIGNUMERIC_All) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+//#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 // This test should follow translations according to
 // https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-numeric?view=sql-server-ver16
