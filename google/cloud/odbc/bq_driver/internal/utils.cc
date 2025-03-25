@@ -524,11 +524,17 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
       in_str_len = in_str_len * sizeof(SQLWCHAR);
     }
   }
-  std::cout<< "debug: check wchar 5 "<< std::endl;
+  std::cout<< "debug: check wchar 5 stmt_txt_wstr =  "<<stmt_txt_wstr<< std::endl;
 
   stmt_txt_wstr.reserve(in_str_len);
+  std::cout<< "debug: check wchar 5.1 reserved len= "<< in_str_len<<std::endl;
+
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
+  std::cout<< "debug: check wchar 5.2 reserved len= "<<std::endl;
+    
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
+  std::cout<< "debug: check wchar 5.3 stmt_txt_wstr= "<< stmt_txt_wstr<<std::endl;
+
   }
   std::cout<< "debug: check wchar 6 "<< std::endl;
 
