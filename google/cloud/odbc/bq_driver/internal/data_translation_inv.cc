@@ -37,6 +37,7 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   if (src_result_len != nullptr) {
     result_len = *src_result_len;
   }
+  std::cout<< "debug: check conversion 3 "<< std::endl;
 
   std::string src_str;
   switch (src_data.type) {
@@ -45,13 +46,24 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
       break;
     }
     case SQL_C_WCHAR: {
+  std::cout<< "debug: check conversion 4 "<< std::endl;
+
       auto* wchar_buf = static_cast<SQLWCHAR*>(src_buf);
+  std::cout<< "debug: check conversion 4 "<< std::endl;
+
       if ((result_len > 0) || (result_len == SQL_NTS)) {
+  std::cout<< "debug: check conversion 5 "<< std::endl;
+
         auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
+  std::cout<< "debug: check conversion 6 "<< std::endl;
+
         if (!utf8_res) {
           return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
         }
+
         src_str = *utf8_res;
+  std::cout<< "debug: check conversion 7 "<< std::endl;
+
         break;
       }
       return StatusRecord{SQLStates::k_HY000(), "Invalid buffer length"};
@@ -161,11 +173,16 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
   SQLLEN* res_len = src_data.result_len;
+  std::cout<< "debug: check conversion 1 "<< std::endl;
 
   switch (src_data.type) {
     case SQL_C_WCHAR:
     case SQL_C_CHAR: {
+  std::cout<< "debug: check conversion 2 "<< std::endl;
+
       auto conv_status = ConvertFromCharBuffer(src_data, sql_type);
+  std::cout<< "debug: check conversion 3 "<< std::endl;
+
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }

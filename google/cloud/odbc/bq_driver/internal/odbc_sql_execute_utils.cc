@@ -37,28 +37,44 @@ StatusRecord ConstructPositionalQueryParams(
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
     }
+  std::cout<< "debug: check inside 1 "<< std::endl;
+
     DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_ind + 1);
     // SQL_NULL_DATA implies the application wants to use empty data.
     if (apd_rec.indicator_ptr != nullptr &&
         *apd_rec.indicator_ptr == SQL_NULL_DATA) {
+  std::cout<< "debug: check inside 2 "<< std::endl;
+
       continue;
     }
+  std::cout<< "debug: check inside 3 "<< std::endl;
+
     if (apd_rec.data_ptr == nullptr) {
+  std::cout<< "debug: check inside 4 "<< std::endl;
+
       return StatusRecord{SQLStates::k_HY009(),
                           "The bound param buffer was null"};
     }
+    std::cout<< "debug: check inside 5 "<< std::endl;
 
     DataBuffer data = {apd_rec.concise_type, apd_rec.data_ptr,
                        apd_rec.octet_length, apd_rec.octet_length_ptr};
+              std::cout<< "debug: check inside 6 "<< std::endl;
 
     DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_ind + 1);
+  std::cout<< "debug: check inside 8 "<< std::endl;
+
     if (!ipd.HasDescriptorRecord(param_ind + 1)) {
       return StatusRecord{
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
     }
     SQLSMALLINT sql_type = ipd_rec.concise_type;
+  std::cout<< "debug: check inside 9 "<< std::endl;
+
     StatusRecordOr<std::string> conv_status = ConvertFromBuffer(data, sql_type);
+  std::cout<< "debug: check inside 10 "<< std::endl;
+
     if (!conv_status) {
       return conv_status.GetStatusRecord();
     }

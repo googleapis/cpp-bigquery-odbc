@@ -1096,25 +1096,34 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
                                SQLPOINTER* param_or_target_value) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
+      std::cout<< "debug: check 1 "<< std::endl;
   if (!handle_result) {
     TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
+  std::cout<< "debug: check 2 "<< std::endl;
 
   StatementHandle* handle = *handle_result;
 
   DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
   DescriptorHandle& ipd = handle->GetDescriptorHandle(DescriptorType::kIPD);
+  std::cout<< "debug: check 3 "<< std::endl;
 
   bool is_need_data = handle->GetNeedData();
+  std::cout<< "debug: check 4 is_need_data= "<<is_need_data << std::endl;
+
   if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
+  std::cout<< "debug: check 5 fail  "<< std::endl;
+
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
   }
 
   if (handle->GetPreparedJob().has_value()) {
+  std::cout<< "debug: check 6 not insert  "<< std::endl;
+
     Job prepared_job = handle->GetPreparedJob().value();
     std::string stmt_type =
         prepared_job.statistics.job_query_stats.statement_type;
@@ -1124,15 +1133,22 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   auto param_num = handle->GetCurrentParamIndex();
+  std::cout<< "debug: check 7 ="<< param_num << std::endl;
+
   if (param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
   }
+  std::cout<< "debug: check 8 "<< std::endl;
 
   param_num++;
   while (param_num <= handle->GetParamCount()) {
     auto param = apd.GetDescriptorRecord(param_num);
+  std::cout<< "debug: check 9 "<< std::endl;
+
     if ((!param.indicator_ptr) || (*(param.indicator_ptr) == SQL_NTS)) {
+  std::cout<< "debug: check 10 not param data indicator "<< std::endl;
+
       param_num++;
       continue;
     }
@@ -1140,45 +1156,76 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     if (param.indicator_ptr != nullptr ||
         *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
         *(param.indicator_ptr) <= SQL_LEN_DATA_AT_EXEC(0)) {
+  std::cout<< "debug: check 11 "<< std::endl;
+
       if (param_or_target_value != nullptr) {
+  std::cout<< "debug: check 12 "<< std::endl;
+
         *param_or_target_value = param.data_ptr;
       }
+  std::cout<< "debug: check 13 "<< std::endl;
+
       handle->SetCurrentParamIndex(param_num);
+  std::cout<< "debug: check 14 "<< std::endl;
+
       handle->SetStmtState(StmtStates::kNeedsPutData);
+  std::cout<< "debug: check 15 "<< std::endl;
+
       handle->SetNeedData(false);
+  std::cout<< "debug: check 16 "<< std::endl;
+
       return SQL_NEED_DATA;
     }
   }
+  std::cout<< "debug: check 17 "<< std::endl;
 
   ConnectionHandle& conn_handle = *(handle->GetConnectionHandle());
   StatusRecordOr<SQLULEN> query_timeout_status =
       handle->GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
+  std::cout<< "debug: check 18 "<< std::endl;
+
   if (!query_timeout_status) {
+  std::cout<< "debug: check 19 "<< std::endl;
+
     return LogAndReturnCode(*handle, query_timeout_status);
   }
+  std::cout<< "debug: check 20 "<< std::endl;
+
   int query_timeout = *query_timeout_status;
   std::string query_str = handle->GetQueryString();
+  std::cout<< "debug: check 21 "<< std::endl;
 
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
+      std::cout<< "debug: check 22 "<< std::endl;
 
   std::vector<QueryParameter>& query_params = handle->GetQueryParameters();
+  std::cout<< "debug: check 23 "<< std::endl;
+
   if (!query_params.empty()) {
+  std::cout<< "debug: check 24 "<< std::endl;
+
     StatusRecord status =
         ConstructPositionalQueryParams(apd, ipd, query_params);
+  std::cout<< "debug: check 25 "<< std::endl;
+
     if (!status.ok()) {
       return LogAndReturnCode(*handle, status);
     }
+  std::cout<< "debug: check 26 "<< std::endl;
+
     QueryRequest query_request = post_request.query_request();
     query_request.set_query_parameters(query_params);
     post_request.set_query_request(query_request);
   }
+  std::cout<< "debug: check 28 "<< std::endl;
 
   if (!conn_handle.IsConnected()) {
     return LogAndReturnCode(
         *handle, StatusRecord{SQLStates::k_08S01(),
                               "Connection to the data source is broken"});
   }
+  std::cout<< "debug: check 29 "<< std::endl;
 
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
@@ -1187,6 +1234,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
         StatusRecord{SQLStates::k_HY000(),
                      "Invalid or null BQ Client within the connection handle"});
   }
+  std::cout<< "debug: check 30 "<< std::endl;
+
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
@@ -1196,6 +1245,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   handle->SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+  std::cout<< "debug: check 31 end: "<< std::endl;
+
   return SQL_SUCCESS;
 }
 
