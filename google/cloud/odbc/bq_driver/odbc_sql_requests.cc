@@ -932,4 +932,159 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   return LogAndReturnCode(stmt_handle, status);
 }
 
+SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
+                             SQLLEN str_len_or_ind_ptr) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  // Ensure statement is in kNeedsPutData state
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_HY010(),
+                      "Function sequence error: Incorrect statement state."});
+  }
+
+  // Get the current parameter index (set by SQLParamData)
+  SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
+  if (param_index > stmt_handle.GetParamCount()) {
+    return LogAndReturnCode(
+        stmt_handle,
+        {SQLStates::k_HY000(), "No parameter currently expecting data."});
+  }
+
+  DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+
+  if (!apd.HasDescriptorRecord(param_index)) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_07002(),
+                      "Descriptor record does not exist for parameter."});
+  }
+
+  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
+
+  // Validate string/buffer length
+  if ((data != nullptr && str_len_or_ind_ptr < 0) &&
+      str_len_or_ind_ptr != SQL_NTS && str_len_or_ind_ptr != SQL_NULL_DATA) {
+    return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
+                                          "Invalid string or buffer length."});
+  }
+
+  // Handle NULL data
+  static char empty_data = '\0';
+  if (str_len_or_ind_ptr == 0 || str_len_or_ind_ptr == SQL_NULL_DATA) {
+    apd_rec.data_ptr = &empty_data;
+    apd_rec.octet_length = 0;
+    apd_rec.octet_length_ptr = &apd_rec.octet_length;
+    stmt_handle.SetNeedData(true);
+    if (apd_rec.indicator_ptr && str_len_or_ind_ptr == 0) {
+      *(apd_rec.indicator_ptr) = SQL_NTS;
+    }
+
+    if (apd_rec.indicator_ptr && str_len_or_ind_ptr == SQL_NULL_DATA) {
+      *(apd_rec.indicator_ptr) = SQL_NULL_DATA;
+    }
+    return SQL_SUCCESS;
+  }
+
+  // Data Length Mismatch Handling
+  if (apd_rec.indicator_ptr && *(apd_rec.indicator_ptr) != SQL_DATA_AT_EXEC) {
+    SQLLEN buffered_data_len = apd_rec.octet_length + str_len_or_ind_ptr;
+    if (*(apd_rec.indicator_ptr) != SQL_NTS) {
+      apd_rec.length =
+          -(*(apd_rec.indicator_ptr)) + SQL_LEN_DATA_AT_EXEC_OFFSET;
+    }
+    if (buffered_data_len > apd_rec.length) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
+    }
+
+    // Check if full parameter data is received & update state
+    if ((buffered_data_len) == *(apd_rec.octet_length_ptr)) {
+      stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+      apd_rec.octet_length_ptr = &apd_rec.octet_length;
+
+      if (apd_rec.indicator_ptr &&
+          ((apd_rec.type == SQL_C_CHAR) || (apd_rec.type == SQL_C_WCHAR))) {
+        *(apd_rec.indicator_ptr) = SQL_NTS;
+      }
+
+      if (apd_rec.type == SQL_C_BINARY) {
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        apd_rec.octet_length_ptr = &apd_rec.octet_length;
+      }
+    }
+  }
+
+  // Allocate a temporary buffer for new data
+  SQLPOINTER buffer = nullptr;
+  if (apd_rec.data_ptr == nullptr) {
+    if (str_len_or_ind_ptr <= 0 || data == nullptr) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_HY090(),
+                        "Invalid buffer allocation size or data pointer."});
+    }
+
+    // First chunk of data, allocate fresh buffer
+    buffer = malloc(str_len_or_ind_ptr);
+    if (buffer == nullptr) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
+    }
+
+    memcpy(buffer, data, str_len_or_ind_ptr);
+  } else {
+    // Additional chunks: allocate new buffer large enough to hold old + new
+    // data
+    size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
+
+    void* new_buffer = realloc(apd_rec.data_ptr, new_size);
+    if (new_buffer == nullptr) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
+    }
+    buffer = new_buffer;
+
+    // Append new data
+    memcpy(static_cast<char*>(buffer) + apd_rec.octet_length, data,
+           str_len_or_ind_ptr);
+  }
+
+  // Update descriptor only after successful allocation
+  apd_rec.data_ptr = buffer;
+  apd_rec.octet_length += str_len_or_ind_ptr;
+
+  if (apd_rec.indicator_ptr) {
+    switch (apd_rec.type) {
+      case SQL_C_CHAR:
+      case SQL_C_WCHAR:
+        *(apd_rec.indicator_ptr) = SQL_NTS;
+        break;
+      case SQL_C_BINARY:
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        break;
+      case SQL_C_LONG:
+        *(apd_rec.indicator_ptr) = sizeof(SQLINTEGER);
+        break;
+      case SQL_C_DOUBLE:
+        *(apd_rec.indicator_ptr) = sizeof(SQLDOUBLE);
+        break;
+      case SQL_C_TYPE_TIMESTAMP:
+        *(apd_rec.indicator_ptr) = sizeof(SQL_TIMESTAMP_STRUCT);
+        break;
+      default:
+        *(apd_rec.indicator_ptr) = apd_rec.octet_length;
+        break;
+    }
+  }
+
+  apd_rec.octet_length_ptr = &apd_rec.octet_length;
+  // Update descriptor record
+  stmt_handle.SetNeedData(true);
+  apd.BindNewDescriptorRecord(param_index, apd_rec);
+  return SQL_SUCCESS;
+}
 }  // namespace google::cloud::odbc_bq_driver
