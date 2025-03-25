@@ -1195,7 +1195,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(*handle, pq_status);
   }
 
-  handle->SetStmtState(StmtStates::kStatementPrepared);
+  handle->SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   return SQL_SUCCESS;
 }
 
