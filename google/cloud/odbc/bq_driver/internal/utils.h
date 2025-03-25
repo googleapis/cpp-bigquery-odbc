@@ -44,7 +44,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
-
+bool check_imp = false;
 static std::string const kBase64Chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
