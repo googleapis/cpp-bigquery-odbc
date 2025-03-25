@@ -53,7 +53,6 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
 
       if ((result_len > 0) || (result_len == SQL_NTS)) {
   std::cout<< "debug: check conversion 5 "<< std::endl;
-  check_imp = true;
         auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
   std::cout<< "debug: check conversion 6 "<< std::endl;
 
