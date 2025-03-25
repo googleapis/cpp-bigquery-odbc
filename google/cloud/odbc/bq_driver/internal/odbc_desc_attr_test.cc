@@ -211,7 +211,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MONTH) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR) {
@@ -227,7 +227,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR_TO_MONTH) {
@@ -243,7 +243,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR_TO_MONTH) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY) {
@@ -259,7 +259,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR) {
@@ -275,7 +275,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE) {
@@ -291,7 +291,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_SECOND) {
@@ -307,7 +307,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_HOUR) {
@@ -323,7 +323,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_HOUR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_MINUTE) {
@@ -339,7 +339,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_SECOND) {
@@ -355,7 +355,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_MINUTE) {
@@ -371,7 +371,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_SECOND) {
@@ -387,7 +387,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE_TO_SECOND) {
@@ -403,7 +403,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetType, FailsToSet_SQL_DATETIME_NoIntervalCodeSet) {
@@ -473,7 +473,7 @@ TEST(SetType, Set_SQL_C_CHAR) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_CHAR, descriptor_record.type);
   EXPECT_EQ(SQL_C_CHAR, descriptor_record.concise_type);
-  EXPECT_EQ(1, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(1, descriptor_record.precision);
   EXPECT_EQ(1, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -489,7 +489,7 @@ TEST(SetType, Set_SQL_C_NUMERIC) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.type);
   EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.concise_type);
-  EXPECT_EQ(38, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(38, descriptor_record.precision);
   EXPECT_EQ(38, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -505,7 +505,7 @@ TEST(SetType, Set_SQL_C_FLOAT) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_FLOAT, descriptor_record.type);
   EXPECT_EQ(SQL_C_FLOAT, descriptor_record.concise_type);
-  EXPECT_EQ(24, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(24, descriptor_record.precision);
   EXPECT_EQ(24, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -521,7 +521,7 @@ TEST(SetType, Set_SQL_C_DOUBLE) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.type);
   EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.concise_type);
-  EXPECT_EQ(53, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(53, descriptor_record.precision);
   EXPECT_EQ(53, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -553,7 +553,7 @@ TEST(SetType, Set_SQL_C_GUID) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_GUID, descriptor_record.type);
   EXPECT_EQ(SQL_C_GUID, descriptor_record.concise_type);
-  EXPECT_EQ(16, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(16, descriptor_record.precision);
   EXPECT_EQ(16, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -583,7 +583,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MONTH) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR) {
@@ -599,7 +599,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR_TO_MONTH) {
@@ -615,7 +615,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR_TO_MONTH) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY) {
@@ -631,7 +631,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR) {
@@ -647,7 +647,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE) {
@@ -663,7 +663,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_SECOND) {
@@ -679,7 +679,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_HOUR) {
@@ -695,7 +695,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_HOUR) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_MINUTE) {
@@ -711,7 +711,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_SECOND) {
@@ -727,7 +727,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_MINUTE) {
@@ -743,7 +743,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_MINUTE) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(0, descriptor_record.precision);
   EXPECT_EQ(0, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_SECOND) {
@@ -759,7 +759,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
@@ -776,7 +776,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
   EXPECT_EQ(2, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(6, descriptor_record.precision);
   EXPECT_EQ(6, descriptor_record.scale);
-  EXPECT_EQ(2, descriptor_record.length);
+  EXPECT_EQ(0, descriptor_record.length);
 }
 
 TEST(SetConciseType, Set_SQL_C_TYPE_DATE) {
@@ -836,7 +836,7 @@ TEST(SetConciseType, Set_C_SQL_CHAR) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_CHAR, descriptor_record.type);
   EXPECT_EQ(SQL_C_CHAR, descriptor_record.concise_type);
-  EXPECT_EQ(1, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(1, descriptor_record.precision);
   EXPECT_EQ(1, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -852,7 +852,7 @@ TEST(SetConciseType, Set_SQL_C_NUMERIC) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.type);
   EXPECT_EQ(SQL_C_NUMERIC, descriptor_record.concise_type);
-  EXPECT_EQ(38, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(38, descriptor_record.precision);
   EXPECT_EQ(38, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -868,7 +868,7 @@ TEST(SetConciseType, Set_SQL_C_FLOAT) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_FLOAT, descriptor_record.type);
   EXPECT_EQ(SQL_C_FLOAT, descriptor_record.concise_type);
-  EXPECT_EQ(24, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(24, descriptor_record.precision);
   EXPECT_EQ(24, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -884,7 +884,7 @@ TEST(SetConciseType, Set_SQL_C_DOUBLE) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.type);
   EXPECT_EQ(SQL_C_DOUBLE, descriptor_record.concise_type);
-  EXPECT_EQ(53, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(53, descriptor_record.precision);
   EXPECT_EQ(53, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);
@@ -916,7 +916,7 @@ TEST(SetConciseType, Set_SQL_C_GUID) {
   ASSERT_TRUE(status_record.ok());
   EXPECT_EQ(SQL_C_GUID, descriptor_record.type);
   EXPECT_EQ(SQL_C_GUID, descriptor_record.concise_type);
-  EXPECT_EQ(16, descriptor_record.datetime_interval_precision);
+  EXPECT_EQ(0, descriptor_record.datetime_interval_precision);
   EXPECT_EQ(16, descriptor_record.precision);
   EXPECT_EQ(16, descriptor_record.length);
   EXPECT_EQ(0, descriptor_record.datetime_interval_code);

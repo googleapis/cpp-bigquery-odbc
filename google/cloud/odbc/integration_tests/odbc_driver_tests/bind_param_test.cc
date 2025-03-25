@@ -398,7 +398,7 @@ TEST(SQLBindParameter, Bind_SQL_WLONGVARCHAR) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
 
 TEST(SQLBindParameter, Bind_SQL_BIT) {
   auto conn = std::make_shared<ODBCHandles>();

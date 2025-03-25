@@ -139,7 +139,7 @@ void DescriptorRecord::SetIntervalType(Interval const& entry,
   precision = GetPrecisionForIntervalCode(datetime_interval_code);
   scale = precision;
   if (IsDescriptorTypeApplication(desc_type)) {
-    length = 2;
+    length = 0;
   } else {
     length = GetLengthForIntervalCode(entry.datetime_interval_code);
   }
@@ -170,19 +170,23 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
     case SQL_C_BINARY:
       // case SQL_C_VARBOOKMARK: (this macro has same value as SQL_C_BINARY)
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 1;
+      precision = length = 1;
+      datetime_interval_precision = 0;
       break;
     case SQL_C_NUMERIC:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 38;
+      precision = length = 38;
+      datetime_interval_precision = 0;
       break;
     case SQL_C_FLOAT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 24;
+      precision = length = 24;
+      datetime_interval_precision = 0;
       break;
     case SQL_C_DOUBLE:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 53;
+      precision = length = 53;
+      datetime_interval_precision = 0;
       break;
     case SQL_C_BIT:
     case SQL_C_WCHAR:
@@ -201,7 +205,8 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
       break;
     case SQL_C_GUID:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 16;
+      precision = length = 16;
+      datetime_interval_precision = 0;
       break;
     default:
       return StatusRecord{SQLStates::k_HY021(), error_message};
@@ -219,7 +224,9 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
     case SQL_VARBINARY:
     case SQL_LONGVARBINARY:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 1;
+      length = 1;
+      precision = 0;
+      datetime_interval_precision = 0;
       break;
     case SQL_LONGVARCHAR:
     case SQL_WCHAR:
@@ -231,7 +238,8 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
     case SQL_NUMERIC:
     case SQL_DECIMAL:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 38;
+      datetime_interval_precision = 0;
+      precision = length = 38;
       scale = 0;
       break;
     case SQL_SMALLINT:
@@ -246,14 +254,14 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       break;
     case SQL_REAL:
       type = concise_type = value;
-      datetime_interval_precision = 14;
+      datetime_interval_precision = 0;
       precision = 24;
       length = 7;
       break;
     case SQL_FLOAT:
     case SQL_DOUBLE:
       type = concise_type = value;
-      datetime_interval_precision = 24;
+      datetime_interval_precision = 0;
       precision = 53;
       length = 15;
       break;
@@ -274,7 +282,9 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       break;
     case SQL_GUID:
       type = concise_type = value;
-      datetime_interval_precision = precision = length = 36;
+      datetime_interval_precision = 0;
+      precision = 0;
+      length = 36;
       break;
     default:
       return StatusRecord{SQLStates::k_HY021(), error_message};
