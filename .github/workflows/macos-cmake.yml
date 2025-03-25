@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macos-14, macos-13 ]
-        shard: [ BqDriver ]
+        shard: [ Core ]
     steps:
     - uses: actions/checkout@v3
       with:
@@ -68,8 +68,6 @@ jobs:
     - name: Install iODBC
       run: |
         brew install libiodbc
-    - name: Setup the driver
-      run: bash ci/dependencies/driver-manager-setup-osx.sh
     - name: Build cpp-bigquery-odbc
       run: |
         if [ "${{ matrix.os }}" == "macos-14" ]; then
@@ -78,13 +76,9 @@ jobs:
           export ODBC_INCLUDE_PATH="/usr/local/opt/libiodbc/include"
         fi
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-        export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
-        export CPPFLAGS="-I$(brew --prefix libiodbc)/include"
-        export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/gha/builds/macos-cmake.sh
     env:
       USE_BAZEL_VERSION: 7.0.0
-      MATRIX_OS: ${{ matrix.os }}
       BAZEL_REMOTE_CACHE: https://storage.googleapis.com/gha-cache-cpp-bigquery-odbc/bazel-cache/${{ matrix.os }}
       SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}

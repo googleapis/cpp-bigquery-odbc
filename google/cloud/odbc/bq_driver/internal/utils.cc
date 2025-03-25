@@ -403,7 +403,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "UTF-32LE");
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -412,8 +412,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
         "iconv_open failed while converting wstring to string: " +
             std::string(strerror(errno))};
   }
-std::wcout<<"=========utf_16_str:"<<utf_16_str<<std::endl;
-std::wcout<<"=========end================:"<<std::endl;
+
   std::vector<char> inbuf(
       reinterpret_cast<char const*>(utf_16_str.data()),
       reinterpret_cast<char const*>(utf_16_str.data() + utf_16_str.length()));
@@ -428,7 +427,7 @@ std::wcout<<"=========end================:"<<std::endl;
   if (res == static_cast<size_t>(-1)) {
     iconv_close(cd);
     return StatusRecord{SQLStates::k_HY000(),
-                        "iconv16 failed while converting wstring to string in utisl " +
+                        "iconv16 failed while converting wstring to string " +
                             std::string(strerror(errno))};
   }
 
@@ -462,7 +461,7 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
   return utf16Str;
 #else
 
-  iconv_t cd = iconv_open("UTF-32LE", "UTF-8");
+  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {

@@ -279,23 +279,19 @@ TEST(StatementTest, SQLFetch_Unicode) {
   table.CreateWithPrepare(
       conn, "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-std::cout<<"===============starting unicode insertion===start"<<std::endl;
+
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertUnicodeData(conn, kUnicodeSampleData);
-  std::cout<<"===============starting unicode insertion=======end"<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT Hindi, Chinese FROM " + table_name;
-  std::cout<<"===============starting unicode verifying=======start"<<std::endl;
   auto results = *FetchResults(conn, query, true);
-  std::cout<<"===============starting unicode verifying=======end"<<std::endl;
   VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results,
                                  std::vector<std::string>());
-  std::cout<<"===============starting unicode verifying======= here end"<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

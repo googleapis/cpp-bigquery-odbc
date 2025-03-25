@@ -528,7 +528,7 @@ void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
   if (!num_rows) {
     return;
   }
-std::wcout<<"===insert_stmt:"<<insert_stmt<<std::endl;
+
   for (int i = 0; i < num_rows; i++) {
     auto row = rows[i];
     std::wstring row_str = L"( ";
@@ -1538,7 +1538,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  iconv_t cd = iconv_open("UTF-8", "UTF-32LE");
+  iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
@@ -1561,7 +1561,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (res == static_cast<size_t>(-1)) {
     iconv_close(cd);
     throw std::runtime_error(
-        "iconv16 failed while converting wstring to string intest " +
+        "iconv16 failed while converting wstring to string " +
         std::string(strerror(errno)));
   }
 
@@ -1593,7 +1593,7 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
   return utf16Str;
 #else
 
-  iconv_t cd = iconv_open("UTF-32LE", "UTF-8");
+  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
   int errorno = -1;
   int* errorptr = &errorno;
   if (cd == reinterpret_cast<iconv_t>(errorptr)) {
