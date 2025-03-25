@@ -734,6 +734,10 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
+  if (!execute_status.ok()) {
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    return SQL_NEED_DATA;
+  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 
