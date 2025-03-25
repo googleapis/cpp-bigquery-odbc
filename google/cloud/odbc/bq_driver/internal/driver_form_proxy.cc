@@ -15,9 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <shellapi.h>
-#include <windows.h>
-#include <string>
-#include <filesystem>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -65,24 +62,28 @@ ProxyOptions::~ProxyOptions() {
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
 void SetWindowIcon(HWND proxy_hwnd) {
-    // Get the absolute path of the current source file
-    std::filesystem::path sourcePath(__FILE__);
-    std::filesystem::path absolutePath = std::filesystem::absolute(sourcePath);
+  // Get the absolute path of the current source file
+  std::filesystem::path sourcePath(__FILE__);
+  std::filesystem::path absolutePath = std::filesystem::absolute(sourcePath);
 
-    std::filesystem::path projectDir = absolutePath;
-    for (int i = 0; i < 6; ++i) {
-        projectDir = projectDir.parent_path();
-    }
-    std::filesystem::path iconPath = projectDir / "ci" / "installer" / "InstallerProj" / "Assets" / "bq.ico";
-    HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-    
-    if (!h_icon) {
-        MessageBoxA(NULL, ("Failed to load icon from: " + iconPath.string()).c_str(), "Error", MB_OK | MB_ICONERROR);
-        return;
-    }
-    // Set the icon for the window
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+  std::filesystem::path project_dir = absolutePath;
+  for (int i = 0; i < 6; ++i) {
+    project_dir = project_dir.parent_path();
+  }
+  std::filesystem::path iconPath =
+      project_dir / "ci" / "installer" / "InstallerProj" / "Assets" / "bq.ico";
+  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON,
+                                   32, 32, LR_LOADFROMFILE);
+
+  if (!h_icon) {
+    MessageBoxA(NULL,
+                ("Failed to load icon from: " + iconPath.string()).c_str(),
+                "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Set the icon for the window
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
 }
 void ProxyOptions::InitControls() {
   HFONT h_font =
