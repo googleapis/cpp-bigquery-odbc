@@ -196,6 +196,11 @@ class StatementHandle : public Handle {
     future_exec_direct_query_ = std::nullopt;
   }
 
+  void SetPreparedJob(
+      ::google::cloud::bigquery_v2_minimal_internal::Job const& job) {
+    prepared_job_ = job;
+  }
+
   SQLUSMALLINT GetCurrentParamIndex() const { return current_param_index_; }
 
   inline void SetCurrentParamIndex(SQLUSMALLINT param_index) {
