@@ -25,6 +25,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 #endif
+ 
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
