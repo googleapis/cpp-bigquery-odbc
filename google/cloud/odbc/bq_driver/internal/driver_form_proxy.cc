@@ -64,6 +64,7 @@ ProxyOptions::~ProxyOptions() {
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 void setWindowIcon(HWND proxy_hwnd) {
   // Get the loaded icon handle
   HICON h_icon = google::cloud::odbc_bq_driver_internal::getWindowIcon();
@@ -72,8 +73,22 @@ void setWindowIcon(HWND proxy_hwnd) {
       // Set the window icon
       SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
       SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+=======
+void SetWindowIcon(HWND proxy_hwnd) {
+  std::string iconPath = google::cloud::odbc_bq_driver_internal::GetIconPath();
+  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.c_str(), IMAGE_ICON, 32, 32,
+                                   LR_LOADFROMFILE);
+  if (!h_icon) {
+    MessageBoxA(NULL, ("Failed to load icon from: " + iconPath).c_str(),
+                "Error", MB_OK | MB_ICONERROR);
+    return;
+>>>>>>> e957b4a9 (checkers)
   }
+  // Set the window icon
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+  SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
 }
+<<<<<<< HEAD
 
 =======
 void SetWindowIcon(HWND proxy_hwnd) {
@@ -88,6 +103,8 @@ void SetWindowIcon(HWND proxy_hwnd) {
   SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
 }
 >>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
+=======
+>>>>>>> e957b4a9 (checkers)
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
