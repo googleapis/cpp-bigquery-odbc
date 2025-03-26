@@ -1028,8 +1028,6 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
-  std::cout << "debug: driver name = " << conn.get()->metadata.driver_name
-            << std::endl;
   PrintDriverVerName(conn);
   EXPECT_EQ(status, SQL_SUCCESS);
 
@@ -1047,11 +1045,6 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string key_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
@@ -1088,11 +1081,6 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name + "}";
@@ -1127,11 +1115,6 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
 
   SQLCHAR in_conn_str[kBufferLength];
@@ -1160,11 +1143,6 @@ TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string conn_str =
@@ -1198,11 +1176,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name + "}";
@@ -1255,11 +1228,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string key_path =
@@ -1318,11 +1286,6 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
-  if (kIsUnixODBC) {
-    // Skipping this test as the unixODBC driver manager closes the connection
-    // when calling the SQLBrowseConnect API.
-    GTEST_SKIP() << "Skipping test";
-  }
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name +

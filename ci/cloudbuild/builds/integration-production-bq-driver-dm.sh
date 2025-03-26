@@ -48,6 +48,7 @@ if command -v odbcinst &>/dev/null; then
 else
   # unixODBC is not installed
   export UNIXODBC_INSTALLED=false
+  export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
   echo "unixODBC is not installed."
 fi
 
