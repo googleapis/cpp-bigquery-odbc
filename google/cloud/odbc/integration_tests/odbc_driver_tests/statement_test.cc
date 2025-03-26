@@ -865,11 +865,6 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
   EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
