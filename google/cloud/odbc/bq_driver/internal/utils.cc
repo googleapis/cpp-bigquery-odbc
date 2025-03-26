@@ -498,6 +498,21 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
 #endif
 }
 
+std::wstring PreprocessForACP(std::wstring const& utf_16_str) {
+  std::wstring processed;
+  for (wchar_t wc : utf_16_str) {
+      if (wc <= 0x7F) {
+          // ASCII characters are safe
+          processed += wc;
+      } else {
+          // Replace with UTF-8 escaped format (e.g., "\u3042" for あ)
+          wchar_t buf[10];
+          swprintf(buf, 10, L"\\u%04X", wc);
+          processed += buf;
+      }
+  }
+  return processed;
+}
 StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
                                                     SQLINTEGER in_str_len) {
   if (in_str == nullptr) {
@@ -536,8 +551,8 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
 
   }
   std::cout<< "debug: check wchar 6 "<< std::endl;
-
-  return Utf16ToUtf8(stmt_txt_wstr);
+  std::wstring processed = PreprocessForACP(input);
+  return Utf16ToUtf8(processed);
 }
 
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier) {

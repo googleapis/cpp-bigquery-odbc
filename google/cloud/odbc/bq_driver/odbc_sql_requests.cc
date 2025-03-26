@@ -1238,6 +1238,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   // For now , we use default options.
   // We can set timeout here as needed later.
+  std::cout<< "debug: post_request: "<< post_request.DebugString("here") <<std::endl;
+
   Options options;
   auto pq_status = bq_client->PostQuery(post_request, options);
   if (!pq_status) {

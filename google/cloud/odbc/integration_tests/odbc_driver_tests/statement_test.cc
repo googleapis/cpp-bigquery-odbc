@@ -3529,9 +3529,11 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   EXPECT_EQ(SQLPrepareW(conn->hstmt, sql_wstr.data(), SQL_NTS), SQL_SUCCESS);
 
   int const large_data_size = (10) / sizeof(wchar_t);
+std::cout << "debug:large_data_size= "<< large_data_size<<std::endl;
+
   std::wstring large_data(large_data_size, L'あ');
   SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
-
+std::cout << "debug:param_size= "<< param_size<<std::endl;
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
                              SQL_WLONGVARCHAR, large_data.size(), 0, nullptr, 0,
                              &param_size),
@@ -3541,6 +3543,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   SQLPOINTER data_ptr = nullptr;
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
   int const chunk_size = 64 * 1024 / sizeof(wchar_t);
+  std::cout << "debug:large_data_size = "<< large_data.size()<<std::endl;
 
   for (auto val = 0; val < large_data.size(); val += chunk_size) {
     int byte_left = large_data.size() - val;
