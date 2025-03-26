@@ -22,7 +22,10 @@
 #ifdef _WIN32
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
+#include <filesystem>
 #endif
+ 
+namespace fs = std::filesystem;
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
@@ -257,6 +260,21 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
       parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 
   return h_hyperlink;
+}
+std::string GetIconPath() {
+  // Get the absolute path of the source file 
+  fs::path sourcePath(__FILE__);
+  fs::path absolutePath = fs::absolute(sourcePath);
+  fs::path projectDir = absolutePath;
+  while (projectDir.has_parent_path()) {
+    if (fs::exists(projectDir / ".git")) { // Check for .git folder
+        break;
+    }
+    projectDir = projectDir.parent_path();
+}
+  const fs::path ICON_RELATIVE_PATH = "ci/installer/InstallerProj/Assets/bq.ico";
+  fs::path iconPath = projectDir / ICON_RELATIVE_PATH;
+  return iconPath.string();
 }
 
 #else
