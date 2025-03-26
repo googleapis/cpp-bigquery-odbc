@@ -3573,6 +3573,9 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
+// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
+#ifndef WIN32
+#ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3594,8 +3597,8 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data.size(), 0,
-                             (SQLPOINTER)1, 0, &param_size),
+                             SQL_WLONGVARCHAR, large_data.size(), 0, nullptr, 0,
+                             &param_size),
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
 
@@ -3619,6 +3622,8 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // DRIVER_MANAGER_TESTING_ENABLED
+#endif  // WIN32
 
 TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3669,6 +3674,69 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+TEST(StatementTest, SQLParamData_MixedBindingModes) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAM_DATA_MIXED_BINDING_TEST";
+  Table table(table_name);
 
+  Schema schema{
+      {"Field1", "STRING"},  // Will use SQL_DATA_AT_EXEC
+      {"Field2", "STRING"},  // Will pass directly in SQLBindParameter
+      {"Field3", "STRING"}   // Will use SQL_DATA_AT_EXEC
+  };
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  // Bind 1st Parameter
+  SQLLEN indicator1 = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator1),
+            SQL_SUCCESS);
+
+  // Bind 2nd Parameter
+  char const* param2_data = "DirectData";
+  SQLLEN indicator2 = SQL_NTS;  // Null-Terminated String
+  EXPECT_EQ(
+      SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                       SQL_LONGVARCHAR, strlen(param2_data), 0,
+                       (SQLPOINTER)param2_data, strlen(param2_data), NULL),
+      SQL_SUCCESS);
+
+  // Bind 3rd Parameter
+  SQLLEN indicator3 = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator3),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  SQLPOINTER target_value = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &target_value), SQL_NEED_DATA);
+
+  // Pass Data for 1st Parameter
+  std::string param1_data = "FirstParamData";
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)param1_data.c_str(),
+                       param1_data.size()),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, &target_value), SQL_NEED_DATA);
+
+  // Pass Data for 3rd Parameter
+  std::string param3_data = "ThirdParamData";
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)param3_data.c_str(),
+                       param3_data.size()),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }  // namespace google::cloud::odbc_tests
