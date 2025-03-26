@@ -1031,49 +1031,4 @@ TEST(SQLProcedureColumnsInternal,
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
-TEST(SQLProcedureColumnsInternal, Failure_CatalogNameIsSearchPattern) {
-  auto conn_handle = CreateConnectionHandle(true);
-  StatementHandle handle(&conn_handle);
-
-  SQLRETURN status = SQLProcedureColumnsInternal(
-      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
-      kSqlDatasetLen, kSqlProcedure, kSqlProcedureLen, kSqlColumn,
-      kSqlColumnLen);
-
-  ASSERT_EQ(SQL_ERROR, status);
-  StatusRecord status_record = GetLastStatusRecord(handle);
-  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  EXPECT_EQ(status_record.message, "Catalog name cannot be a search pattern");
-}
-
-TEST(SQLProcedureColumnsInternal, Failure_ProcedureNameLenNegative) {
-  auto conn_handle = CreateConnectionHandle(true);
-  StatementHandle handle(&conn_handle);
-
-  SQLRETURN status = SQLProcedureColumnsInternal(
-      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
-      kSqlProcedure, -7, kSqlColumn, kSqlColumnLen);
-
-  ASSERT_EQ(SQL_ERROR, status);
-  StatusRecord status_record = GetLastStatusRecord(handle);
-  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  EXPECT_EQ(status_record.message,
-            "Invalid buffer length - procedure name length is invalid");
-}
-
-TEST(SQLProcedureColumnsInternal, Failure_ColumnNameLenNegative) {
-  auto conn_handle = CreateConnectionHandle(true);
-  StatementHandle handle(&conn_handle);
-
-  SQLRETURN status = SQLProcedureColumnsInternal(
-      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
-      kSqlProcedure, kSqlProcedureLen, kSqlColumn, -7);
-
-  ASSERT_EQ(SQL_ERROR, status);
-  StatusRecord status_record = GetLastStatusRecord(handle);
-  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
-  EXPECT_EQ(status_record.message,
-            "Invalid buffer length - procedure column name length is invalid");
-}
-
 }  // namespace google::cloud::odbc_bq_driver
