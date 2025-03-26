@@ -53,12 +53,14 @@ std::string const kDataset = "test-schema";
 std::string const kColumn = "test-column";
 std::string const kPKTable = "pk-test-table";
 std::string const kFKTable = "fk-test-table";
+std::string const kProcedure = "procedure";
 
 SQLCHAR* const kSqlCatalog = ToSqlChar(kCatalog.c_str());
 SQLCHAR* const kSqlDataset = ToSqlChar(kDataset.c_str());
 SQLCHAR* const kSqlColumn = ToSqlChar(kColumn.c_str());
 SQLCHAR* const kSqlPKTable = ToSqlChar(kPKTable.c_str());
 SQLCHAR* const kSqlFKTable = ToSqlChar(kFKTable.c_str());
+SQLCHAR* const kSqlProcedure = ToSqlChar(kProcedure.c_str());
 
 SQLCHAR const kSqlEmpty[256] = "";
 
@@ -67,6 +69,7 @@ SQLSMALLINT const kSqlDatasetLen = kDataset.length();
 SQLSMALLINT const kSqlColumnLen = kColumn.length();
 SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 SQLSMALLINT const kSqlFKTableLen = kFKTable.length();
+SQLSMALLINT const kSqlProcedureLen = kProcedure.length();
 
 // Helper class and functions specific to odbc metadata unit tests.
 namespace {
@@ -997,6 +1000,35 @@ TEST(SQLGetInfoInternal, NotConnectedSQL_ODBC_VER) {
   EXPECT_EQ(kDriverVersion, actual);
   EXPECT_EQ(str_len_ptr, 5);
   FreeHandles();
+}
+
+TEST(SQLProcedureColumnsInternal, InvalidStatementHandle) {
+  SQLRETURN ret = SQLProcedureColumnsInternal(nullptr, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_INVALID_HANDLE);
+}
+
+TEST(SQLProcedureColumnsInternal, NullConnectionHandle) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+  SQLRETURN ret = SQLProcedureColumnsInternal(&handle, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLProcedureColumnsInternal,
+     Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLProcedureColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlProcedure, kSqlProcedureLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
 }  // namespace google::cloud::odbc_bq_driver

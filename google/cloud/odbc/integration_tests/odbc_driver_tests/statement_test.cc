@@ -3557,4 +3557,361 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+struct ExpectedProcedureColumnValues {
+  std::string procedure_catalog;
+  std::string procedure_schema;
+  std::string procedure_name;
+  std::string column_name;
+  SQLSMALLINT column_type;
+  SQLSMALLINT data_type;
+  std::string type_name;
+  SQLINTEGER column_size;
+  SQLINTEGER buffer_length;
+  SQLSMALLINT decimal_digits;
+  SQLSMALLINT num_pred_radix;
+  SQLSMALLINT nullable;
+  std::string remarks;
+  std::string column_default;
+  SQLSMALLINT sql_data_type;
+  SQLSMALLINT datetime_sub;
+  SQLINTEGER char_octet_length;
+  SQLSMALLINT ordinal_position;
+  std::string is_nullable;
+};
+
+void ValidateProcedureColumns(
+    SQLHSTMT hstmt,
+    std::vector<ExpectedProcedureColumnValues> const& expected_columns) {
+  SQLCHAR procedure_catalog[128] = {0}, procedure_schema[128] = {0},
+          procedure_name[128] = {0};
+  SQLCHAR column_name[128] = {0}, type_name[128] = {0}, remarks[256] = {0},
+          column_default[128] = {0};
+  SQLCHAR is_nullable[10] = {0};
+  SQLSMALLINT column_type = 0, data_type = 0, decimal_digits = 0,
+              num_prec_radix = 0;
+  SQLSMALLINT nullable = 0, sql_data_type = 0, datetime_sub = 0,
+              ordinal_position = 0;
+  SQLINTEGER column_size = 0, buffer_length = 0, char_octet_length = 0;
+  SQLLEN ind = 0;
+
+  for (auto const& expected : expected_columns) {
+    SQLRETURN ret = SQLFetch(hstmt);
+    if (ret == SQL_NO_DATA) {
+      FAIL() << "SQLProcedureColumns returned fewer rows than expected.";
+    }
+    ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
+
+    EXPECT_EQ(SQLGetData(hstmt, 1, SQL_C_CHAR, procedure_catalog,
+                         sizeof(procedure_catalog), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_catalog),
+                 expected.procedure_catalog.c_str());
+
+    EXPECT_EQ(SQLGetData(hstmt, 2, SQL_C_CHAR, procedure_schema,
+                         sizeof(procedure_schema), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_schema),
+                 expected.procedure_schema.c_str());
+
+    EXPECT_EQ(SQLGetData(hstmt, 3, SQL_C_CHAR, procedure_name,
+                         sizeof(procedure_name), &ind),
+              SQL_SUCCESS);
+
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_name),
+                 expected.procedure_name.c_str());
+
+    EXPECT_EQ(SQLGetData(hstmt, 4, SQL_C_CHAR, column_name, sizeof(column_name),
+                         &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(column_name),
+                 expected.column_name.c_str());
+
+    EXPECT_EQ(SQLGetData(hstmt, 5, SQL_C_SSHORT, &column_type, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(column_type, expected.column_type);
+
+    EXPECT_EQ(SQLGetData(hstmt, 6, SQL_C_SSHORT, &data_type, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(
+        SQLGetData(hstmt, 7, SQL_C_CHAR, type_name, sizeof(type_name), &ind),
+        SQL_SUCCESS);
+    EXPECT_EQ(data_type, expected.data_type);
+
+    EXPECT_EQ(SQLGetData(hstmt, 8, SQL_C_SSHORT, &column_size, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(column_size, expected.column_size);
+    EXPECT_EQ(SQLGetData(hstmt, 9, SQL_C_SSHORT, &buffer_length, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(buffer_length, expected.buffer_length);
+    EXPECT_EQ(SQLGetData(hstmt, 10, SQL_C_SSHORT, &decimal_digits, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(decimal_digits, expected.decimal_digits);
+    EXPECT_EQ(SQLGetData(hstmt, 11, SQL_C_SSHORT, &num_prec_radix, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(num_prec_radix, expected.num_pred_radix);
+    EXPECT_EQ(SQLGetData(hstmt, 12, SQL_C_SSHORT, &nullable, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(nullable, expected.nullable);
+    EXPECT_EQ(SQLGetData(hstmt, 13, SQL_C_CHAR, remarks, sizeof(remarks), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(remarks), expected.remarks.c_str());
+    EXPECT_EQ(SQLGetData(hstmt, 14, SQL_C_CHAR, column_default,
+                         sizeof(column_default), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(column_default),
+                 expected.column_default.c_str());
+    EXPECT_EQ(SQLGetData(hstmt, 15, SQL_C_SSHORT, &sql_data_type, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(sql_data_type, expected.sql_data_type);
+    EXPECT_EQ(SQLGetData(hstmt, 16, SQL_C_SSHORT, &datetime_sub, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(datetime_sub, expected.datetime_sub);
+    EXPECT_EQ(SQLGetData(hstmt, 17, SQL_C_SSHORT, &char_octet_length, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(char_octet_length, expected.char_octet_length);
+    EXPECT_EQ(SQLGetData(hstmt, 18, SQL_C_SSHORT, &ordinal_position, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(type_name),
+                 expected.type_name.c_str());
+
+    EXPECT_EQ(ordinal_position, expected.ordinal_position);
+
+    EXPECT_EQ(SQLGetData(hstmt, 19, SQL_C_CHAR, is_nullable,
+                         sizeof(is_nullable), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(is_nullable),
+                 expected.is_nullable.c_str());
+    std::cout << "--------" << column_name << "------------" << std::endl;
+  }
+  EXPECT_EQ(SQLFetch(hstmt), SQL_NO_DATA)
+      << "SQLProcedureColumns returned more rows than expected.";
+}
+void TestSQLProcedureColumns(std::string const& catalog_name,
+                             std::string const& procedure_suffix) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string procedure_name =
+      kDatasetWithTablePrefix + "TEST_PROCEDURE_" + procedure_suffix;
+
+  // Create Procedure
+  std::string create_procedure_query = "CREATE OR REPLACE PROCEDURE " +
+                                       procedure_name +
+                                       "(param1 INT64, param2 STRING) "
+                                       "BEGIN "
+                                       "END;";
+  SQLRETURN ret = SQLExecDirect(
+      conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Reconnect for SQLProcedureColumns
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string procedure_pattern =
+      kTableNamePrefix + "TEST_PROCEDURE_" + procedure_suffix;
+
+  SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)150, 0);
+
+  ret = SQLProcedureColumns(
+      conn->hstmt, catalog_name.empty() ? NULL : (SQLCHAR*)catalog_name.c_str(),
+      catalog_name.empty() ? 0 : SQL_NTS, (SQLCHAR*)kDatasetName.c_str(),
+      SQL_NTS,
+      (SQLCHAR*)procedure_pattern.c_str(),  // Wildcard match
+      SQL_NTS, NULL, 0);
+
+  EXPECT_EQ(ret, SQL_SUCCESS);
+
+  // Validate results allowing for any prefix
+  std::vector<ExpectedProcedureColumnValues> expected_columns = {
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET", procedure_pattern,
+       "param1", SQL_PARAM_INPUT, SQL_BIGINT, "INT64", 19, 20, 0, 10, 1, "", "",
+       SQL_BIGINT, 0, 0, 1, "YES"},
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET", procedure_pattern,
+       "param2", SQL_PARAM_INPUT, SQL_VARCHAR, "STRING", 16384, 16384, 0, 10, 1,
+       "", "", SQL_VARCHAR, 0, 16384, 2, "YES"}};
+
+  // Validate procedure columns
+  ValidateProcedureColumns(conn->hstmt, expected_columns);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Cleanup
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Procedure procedure(procedure_name);
+  procedure.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// Test case for procedure without catalog
+TEST(SQLProcedureColumns, BasicProcedure) {
+  TestSQLProcedureColumns("", "BASIC");
+}
+
+// Test case for procedure with catalog
+TEST(SQLProcedureColumns, ProcedureWithCatalog) {
+  TestSQLProcedureColumns("bigquery-devtools-drivers", "CATALOG");
+}
+
+TEST(SQLProcedureColumns, ComplexProcedure) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string procedure_name =
+      kDatasetWithTablePrefix + "TEST_COMPLEX_PROCEDURE";
+
+  std::string create_procedure_query = "CREATE OR REPLACE PROCEDURE " +
+                                       procedure_name +
+                                       "("
+                                       "param1 INT64, "
+                                       "param2 STRING, "
+                                       "param3 FLOAT64, "
+                                       "param4 BOOL, "
+                                       "param5 TIMESTAMP, "
+                                       "OUT param6 INT64, "
+                                       "OUT param7 STRING) "
+                                       "BEGIN "
+                                       "SET param6 = param1; "
+                                       "SET param7 = param2; "
+                                       "END;";
+
+  SQLRETURN ret = SQLExecDirect(
+      conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::string procedure_pattern = kTableNamePrefix + "TEST_COMPLEX_PROCEDURE";
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ret = SQLProcedureColumns(
+      conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+      (SQLCHAR*)procedure_pattern.c_str(), SQL_NTS, NULL, 0);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+
+  std::vector<ExpectedProcedureColumnValues> expected_values = {
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param1",
+       SQL_PARAM_INPUT, SQL_BIGINT, "INT64", 19, 20, 0, 10, SQL_NULLABLE, "",
+       "", SQL_BIGINT, 0, 0, 1, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param2",
+       SQL_PARAM_INPUT, SQL_VARCHAR, "STRING", 16384, 16384, 0, 10,
+       SQL_NULLABLE, "", "", SQL_VARCHAR, 0, 16384, 2, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param3",
+       SQL_PARAM_INPUT, SQL_DOUBLE, "FLOAT64", 53, 8, 9, 2, SQL_NULLABLE, "",
+       "", SQL_DOUBLE, 0, 16384, 3, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param4",
+       SQL_PARAM_INPUT, SQL_BIT, "BOOL", 1, 1, 9, 2, SQL_NULLABLE, "", "",
+       SQL_BIT, 0, 16384, 4, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param5",
+       SQL_PARAM_INPUT, SQL_TYPE_TIMESTAMP, "TIMESTAMP", 26, 16, 6, 2,
+       SQL_NULLABLE, "", "", 9, 3, 16384, 5, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param6",
+       SQL_PARAM_OUTPUT, SQL_BIGINT, "INT64", 19, 20, 0, 10, SQL_NULLABLE, "",
+       "", SQL_BIGINT, 3, 16384, 6, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param7",
+       SQL_PARAM_OUTPUT, SQL_VARCHAR, "STRING", 16384, 16384, 0, 10,
+       SQL_NULLABLE, "", "", SQL_VARCHAR, 3, 16384, 7, "YES"},
+  };
+
+  ValidateProcedureColumns(conn->hstmt, expected_values);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Cleanup
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Procedure procedure(procedure_name);
+  procedure.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLProcedureColumns, NonExistentProcedure) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLRETURN ret = SQLProcedureColumns(
+      conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+      (SQLCHAR*)"NON_EXISTENT_PROCEDURE", SQL_NTS, NULL, 0);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_NO_DATA)
+      << "Expected no data for non-existent procedure";
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLProcedureColumns, ProcedureWithNoParameters) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string procedure_name = kDatasetWithTablePrefix + "TEST_NO_PARAMS";
+  std::string create_procedure_query =
+      "CREATE OR REPLACE PROCEDURE " + procedure_name + "() BEGIN END;";
+
+  SQLRETURN ret = SQLExecDirect(
+      conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string procedure_pattern = kTableNamePrefix + "TEST_NO_PARAMS";
+  ret = SQLProcedureColumns(
+      conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+      (SQLCHAR*)procedure_pattern.c_str(), SQL_NTS, NULL, 0);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_NO_DATA)
+      << "Expected no parameters for procedure with no parameters";
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Cleanup
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Procedure procedure(procedure_name);
+  procedure.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(SQLProcedureColumns, ProcedureWithInOutParameters) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string procedure_name = kDatasetWithTablePrefix + "TEST_INOUT_PARAMS";
+  std::string create_procedure_query =
+      "CREATE OR REPLACE PROCEDURE " + procedure_name +
+      "("
+      "INOUT param1 INT64, "
+      "INOUT param2 STRING) "
+      "BEGIN "
+      "SET param1 = param1 + 1; "
+      "SET param2 = CONCAT(param2, '_updated'); "
+      "END;";
+
+  SQLRETURN ret = SQLExecDirect(
+      conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  std::string procedure_pattern = kTableNamePrefix + "TEST_INOUT_PARAMS";
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ret = SQLProcedureColumns(
+      conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+      (SQLCHAR*)procedure_pattern.c_str(), SQL_NTS, NULL, 0);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+
+  // Expected results
+  std::vector<ExpectedProcedureColumnValues> expected_values = {
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param1",
+       SQL_PARAM_INPUT_OUTPUT, SQL_BIGINT, "INT64", 19, 20, 0, 10, SQL_NULLABLE,
+       "", "", SQL_BIGINT, 0, 0, 1, "YES"},
+      {"bigquery-devtools-drivers", kDatasetName, procedure_pattern, "param2",
+       SQL_PARAM_INPUT_OUTPUT, SQL_VARCHAR, "STRING", 16384, 16384, 0, 10,
+       SQL_NULLABLE, "", "", SQL_VARCHAR, 0, 16384, 2, "YES"},
+  };
+
+  // Call validation function
+  ValidateProcedureColumns(conn->hstmt, expected_values);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Cleanup
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Procedure procedure(procedure_name);
+  procedure.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
