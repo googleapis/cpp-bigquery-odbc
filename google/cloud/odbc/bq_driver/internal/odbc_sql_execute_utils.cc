@@ -138,27 +138,25 @@ StatusRecordOr<DSResults> ExecuteScript(
   std::string statement_type = job_data.second;
 
   Options query_results_options;
-  if (pq_status->job_complete) {
-    auto gq_status = bq_client->GetAllQueryResults(
-        pq_status->job_reference.project_id, job_id,
-        pq_status->job_reference.location,
-        post_query_request.query_request().timeout(), query_results_options);
+  auto gq_status = bq_client->GetAllQueryResults(
+      pq_status->job_reference.project_id, job_id,
+      pq_status->job_reference.location,
+      post_query_request.query_request().timeout(), query_results_options);
 
-    if (!gq_status) {
-      return gq_status.GetStatusRecord();
-    }
-
-    // Assign DML row counts
-    std::int64_t dml_affected_rows = gq_status->num_dml_affected_rows;
-    if (statement_type == "INSERT") {
-      results.dml_stats.inserted_row_count = dml_affected_rows;
-    } else if (statement_type == "UPDATE") {
-      results.dml_stats.updated_row_count = dml_affected_rows;
-    } else if (statement_type == "DELETE") {
-      results.dml_stats.deleted_row_count = dml_affected_rows;
-    }
-    results.data_source_results = *gq_status;
+  if (!gq_status) {
+    return gq_status.GetStatusRecord();
   }
+
+  // Assign DML row counts
+  std::int64_t dml_affected_rows = gq_status->num_dml_affected_rows;
+  if (statement_type == "INSERT") {
+    results.dml_stats.inserted_row_count = dml_affected_rows;
+  } else if (statement_type == "UPDATE") {
+    results.dml_stats.updated_row_count = dml_affected_rows;
+  } else if (statement_type == "DELETE") {
+    results.dml_stats.deleted_row_count = dml_affected_rows;
+  }
+  results.data_source_results = *gq_status;
   stmt_handle.SetDSResults(results);
 
   if (!conn_handle->IsSessionStarted() &&
