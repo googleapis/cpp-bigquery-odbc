@@ -1693,7 +1693,8 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
                GetParam());
 
   if (!kIsUnixODBC) {
-    // Skipping this, as unixODBC does not reset descriptors.
+    // Skipping this, as unixODBC the driver manager is unable to reset
+    // descriptors for both the existing driver and the internal driver.
     EXPECT_EQ(SQL_DESC_ALLOC_AUTO, alloc_type);
     EXPECT_EQ(arr_size_implicit, arr_size_new);
   }
