@@ -760,57 +760,42 @@ TEST(StatementTest, SQLFetchScroll) {
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Columns) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_SCROLL_All_COLUMNS_TEST";
-  Table table(table_name);
-
-  // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertData(conn, kSampleData);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
   auto const query =
-      "SELECT StringField, IntegerField, FloatField  FROM " + table_name;
-  auto results =
-      *FetchScrollResultsAllColumns(conn, query, SQL_FETCH_NEXT, true);
+      "SELECT StringField, IntegerField, FloatField FROM UNNEST([STRUCT(\"Test "
+      "String 1\" AS StringField, 1 AS IntegerField, 1.1 AS "
+      "FloatField),STRUCT(NULL AS StringField, 237 AS IntegerField, 2.22 AS "
+      "FloatField),     STRUCT(\"Test String 3\" AS StringField, NULL AS "
+      "IntegerField, 3.333 AS FloatField),     STRUCT(\"Test String 4\" AS "
+      "StringField, 49 AS IntegerField, NULL AS FloatField),     STRUCT(\"Test "
+      "String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField),     "
+      "STRUCT(\"Test String 6\" AS StringField, 698 AS IntegerField, 0.31 AS "
+      "FloatField),     STRUCT(\"Test String 7\" AS StringField, 12 AS "
+      "IntegerField, 71.6 AS FloatField),     STRUCT(\"Test String 8\" AS "
+      "StringField, 83 AS IntegerField, 8.8 AS FloatField) ])";
+
+  auto results = *FetchScrollResultsAllColumns(conn, query, SQL_FETCH_NEXT);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Types) {
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_ALL_TYPE_TEST";
-  Table table(table_name);
-
-  // Create Table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.InsertData(conn, kSampleData);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto const query = "SELECT StringField FROM " + table_name;
+  auto const query =
+      "SELECT StringField FROM UNNEST([STRUCT(\"Test String 1\" AS "
+      "StringField, 1 AS IntegerField, 1.1 AS FloatField),STRUCT(NULL AS "
+      "StringField, 237 AS IntegerField, 2.22 AS FloatField),     "
+      "STRUCT(\"Test String 3\" AS StringField, NULL AS IntegerField, 3.333 AS "
+      "FloatField),     STRUCT(\"Test String 4\" AS StringField, 49 AS "
+      "IntegerField, NULL AS FloatField),     STRUCT(\"Test String 5\" AS "
+      "StringField, 53 AS IntegerField, 5 AS FloatField),     STRUCT(\"Test "
+      "String 6\" AS StringField, 698 AS IntegerField, 0.31 AS FloatField),    "
+      " STRUCT(\"Test String 7\" AS StringField, 12 AS IntegerField, 71.6 AS "
+      "FloatField),     STRUCT(\"Test String 8\" AS StringField, 83 AS "
+      "IntegerField, 8.8 AS FloatField) ])";
 
   SQLRETURN status;
   SQLCHAR buf_sql_fetch_absolute[kBufferLength];
@@ -882,9 +867,9 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.Drop(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 

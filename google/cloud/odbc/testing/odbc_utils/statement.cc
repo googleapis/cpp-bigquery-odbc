@@ -678,18 +678,13 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
 
 std::shared_ptr<Results> FetchScrollResultsAllColumns(
     std::shared_ptr<ODBCHandles> conn, std::string query,
-    SQLSMALLINT fetch_orientation, bool use_bind_col, bool use_ansi) {
+    SQLSMALLINT fetch_orientation) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
-  if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  }
-
-  CheckError(status, "SQLPrepare", conn, use_ansi);
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
 
   SQLSMALLINT num_cols;
   status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version.
@@ -712,12 +707,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
     SqlToCdataTypes(col_ptr);
     // Allocate memory for column data using dynamic memory.
     col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
-
-    if (use_bind_col) {
-      BindCol(conn, col_ptr, i + 1);  // No ansi version.
-    } else {
-      BindColManually(conn, col_ptr, i + 1, use_ansi);
-    }
+    BindCol(conn, col_ptr, i + 1);
   }
 
   SQLExecute(conn->hstmt);  // No ansi version.
@@ -731,7 +721,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
-      CheckError(status, "SQLFetch", conn);
+      CheckError(status, "SQLFetchScroll", conn);
       break;
     }
 
