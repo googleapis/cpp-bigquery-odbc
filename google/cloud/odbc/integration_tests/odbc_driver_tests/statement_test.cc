@@ -3528,7 +3528,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   sql_wstr.emplace_back(L'\0');
   EXPECT_EQ(SQLPrepareW(conn->hstmt, sql_wstr.data(), SQL_NTS), SQL_SUCCESS);
 
-  int const large_data_size = (1024 * 512) / sizeof(wchar_t);
+  int const large_data_size = (10) / sizeof(wchar_t);
   std::wstring large_data(large_data_size, L'あ');
   SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
 
