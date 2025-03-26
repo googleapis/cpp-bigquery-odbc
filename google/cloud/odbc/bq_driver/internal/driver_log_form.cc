@@ -222,9 +222,6 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
     p_this = (LogTraceDialog*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   }
   switch (u_msg) {
-    case WM_CREATE:
-      setWindowIcon(hwnd);
-      break;
     case WM_INITDIALOG: {
       p_this->parent_hwnd = hwnd;  // Store parent window handle
 
