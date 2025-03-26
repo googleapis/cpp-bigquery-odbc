@@ -551,7 +551,7 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
 
   }
   std::cout<< "debug: check wchar 6 "<< std::endl;
-  std::wstring processed = PreprocessForACP(input);
+  std::wstring processed = PreprocessForACP(stmt_txt_wstr);
   return Utf16ToUtf8(processed);
 }
 
