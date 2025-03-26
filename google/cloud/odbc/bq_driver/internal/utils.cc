@@ -500,12 +500,14 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
 
 StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
                                                     SQLINTEGER in_str_len) {
+                                                      std::cout<<"===== utilsConvertSQLWCHARToString start"<<std::endl;
   if (in_str == nullptr) {
     return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
   }
   if (in_str_len == 0 || in_str[0] == '\0') {
     return std::string();
   }
+  std::cout<<"===== utilsConvertSQLWCHARToString start 1"<<std::endl;
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
@@ -516,10 +518,13 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
       in_str_len = in_str_len * sizeof(SQLWCHAR);
     }
   }
+  std::cout<<"===== utilsConvertSQLWCHARToString start 2:"<<in_str_len<<std::endl;
+  std::wcout<<in_str<<std::endl;
   stmt_txt_wstr.reserve(in_str_len);
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
+  std::cout<<"=============utilsConvertSQLWCHARToString end"<<std::endl;
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 
