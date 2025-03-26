@@ -165,7 +165,7 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
 
 HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id);
-std::string GetIconPath();
+HICON getWindowIcon();
 
 inline std::string GetValueOrDefault(Section const& attribute_map,
                                      std::string const& key) {

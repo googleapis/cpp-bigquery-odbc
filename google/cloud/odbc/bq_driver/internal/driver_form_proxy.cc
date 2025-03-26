@@ -59,17 +59,17 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-void SetWindowIcon(HWND proxy_hwnd) {
-  std::string iconPath = google::cloud::odbc_bq_driver_internal::GetIconPath();
-  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);  
-  if (!h_icon) {
-      MessageBoxA(NULL, ("Failed to load icon from: " + iconPath).c_str(), "Error", MB_OK | MB_ICONERROR);
-      return;
+void setWindowIcon(HWND proxy_hwnd) {
+  // Get the loaded icon handle
+  HICON h_icon = google::cloud::odbc_bq_driver_internal::getWindowIcon();
+
+  if (h_icon) {
+      // Set the window icon
+      SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+      SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
   }
-  // Set the window icon
-  SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
-  SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
 }
+
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -215,7 +215,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {
     case WM_CREATE:
-      SetWindowIcon(hwnd);
+      setWindowIcon(hwnd);
       break;
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
