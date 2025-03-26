@@ -26,8 +26,6 @@
 namespace fs = std::filesystem;
 #endif
 
-namespace fs = std::filesystem;
-
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -268,16 +266,20 @@ HICON getWindowIcon() {
   fs::path absolutePath = fs::absolute(sourcePath);
   fs::path projectDir = absolutePath;
   while (projectDir.has_parent_path()) {
-      if (fs::exists(projectDir / ".git")) { // Check for .git file
-          break;
-      }
-      projectDir = projectDir.parent_path();
+    if (fs::exists(projectDir / ".git")) {  // Check for .git file
+      break;
+    }
+    projectDir = projectDir.parent_path();
   }
-  const fs::path ICON_RELATIVE_PATH = "ci/installer/InstallerProj/Assets/bq.ico";
+  fs::path const ICON_RELATIVE_PATH =
+      "ci/installer/InstallerProj/Assets/bq.ico";
   fs::path iconPath = projectDir / ICON_RELATIVE_PATH;
-  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON,
+                                   32, 32, LR_LOADFROMFILE);
   if (!h_icon) {
-      MessageBoxA(NULL, ("Failed to load icon from: " + iconPath.string()).c_str(), "Error", MB_OK | MB_ICONERROR);
+    MessageBoxA(NULL,
+                ("Failed to load icon from: " + iconPath.string()).c_str(),
+                "Error", MB_OK | MB_ICONERROR);
   }
   return h_icon;
 }
