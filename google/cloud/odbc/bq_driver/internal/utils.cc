@@ -266,7 +266,9 @@ HICON getWindowIcon() {
   fs::path absolutePath = fs::absolute(sourcePath);
   fs::path projectDir = absolutePath;
   while (projectDir.has_parent_path()) {
-    if (fs::exists(projectDir / ".git")) {  // Check for .git file for finding the project directory
+    if (fs::exists(
+            projectDir /
+            ".git")) {  // Check for .git file for finding the project directory
       break;
     }
     projectDir = projectDir.parent_path();
