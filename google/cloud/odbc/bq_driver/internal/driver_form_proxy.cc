@@ -50,6 +50,8 @@ int const kEditBoxStartX = 230;
 int const kOkButtonX = 285;
 int const kCancelButtonX = 365;
 int const kButtonY = 148;
+// max port number
+int const kMaxPortNumber=65536;
 
 HWND ProxyOptions::GetHwnd() const { return proxy_hwnd; }
 ProxyOptions::ProxyOptions() : proxy_hwnd(NULL) {}
@@ -58,16 +60,6 @@ ProxyOptions::~ProxyOptions() {
     DestroyWindow(proxy_hwnd);
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
-}
-void setWindowIcon(HWND proxy_hwnd) {
-  // Get the loaded icon handle
-  HICON h_icon = google::cloud::odbc_bq_driver_internal::getWindowIcon();
-
-  if (h_icon) {
-    // Set the window icon
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
-  }
 }
 
 void ProxyOptions::InitControls() {
@@ -333,7 +325,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
           bool is_valid_port = false;
           if (strlen(port_text) > 0) {
             int port = atoi(port_text);
-            is_valid_port = (port > 0 && port < 65535);  // Validate port range
+            is_valid_port = (port > 0 && port <kMaxPortNumber);  // Validate port range
           }
 
           // Enable OK button if both host and valid port are provided

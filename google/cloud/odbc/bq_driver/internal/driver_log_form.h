@@ -28,7 +28,6 @@ static int const kIdcMaxSizeEdit = 106;   // Max File Size (MB) Edit Box
 static int const kIdcGroupBox = 107;      // Group Box for Log Rotation
 static int const kIdcHyperlink = 108;
 
-void setWindowIcon(HWND hwnd);
 
 class LogTraceDialog {
  public:
