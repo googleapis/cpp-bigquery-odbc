@@ -94,7 +94,8 @@ if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
     done
     cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
 fi
-
+echo "data =============is"
+echo $VCPKG_ROOT
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
