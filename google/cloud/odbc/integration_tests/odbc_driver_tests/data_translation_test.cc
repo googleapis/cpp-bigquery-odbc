@@ -114,10 +114,16 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
      SQL_SUCCESS},  // Existing Driver returns  123123123123123123123.222000000
     {SQL_C_CHAR, "123",
      SQL_SUCCESS},  // Existing Driver returns "123.000000000" here
+    {SQL_C_WCHAR, "1234567891234567891",
+     SQL_SUCCESS},  // existing driver returns "1234567891234567891.000000000"
 #endif              // BQ_DRIVER_INTEGRATION_TESTS
 
-    /*{SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,
-     "-123456789123456"},*/
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+    {SQL_C_NUMERIC, "-123456789123456.78", SQL_SUCCESS_WITH_INFO,
+     "-123456789123456"},  // Existing driver does not give scale value properly
+                           // also SQL_NUMERIC_STRUCT has SQL_MAX_NUMERIC_LEN/16
+                           // char to store value
+#endif
 
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
@@ -148,6 +154,7 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_BIT, "0", SQL_SUCCESS},
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
+    {SQL_C_WCHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
@@ -171,6 +178,12 @@ std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
     {SQL_C_CHAR, "99999999999999999999999999999.999999999",
      SQL_SUCCESS},  //"99999999999999999999999999999.99999999900000000000000000000000000000"
     {SQL_C_CHAR, "123123123123123123123.222", SQL_SUCCESS},
+    {SQL_C_WCHAR, "1234567891234567891",
+     SQL_SUCCESS},  // existing driver returns
+    //"1234567891234567891.00000000000000000000000000000000000000"
+    {SQL_C_WCHAR, "99999999999999999999999999999.999999999",
+     SQL_SUCCESS},  // existing driver returns
+//"99999999999999999999999999999.99999999900000000000000000000000000000"
 #endif
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
@@ -188,12 +201,21 @@ std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
     {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
     {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+29", SQL_SUCCESS},
     {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
-
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+    {SQL_C_SSHORT, "31", SQL_SUCCESS},
+    {SQL_C_SSHORT, "-31", SQL_SUCCESS},
+    {SQL_C_USHORT, "3", SQL_SUCCESS},
+    {SQL_C_SLONG, "-13", SQL_SUCCESS},
+    {SQL_C_ULONG, "81", SQL_SUCCESS},
+#else
+    // existing driver returns  (40460) Fractional data truncated while
+    // performing conversion.
     {SQL_C_SSHORT, "31", SQL_SUCCESS_WITH_INFO},
     {SQL_C_SSHORT, "-31", SQL_SUCCESS_WITH_INFO},
     {SQL_C_USHORT, "3", SQL_SUCCESS_WITH_INFO},
     {SQL_C_SLONG, "-13", SQL_SUCCESS_WITH_INFO},
     {SQL_C_ULONG, "81", SQL_SUCCESS_WITH_INFO},
+#endif
     {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
     {SQL_C_FLOAT, "-157.8", SQL_SUCCESS},
 
@@ -402,6 +424,7 @@ void TestTranslationsFromNumeric(
                         kBufferLength, &strlen_or_ind);
     std::cout << "Testing row: " << expected.target_c_type << ", "
               << expected.value << ", " << expected.status << std::endl;
+
     EXPECT_EQ(status, expected.status);
     if (!SQL_SUCCEEDED(status)) {
       row_count++;
@@ -416,6 +439,19 @@ void TestTranslationsFromNumeric(
       // to understand the expectations regarding typecasting applications
       // buffers.
       switch (expected.target_c_type) {
+        case SQL_C_WCHAR: {
+          SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
+          std::string returned_val = ConvertSQLWCHARToString(
+              reinterpret_cast<SQLWCHAR*>(data), length);
+          std::wstring returned_valW(returned_val.begin(), returned_val.end());
+          returned_valW.erase(returned_valW.find_last_not_of(L'\0') + 1);
+          std::wstring expected_valw(expected.value.begin(),
+                                     expected.value.end());
+          expected_valw.erase(expected_valw.find_last_not_of(L'\0') + 1);
+          EXPECT_EQ(returned_valW, expected_valw);
+          // EXPECT_EQ(returned_val, expected.value);
+          break;
+        }
         case SQL_C_CHAR: {
           std::string returned_val = (char*)data;
           EXPECT_EQ(returned_val, expected.value);

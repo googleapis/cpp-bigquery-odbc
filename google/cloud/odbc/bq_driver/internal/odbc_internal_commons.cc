@@ -49,6 +49,67 @@ int const kSecondsPerLeapYear = 31622400;  // 366 days
 int const kSecondsPerHour = 3600;
 int const kSecondsPerMinute = 60;
 
+// converting the given string to Numeric number
+// getting scale ,precision, sign and the value from sting parameter
+void GetNumericDetailsFromStr(std::string const& src_dsval,
+                              SQL_NUMERIC_STRUCT& numst) {
+  SQLCHAR sign = 1;
+  SQLCHAR precision = 0;
+  SQLSCHAR scale;
+  std::string num;
+  int integralcount = 0;
+  int fractionalcount = 0;
+
+  // Handle leading whitespace
+  size_t i = 0;
+  while (isspace(src_dsval[i])) {
+    i++;
+  }
+  // Check for sign
+  if (src_dsval[i] == '-') {
+    sign = 0;
+    i++;
+  }
+
+  // Extract digits before decimal point
+  while (isdigit(src_dsval[i])) {
+    num += src_dsval[i];
+    integralcount++;
+    i++;
+  }
+
+  // Find decimal point
+  if (src_dsval[i] == '.') {
+    i++;
+  }
+
+  // Extract digits after decimal point
+  while (isdigit(src_dsval[i])) {
+    num += src_dsval[i];
+    fractionalcount++;
+    i++;
+  }
+  // For NUmeric data type we have limited length defined by driver itself
+  // driver forces this limit by SQL_NUMERIC_STRUCT which has value of length
+  // SQL_MAX_NUMERIC_LEN i.e 16
+  if (integralcount >= SQL_MAX_NUMERIC_LEN) {
+    scale = 0;
+    precision = SQL_MAX_NUMERIC_LEN;
+  } else {
+    int maxlen = SQL_MAX_NUMERIC_LEN;
+    int limit_scale = maxlen - integralcount;
+    precision = integralcount + fractionalcount;
+    scale = fractionalcount;
+    if (scale >= limit_scale) scale = limit_scale;
+    if (precision >= SQL_MAX_NUMERIC_LEN) precision = SQL_MAX_NUMERIC_LEN;
+  }
+  numst.scale = scale;
+  numst.precision = precision;
+  numst.sign = sign;
+  uint64_t dd = std::stoull(num);
+  memcpy(reinterpret_cast<char*>(numst.val), &dd, SQL_MAX_NUMERIC_LEN);
+}
+
 bool IsLeapYear(int year) {
   return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
 }

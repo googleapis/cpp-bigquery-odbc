@@ -254,20 +254,8 @@ inline odbc_internal::StatusRecordOr<SQLDOUBLE> ConvertToDouble(
   return result;
 }
 
-template <typename SrcType, typename DestType>
-inline odbc_internal::StatusRecord isNonFloating() {
-  using odbc_internal::SQLStates;
-  using odbc_internal::StatusRecord;
-  StatusRecord status_record = StatusRecord::Ok();
-  if constexpr (std::is_floating_point_v<SrcType> &&
-                std::is_integral_v<DestType>) {
-    status_record = StatusRecord{SQLStates::k_01S07(), "Fractional truncation"};
-  }
-  return status_record;
-}
-
 inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
-    DSValue const& src_dsval, DataBuffer& dest_data, bool big_umeric) {
+    DSValue const& src_dsval, DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   SQLPOINTER dest_buf = dest_data.buf;
@@ -283,11 +271,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
   std::string str_input;
   DSValueToString(src_dsval, str_input);
   StatusRecord status_record = StatusRecord::Ok();
-  if (dest_type == SQL_C_CHAR) {
-    StatusRecord status_record =
-        StringValueToOutputBufferResponse(str_input.c_str(), dest_data);
-    return status_record;
-  }
   StatusRecordOr<SQLDOUBLE> conversion_status = ConvertToDouble(str_input);
   if (!conversion_status) {
     return conversion_status.GetStatusRecord();
@@ -297,8 +280,9 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
     case SQL_C_NUMERIC: {
       SQL_NUMERIC_STRUCT numst;
       GetNumericDetailsFromStr(str_input, numst);
-      auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_buf);
-      *dest_val = static_cast<SQL_NUMERIC_STRUCT>(numst);
+      auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
+          dest_buf);      // convert the pointer to type
+      *dest_val = numst;  // fill the value
       if (res_len) {
         *res_len = sizeof(SQL_NUMERIC_STRUCT);
       }
@@ -310,13 +294,25 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       dest[buffer_length - 1] = '\0';
       return status_record;
     }
+    case SQL_C_WCHAR: {
+      int src_len = str_input.length();
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(str_input);
+      if (!wstr) {
+        status_record = StatusRecord{SQLStates::k_HY000(),
+                                     "DSValueToWchar Conversion Failed"};
+        break;
+      }
+      WStrToOutputBufferResponse(wstr.GetValue(), dest_buf, buffer_length,
+                                 src_len, buffer_length, res_len);
+      return status_record;
+    }
     case SQL_C_FLOAT: {
       auto* dest_val = reinterpret_cast<SQLREAL*>(dest_buf);
       status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLREAL>(numeric_no);
+        *dest_val = numeric_no;
         if (res_len) {
           *res_len = sizeof(SQLREAL);
         }
@@ -329,7 +325,7 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLDOUBLE>(numeric_no);
+        *dest_val = numeric_no;
         if (res_len) {
           *res_len = sizeof(SQLDOUBLE);
         }
@@ -342,7 +338,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
-        if (big_umeric) status_record = isNonFloating<SQLDOUBLE, SQLSMALLINT>();
         *dest_val = static_cast<SQLSMALLINT>(numeric_no);
         if (res_len) {
           *res_len = sizeof(SQLSMALLINT);
@@ -357,8 +352,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffe
       if (status_record.sql_state != SQLStates::k_22003()) {
-        if (big_umeric)
-          status_record = isNonFloating<SQLDOUBLE, SQLUSMALLINT>();
         *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
         if (res_len) {
           *res_len = sizeof(SQLUSMALLINT);
@@ -372,9 +365,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
-        if (big_umeric)
-          status_record = status_record =
-              isNonFloating<SQLDOUBLE, SQLINTEGER>();
         *dest_val = static_cast<SQLINTEGER>(numeric_no);
         if (res_len) {
           *res_len = sizeof(SQLINTEGER);
@@ -389,7 +379,6 @@ inline odbc_internal::StatusRecord ConvertFromNumericDSValue(
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
-        if (big_umeric) status_record = isNonFloating<SQLDOUBLE, SQLINTEGER>();
         *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
         if (res_len) {
           *res_len = sizeof(SQLUSMALLINT);
