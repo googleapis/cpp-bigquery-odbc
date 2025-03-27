@@ -260,7 +260,7 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
 
   return h_hyperlink;
 }
-void setWindowIcon(HWND hwnd) { 
+void setWindowIcon(HWND hwnd) {
   fs::path source_path(__FILE__);
   fs::path absolute_path = fs::absolute(source_path);
   fs::path project_dir = absolute_path;
@@ -272,7 +272,8 @@ void setWindowIcon(HWND hwnd) {
     project_dir = project_dir.parent_path();
   }
 
-  fs::path const ICON_RELATIVE_PATH = "ci/installer/InstallerProj/Assets/bq.ico";
+  fs::path const ICON_RELATIVE_PATH =
+      "ci/installer/InstallerProj/Assets/bq.ico";
   fs::path icon_path = project_dir / ICON_RELATIVE_PATH;
   HICON h_icon = (HICON)LoadImageA(NULL, icon_path.string().c_str(), IMAGE_ICON,
                                    32, 32, LR_LOADFROMFILE);

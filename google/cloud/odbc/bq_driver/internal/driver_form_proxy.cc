@@ -51,7 +51,7 @@ int const kOkButtonX = 285;
 int const kCancelButtonX = 365;
 int const kButtonY = 148;
 // max port number
-int const kMaxPortNumber=65536;
+int const kMaxPortNumber = 65536;
 
 HWND ProxyOptions::GetHwnd() const { return proxy_hwnd; }
 ProxyOptions::ProxyOptions() : proxy_hwnd(NULL) {}
@@ -325,7 +325,8 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
           bool is_valid_port = false;
           if (strlen(port_text) > 0) {
             int port = atoi(port_text);
-            is_valid_port = (port > 0 && port <kMaxPortNumber);  // Validate port range
+            is_valid_port =
+                (port > 0 && port < kMaxPortNumber);  // Validate port range
           }
 
           // Enable OK button if both host and valid port are provided
