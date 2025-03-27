@@ -442,8 +442,8 @@ TEST(StatementTest, SQLExecDirectW) {
 
   std::wstring const string_field = L"Some Test String नमस्ते";
   SQLWCHAR insert_stmt[kBufferLength];
-  swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
-           table_name.c_str(), string_field.c_str());
+  // swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
+  //          table_name.c_str(), string_field.c_str());
 
   SQLRETURN status =
       SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt, SQL_NTS);
@@ -3583,36 +3583,57 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   std::wstring const table_name =
       ToWStr(kDatasetWithTablePrefix) + L"ODBC_PARAM_DATA_UNICODE_TEST";
   Table table(table_name);
-  table.CreateWithPrepare(conn, "(StringField STRING)");
+  table.CreateWithPrepare(conn, "(StringField1 STRING, StringField2 STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto query = L"INSERT INTO " + table_name + L" VALUES (?)";
+  auto query = L"INSERT INTO " + table_name + L" VALUES (?, ?)";
   std::vector<SQLWCHAR> sql_wstr(query.begin(), query.end());
   sql_wstr.emplace_back(L'\0');
   EXPECT_EQ(SQLPrepareW(conn->hstmt, sql_wstr.data(), SQL_NTS), SQL_SUCCESS);
 
   int const large_data_size = (1024 * 512) / sizeof(wchar_t);
-  std::wstring large_data(large_data_size, L'あ');
-  SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+  std::wstring large_data1(large_data_size, L'あ');
+  std::wstring large_data2(large_data_size, L'い');
 
+  SQLLEN param_size1 = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+  SQLLEN param_size2 = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+
+  // TODO(b/406700354): Add support for (VOID *)1 in SQLBindParameter
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data.size(), 0, nullptr, 0,
-                             &param_size),
+                             SQL_WLONGVARCHAR, large_data1.size(), 0,
+                             (SQLPOINTER)1, 0, &param_size1),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                             SQL_WLONGVARCHAR, large_data2.size(), 0, nullptr,
+                             0, &param_size2),
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
 
   SQLPOINTER data_ptr = nullptr;
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
-  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
 
-  for (auto val = 0; val < large_data.size(); val += chunk_size) {
-    int byte_left = large_data.size() - val;
+  // Send data for the first parameter
+  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
+  for (auto val = 0; val < large_data1.size(); val += chunk_size) {
+    int byte_left = large_data1.size() - val;
     int byte_to_put = std::min(chunk_size, byte_left);
-    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data.data() + val),
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data1.data() + val),
                          byte_to_put * sizeof(wchar_t)),
               SQL_SUCCESS);
   }
+
+  // Send data for the second parameter
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
+  for (auto val = 0; val < large_data2.size(); val += chunk_size) {
+    int byte_left = large_data2.size() - val;
+    int byte_to_put = std::min(chunk_size, byte_left);
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data2.data() + val),
+                         byte_to_put * sizeof(wchar_t)),
+              SQL_SUCCESS);
+  }
+
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_SUCCESS);
   EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
