@@ -262,25 +262,25 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
 }
 HICON getWindowIcon() {
   // Get the absolute path of the source file
-  fs::path sourcePath(__FILE__);
-  fs::path absolutePath = fs::absolute(sourcePath);
-  fs::path projectDir = absolutePath;
-  while (projectDir.has_parent_path()) {
+  fs::path source_path(__FILE__);
+  fs::path absolute_path = fs::absolute(source_path);
+  fs::path project_dir = absolute_path;
+  while (project_dir.has_parent_path()) {
     if (fs::exists(
-            projectDir /
+            project_dir /
             ".git")) {  // Check for .git file for finding the project directory
       break;
     }
-    projectDir = projectDir.parent_path();
+    project_dir = project_dir.parent_path();
   }
   fs::path const ICON_RELATIVE_PATH =
       "ci/installer/InstallerProj/Assets/bq.ico";
-  fs::path iconPath = projectDir / ICON_RELATIVE_PATH;
-  HICON h_icon = (HICON)LoadImageA(NULL, iconPath.string().c_str(), IMAGE_ICON,
+  fs::path icon_path = project_dir / ICON_RELATIVE_PATH;
+  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.string().c_str(), IMAGE_ICON,
                                    32, 32, LR_LOADFROMFILE);
   if (!h_icon) {
     MessageBoxA(NULL,
-                ("Failed to load icon from: " + iconPath.string()).c_str(),
+                ("Failed to load icon from: " + icon_path.string()).c_str(),
                 "Error", MB_OK | MB_ICONERROR);
   }
   return h_icon;

@@ -315,30 +315,37 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
       } else if (wm_id == kIdcProxyCancelButton) {
         DestroyWindow(hwnd);
 
-      } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
-                 HIWORD(w_param) == EN_CHANGE) {
-        // Ensure the OK button is enabled when the checkbox is unchecked
-        BOOL is_checked =
-            (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
-        HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
-        if (is_checked) {  // Only check the fields if the proxy checkbox is
-                           // checked
-          char host_text[256], port_text[10];
-          GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
-                        sizeof(host_text));
-          GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
-                        sizeof(port_text));
+      }else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
+      HIWORD(w_param) == EN_CHANGE) {
+      // Ensure the OK button is enabled when the checkbox is checked
+       BOOL is_checked =(IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED);
+      HWND h_ok_button = GetDlgItem(hwnd, kIdcProxyOKButton);
 
-          if (strlen(host_text) > 0 && strlen(port_text) > 0) {
-            EnableWindow(h_ok_button, TRUE);
-          } else {
-            EnableWindow(h_ok_button, FALSE);
-          }
-        } else {
-          // If the checkbox is unchecked, always enable OK button
-          EnableWindow(h_ok_button, TRUE);
+        if (is_checked) {  
+        // Only check the fields if the proxy checkbox is checked
+        char host_text[256], port_text[10];
+        GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
+                    sizeof(host_text));
+        GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
+                    sizeof(port_text));
+
+        bool is_valid_port = false;
+        if (strlen(port_text) > 0) {
+        int port = atoi(port_text);
+        is_valid_port = (port > 0 && port < 65535);  // Validate port range
         }
+
+        // Enable OK button if both host and valid port are provided
+        if (strlen(host_text) > 0 && is_valid_port) {
+        EnableWindow(h_ok_button, TRUE);
+} else {
+        EnableWindow(h_ok_button, FALSE);
       }
+} else {
+        // If the checkbox is unchecked, always enable OK button
+        EnableWindow(h_ok_button, TRUE);
+      }
+    }
       // Insert hyperlink click handler
       else if (wm_id == kIdcHyperlink1 && wm_event == STN_CLICKED) {
         ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
