@@ -27,31 +27,7 @@ export ODBCINSTINI=/Users/runner/work/connection/odbc-driver/odbcinst.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json
 
-mapfile -t args < <(cmake::common_args)
-args+=(
-  -DODBC_UNIT_TESTING=OFF
-  -DODBC_INTEGRATION_TESTING=ON
-  -DBQ_DRIVER_INTEGRATION_TESTS=ON
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-  -DBUILD_SHARED_LIBS=ON
-  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-  -DCMAKE_CXX_FLAGS="-I$(brew --prefix libiodbc)/include"
-  -DCMAKE_CXX_STANDARD=17
-)
-
-mapfile -t vcpkg_args < <(cmake::vcpkg_args)
 mapfile -t ctest_args < <(ctest::common_args)
-
-io::log_h1 "Starting Build"
-TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
-time {
-  io::run cmake "${args[@]}" "${vcpkg_args[@]}"
-}
-
-TIMEFORMAT="==> 🕑 CMake build done in %R seconds"
-time {
-  io::run cmake --build cmake-out
-}
 
 if [[ "$MATRIX_OS" == "macos-14" ]]; then
   TIMEFORMAT="==> 🕑 CMake test done in %R seconds"

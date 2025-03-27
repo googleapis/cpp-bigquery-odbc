@@ -69,7 +69,11 @@ jobs:
       run: |
         brew install libiodbc
     - name: Setup the driver
-      run: bash ci/dependencies/driver-manager-setup-osx.sh
+      run: |
+        export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
+        export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
+        export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
+        bash ci/dependencies/driver-manager-setup-osx.sh
     - name: Build cpp-bigquery-odbc
       run: |
         if [ "${{ matrix.os }}" == "macos-14" ]; then
