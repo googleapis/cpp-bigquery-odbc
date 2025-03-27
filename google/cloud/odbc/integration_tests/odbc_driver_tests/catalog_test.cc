@@ -30,6 +30,7 @@ std::string const kExternal = "EXTERNAL";
 std::string const kMaterializedView =
     kIsBqDriver ? "MATERIALIZED VIEW" : "MATERIALIZED_VIEW";
 std::string const kSnapshot = "SNAPSHOT";
+std::string const kCatalog = "bigquery-devtools-drivers";
 
 RowWiseResults const kCatalogPrimaryKeysExpected{
     {{1, "bigquery-devtools-drivers"},
@@ -1349,6 +1350,184 @@ TEST(SQLProcedureColumns, ProcedureWithInOutParameters) {
   Procedure procedure(procedure_name);
   procedure.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+struct ExpectedProcedureValues {
+  std::string procedure_catalog;
+  std::string procedure_schema;
+  std::string procedure_name;
+  SQLSMALLINT num_input_params;
+  SQLSMALLINT num_output_params;
+  SQLSMALLINT num_result_sets;
+  std::string remarks;
+  SQLSMALLINT procedure_type;
+};
+ExpectedProcedureValues const kExpectedProcedure = {
+    kCatalog, kDatasetName, "", 5, 2, -1, "SQL", SQL_PT_PROCEDURE};
+
+ExpectedProcedureValues const kExpectedTableRoutine = {
+    kCatalog, kDatasetName, "", 1, 0, -1, "SQL", SQL_PT_UNKNOWN};
+
+ExpectedProcedureValues const kExpectedFunction = {
+    kCatalog, kDatasetName, "", 5, 0, -1, "SQL", SQL_PT_FUNCTION};
+
+void ValidateSQLProcedures(
+    SQLHSTMT h_stmt,
+    std::vector<ExpectedProcedureValues> const& expected_procedures) {
+  SQLCHAR procedure_catalog[128], procedure_schema[128], procedure_name[128],
+      remarks[256];
+  SQLSMALLINT num_input_params, num_output_params, num_result_sets,
+      procedure_type;
+  SQLLEN ind = 0;
+
+  for (auto const& expected : expected_procedures) {
+    SQLRETURN ret = SQLFetch(h_stmt);
+    if (ret == SQL_NO_DATA) {
+      FAIL() << "SQLProcedures returned fewer rows than expected.";
+    }
+    ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
+
+    EXPECT_EQ(SQLGetData(h_stmt, 1, SQL_C_CHAR, procedure_catalog,
+                         sizeof(procedure_catalog), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_catalog),
+                 expected.procedure_catalog.c_str());
+
+    EXPECT_EQ(SQLGetData(h_stmt, 2, SQL_C_CHAR, procedure_schema,
+                         sizeof(procedure_schema), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_schema),
+                 expected.procedure_schema.c_str());
+
+    EXPECT_EQ(SQLGetData(h_stmt, 3, SQL_C_CHAR, procedure_name,
+                         sizeof(procedure_name), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(procedure_name),
+                 expected.procedure_name.c_str());
+
+    EXPECT_EQ(SQLGetData(h_stmt, 4, SQL_C_SSHORT, &num_input_params, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(num_input_params, expected.num_input_params);
+
+    EXPECT_EQ(SQLGetData(h_stmt, 5, SQL_C_SSHORT, &num_output_params, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(num_output_params, expected.num_output_params);
+
+    EXPECT_EQ(SQLGetData(h_stmt, 6, SQL_C_SSHORT, &num_result_sets, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(num_result_sets, expected.num_result_sets);
+
+    EXPECT_EQ(SQLGetData(h_stmt, 7, SQL_C_CHAR, remarks, sizeof(remarks), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(remarks), expected.remarks.c_str());
+
+    EXPECT_EQ(SQLGetData(h_stmt, 8, SQL_C_SSHORT, &procedure_type, 10, &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(procedure_type, expected.procedure_type);
+  }
+
+  EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
+      << "SQLProcedures returned more rows than expected.";
+}
+
+void ExecuteSQLQuery(std::shared_ptr<ODBCHandles> conn,
+                     std::string const& query) {
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+}
+
+void CreateProcedure(std::shared_ptr<ODBCHandles> conn,
+                     std::string const& procedure_name,
+                     std::string const& query) {
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ExecuteSQLQuery(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+void CreateFunction(std::shared_ptr<ODBCHandles> conn,
+                    std::string const& function_name,
+                    std::string const& query) {
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ExecuteSQLQuery(conn, query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+void CallSQLProcedures(std::shared_ptr<ODBCHandles> conn,
+                       std::string const& pattern,
+                       std::vector<ExpectedProcedureValues>& expected_values) {
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN ret =
+      SQLProcedures(conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(),
+                    SQL_NTS, (SQLCHAR*)pattern.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+  ValidateSQLProcedures(conn->hstmt, expected_values);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+void CleanupRoutine(std::shared_ptr<ODBCHandles> conn,
+                    std::string const& drop_query) {
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ExecuteSQLQuery(conn, drop_query);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLProcedures, ComplexSQLProcedure) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string procedure_name =
+      kDatasetWithTablePrefix + "TEST_COMPLEX_SQL_PROCEDURE";
+  std::string create_procedure_query =
+      "CREATE OR REPLACE PROCEDURE " + procedure_name +
+      "(param1 INT64, param2 STRING, param3 FLOAT64, param4 BOOL, param5 "
+      "TIMESTAMP, "
+      "OUT param6 INT64, OUT param7 STRING) BEGIN "
+      "SET param6 = param1; SET param7 = param2; END;";
+
+  CreateProcedure(conn, procedure_name, create_procedure_query);
+
+  std::string procedure_pattern =
+      kTableNamePrefix + "TEST_COMPLEX_SQL_PROCEDURE";
+  std::vector<ExpectedProcedureValues> expected_values = {kExpectedProcedure};
+  expected_values[0].procedure_name = procedure_pattern;
+
+  CallSQLProcedures(conn, procedure_pattern, expected_values);
+  CleanupRoutine(conn, "DROP PROCEDURE " + procedure_name);
+}
+
+TEST(SQLProcedures, ComplexFunction) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string function_name = kDatasetWithTablePrefix + "TEST_COMPLEX_FUNCTION";
+  std::string create_function_query =
+      "CREATE OR REPLACE FUNCTION " + function_name +
+      "(param1 INT64, param2 STRING, param3 FLOAT64, param4 BOOL, param5 "
+      "TIMESTAMP) "
+      "RETURNS STRING AS ( CONCAT(param2, '-', CAST(param1 AS STRING)) );";
+
+  CreateFunction(conn, function_name, create_function_query);
+
+  std::string function_pattern = kTableNamePrefix + "TEST_COMPLEX_FUNCTION";
+  std::vector<ExpectedProcedureValues> expected_functions = {kExpectedFunction};
+  expected_functions[0].procedure_name = function_pattern;
+
+  CallSQLProcedures(conn, function_pattern, expected_functions);
+  CleanupRoutine(conn, "DROP FUNCTION " + function_name);
+}
+
+TEST(SQLProcedures, TableFunction) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string routine_name = kDatasetWithTablePrefix + "TEST_TABLE_ROUTINE";
+  std::string create_routine_query =
+      "CREATE OR REPLACE TABLE FUNCTION " + routine_name +
+      "(param1 INT64) AS SELECT param1 AS result;";
+
+  CreateFunction(conn, routine_name, create_routine_query);
+
+  std::string routine_pattern = kTableNamePrefix + "TEST_TABLE_ROUTINE";
+  std::vector<ExpectedProcedureValues> expected_values = {
+      kExpectedTableRoutine};
+  expected_values[0].procedure_name = routine_pattern;
+
+  CallSQLProcedures(conn, routine_pattern, expected_values);
+  CleanupRoutine(conn, "DROP TABLE FUNCTION " + routine_name);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
