@@ -215,11 +215,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {
     case WM_CREATE:
-<<<<<<< HEAD
       setWindowIcon(hwnd);
-=======
-      SetWindowIcon(hwnd);
->>>>>>> 007845a3 (impl(bq_driver): Proxy Option UI enhancement)
       break;
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
