@@ -2820,21 +2820,26 @@ TEST(MultiStatementTest, BasicScript) {
 
   // TODO(b/402294528): SQLColAttribute giving timeout issue
   //  Attribute validation for select_stmt_1
-  /*for (SQLSMALLINT i = 1; i <= num_cols; i++) {
+  // /*
+  for (SQLSMALLINT i = 1; i <= num_cols; i++) {
     SQLCHAR column_name[256];
     SQLSMALLINT name_length;
     SQLULEN column_size;
     SQLLEN nullable;
 
+    std::cout << "SQLColAttribute loop:: " << std::endl;
+
     // Validate column attributes
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
-                    sizeof(column_name), &name_length, NULL);
-    SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                    &nullable);
+    //SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
+    //                sizeof(column_name), &name_length, NULL);
+    std::cout << "SQLColAttribute loop 1:: " << std::endl;
+    //SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
+    //                &nullable);
 
     EXPECT_GT(name_length, 0);  // Column name length should be > 0
     EXPECT_GT(column_size, 0);  // Column size should be > 0
-  }*/
+  }
+  //  */
 
   // Check rows returned by select_stmt_1
   status = SQLRowCount(conn->hstmt, &row_count);
@@ -2854,21 +2859,23 @@ TEST(MultiStatementTest, BasicScript) {
 
   // TODO(b/402294528): SQLColAttribute giving timeout issue
   //  Attribute validation for select_stmt_2
-  /*for (SQLSMALLINT i = 1; i <= num_cols; i++) {
+  for (SQLSMALLINT i = 1; i <= num_cols; i++) {
     SQLCHAR column_name[256];
     SQLSMALLINT name_length;
     SQLULEN column_size;
     SQLLEN nullable;
+    std::cout << "SQLColAttribute loop 3:: " << std::endl;
 
     // Validate column attributes
     SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
                     sizeof(column_name), &name_length, NULL);
+    std::cout << "SQLColAttribute loop 4:: " << std::endl;
     SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
                     &nullable);
 
     EXPECT_GT(name_length, 0);  // Column name length should be > 0
     EXPECT_GT(column_size, 0);  // Column size should be > 0
-  }*/
+  }
 
   // Check rows returned by select_stmt_2
   status = SQLRowCount(conn->hstmt, &row_count);
