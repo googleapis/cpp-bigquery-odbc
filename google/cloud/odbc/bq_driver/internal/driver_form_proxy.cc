@@ -61,16 +61,6 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-void setWindowIcon(HWND proxy_hwnd) {
-  // Get the loaded icon handle
-  HICON h_icon = google::cloud::odbc_bq_driver_internal::getWindowIcon();
-
-  if (h_icon) {
-    // Set the window icon
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
-    SendMessage(proxy_hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
-  }
-}
 
 void ProxyOptions::InitControls() {
   HFONT h_font =

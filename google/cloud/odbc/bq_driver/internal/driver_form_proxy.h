@@ -32,7 +32,6 @@ static int const kIdcProxyPortErrorLabel =
 static int const hFontHyperlink = 134;
 static int const kIdcHyperlink1 = 135;
 
-void setWindowIcon(HWND hwnd);
 
 class ProxyOptions {
  public:
