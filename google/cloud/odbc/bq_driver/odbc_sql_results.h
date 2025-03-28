@@ -63,6 +63,18 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function?view=sql-server-ver16
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle);
 
+// Implements the semantics for SQLFetchScroll ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetchscroll-function?view=sql-server-ver16
+SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
+                                 SQLSMALLINT fetch_orientation,
+                                 SQLLEN fetch_offset);
+
 // Implements the semantics for SQLFetch ODBC API
 // as per the ODBC 3.8 spec and the design doc.
 //
