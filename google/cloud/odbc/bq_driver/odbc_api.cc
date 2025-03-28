@@ -69,6 +69,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLEndTran;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetch;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFetchScroll;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLFreeStmt;
@@ -189,6 +190,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLEndTran;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecDirect;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLExecute;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetch;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFetchScroll;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLForeignKeys;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeHandle;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLFreeStmt;
@@ -2844,12 +2846,26 @@ SQLRETURN SQL_API SQLFetchScroll(SQLHSTMT statementHandle,
                                  SQLSMALLINT fetchOrientation,
                                  SQLLEN fetchOffset) {
   SQLRETURN rc = SQL_SUCCESS;
+  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLFetchScroll");
+
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLFetchScroll(statementHandle, fetchOrientation,
+                                      fetchOffset, *(*kTraceOption));
 
   // Call to internal function for SQLFetchScroll in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLFetchScrollInternal(
+      statementHandle, fetchOrientation, fetchOffset);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionExit_SQLFetchScroll(rc, *(*kTraceOption));
 
   return rc;
 }

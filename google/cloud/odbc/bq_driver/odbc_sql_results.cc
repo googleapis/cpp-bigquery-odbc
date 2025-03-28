@@ -189,6 +189,69 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   return LogAndReturnCode(handle, status_record);
 }
 
+SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
+                                 SQLSMALLINT fetch_orientation,
+                                 SQLLEN fetch_offset) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  StatusRecord status_record;
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
+    status_record = StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    return LogAndReturnCode(handle, status_record);
+  }
+
+  if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
+    status_record = {SQLStates::k_HY010(), "No statement has been executed"};
+    return LogAndReturnCode(handle, status_record);
+  }
+
+  // Validate FetchOrientation
+  if (fetch_orientation != SQL_FETCH_NEXT &&
+      fetch_orientation != SQL_FETCH_PRIOR &&
+      fetch_orientation != SQL_FETCH_FIRST &&
+      fetch_orientation != SQL_FETCH_LAST &&
+      fetch_orientation != SQL_FETCH_ABSOLUTE &&
+      fetch_orientation != SQL_FETCH_RELATIVE) {
+    status_record = {SQLStates::k_HY106(), "Fetch type out of range"};
+    return LogAndReturnCode(handle, status_record);
+  }
+
+  DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
+
+  ResultSet const& result_set = handle.GetResultSet();
+  result_set.translated_data.row_offset = 0;
+
+  // Compute new row position based on fetch type
+  switch (fetch_orientation) {
+    case SQL_FETCH_NEXT:
+      if (result_set.cursor + 1 < result_set.rows.size())
+        result_set.cursor++;
+      else
+        return SQL_NO_DATA;
+      break;
+    case SQL_FETCH_PRIOR:
+    case SQL_FETCH_FIRST:
+    case SQL_FETCH_LAST:
+    case SQL_FETCH_ABSOLUTE:
+    case SQL_FETCH_RELATIVE:
+      status_record = {SQLStates::k_HY106(), "Fetch type not supported"};
+      return LogAndReturnCode(handle, status_record);
+  }
+  int rowset_size = ard.GetHeaderRecord().array_size;
+  if (!rowset_size) {
+    rowset_size = 1;
+  }
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  return LogAndReturnCode(handle, status_record);
+}
+
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
                                    SQLSMALLINT* column_count_ptr) {
   StatusRecordOr<StatementHandle*> handle_result =
