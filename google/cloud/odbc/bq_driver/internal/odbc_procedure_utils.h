@@ -47,10 +47,10 @@ struct ProcedureFieldSchema {
   std::string dataset;
   std::string procedure;
   std::string ordinal_number;
+  std::string column_type;
+  std::string nullable;
   std::string name;
   std::string type_name;
-  std::string nullable;
-  std::string column_type;
 };
 
 struct ProcedureSchema {
@@ -69,10 +69,15 @@ struct Procedure {
   ProcedureSchema schema;
 };
 
-odbc_internal::StatusRecord ValidateProcedureColumnParameters(
+odbc_internal::StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* procedure_name, SQLSMALLINT procedure_name_len,
+    SQLULEN metadata_id);
+
+odbc_internal::StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
+    ConnectionHandle& conn_handle, std::string const& catalog,
+    std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
