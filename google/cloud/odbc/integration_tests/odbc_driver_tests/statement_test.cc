@@ -859,18 +859,16 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
       SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
                       &buf_sql_fetch_last, kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_last);
-  std::cout<<"actual_message "<<actual_message<<std::endl;
   EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   // Fetch Last Row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_BOOKMARK, 0);
   EXPECT_EQ(status, SQL_ERROR);
-  status =
-      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
-                      &buf_sql_fetch_bookmark, kBufferLength, &string_length_ptr);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
+                           SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_bookmark,
+                           kBufferLength, &string_length_ptr);
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_bookmark);
-  std::cout<<"actual_message bookmark "<<actual_message<<std::endl;
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type out of range"));
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

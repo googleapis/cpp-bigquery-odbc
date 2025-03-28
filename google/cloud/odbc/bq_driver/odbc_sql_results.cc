@@ -216,7 +216,8 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       fetch_orientation != SQL_FETCH_FIRST &&
       fetch_orientation != SQL_FETCH_LAST &&
       fetch_orientation != SQL_FETCH_ABSOLUTE &&
-      fetch_orientation != SQL_FETCH_RELATIVE) {
+      fetch_orientation != SQL_FETCH_RELATIVE &&
+      fetch_orientation != SQL_FETCH_BOOKMARK) {
     status_record = {SQLStates::k_HY106(), "Fetch type out of range"};
     return LogAndReturnCode(handle, status_record);
   }
@@ -239,7 +240,10 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     case SQL_FETCH_LAST:
     case SQL_FETCH_ABSOLUTE:
     case SQL_FETCH_RELATIVE:
-      status_record = {SQLStates::k_HY106(), "Fetch type not supported"};
+    case SQL_FETCH_BOOKMARK:
+      status_record = {SQLStates::k_HY106(),
+                       "Fetch type not supported, as fetch orientation is not "
+                       "compatible with current settings."};
       return LogAndReturnCode(handle, status_record);
   }
   int rowset_size = ard.GetHeaderRecord().array_size;
