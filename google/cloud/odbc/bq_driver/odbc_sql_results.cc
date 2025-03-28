@@ -190,7 +190,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 
 SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
                                  SQLSMALLINT fetch_orientation,
-                                 SQLLEN fetch_offset) {
+                                 SQLLEN /*fetch_offset*/) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   StatusRecord status_record;
