@@ -54,9 +54,3 @@ Start-Process msiexec.exe -ArgumentList "/i `"$installerPath`" /qn /l*v `"$logFi
 
 Write-Output "Installation completed. Log contents:"
 Get-Content $logFilePath | Write-Output
-
-
-$Env:VCINSTALLDIR
-$Env:VCPKG_ROOT
-pwd
-cmake -B c:\b -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -S . -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DODBC_UNIT_TESTING=OFF -DODBC_INTEGRATION_TESTING=OFF -DCLIENT_LIBRARY_INTEGRATION_TESTING=ON -DODBC_DEMO_TESTING=OFF -DCMAKE_CXX_STANDARD=17
