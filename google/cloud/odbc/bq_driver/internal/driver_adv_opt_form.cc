@@ -111,6 +111,9 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "LegacySQL");
   SendMessage(h_language_combo_box, CB_SETCURSEL, 0, 0);
   SetWindowText(h_language_combo_box, language_dialect_.c_str());
+
+  HWND h_edit = GetWindow(h_language_combo_box, GW_CHILD);
+  SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
 }
 
 void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
@@ -199,6 +202,22 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
       adv_hwnd, kIdcAllowHighThroughputCheckbox,
       (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
+  HWND h_activation_threshold_label = CreateLabel(
+      adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
+      kYAxis + 175, kWidth * 4.5, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_activation_threshold_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
+                    kEditBoxHeight, kIdcActivationThresholdEdit);
+  SendMessage(h_activation_threshold_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowLong(
+      h_activation_threshold_edit, GWL_STYLE,
+      GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
+  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
+                    InputSubclassProc, 0, 0);
+
   HWND h_high_encryption_header =
       CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 206, kWidth * 5,
                   kHeight, WS_VISIBLE | SS_LEFT);
@@ -217,21 +236,9 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SendMessage(h_encryption_combo_box, CB_SETCURSEL, 0, 0);
   SetWindowText(h_encryption_combo_box, encryption_type_.c_str());
 
-  HWND h_activation_threshold_label = CreateLabel(
-      adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
-      kYAxis + 175, kWidth * 4.5, kHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_edit = GetWindow(h_encryption_combo_box, GW_CHILD);
+  SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
 
-  HWND h_activation_threshold_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
-                    kEditBoxHeight, kIdcActivationThresholdEdit);
-  SendMessage(h_activation_threshold_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowLong(
-      h_activation_threshold_edit, GWL_STYLE,
-      GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
-  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
-                    InputSubclassProc, 0, 0);
   // Disable and clear if 'Allow large result sets' is unchecked
   if (allow_large_results_ != "1") {
     HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
@@ -674,6 +681,9 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
     }
     case WM_KEYDOWN:  // Capture global key presses
       if (w_param == VK_ESCAPE) {
+        if (p_current_window) {
+          p_current_window->adv_hwnd = NULL;
+        }
         DestroyWindow(hwnd);  // Close dialog when ESC is pressed
         return 0;
       } else if (w_param == VK_RETURN) {
@@ -757,7 +767,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   int y_pos = (screen_height - window_height) / 2;
 
   adv_hwnd = CreateWindowEx(
-      0, CLASS_NAME, "Advanced Options",
+      WS_EX_TOPMOST, CLASS_NAME, "Advanced Options",
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_DLGFRAME, x_pos, y_pos,
       window_width, window_height, hwnd, NULL, g_hDllInstance, this);
   if (adv_hwnd) {
@@ -773,8 +783,28 @@ void AdvanceOptions::Show(HWND hwnd) {
     CreateSessionControls(h_font);
     CreateAdditionalControls(h_font);
     CreateButtons(h_font);
+
+    ShowWindow(adv_hwnd, SW_SHOW);
+    UpdateWindow(adv_hwnd);
+
+    // Message loop for tab and esc handling
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0)) {
+      if (msg.message == WM_KEYDOWN) {
+        if (SendMessage(adv_hwnd, msg.message, msg.wParam, msg.lParam) != 0) {
+          continue;
+        }
+      }
+
+      if (!IsDialogMessage(adv_hwnd, &msg)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+
+      if (!IsWindow(adv_hwnd)) {
+        break;
+      }
+    }
   }
-  ShowWindow(adv_hwnd, SW_SHOW);
-  UpdateWindow(adv_hwnd);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

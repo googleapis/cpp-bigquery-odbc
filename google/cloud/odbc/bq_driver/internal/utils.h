@@ -42,6 +42,7 @@ extern HINSTANCE g_hDllInstance;
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
+extern bool g_suppress_dropdown;
 
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
@@ -171,6 +172,10 @@ void setWindowIcon(HWND hwnd);
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data);
+
+LRESULT CALLBACK EditBlockSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+                                       LPARAM l_param, UINT_PTR sub_id,
+                                       DWORD_PTR ref_data);
 
 LRESULT CALLBACK ComboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                       LPARAM l_param, UINT_PTR sub_id,

@@ -28,6 +28,7 @@ HINSTANCE g_hDllInstance = NULL;
 #endif
 
 namespace google::cloud::odbc_bq_driver_internal {
+bool g_suppress_dropdown = false;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -196,11 +197,18 @@ HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id) {
-  return CreateWindowEx(
+  HWND hwndEdit = CreateWindowEx(
       0, "EDIT", "",
-      WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
+      WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
           ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
       x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
+
+  // Attach the input subclass to handle VK_TAB and VK_ESCAPE
+  if (hwndEdit) {
+    SetWindowSubclass(hwndEdit, InputSubclassProc, 1, 0);
+  }
+
+  return hwndEdit;
 }
 
 // Helper function to create a combo box (dropdown)
@@ -227,9 +235,9 @@ HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
 // Helper function to create a checkbox
 HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
-  return CreateWindowEx(0, "BUTTON", text,
-                        WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
-                        height, parent, (HMENU)id, g_hDllInstance, NULL);
+  return CreateWindowEx(
+      0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 // Helper function to create a group box
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
@@ -302,12 +310,33 @@ void setWindowIcon(HWND hwnd) {
   SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
   SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 }
+
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data) {
-  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the parent dialog
-    return 0;                                      // Mark message as handled
+  if (msg == WM_KEYDOWN) {
+    if (w_param == VK_ESCAPE) {
+      SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the parent dialog
+      return 0;                                      // Mark message as handled
+    } else if (w_param == VK_TAB) {
+      // Move focus to next or previous control
+      BOOL shiftPressed = (GetKeyState(VK_SHIFT) & 0x8000);
+      HWND next = GetNextDlgTabItem(GetParent(hwnd), hwnd, shiftPressed);
+      if (next) SetFocus(next);
+      return 0;  // Mark as handled to prevent tab character insertion
+    }
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
+
+LRESULT CALLBACK EditBlockSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+                                       LPARAM l_param, UINT_PTR sub_id,
+                                       DWORD_PTR ref_data) {
+  switch (msg) {
+    case WM_CHAR:  // block character input
+    case WM_PASTE:
+    case WM_CUT:
+      return 0;  // block typing and clipboard actions
   }
   return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
@@ -315,6 +344,12 @@ LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
 LRESULT CALLBACK ComboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                       LPARAM l_param, UINT_PTR sub_id,
                                       DWORD_PTR ref_data) {
+  if (msg == WM_CTLCOLORLISTBOX) {
+    if (g_suppress_dropdown) {
+      SendMessage(hwnd, CB_SHOWDROPDOWN, FALSE, 0);
+      return (LRESULT)GetStockObject(WHITE_BRUSH);
+    }
+  }
   if (msg == WM_KEYDOWN) {
     if (w_param == VK_ESCAPE) {
       SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);

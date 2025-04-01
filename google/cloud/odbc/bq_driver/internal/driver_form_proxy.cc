@@ -35,6 +35,13 @@ std::string const kProxyHost = "ProxyHost";
 std::string const kProxyUsername = "ProxyUid";
 std::string const kProxyPassEncryption = "ProxyPwd_Enc";
 
+// Saved values from last OK
+std::string saved_proxy_check_;
+std::string saved_proxy_host_;
+std::string saved_proxy_port_;
+std::string saved_proxy_username_;
+std::string saved_proxy_pwd_enc_;
+
 // Control dimensions and positions
 int const kBtnWidth = 68;
 int const kBtnHeight = 17;
@@ -85,6 +92,7 @@ void ProxyOptions::InitControls() {
                     kEditBoxWidth, kEditBoxHeight, kIdcProxyHostName);
   SendMessage(h_proxy_host_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_proxy_host_edit, proxy_host_.c_str());
+  EnableWindow(h_proxy_host_edit, FALSE);
 
   HWND h_proxy_port_label = CreateLabel(
       proxy_hwnd, "Proxy port:", kControlStartX, kControlSpacing * 1.6 + 3,
@@ -98,6 +106,7 @@ void ProxyOptions::InitControls() {
                 GetWindowLong(h_proxy_port_edit, GWL_STYLE) | ES_NUMBER);
   SendMessage(h_proxy_port_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_proxy_port_edit, proxy_port_.c_str());
+  EnableWindow(h_proxy_port_edit, FALSE);
 
   HWND h_proxy_username_label = CreateLabel(
       proxy_hwnd, "Proxy username:", kControlStartX, kControlSpacing * 2.2 + 3,
@@ -109,6 +118,7 @@ void ProxyOptions::InitControls() {
                     kEditBoxWidth, kEditBoxHeight, kIdcProxyUsernameEdit);
   SendMessage(h_proxy_username_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_proxy_username_edit, proxy_username_.c_str());
+  EnableWindow(h_proxy_username_edit, FALSE);
 
   HWND h_proxy_password_label = CreateLabel(
       proxy_hwnd, "Proxy password:", kControlStartX, kControlSpacing * 2.8 + 3,
@@ -123,11 +133,12 @@ void ProxyOptions::InitControls() {
   SendMessage(h_proxy_password_edit, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
   SendMessage(h_proxy_password_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_proxy_password_edit, proxy_pwd_enc_.c_str());
+  EnableWindow(h_proxy_password_edit, FALSE);
 
   // Documentation Hyperlink
   HWND h_doc_text =
       CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight - 8,
-                  kButtonY, kLabelWidth - 20, kLabelHeight, 0);
+                  kButtonY, kLabelWidth - 50, kLabelHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_hyperlink = CreateHyperlinkLabel(
@@ -155,11 +166,17 @@ void ProxyOptions::InitControls() {
                     InputSubclassProc, 0, 0);
   SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyCheckbox),
                     CheckboxSubclassProc, 0, 0);
-  if (proxy_check_ == "0") {
-    EnableWindow(h_proxy_host_edit, FALSE);
-    EnableWindow(h_proxy_port_edit, FALSE);
-    EnableWindow(h_proxy_username_edit, FALSE);
-    EnableWindow(h_proxy_password_edit, FALSE);
+
+  if (proxy_check_ == "1") {
+    EnableWindow(h_proxy_host_edit, TRUE);
+    EnableWindow(h_proxy_port_edit, TRUE);
+    EnableWindow(h_proxy_username_edit, TRUE);
+    EnableWindow(h_proxy_password_edit, TRUE);
+    if (!saved_proxy_host_.empty() && !saved_proxy_port_.empty()) {
+      EnableWindow(h_ok_button, TRUE);
+    } else {
+      EnableWindow(h_ok_button, FALSE);
+    }
   }
 }
 
@@ -188,16 +205,32 @@ void ProxyOptions::Show(HWND hwnd) {
   int x_pos = (screen_width - window_width) / 2;
   int y_pos = (screen_height - window_height) / 2;
 
-  proxy_hwnd = CreateWindowEx(WS_EX_CONTROLPARENT, CLASS_NAME, "Proxy options",
+  proxy_hwnd = CreateWindowEx(WS_EX_TOPMOST, CLASS_NAME, "Proxy options",
                               WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos,
                               y_pos, window_width, window_height + 6, NULL,
                               NULL, g_hDllInstance, this);
 
   if (proxy_hwnd) {
     InitControls();
+    ShowWindow(proxy_hwnd, SW_SHOW);
+    UpdateWindow(proxy_hwnd);
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0)) {
+      if (msg.message == WM_KEYDOWN) {
+        if (SendMessage(proxy_hwnd, msg.message, msg.wParam, msg.lParam) != 0) {
+          continue;
+        }
+      }
+
+      if (!IsDialogMessage(proxy_hwnd, &msg)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+      if (!IsWindow(proxy_hwnd)) {
+        break;
+      }
+    }
   }
-  ShowWindow(proxy_hwnd, SW_SHOW);
-  UpdateWindow(proxy_hwnd);
 }
 
 void GetControlText(HWND hwnd, int control_id, std::string& out_value) {
@@ -215,14 +248,41 @@ void ProxyOptions::SetValues(Section const& attribute_map) {
   proxy_username_ = GetValueOrDefault(attribute_map, kProxyUsername);
   proxy_pwd_enc_ =
       DecryptPassword(GetValueOrDefault(attribute_map, kProxyPassEncryption));
+  saved_proxy_check_ = proxy_check_;
+  saved_proxy_host_ = proxy_host_;
+  saved_proxy_port_ = proxy_port_;
+  saved_proxy_username_ = proxy_username_;
+  saved_proxy_pwd_enc_ = proxy_pwd_enc_;
 }
 
 LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {
-    case WM_CREATE:
+    case WM_CREATE: {
       setWindowIcon(hwnd);
+
+      // Populate fields from saved values
+      CheckDlgButton(hwnd, kIdcProxyCheckbox,
+                     saved_proxy_check_ == "1" ? BST_CHECKED : BST_UNCHECKED);
+      SetWindowText(GetDlgItem(hwnd, kIdcProxyHostName),
+                    saved_proxy_host_.c_str());
+      SetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit),
+                    saved_proxy_port_.c_str());
+      SetWindowText(GetDlgItem(hwnd, kIdcProxyUsernameEdit),
+                    saved_proxy_username_.c_str());
+      SetWindowText(GetDlgItem(hwnd, kIdcProxyPasswordEdit),
+                    saved_proxy_pwd_enc_.c_str());
+
+      // Enable/Disable fields accordingly
+      BOOL is_checked = (saved_proxy_check_ == "1");
+      EnableWindow(GetDlgItem(hwnd, kIdcProxyHostName), is_checked);
+      EnableWindow(GetDlgItem(hwnd, kIdcProxyPortEdit), is_checked);
+      EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
+      EnableWindow(GetDlgItem(hwnd, kIdcProxyPasswordEdit), is_checked);
+      EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), !is_checked);
+
       break;
+    }
     case WM_ERASEBKGND: {
       HDC hdc = (HDC)w_param;
       RECT rc;
@@ -287,22 +347,21 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         EnableWindow(GetDlgItem(hwnd, kIdcProxyUsernameEdit), is_checked);
 
         if (is_checked) {
-          // OK button remains disabled initially when checkbox is checked
-          EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), FALSE);
+          char host_text[256] = {0};
+          char port_text[10] = {0};
+          GetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), host_text,
+                        sizeof(host_text));
+          GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
+                        sizeof(port_text));
+
+          if (strlen(host_text) > 0 && strlen(port_text) > 0) {
+            EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), TRUE);
+          } else {
+            EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), FALSE);
+          }
         } else {
           // Enable OK button when checkbox is unchecked
           EnableWindow(GetDlgItem(hwnd, kIdcProxyOKButton), TRUE);
-
-          // Reset fields when checkbox is unchecked
-          SetWindowText(GetDlgItem(hwnd, kIdcProxyHostName), "");
-          SetWindowText(GetDlgItem(hwnd, kIdcProxyPasswordEdit), "");
-          SetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), "0");
-          SetWindowText(GetDlgItem(hwnd, kIdcProxyUsernameEdit), "");
-
-          proxy_host_.clear();
-          proxy_port_.clear();
-          proxy_username_.clear();
-          proxy_pwd_enc_.clear();
         }
 
       } else if (wm_id == kIdcProxyOKButton) {
@@ -310,21 +369,51 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         proxy_check_ =
             (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED) ? "1"
                                                                          : "0";
-        std::string temp_port;
-        GetControlText(hwnd, kIdcProxyPortEdit, temp_port);
-        bool is_valid_port = false;
-        if (!temp_port.empty()) {
-          int port = atoi(temp_port.c_str());
-          is_valid_port = (port >= 0 && port < kMaxPortNumber);
-        }
-        proxy_port_ = temp_port;
-        GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
-        GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
-        GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
+        saved_proxy_check_ = proxy_check_;
+        if (proxy_check_ == "1") {
+          std::string temp_port;
+          GetControlText(hwnd, kIdcProxyPortEdit, temp_port);
+          bool is_valid_port = false;
+          if (!temp_port.empty()) {
+            int port = atoi(temp_port.c_str());
+            is_valid_port = (port >= 0 && port < kMaxPortNumber);
+          }
+          if (!is_valid_port) {
+            std::string error_msg =
+                "[Google][BigQuery] (1060) Invalid port: '" + temp_port +
+                "'.\nValid values are in the range [0, 65535].";
+            MessageBoxA(hwnd, error_msg.c_str(), "DSN Configuration Error",
+                        MB_ICONWARNING | MB_OK);
+            return 0;
+          }
+          proxy_port_ = temp_port;
+          GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
+          GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
+          GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
 
+          saved_proxy_host_ = proxy_host_;
+          saved_proxy_port_ = proxy_port_;
+          saved_proxy_username_ = proxy_username_;
+          saved_proxy_pwd_enc_ = proxy_pwd_enc_;
+        } else {
+          proxy_host_.clear();
+          proxy_port_.clear();
+          proxy_username_.clear();
+          proxy_pwd_enc_.clear();
+
+          saved_proxy_host_.clear();
+          saved_proxy_port_.clear();
+          saved_proxy_username_.clear();
+          saved_proxy_pwd_enc_.clear();
+        }
         DestroyWindow(hwnd);
 
       } else if (wm_id == kIdcProxyCancelButton) {
+        proxy_check_ = saved_proxy_check_;
+        proxy_host_ = saved_proxy_host_;
+        proxy_port_ = saved_proxy_port_;
+        proxy_username_ = saved_proxy_username_;
+        proxy_pwd_enc_ = saved_proxy_pwd_enc_;
         DestroyWindow(hwnd);
 
       } else if ((wm_id == kIdcProxyHostName || wm_id == kIdcProxyPortEdit) &&
@@ -366,17 +455,15 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         // Simulate a button click on the OK button when Enter is pressed
         SendMessage(GetDlgItem(hwnd, kIdcProxyOKButton), BM_CLICK, 0, 0);
         return 0;
-      } else if (w_param == VK_TAB) {
-        BOOL shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-        HWND next_control = GetNextDlgTabItem(hwnd, GetFocus(), shift_pressed);
-        if (next_control) {
-          SetFocus(next_control);
-        }
-        return 0;
       }
       break;
     }
     case WM_CLOSE:
+      proxy_check_ = saved_proxy_check_;
+      proxy_host_ = saved_proxy_host_;
+      proxy_port_ = saved_proxy_port_;
+      proxy_username_ = saved_proxy_username_;
+      proxy_pwd_enc_ = saved_proxy_pwd_enc_;
       DestroyWindow(hwnd);
       return 0;
     case WM_DESTROY:

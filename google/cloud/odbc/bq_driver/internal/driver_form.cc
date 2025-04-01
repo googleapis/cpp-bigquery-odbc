@@ -67,8 +67,8 @@ int const kComboBoxHeight = 100;
 int const kEditBoxHeight = 17;
 int const kLabelWidth = 150;
 int const kLabelHeight = 20;
-int const kCheckboxWidth = 15;
-int const kCheckboxHeight = 15;
+int const kCheckboxWidth = 150;
+int const kCheckboxHeight = 20;
 int const kAxisY = 15;
 int const kAxisX = 15;
 int const KOptionsBtnHeight = 105;
@@ -366,6 +366,8 @@ void DriverForm::InitControls() {
   SendMessage(h_encrypt_data_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcEncryptDataComboBox),
                     ComboBoxSubclassProc, 0, 0);
+  HWND h_encrypt = GetWindow(h_encrypt_data_combo_box, GW_CHILD);
+  SetWindowSubclass(h_encrypt, EditBlockSubclassProc, 1, 0);
 
   HWND h_group_box =
       CreateGroupBox(m_hwnd, "Authentication", kAxisX - 5, kAxisY + 90,
@@ -383,6 +385,8 @@ void DriverForm::InitControls() {
   SendMessage(h_auth_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcAuthBox), ComboBoxSubclassProc, 0,
                     0);
+  HWND h_edit = GetWindow(h_auth_combo_box, GW_CHILD);
+  SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
 
   HWND h_key_file_path_header =
       CreateLabel(m_hwnd, "Key file path:", kAxisX + 5, kAxisY + 145,
@@ -400,17 +404,12 @@ void DriverForm::InitControls() {
                    kBtnWidth + 8, kBtnHeight, kIdcBrowseButton);
   SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_drive_scope_checkbox =
-      CreateCheckBox(m_hwnd, "", kAxisX + 5, kAxisY + 195, kCheckboxWidth,
-                     kCheckboxHeight, kIdcDriveScopeCheckbox);
+  HWND h_drive_scope_checkbox = CreateCheckBox(
+      m_hwnd, "Request Google Drive scope access", kAxisX + 5, kAxisY + 195,
+      kCheckboxWidth, kCheckboxHeight, kIdcDriveScopeCheckbox);
   SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDriveScopeCheckbox),
                     CheckboxSubclassProc, 0, 0);
-
-  HWND h_drive_scope_label = CreateLabel(
-      m_hwnd, "Request Google Drive scope access", kAxisX + 25, kAxisY + 195,
-      kLabelWidth + 70, kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_drive_scope_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_ssl_header =
       CreateGroupBox(m_hwnd, "SSL Options", kAxisX - 5, kAxisY + 250,
@@ -426,18 +425,15 @@ void DriverForm::InitControls() {
   SendMessage(h_min_tls_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcMinTLSComboBox),
                     ComboBoxSubclassProc, 0, 0);
+  HWND h_min = GetWindow(h_min_tls_combo_box, GW_CHILD);
+  SetWindowSubclass(h_min, EditBlockSubclassProc, 1, 0);
 
-  HWND h_system_trust_store_checkbox =
-      CreateCheckBox(m_hwnd, "", kAxisX + 5, kAxisY + 300, kCheckboxWidth,
-                     kCheckboxHeight, kIdcSystemTrustStoreCheckbox);
+  HWND h_system_trust_store_checkbox = CreateCheckBox(
+      m_hwnd, "Use system trust store", kAxisX + 5, kAxisY + 300,
+      kCheckboxWidth, kCheckboxHeight, kIdcSystemTrustStoreCheckbox);
   SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcSystemTrustStoreCheckbox),
                     CheckboxSubclassProc, 0, 0);
-
-  HWND h_system_trust_label =
-      CreateLabel(m_hwnd, "Use system trust store", kAxisX + 25, kAxisY + 300,
-                  kLabelWidth + 70, kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_system_trust_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_trusted_cert_header =
       CreateLabel(m_hwnd, "Trusted certificate:", kAxisX + 5, kAxisY + 325,
@@ -468,6 +464,12 @@ void DriverForm::InitControls() {
       CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY + 413, kLabelWidth,
                   kLabelHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_dataset_box =
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 413, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcDatasetBOX);
+  SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDatasetBOX), ComboBoxSubclassProc, 0,
+                    0);
   HWND h_gcp_parent_folder_header =
       CreateLabel(m_hwnd, "GCP parent folder:", kAxisX, kAxisY + 441,
                   kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
@@ -477,12 +479,6 @@ void DriverForm::InitControls() {
                     kEditBoxHeight, kIdcGcpFolder);
   SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcGcpFolder), InputSubclassProc, 0, 0);
-  HWND h_dataset_box =
-      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 413, kEditComboBoxWidth,
-                     kComboBoxHeight, kIdcDatasetBOX);
-  SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDatasetBOX), ComboBoxSubclassProc, 0,
-                    0);
 
   // Documentation Hyperlink
   HWND h_doc_text =
@@ -583,14 +579,16 @@ void DriverForm::Show() {
   int xPos = (screen_width - window_width) / 2;
   int yPos = (screen_height - window_height) / 2;
 
-  m_hwnd = CreateWindowEx(WS_EX_TOPMOST, CLASS_NAME,
-                          "BigQuery ODBC Driver data source setup",
-                          WS_OVERLAPPEDWINDOW, xPos, yPos, window_width,
-                          window_height, NULL, NULL, g_hDllInstance, this);
+  m_hwnd = CreateWindowEx(
+      WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
+      xPos, yPos, window_width, window_height, NULL, NULL, g_hDllInstance,
+      this);
 
   if (m_hwnd) {
     InitControls();
-
+    ShowWindow(m_hwnd, SW_SHOW);
+    UpdateWindow(m_hwnd);
     // Create and position OK and Cancel buttons at the bottom
     RECT rc_client;
     GetClientRect(m_hwnd, &rc_client);
@@ -601,8 +599,25 @@ void DriverForm::Show() {
                    20;        // Position 20 pixels from the bottom
     int button_spacing = 20;  // Space between buttons
 
-    ShowWindow(m_hwnd, SW_SHOW);
-    UpdateWindow(m_hwnd);
+    MSG msg = {};
+    bool quit = false;
+    while (!quit && GetMessage(&msg, NULL, 0, 0)) {
+      if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
+        SendMessage(m_hwnd, WM_CLOSE, 0, 0);
+        quit = true;  // 🔽 Ensure loop exits after sending WM_CLOSE
+        continue;
+      }
+
+      if (!IsDialogMessage(m_hwnd, &msg)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+
+      // Optional fallback:
+      if (!IsWindow(m_hwnd)) {
+        quit = true;
+      }
+    }
   }
 }
 void EvaluateFields(HWND hwnd) {
@@ -657,14 +672,32 @@ void RetrieveFieldText(HWND hwnd, int control_id, char* buffer,
   GetWindowText(h_control, buffer, buffer_size);
 }
 
-void HandleDropdown(HWND hwnd, int control_id, char const* field_type,
-                    char const* key_buffer, char const* auth_buffer,
-                    char const* catalog_buffer = "") {
+StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
+                            char const* key_buffer, char const* auth_buffer,
+                            char const* catalog_buffer = "") {
   HWND h_control = GetDlgItem(hwnd, control_id);
   if (key_buffer[0] && auth_buffer[0] &&
       (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
     PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
                      catalog_buffer);
+    return StatusRecord::Ok();
+  }
+
+  if (!key_buffer[0] &&
+      strcmp(auth_buffer, "Application Default Credentials") == 0) {
+    // TODO(b/414877049): Remove the error code once Application Default
+    // Credentials OAuth Mechanism is done.
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuthMechanism 'Application Default Credentials' not "
+                        "supported at the moment"};
+  }
+
+  if (!auth_buffer[0]) {
+    return StatusRecord{SQLStates::k_HY000(), "OAuthMechanism not selected"};
+  }
+
+  if (!key_buffer[0]) {
+    return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 }
 
@@ -764,6 +797,9 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
     case WM_KEYDOWN:
       if (w_param == VK_ESCAPE) {
         SendMessage(hwnd, WM_CLOSE, 0, 0);
+        if (p_this) {
+          p_this->m_hwnd = NULL;  // Set the window handle to NULL
+        }
         return 0;
       }
       if (w_param == VK_RETURN) {
@@ -978,36 +1014,51 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         case kIdcCatlogBOX:
         case kIdcDatasetBOX: {
           EvaluateFields(hwnd);
-          char catalog_buffer[256] = {};
-          char dsn_buffer[256] = {};
-          char key_buffer[256] = {};
-          char auth_buffer[256] = {};
-          char data_buffer[256] = {};  // Only used for kIdcDatasetBOX
-
-          RetrieveFieldText(hwnd, kIdcCatlogBOX, catalog_buffer,
-                            sizeof(catalog_buffer));
-          RetrieveFieldText(hwnd, kIdcDSNEdit, dsn_buffer, sizeof(dsn_buffer));
-          RetrieveFieldText(hwnd, kIdcKeyfileEdit, key_buffer,
-                            sizeof(key_buffer));
-          RetrieveFieldText(hwnd, kIdcAuthBox, auth_buffer,
-                            sizeof(auth_buffer));
-
-          if (LOWORD(w_param) == kIdcDatasetBOX) {
-            RetrieveFieldText(hwnd, kIdcDatasetBOX, data_buffer,
-                              sizeof(data_buffer));
-          }
           switch (HIWORD(w_param)) {
-            case CBN_DROPDOWN:
-              if (LOWORD(w_param) == kIdcCatlogBOX) {
-                HandleDropdown(hwnd, kIdcCatlogBOX, "Catalog", key_buffer,
-                               auth_buffer);
-              } else if (LOWORD(w_param) == kIdcDatasetBOX) {
-                HandleDropdown(hwnd, kIdcDatasetBOX, "Dataset", key_buffer,
-                               auth_buffer, catalog_buffer);
-              }
-              break;
+            case CBN_SETFOCUS: {
+              char key_buffer[256] = {};
+              char auth_buffer[256] = {};
+              RetrieveFieldText(hwnd, kIdcKeyfileEdit, key_buffer,
+                                sizeof(key_buffer));
+              RetrieveFieldText(hwnd, kIdcAuthBox, auth_buffer,
+                                sizeof(auth_buffer));
 
-            case CBN_SELCHANGE:
+              if (LOWORD(w_param) == kIdcCatlogBOX) {
+                auto status = HandleDropdown(hwnd, kIdcCatlogBOX, "Catalog",
+                                             key_buffer, auth_buffer);
+                g_suppress_dropdown = !status.ok();
+                if (!status.ok()) {
+                  MessageBox(hwnd, status.message.c_str(), "Error",
+                             MB_OK | MB_ICONERROR);
+                }
+                g_suppress_dropdown = false;
+              } else if (LOWORD(w_param) == kIdcDatasetBOX) {
+                char catalog_buffer[256] = {};
+                RetrieveFieldText(hwnd, kIdcCatlogBOX, catalog_buffer,
+                                  sizeof(catalog_buffer));
+                if (catalog_buffer[0] == '\0') {
+                  MessageBox(hwnd, "Please choose a catalog first.",
+                             "Missing Catalog", MB_OK | MB_ICONWARNING);
+                  HWND h_dataset = GetDlgItem(hwnd, kIdcDatasetBOX);
+                  if (h_dataset) {
+                    SendMessage(h_dataset, CB_RESETCONTENT, 0, 0);
+                  }
+
+                  break;
+                }
+                auto status =
+                    HandleDropdown(hwnd, kIdcDatasetBOX, "Dataset", key_buffer,
+                                   auth_buffer, catalog_buffer);
+                g_suppress_dropdown = !status.ok();
+                if (!status.ok()) {
+                  MessageBox(hwnd, status.message.c_str(), "Error",
+                             MB_OK | MB_ICONERROR);
+                }
+                g_suppress_dropdown = false;
+              }
+            }
+            case CBN_EDITCHANGE:  // User typed in
+            case CBN_SELCHANGE:   // User selected from dropdown
               if (LOWORD(w_param) == kIdcCatlogBOX) {
                 HandleSelectionChange(hwnd, kIdcCatlogBOX);
               } else if (LOWORD(w_param) == kIdcDatasetBOX) {

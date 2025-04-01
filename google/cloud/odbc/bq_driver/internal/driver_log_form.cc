@@ -100,6 +100,8 @@ void LogTraceDialog::InitControls() {
   SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(parent_hwnd, kIdclogTraceBox),
                     ComboBoxSubclassProc, 0, 0);
+  HWND h_edit = GetWindow(h_log_level_box, GW_CHILD);
+  SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
                                     KAxisY + 30, KLabelWidth, kLabelHeight, 0);
@@ -211,16 +213,36 @@ void LogTraceDialog::Show() {
   int x_pos = (screen_width - window_width) / 2;
   int y_pos = (screen_height - window_height) / 2;
 
-  parent_hwnd = CreateWindowEx(0, CLASS_NAME, "Logging options",
+  parent_hwnd = CreateWindowEx(WS_EX_TOPMOST, CLASS_NAME, "Logging options",
                                WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos,
                                y_pos, window_width, window_height, parent_hwnd,
                                NULL, g_hDllInstance, this);
 
   if (parent_hwnd) {
     InitControls();
+
+    ShowWindow(parent_hwnd, SW_SHOW);
+    SetForegroundWindow(parent_hwnd);
+    UpdateWindow(parent_hwnd);
+
+    MSG msg = {};
+    while (GetMessage(&msg, NULL, 0, 0)) {
+      if (msg.message == WM_KEYDOWN) {
+        if (SendMessage(parent_hwnd, msg.message, msg.wParam, msg.lParam) !=
+            0) {
+          continue;
+        }
+      }
+
+      // Let IsDialogMessage handle Tab/Enter navigation
+      if (!IsDialogMessage(parent_hwnd, &msg)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+      }
+      // Exit loop if window was destroyed
+      if (!IsWindow(parent_hwnd)) break;
+    }
   }
-  ShowWindow(parent_hwnd, SW_SHOW);
-  UpdateWindow(parent_hwnd);
 }
 
 LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
