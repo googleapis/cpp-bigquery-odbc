@@ -50,6 +50,7 @@ std::string const enable_session_key = "EnableSession";
 std::string const htapi_activation_threshold_check_key =
     "AllowHtapiForLargeResults";
 std::string const allow_large_results_key = "AllowLargeResults";
+std::string const encryption_type_ = "EncryptionType";
 std::string const use_default_large_results_dataset_key =
     "UseDefaultLargeResultsDataset";
 std::string const proxy_check_key = "ProxyEnable";

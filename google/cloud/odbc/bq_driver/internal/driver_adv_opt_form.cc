@@ -14,17 +14,20 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 
 char const AdvanceOptions::CLASS_NAME[] = "AdvanceOptClass";
+constexpr char kBigQueryDocsURL[] =
+    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 
 std::string AdvanceOptions::activation_threshold_;
 
 // Specifies the default SQL dialect used for queries.
 // The default is "Standard SQL", but it may be overridden by the user.
-std::string AdvanceOptions::language_dialect_ = "Standard SQL";
+std::string AdvanceOptions::language_dialect_ = "GoogleSQL";
 std::string AdvanceOptions::adv_dataset_name_;
 
 // Default expiration time for temporary objects in milliseconds.
@@ -50,6 +53,7 @@ std::string AdvanceOptions::enable_session_;
 std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
+std::string AdvanceOptions::encryption_type_="Google-managed encryption key";
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -61,24 +65,29 @@ std::string const kLargeResultsTempTableExpirationTime =
 std::string const kSessionLocation = "SessionLocation";
 std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
-std::string const kHTAPI_ActivationThreshold = "HTAPI_ActivationThreshold";
+std::string const activation_threshold_ = "HTAPI_ActivationThreshold";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
 std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
 std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
+std::string const kEncryptionType="EncryptionType"; 
 
 // Control dimensions and positions
 int const kHeight = 20;
 int const kWidth = 50;
-int const kButtonHeight = 30;
-int const kButtonWidth = 80;
-int const kXAxis = 20;
-int const kOkButtonX = 220;
-int const kCancelButtonX = 310;
-int const kButtonY = 580;
-int const kYAxis = 10;
+int const kButtonHeight = 17;
+int const kButtonWidth = 68;
+int const kXAxis = 10;
+int const kOkButtonX = 290;
+int const kCancelButtonX = 370;
+int const kButtonY = 543;
+int const kYAxis = 20;
+int const kEditBoxWidth = 203;
+int const kEditBoxHeight = 17;
+int const kinputComboBoxXAxis = 237;
+int const KComboBoxHeight = 100;
 
 HWND AdvanceOptions::GetHwnd() const { return adv_hwnd; }
 AdvanceOptions::AdvanceOptions() : adv_hwnd(NULL) {}
@@ -88,151 +97,230 @@ AdvanceOptions::~AdvanceOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   HWND h_language_header =
-      CreateLabel(adv_hwnd, "Language Dialect", kXAxis, kYAxis, kWidth * 3,
+      CreateLabel(adv_hwnd, "Language dialect", kXAxis, kYAxis, kWidth * 3,
                   kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_language_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_language_combo_box =
-      CreateComboBox(adv_hwnd, kXAxis * 10, kYAxis, kWidth * 3, kHeight * 6,
-                     kIdcLanguageDialectComboBox);
+      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis, kEditBoxWidth,
+        KComboBoxHeight, kIdcLanguageDialectComboBox);
   SendMessage(h_language_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "Standard SQL");
-  SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "Legacy SQL");
+  SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "GoogleSQL");
+  SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "LegacySQL");
   SendMessage(h_language_combo_box, CB_SETCURSEL, 0, 0);
   SetWindowText(h_language_combo_box, language_dialect_.c_str());
 }
 
 void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   HWND h_large_results_header =
-      CreateLabel(adv_hwnd, "Large Results Options", kXAxis, kYAxis * 5,
-                  kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT | SS_NOPREFIX);
-  HWND h_allow_large_results_checkbox =
-      CreateCheckBox(adv_hwnd, "Allow Large Result Sets", kXAxis, kYAxis * 8,
-                     kWidth * 6, kHeight, kIdcAllowLargeResultsCheckbox);
+      CreateGroupBox(adv_hwnd, "Large results options", kXAxis, kYAxis + 25,
+                     kWidth + 385, kHeight + 153, KIdcLargeResultHeader);
+  SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_allow_large_results_checkbox = CreateCheckBox(
+      adv_hwnd, "Allow large result sets", kXAxis + 5, kYAxis + 50, kWidth * 6,
+      kHeight, kIdcAllowLargeResultsCheckbox);
+  SendMessage(h_allow_large_results_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_allow_large_results_checkbox, FALSE);
   CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox,
                  (allow_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-
+  HWND h_language_box = GetDlgItem(adv_hwnd, kIdcLanguageDialectComboBox);
+  char language_buffer[256] = {0};
+  GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
+  if (strcmp(language_buffer, "LegacySQL") == 0) {
+    EnableWindow(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox), TRUE);
+  } else {
+    EnableWindow(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox), FALSE);
+  }
+  if (allow_large_results_ == "1") {
+    CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox, BST_CHECKED);
+  } else {
+    CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox, BST_UNCHECKED);
+  }
   HWND h_use_default_checkbox = CreateCheckBox(
-      adv_hwnd, "Use Default \"_bqodbc_temp_tables\" Dataset", kXAxis * 2,
-      kYAxis * 11, kWidth * 6 + 20, kHeight, kIdcUseDefaultCheckbox);
+      adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset",
+      kXAxis + 5, kYAxis + 75, kWidth * 6 + 15, kHeight,
+      kIdcUseDefaultCheckbox);
+  SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   CheckDlgButton(
       adv_hwnd, kIdcUseDefaultCheckbox,
       (use_default_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_dataset_name_label =
-      CreateLabel(adv_hwnd, "Dataset Name for Large Result Sets:", kXAxis * 2,
-                  kYAxis * 14, kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
-  HWND h_dataset_name_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 14, kWidth * 2, kHeight,
-                    kIdcDatasetNameEdit);
-  SetWindowText(h_dataset_name_edit, adv_dataset_name_.c_str());
+      CreateLabel(adv_hwnd, "Dataset name for large result sets:", kXAxis + 5,
+                  kYAxis + 100, kWidth * 4, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_dataset_name_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
+  HWND h_dataset_name_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 100, kEditBoxWidth,
+                    kEditBoxHeight, kIdcDatasetNameEdit);
+  SendMessage(h_dataset_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowText(h_dataset_name_edit, adv_dataset_name_.c_str());
+  if (use_default_large_results_ == "1") {
+    CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_CHECKED);
+    EnableWindow(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit), FALSE);
+  } else {
+    EnableWindow(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit), TRUE);
+  }
   HWND h_temp_expiration_label = CreateLabel(
-      adv_hwnd, "Default temp table expiration time(ms):", kXAxis * 2,
-      kYAxis * 17, kWidth * 5 + 20, kHeight, WS_VISIBLE | SS_LEFT);
+      adv_hwnd, "Default temp table expiration time (ms):", kXAxis + 5,
+      kYAxis + 125, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_temp_expiration_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   HWND h_temp_expiration_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 17, kWidth * 2, kHeight,
-                    kIdcTempExpirationEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 125, kEditBoxWidth,
+                    kEditBoxHeight, kIdcTempExpirationEdit);
+  SendMessage(h_temp_expiration_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   HWND h_allow_high_throughput_checkbox = CreateCheckBox(
-      adv_hwnd, "Allow High-Throughput API for Large Results queries:", kXAxis,
-      kYAxis * 20, kWidth * 7 + 20, kHeight, kIdcAllowHighThroughputCheckbox);
+      adv_hwnd,
+      "Allow BigQuery Storage API for large results queries:", kXAxis + 5,
+      kYAxis + 150, kWidth * 7 + 20, kHeight, kIdcAllowHighThroughputCheckbox);
+  SendMessage(h_allow_high_throughput_checkbox, WM_SETFONT, (WPARAM)h_font,
+              TRUE);
   CheckDlgButton(
       adv_hwnd, kIdcAllowHighThroughputCheckbox,
       (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
-  HWND h_high_throughput_header =
-      CreateLabel(adv_hwnd, "High-Throughput API Options", kXAxis, kYAxis * 23,
-                  kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
+  HWND h_high_encryption_header =
+      CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 206, kWidth * 5,
+                  kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_high_encryption_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_activation_threshold_label =
-      CreateLabel(adv_hwnd, "Activation Threshold for High-Throughput:", kXAxis,
-                  kYAxis * 26, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
+  HWND h_encryption_combo_box =
+      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 206, kEditBoxWidth,
+        KComboBoxHeight, kIdcEncryptionKeyComboBox);
+  SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
+              (LPARAM) "Google-managed encryption key");
+  SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
+                (LPARAM) "Customer-managed encryption key");
+   SendMessage(h_encryption_combo_box, CB_SETCURSEL, 0, 0);
+   SetWindowText(h_encryption_combo_box, encryption_type_.c_str());
+
+  HWND h_activation_threshold_label = CreateLabel(
+      adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
+      kYAxis + 175, kWidth * 4.5, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   HWND h_activation_threshold_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 26, kWidth * 2, kHeight,
-                    kIdcActivationThresholdEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
+                    kEditBoxHeight, kIdcActivationThresholdEdit);
+  SendMessage(h_activation_threshold_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowLong(h_activation_threshold_edit, GWL_STYLE,
+  GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
+  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());  
 }
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
   HWND h_encryption_key_header =
-      CreateLabel(adv_hwnd, "Customer-Managed Encryption Key:", kXAxis,
-                  kYAxis * 29, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
+      CreateLabel(adv_hwnd, "Customer-managed encryption key:", kXAxis,
+                  kYAxis + 235, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_encryption_key_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   HWND h_encryption_key_edit =
-      CreateEditBox(adv_hwnd, kXAxis, kYAxis * 32, kWidth * 6 + 30, kHeight,
-                    kIdcEncryptionKeyEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 235, kEditBoxWidth,
+                    kEditBoxHeight, kIdcEncryptionKeyEdit);
+  SendMessage(h_encryption_key_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_encryption_key_edit, encryption_key_.c_str());
 }
 
 void AdvanceOptions::CreateSessionControls(HFONT h_font) {
   HWND h_rows_per_block_label =
-      CreateLabel(adv_hwnd, "Rows Per Block:", kXAxis, kYAxis * 35, kWidth * 3,
+      CreateLabel(adv_hwnd, "Rows per block:", kXAxis, kYAxis + 260, kWidth * 3,
                   kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_rows_per_block_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_rows_per_block_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 35, kWidth * 2, kHeight,
-                    kIdcRowsPerBlockEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 260, kEditBoxWidth,
+                    kEditBoxHeight, kIdcRowsPerBlockEdit);
+  SendMessage(h_rows_per_block_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_rows_per_block_edit, rows_per_block_.c_str());
-
+  SetWindowLongPtr(
+      h_rows_per_block_edit, GWL_STYLE,
+      GetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE) | ES_RIGHT);
   HWND h_default_string_label =
-      CreateLabel(adv_hwnd, "Default String Column Length:", kXAxis,
-                  kYAxis * 38, kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
+      CreateLabel(adv_hwnd, "Default string column length:", kXAxis,
+                  kYAxis + 285, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_default_string_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_default_string_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 38, kWidth * 2, kHeight,
-                    kIdcDefaultStringEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 285, kEditBoxWidth,
+                    kEditBoxHeight, kIdcDefaultStringEdit);
+  SendMessage(h_default_string_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_default_string_edit, default_string_length_.c_str());
-
+  SetWindowLongPtr(
+      h_default_string_edit, GWL_STYLE,
+      GetWindowLongPtr(h_default_string_edit, GWL_STYLE) | ES_RIGHT);
   HWND h_enable_session_checkbox =
-      CreateCheckBox(adv_hwnd, "Enable Session", kXAxis, kYAxis * 41,
+      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 310,
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
+  SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   CheckDlgButton(adv_hwnd, kIdcEnableSessionCheckbox,
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_session_location_label =
-      CreateLabel(adv_hwnd, "Session Location:", kXAxis * 9, kYAxis * 41,
+      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 335,
                   kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_session_location_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_session_location_edit =
-      CreateEditBox(adv_hwnd, kXAxis * 15, kYAxis * 41, kWidth * 2, kHeight,
-                    kIdcSessionLocationEdit);
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 335, kEditBoxWidth,
+                    kEditBoxHeight, kIdcSessionLocationEdit);
+  SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_session_location_edit, FALSE);
   SetWindowText(h_session_location_edit, session_location_.c_str());
+   h_session_location_edit = GetDlgItem(adv_hwnd, kIdcSessionLocationEdit);
+  EnableWindow(h_session_location_edit, TRUE);  // Enable the session location input box
 }
 
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   HWND h_variables_checkbox = CreateCheckBox(
-      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis * 44,
+      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 360,
       kWidth * 7, kHeight, kIdcVariableCheckbox);
   CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
                  (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-
+  SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional Projects:", kXAxis, kYAxis * 47,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 385,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis * 49, kWidth * 7 + 30,
-                              kHeight, kIdcAdditionalProjectsEdit);
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 405, kWidth + 380,
+                              kHeight + 32, kIdcAdditionalProjectsEdit);
+  SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   SetWindowText(h_additional_projects_edit, additional_projects_.c_str());
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query Properties:", kXAxis, kYAxis * 52,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 465,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis * 55, kWidth * 7 + 30,
-                              kHeight, kIdcQueryPropertiesEdit);
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 380,
+                              kHeight + 13, kIdcQueryPropertiesEdit);
+  SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+
   SetWindowText(h_query_properties_edit, query_properties_.c_str());
+  HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
+                                kButtonY + 10, kWidth + 110, kHeight, 0);
+  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_hyperlink =
+      CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
+                           kButtonY + 10, kWidth + 100, kHeight, kIdcHyperlink2);
+  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
-  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX, kButtonY,
+  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 10,
                                   kButtonWidth, kButtonHeight, kIdcOKButton);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_cancel_button =
-      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY, kButtonWidth,
-                   kButtonHeight, kIdcCancelButton);
+      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 10,
+                   kButtonWidth, kButtonHeight, kIdcCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 
@@ -248,8 +336,59 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
     p_current_window = (AdvanceOptions*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   }
   switch (u_msg) {
-    case WM_COMMAND:
-      switch (LOWORD(w_param)) {
+    case WM_ERASEBKGND: {
+      HDC hdc = (HDC)w_param;
+      RECT rc;
+      GetClientRect(hwnd, &rc);
+      HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
+      FillRect(hdc, &rc, hBrush);
+      DeleteObject(hBrush);
+      return 1;  // Indicate we handled the background redraw
+    }
+    case WM_LBUTTONDOWN: {
+      POINT pt;
+      GetCursorPos(&pt);
+      ScreenToClient(hwnd, &pt);
+      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink2);
+      RECT rect;
+      GetClientRect(h_hyperlink, &rect);
+      MapWindowPoints(h_hyperlink, hwnd, (LPPOINT)&rect, 2);
+      if (PtInRect(&rect, pt)) {
+        ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+      }
+      break;
+    }
+    case WM_CTLCOLORSTATIC: {
+      HDC hdcStatic = (HDC)w_param;
+      HWND hwndStatic = (HWND)l_param;
+      if (GetDlgCtrlID(hwndStatic) == kIdcHyperlink2) {
+        SetTextColor(hdcStatic, RGB(0, 0, 255));  // Set text color to blue
+        SetBkMode(hdcStatic, TRANSPARENT);        // Transparent background
+        static HFONT hFontUnderline = NULL;
+        if (!hFontUnderline) {
+          LOGFONT lf;
+          HFONT hFont = (HFONT)SendMessage(hwndStatic, WM_GETFONT, 0, 0);
+          if (hFont && GetObject(hFont, sizeof(LOGFONT), &lf)) {
+            lf.lfUnderline = TRUE;  // Enable underline
+            hFontUnderline = CreateFontIndirect(&lf);
+          }
+        }
+        if (hFontUnderline) {
+          SelectObject(hdcStatic, hFontUnderline);
+        }
+        return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
+      }
+      break;
+    }
+    case WM_COMMAND: {
+      int wm_id = LOWORD(w_param);
+      switch (wm_id) {
+        case kIdcHyperlink2:
+          if (HIWORD(w_param) == STN_CLICKED) {
+            ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL,
+                         SW_SHOWNORMAL);
+          }
+          break;
         case kIdcOKButton: {
           HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
           char language_buffer[256] = {0};
@@ -266,32 +405,31 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           } else {
             adv_dataset_name_ = "";
           }
-
           HWND h_temp_expiration_edit =
               GetDlgItem(hwnd, kIdcTempExpirationEdit);
           char temp_expiration_buffer[256] = {0};
           GetWindowText(h_temp_expiration_edit, temp_expiration_buffer,
                         sizeof(temp_expiration_buffer));
           temp_expiration_ = temp_expiration_buffer;
-
           HWND h_encryption_key_edit = GetDlgItem(hwnd, kIdcEncryptionKeyEdit);
           char encryption_key_buffer[256] = {0};
           GetWindowText(h_encryption_key_edit, encryption_key_buffer,
                         sizeof(encryption_key_buffer));
           encryption_key_ = encryption_key_buffer;
-
           HWND h_rows_per_block_edit = GetDlgItem(hwnd, kIdcRowsPerBlockEdit);
           char rows_per_block_buffer[256] = {0};
           GetWindowText(h_rows_per_block_edit, rows_per_block_buffer,
                         sizeof(rows_per_block_buffer));
           rows_per_block_ = rows_per_block_buffer;
-
           HWND h_default_string_edit = GetDlgItem(hwnd, kIdcDefaultStringEdit);
           char default_string_buffer[256] = {0};
           GetWindowText(h_default_string_edit, default_string_buffer,
                         sizeof(default_string_buffer));
           default_string_length_ = default_string_buffer;
-
+          HWND h_encryption_combo_box = GetDlgItem(hwnd, kIdcEncryptionKeyComboBox);
+          char encryption_type_buffer[256] = {0};
+          GetWindowText(h_encryption_combo_box, encryption_type_buffer, sizeof(encryption_type_buffer));
+          encryption_type_ = encryption_type_buffer;
           HWND h_session_location_edit =
               GetDlgItem(hwnd, kIdcSessionLocationEdit);
           char session_location_buffer[256] = {0};
@@ -302,51 +440,43 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           } else {
             session_location_ = "";
           }
-
           HWND h_additional_projects_edit =
               GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
           char additional_projects_buffer[1024] = {0};
           GetWindowText(h_additional_projects_edit, additional_projects_buffer,
                         sizeof(additional_projects_buffer));
           additional_projects_ = additional_projects_buffer;
-
           HWND h_query_properties_edit =
               GetDlgItem(hwnd, kIdcQueryPropertiesEdit);
           char query_properties_buffer[1024] = {0};
           GetWindowText(h_query_properties_edit, query_properties_buffer,
                         sizeof(query_properties_buffer));
           query_properties_ = query_properties_buffer;
-
           HWND h_activation_threshold =
               GetDlgItem(hwnd, kIdcActivationThresholdEdit);
           char activation_threshold_buffer[1024] = {0};
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
           activation_threshold_ = activation_threshold_buffer;
-
           use_wchar_ =
               (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
                   ? "1"
                   : "0";
-
           enable_session_ =
               (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
-
           activation_threshold_checkbox_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
-
           allow_large_results_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowLargeResultsCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
-
           use_default_large_results_ =
               (IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox) == BST_CHECKED)
                   ? "1"
@@ -376,14 +506,12 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           if (HIWORD(w_param) == CBN_SELCHANGE) {
             HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
             char language_buffer[256] = {0};
-
             int index = SendMessage(h_language_box, CB_GETCURSEL, 0, 0);
             if (index != CB_ERR) {
               SendMessage(h_language_box, CB_GETLBTEXT, index,
                           (LPARAM)language_buffer);
-
               HWND h_checkbox = GetDlgItem(hwnd, kIdcAllowLargeResultsCheckbox);
-              if (strcmp(language_buffer, "Legacy SQL") == 0) {
+              if (strcmp(language_buffer, "LegacySQL") == 0) {
                 EnableWindow(h_checkbox, TRUE);
               } else {
                 EnableWindow(h_checkbox, FALSE);
@@ -399,11 +527,10 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           break;
       }
       break;
-
+    }
     case WM_CLOSE:
       DestroyWindow(hwnd);  // Close the window
       return 0;
-
     case WM_DESTROY:
       if (p_current_window) {
         p_current_window->adv_hwnd = NULL;
@@ -413,17 +540,16 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
   }
   return DefWindowProc(hwnd, u_msg, w_param, l_param);
 }
-
 void AdvanceOptions::SetValues(Section const& attribute_map) {
   language_dialect_ = GetValueOrDefault(attribute_map, kLanguageDialect);
   std::string lang_dialect_value =
       GetValueOrDefault(attribute_map, kLanguageDialect);
   if (lang_dialect_value ==
       std::to_string(static_cast<int>(LanguageDialect::kStandardSQL))) {
-    language_dialect_ = "Standard SQL";
+    language_dialect_ = "GoogleSQL";
   } else if (lang_dialect_value ==
              std::to_string(static_cast<int>(LanguageDialect::kLegacySQL))) {
-    language_dialect_ = "Legacy SQL";
+    language_dialect_ = "LegacySQL";
   } else {
     language_dialect_ = "";
   }
@@ -438,7 +564,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
-      GetValueOrDefault(attribute_map, kHTAPI_ActivationThreshold);
+      GetValueOrDefault(attribute_map, activation_threshold_);
   use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
   activation_threshold_checkbox_ =
@@ -446,40 +572,38 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   allow_large_results_ = GetValueOrDefault(attribute_map, kAllowLargeResults);
   use_default_large_results_ =
       GetValueOrDefault(attribute_map, kUseDefaultLargeResultsDataset);
+  encryption_type_ = GetValueOrDefault(attribute_map, kEncryptionType);
 }
-
 void AdvanceOptions::Show(HWND hwnd) {
   if (adv_hwnd) {
     ShowWindow(adv_hwnd, SW_SHOW);
     SetForegroundWindow(adv_hwnd);
     return;
   }
-
   WNDCLASS wc_adv = {};
   wc_adv.lpfnWndProc = AdvanceOptions::AdvanceOptProc;
   wc_adv.hInstance = GetModuleHandle(NULL);
   wc_adv.lpszClassName = CLASS_NAME;
   wc_adv.hbrBackground =
       (HBRUSH)(COLOR_WINDOW + 1);  // Sets background to white
-
   RegisterClass(&wc_adv);
 
-  int window_width = 420;
-  int window_height = 650;
+  int window_width = 462;
+  int window_height = 618;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;
   int y_pos = (screen_height - window_height) / 2;
 
   adv_hwnd = CreateWindowEx(
-      0, CLASS_NAME, "Advanced Options", WS_OVERLAPPEDWINDOW, x_pos, y_pos,
+      0, CLASS_NAME, "Advanced Options",
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_DLGFRAME, x_pos, y_pos,
       window_width, window_height, hwnd, NULL, GetModuleHandle(NULL), this);
-
   if (adv_hwnd) {
     HFONT h_font =
-        CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                   OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-                   DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+        CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                   DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                   CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Inter");
 
     CreateLanguageControls(h_font);
     CreateLargeResultsControls(h_font);

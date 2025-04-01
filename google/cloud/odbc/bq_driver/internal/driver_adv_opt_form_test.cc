@@ -87,7 +87,7 @@ TEST_F(AdvanceOptionsTest, SetValues_ValidInput) {
   AdvanceOptions options;
   options.SetValues(attribute_map);
 
-  EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
+  EXPECT_EQ(options.GetLanguageDialect(), "GoogleSQL");
   EXPECT_EQ(options.GetDatasetName(), "dataset1");
   EXPECT_EQ(options.GetEncryptionKey(), "key123");
   EXPECT_EQ(options.GetRowsPerBlock(), "500");
@@ -106,7 +106,7 @@ TEST_F(AdvanceOptionsTest, SetValues_MissingKeys) {
   AdvanceOptions options;
   options.SetValues(attribute_map);
 
-  EXPECT_EQ(options.GetLanguageDialect(), "Standard SQL");
+  EXPECT_EQ(options.GetLanguageDialect(), "GoogleSQL");
   EXPECT_EQ(options.GetDatasetName(), "");
   EXPECT_EQ(options.GetEncryptionKey(), "");
   EXPECT_EQ(options.GetRowsPerBlock(), "");
