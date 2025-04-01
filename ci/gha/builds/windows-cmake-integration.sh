@@ -14,88 +14,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#!/bin/bash
+
+# Exit on error, undefined variable, or pipe failure
 set -euo pipefail
 
+# Source necessary libraries (assuming they define ctest::common_args and io::run)
+# Adjust paths if the script location changes relative to these libs
 source "$(dirname "$0")/../../lib/init.sh"
-source module ci/gha/builds/lib/windows.sh
-source module ci/gha/builds/lib/cmake.sh
+source module ci/gha/builds/lib/windows.sh # May not be needed if only ctest parts are used
+source module ci/gha/builds/lib/cmake.sh   # Needed for ctest::common_args
 
-export ODBC_TESTS_DSN="SampleDSN"
-
+# Ensure CMAKE_OUT is set (should be exported by GHA step)
 if [[ -z "${CMAKE_OUT:-}" ]]; then
-  CMAKE_OUT=cmake-out
+  echo "Error: CMAKE_OUT environment variable is not set." >&2
+  exit 1
 fi
-mapfile -t args < <(cmake::common_args "${CMAKE_OUT}")
-mapfile -t vcpkg_args < <(cmake::vcpkg_args)
+# Ensure ODBC_TESTS_DSN is set for the tests
+export ODBC_TESTS_DSN="SampleDSN" # Keep this if tests need it
+
+# Gather CTest arguments
 mapfile -t ctest_args < <(ctest::common_args)
-if [[ $# -gt 1 ]]; then
-  args+=("-DCMAKE_BUILD_TYPE=${1}")
-  shift
-fi
-if command -v sccache >/dev/null 2>&1; then
-  args+=(
-    # sccache requires specific workarounds with MSVC.
-    -DCMAKE_PROJECT_cpp-bigquery-odbc_INCLUDE="$(dirname "$0")/cmake/windows-sccache.cmake"
-  )
-fi
 
-# Disable manifest [[1]] generation.  These are known to cause flakes in CI
-# systems [[2]], and we do not need manifests for our purposes.
-#
-# [1]: https://learn.microsoft.com/en-us/windows/win32/sbscs/manifests
-# [2]: https://stackoverflow.com/questions/3775406
-args+=("-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:NO")
+# --- Run CTest ---
+io::log_h1 "Starting Tests (CTest)"
 
-# TODO(b/379091255): Set -DODBC_EXAMPLES=ON
-args+=("-DODBC_EXAMPLES=OFF")
-args+=("-DODBC_INTEGRATION_TESTING=ON")
-args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
-args+=("-DODBC_UNIT_TESTING=OFF")
-
-# We use our driver or the existing one based on BUILD_SHARD env
-if [ "$BUILD_SHARD" == "Core" ]; then
-  args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
-else
-  args+=("-DBQ_DRIVER_INTEGRATION_TESTS=ON")
-  args+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
-  args+=("-DBUILD_SHARED_LIBS=ON")
-fi
-
-io::log_h1 "Starting Build"
-TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
-time {
-  # Always run //google/cloud:status_test in case the list of targets has
-  # no unit tests.
-  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=20
-}
-
-if command -v sccache >/dev/null 2>&1; then
-  io::log "Current sccache stats"
-  sccache --show-stats
-fi
-
-TIMEFORMAT="==> 🕑 CMake build done in %R seconds"
-time {
-  # Always run //google/cloud:status_test in case the list of targets has
-  # no unit tests.
-  io::run cmake --build "${CMAKE_OUT}"
-}
-
-if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
-  done
-  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
-fi
-
-if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
-  done
-  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
+# Check if CMAKE_OUT directory exists before running tests
+if [[ ! -d "${CMAKE_OUT}" ]]; then
+  echo "Error: CMake output directory '${CMAKE_OUT}' not found. Cannot run tests." >&2
+  exit 1
 fi
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
+  # Run tests from the build directory, excluding integration tests
+  # Assuming 'io::run' handles logging and execution
   io::run ctest "${ctest_args[@]}" --test-dir "${CMAKE_OUT}" -LE integration-test
 }
+
+io::log_h1 "Tests Finished (CTest)"

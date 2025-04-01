@@ -60,6 +60,28 @@ jobs:
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "3.29.0"
+    - name: Download and Install sccache
+      working-directory: "${{runner.temp}}"
+      shell: bash
+      run: |
+        mkdir -p /c/Users/runneradmin/.cargo/bin
+        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
+          tar -zxf - --strip-components=1
+        chmod +x sccache.exe
+        mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Dynamic Configuration
+      id: dynamic
+      shell: bash
+      run: |
+        echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+    - name: Download and Install vcpkg
+      shell: bash
+      run: |
+        cd "${TEMP}"
+        mkdir .build
+        cd .build
+        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
     - name: Download and Install ODBC Driver
       shell: powershell
       # TODO(b/357810060): Enable msvc-2019 arch
@@ -78,28 +100,6 @@ jobs:
         Write-Output "Running DSN creation script from $regFilePath ..."
         reg import $regFilePath
         Write-Output "DSN creation completed."
-    - name: Dynamic Configuration
-      id: dynamic
-      shell: bash
-      run: |
-        echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-    - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
-      shell: bash
-      run: |
-        mkdir -p /c/Users/runneradmin/.cargo/bin
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
-          tar -zxf - --strip-components=1
-        chmod +x sccache.exe
-        mv sccache.exe /c/Users/runneradmin/.cargo/bin
-    - name: Download and Install vcpkg
-      shell: bash
-      run: |
-        cd "${TEMP}"
-        mkdir .build
-        cd .build
-        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:
