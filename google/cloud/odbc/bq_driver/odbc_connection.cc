@@ -30,7 +30,6 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-using google::cloud::odbc_bq_driver::IsValidEmail;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -73,7 +72,6 @@ Authentication CreateAuth(Dsn const& dsn) {
   }
   auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
   auth.oauth.credentials_file_path = dsn.key_file_path;
-  auth.email = dsn.email;
   auth.refresh_token = dsn.refresh_token;
   // Populate BYOID Properties from Dsn.
   auth.oauth.byoid_aud_url = dsn.byoid_aud_url;
@@ -146,7 +144,6 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
 
   // Retrieve user inputs and configure the connection.
   Section dsn_section = {{"DSN", form.GetDSN()},
-                         {"EMAIL", form.GetEmail()},
                          {"KEYFILEPATH", form.GetKeyFilePath()},
                          {"OAUTHMECHANISM", form.GetOAuthMechanism()},
                          {"CATALOG", form.GetCatalogName()},
@@ -324,14 +321,8 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                        "Auth String cannot be empty for DSN-less usecase"};
       return LogAndReturnCode(handle_ref, status_record);
     }
-    if (!IsValidEmail(user_name_str)) {
-      auto status_record = StatusRecord{
-          SQLStates::k_HY090(), "Username needs to be an email address"};
-      return LogAndReturnCode(handle_ref, status_record);
-    }
     dsn_section["OAUTHMECHANISM"] = std::to_string(
         static_cast<int>(OauthMechanism::kServiceAndUserAccount));
-    dsn_section["EMAIL"] = user_name_str;
     dsn_section["KEYFILEPATH"] = auth_string_str;
   }
   // Populate the DSN info inside the handle.
