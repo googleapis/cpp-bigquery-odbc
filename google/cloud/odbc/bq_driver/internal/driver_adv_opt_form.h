@@ -59,7 +59,9 @@ class AdvanceOptions {
   }
   inline std::string const& GetDatasetName() const { return adv_dataset_name_; }
   inline std::string const& GetEncryptionKey() const { return encryption_key_; }
-  inline std::string const& GetEncryptionType() const { return encryption_type_; }
+  inline std::string const& GetEncryptionType() const {
+    return encryption_type_;
+  }
   inline std::string const& GetSessionLocation() const {
     return session_location_;
   }

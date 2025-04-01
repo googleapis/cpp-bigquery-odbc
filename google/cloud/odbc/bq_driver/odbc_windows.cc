@@ -148,7 +148,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string proxy_pwd = GetValueOrDefault(section, proxy_pwd_key);
   std::string proxy_pwd_enc =
       EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
-  std::string encryption_type_value = GetValueOrDefault(section, encryption_type_);
+  std::string encryption_type_value =
+      GetValueOrDefault(section, encryption_type_);
 
   DriverForm form;
   AdvanceOptions advance_form;

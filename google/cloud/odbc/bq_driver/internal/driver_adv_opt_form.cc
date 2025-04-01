@@ -53,7 +53,7 @@ std::string AdvanceOptions::enable_session_;
 std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
-std::string AdvanceOptions::encryption_type_="Google-managed encryption key";
+std::string AdvanceOptions::encryption_type_ = "Google-managed encryption key";
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -72,7 +72,7 @@ std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
 std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
-std::string const kEncryptionType="EncryptionType"; 
+std::string const kEncryptionType = "EncryptionType";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -104,7 +104,7 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   SendMessage(h_language_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_language_combo_box =
       CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis, kEditBoxWidth,
-        KComboBoxHeight, kIdcLanguageDialectComboBox);
+                     KComboBoxHeight, kIdcLanguageDialectComboBox);
   SendMessage(h_language_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "GoogleSQL");
   SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "LegacySQL");
@@ -194,14 +194,14 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 
   HWND h_encryption_combo_box =
       CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 206, kEditBoxWidth,
-        KComboBoxHeight, kIdcEncryptionKeyComboBox);
+                     KComboBoxHeight, kIdcEncryptionKeyComboBox);
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Google-managed encryption key");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
-                (LPARAM) "Customer-managed encryption key");
-   SendMessage(h_encryption_combo_box, CB_SETCURSEL, 0, 0);
-   SetWindowText(h_encryption_combo_box, encryption_type_.c_str());
+              (LPARAM) "Customer-managed encryption key");
+  SendMessage(h_encryption_combo_box, CB_SETCURSEL, 0, 0);
+  SetWindowText(h_encryption_combo_box, encryption_type_.c_str());
 
   HWND h_activation_threshold_label = CreateLabel(
       adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
@@ -212,9 +212,10 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
       CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
                     kEditBoxHeight, kIdcActivationThresholdEdit);
   SendMessage(h_activation_threshold_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowLong(h_activation_threshold_edit, GWL_STYLE,
-  GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
-  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());  
+  SetWindowLong(
+      h_activation_threshold_edit, GWL_STYLE,
+      GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
+  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
 }
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
@@ -272,8 +273,9 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
   SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_session_location_edit, FALSE);
   SetWindowText(h_session_location_edit, session_location_.c_str());
-   h_session_location_edit = GetDlgItem(adv_hwnd, kIdcSessionLocationEdit);
-  EnableWindow(h_session_location_edit, TRUE);  // Enable the session location input box
+  h_session_location_edit = GetDlgItem(adv_hwnd, kIdcSessionLocationEdit);
+  EnableWindow(h_session_location_edit,
+               TRUE);  // Enable the session location input box
 }
 
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
@@ -307,9 +309,9 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
                                 kButtonY + 10, kWidth + 110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_hyperlink =
-      CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
-                           kButtonY + 10, kWidth + 100, kHeight, kIdcHyperlink2);
+  HWND h_hyperlink = CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation",
+                                          144, kButtonY + 10, kWidth + 100,
+                                          kHeight, kIdcHyperlink2);
   SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 
@@ -426,9 +428,11 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_default_string_edit, default_string_buffer,
                         sizeof(default_string_buffer));
           default_string_length_ = default_string_buffer;
-          HWND h_encryption_combo_box = GetDlgItem(hwnd, kIdcEncryptionKeyComboBox);
+          HWND h_encryption_combo_box =
+              GetDlgItem(hwnd, kIdcEncryptionKeyComboBox);
           char encryption_type_buffer[256] = {0};
-          GetWindowText(h_encryption_combo_box, encryption_type_buffer, sizeof(encryption_type_buffer));
+          GetWindowText(h_encryption_combo_box, encryption_type_buffer,
+                        sizeof(encryption_type_buffer));
           encryption_type_ = encryption_type_buffer;
           HWND h_session_location_edit =
               GetDlgItem(hwnd, kIdcSessionLocationEdit);
