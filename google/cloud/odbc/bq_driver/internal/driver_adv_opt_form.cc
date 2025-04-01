@@ -174,9 +174,8 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
                     kEditBoxHeight, kIdcTempExpirationEdit);
   SendMessage(h_temp_expiration_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
-  SetWindowLong(
-    h_temp_expiration_edit, GWL_STYLE,
-    GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER);
+  SetWindowLong(h_temp_expiration_edit, GWL_STYLE,
+                GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER);
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
@@ -244,9 +243,9 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcRowsPerBlockEdit);
   SendMessage(h_rows_per_block_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_rows_per_block_edit, rows_per_block_.c_str());
-  SetWindowLongPtr(
-      h_rows_per_block_edit, GWL_STYLE,
-      GetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE) | ES_RIGHT| ES_NUMBER);
+  SetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE,
+                   GetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE) |
+                       ES_RIGHT | ES_NUMBER);
   HWND h_default_string_label =
       CreateLabel(adv_hwnd, "Default string column length:", kXAxis,
                   kYAxis + 285, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
@@ -256,9 +255,9 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcDefaultStringEdit);
   SendMessage(h_default_string_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_default_string_edit, default_string_length_.c_str());
-  SetWindowLongPtr(
-      h_default_string_edit, GWL_STYLE,
-      GetWindowLongPtr(h_default_string_edit, GWL_STYLE) | ES_RIGHT |ES_NUMBER);
+  SetWindowLongPtr(h_default_string_edit, GWL_STYLE,
+                   GetWindowLongPtr(h_default_string_edit, GWL_STYLE) |
+                       ES_RIGHT | ES_NUMBER);
 
   HWND h_enable_session_checkbox =
       CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 310,
