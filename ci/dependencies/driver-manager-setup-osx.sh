@@ -17,13 +17,13 @@
 set -euo pipefail
 
 # Make our include guard clean against set -o nounset.
-test -n "${CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_SH__:-}" || declare -i CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_SH__=0
-if ((CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_SH__++ != 0)); then
+test -n "${CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_OSX_SH__:-}" || declare -i CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_OSX_SH__=0
+if ((CI_DEPENDENCIES_GOOGLE_DRIVER_MANAGER_SETUP_OSX_SH__++ != 0)); then
   return 0
 fi # include guard
 
-CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR="$(pwd)"
-export CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR
+CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_OSX_CURR_DIR="$(pwd)"
+export CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_OSX_CURR_DIR
 export GCS_BUCKET=bq-dev-tools-testing-drivers
 
 # Check gcloud is installed.
@@ -46,7 +46,7 @@ if [[ $file_size =~ ^[0-9]+$ ]] && [ "$file_size" -lt 100 ]; then
   exit 1
 fi
 
-cd "$CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR"
+cd "$CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_OSX_CURR_DIR"
 
 source "$(dirname "$0")/../lib/init.sh"
 source module ci/gha/builds/lib/cmake.sh
