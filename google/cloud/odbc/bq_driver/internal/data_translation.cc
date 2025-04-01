@@ -24,14 +24,11 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                                       DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
-  SQLPOINTER dest_buf = dest_data.buf;
-  SQLSMALLINT dest_type = dest_data.type;
-  SQLLEN buffer_length = dest_data.buflen;
-  SQLLEN* res_len = dest_data.result_len;
-  if (!dest_buf) {
+
+  if (!dest_data.buf) {
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
-  if (buffer_length < 0) {
+  if (dest_data.buflen < 0) {
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
   std::string str_input;
@@ -42,22 +39,22 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
     return conversion_status.GetStatusRecord();
   }
   SQLDOUBLE numeric_no = *conversion_status;
-  switch (dest_type) {
+  switch (dest_data.type) {
     case SQL_C_NUMERIC: {
       SQL_NUMERIC_STRUCT numst;
       GetNumericDetailsFromStr(str_input, numst);
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
-          dest_buf);      // convert the pointer to type
-      *dest_val = numst;  // fill the value
-      if (res_len) {
-        *res_len = sizeof(SQL_NUMERIC_STRUCT);
+          dest_data.buf);  // convert the pointer to type
+      *dest_val = numst;   // fill the value
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_NUMERIC_STRUCT);
       }
       return status_record;
     }
     case SQL_C_CHAR: {
-      auto* dest = reinterpret_cast<char*>(dest_buf);
-      strncpy(dest, str_input.c_str(), buffer_length - 1);
-      dest[buffer_length - 1] = '\0';
+      auto* dest = reinterpret_cast<char*>(dest_data.buf);
+      strncpy(dest, str_input.c_str(), dest_data.buflen - 1);
+      dest[dest_data.buflen - 1] = '\0';
       return status_record;
     }
     case SQL_C_WCHAR: {
@@ -68,92 +65,93 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      WStrToOutputBufferResponse(wstr.GetValue(), dest_buf, buffer_length,
-                                 src_len, buffer_length, res_len);
+      WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
+                                 dest_data.buflen, src_len, dest_data.buflen,
+                                 dest_data.result_len);
       return status_record;
     }
     case SQL_C_FLOAT: {
-      auto* dest_val = reinterpret_cast<SQLREAL*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLREAL*>(dest_data.buf);
       status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = numeric_no;
-        if (res_len) {
-          *res_len = sizeof(SQLREAL);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLREAL);
         }
         return status_record;
       }
     }
     case SQL_C_DOUBLE: {
-      auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_data.buf);
       status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = numeric_no;
-        if (res_len) {
-          *res_len = sizeof(SQLDOUBLE);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLDOUBLE);
         }
       }
       return status_record;
     }
     case SQL_C_SSHORT: {
-      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_data.buf);
       status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLSMALLINT>(numeric_no);
-        if (res_len) {
-          *res_len = sizeof(SQLSMALLINT);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLSMALLINT);
         }
       }
       return status_record;
     }
     case SQL_C_USHORT: {
-      auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_data.buf);
       status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffe
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
-        if (res_len) {
-          *res_len = sizeof(SQLUSMALLINT);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLUSMALLINT);
         }
       }
       return status_record;
     }
     case SQL_C_SLONG: {
-      auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_data.buf);
       status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLINTEGER>(numeric_no);
-        if (res_len) {
-          *res_len = sizeof(SQLINTEGER);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLINTEGER);
         }
       }
       return status_record;
     }
     case SQL_C_ULONG: {
-      auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_data.buf);
       status_record =
           CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
       // In case of 'Numeric value out of range'(22003), no need to populate the
       // buffer
       if (status_record.sql_state != SQLStates::k_22003()) {
         *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
-        if (res_len) {
-          *res_len = sizeof(SQLUSMALLINT);
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLUSMALLINT);
         }
       }
       return status_record;
     }
     case SQL_C_BIT: {
-      auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
+      auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_data.buf);
       if (numeric_no == 0 || numeric_no == 1) {
         *dest_val = static_cast<SQLCHAR>(numeric_no);
         return StatusRecord::Ok();
