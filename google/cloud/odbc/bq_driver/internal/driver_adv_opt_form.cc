@@ -572,6 +572,9 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
       GetValueOrDefault(attribute_map, activation_threshold_);
+      if (activation_threshold_.empty()) {
+        activation_threshold_ = "10000";  // Default value
+      }
   use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
   activation_threshold_checkbox_ =
