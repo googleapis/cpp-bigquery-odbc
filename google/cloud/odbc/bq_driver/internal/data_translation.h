@@ -254,6 +254,7 @@ inline odbc_internal::StatusRecordOr<SQLDOUBLE> ConvertToDouble(
   return result;
 }
 
+
 // Assuming that DSValue hosts string data, this converts it to the destination
 // data type in the DataBuffer
 odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
