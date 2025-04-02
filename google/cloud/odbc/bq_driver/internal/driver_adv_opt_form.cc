@@ -464,7 +464,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char activation_threshold_buffer[1024] = {0};
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
-                        activation_threshold_ = activation_threshold_buffer;
+          activation_threshold_ = activation_threshold_buffer;
           use_wchar_ =
               (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
                   ? "1"
