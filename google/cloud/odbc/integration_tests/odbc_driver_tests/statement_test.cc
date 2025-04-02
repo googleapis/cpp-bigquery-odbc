@@ -3164,7 +3164,8 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
   Table table(table_name);
 
-  Schema schema{{"TextField", "STRING"}};
+  Schema schema{{"TextField1", "STRING"},
+                {"TextField2", "STRING"}};
 
   // Create table
   auto conn = std::make_shared<ODBCHandles>();
@@ -3174,7 +3175,7 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 
   // Prepare and bind parameters
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  auto query = "INSERT INTO " + table_name + " VALUES (? ,?)";
 
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
@@ -3194,19 +3195,30 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                              SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
+            
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 100, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
-  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
 
   // Scenario 3: Call SQLPutData with null data and valid size
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, data.size()), SQL_ERROR);
 
   // Scenario 4: Call SQLPutData with valid data and valid size
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_SUCCESS);
-
-  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
-
+  
+  std::string data1 = std::string(101, 'Z');
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  
+  // Scenario 5: Data Truncation - inserting data that exceeds column size
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data1.c_str(), data1.size()),
+            SQL_ERROR);
+  
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_ERROR);
+  
   // Cleanup before disconnecting
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
