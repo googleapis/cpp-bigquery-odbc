@@ -117,6 +117,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagFieldW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetDiagRecW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetInfoW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttrW;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNativeSql;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNativeSqlW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepareW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeysW;
@@ -150,6 +151,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagFieldW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetDiagRecW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetInfoW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetStmtAttrW;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNativeSql;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNativeSqlW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepareW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeysW;
@@ -2148,18 +2150,26 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
                                SQLINTEGER outStatementTextBufferLen,
                                SQLINTEGER* outStatementTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
+  bool is_tracing_enabled = IsTracingEnabled("SQLNativeSql");
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLNativeSql(
+        connectionHandle, inStatementText, inStatementTextLen, outStatementText,
+        outStatementTextBufferLen, outStatementTextLen, *(*kTraceOption));
 
   // Call to common internal function for SQLNativeSql and SQLNativeSqlW
-  // in odbc_sql_requests.h.
+  // in odbc_sql_results.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLNativeSqlInternal(
+      connectionHandle, inStatementText, inStatementTextLen, outStatementText,
+      outStatementTextBufferLen, outStatementTextLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLNativeSql(rc, *(*kTraceOption));
 
   return rc;
 }
@@ -2203,17 +2213,27 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   // TODO: Internal call should be made with out_statement_text as the output
   // parameter.
   // Handle Unicode conversion of output parameters.
+  rc = ::google::cloud::odbc_bq_driver::SQLNativeSqlInternal(
+      connectionHandle, ToSqlChar(utf8_in_stmt_txt->data()), inStatementTextLen,
+      out_statement_text, outStatementTextBufferLen, outStatementTextLen);
 
-  StatusRecordOr<std::wstring> utf16_out_stmt_txt =
-      Utf8ToUtf16((char*)out_statement_text);
-  if (!utf16_out_stmt_txt) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf16_out_stmt_txt.GetStatusRecord().message);
-    return utf16_out_stmt_txt.GetCalculatedReturnCode();
+  std::string outStatementTextStr = (char*)out_statement_text;
+  if (!outStatementTextStr.empty()) {
+    StatusRecordOr<std::wstring> utf16_out_stmt_txt =
+        Utf8ToUtf16(outStatementTextStr);
+    if (!utf16_out_stmt_txt) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf16_out_stmt_txt.GetStatusRecord().message);
+      return utf16_out_stmt_txt.GetCalculatedReturnCode();
+    }
+
+    std::memset(outStatementText, '\0',
+                outStatementTextBufferLen * sizeof(SQLWCHAR));
+
+    std::memcpy((SQLWCHAR*)outStatementText,
+                ToSqlWChar(utf16_out_stmt_txt->data()),
+                utf16_out_stmt_txt->size() * sizeof(SQLWCHAR));
   }
-  outStatementText = ToSqlWChar(utf16_out_stmt_txt->data());
-  if (outStatementTextLen) *outStatementTextLen = utf16_out_stmt_txt->length();
-
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));
 

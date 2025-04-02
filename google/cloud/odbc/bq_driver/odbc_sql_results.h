@@ -117,6 +117,19 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_string_len);
 
+// Implements the semantics for SQLNativeSql ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnativesql-function?view=sql-server-ver16
+SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
+                               SQLCHAR* in_statement_text,
+                               SQLINTEGER in_statement_text_len,
+                               SQLCHAR* out_statement_text,
+                               SQLINTEGER out_statement_text_buffer_len,
+                               SQLINTEGER* out_statement_text_len);
 }  // namespace google::cloud::odbc_bq_driver
-
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H

@@ -3668,7 +3668,121 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+std::string const kTableName = "ODBC_NATIVE_SQL_TEST";
+std::vector<std::string> const kNativeSqlQueries = {
+    "SELECT * FROM " + kTableName + " WHERE Column1 = {d '2023-01-01'}",
+    "SELECT {fn UCASE(Name)} FROM " + kTableName,
+    "SELECT {fn SUBSTRING(Name, 1, CHARINDEX(',', Name) - 1)} FROM " +
+        kTableName,
+    "SELECT Name FROM " + kTableName +
+        " WHERE Name LIKE '\\%AAA%' {escape '\\'}",
+    "SELECT Customers.CustID, Customers.Name, Orders.OrderID, Orders.Status "
+    "FROM {oj Customers LEFT OUTER JOIN Orders ON "
+    "Customers.CustID=Orders.CustID} "
+    "WHERE Orders.Status='OPEN'",
+    "abcjqwdxnasxw,wdhxqwdxq,dwhdnwkxwxn"};
+
+TEST(StatementTest, SQLNativeSql_AllValidations) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLCHAR native_sql[kBufferLength];
+  SQLINTEGER native_sql_length;
+
+  for (auto const& sql_query : kNativeSqlQueries) {
+    SCOPED_TRACE("Testing query: " + sql_query);
+
+    // Valid SQLNativeSql execution
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                           native_sql, sizeof(native_sql), &native_sql_length),
+              SQL_SUCCESS);
+
+    EXPECT_EQ(std::string((char*)native_sql), sql_query)
+        << "Native SQL does not match input query.";
+    EXPECT_EQ(native_sql_length, sql_query.size())
+        << "Native SQL length mismatch.";
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLNativeSql_NegativeTest) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLCHAR native_sql[kBufferLength];
+  SQLINTEGER native_sql_length;
+
+  // Null inStatementText should return SQL_ERROR
+  {
+    SCOPED_TRACE("Testing null inStatementText");
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, nullptr, SQL_NTS, native_sql,
+                           sizeof(native_sql), &native_sql_length),
+              SQL_ERROR);
+  }
+
+  // Null outStatementText, but valid SQL should still return SQL_SUCCESS and
+  // fill length
+  {
+    SCOPED_TRACE("Testing null outStatementText");
+    std::string sql_query = "SELECT * FROM DummyTable";
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                           nullptr, 0, &native_sql_length),
+              SQL_SUCCESS_WITH_INFO);
+    EXPECT_EQ(native_sql_length, sql_query.size());
+  }
+
+  // Negative outStatementTextBufferLen should return SQL_ERROR
+  {
+    SCOPED_TRACE("Testing negative buffer length");
+    std::string sql_query = "SELECT * FROM DummyTable";
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                           native_sql, -1, &native_sql_length),
+              SQL_ERROR);
+  }
+
+  // Insufficient buffer: should return SQL_SUCCESS_WITH_INFO
+  {
+    SCOPED_TRACE("Testing insufficient buffer length");
+    std::string sql_query = "SELECT * FROM Orders";
+    SQLCHAR small_buffer[10];
+    SQLINTEGER small_buffer_length;
+    EXPECT_EQ(
+        SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                     small_buffer, sizeof(small_buffer), &small_buffer_length),
+        SQL_SUCCESS_WITH_INFO);
+    EXPECT_EQ(small_buffer_length, sql_query.size());
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring const unicode_query =
+      L"SELECT * FROM ODBC_NATIVE_SQL_TEST WHERE City = 'München' AND Café = "
+      L"'Yes'";
+
+  SQLWCHAR native_sql[kBufferLength] = {};
+  SQLINTEGER native_sql_length = 0;
+
+  SCOPED_TRACE("Testing SQLNativeSqlW with Unicode wide characters");
+
+  EXPECT_EQ(
+      SQLNativeSqlW(conn->hdbc,
+                    reinterpret_cast<SQLWCHAR*>(
+                        const_cast<wchar_t*>(unicode_query.c_str())),
+                    SQL_NTS, native_sql, kBufferLength, &native_sql_length),
+      SQL_SUCCESS);
+
+  // Convert to wstring, trimming possible null-padding at the end
+  std::wstring returned_sql(native_sql, native_sql + unicode_query.size());
+  EXPECT_EQ(returned_sql, unicode_query)
+      << "Returned SQL does not match input wide Unicode SQL.";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 }  // namespace google::cloud::odbc_tests

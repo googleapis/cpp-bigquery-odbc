@@ -29,6 +29,7 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::bigquery_v2_minimal_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::CheckTargetType;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
 using google::cloud::odbc_bq_driver_internal::CreateTypeInfoRowSchema;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -669,6 +670,76 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     }
     return LogAndReturnCode(stmt_handle, status_record);
   }
+}
+
+SQLRETURN SQL_API SQLNativeSqlInternal(SQLHDBC connection_handle,
+                                       SQLCHAR* in_statement_text,
+                                       SQLINTEGER in_statement_text_len,
+                                       SQLCHAR* out_statement_text,
+                                       SQLINTEGER out_statement_text_buffer_len,
+                                       SQLINTEGER* out_statement_text_len) {
+  // Validate the connection handle
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      ValidateConnectionHandle(connection_handle);
+  if (!handle_result) {
+    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  ConnectionHandle& conn_handle = *(*handle_result);
+
+  // Validate input SQL statement
+  if (!in_statement_text) {
+    return LogAndReturnCode(
+        conn_handle, {SQLStates::k_HY009(), "Invalid use of null pointer"});
+  }
+
+  if (in_statement_text_len < 0 && in_statement_text_len != SQL_NTS) {
+    return LogAndReturnCode(
+        conn_handle, {SQLStates::k_HY090(), "Invalid string or buffer length"});
+  }
+
+  // Convert input SQL statement to a std::string
+  std::string input_sql(
+      reinterpret_cast<char const*>(in_statement_text),
+      (in_statement_text_len == SQL_NTS)
+          ? std::strlen(reinterpret_cast<char const*>(in_statement_text))
+          : static_cast<size_t>(in_statement_text_len));
+
+  if (input_sql.empty()) {
+    return LogAndReturnCode(conn_handle,
+                            {SQLStates::k_HY090(), "Empty SQL statement"});
+  }
+
+  // Output is same as input for BigQuery
+  std::string const& output_sql = input_sql;
+  auto output_length = static_cast<SQLINTEGER>(output_sql.size());
+
+  if (out_statement_text_buffer_len == 0) {
+    if (out_statement_text_len) {
+      *out_statement_text_len = output_length;
+    }
+    if (out_statement_text) {
+      out_statement_text[out_statement_text_buffer_len] = '\0';
+    }
+    return LogAndReturnCode(
+        conn_handle, {SQLStates::k_01004(), "String data, right truncated"});
+  }
+
+  // Use helper for output buffer handling
+  auto status_record = StringValueToOutputBufferResponse<SQLINTEGER>(
+      output_sql.c_str(), out_statement_text, out_statement_text_buffer_len,
+      out_statement_text_len);
+
+  // Output length is same as input length
+  if (out_statement_text_len) {
+    *out_statement_text_len = output_length;
+  }
+
+  if (!status_record.ok()) {
+    return LogAndReturnCode(conn_handle, status_record);
+  }
+
+  return SQL_SUCCESS;
 }
 
 }  // namespace google::cloud::odbc_bq_driver
