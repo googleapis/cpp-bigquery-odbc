@@ -514,9 +514,10 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
     in_str_len = wstr.size();
     // Calculating length based on SQLWCHAR size in different plateform and
     // compiler.
-    // if (sizeof(SQLWCHAR) == 2) {
-    //   in_str_len = in_str_len * sizeof(SQLWCHAR);
-    // }
+    std::cout<<"======sizeof(SQLWCHAR):"<<sizeof(SQLWCHAR)<<std::endl;
+    if (sizeof(SQLWCHAR) == 2) {
+      in_str_len = in_str_len * sizeof(SQLWCHAR);
+    }
   }
   std::cout<<"===== utilsConvertSQLWCHARToString start 2:"<<in_str_len<<std::endl;
   std::wcout<<in_str<<std::endl;
