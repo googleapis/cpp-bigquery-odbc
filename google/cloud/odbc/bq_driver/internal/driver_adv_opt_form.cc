@@ -65,7 +65,7 @@ std::string const kLargeResultsTempTableExpirationTime =
 std::string const kSessionLocation = "SessionLocation";
 std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
-std::string const activation_threshold_ = "HTAPI_ActivationThreshold";
+std::string const kActivationThreshold = "HTAPI_ActivationThreshold";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
 std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
@@ -464,7 +464,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char activation_threshold_buffer[1024] = {0};
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
-          activation_threshold_ = activation_threshold_buffer;
+                        activation_threshold_ = activation_threshold_buffer;
           use_wchar_ =
               (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
                   ? "1"
@@ -571,10 +571,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
-      GetValueOrDefault(attribute_map, activation_threshold_);
-      if (activation_threshold_.empty()) {
-        activation_threshold_ = "10000";  // Default value
-      }
+      GetValueOrDefault(attribute_map, kActivationThreshold);
   use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
   activation_threshold_checkbox_ =
