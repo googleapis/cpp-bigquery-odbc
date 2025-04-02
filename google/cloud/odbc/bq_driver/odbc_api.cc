@@ -4395,6 +4395,7 @@ SQLRETURN SQL_API SQLFreeHandle(SQLSMALLINT handleType, SQLHANDLE handle) {
   // enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLFreeHandle(handleType, handle, *(*kTraceOption));
+  std::cout << "Here before internal\n";
 
   // Call to internal function for SQLFreeHandle in odbc_commons.h
   rc = google::cloud::odbc_bq_driver::SQLFreeHandleInternal(handleType, handle);

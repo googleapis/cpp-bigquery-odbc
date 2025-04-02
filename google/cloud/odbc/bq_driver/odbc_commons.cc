@@ -30,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
+  std::cout << "Here inside " << handle_type << std::endl;
   switch (handle_type) {
     case SQL_HANDLE_ENV: {
       StatusRecordOr<EnvironmentHandle*> handle_result =
@@ -44,9 +45,10 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       break;
     }
     case SQL_HANDLE_DBC: {
+      std::cout << "Here \n";
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
-          std::cout << "Here 1\n";
+      std::cout << "Here 1\n";
       if (!handle_result) {
         std::cout << "Here Fail\n";
         TracePrintInternal(*(*kTraceOption),
@@ -62,7 +64,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
             ->GetEnvironmentHandle()
             ->GetConnectionHandles()
             .erase(*handle_result);
-            std::cout << "Here inn after\n";
+        std::cout << "Here inn after\n";
       }
       std::cout << "Here 3\n";
       (*handle_result)->kType = HandleType::kUnspecified;
