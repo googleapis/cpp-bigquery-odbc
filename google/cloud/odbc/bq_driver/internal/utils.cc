@@ -197,7 +197,7 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id) {
   return CreateWindowEx(0, "EDIT", "",
                         WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT |
-                            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
+                            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
                         x, y, width, height, parent, (HMENU)id,
                         GetModuleHandle(NULL), NULL);
 }
