@@ -27,6 +27,8 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kTimeCharLength = 8;
+constexpr int kMaxNumericPrecision = 38;
+constexpr int kMinNumericPrecision = 1;
 
 // Checks if an arithmetic value can be converted to another accurately.
 template <typename SrcType, typename DestType>

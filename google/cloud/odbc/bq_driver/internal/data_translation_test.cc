@@ -283,6 +283,72 @@ TEST(ConvertFromNumericDSValue, To_SQL_C_FLOAT) {
   FromNumericToAllTest<SQLREAL>("42", 42, SQL_C_FLOAT);
   FromNumericToAllTest<SQLREAL>("42.1", 42.1, SQL_C_FLOAT);
   FromNumericToAllTest<SQLREAL>("-1.1", -1.1, SQL_C_FLOAT);
+  FromNumericToAllTest<SQLREAL>("abc", 0, SQL_C_FLOAT, SQLStates::k_HY000(),
+                                "Invalid conversion");
+  FromNumericToAllTest<SQLREAL>("-1.0e100", 0, SQL_C_FLOAT,
+                                SQLStates::k_22003(),
+                                "Numeric value out of range");
+}
+
+TEST(ConvertFromNumericDSValue, To_SQL_C_Numeric) {
+  // Prepare buffer for SQL_NUMERIC_STRUCT
+  SQL_NUMERIC_STRUCT numeric_struct;
+  memset(&numeric_struct, 0, sizeof(numeric_struct));
+
+  // Successful conversion cases
+  SQLPOINTER buf = &numeric_struct;
+  SQLLEN result_len = 0;
+  DataBuffer data = {SQL_C_NUMERIC, buf, sizeof(SQL_NUMERIC_STRUCT),
+                     &result_len};
+
+  {
+    DSValue ds_value;
+    StringToDSValue("42", ds_value);
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+
+    EXPECT_EQ(numeric_struct.val[0], 42);
+    EXPECT_EQ(numeric_struct.sign, 1);  // Positive number
+    EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
+  }
+
+  {
+    DSValue ds_value;
+    StringToDSValue("-99", ds_value);
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+
+    EXPECT_EQ(numeric_struct.val[0], 99);
+    EXPECT_EQ(numeric_struct.sign, 0);  // Negative number
+    EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
+  }
+
+  // Failure cases
+  {
+    DSValue ds_value;
+    StringToDSValue("abc", ds_value);  // Invalid numeric input
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+
+    EXPECT_EQ(status_record.sql_state,
+              SQLStates::k_HY000());  // Invalid conversion error
+    EXPECT_EQ(status_record.message, "Invalid conversion");
+  }
+
+  {
+    DSValue ds_value;
+    StringToDSValue("123456789123456789123456789123456789.123456789", ds_value);
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+    EXPECT_EQ(status_record.sql_state,
+              SQLStates::k_22003());  // Expect "Numeric value out of range"
+    EXPECT_EQ(status_record.message, "Numeric value out of range");
+  }
+
+  {
+    DSValue ds_value;
+    StringToDSValue("-0.00000000000000000000000000000000000001", ds_value);
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+    EXPECT_EQ(status_record.sql_state,
+              SQLStates::k_22003());  // Expect "Numeric value out of range"
+    EXPECT_EQ(status_record.message, "Numeric value out of range");
+  }
 }
 
 TEST(ConvertFromNumericDSValue, To_SQL_C_SSHORT) {

@@ -41,6 +41,21 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   SQLDOUBLE numeric_no = *conversion_status;
   switch (dest_data.type) {
     case SQL_C_NUMERIC: {
+      std::string num_str = str_input;
+      if (num_str.front() == '-') num_str = num_str.substr(1);  // Remove sign
+
+      size_t num_digits = 0;
+      for (char c : num_str) {
+        if (std::isdigit(c)) {
+          ++num_digits;
+        }
+        if (num_digits > kMaxNumericPrecision) break;  // Early exit
+      }
+      if (num_digits > kMaxNumericPrecision ||
+          num_digits < kMinNumericPrecision) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
+
       SQL_NUMERIC_STRUCT numst;
       GetNumericDetailsFromStr(str_input, numst);
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
@@ -52,9 +67,8 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return status_record;
     }
     case SQL_C_CHAR: {
-      auto* dest = reinterpret_cast<char*>(dest_data.buf);
-      strncpy(dest, str_input.c_str(), dest_data.buflen - 1);
-      dest[dest_data.buflen - 1] = '\0';
+      auto status_record =
+          StringValueToOutputBufferResponse(str_input.c_str(), dest_data);
       return status_record;
     }
     case SQL_C_WCHAR: {
@@ -80,8 +94,8 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
         if (dest_data.result_len) {
           *dest_data.result_len = sizeof(SQLREAL);
         }
-        return status_record;
       }
+      return status_record;
     }
     case SQL_C_DOUBLE: {
       auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_data.buf);
