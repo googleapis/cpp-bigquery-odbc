@@ -51,14 +51,17 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      ConnectionHandle* conn_handle = *handle_result;
+     // ConnectionHandle* conn_handle = *handle_result;
       // Dissociate itself from an environment handle
-      if (conn_handle->GetEnvironmentHandle()) {
-        conn_handle->GetEnvironmentHandle()->GetConnectionHandles().erase(
-            conn_handle);
+      if ((*handle_result)->GetEnvironmentHandle()) {
+        (*handle_result)->GetEnvironmentHandle()->GetConnectionHandles().erase(
+          *handle_result);
       }
       (*handle_result)->kType = HandleType::kUnspecified;
-      delete *handle_result;
+      if(handle_result){
+        std::cout<<"Not Null\n";
+        delete *handle_result;
+      }
       break;
     }
     case SQL_HANDLE_STMT: {
