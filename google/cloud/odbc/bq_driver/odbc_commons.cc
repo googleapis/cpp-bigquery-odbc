@@ -46,20 +46,27 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
     case SQL_HANDLE_DBC: {
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
+          std::cout << "Here 1\n";
       if (!handle_result) {
+        std::cout << "Here Fail\n";
         TracePrintInternal(*(*kTraceOption),
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
+      std::cout << "Here 2\n";
       // ConnectionHandle* conn_handle = *handle_result;
       // Dissociate itself from an environment handle
       if ((*handle_result)->GetEnvironmentHandle()) {
+        std::cout << "Here inn\n";
         (*handle_result)
             ->GetEnvironmentHandle()
             ->GetConnectionHandles()
             .erase(*handle_result);
+            std::cout << "Here inn after\n";
       }
+      std::cout << "Here 3\n";
       (*handle_result)->kType = HandleType::kUnspecified;
+      std::cout << "Here 4\n";
       if (handle_result) {
         std::cout << "Not Null\n";
         delete *handle_result;
