@@ -333,8 +333,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                         sizeof(host_text));
           GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
                         sizeof(port_text));
-
-          // Enable OK button if both host and valid port are provided
+          // Enable OK button if both host and port are provided
           if (strlen(host_text) > 0 && strlen(port_text) > 0) {
             EnableWindow(h_ok_button, TRUE);
           } else {
