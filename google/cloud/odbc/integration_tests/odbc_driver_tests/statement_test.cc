@@ -748,7 +748,7 @@ TEST(StatementTest, SQLFetchScroll) {
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
+std::cout<<"after disconnect "<<std::endl;
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);

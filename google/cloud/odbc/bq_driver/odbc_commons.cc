@@ -30,7 +30,7 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
-  std::cout << "Here inside " << handle_type << std::endl;
+  std::cout << "Here inside internal " << handle_type << std::endl;
   switch (handle_type) {
     case SQL_HANDLE_ENV: {
       StatusRecordOr<EnvironmentHandle*> handle_result =
@@ -45,7 +45,7 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       break;
     }
     case SQL_HANDLE_DBC: {
-      std::cout << "Here \n";
+      std::cout << "Here SQL_HANDLE_DBC"<<std::endl;
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
       std::cout << "Here 1\n";
