@@ -24,7 +24,6 @@
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 #include <filesystem>
 namespace fs = std::filesystem;
-namespace fs = std::filesystem;
 #endif
 
 namespace google::cloud::odbc_bq_driver_internal {
