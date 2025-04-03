@@ -296,21 +296,20 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         proxy_check_ =
             (IsDlgButtonChecked(hwnd, kIdcProxyCheckbox) == BST_CHECKED) ? "1"
                                                                          : "0";
-
-        GetControlText(hwnd, kIdcProxyPortEdit, proxy_port_);
+        std::string temp_port;
+        GetControlText(hwnd, kIdcProxyPortEdit, temp_port);
         bool is_valid_port = false;
-        if (!proxy_port_.empty()) {
-          int port = atoi(proxy_port_.c_str());
-          is_valid_port = (port >= 0 && port < kMaxPortNumber);
-        }
+        if (!temp_port.empty()) {
+            int port = atoi(temp_port.c_str());
+            is_valid_port = (port >= 0 && port < kMaxPortNumber);
+        }  
         if (!is_valid_port) {
-          std::string error_msg =
-              "[Google][BigQuery] (1060) Invalid port: '" + proxy_port_ +
-              "'.\nValid values are in the range [0, 65535].";
-          MessageBoxA(hwnd, error_msg.c_str(), "DSN Configuration Error",
-                      MB_ICONWARNING | MB_OK);
-          return 0;
+            std::string error_msg = "[Google][BigQuery] (1060) Invalid port: '" + temp_port +
+                                    "'.\nValid values are in the range [0, 65535].";
+            MessageBoxA(hwnd, error_msg.c_str(), "DSN Configuration Error", MB_ICONWARNING | MB_OK);
+            return 0;
         }
+        proxy_port_ = temp_port;
         GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
         GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
         GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
