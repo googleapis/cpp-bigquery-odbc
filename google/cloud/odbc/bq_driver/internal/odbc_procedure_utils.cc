@@ -21,6 +21,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
+using ::google::cloud::odbc_bq_driver_internal::GetFixedColumnMetadata;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -504,6 +505,294 @@ StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
 
         return FetchBQProcedureData(handle, *validated_proc);
       });
+}
+
+StatusRecordOr<DSRow> CreateProcedureColumnResultSetDSRow(
+    ProcedureFieldSchema const& proc_column) {
+  DSRow ds_row;
+
+  // PROCEDURE_CAT
+  DSValue ds_procedure_cat = kNullValue;
+  if (!proc_column.catalog.empty()) {
+    StringToDSValue(proc_column.catalog, ds_procedure_cat);
+  }
+  ds_row.emplace_back(ds_procedure_cat);
+
+  // PROCEDURE_SCHEMA
+  DSValue ds_procedure_schema = kNullValue;
+  if (!proc_column.dataset.empty()) {
+    StringToDSValue(proc_column.dataset, ds_procedure_schema);
+  }
+  ds_row.emplace_back(ds_procedure_schema);
+
+  // PROCEDURE_NAME
+  DSValue ds_procedure_name = kNullValue;
+  if (!proc_column.procedure.empty()) {
+    StringToDSValue(proc_column.procedure, ds_procedure_name);
+  }
+  ds_row.emplace_back(ds_procedure_name);
+
+  // COLUMN_NAME
+  DSValue ds_column_name = kNullValue;
+  if (!proc_column.name.empty()) {
+    StringToDSValue(proc_column.name, ds_column_name);
+  }
+  ds_row.emplace_back(ds_column_name);
+
+  // COLUMN_TYPE
+  DSValue ds_column_type;
+  std::string value;
+  if (proc_column.column_type == "OUT") {
+    value = "4";
+  } else if (proc_column.column_type == "INOUT") {
+    value = "2";
+  } else {
+    value = "1";
+  }
+  SQLBIGINT bigint_value = std::stoll(value);
+  ArithmeticToDSValue<SQLBIGINT>(bigint_value, ds_column_type);
+  ds_row.emplace_back(ds_column_type);
+
+  // DATA_TYPE
+  DSValue ds_data_type = kNullValue;
+  auto data_type_status = GetSQLDataType(proc_column.type_name, false);
+  if (!data_type_status) {
+    return data_type_status.GetStatusRecord();
+  }
+  optional<SQLSMALLINT> data_type = data_type_status.GetValue();
+  if (data_type.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*data_type),
+                                   ds_data_type);
+  }
+  ds_row.emplace_back(ds_data_type);
+
+  // TYPE_NAME
+  DSValue ds_type_name = kNullValue;
+  auto type_status = GetTypeDescription(proc_column.type_name);
+  if (!type_status) {
+    return type_status.GetStatusRecord();
+  }
+  std::string type_name = *type_status;
+  if (!type_name.empty()) {
+    StringToDSValue(type_name, ds_type_name);
+  }
+  ds_row.emplace_back(ds_type_name);
+
+  auto fixed_col_status = GetFixedColumnMetadata(proc_column.type_name);
+  if (!fixed_col_status.Ok()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to retrieve fixed column metadata"};
+  }
+  FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
+
+  // COLUMN_SIZE
+  DSValue ds_col_size = kNullValue;
+  if (fixed_column_metadata.precision.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(
+        static_cast<SQLBIGINT>(fixed_column_metadata.precision.value_or(0)),
+        ds_col_size);
+  }
+  ds_row.emplace_back(ds_col_size);
+
+  // BUFFER_LENGTH
+  DSValue ds_buf_len = kNullValue;
+  if (fixed_column_metadata.buf_len.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(
+        static_cast<SQLBIGINT>(fixed_column_metadata.buf_len.value_or(0)),
+        ds_buf_len);
+  }
+  ds_row.emplace_back(ds_buf_len);
+
+  // DECIMAL_DIGITS
+  DSValue ds_dec_digits = kNullValue;
+  if (fixed_column_metadata.scale.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(
+        static_cast<SQLBIGINT>(fixed_column_metadata.scale.value_or(0)),
+        ds_dec_digits);
+  }
+  ds_row.emplace_back(ds_dec_digits);
+
+  // NUM_PREC_RADIX
+  DSValue ds_radix = kNullValue;
+  if (fixed_column_metadata.radix.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(
+        static_cast<SQLBIGINT>(fixed_column_metadata.radix.value_or(0)),
+        ds_radix);
+  }
+  ds_row.emplace_back(ds_radix);
+
+  // NULLABLE
+  DSValue ds_nullable;
+  if (proc_column.nullable == "YES") {
+    ArithmeticToDSValue<SQLBIGINT>(1, ds_nullable);
+  } else {
+    ArithmeticToDSValue<SQLBIGINT>(0, ds_nullable);
+  }
+  ds_row.emplace_back(ds_nullable);
+
+  // REMARKS
+  DSValue ds_remarks = kNullValue;
+  ds_row.emplace_back(ds_remarks);
+
+  // COLUMN_DEF
+  DSValue column_def = kNullValue;
+  ds_row.emplace_back(column_def);
+
+  // SQL_DATA_TYPE
+  DSValue ds_sql_data_type = kNullValue;
+  optional<SQLSMALLINT> sql_data_type;
+  if (data_type.has_value()) {
+    auto sql_data_type_status = GetSQLDataType(*data_type);
+    if (!sql_data_type_status) {
+      return sql_data_type_status.GetStatusRecord();
+    }
+    sql_data_type = *sql_data_type_status;
+    if (sql_data_type.has_value()) {
+      ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*sql_data_type),
+                                     ds_sql_data_type);
+    }
+  }
+  ds_row.emplace_back(ds_sql_data_type);
+
+  // SQL_DATETIME_SUB
+  DSValue ds_sql_datetime_sub = kNullValue;
+  if (sql_data_type.has_value() && data_type.has_value()) {
+    auto sql_data_time_sub_status =
+        GetSQLDateTimeSub(*sql_data_type, *data_type);
+    if (!sql_data_time_sub_status) {
+      return sql_data_time_sub_status.GetStatusRecord();
+    }
+    optional<SQLSMALLINT> sql_date_time_sub = *sql_data_time_sub_status;
+    if (sql_date_time_sub.has_value()) {
+      ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(*sql_date_time_sub),
+                                     ds_sql_datetime_sub);
+    }
+  }
+  ds_row.emplace_back(ds_sql_datetime_sub);
+
+  // CHAR_OCTET_LENGTH
+  DSValue ds_char_octet_len = kNullValue;
+  if (proc_column.column_type == "OUT") {
+    ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(16384),
+                                   ds_char_octet_len);
+  } else if (fixed_column_metadata.char_octet_len.has_value()) {
+    ArithmeticToDSValue<SQLBIGINT>(
+        static_cast<SQLBIGINT>(
+            fixed_column_metadata.char_octet_len.value_or(0)),
+        ds_char_octet_len);
+  }
+  ds_row.emplace_back(ds_char_octet_len);
+
+  // ORDINAL_POSITION
+  DSValue ds_ord_pos = kNullValue;
+  if (std::stoll(proc_column.ordinal_number) < 0) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid ordinal position"};
+  }
+  ArithmeticToDSValue<SQLBIGINT>(std::stoll(proc_column.ordinal_number),
+                                 ds_ord_pos);
+  ds_row.emplace_back(ds_ord_pos);
+
+  // IS_NULLABLE
+  DSValue ds_is_nullable;
+  std::string is_nullable = proc_column.nullable;
+  StringToDSValue(is_nullable, ds_is_nullable);
+  ds_row.emplace_back(ds_is_nullable);
+
+  return ds_row;
+}
+
+static std::map<std::string, ColumnSchema> const kODBCProcedureColumnsMap = {
+    {"PROCEDURE_CAT",
+     ColumnSchema{0, BQDataType::kString}},  // Procedure catalog
+    {"PROCEDURE_SCHEMA",
+     ColumnSchema{1, BQDataType::kString}},  // Procedure schema
+    {"PROCEDURE_NAME", ColumnSchema{2, BQDataType::kString}},  // Procedure name
+    {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},     // Column name
+    {"COLUMN_TYPE",
+     ColumnSchema{4, BQDataType::kInt64}},  // Column type (input, output, etc.)
+    {"DATA_TYPE", ColumnSchema{5, BQDataType::kInt64}},   // SQL data type
+    {"TYPE_NAME", ColumnSchema{6, BQDataType::kString}},  // Type name
+    {"COLUMN_SIZE",
+     ColumnSchema{7, BQDataType::kInt64}},  // Column size (precision)
+    {"BUFFER_LENGTH", ColumnSchema{8, BQDataType::kInt64}},   // Buffer length
+    {"DECIMAL_DIGITS", ColumnSchema{9, BQDataType::kInt64}},  // Decimal digits
+    {"NUM_PREC_RADIX",
+     ColumnSchema{10, BQDataType::kInt64}},  // Numeric precision radix
+    {"NULLABLE", ColumnSchema{11, BQDataType::kInt64}},  // Nullable flag
+    {"REMARKS", ColumnSchema{12, BQDataType::kString}},  // Remarks/comments
+    {"COLUMN_DEF",
+     ColumnSchema{13, BQDataType::kString}},  // Column default value
+    {"SQL_DATA_TYPE",
+     ColumnSchema{14,
+                  BQDataType::kInt64}},  // SQL data type (same as DATA_TYPE)
+    {"SQL_DATETIME_SUB",
+     ColumnSchema{15, BQDataType::kInt64}},  // Date/time subtype
+    {"CHAR_OCTET_LENGTH",
+     ColumnSchema{16, BQDataType::kInt64}},  // Character octet length
+    {"ORDINAL_POSITION",
+     ColumnSchema{17, BQDataType::kInt64}},  // Ordinal position
+    {"IS_NULLABLE",
+     ColumnSchema{18, BQDataType::kString}}  // "YES", "NO", or "UNKNOWN"
+};
+
+StatusRecordOr<ColumnSchema> GetProcedureColumnSchema(
+    std::string const& col_name) {
+  auto map_item = kODBCProcedureColumnsMap.find(col_name);
+  if (map_item != kODBCProcedureColumnsMap.end()) {
+    return map_item->second;
+  }
+  return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                                     "Invalid column name: " + col_name};
+}
+
+StatusRecord CreateProcedureColumnResultSetRowSchema(ResultSet& result_set) {
+  for (auto const& entry : kODBCProcedureColumnsMap) {
+    auto col_schema_status = GetProcedureColumnSchema(entry.first);
+    if (!col_schema_status) {
+      return col_schema_status.GetStatusRecord();
+    }
+    result_set.row_schema.emplace_back(*col_schema_status);
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
+    Procedure const& bq_procedure, std::string const& bq_procedure_column,
+    SQLULEN metadata_id) {
+  ResultSet result_set;
+
+  auto row_schema_status = CreateProcedureColumnResultSetRowSchema(result_set);
+  if (!row_schema_status.ok()) {
+    return row_schema_status;
+  }
+
+  if (!metadata_id &&
+      (bq_procedure_column.empty() || bq_procedure_column == "%")) {
+    int ord_pos = 1;
+    for (auto const& procedure_field : bq_procedure.schema.fields) {
+      auto ds_row_status = CreateProcedureColumnResultSetDSRow(procedure_field);
+      if (!ds_row_status) {
+        return ds_row_status.GetStatusRecord();
+      }
+      result_set.rows.emplace_back(*ds_row_status);
+    }
+  } else {
+    int ord_pos = 1;
+    for (auto const& procedure_field : bq_procedure.schema.fields) {
+      std::regex column_pattern = BuildRegex(bq_procedure_column, metadata_id);
+      if (std::regex_match(procedure_field.name, column_pattern)) {
+        auto ds_row_status =
+            CreateProcedureColumnResultSetDSRow(procedure_field);
+        if (!ds_row_status) {
+          return ds_row_status.GetStatusRecord();
+        }
+        result_set.rows.emplace_back(*ds_row_status);
+        break;
+      }
+      ord_pos++;
+    }
+  }
+  return result_set;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

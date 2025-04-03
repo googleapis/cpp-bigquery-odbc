@@ -25,9 +25,9 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
-    TableFieldSchema const& field_schema) {
+    std::string const& type) {
   FixedColumnMetadata fixed_column_metadata;
-  auto ds_type_status = ConvertDSType(field_schema.type);
+  auto ds_type_status = ConvertDSType(type);
   if (!ds_type_status) {
     return ds_type_status.GetStatusRecord();
   }
@@ -38,6 +38,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.precision = 16384;
       fixed_column_metadata.buf_len = 16384;
       fixed_column_metadata.char_octet_len = 16384;
+      fixed_column_metadata.radix = 10;
       break;
     }
     case BQDataType::kInt64: {
@@ -50,6 +51,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     case BQDataType::kBool: {
       fixed_column_metadata.precision = 1;
       fixed_column_metadata.buf_len = 1;
+      fixed_column_metadata.char_octet_len = 16384;
       break;
     }
     case BQDataType::kTime: {
@@ -68,6 +70,8 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.precision = 26;
       fixed_column_metadata.buf_len = 16;
       fixed_column_metadata.scale = 6;
+      fixed_column_metadata.radix = 2;
+      fixed_column_metadata.char_octet_len = 16384;
       break;
     }
     case BQDataType::kNumeric: {
@@ -82,6 +86,14 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 79;
       fixed_column_metadata.scale = 38;
       fixed_column_metadata.radix = 10;
+      break;
+    }
+    case BQDataType::kFloat64: {
+      fixed_column_metadata.precision = 53;
+      fixed_column_metadata.buf_len = 8;
+      fixed_column_metadata.scale = 9;
+      fixed_column_metadata.radix = 2;
+      fixed_column_metadata.char_octet_len = 16384;
       break;
     }
     default: {
@@ -100,7 +112,7 @@ StatusRecordOr<optional<SQLINTEGER>> GetColSize(
   } else if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema);
+    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -120,7 +132,7 @@ StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
   } else if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision + 2);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema);
+    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -138,7 +150,7 @@ StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema);
+    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -157,7 +169,7 @@ StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
   if (field_schema.scale > 0) {
     result = static_cast<SQLSMALLINT>(field_schema.scale);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema);
+    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -171,7 +183,7 @@ StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
 
 StatusRecordOr<optional<SQLSMALLINT>> GetRadix(
     TableFieldSchema const& field_schema) {
-  auto fixed_metadata_status = GetFixedColumnMetadata(field_schema);
+  auto fixed_metadata_status = GetFixedColumnMetadata(field_schema.type);
   if (!fixed_metadata_status) {
     return fixed_metadata_status.GetStatusRecord();
   }

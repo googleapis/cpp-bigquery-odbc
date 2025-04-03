@@ -101,6 +101,20 @@ FetchBQSQLProceduresData(ConnectionHandle& conn_handle,
                          std::string const& procedure_pattern,
                          SQLULEN metadata_id);
 
+odbc_internal::StatusRecordOr<ResultSet> ProcessProcedures(
+    std::vector<SQLProcedures> const& bq_procedure);
+
+odbc_internal::StatusRecordOr<std::vector<SQLProcedures>>
+FetchBQSQLProceduresData(ConnectionHandle& conn_handle,
+                         std::string const& catalog,
+                         std::string const& dataset_pattern,
+                         std::string const& procedure_pattern,
+                         SQLULEN metadata_id);
+
+odbc_internal::StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
+    Procedure const& bq_procedure, std::string const& bq_procedure_column,
+    SQLULEN metadata_id);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_PROCEDURE_UTILS_H
