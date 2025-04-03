@@ -298,6 +298,17 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                                                          : "0";
 
         GetControlText(hwnd, kIdcProxyPortEdit, proxy_port_);
+        bool is_valid_port = false;
+        if (!proxy_port_.empty()) {
+            int port = atoi(proxy_port_.c_str());
+            is_valid_port = (port >= 0 && port < kMaxPortNumber);
+        }  
+        if (!is_valid_port) {
+            std::string error_msg = "[Google][BigQuery] (1060) Invalid port: '" + proxy_port_ +
+                                    "'.\nValid values are in the range [0, 65535].";
+            MessageBoxA(hwnd, error_msg.c_str(), "DSN Configuration Error", MB_ICONWARNING | MB_OK);
+            return 0;
+        }
         GetControlText(hwnd, kIdcProxyHostName, proxy_host_);
         GetControlText(hwnd, kIdcProxyUsernameEdit, proxy_username_);
         GetControlText(hwnd, kIdcProxyPasswordEdit, proxy_pwd_enc_);
@@ -321,18 +332,11 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                         sizeof(host_text));
           GetWindowText(GetDlgItem(hwnd, kIdcProxyPortEdit), port_text,
                         sizeof(port_text));
-
-          bool is_valid_port = false;
-          if (strlen(port_text) > 0) {
-            int port = atoi(port_text);
-            is_valid_port =
-                (port > 0 && port < kMaxPortNumber);  // Validate port range
-          }
-
+                        
           // Enable OK button if both host and valid port are provided
-          if (strlen(host_text) > 0 && is_valid_port) {
+          if (strlen(host_text) > 0 && strlen(port_text) > 0) {
             EnableWindow(h_ok_button, TRUE);
-          } else {
+          }else{
             EnableWindow(h_ok_button, FALSE);
           }
         } else {
