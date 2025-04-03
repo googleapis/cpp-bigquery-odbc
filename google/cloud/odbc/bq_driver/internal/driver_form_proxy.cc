@@ -354,7 +354,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
           // Enable OK button if both host and port are provided
           if (strlen(host_text) > 0 && strlen(port_text) > 0) {
             EnableWindow(h_ok_button, TRUE);
-          }else{
+          } else {
             EnableWindow(h_ok_button, FALSE);
           }
         } else {
