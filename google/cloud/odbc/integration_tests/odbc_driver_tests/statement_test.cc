@@ -3113,7 +3113,6 @@ TEST(SQLMoreResults, ErrorHandling) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifdef _WIN32
 TEST(StatementTest, SQLPutDataStringDataChunks) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
   Table table(table_name);
@@ -3136,6 +3135,7 @@ TEST(StatementTest, SQLPutDataStringDataChunks) {
   auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
   std::vector<std::string> data;
   for (int i = 0; i < schema.size(); i++) {
+    //data.push_back("");
     data.emplace_back(GetRandomString(50));
   }
   InsertDataWithSqlPut(conn, query, data);
@@ -3157,7 +3157,6 @@ TEST(StatementTest, SQLPutDataStringDataChunks) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // _WIN32
 
 TEST(StatementTest, SQLPutDataErrorTest) {
   // Test SQLPutData error scenarios with proper sequence and data validation
@@ -3200,6 +3199,7 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(SQLExecute(conn->hstmt),
             SQL_NEED_DATA);  // Execute should move to NEED_DATA state
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, 0), SQL_ERROR); 
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_SUCCESS);  // Now SQLPutData should succeed
 

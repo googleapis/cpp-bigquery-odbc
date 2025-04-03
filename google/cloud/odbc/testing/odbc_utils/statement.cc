@@ -836,6 +836,18 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
   return std::make_shared<Results>(results);
 }
 
+void printBuffer(const void* buffer, size_t size) {
+  const unsigned char* bytePtr = static_cast<const unsigned char*>(buffer);
+  for (size_t i = 0; i < size; ++i) {
+      std::cout << "Byte [" << i << "]: 0x";
+      std::cout.width(2);
+      std::cout.fill('0');
+      std::cout << std::hex << static_cast<int>(bytePtr[i]);
+      std::cout << std::endl;
+  }
+  std::cout << std::dec; // Reset to decimal output
+}
+
 void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
                           std::vector<std::string> data, bool use_ansi) {
   SQLRETURN status;
@@ -846,8 +858,10 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   SQLCHAR* data_ptr;
   std::vector<SQLCHAR*> data_to_insert;
   for (int i = 0; i < data.size(); i++) {
+    std::cout << "Address of data[" << i << "]: " << &data[i] << std::endl;
     data_to_insert.push_back((SQLCHAR*)data[i].c_str());
   }
+  std::cout << "Address of data[final]: " << &data[data.size()] << std::endl;
 
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, query);
@@ -878,6 +892,7 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
                               (SQLPOINTER)data_ptr, 0,
                               &chunk_size);  // No ANSI version.
     CheckError(status, "SQLBindParameter", conn);
+    std::cout << "Address of data_ptr: " << static_cast<void*>(data_ptr) << std::endl;
   }
 
   SQLPOINTER bounded_data_ptr;
@@ -890,13 +905,17 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
+    std::cout << "bounded_data_ptr:: " << bounded_data_ptr << std::endl;
     data_ptr = (SQLCHAR*)bounded_data_ptr;
+    printBuffer(bounded_data_ptr, 5);
     bytes_left = strlen((char*)data_ptr);
+    std::cout << "bytes_left:: " << bytes_left << std::endl;
   }
   while (status == SQL_NEED_DATA) {
     while (bytes_left > 0) {
       SQLLEN bytes_to_put =
           std::min(static_cast<int>(batch_size), static_cast<int>(bytes_left));
+      std::cout << "bytes_to_put:: " << bytes_to_put << std::endl;
       status = SQLPutData(conn->hstmt, data_ptr,
                           bytes_to_put);  // No ANSI version.
       CheckError(status, "SQLPutData", conn);
@@ -907,6 +926,7 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
+    std::cout << "bounded_data_ptr2:: " << bounded_data_ptr << std::endl;
     data_ptr = (SQLCHAR*)bounded_data_ptr;
     if (status == SQL_NEED_DATA) {
       bytes_left = strlen((char*)data_ptr);
