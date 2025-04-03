@@ -37,26 +37,32 @@ static StatusRecord const kInvalidTypeStatusRecord =
                              apply_to = function)
 StatusRecordOr<ConnectionHandle*> ValidateConnectionHandle(
     SQLHDBC connection_handle, bool check_if_connected) {
+      std::cout<<"Inn "<<std::endl;
   if (connection_handle == nullptr) {
+    std::cout<<"Inn iff "<<std::endl;
     return StatusRecordOr<ConnectionHandle*>(kNullPointerStatusRecord,
                                              SQL_INVALID_HANDLE);
   }
+  std::cout<<"Inn1 "<<std::endl;
   auto* conn_handle_ptr =
       reinterpret_cast<ConnectionHandle*>(connection_handle);
+      std::cout<<"Inn2 "<<std::endl;
   if (conn_handle_ptr->kType != HandleType::kConnHandle) {
+    std::cout<<"Inn iff 2 "<<std::endl;
     return StatusRecordOr<ConnectionHandle*>(kInvalidTypeStatusRecord,
                                              SQL_INVALID_HANDLE);
   }
-
+  std::cout<<"Inn3 "<<std::endl;
   conn_handle_ptr->GetDiagnostics().ClearDiagnostics();
 
   if (check_if_connected && !conn_handle_ptr->IsConnected()) {
+    std::cout<<"Inn iff check "<<std::endl;
     StatusRecord status_record{
         SQLStates::k_08003(), "Connection handle not connected to data source"};
     conn_handle_ptr->GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-
+  std::cout<<"Inn4 "<<std::endl;
   return conn_handle_ptr;
 }
 #pragma clang attribute pop
