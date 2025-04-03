@@ -69,6 +69,17 @@ struct Procedure {
   ProcedureSchema schema;
 };
 
+struct SQLProcedures {
+  std::string procedure_catalog;
+  std::string procedure_schema;
+  std::string procedure_name;
+  SQLSMALLINT num_input_params;
+  SQLSMALLINT num_output_params;
+  SQLSMALLINT num_result_sets;
+  std::string remarks;
+  SQLSMALLINT procedure_type;
+};
+
 odbc_internal::StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
@@ -79,6 +90,16 @@ odbc_internal::StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
     ConnectionHandle& conn_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id);
+
+odbc_internal::StatusRecordOr<ResultSet> ProcessProcedures(
+    std::vector<SQLProcedures> const& bq_procedure);
+
+odbc_internal::StatusRecordOr<std::vector<SQLProcedures>>
+FetchBQSQLProceduresData(ConnectionHandle& conn_handle,
+                         std::string const& catalog,
+                         std::string const& dataset_pattern,
+                         std::string const& procedure_pattern,
+                         SQLULEN metadata_id);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
