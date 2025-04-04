@@ -448,12 +448,9 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     if (!type_status_record.Ok()) {
       return type_status_record.GetStatusRecord();
     }
-    if (table_field_schema.mode == "REPEATED") {
-      col_schema.col_type = kArray;
-      col_schema.array_type = *type_status_record;
-    } else {
-      col_schema.col_type = *type_status_record;
-    }
+
+    col_schema.col_type = *type_status_record;
+    col_schema.mode = table_field_schema.mode;
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.
@@ -461,7 +458,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     DSRow rs_row;
     int i = 0;
     for (auto const& col : row.columns) {
-      BQDataType col_type = result_set.row_schema[i].col_type;
+      BQDataType col_type;
+      if (result_set.row_schema[i].mode == "REPEATED")
+        col_type = kArray;
+      else
+        col_type = result_set.row_schema[i].col_type;
       std::string data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
@@ -493,7 +494,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kArray: {
-            BQDataType array_type = result_set.row_schema[i].array_type;
+            BQDataType array_type = result_set.row_schema[i].col_type;
             ArrayJsonToDSValue(data, row_val, array_type);
             break;
           }
