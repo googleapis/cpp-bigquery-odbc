@@ -41,23 +41,11 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   SQLDOUBLE numeric_no = *conversion_status;
   switch (dest_data.type) {
     case SQL_C_NUMERIC: {
-      std::string num_str = str_input;
-      if (num_str.front() == '-') num_str = num_str.substr(1);  // Remove sign
-
-      size_t num_digits = 0;
-      for (char c : num_str) {
-        if (std::isdigit(c)) {
-          ++num_digits;
-        }
-        if (num_digits > kMaxNumericPrecision) break;  // Early exit
-      }
-      if (num_digits > kMaxNumericPrecision ||
-          num_digits < kMinNumericPrecision) {
-        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
-      }
-
       SQL_NUMERIC_STRUCT numst;
-      GetNumericDetailsFromStr(str_input, numst);
+      status_record = GetNumericDetailsFromStr(str_input, numst);
+      if (status_record.sql_state == SQLStates::k_22003()) {
+        return status_record;
+      }
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
           dest_data.buf);  // convert the pointer to type
       *dest_val = numst;   // fill the value

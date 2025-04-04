@@ -125,6 +125,8 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
                            // char to store value
 #endif
 
+    {SQL_C_NUMERIC, "0.00000000000000000000123456789123456789", SQL_SUCCESS,
+     "0"},  // The existing driver returns "0"
     {SQL_C_NUMERIC, "1234567891234567", SQL_SUCCESS, "1234567891234567"},
     {SQL_C_NUMERIC, "-1234567891234567", SQL_SUCCESS, "-1234567891234567"},
 
