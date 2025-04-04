@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <shellapi.h>
+#include <commctrl.h>  // Required for SetWindowSubclass
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -61,7 +63,28 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
+LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param,
+  UINT_PTR sub_id, DWORD_PTR ref_data) {
+if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the main dialog
+return 0;  // Mark message as handled
+}
+return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
 
+LRESULT CALLBACK CheckboxSubclassProc(
+  HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param,
+  UINT_PTR u_id_subclass, DWORD_PTR ref_data) {
+
+if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+  HWND parent_hwnd = GetParent(hwnd);
+  if (parent_hwnd) {
+    PostMessage(parent_hwnd, WM_CLOSE, 0, 0);  // Close the proxy dialog
+  }
+  return 0;
+}
+return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -145,6 +168,11 @@ void ProxyOptions::InitControls() {
                    kBtnHeight, kIdcProxyCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
+  SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyHostName), InputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyPortEdit), InputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyUsernameEdit), InputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyPasswordEdit), InputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(proxy_hwnd, kIdcProxyCheckbox), CheckboxSubclassProc, 0, 0);
   if (proxy_check_ == "0") {
     EnableWindow(h_proxy_host_edit, FALSE);
     EnableWindow(h_proxy_port_edit, FALSE);
@@ -164,6 +192,10 @@ void ProxyOptions::Show(HWND hwnd) {
   wc_proxy.lpfnWndProc = ProxyOptions::ProxyOptProc;
   wc_proxy.hInstance = GetModuleHandle(NULL);
   wc_proxy.lpszClassName = CLASS_NAME;
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
+  icc.dwICC = ICC_STANDARD_CLASSES;  // Load standard control classes
+  InitCommonControlsEx(&icc);
 
   RegisterClass(&wc_proxy);
 
