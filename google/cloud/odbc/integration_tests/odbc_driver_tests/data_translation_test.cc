@@ -3221,4 +3221,78 @@ TEST(DataTranslationTest, From_SQL_RangeDate_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_EMPTY_DATA_HANDLE";
+  Table table(table_name);
+  Schema schema{
+      {"EmptyString", "STRING"},
+      {"EmptyBytes", "BYTES"},
+  };
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert Data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  // Bind empty string
+  SQLCHAR empty_string[1] = "";
+  SQLLEN empty_string_len = SQL_NTS;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_VARCHAR, 0, 0, empty_string,
+                             sizeof(empty_string), &empty_string_len),
+            SQL_SUCCESS);
+
+  // Bind empty binary
+  SQLCHAR empty_bytes[1] = "";
+  SQLLEN empty_bytes_len = 0;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_BINARY,
+                             SQL_VARBINARY, 0, 0, empty_bytes,
+                             sizeof(empty_bytes), &empty_bytes_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt = "SELECT EmptyString, EmptyBytes FROM " + table_name;
+  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  SQLCHAR empty_str_out[10] = {};
+  SQLLEN empty_str_len = 0;
+  SQLCHAR empty_bytes_out[10] = {};
+  SQLLEN empty_bytes_length = 0;
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, empty_str_out,
+                       sizeof(empty_str_out), &empty_str_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_BINARY, empty_bytes_out,
+                       sizeof(empty_bytes_out), &empty_bytes_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(std::string(reinterpret_cast<char*>(empty_str_out), empty_str_len),
+            "");  // Confirm empty string
+  EXPECT_EQ(empty_str_len, 0);
+
+  EXPECT_EQ(empty_bytes_len, 0);  // Confirm empty binary
+  EXPECT_EQ(
+      std::string(reinterpret_cast<char*>(empty_bytes_out), empty_bytes_len),
+      "");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

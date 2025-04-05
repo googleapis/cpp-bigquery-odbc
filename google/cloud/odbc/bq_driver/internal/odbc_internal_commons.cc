@@ -465,6 +465,19 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
       std::string data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
+      } else if (data.empty()) {
+        switch (col_type) {
+          case BQDataType::kString:
+          case BQDataType::kBytes: {
+            DSValue empty_value;
+            StringToDSValue("", empty_value);
+            rs_row.emplace_back(empty_value);
+            break;
+          }
+          default:
+            return StatusRecord{SQLStates::k_HY000(),
+                                "Invalid or unsupported col BQ data type"};
+        }
       } else if (!data.empty()) {
         DSValue row_val;
         switch (col_type) {
