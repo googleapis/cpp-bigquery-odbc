@@ -3121,7 +3121,11 @@ TEST(SQLMoreResults, ErrorHandling) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 #ifdef _WIN32
+// TODO(b/404480454): Issue with SQLBindParameter When Using the
+//  Same Indicator Pointer for Multiple Parameters
+
 TEST(StatementTest, SQLPutDataStringDataChunks) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_TEST";
   Table table(table_name);
@@ -3166,7 +3170,9 @@ TEST(StatementTest, SQLPutDataStringDataChunks) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // _WIN32
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+// TODO(b/404480454): Issue with SQLBindParameter When Using the
+//  Same Indicator Pointer for Multiple Parameters
+//  HotlistsMark as Duplicate
 TEST(StatementTest, SQLPutDataErrorTest) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
@@ -3231,7 +3237,6 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 // TODO(b/404480454): Issue with SQLBindParameter When Using the
 //  Same Indicator Pointer for Multiple Parameters
 //  HotlistsMark as Duplicate
@@ -3325,6 +3330,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
@@ -3359,7 +3365,6 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3627,7 +3632,6 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   SQLHSTMT invalid_handle = nullptr;
   SQLPOINTER data_ptr = nullptr;
@@ -3704,6 +3708,68 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+// For the internal driver, the Driver Manager does not raise a function
+// sequence error, whereas for the external driver, it does.
+TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAM_DATA_VALIDATE_STATEMENT_STATE";
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  std::string data = GetRandomString(100);
+  SQLLEN data_len = SQL_LEN_DATA_AT_EXEC(100);
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &data_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  SQLPOINTER param_ptr = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &param_ptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_SUCCESS);
+
+  // validate SQLFetch
+  SQLRETURN fetch_ret = SQLFetch(conn->hstmt);
+  EXPECT_EQ(fetch_ret,
+            SQL_ERROR);  // Should be error due to invalid statement state
+
+  // Verify error code
+  SQLCHAR sqlstate[6] = {0};
+  SQLINTEGER native_error = 0;
+  SQLCHAR message[256] = {0};
+  SQLSMALLINT msg_len = 0;
+  EXPECT_EQ(SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sqlstate,
+                          &native_error, message, sizeof(message), &msg_len),
+            SQL_SUCCESS);
+  // In iODBC, the Driver Manager returns the SQLState S1010, whereas the
+  // unixODBC Driver Manager returns HY010.
+  EXPECT_THAT((char*)sqlstate, HasSubstr("010"));
+  EXPECT_THAT((char*)message, HasSubstr("Function sequence error"));
+
+  // Final SQLParamData to finish execution
+  SQLRETURN final_ret = SQLParamData(conn->hstmt, &param_ptr);
+  EXPECT_TRUE(final_ret == SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Clean up table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3852,7 +3918,6 @@ TEST(StatementTest, SQLParamData_MixedBindingModes) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 std::string const kTableName = "ODBC_NATIVE_SQL_TEST";
 std::vector<std::string> const kNativeSqlQueries = {
