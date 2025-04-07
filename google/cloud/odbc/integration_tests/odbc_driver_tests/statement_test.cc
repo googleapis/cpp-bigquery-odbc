@@ -188,7 +188,8 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  for (int i = 0; i < 5; ++i) {
+  int size_of_fields = sizeof(fields) / sizeof(fields[0]);
+  for (int i = 0; i < size_of_fields; ++i) {
     EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT,
                                fields[i].c_type, fields[i].sql_type, 0, 0,
                                nullptr, 0, fields[i].str_len_or_ind_ptr),
@@ -199,7 +200,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   SQLPOINTER param = nullptr;
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < size_of_fields; ++i) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param), SQL_NEED_DATA);
     EXPECT_EQ(SQLPutData(conn->hstmt, fields[i].data_ptr, fields[i].data_size),
               SQL_SUCCESS);
@@ -249,8 +250,9 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
        &result_binary_len},
   };
 
+  size_t size_of_validations = sizeof(validations) / sizeof(validations[0]);
   // Fetch and validate data
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < size_of_validations; ++i) {
     EXPECT_EQ(SQLGetData(conn->hstmt, i + 1, validations[i].c_type,
                          validations[i].data_ptr, validations[i].data_size,
                          validations[i].str_len_or_ind_ptr),
@@ -3614,7 +3616,6 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   SQLHSTMT invalid_handle = nullptr;
   SQLPOINTER data_ptr = nullptr;
@@ -3624,6 +3625,7 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
 }
 
 // TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
+#ifndef WIN32
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3648,13 +3650,8 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   SQLLEN param_size2 = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data1.size(), 0,
-                             (SQLPOINTER)1, 0, &param_size1),
-            SQL_SUCCESS);
-
-  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data2.size(), 0, nullptr,
-                             0, &param_size2),
+                             SQL_WLONGVARCHAR, large_data.size(), 0, nullptr, 0,
+                             &param_size),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
@@ -3662,10 +3659,9 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   SQLPOINTER data_ptr = nullptr;
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
 
-  // Send data for the first parameter
   int const chunk_size = 64 * 1024 / sizeof(wchar_t);
-  for (auto val = 0; val < large_data1.size(); val += chunk_size) {
-    int byte_left = large_data1.size() - val;
+  for (auto val = 0; val < large_data.size(); val += chunk_size) {
+    int byte_left = large_data.size() - val;
     int byte_to_put = std::min(chunk_size, byte_left);
     EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data1.data() + val),
                          byte_to_put * sizeof(wchar_t)),
@@ -3682,6 +3678,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
                          byte_to_put * sizeof(wchar_t)),
               SQL_SUCCESS);
   }
+
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_SUCCESS);
   EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -3691,6 +3688,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // WIN32
 
 TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3835,6 +3833,55 @@ TEST(StatementTest, SQLParamData_MixedBindingModes) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+TEST(StatementTest, SQLBindParameterSpecialCase) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring const table_name =
+      ToWStr(kDatasetWithTablePrefix) + L"ODBC_BIND_PARAM_SPL_CASE";
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = L"INSERT INTO " + table_name + L" VALUES (?)";
+  std::vector<SQLWCHAR> sql_wstr(query.begin(), query.end());
+  sql_wstr.emplace_back(L'\0');
+  EXPECT_EQ(SQLPrepareW(conn->hstmt, sql_wstr.data(), SQL_NTS), SQL_SUCCESS);
+
+  int const large_data_size = (1024 * 512) / sizeof(wchar_t);
+  std::wstring large_data(large_data_size, L'い');
+  SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                             SQL_WLONGVARCHAR, large_data.size(), 0,
+                             (SQLPOINTER)1, 0, &param_size),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  SQLPOINTER data_ptr = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
+
+  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
+  for (auto val = 0; val < large_data.size(); val += chunk_size) {
+    int byte_left = large_data.size() - val;
+    int byte_to_put = std::min(chunk_size, byte_left);
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data.data() + val),
+                         byte_to_put * sizeof(wchar_t)),
+              SQL_SUCCESS);
+  }
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_SUCCESS);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
