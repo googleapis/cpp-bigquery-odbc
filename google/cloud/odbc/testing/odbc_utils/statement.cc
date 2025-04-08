@@ -618,13 +618,13 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   } else {
     status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   }
-
+std::cout<<"=======ScrollResults1"<<std::endl;
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
   SQLSMALLINT num_cols = 0;
   status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version
   CheckError(status, "SQLNumResultCols", conn);
-
+  std::cout<<"=======ScrollResults2"<<std::endl;
   std::vector<std::shared_ptr<Column>> cols(num_cols);
   Results results;
   for (int i = 0; i < num_cols; i++) {
@@ -646,7 +646,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                         col_ptr->row_data_len.get());  // No ANSI version
     CheckError(status, "SQLBindCol", conn);
   }
-
+  std::cout<<"=======ScrollResults3"<<std::endl;
   status = SQLExecute(conn->hstmt);  // No ANSI version
   CheckError(status, "SQLExecute", conn);
   while (1) {
@@ -673,6 +673,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
       }
     }
   }
+  std::cout<<"=======ScrollResults4"<<std::endl;
   return std::make_shared<Results>(results);
 }
 

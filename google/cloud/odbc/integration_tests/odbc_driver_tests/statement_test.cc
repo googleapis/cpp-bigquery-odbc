@@ -311,6 +311,7 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
     }
     col_names = all_col_names;
   }
+  std::cout<<"=======VerifyColumnWiseResults 1"<<std::endl;
   for (auto col_name : col_names) {
     auto ret_col_values = col_wise_data[col_name];
 
@@ -341,7 +342,7 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
       }
     }
     sort(input_col_values.begin(), input_col_values.end(), str_comparison);
-
+    std::cout<<"=======VerifyColumnWiseResults 2"<<std::endl;
     // Check if the sorted inserted and returned vectors have same values
     EXPECT_EQ(ret_col_values.size(), input_col_values.size());
     if ((!col_name.compare("FloatField"))) {
@@ -356,6 +357,7 @@ void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
       }
     }
   }
+  std::cout<<"=======VerifyColumnWiseResults end"<<std::endl;
 }
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
@@ -734,26 +736,110 @@ TEST(StatementTest, SQLFetchScroll) {
   table.Create(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
+std::cout<<"first ========1"<<std::endl;
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertData(conn, kSampleData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
+  std::cout<<"first ========2"<<std::endl;
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   auto const query = "SELECT StringField FROM " + table_name;
-  auto results = *ScrollResults(conn, query, 3);
+  int rs_size = 3;
+//  auto results = *ScrollResults(conn, query, 3);
+  SQLRETURN status;
+  SQLULEN num_rows_fetched = 0;
+
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
+                     0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
+
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
+                     0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
+                          (SQLPOINTER)&num_rows_fetched,
+                          0);  // Ansi version not supported by UniXODBC.
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+ 
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  
+std::cout<<"=======ScrollResults1"<<std::endl;
+  CheckError(status, "SQLPrepare", conn, false);
+
+  SQLSMALLINT num_cols = 0;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);  // No ANSI version
+  CheckError(status, "SQLNumResultCols", conn);
+  std::cout<<"=======ScrollResults2"<<std::endl;
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  Results results;
+  for (int i = 0; i < num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i] = col_ptr;
+
+    DescribeCol(conn, col_ptr, 1);
+    auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
+    col_ptr->result_set = result_set.get();
+
+    std::string col_name = (char*)col_ptr->name;
+
+    SqlToCdataTypes(col_ptr);
+
+    std::shared_ptr<SQLLEN[]> row_data_len(new SQLLEN[rs_size]);
+    col_ptr->row_data_len = row_data_len;
+    status = SQLBindCol(conn->hstmt, 1, col_ptr->data_type, col_ptr->result_set,
+                        col_ptr->data_size,
+                        col_ptr->row_data_len.get());  // No ANSI version
+    CheckError(status, "SQLBindCol", conn);
+  }
+  std::cout<<"=======ScrollResults3"<<std::endl;
+  status = SQLExecute(conn->hstmt);  // No ANSI version
+  CheckError(status, "SQLExecute", conn);
+  while (1) {
+    status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);  // No ANSI version
+    if (status == SQL_NO_DATA_FOUND) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetchScroll", conn);
+      break;
+    }
+
+    for (int i_r = 0; i_r < num_rows_fetched; i_r++) {
+      for (int i_c = 0; i_c < num_cols; i_c++) {
+        std::string col_name = (char*)cols[i_c]->name;
+        auto data_len = cols[i_c]->data_len;
+        if (cols[i_c]->row_data_len[i_r] < 0) {
+          results[col_name].emplace_back(std::string());
+          continue;
+        }
+        auto data_size = cols[i_c]->data_size;
+        auto data = cols[i_c]->result_set + i_r * data_size;
+        results[col_name].push_back((char*)data);
+      }
+    }
+  }
+  std::cout<<"=======ScrollResults4"<<std::endl;
+
+  std::cout<<"first ========3"<<std::endl;
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
-
+  std::cout<<"first ========4"<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::cout<<"first ========5:"<<conn->connected<<std::endl;
+  // // Delete table
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.Drop(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 
 TEST(StatementTest, SQLFetchScroll_All_Columns) {
   auto conn = std::make_shared<ODBCHandles>();
