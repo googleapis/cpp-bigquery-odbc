@@ -569,7 +569,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   BQDataType bq_data_type;
   for (auto const& col_schema : schema) {
     if (col_schema.col_index == column_number - 1) {
-      if (col_schema.mode == "REPEATED") {
+      if (col_schema.is_mode_repeated) {
         bq_data_type = BQDataType::kArray;
       } else {
         bq_data_type = col_schema.col_type;

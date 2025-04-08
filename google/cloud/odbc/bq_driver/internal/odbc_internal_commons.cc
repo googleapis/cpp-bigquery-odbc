@@ -450,7 +450,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     }
 
     col_schema.col_type = *type_status_record;
-    col_schema.mode = table_field_schema.mode;
+    if (table_field_schema.mode == "REPEATED") {
+      col_schema.is_mode_repeated = true;
+    } else {
+      col_schema.is_mode_repeated = false;
+    }
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.
@@ -459,7 +463,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     int i = 0;
     for (auto const& col : row.columns) {
       BQDataType col_type;
-      if (result_set.row_schema[i].mode == "REPEATED")
+      if (result_set.row_schema[i].is_mode_repeated)
         col_type = kArray;
       else
         col_type = result_set.row_schema[i].col_type;

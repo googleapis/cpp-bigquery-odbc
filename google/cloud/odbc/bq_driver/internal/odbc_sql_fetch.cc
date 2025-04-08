@@ -166,7 +166,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
     SQLLEN row_offset_ind = row_num * elem_size_ind;
 
     BQDataType bq_data_type = col_schema.col_type;
-    if (col_schema.mode == "REPEATED") {
+    if (col_schema.is_mode_repeated) {
       bq_data_type = BQDataType::kArray;
     }
 

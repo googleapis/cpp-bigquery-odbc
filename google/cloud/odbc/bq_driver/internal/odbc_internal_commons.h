@@ -91,7 +91,7 @@ enum BQDataType {
 struct ColumnSchema {
   int col_index;
   BQDataType col_type;
-  std::string mode;
+  bool is_mode_repeated;
 };
 bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
