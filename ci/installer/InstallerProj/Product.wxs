@@ -92,9 +92,9 @@ limitations under the License.
         <Binary Id="BannerBmp" SourceFile="$(var.ProjectDir)\Assets\Banner.bmp" />
 
         <?if $(var.Platform) = x64 ?>
-        <?define TITLETEXT = "Google BQDriver 64 Setup" ?>
+        <?define TITLETEXT = "Google BigQuery Driver 64 Setup" ?>
         <?else?>
-        <?define TITLETEXT = "Google BQDriver 32 Setup" ?>
+        <?define TITLETEXT = "Google BigQuery Driver 32 Setup" ?>
         <?endif?>
         <Property Id="TITLETEXT" Value="$(var.TITLETEXT)" />
 
