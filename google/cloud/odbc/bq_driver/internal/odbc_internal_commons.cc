@@ -450,11 +450,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     }
 
     col_schema.col_type = *type_status_record;
-    if (table_field_schema.mode == "REPEATED") {
-      col_schema.is_mode_repeated = true;
-    } else {
-      col_schema.is_mode_repeated = false;
-    }
+    col_schema.is_mode_repeated = (table_field_schema.mode == "REPEATED");
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.
