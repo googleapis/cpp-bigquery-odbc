@@ -413,6 +413,28 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
   SQLULEN metadata_id = *attr_status;
 
+  if (handle.GetConnectionHandle() == nullptr) {
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
+  }
+
+  if (catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                             sizeof(current_catalog), &catalog_len);
+    catalog_name = current_catalog;
+    catalog_name_len = catalog_len;
+  }
+
   auto input_param_status = ValidateColumnParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, column_name, column_name_len, metadata_id);
@@ -436,18 +458,6 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     SanitizeIdentifierArgument(s_dataset_name);
     SanitizeIdentifierArgument(s_table_name);
     SanitizeIdentifierArgument(s_column_name);
-  }
-
-  if (handle.GetConnectionHandle() == nullptr) {
-    return LogAndReturnCode(handle,
-                            StatusRecord{SQLStates::k_HY013(),
-                                         "Internal connection handle is null"});
-  }
-  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
-  if (!conn_handle.IsConnected()) {
-    return LogAndReturnCode(
-        handle, StatusRecord{SQLStates::k_08S01(),
-                             "Connection to the data source is broken"});
   }
 
   // Fetch BQ Table. This particular call fetches a single table.
