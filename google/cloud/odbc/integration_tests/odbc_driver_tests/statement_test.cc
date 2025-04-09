@@ -744,11 +744,120 @@ TEST(StatementTest, SQLFetchScroll) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   auto const query = "SELECT StringField FROM " + table_name;
-  auto results = *ScrollResults(conn, query, 3);
+  std::vector<std::shared_ptr<SQLCHAR[]>> result_set_storage;  // Changed to shared_ptr vector
+
+  auto ScrollResultsFunc = [&](std::shared_ptr<ODBCHandles> conn, 
+    std::string query, 
+    int rs_size) -> std::shared_ptr<Results> {
+SQLRETURN status;
+SQLULEN num_rows_fetched = 0;
+std::vector<std::shared_ptr<Column>> cols;
+Results results;
+
+// Set statement attributes
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, 
+       SQL_BIND_BY_COLUMN, 0);
+CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
+
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, 
+       (SQLPOINTER)rs_size, 0);
+CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+
+status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
+       (SQLPOINTER)&num_rows_fetched, 0);
+CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
+
+// Prepare statement
+char read_stmt[kBufferLength];
+StrToChar(read_stmt, query);
+
+
+status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+
+CheckError(status, "SQLPrepare", conn, false );
+
+// Get column info
+SQLSMALLINT num_cols = 0;
+status = SQLNumResultCols(conn->hstmt, &num_cols);
+CheckError(status, "SQLNumResultCols", conn);
+
+cols.resize(num_cols);
+for (int i = 0; i < num_cols; i++) {
+  auto col_ptr = std::make_shared<Column>();
+  cols[i] = col_ptr;
+
+  DescribeCol(conn, col_ptr, 1);
+
+  // In the test scope declaration
+
+// Inside the lambda column setup loop
+
+auto result_set =
+std::shared_ptr<SQLCHAR[]>(new SQLCHAR[rs_size * col_ptr->data_size]);
+
+
+col_ptr->result_set = result_set.get();
+result_set_storage.push_back(result_set);  // Shared ownership (no move needed)
+
+// Alternative if using C++17 or earlier:
+// auto result_set = std::shared_ptr<SQLCHAR[]>(
+//     new SQLCHAR[rs_size * col_ptr->data_size],
+//     std::default_delete<SQLCHAR[]>()
+// );
+
+
+  std::string col_name = (char*)col_ptr->name;
+
+  SqlToCdataTypes(col_ptr);
+
+  std::shared_ptr<SQLLEN[]> row_data_len(new SQLLEN[rs_size]);
+  col_ptr->row_data_len = row_data_len;
+  status = SQLBindCol(conn->hstmt, 1, col_ptr->data_type, col_ptr->result_set,
+                      col_ptr->data_size,
+                      col_ptr->row_data_len.get());  // No ANSI version
+  CheckError(status, "SQLBindCol", conn);
+}
+result_set_storage.clear();  // Clear the vector to avoid memory leak
+
+// Execute and fetch
+status = SQLExecute(conn->hstmt);
+CheckError(status, "SQLExecute", conn);
+
+while (true) {
+status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
+if (status == SQL_NO_DATA_FOUND) break;
+if (!SQL_SUCCEEDED(status)) {
+CheckError(status, "SQLFetchScroll", conn);
+break;
+}
+
+// Process fetched rows
+for (int i_r = 0; i_r < num_rows_fetched; i_r++) {
+for (int i_c = 0; i_c < num_cols; i_c++) {
+std::string col_name = (char*)cols[i_c]->name;
+if (cols[i_c]->row_data_len[i_r] < 0) {
+results[col_name].emplace_back();
+continue;
+}
+auto data = cols[i_c]->result_set + 
+       i_r * cols[i_c]->data_size;
+results[col_name].push_back((char*)data);
+}
+}
+}
+
+return std::make_shared<Results>(std::move(results));
+};
+// result_set_storage.clear();  // Clear the vector to avoid memory leak
+  auto results = *ScrollResultsFunc(conn, query, 3);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
-
+// for(auto &itr : result_set_storage)
+// {
+//   // No need to delete, shared_ptr will handle it
+//   // delete[] itr.get();
+//   itr.reset();  // Reset shared_ptr to release memory
+// }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
