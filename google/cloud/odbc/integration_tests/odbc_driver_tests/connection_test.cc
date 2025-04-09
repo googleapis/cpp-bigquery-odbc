@@ -1077,8 +1077,9 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
                                  sizeof(out_conn_str), &out_conn_str_len);
   EXPECT_EQ(status, SQL_NEED_DATA);
 
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
+  //std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+  std::wstring w_conn_string = reinterpret_cast<wchar_t*>(out_conn_str);
+  std::string res_out_conn_str = Utf16ToUtf8(w_conn_string);  // You'll need this helper
   // TODO(b/383449326): Add other connection attributes for the connection
   // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
   // if (kIsBqDriver) {
