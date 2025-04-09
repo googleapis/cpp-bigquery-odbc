@@ -44,7 +44,6 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       break;
     }
     case SQL_HANDLE_DBC: {
-      std::cout<<"SQLFreeHandleInternal=======1"<<std::endl;
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
       if (!handle_result) {
@@ -52,24 +51,14 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
                            handle_result.GetStatusRecord().message);
         return handle_result.GetCalculatedReturnCode();
       }
-      std::cout<<"SQLFreeHandleInternal=======2"<<std::endl;
       ConnectionHandle* conn_handle = *handle_result;
       // Dissociate itself from an environment handle
       if (conn_handle->GetEnvironmentHandle()) {
         conn_handle->GetEnvironmentHandle()->GetConnectionHandles().erase(
             conn_handle);
       }
-      std::cout<<"SQLFreeHandleInternal=======3"<<std::endl;
       (*handle_result)->kType = HandleType::kUnspecified;
-      std::cout<<"SQLFreeHandleInternal=======4"<<std::endl;
-      if (*handle_result && *handle_result != nullptr) {
-        std::cout<<"SQLFreeHandleInternal=======41:"<<std::endl;
-        delete *handle_result;
-        std::cout<<"SQLFreeHandleInternal=======42:"<<std::endl;
-        *handle_result = nullptr;
-        std::cout<<"SQLFreeHandleInternal=======43:"<<std::endl;
-      }
-      std::cout<<"SQLFreeHandleInternal=======5"<<std::endl;
+      delete *handle_result;
       break;
     }
     case SQL_HANDLE_STMT: {

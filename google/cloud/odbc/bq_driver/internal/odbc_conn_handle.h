@@ -94,14 +94,13 @@ class ConnectionHandle : public Handle {
   explicit ConnectionHandle() = default;
   explicit ConnectionHandle(EnvironmentHandle* env_handle)
       : env_handle_(env_handle){};
-  ~ConnectionHandle() {
-    std::cout << "ConnectionHandle destructor called" << std::endl;
-  }
+  ~ConnectionHandle() = default;
 
   ConnectionHandle(ConnectionHandle const& connectionHandle);
   ConnectionHandle& operator=(ConnectionHandle const& connectionHandle);
   ConnectionHandle(ConnectionHandle&& connectionHandle) noexcept;
   ConnectionHandle& operator=(ConnectionHandle&& connectionHandle) noexcept;
+
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
   inline void Disconnect() { is_connected_ = false; };
@@ -122,6 +121,7 @@ class ConnectionHandle : public Handle {
   [[nodiscard]] bool IsConnected() const { return is_connected_; }
 
   HandleType kType = HandleType::kConnHandle;
+
   std::set<StatementHandle*>& GetStatementHandles() { return stmt_handles_; }
   std::set<DescriptorHandle*>& GetDescriptorHandles() { return desc_handles_; }
   inline EnvironmentHandle* GetEnvironmentHandle() { return env_handle_; };

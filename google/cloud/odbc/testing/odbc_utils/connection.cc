@@ -18,17 +18,16 @@ namespace google::cloud::odbc_tests {
 
 void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
                    bool use_ansi) {
-                    std::cout<<"======SetAttributes 1:"<<conn->outdsn<<":"<<conn->henv<<std::endl;
   auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
-  std::cout<<"======SetAttributes 2"<<std::endl;
+
   status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
                          (SQLPOINTER)SQL_OV_ODBC3, 0);
   CheckError(status, "SQLSetEnvAttr", conn);
-  std::cout<<"======SetAttributes 3"<<std::endl;
+
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CheckError(status, "SQLAllocHandle", conn);
-  std::cout<<"======SetAttributes 4"<<std::endl;
+
   if (use_ansi) {
     status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
                                 (SQLPOINTER)10, 0);
@@ -46,7 +45,6 @@ void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
                                (SQLPOINTER)timeout, 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
   }
-  std::cout<<"======SetAttributes 5"<<std::endl;
 }
 
 SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
@@ -55,9 +53,9 @@ SQLRETURN Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
-std::cout<<"=========Connect 1"<<std::endl;
+
   SetAttributes(conn, timeout, use_ansi);
-  std::cout<<"=========Connect 2"<<std::endl;
+
   StrToChar((char*)data_source, conn_str);
 
   if (use_ansi) {
@@ -69,13 +67,12 @@ std::cout<<"=========Connect 1"<<std::endl;
                               (SQLCHAR*)conn->outdsn, sizeof(conn->outdsn),
                               &buflen, SQL_DRIVER_COMPLETE);
   }
-  std::cout<<"=========Connect 3"<<std::endl;
   CheckError(status, "SQLDriverConnect", conn, use_ansi);
 
   conn->connected = true;
 
   PrintDriverVerName(conn, use_ansi);
-  std::cout<<"=========Connect 4"<<std::endl;
+
   // Allocate statement handle
   status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
   CheckError(status, "SQLAllocHandle", conn);
@@ -210,9 +207,8 @@ SQLRETURN Connect(std::wstring dsn, std::shared_ptr<ODBCHandles> conn,
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
   SQLRETURN status;
-std::cout<<"======connection 1"<<std::endl;
+
   SetAttributes(conn, timeout);
-  std::cout<<"======connection 2"<<std::endl;
   std::vector<SQLWCHAR> sqlWStr(dsn.begin(), dsn.end());
   sqlWStr.emplace_back(L'\0');
 
@@ -241,37 +237,28 @@ std::cout<<"======connection 1"<<std::endl;
 
 // Disconnect from the database
 SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn) {
-  SQLRETURN status = SQL_SUCCESS;
-
+  SQLRETURN status;
   if (conn->hstmt) {
-      SQLCloseCursor(conn->hstmt);
-      status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
-      CheckError(status, "SQLFreeHandle", conn);
-      conn->hstmt = nullptr; // Reset handle
+    // Not checking for error after SQLCloseCursor because it fails when no
+    // cursor is open.
+    SQLCloseCursor(conn->hstmt);
+    status = SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
+    CheckError(status, "SQLFreeHandle", conn);
   }
-
   if (conn->connected) {
-      status = SQLDisconnect(conn->hdbc);
-      CheckError(status, "SQLDisconnect", conn);
+    status = SQLDisconnect(conn->hdbc);
+    CheckError(status, "SQLDisconnect", conn);
   }
-
   if (conn->hdbc) {
-      status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
-      CheckError(status, "SQLFreeHandle", conn);
-      conn->hdbc = nullptr; // Reset handle
+    status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+    CheckError(status, "SQLFreeHandle", conn);
   }
-
   if (conn->henv) {
-      status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
-      CheckError(status, "SQLFreeHandle", conn);
-      conn->henv = nullptr; // Reset handle
+    status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
+    CheckError(status, "SQLFreeHandle", conn);
   }
-
-  conn->connected = false;
-
-  return status;
+  return 0;
 }
-
 
 // Gets Info about the driver and populates conn.metadata
 SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {

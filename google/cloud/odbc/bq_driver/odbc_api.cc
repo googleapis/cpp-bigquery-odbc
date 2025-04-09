@@ -289,10 +289,9 @@ StatusRecordOr<std::wstring> ConvertSQLPointerToSQLWChar(
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
                                  SQLHANDLE* outputHandle) {
-  std::cout<<"======SQLAllocHandle 1:"<<std::endl;
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLAllocHandle");
-  std::cout<<"======SQLAllocHandle 2:"<<std::endl;
+
   switch (handleType) {
     case SQL_HANDLE_ENV: {
       // Call to Acquire mutex for environment handle in odbc_lock.h.
@@ -2334,10 +2333,6 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   bool is_tracing_enabled = IsTracingEnabled("SQLGetData");
   if (is_tracing_enabled)
@@ -2365,10 +2360,7 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
                                    SQLSMALLINT* columnCount) {
   SQLRETURN rc = SQL_SUCCESS;
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   bool is_tracing_enabled = IsTracingEnabled("SQLNumResultCols");
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (IsTracingEnabled)
@@ -2666,10 +2658,6 @@ SQLRETURN SQL_API SQLDescribeCol(
     SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
   SQLRETURN rc = SQL_SUCCESS;
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
   bool is_tracing_enabled = IsTracingEnabled("SQLDescribeCol");
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
@@ -2702,10 +2690,6 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT* columnSQLdataType, SQLULEN* columnSize,
     SQLSMALLINT* decimalDigits, SQLSMALLINT* columnNullable) {
   SQLRETURN rc = SQL_SUCCESS;
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
   bool is_tracing_enabled = IsTracingEnabled("SQLDescribeColW");
   SQLCHAR column_name_buffer[kBufferLength] = {0};
   SQLSMALLINT column_name_string_len = 0;
@@ -3140,10 +3124,7 @@ SQLRETURN SQL_API SQLColumns(SQLHSTMT statementHandle, SQLCHAR* catalogName,
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
   bool is_tracing_enabled = IsTracingEnabled("SQLColumns");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLColumns(
@@ -3172,10 +3153,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
                               SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLColumnsW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLColumnsW(
@@ -3265,10 +3243,7 @@ SQLRETURN SQL_API SQLTables(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                             SQLSMALLINT tableNameLen, SQLCHAR* tableType,
                             SQLSMALLINT tableTypeLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   bool is_tracing_enabled = IsTracingEnabled("SQLTables");
   if (is_tracing_enabled)
@@ -3298,10 +3273,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
                              SQLSMALLINT tableTypeLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLTablesW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLTablesW(
@@ -3397,10 +3369,6 @@ SQLRETURN SQL_API SQLPrimaryKeys(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                  SQLCHAR* tableName, SQLSMALLINT tableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLPrimaryKeys");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLPrimaryKeys(
@@ -3426,10 +3394,7 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
     SQLSMALLINT tableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLPrimaryKeysW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLPrimaryKeysW(
@@ -3527,10 +3492,7 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
     SQLSMALLINT procNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLProcedureColumnsW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLProcedureColumnsW(
@@ -3634,10 +3596,7 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
                                  SQLSMALLINT procNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLProceduresW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLProceduresW(statementHandle, catalogName,
@@ -3736,10 +3695,7 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
     SQLUSMALLINT minRowIdScope, SQLUSMALLINT colNullable) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLSpecialColumnsW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLSpecialColumnsW(
@@ -3836,10 +3792,7 @@ SQLRETURN SQL_API SQLStatisticsW(
     SQLSMALLINT tableNameLen, SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLStatisticsW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLStatisticsW(
@@ -3932,10 +3885,7 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
     SQLSMALLINT tableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLTablePrivilegesW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLTablePrivilegesW(
@@ -4024,10 +3974,7 @@ SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
                SQLSMALLINT fkTableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLForeignKeys");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLForeignKeys(
@@ -4062,10 +4009,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
                 SQLSMALLINT fkTableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLForeignKeysW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLForeignKeysW(
@@ -4221,10 +4165,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
     SQLSMALLINT tableNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLColumnPrivilegesW");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLColumnPrivilegesW(
@@ -4390,10 +4331,7 @@ SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
 SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLCloseCursor");
-  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
+
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLCloseCursor(statementHandle, *(*kTraceOption));
