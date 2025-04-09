@@ -558,25 +558,30 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
           activation_threshold_ = activation_threshold_buffer;
+
           use_wchar_ =
               (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
                   ? "1"
                   : "0";
+
           enable_session_ =
               (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
+
           activation_threshold_checkbox_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
+
           allow_large_results_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowLargeResultsCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
+
           use_default_large_results_ =
               (IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox) == BST_CHECKED)
                   ? "1"
@@ -637,6 +642,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
             char language_buffer[256] = {0};
             int index = SendMessage(h_language_box, CB_GETCURSEL, 0, 0);
+
             if (index != CB_ERR) {
               SendMessage(h_language_box, CB_GETLBTEXT, index,
                           (LPARAM)language_buffer);
@@ -699,6 +705,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
   }
   return DefWindowProc(hwnd, u_msg, w_param, l_param);
 }
+
 void AdvanceOptions::SetValues(Section const& attribute_map) {
   language_dialect_ = GetValueOrDefault(attribute_map, kLanguageDialect);
   std::string lang_dialect_value =
@@ -733,6 +740,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
       GetValueOrDefault(attribute_map, kUseDefaultLargeResultsDataset);
   encryption_type_ = GetValueOrDefault(attribute_map, kEncryptionType);
 }
+
 void AdvanceOptions::Show(HWND hwnd) {
   if (adv_hwnd) {
     ShowWindow(adv_hwnd, SW_SHOW);
