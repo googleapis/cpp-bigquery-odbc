@@ -88,7 +88,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p /c/Users/runneradmin/.cargo/bin
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
+        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-pc-windows-msvc.tar.gz | \
           tar -zxf - --strip-components=1
         chmod +x sccache.exe
         mv sccache.exe /c/Users/runneradmin/.cargo/bin
