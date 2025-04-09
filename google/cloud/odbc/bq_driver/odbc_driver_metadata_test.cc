@@ -887,7 +887,8 @@ TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
 }
 
 TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, -7, kSqlDataset, kSqlDatasetLen, kSqlPKTable,
@@ -901,7 +902,8 @@ TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, -7, kSqlPKTable,
@@ -915,7 +917,8 @@ TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
@@ -929,7 +932,8 @@ TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
@@ -943,7 +947,8 @@ TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_CatalogNameIsSearchPattern) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
