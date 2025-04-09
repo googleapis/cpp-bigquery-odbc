@@ -691,40 +691,55 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
 }
 
 StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
-                                            SQLSMALLINT out_conn_str_buflen,
-                                            SQLSMALLINT* out_conn_str_len,
-                                            std::string& conn_string,
-                                            bool is_conn_str_empty) {
-  if (is_conn_str_empty) {
-    if (conn_string.empty()) {
-      return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
-    }
-  }
+  SQLSMALLINT out_conn_str_buflen,
+  SQLSMALLINT* out_conn_str_len,
+  std::string& conn_string,
+  bool is_conn_str_empty) {
+std::cout << "[DEBUG] Entered PopulateOutputConnectionString" << std::endl;
+std::cout << "[DEBUG] Input connection string: \"" << conn_string << "\"" << std::endl;
+std::cout << "[DEBUG] Output buffer length: " << out_conn_str_buflen << std::endl;
+std::cout << "[DEBUG] is_conn_str_empty flag: " << (is_conn_str_empty ? "true" : "false") << std::endl;
 
-  std::string out_tmp_str = conn_string;
-  if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
-    out_tmp_str.append(";");
-  }
+if (is_conn_str_empty) {
+if (conn_string.empty()) {
+std::cout << "[ERROR] Connection string is empty when it shouldn't be" << std::endl;
+return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
+}
+}
 
-  auto out_str_len = out_tmp_str.length();
+std::string out_tmp_str = conn_string;
+if (!out_tmp_str.empty() && out_tmp_str.back() != ';') {
+out_tmp_str.append(";");
+std::cout << "[DEBUG] Appended semicolon to connection string: \"" << out_tmp_str << "\"" << std::endl;
+}
 
-  if (out_str_len >= out_conn_str_buflen) {
-    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-            out_conn_str_buflen - 1);
-    out_conn_str[out_conn_str_buflen - 1] = '\0';
-    if (out_conn_str_len) {
-      *out_conn_str_len = out_str_len;
-    }
+auto out_str_len = out_tmp_str.length();
+std::cout << "[DEBUG] Final output string length: " << out_str_len << std::endl;
 
-    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-  }
-  strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-          out_tmp_str.length());
-  out_conn_str[out_tmp_str.length()] = '\0';
-  if (out_conn_str_len) {
-    *out_conn_str_len = out_tmp_str.length();
-  }
-  return StatusRecord::Ok();
+if (out_str_len >= out_conn_str_buflen) {
+std::cout << "[WARN] Output string truncated to fit buffer" << std::endl;
+strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+out_conn_str_buflen - 1);
+out_conn_str[out_conn_str_buflen - 1] = '\0';
+if (out_conn_str_len) {
+*out_conn_str_len = out_str_len;
+std::cout << "[DEBUG] Reported length (with truncation): " << *out_conn_str_len << std::endl;
+}
+
+return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+}
+
+strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+out_tmp_str.length());
+out_conn_str[out_tmp_str.length()] = '\0';
+if (out_conn_str_len) {
+*out_conn_str_len = out_tmp_str.length();
+std::cout << "[DEBUG] Output connection string length: " << *out_conn_str_len << std::endl;
+}
+
+std::cout << "[DEBUG] Output connection string: \"" << reinterpret_cast<char*>(out_conn_str) << "\"" << std::endl;
+std::cout << "[DEBUG] Exiting PopulateOutputConnectionString" << std::endl;
+return StatusRecord::Ok();
 }
 
 std::string Base64Encode(uint8_t const* data, int length) {

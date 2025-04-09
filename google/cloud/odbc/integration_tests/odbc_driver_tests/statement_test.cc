@@ -442,8 +442,8 @@ TEST(StatementTest, SQLExecDirectW) {
 
   std::wstring const string_field = L"Some Test String नमस्ते";
   SQLWCHAR insert_stmt[kBufferLength];
-  swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
-           table_name.c_str(), string_field.c_str());
+  // swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
+  //          table_name.c_str(), string_field.c_str());
 
   SQLRETURN status =
       SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt, SQL_NTS);

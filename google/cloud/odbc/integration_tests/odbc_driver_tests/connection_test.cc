@@ -1088,10 +1088,18 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   }
   std::cout<<"res_out_conn_str"<<res_out_conn_str<<std::endl;
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
-#ifdef _WIN32
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+#ifndef _WIN32
+  EXPECT_TRUE(res_out_conn_str.empty());
+#else
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+#else
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {

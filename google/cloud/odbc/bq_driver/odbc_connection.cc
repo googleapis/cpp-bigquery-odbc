@@ -434,64 +434,79 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                                    SQLCHAR* out_conn_str,
                                    SQLSMALLINT out_conn_str_bufflen,
                                    SQLSMALLINT* out_conn_str_len) {
+  std::cout << "[DEBUG] Entered SQLBrowseConnectInternal" << std::endl;
+
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
+    std::cout << "[ERROR] Invalid connection handle: "
+              << handle_result.GetStatusRecord().message << std::endl;
     TracePrintInternal(*(*kTraceOption),
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-  auto* handle_ref = *handle_result;
 
+  auto* handle_ref = *handle_result;
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
+  std::cout << "[DEBUG] Input connection string: " << conn_string << std::endl;
+
   StatusRecordOr<Section> connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
 
   if (!connection_params_resp_status) {
+    std::cout << "[ERROR] Failed to parse connection string." << std::endl;
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
 
   auto connection_params_resp = *connection_params_resp_status;
-
   Section dsn_section;
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
     GetUpperStr(property);
     dsn_section[property] = value;
+    std::cout << "[DEBUG] Parsed parameter: " << property << " = " << value << std::endl;
   }
 
   StatusRecord validation_status =
       ValidateAllowedAttributes(handle_ref, dsn_section);
   if (!validation_status.ok()) {
+    std::cout << "[ERROR] Attribute validation failed: "
+              << validation_status.message << std::endl;
     return LogAndReturnCode(*handle_ref, validation_status);
   }
 
   std::string dsn_name = dsn_section["DSN"];
   if (!dsn_name.empty()) {
+    std::cout << "[DEBUG] DSN specified: " << dsn_name << std::endl;
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
 
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       if (!dsn_section[property].empty()) {
         dsn_section[property] = it.second;
+        std::cout << "[DEBUG] Overriding DSN property: " << property << " = " << it.second << std::endl;
       }
     }
   }
-  handle_ref->SetUp(dsn_section, dsn_name);
-  auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
+  handle_ref->SetUp(dsn_section, dsn_name);
+  std::cout << "[DEBUG] Connection handle setup complete" << std::endl;
+
+  auto missing_att_str = GetMissingAttributesStr(handle_ref);
   if (missing_att_str) {
+    std::cout << "[DEBUG] Missing attributes: " << *missing_att_str << std::endl;
     PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
                                    out_conn_str_len, *missing_att_str, false);
     return SQL_NEED_DATA;
   }
+
+  std::cout << "[DEBUG] All required attributes provided, proceeding to connect." << std::endl;
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {
-    // Populate the output parameters as per the spec.
     std::ostringstream str_stream;
     std::string temp_conn_str;
 
@@ -506,14 +521,22 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                << ";";
 
     std::string constructed_str = str_stream.str();
+    std::cout << "[DEBUG] Constructed output connection string: " << constructed_str << std::endl;
+
     auto status_record = PopulateOutputConnectionString(
         out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
         false);
     if (!status_record.ok()) {
+      std::cout << "[ERROR] Failed to populate output connection string" << std::endl;
       return SQL_NEED_DATA;
     }
+  } else if (!status.ok()) {
+    std::cout << "[ERROR] Connection failed: " << status.message << std::endl;
   }
+
+  std::cout << "[DEBUG] SQLBrowseConnectInternal completed successfully" << std::endl;
   return SQL_SUCCESS;
 }
+
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)
