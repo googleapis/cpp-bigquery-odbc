@@ -88,6 +88,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNumResultCols;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeys;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPutData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetCursorName;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLSetDescField;
@@ -201,6 +202,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumParams;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNumResultCols;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepare;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeys;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPutData;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLRowCount;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetConnectAttr;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLSetCursorName;
@@ -2276,12 +2278,24 @@ SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
 SQLRETURN SQL_API SQLPutData(SQLHSTMT statementHandle, SQLPOINTER paramData,
                              SQLLEN paramDataLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLPutData");
+
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled)
+    TraceFunctionEntry_SQLPutData(statementHandle, paramData, paramDataLen,
+                                  *(*kTraceOption));
 
   // Call to internal function for SQLPutData in odbc_sql_requests.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLPutDataInternal(
+      statementHandle, paramData, paramDataLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) TraceFunctionExit_SQLPutData(rc, *(*kTraceOption));
 
   return rc;
 }
