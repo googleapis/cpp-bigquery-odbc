@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
 #include <shellapi.h>
 #include <shlobj.h>
+#include <commctrl.h>  // Required for SetWindowSubclass
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
@@ -70,6 +72,28 @@ void OpenFolderDialog(HWND hwnd, HWND h_edit,
     CoTaskMemFree(pidl);
   }
 }
+LRESULT CALLBACK comboBoxSubclassProc(HWND hwnd, UINT u_msg, WPARAM w_param,
+  LPARAM l_param, UINT_PTR, DWORD_PTR ref_data) {
+    if (u_msg == WM_KEYDOWN) {
+    if (w_param == VK_ESCAPE) {
+    HWND parent = GetParent(hwnd);
+    if (parent) {
+    PostMessage(parent, WM_CLOSE, 0, 0);  // Trigger close on parent window
+    return 0;
+     }
+     } 
+     }
+    return DefSubclassProc(hwnd, u_msg, w_param, l_param);
+}
+
+LRESULT CALLBACK inputSubclassProc1(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param,
+  UINT_PTR sub_id, DWORD_PTR ref_data) {
+if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the main dialog
+return 0;  // Mark message as handled
+}
+return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
 
 void LogTraceDialog::SetValues(Section const& attributes_map) {
   if (attributes_map.count(kLogLevel) > 0) {
@@ -98,6 +122,7 @@ void LogTraceDialog::InitControls() {
       CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
                      KComboBoxHeight, kIdclogTraceBox);
   SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdclogTraceBox), comboBoxSubclassProc, 0, 0);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
                                     KAxisY + 30, KLabelWidth, kLabelHeight, 0);
@@ -175,6 +200,10 @@ void LogTraceDialog::InitControls() {
   EnableWindow(h_log_browse_btn, enable_controls);
   EnableWindow(h_max_files_edit, enable_controls);  // Disable max files edit
   EnableWindow(h_max_size_edit, enable_controls);   // Disable max size edit
+
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcLogFileEdit), inputSubclassProc1, 0, 0);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcMaxFilesEdit), inputSubclassProc1, 0, 0);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcMaxSizeEdit), inputSubclassProc1, 0, 0);
 }
 
 void LogTraceDialog::Show() {
@@ -188,6 +217,10 @@ void LogTraceDialog::Show() {
   wc_logging.lpfnWndProc = LogTraceDialog::LogTraceProc;
   wc_logging.hInstance = GetModuleHandle(NULL);
   wc_logging.lpszClassName = CLASS_NAME;
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
+  icc.dwICC = ICC_STANDARD_CLASSES;  // Load standard control classes
+  InitCommonControlsEx(&icc);
 
   RegisterClass(&wc_logging);
 
