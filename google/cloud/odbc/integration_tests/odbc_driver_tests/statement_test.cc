@@ -3625,8 +3625,7 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
 }
 
 // TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-#ifndef WIN32
+
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3676,8 +3675,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // WIN32
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
