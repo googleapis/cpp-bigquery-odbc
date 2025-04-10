@@ -23,6 +23,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
@@ -845,6 +846,76 @@ TEST(SQLMoreResultsInternal, PreviouslyOngoingAsyncOperation_Canceled) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
               HasSubstr("Operation canceled"));
+}
+
+TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kNeedsPutData);
+  SQLPOINTER param_or_target_value = nullptr;
+  SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY010(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Function sequence error: Incorrect statement state",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
+
+  stmt_handle.SetCurrentParamIndex(1);
+  SQLPOINTER param_or_target_value = nullptr;
+  SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_HY000(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Parameter out of bounds",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
+
+  DescriptorRecord param_record;
+  SQLLEN indicator_value = SQL_DATA_AT_EXEC;
+  param_record.indicator_ptr = &indicator_value;
+  param_record.data_ptr = nullptr;
+
+  std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
+      query_parameters = {{"test_col1", {"string"}, {"test_val1"}},
+                          {"test_col2", {"string"}, {"test_val2"}}};
+
+  stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
+      .BindNewDescriptorRecord(1, param_record);
+  stmt_handle.SetQueryParameters(query_parameters);
+
+  SQLPOINTER param_or_target_value = nullptr;
+  SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
+
+  EXPECT_EQ(SQL_NEED_DATA, status);
+  EXPECT_EQ(stmt_handle.GetStmtState(), StmtStates::kNeedsPutData);
+}
+
+TEST(SQLParamDataInternal, Success_SQL_NO_Data) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kNeedsParams);
+
+  Job mock_job;
+  mock_job.statistics.job_query_stats.statement_type = "UPDATE";
+  stmt_handle.SetPreparedJob(mock_job);
+
+  SQLPOINTER param_or_target_value = nullptr;
+  SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
+  EXPECT_EQ(SQL_NO_DATA, status);
+
+  mock_job.statistics.job_query_stats.statement_type = "DELETE";
+  stmt_handle.SetPreparedJob(mock_job);
+
+  status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
+  EXPECT_EQ(SQL_NO_DATA, status);
 }
 
 }  // namespace google::cloud::odbc_bq_driver
