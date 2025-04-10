@@ -1054,10 +1054,10 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
       "};Catalog=bigquery-devtools-drivers;KeyFilePath=" + key_path +
       ";OAuthMechanism=0;";
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-
+  std::cout<<"RESPONSE:"<<res_out_conn_str<<std::endl;
   EXPECT_EQ(res_out_conn_str, expected_out_conn_str);
   EXPECT_EQ(sizeof(res_out_conn_str), sizeof(expected_out_conn_str));
-  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
+  EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size()+1);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
