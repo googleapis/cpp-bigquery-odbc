@@ -357,6 +357,7 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SetWindowText(h_additional_projects_edit, additional_projects_.c_str());
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAdditionalProjectsEdit),inputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
       CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 465,
@@ -368,6 +369,7 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SetWindowText(h_query_properties_edit, query_properties_.c_str());
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcQueryPropertiesEdit),inputSubclassProc, 0, 0);
   HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
                                 kButtonY + 10, kWidth + 110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);

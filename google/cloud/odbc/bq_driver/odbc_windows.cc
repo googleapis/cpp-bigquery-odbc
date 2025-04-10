@@ -149,7 +149,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string proxy_pwd_enc =
       EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
   std::string encryption_type_value =
-      GetValueOrDefault(section, encryption_type_);
+      GetValueOrDefault(section, encryption_type);
 
   DriverForm form;
   AdvanceOptions advance_form;
@@ -183,7 +183,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {allow_large_results_key, allow_large_results},
         {use_default_large_results_dataset_key,
          use_default_large_results_dataset},
-        {encryption_type_, encryption_type_value},
+        {encryption_type, encryption_type_value},
         {proxy_check_key, proxy_check},
         {proxy_host_key, proxy_host},
         {proxy_port_key, proxy_port},
