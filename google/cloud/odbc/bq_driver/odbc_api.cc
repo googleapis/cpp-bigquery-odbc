@@ -549,69 +549,87 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
 //////////////////////////////////////
 // TODO(b/361047481): Add Integration Testcase for Unicode Support.
 SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
-                                    SQLWCHAR* inConnectionString,
-                                    SQLSMALLINT inConnectionStringLen,
-                                    SQLWCHAR* outConnectionString,
-                                    SQLSMALLINT outConnectionStringBufferLen,
-                                    SQLSMALLINT* outConnectionStringLen) {
-  SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
-  bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
+  SQLWCHAR* inConnectionString,
+  SQLSMALLINT inConnectionStringLen,
+  SQLWCHAR* outConnectionString,
+  SQLSMALLINT outConnectionStringBufferLen,
+  SQLSMALLINT* outConnectionStringLen) {
+SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN status;
+bool is_tracing_enabled = IsTracingEnabled("SQLBrowseConnectW");
 
-  HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
-  // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
-  if (is_tracing_enabled)
-    TraceFunctionEntry_SQLBrowseConnectW(
-        connectionHandle, inConnectionString, inConnectionStringLen,
-        outConnectionString, outConnectionStringBufferLen,
-        outConnectionStringLen, *(*kTraceOption));
+HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
+if (!lock.isLocked()) {
+return SQL_INVALID_HANDLE;
+}
 
-  // Handle Unicode conversion of input parameters.
-  StatusRecordOr<std::string> utf8_in_connection_str;
-  if (inConnectionStringLen > 0 || inConnectionStringLen == SQL_NTS) {
-    utf8_in_connection_str =
-        ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
-    if (!utf8_in_connection_str) {
-      TracePrintInternal(*(*kTraceOption),
-                         utf8_in_connection_str.GetStatusRecord().message);
-      return utf8_in_connection_str.GetCalculatedReturnCode();
-    }
-    inConnectionStringLen = utf8_in_connection_str->length();
-  }
-  // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
-  // in odbc_connection.h.
-  // TODO: Internal call should be made with out_connection_string and
-  // out_connection_string_len as the output parameters
-  SQLCHAR* out_connection_string =
-      reinterpret_cast<SQLCHAR*>(outConnectionString);
-  rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
-      connectionHandle, ToSqlChar(utf8_in_connection_str->data()),
-      inConnectionStringLen, out_connection_string,
-      outConnectionStringBufferLen, outConnectionStringLen);
+if (is_tracing_enabled)
+TraceFunctionEntry_SQLBrowseConnectW(
+connectionHandle, inConnectionString, inConnectionStringLen,
+outConnectionString, outConnectionStringBufferLen,
+outConnectionStringLen, *(*kTraceOption));
 
-  // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) {
-    StatusRecordOr<std::wstring> utf16_out_conn_str =
-        Utf8ToUtf16((char*)out_connection_string);
-    if (!utf16_out_conn_str) {
-      TracePrintInternal(*(*kTraceOption),
-                         utf16_out_conn_str.GetStatusRecord().message);
-      return utf16_out_conn_str.GetCalculatedReturnCode();
-    }
-    std::memset(outConnectionString, '\0',
-                outConnectionStringBufferLen * sizeof(SQLWCHAR));
-    std::memcpy((SQLWCHAR*)outConnectionString,
-                ToSqlWChar(utf16_out_conn_str->data()),
-                utf16_out_conn_str->size() * sizeof(SQLWCHAR));
-  }
-  // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
-  if (is_tracing_enabled)
-    TraceFunctionExit_SQLBrowseConnectW(rc, *(*kTraceOption));
+// 🐞 DEBUG: Print incoming wide string
+std::wstring in_wstr(reinterpret_cast<const wchar_t*>(inConnectionString),
+                     inConnectionStringLen == SQL_NTS ? wcslen(reinterpret_cast<const wchar_t*>(inConnectionString))
+                                                      : inConnectionStringLen);
+std::wcerr << L"[DEBUG] Input SQLWCHAR string: " << in_wstr << std::endl;
 
-  return rc;
+StatusRecordOr<std::string> utf8_in_connection_str;
+if (inConnectionStringLen > 0 || inConnectionStringLen == SQL_NTS) {
+utf8_in_connection_str =
+ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
+if (!utf8_in_connection_str) {
+TracePrintInternal(*(*kTraceOption),
+utf8_in_connection_str.GetStatusRecord().message);
+return utf8_in_connection_str.GetCalculatedReturnCode();
+}
+
+std::cerr << "[DEBUG] Converted UTF-8 input string: " << *utf8_in_connection_str << std::endl;
+inConnectionStringLen = utf8_in_connection_str->length();
+}
+
+SQLCHAR* out_connection_string = reinterpret_cast<SQLCHAR*>(outConnectionString);
+rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
+connectionHandle, ToSqlChar(utf8_in_connection_str->data()),
+inConnectionStringLen, out_connection_string,
+outConnectionStringBufferLen, outConnectionStringLen);
+
+//DEBUG: Print the raw output buffer from internal call
+std::cerr << "[DEBUG] Raw output from SQLBrowseConnectInternal: ";
+for (int i = 0; i < *outConnectionStringLen; ++i) {
+std::cerr << out_connection_string[i];
+}
+std::cerr << "\n[DEBUG] Output length (bytes): " << *outConnectionStringLen << std::endl;
+
+if (SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) {
+StatusRecordOr<std::wstring> utf16_out_conn_str =
+Utf8ToUtf16((char*)out_connection_string);
+if (!utf16_out_conn_str) {
+TracePrintInternal(*(*kTraceOption),
+utf16_out_conn_str.GetStatusRecord().message);
+return utf16_out_conn_str.GetCalculatedReturnCode();
+}
+
+std::wcerr << L"[DEBUG] UTF-16 converted output: " << *utf16_out_conn_str << std::endl;
+
+std::memset(outConnectionString, '\0',
+outConnectionStringBufferLen * sizeof(SQLWCHAR));
+std::memcpy((SQLWCHAR*)outConnectionString,
+ToSqlWChar(utf16_out_conn_str->data()),
+utf16_out_conn_str->size() * sizeof(SQLWCHAR));
+
+std::wcerr << L"[DEBUG] Final written outConnectionString: "
+           << std::wstring(reinterpret_cast<const wchar_t*>(outConnectionString),
+                           utf16_out_conn_str->size())
+           << std::endl;
+std::cerr << "[DEBUG] outConnectionStringLen set to: " << *outConnectionStringLen << std::endl;
+}
+
+if (is_tracing_enabled)
+TraceFunctionExit_SQLBrowseConnectW(rc, *(*kTraceOption));
+
+return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
