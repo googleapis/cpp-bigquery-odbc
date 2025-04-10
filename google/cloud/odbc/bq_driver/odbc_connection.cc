@@ -466,7 +466,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     std::string value = it.second;
     GetUpperStr(property);
     dsn_section[property] = value;
-    std::cout << "[DEBUG] Parsed parameter: " << property << " = " << value << std::endl;
+    std::cout << "[DEBUG] Parsed parameter: " << property << " = " << value
+              << std::endl;
   }
 
   StatusRecord validation_status =
@@ -486,7 +487,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
       std::string property = it.first;
       if (!dsn_section[property].empty()) {
         dsn_section[property] = it.second;
-        std::cout << "[DEBUG] Overriding DSN property: " << property << " = " << it.second << std::endl;
+        std::cout << "[DEBUG] Overriding DSN property: " << property << " = "
+                  << it.second << std::endl;
       }
     }
   }
@@ -495,19 +497,22 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   std::cout << "[DEBUG] Connection handle setup complete" << std::endl;
 
   auto missing_result = GetMissingAttributesStr(handle_ref);
-// Combine input connection string with missing attributes
-std::string in_conn_str_str(reinterpret_cast<char*>(in_conn_str));
-auto missing_att_str = in_conn_str_str + ";" + *missing_result;
+  // Combine input connection string with missing attributes
+  std::string in_conn_str_str(reinterpret_cast<char*>(in_conn_str));
+  auto missing_att_str = in_conn_str_str + *missing_result;
 
-if (!missing_att_str.empty()) {
-  std::cout << "[DEBUG] Missing attributes: " << *missing_result << std::endl;
-  std::cout << "[DEBUG] Missing attributes with full string: " <<missing_att_str<<std::endl;
-  PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
-                                 out_conn_str_len, missing_att_str, false);
-  return SQL_NEED_DATA;
-}
+  if (!missing_att_str.empty()) {
+    std::cout << "[DEBUG] Missing attributes: " << *missing_result << std::endl;
+    std::cout << "[DEBUG] Missing attributes with full string: "
+              << missing_att_str << std::endl;
+    PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
+                                   out_conn_str_len, missing_att_str, false);
+    return SQL_NEED_DATA;
+  }
 
-  std::cout << "[DEBUG] All required attributes provided, proceeding to connect." << std::endl;
+  std::cout
+      << "[DEBUG] All required attributes provided, proceeding to connect."
+      << std::endl;
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
@@ -526,20 +531,23 @@ if (!missing_att_str.empty()) {
                << ";";
 
     std::string constructed_str = str_stream.str();
-    std::cout << "[DEBUG] Constructed output connection string: " << constructed_str << std::endl;
+    std::cout << "[DEBUG] Constructed output connection string: "
+              << constructed_str << std::endl;
 
     auto status_record = PopulateOutputConnectionString(
         out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
         false);
     if (!status_record.ok()) {
-      std::cout << "[ERROR] Failed to populate output connection string" << std::endl;
+      std::cout << "[ERROR] Failed to populate output connection string"
+                << std::endl;
       return SQL_NEED_DATA;
     }
   } else if (!status.ok()) {
     std::cout << "[ERROR] Connection failed: " << status.message << std::endl;
   }
 
-  std::cout << "[DEBUG] SQLBrowseConnectInternal completed successfully" << std::endl;
+  std::cout << "[DEBUG] SQLBrowseConnectInternal completed successfully"
+            << std::endl;
   return SQL_SUCCESS;
 }
 

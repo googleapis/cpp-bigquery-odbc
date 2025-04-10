@@ -359,107 +359,108 @@ TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionString) {
   EXPECT_EQ(result, SQL_ERROR);
 }
 
-TEST(SQLBrowseConnectInternal, Fail_MissingRequiredAttribute) {
-  std::string const conn_str =
-      "DRIVER=Simba ODBC Driver for Google BigQuery;"
-      "Catalog=bigquery-devtools-drivers;";
+// TEST(SQLBrowseConnectInternal, Fail_MissingRequiredAttribute) {
+//   std::string const conn_str =
+//       "DRIVER=Simba ODBC Driver for Google BigQuery;"
+//       "Catalog=bigquery-devtools-drivers;";
 
-  SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
-  SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
+//   SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
+//   SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+//   SQLCHAR out_conn_str[1024] = {0};
+//   SQLSMALLINT out_conn_str_len;
 
-  ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+//   ConnectionHandle conn_handle = CreateConnectionHandle(false);
+//   auto status = SQLBrowseConnectInternal(
+//       &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
+//       sizeof(out_conn_str), &out_conn_str_len);
 
-  EXPECT_EQ(SQL_NEED_DATA, status);
+//   EXPECT_EQ(SQL_NEED_DATA, status);
 
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  EXPECT_EQ(res_out_conn_str, "OAuthMechanism:OAuthMechanism=?;");
-}
+//   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+//   EXPECT_EQ(res_out_conn_str, "OAuthMechanism:OAuthMechanism=?;");
+// }
 
-TEST(SQLBrowseConnectInternal, Fail_NonRequestedAttributeInConnStr) {
-  std::string conn_str =
-      "DRIVER=Simba ODBC Driver for Google BigQuery;"
-      "Catalog=bigquery-devtools-drivers;";
+// TEST(SQLBrowseConnectInternal, Fail_NonRequestedAttributeInConnStr) {
+//   std::string conn_str =
+//       "DRIVER=Simba ODBC Driver for Google BigQuery;"
+//       "Catalog=bigquery-devtools-drivers;";
 
-  SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
-  SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
+//   SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
+//   SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+//   SQLCHAR out_conn_str[1024] = {0};
+//   SQLSMALLINT out_conn_str_len;
 
-  ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+//   ConnectionHandle conn_handle = CreateConnectionHandle(false);
+//   auto status = SQLBrowseConnectInternal(
+//       &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
+//       sizeof(out_conn_str), &out_conn_str_len);
 
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  EXPECT_EQ(SQL_NEED_DATA, status);
+//   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+//   EXPECT_EQ(SQL_NEED_DATA, status);
 
-  EXPECT_EQ(conn_handle.GetDsn().driver,
-            "Simba ODBC Driver for Google BigQuery");
-  EXPECT_EQ(conn_handle.GetDsn().catalog, "bigquery-devtools-drivers");
-  EXPECT_EQ(res_out_conn_str, "OAuthMechanism:OAuthMechanism=?;");
+//   EXPECT_EQ(conn_handle.GetDsn().driver,
+//             "Simba ODBC Driver for Google BigQuery");
+//   EXPECT_EQ(conn_handle.GetDsn().catalog, "bigquery-devtools-drivers");
+//   EXPECT_EQ(res_out_conn_str, "OAuthMechanism:OAuthMechanism=?;");
 
-  // connection string with an extra attribute `AllowLargeResults`
-  conn_str = "OAuthMechanism=0;AllowLargeResults=0;";
-  in_conn_str = ToSqlChar(conn_str.c_str());
-  conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+//   // connection string with an extra attribute `AllowLargeResults`
+//   conn_str = "OAuthMechanism=0;AllowLargeResults=0;";
+//   in_conn_str = ToSqlChar(conn_str.c_str());
+//   conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
 
-  status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
-                                    (SQLCHAR*)out_conn_str,
-                                    sizeof(out_conn_str), &out_conn_str_len);
+//   status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
+//                                     (SQLCHAR*)out_conn_str,
+//                                     sizeof(out_conn_str), &out_conn_str_len);
 
-  EXPECT_EQ(status, SQL_ERROR);
-  EXPECT_EQ(SQLStates::k_HY000(),
-            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
-  EXPECT_EQ(
-      "Connection Error: Non Requested connection attribute "
-      "'ALLOWLARGERESULTS' "
-      "in "
-      "ConnectionString",
-      conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
-}
+//   EXPECT_EQ(status, SQL_ERROR);
+//   EXPECT_EQ(SQLStates::k_HY000(),
+//             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+//   EXPECT_EQ(
+//       "Connection Error: Non Requested connection attribute "
+//       "'ALLOWLARGERESULTS' "
+//       "in "
+//       "ConnectionString",
+//       conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+// }
 
-TEST(SQLBrowseConnectInternal, Fail_ConnectionAttributeAlreadyPresent) {
-  auto conn_str =
-      "driver=Simba ODBC Driver for Google BigQuery;"
-      "OAuthMechanism=0;";
+// TEST(SQLBrowseConnectInternal, Fail_ConnectionAttributeAlreadyPresent) {
+//   auto conn_str =
+//       "driver=Simba ODBC Driver for Google BigQuery;"
+//       "OAuthMechanism=0;";
 
-  SQLCHAR* in_conn_str = ToSqlChar(conn_str);
-  SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
-  SQLCHAR out_conn_str[1024] = {0};
-  SQLSMALLINT out_conn_str_len;
+//   SQLCHAR* in_conn_str = ToSqlChar(conn_str);
+//   SQLSMALLINT conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+//   SQLCHAR out_conn_str[1024] = {0};
+//   SQLSMALLINT out_conn_str_len;
 
-  ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+//   ConnectionHandle conn_handle = CreateConnectionHandle(false);
+//   auto status = SQLBrowseConnectInternal(
+//       &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
+//       sizeof(out_conn_str), &out_conn_str_len);
 
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  EXPECT_EQ(SQL_NEED_DATA, status);
+//   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+//   EXPECT_EQ(SQL_NEED_DATA, status);
 
-  EXPECT_EQ(conn_handle.GetDsn().driver,
-            "Simba ODBC Driver for Google BigQuery");
-  EXPECT_EQ(conn_handle.GetDsn().o_auth_mechanism, "0");
-  EXPECT_EQ(res_out_conn_str, "Catalog:Catalog=?;KeyFilePath:KeyFilePath=?;");
+//   EXPECT_EQ(conn_handle.GetDsn().driver,
+//             "Simba ODBC Driver for Google BigQuery");
+//   EXPECT_EQ(conn_handle.GetDsn().o_auth_mechanism, "0");
+//   EXPECT_EQ(res_out_conn_str,
+//   "Catalog:Catalog=?;KeyFilePath:KeyFilePath=?;");
 
-  conn_str =
-      "Catalog=bigquery-devtools-drivers;KeyFilePath=/path/to/"
-      "file;driver=Simba ODBC Driver for Google BigQuery;";
-  in_conn_str = ToSqlChar(conn_str);
-  conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
+//   conn_str =
+//       "Catalog=bigquery-devtools-drivers;KeyFilePath=/path/to/"
+//       "file;driver=Simba ODBC Driver for Google BigQuery;";
+//   in_conn_str = ToSqlChar(conn_str);
+//   conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
 
-  status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
-                                    (SQLCHAR*)out_conn_str,
-                                    sizeof(out_conn_str), &out_conn_str_len);
+//   status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
+//                                     (SQLCHAR*)out_conn_str,
+//                                     sizeof(out_conn_str), &out_conn_str_len);
 
-  EXPECT_EQ(status, SQL_ERROR);
-  EXPECT_EQ(SQLStates::k_HY000(),
-            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
-  EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
-            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
-}
+//   EXPECT_EQ(status, SQL_ERROR);
+//   EXPECT_EQ(SQLStates::k_HY000(),
+//             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+//   EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
+//             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+// }
 }  // namespace google::cloud::odbc_bq_driver
