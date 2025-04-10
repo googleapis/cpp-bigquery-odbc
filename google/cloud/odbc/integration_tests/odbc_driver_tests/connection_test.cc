@@ -1084,8 +1084,10 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   EXPECT_EQ(status, SQL_NEED_DATA);
 
-  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str), out_conn_str_len);
-  
+ // Convert SQLWCHAR* (out_conn_str) to std::wstring
+std::wstring wide_str(reinterpret_cast<const wchar_t*>(out_conn_str), out_conn_str_len);
+std::string res_out_conn_str = Utf16ToUtf8(wide_str);
+    
   std::cout << "[DEBUG] Output connection string: " << res_out_conn_str << std::endl;
   std::cout << "[DEBUG] Output string actual size: " << res_out_conn_str.size() << std::endl;
 
