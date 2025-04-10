@@ -614,10 +614,16 @@ return utf16_out_conn_str.GetCalculatedReturnCode();
 std::wcerr << L"[DEBUG] UTF-16 converted output: " << *utf16_out_conn_str << std::endl;
 
 std::memset(outConnectionString, '\0',
-outConnectionStringBufferLen * sizeof(SQLWCHAR));
+  outConnectionStringBufferLen * sizeof(SQLWCHAR));
+
 std::memcpy((SQLWCHAR*)outConnectionString,
-ToSqlWChar(utf16_out_conn_str->data()),
-utf16_out_conn_str->size() * sizeof(SQLWCHAR));
+  ToSqlWChar(utf16_out_conn_str->data()),
+  utf16_out_conn_str->size() * sizeof(SQLWCHAR));
+
+// Ensure null-termination
+if (utf16_out_conn_str->size() < static_cast<size_t>(outConnectionStringBufferLen)) {
+outConnectionString[utf16_out_conn_str->size()] = L'\0';
+}
 
 std::wcerr << L"[DEBUG] Final written outConnectionString: "
            << std::wstring(reinterpret_cast<const wchar_t*>(outConnectionString),
