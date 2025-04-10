@@ -1185,10 +1185,13 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       param_num++;
       continue;
     }
-
+    // Check the parameter's indicator to see if it needs data at execution
+    // time.
     if (param.indicator_ptr != nullptr ||
         *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
         *(param.indicator_ptr) <= SQL_LEN_DATA_AT_EXEC(0)) {
+      // If the target value pointer is not null, set it to point to the
+      // parameter's data.
       if (param_or_target_value != nullptr) {
         *param_or_target_value = param.data_ptr;
       }

@@ -2266,6 +2266,10 @@ SQLRETURN SQL_API SQLParamData(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLParamData");
 
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLParamData(statementHandle, paramOrTargetValue,
