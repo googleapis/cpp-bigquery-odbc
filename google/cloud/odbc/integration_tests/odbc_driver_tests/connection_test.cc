@@ -1070,7 +1070,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
-  SQLCHAR out_conn_str[1024] = {0};
+  SQLCHAR out_conn_str[kBufferLength];
 
   StrToChar((char*)in_conn_str, conn_str);
   SetAttributes(conn, 30);
@@ -1085,8 +1085,13 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_EQ(status, SQL_NEED_DATA);
 
  // Convert SQLWCHAR* (out_conn_str) to std::wstring
-std::wstring wide_str(reinterpret_cast<const wchar_t*>(out_conn_str), out_conn_str_len);
+std::wstring wide_str(reinterpret_cast<const wchar_t*>(out_conn_str));
+std::wcout<<"[DEBUG] Output connection string: "<<wide_str<<std::endl;
 std::string res_out_conn_str = Utf16ToUtf8(wide_str);
+
+std::string res_out_conn(reinterpret_cast<char const*>(out_conn_str));
+std::cout << "[DEBUG] Output connection string: " << res_out_conn<< std::endl;
+
     
   std::cout << "[DEBUG] Output connection string: " << res_out_conn_str << std::endl;
   std::cout << "[DEBUG] Output string actual size: " << res_out_conn_str.size() << std::endl;
