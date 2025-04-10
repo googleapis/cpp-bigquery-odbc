@@ -1063,7 +1063,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
-  std::string conn_str = "DRIVER={" + driver_name + "}";
+  std::string conn_str = "DRIVER={" + driver_name + "};";
 
   std::cout << "[DEBUG] Driver name: " << driver_name << std::endl;
   std::cout << "[DEBUG] Input connection string: " << conn_str << std::endl;
