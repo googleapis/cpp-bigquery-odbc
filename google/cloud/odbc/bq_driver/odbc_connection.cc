@@ -494,13 +494,18 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   handle_ref->SetUp(dsn_section, dsn_name);
   std::cout << "[DEBUG] Connection handle setup complete" << std::endl;
 
-  auto missing_att_str = GetMissingAttributesStr(handle_ref);
-  if (missing_att_str) {
-    std::cout << "[DEBUG] Missing attributes: " << *missing_att_str << std::endl;
-    PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
-                                   out_conn_str_len, *missing_att_str, false);
-    return SQL_NEED_DATA;
-  }
+  auto missing_result = GetMissingAttributesStr(handle_ref);
+// Combine input connection string with missing attributes
+std::string in_conn_str_str(reinterpret_cast<char*>(in_conn_str));
+auto missing_att_str = in_conn_str_str + ";" + *missing_result;
+
+if (!missing_att_str.empty()) {
+  std::cout << "[DEBUG] Missing attributes: " << *missing_result << std::endl;
+  std::cout << "[DEBUG] Missing attributes with full string: " <<missing_att_str<<std::endl;
+  PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
+                                 out_conn_str_len, missing_att_str, false);
+  return SQL_NEED_DATA;
+}
 
   std::cout << "[DEBUG] All required attributes provided, proceeding to connect." << std::endl;
   Authentication auth = CreateAuth(handle_ref->GetDsn());
