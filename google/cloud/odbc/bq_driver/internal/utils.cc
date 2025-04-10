@@ -289,39 +289,39 @@ void setWindowIcon(HWND hwnd) {
 }
 
 LRESULT CALLBACK inputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-  LPARAM l_param, UINT_PTR sub_id,
-  DWORD_PTR ref_data) {
-if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the parent dialog
-return 0;  // Mark message as handled
-}
-return DefSubclassProc(hwnd, msg, w_param, l_param);
+                                   LPARAM l_param, UINT_PTR sub_id,
+                                   DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the parent dialog
+    return 0;                                      // Mark message as handled
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
 LRESULT CALLBACK comboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-  LPARAM l_param, UINT_PTR sub_id,
-  DWORD_PTR ref_data) {
-if (msg == WM_KEYDOWN) {
-if (w_param == VK_ESCAPE) {
-SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
-return 0;
-} else if (w_param == VK_RETURN) {
-HWND h_ok = GetDlgItem(GetParent(hwnd), IDOK);
-if (h_ok) SendMessage(GetParent(hwnd), WM_COMMAND, IDOK, (LPARAM)h_ok);
-return 0;
-}
-}
-return DefSubclassProc(hwnd, msg, w_param, l_param);
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN) {
+    if (w_param == VK_ESCAPE) {
+      SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
+      return 0;
+    } else if (w_param == VK_RETURN) {
+      HWND h_ok = GetDlgItem(GetParent(hwnd), IDOK);
+      if (h_ok) SendMessage(GetParent(hwnd), WM_COMMAND, IDOK, (LPARAM)h_ok);
+      return 0;
+    }
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
 LRESULT CALLBACK checkboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-  LPARAM l_param, UINT_PTR sub_id,
-  DWORD_PTR ref_data) {
-if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
-return 0;
-}
-return DefSubclassProc(hwnd, msg, w_param, l_param);
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
+    return 0;
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
 #else

@@ -186,7 +186,8 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
   SetWindowLong(h_temp_expiration_edit, GWL_STYLE,
                 GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER);
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcTempExpirationEdit),inputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcTempExpirationEdit),
+                    inputSubclassProc, 0, 0);
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
@@ -316,7 +317,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
   SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableSessionCheckbox),
-  checkboxSubclassProc, 0, 0);
+                    checkboxSubclassProc, 0, 0);
   CheckDlgButton(adv_hwnd, kIdcEnableSessionCheckbox,
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 

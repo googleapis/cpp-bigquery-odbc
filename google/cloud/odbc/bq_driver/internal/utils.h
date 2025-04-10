@@ -168,16 +168,16 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
 void setWindowIcon(HWND hwnd);
 
 LRESULT CALLBACK inputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-  LPARAM l_param, UINT_PTR sub_id,
-  DWORD_PTR ref_data);
+                                   LPARAM l_param, UINT_PTR sub_id,
+                                   DWORD_PTR ref_data);
 
 LRESULT CALLBACK comboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-    LPARAM l_param, UINT_PTR sub_id,
-    DWORD_PTR ref_data);
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data);
 
 LRESULT CALLBACK checkboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-    LPARAM l_param, UINT_PTR sub_id,
-    DWORD_PTR ref_data);
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data);
 
 inline std::string GetValueOrDefault(Section const& attribute_map,
                                      std::string const& key) {
