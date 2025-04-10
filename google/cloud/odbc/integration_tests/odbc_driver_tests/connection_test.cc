@@ -1065,6 +1065,9 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name + "}";
 
+  std::cout << "[DEBUG] Driver name: " << driver_name << std::endl;
+  std::cout << "[DEBUG] Input connection string: " << conn_str << std::endl;
+
   SQLCHAR in_conn_str[kBufferLength];
   SQLSMALLINT out_conn_str_len;
   SQLCHAR out_conn_str[1024] = {0};
@@ -1075,32 +1078,42 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
                                  sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
                                  sizeof(out_conn_str), &out_conn_str_len);
+
+  std::cout << "[DEBUG] SQLBrowseConnect status: " << status << std::endl;
+  std::cout << "[DEBUG] out_conn_str_len: " << out_conn_str_len << std::endl;
+
   EXPECT_EQ(status, SQL_NEED_DATA);
 
-  //std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
-  std::wstring w_conn_string = reinterpret_cast<wchar_t*>(out_conn_str);
-  std::string res_out_conn_str = Utf16ToUtf8(w_conn_string);  // You'll need this helper
-  // TODO(b/383449326): Add other connection attributes for the connection
-  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-  // if (kIsBqDriver) {
-  //   EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-  // } else {
-  //   EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-  // }
-  std::cout<<"res_out_conn_str"<<res_out_conn_str<<std::endl;
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+  std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
+
+  std::cout << "[DEBUG] Output connection string: " << res_out_conn_str << std::endl;
+  std::cout << "[DEBUG] Output string actual size: " << res_out_conn_str.size() << std::endl;
+
+  if (kIsBqDriver) {
+    std::cout << "[DEBUG] kIsBqDriver is true" << std::endl;
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+  } else {
+    std::cout << "[DEBUG] kIsBqDriver is false" << std::endl;
+    EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
+  }
+
+  // Print final connection string
+  std::cout << "res_out_conn_str: " << res_out_conn_str << std::endl;
+
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 #ifndef _WIN32
+  std::cout << "[DEBUG] Linux non-BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
   EXPECT_TRUE(res_out_conn_str.empty());
 #else
+  std::cout << "[DEBUG] Windows non-BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
 #else
+  std::cout << "[DEBUG] BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
-
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
