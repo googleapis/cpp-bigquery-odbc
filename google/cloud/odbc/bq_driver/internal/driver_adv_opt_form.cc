@@ -99,44 +99,6 @@ AdvanceOptions::~AdvanceOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-LRESULT CALLBACK inputSubclassProc2(HWND hwnd, UINT msg, WPARAM w_param,
-                                    LPARAM l_param, UINT_PTR sub_id,
-                                    DWORD_PTR ref_data) {
-  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the main dialog
-    return 0;                                      // Mark message as handled
-  }
-  return DefSubclassProc(hwnd, msg, w_param, l_param);
-}
-
-LRESULT CALLBACK checkboxSubclassProc1(HWND hwnd, UINT msg, WPARAM w_param,
-                                       LPARAM l_param, UINT_PTR u_id_subclass,
-                                       DWORD_PTR ref_data) {
-  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-    HWND parent_hwnd = GetParent(hwnd);
-    if (parent_hwnd) {
-      PostMessage(parent_hwnd, WM_CLOSE, 0, 0);  // Close the proxy dialog
-    }
-    return 0;
-  }
-
-  return DefSubclassProc(hwnd, msg, w_param, l_param);
-}
-
-LRESULT CALLBACK comboBoxSubclassProc1(HWND hwnd, UINT u_msg, WPARAM w_param,
-                                       LPARAM l_param, UINT_PTR,
-                                       DWORD_PTR ref_data) {
-  if (u_msg == WM_KEYDOWN) {
-    if (w_param == VK_ESCAPE) {
-      HWND parent = GetParent(hwnd);
-      if (parent) {
-        PostMessage(parent, WM_CLOSE, 0, 0);  // Trigger close on parent window
-        return 0;
-      }
-    }
-  }
-  return DefSubclassProc(hwnd, u_msg, w_param, l_param);
-}
 
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   HWND h_language_header =
@@ -148,7 +110,7 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
                      KComboBoxHeight, kIdcLanguageDialectComboBox);
   SendMessage(h_language_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcLanguageDialectComboBox),
-                    comboBoxSubclassProc1, 0, 0);
+                    comboBoxSubclassProc, 0, 0);
   SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "GoogleSQL");
   SendMessage(h_language_combo_box, CB_ADDSTRING, 0, (LPARAM) "LegacySQL");
   SendMessage(h_language_combo_box, CB_SETCURSEL, 0, 0);
@@ -169,7 +131,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox,
                  (allow_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox),
-                    checkboxSubclassProc1, 0, 0);
+                    checkboxSubclassProc, 0, 0);
   HWND h_language_box = GetDlgItem(adv_hwnd, kIdcLanguageDialectComboBox);
   char language_buffer[256] = {0};
   GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
@@ -189,7 +151,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
       kIdcUseDefaultCheckbox);
   SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox),
-                    checkboxSubclassProc1, 0, 0);
+                    checkboxSubclassProc, 0, 0);
   CheckDlgButton(
       adv_hwnd, kIdcUseDefaultCheckbox,
       (use_default_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
@@ -205,7 +167,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SendMessage(h_dataset_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_dataset_name_edit, adv_dataset_name_.c_str());
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   if (use_default_large_results_ == "1") {
     CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_CHECKED);
     EnableWindow(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit), FALSE);
@@ -224,8 +186,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
   SetWindowLong(h_temp_expiration_edit, GWL_STYLE,
                 GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER);
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcTempExpirationEdit),
-                    inputSubclassProc2, 0, 0);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcTempExpirationEdit),inputSubclassProc, 0, 0);
 }
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
@@ -236,7 +197,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SendMessage(h_allow_high_throughput_checkbox, WM_SETFONT, (WPARAM)h_font,
               TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox),
-                    checkboxSubclassProc1, 0, 0);
+                    checkboxSubclassProc, 0, 0);
   CheckDlgButton(
       adv_hwnd, kIdcAllowHighThroughputCheckbox,
       (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
@@ -251,7 +212,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
                      KComboBoxHeight, kIdcEncryptionKeyComboBox);
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyComboBox),
-                    comboBoxSubclassProc1, 0, 0);
+                    comboBoxSubclassProc, 0, 0);
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Google-managed encryption key");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
@@ -273,7 +234,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
       GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
   SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   // Disable and clear if 'Allow large result sets' is unchecked
   if (allow_large_results_ != "1") {
     HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
@@ -310,7 +271,7 @@ void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcEncryptionKeyEdit);
   SendMessage(h_encryption_key_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   if (encryption_type_ == "Customer-managed encryption key") {
     SetWindowText(h_encryption_key_edit, encryption_key_.c_str());
     EnableWindow(h_encryption_key_edit, TRUE);
@@ -330,7 +291,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcRowsPerBlockEdit);
   SendMessage(h_rows_per_block_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcRowsPerBlockEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   SetWindowText(h_rows_per_block_edit, rows_per_block_.c_str());
   SetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE,
                    GetWindowLongPtr(h_rows_per_block_edit, GWL_STYLE) |
@@ -344,7 +305,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcDefaultStringEdit);
   SendMessage(h_default_string_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcDefaultStringEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   SetWindowText(h_default_string_edit, default_string_length_.c_str());
   SetWindowLongPtr(h_default_string_edit, GWL_STYLE,
                    GetWindowLongPtr(h_default_string_edit, GWL_STYLE) |
@@ -355,7 +316,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
   SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableSessionCheckbox),
-                    checkboxSubclassProc1, 0, 0);
+  checkboxSubclassProc, 0, 0);
   CheckDlgButton(adv_hwnd, kIdcEnableSessionCheckbox,
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
@@ -368,7 +329,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                     kEditBoxHeight, kIdcSessionLocationEdit);
   SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcSessionLocationEdit),
-                    inputSubclassProc2, 0, 0);
+                    inputSubclassProc, 0, 0);
   EnableWindow(h_session_location_edit, FALSE);
   SetWindowText(h_session_location_edit, session_location_.c_str());
   h_session_location_edit = GetDlgItem(adv_hwnd, kIdcSessionLocationEdit);
@@ -384,7 +345,7 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                  (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
   SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
-                    checkboxSubclassProc1, 0, 0);
+                    checkboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
       CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 385,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
