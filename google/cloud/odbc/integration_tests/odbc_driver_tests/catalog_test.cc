@@ -662,10 +662,30 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
        kSqlColumnsEmptyDefaultTable, "IntField", "INTEGER", "INT64", "", "YES",
        SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA,
        2});
+
   // Fetch all columns
-  TestSQLColumns("%", expected_results, false,
-                 kSqlColumnsEmptyDefaultTableSchema,
-                 kSqlColumnsEmptyDefaultTable);
+  auto conn = std::make_shared<ODBCHandles>();
+  std::cout << "Creating table with schema : "
+            << kSqlColumnsEmptyDefaultTableSchema << std::endl;
+  // Create table for SQLColumns.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kSqlColumnsEmptyDefaultTableSchema);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Set statement attribute so the parameters are passed as literal values.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status;
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // We are deliberately using an empty catalog name here to test the behaviour
+  // of assigning a default catalog value(b/399756489)
+  std::vector<SQLColumnsResult> results =
+      Catalog::GetColumns(conn, "", kCatalogFnsDataset.c_str(),
+                          kSqlColumnsEmptyDefaultTable.c_str(), "%");
+  VerifyColumnsResults(results, expected_results);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 // This preprocessor flag is used to disable tests for unimplemented bq_driver
@@ -1531,89 +1551,5 @@ TEST(SQLProcedures, TableFunction) {
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
-
-struct ExpectedColumnValues {
-  std::string catalog_name;
-  std::string column_name;
-  std::string type_name;
-  SQLSMALLINT data_type;
-};
-
-void ValidateSQLColumns(
-    SQLHSTMT h_stmt,
-    std::vector<ExpectedColumnValues> const& expected_columns) {
-  SQLCHAR column_name[256], type_name[256], catalog_name[256];
-  SQLSMALLINT data_type, nullable;
-  SQLULEN column_size;
-  SQLLEN ind = 0;
-
-  for (auto const& expected : expected_columns) {
-    SQLRETURN ret = SQLFetch(h_stmt);
-    if (ret == SQL_NO_DATA) {
-      FAIL() << "SQLColumns returned fewer rows than expected.";
-    }
-    ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
-
-    EXPECT_EQ(SQLGetData(h_stmt, 1, SQL_C_CHAR, catalog_name,
-                         sizeof(catalog_name), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(catalog_name),
-                 expected.catalog_name.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 4, SQL_C_CHAR, column_name,
-                         sizeof(column_name), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(column_name),
-                 expected.column_name.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 5, SQL_C_SSHORT, &data_type, 0, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(data_type, expected.data_type);
-
-    EXPECT_EQ(
-        SQLGetData(h_stmt, 6, SQL_C_CHAR, type_name, sizeof(type_name), &ind),
-        SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(type_name),
-                 expected.type_name.c_str());
-  }
-
-  EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
-      << "SQLColumns returned more rows than expected.";
-}
-
-TEST(SQLColumns, NullCatalog) {
-  auto conn = std::make_shared<ODBCHandles>();
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name = kDatasetWithTablePrefix + "NULL_CATALOG";
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(index INT64, Name STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  // Prepare SQLColumns inputs
-  std::string table_part = kTableNamePrefix + "NULL_CATALOG";
-  std::string column = "%";  // Get all columns by wildcard
-
-  SQLRETURN ret =
-      SQLColumns(conn->hstmt, nullptr, 0,                  // Catalog
-                 (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,  // Schema
-                 (SQLCHAR*)table_part.c_str(), SQL_NTS,    // Table name
-                 (SQLCHAR*)column.c_str(), SQL_NTS);       // Column name
-  ASSERT_EQ(ret, SQL_SUCCESS);
-
-  std::vector<ExpectedColumnValues> expected_columns = {
-      {"bigquery-devtools-drivers", "index", "INT64", SQL_BIGINT},
-      {"bigquery-devtools-drivers", "Name", "STRING", SQL_VARCHAR}};
-
-  ValidateSQLColumns(conn->hstmt, expected_columns);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
 
 }  // namespace google::cloud::odbc_tests
