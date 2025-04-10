@@ -1085,11 +1085,24 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
 
   EXPECT_EQ(status, SQL_NEED_DATA);
 
-  std::string out_str(reinterpret_cast<char*>(out_conn_str), out_conn_str_len);
-  std::cout << "[DEBUG] Parsed output connection string: " << out_str << std::endl;
+  std::string res_out_conn_str(reinterpret_cast<char*>(out_conn_str), out_conn_str_len);
+  std::cout << "[DEBUG] Parsed output connection string: " << res_out_conn_str << std::endl;
 
+  #ifndef BQ_DRIVER_INTEGRATION_TESTS
+#ifndef _WIN32
+  std::cout << "[DEBUG] Linux non-BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
+  EXPECT_TRUE(res_out_conn_str.empty());
+#else
+  std::cout << "[DEBUG] Windows non-BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+#endif  // _WIN32
+#else
+  std::cout << "[DEBUG] BQ_DRIVER_INTEGRATION_TESTS build detected." << std::endl;
+  EXPECT_THAT(res_out_conn_str,
+              HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }
-
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
   auto conn = std::make_shared<ODBCHandles>();
 
