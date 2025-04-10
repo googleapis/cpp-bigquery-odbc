@@ -411,9 +411,9 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
       HDC hdc = (HDC)w_param;
       RECT rc;
       GetClientRect(hwnd, &rc);
-      HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
-      FillRect(hdc, &rc, hBrush);
-      DeleteObject(hBrush);
+      HBRUSH h_brush = CreateSolidBrush(RGB(240, 240, 240));
+      FillRect(hdc, &rc, h_brush);
+      DeleteObject(h_brush);
       return 1;  // Indicate we handled the background redraw
     }
     case WM_LBUTTONDOWN: {
@@ -430,22 +430,22 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
       break;
     }
     case WM_CTLCOLORSTATIC: {
-      HDC hdcStatic = (HDC)w_param;
-      HWND hwndStatic = (HWND)l_param;
-      if (GetDlgCtrlID(hwndStatic) == kIdcHyperlink2) {
-        SetTextColor(hdcStatic, RGB(0, 0, 255));  // Set text color to blue
-        SetBkMode(hdcStatic, TRANSPARENT);        // Transparent background
-        static HFONT hFontUnderline = NULL;
-        if (!hFontUnderline) {
+      HDC hdc_static = (HDC)w_param;
+      HWND hwnd_static = (HWND)l_param;
+      if (GetDlgCtrlID(hwnd_static) == kIdcHyperlink2) {
+        SetTextColor(hdc_static, RGB(0, 0, 255));  // Set text color to blue
+        SetBkMode(hdc_static, TRANSPARENT);        // Transparent background
+        static HFONT h_font_underline = NULL;
+        if (!h_font_underline) {
           LOGFONT lf;
-          HFONT hFont = (HFONT)SendMessage(hwndStatic, WM_GETFONT, 0, 0);
-          if (hFont && GetObject(hFont, sizeof(LOGFONT), &lf)) {
+          HFONT h_font = (HFONT)SendMessage(hwnd_static, WM_GETFONT, 0, 0);
+          if (h_font && GetObject(h_font, sizeof(LOGFONT), &lf)) {
             lf.lfUnderline = TRUE;  // Enable underline
-            hFontUnderline = CreateFontIndirect(&lf);
+            h_font_underline = CreateFontIndirect(&lf);
           }
         }
-        if (hFontUnderline) {
-          SelectObject(hdcStatic, hFontUnderline);
+        if (h_font_underline) {
+          SelectObject(hdc_static, h_font_underline);
         }
         return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
       }
