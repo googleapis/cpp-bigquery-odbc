@@ -63,28 +63,7 @@ ProxyOptions::~ProxyOptions() {
   }
   UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
 }
-LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-                                   LPARAM l_param, UINT_PTR sub_id,
-                                   DWORD_PTR ref_data) {
-  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the main dialog
-    return 0;                                      // Mark message as handled
-  }
-  return DefSubclassProc(hwnd, msg, w_param, l_param);
-}
 
-LRESULT CALLBACK CheckboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
-                                      LPARAM l_param, UINT_PTR u_id_subclass,
-                                      DWORD_PTR ref_data) {
-  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
-    HWND parent_hwnd = GetParent(hwnd);
-    if (parent_hwnd) {
-      PostMessage(parent_hwnd, WM_CLOSE, 0, 0);  // Close the proxy dialog
-    }
-    return 0;
-  }
-  return DefSubclassProc(hwnd, msg, w_param, l_param);
-}
 void ProxyOptions::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,

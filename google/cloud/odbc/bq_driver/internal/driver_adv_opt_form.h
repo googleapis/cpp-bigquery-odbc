@@ -16,6 +16,8 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_ADV_OPT_FORM_H
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <commctrl.h>
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 // NEXTID:148
@@ -40,6 +42,9 @@ static int const KIdcLargeResultHeader = 145;
 static int const kIdcEncryptionKeyComboBox = 146;
 static int const kIdcHyperlink2 = 147;
 
+inline constexpr char kBigQueryDocsURL[] =
+    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
+    
 class AdvanceOptions {
  public:
   AdvanceOptions();

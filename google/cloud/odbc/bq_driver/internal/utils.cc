@@ -288,7 +288,7 @@ void setWindowIcon(HWND hwnd) {
   SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
 }
 
-LRESULT CALLBACK inputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data) {
   if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
@@ -298,7 +298,7 @@ LRESULT CALLBACK inputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
   return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
-LRESULT CALLBACK comboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+LRESULT CALLBACK ComboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                       LPARAM l_param, UINT_PTR sub_id,
                                       DWORD_PTR ref_data) {
   if (msg == WM_KEYDOWN) {
@@ -314,7 +314,7 @@ LRESULT CALLBACK comboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
   return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
-LRESULT CALLBACK checkboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+LRESULT CALLBACK CheckboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                       LPARAM l_param, UINT_PTR sub_id,
                                       DWORD_PTR ref_data) {
   if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
