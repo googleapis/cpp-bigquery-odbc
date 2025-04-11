@@ -16,7 +16,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include <shellapi.h>
 
-
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 

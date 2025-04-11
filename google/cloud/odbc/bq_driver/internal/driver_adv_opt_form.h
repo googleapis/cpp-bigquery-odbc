@@ -44,7 +44,7 @@ static int const kIdcHyperlink2 = 147;
 
 inline constexpr char kBigQueryDocsURL[] =
     "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
-    
+
 class AdvanceOptions {
  public:
   AdvanceOptions();
