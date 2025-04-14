@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_procedure_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
@@ -29,6 +30,7 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DSResults;
+using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
 using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
 using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
@@ -43,6 +45,7 @@ using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
+using google::cloud::odbc_bq_driver_internal::ProcessProcedures;
 using google::cloud::odbc_bq_driver_internal::ProcessQueryResults;
 using google::cloud::odbc_bq_driver_internal::ProcessTableResults;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
@@ -59,6 +62,7 @@ using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::ValidateColumnParameters;
 using google::cloud::odbc_bq_driver_internal::ValidateInputParameters;
+using google::cloud::odbc_bq_driver_internal::ValidateProcedureColumnParameters;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -493,6 +497,95 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
+                               SQLSMALLINT catalog_name_len,
+                               SQLCHAR* schema_name,
+                               SQLSMALLINT schema_name_len, SQLCHAR* proc_name,
+                               SQLSMALLINT proc_name_len) {
+  // Validate statement handle
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  // Get metadata attribute
+  StatusRecordOr<SQLULEN> attr_status =
+      handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  if (!attr_status) {
+    return LogAndReturnCode(handle, attr_status);
+  }
+  SQLULEN metadata_id = *attr_status;
+
+  // Validate connection handle
+  if (handle.GetConnectionHandle() == nullptr) {
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
+  }
+
+  if (catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                             sizeof(current_catalog), &catalog_len);
+    catalog_name = current_catalog;
+    catalog_name_len = catalog_len;
+  }
+
+  // Validate input parameters
+  auto input_param_status = ValidateProcedureColumnParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, proc_name,
+      proc_name_len, metadata_id);
+  if (!input_param_status.Ok()) {
+    return LogAndReturnCode(handle, input_param_status);
+  }
+
+  // Convert parameters to strings
+  std::string project_filter = ToCharStr(catalog_name, kMatchAll);
+  std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
+  std::string proc_filter = ToCharStr(proc_name, kMatchAll);
+
+  auto filtered_procedure_data_status = FetchBQSQLProceduresData(
+      conn_handle, project_filter, dataset_filter, proc_filter, metadata_id);
+
+  ResultSet final_result_set;
+  if (filtered_procedure_data_status.GetValue().empty()) {
+    handle.SetResultSet(final_result_set);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    return SQL_SUCCESS;
+  }
+  if (!filtered_procedure_data_status) {
+    return LogAndReturnCode(handle, filtered_procedure_data_status);
+  }
+
+  StatusRecordOr<ResultSet> procedure_result_set_status =
+      ProcessProcedures(filtered_procedure_data_status.GetValue());
+
+  if (!procedure_result_set_status) {
+    return LogAndReturnCode(handle, procedure_result_set_status);
+  }
+
+  if (!procedure_result_set_status->rows.empty()) {
+    final_result_set.row_schema = procedure_result_set_status->row_schema;
+    final_result_set.rows.insert(final_result_set.rows.end(),
+                                 procedure_result_set_status->rows.begin(),
+                                 procedure_result_set_status->rows.end());
+  }
+  handle.SetResultSet(final_result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
 }
 

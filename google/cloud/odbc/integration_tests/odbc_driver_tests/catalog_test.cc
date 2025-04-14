@@ -1462,6 +1462,8 @@ TEST(SQLProcedureColumns, ProcedureWithInOutParameters) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 struct ExpectedProcedureValues {
   std::string procedure_catalog;
   std::string procedure_schema;
@@ -1639,7 +1641,5 @@ TEST(SQLProcedures, TableFunction) {
   CallSQLProcedures(conn, routine_pattern, expected_values);
   CleanupRoutine(conn, "DROP TABLE FUNCTION " + routine_name);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

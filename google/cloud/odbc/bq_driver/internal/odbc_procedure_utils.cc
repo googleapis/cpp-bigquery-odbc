@@ -66,11 +66,22 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
                         "Catalog name cannot be a search pattern"};
   }
 
-  std::string catalog(reinterpret_cast<char const*>(catalog_name),
-                      catalog_name_len);
-  std::string dataset(reinterpret_cast<char const*>(schema_name),
-                      schema_name_len);
-  std::string proc_name(reinterpret_cast<char const*>(procedure_name),
+  std::string catalog =
+      (catalog_name_len == SQL_NTS)
+          ? std::string(reinterpret_cast<char const*>(catalog_name))
+          : std::string(reinterpret_cast<char const*>(catalog_name),
+                        catalog_name_len);
+
+  std::string dataset =
+      (schema_name_len == SQL_NTS)
+          ? std::string(reinterpret_cast<char const*>(schema_name))
+          : std::string(reinterpret_cast<char const*>(schema_name),
+                        schema_name_len);
+
+  std::string proc_name =
+      (procedure_name_len == SQL_NTS)
+          ? std::string(reinterpret_cast<char const*>(procedure_name))
+          : std::string(reinterpret_cast<char const*>(procedure_name),
                         procedure_name_len);
 
   if (catalog.empty()) {
@@ -161,12 +172,12 @@ StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
   named_query_params.push_back(param);
 
   std::string query = R"(
-SELECT routine_name, routine_schema
-FROM `)" + project_id +
+  SELECT routine_name, routine_schema, routine_type
+  FROM `)" + project_id +
                       "." + dataset_id + R"(.INFORMATION_SCHEMA.ROUTINES`
-WHERE routine_name LIKE @procedure_name
-AND routine_type = 'PROCEDURE'
-)";
+  WHERE routine_name LIKE @procedure_name
+  AND routine_type IN ('PROCEDURE', 'FUNCTION' , 'TABLE FUNCTION')
+  )";
 
   // Construct Post Query Request
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
@@ -282,10 +293,11 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
   if (!query_result.Ok()) {
     return StatusRecord{SQLStates::k_HY000(), "Failed to fetch procedure data"};
   }
+  SQLProcedures procedure;
 
   auto response = query_result.GetValue();
   if (response.rows.empty()) {
-    return StatusRecord{SQLStates::k_HY000(), "No procedure data found"};
+    return procedure;
   }
 
   // Query to fetch input and output parameter counts
@@ -313,8 +325,6 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
   if (response_val.rows.empty()) {
     return StatusRecord{SQLStates::k_HY000(), "No parameter data found"};
   }
-  // Construct procedure object
-  SQLProcedures procedure;
 
   auto& row = response.rows[0];
   auto& columns = row.columns;
