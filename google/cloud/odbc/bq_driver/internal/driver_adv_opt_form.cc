@@ -233,28 +233,28 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
                     InputSubclassProc, 0, 0);
   // Disable and clear if 'Allow large result sets' is unchecked
- if (allow_large_results_ != "1") {
-  HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
-  HWND h_high_throughput_checkbox =
-      GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox);
-  HWND h_dataset_name_edit = GetDlgItem(adv_hwnd, kIdcDatasetNameEdit);
-  HWND h_temp_expiration_edit = GetDlgItem(adv_hwnd, kIdcTempExpirationEdit);
-  HWND h_activation_threshold_edit =
-      GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit);
+  if (allow_large_results_ != "1") {
+    HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
+    HWND h_high_throughput_checkbox =
+        GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox);
+    HWND h_dataset_name_edit = GetDlgItem(adv_hwnd, kIdcDatasetNameEdit);
+    HWND h_temp_expiration_edit = GetDlgItem(adv_hwnd, kIdcTempExpirationEdit);
+    HWND h_activation_threshold_edit =
+        GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit);
 
-  EnableWindow(h_use_default_checkbox, FALSE);
-  EnableWindow(h_high_throughput_checkbox, FALSE);
-  EnableWindow(h_dataset_name_edit, FALSE);
-  EnableWindow(h_temp_expiration_edit, FALSE);
-  EnableWindow(h_activation_threshold_edit, FALSE);
+    EnableWindow(h_use_default_checkbox, FALSE);
+    EnableWindow(h_high_throughput_checkbox, FALSE);
+    EnableWindow(h_dataset_name_edit, FALSE);
+    EnableWindow(h_temp_expiration_edit, FALSE);
+    EnableWindow(h_activation_threshold_edit, FALSE);
 
-  CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
-  CheckDlgButton(adv_hwnd, kIdcAllowHighThroughputCheckbox, BST_UNCHECKED);
+    CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
+    CheckDlgButton(adv_hwnd, kIdcAllowHighThroughputCheckbox, BST_UNCHECKED);
 
-  SetWindowText(h_dataset_name_edit, TEXT(""));
-  SetWindowText(h_temp_expiration_edit, TEXT(""));  
-  SetWindowText(h_activation_threshold_edit, TEXT(""));
-}
+    SetWindowText(h_dataset_name_edit, TEXT(""));
+    SetWindowText(h_temp_expiration_edit, TEXT(""));
+    SetWindowText(h_activation_threshold_edit, TEXT(""));
+  }
 }
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
@@ -580,7 +580,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           if (HIWORD(w_param) == BN_CLICKED) {
             BOOL is_checked =
                 IsDlgButtonChecked(hwnd, kIdcAllowLargeResultsCheckbox);
-        
+
             HWND h_use_default_checkbox =
                 GetDlgItem(hwnd, kIdcUseDefaultCheckbox);
             HWND h_high_throughput_checkbox =
@@ -590,16 +590,16 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 GetDlgItem(hwnd, kIdcTempExpirationEdit);
             HWND h_activation_threshold_edit =
                 GetDlgItem(hwnd, kIdcActivationThresholdEdit);
-        
+
             // Enable or disable controls
             EnableWindow(h_use_default_checkbox, is_checked);
             EnableWindow(h_high_throughput_checkbox, is_checked);
             EnableWindow(h_dataset_name_edit,
                          is_checked &&
-                         !IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox));
+                             !IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox));
             EnableWindow(h_temp_expiration_edit, is_checked);
             EnableWindow(h_activation_threshold_edit, is_checked);
-        
+
             if (is_checked) {
               // Set default value when checkbox is checked
               SetWindowText(h_temp_expiration_edit, TEXT("3600000"));
@@ -608,7 +608,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
               CheckDlgButton(hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
               CheckDlgButton(hwnd, kIdcAllowHighThroughputCheckbox,
                              BST_UNCHECKED);
-        
+
               // Clear dependent textboxes
               SetWindowText(h_dataset_name_edit, TEXT(""));
               SetWindowText(h_temp_expiration_edit, TEXT(""));
@@ -616,7 +616,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             }
           }
           break;
-        }        
+        }
         case kIdcEnableSessionCheckbox: {
           if (HIWORD(w_param) == BN_CLICKED) {
             BOOL is_checked =
