@@ -860,7 +860,7 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
   actual_message = reinterpret_cast<char*>(buf_sql_fetch_last);
   EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 
-  // Fetch Last Row
+  // Fetch Bookmark row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_BOOKMARK, 0);
   EXPECT_EQ(status, SQL_ERROR);
   status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE,
