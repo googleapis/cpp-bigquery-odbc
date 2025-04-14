@@ -939,7 +939,7 @@ TEST(StatementTest, SQLGetData) {
 
 TEST(StatementTest, SQLGetData_insufficientBuffer) {
   auto conn = std::make_shared<ODBCHandles>();
-  auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
+  auto table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_RESULT_SET_TEST";
   Table table(table_name);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
