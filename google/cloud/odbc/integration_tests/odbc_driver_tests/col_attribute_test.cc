@@ -267,6 +267,9 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              "SQLColAttribute " + std::to_string(SQL_DESC_BASE_COLUMN_NAME),
              conn);
   col = reinterpret_cast<char*>(col_attr);
+  std::cout << "Debug datatype expected   = "
+            << kDataTypesColumns[i - 1].col_name << std::endl;
+  std::cout << "Debug datatype return   = " << col << std::endl;
   EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
 
   memset(col_attr, 0, kBufferLength);
@@ -373,6 +376,8 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
                            &col_attr_int);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CONCISE_TYPE),
              conn);
+  std::cout << "debug: concise type = " << col_attr_int << " i " << i
+            << std::endl;
   EXPECT_EQ(info_row.data_type, col_attr_int);
 
   col_attr_int = 0;
@@ -449,6 +454,9 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TYPE, NULL, 0, NULL,
                            &col_attr_int);
+  std::cout << "Debug desc type in expedcted   = " << info_row.sql_data_type
+            << std::endl;
+  std::cout << "Debug desc type in return  = " << col_attr_int << std::endl;
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TYPE), conn);
   EXPECT_EQ(info_row.sql_data_type, col_attr_int);
 

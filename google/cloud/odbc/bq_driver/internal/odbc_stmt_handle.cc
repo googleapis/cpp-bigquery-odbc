@@ -292,6 +292,7 @@ StatusRecord StatementHandle::PopulateIrd(
     descriptor_record.length = res.max_length;
     StatusRecordOr<SQLSMALLINT> type_status_record =
         GetSQLDataType(res.type, (res.mode == array_field));
+    std::cout << "Debug datatype = " << res.type << std::endl;
 
     if (!type_status_record.Ok()) {
       return type_status_record.GetStatusRecord();
@@ -316,7 +317,9 @@ StatusRecord StatementHandle::PopulateIrd(
     descriptor_record.table_name = table_fields.table_id;
     descriptor_record.label = res.name;
     descriptor_record.type = type_info.sql_data_type;
-    descriptor_record.concise_type = type_status_record.GetValue();
+    descriptor_record.SetConciseType(*type_status_record, DescriptorType::kIRD);
+    std::cout << "concise type= " << descriptor_record.concise_type
+              << std::endl;
     descriptor_record.local_type_name =
         type_info.local_type_name ? std::string(reinterpret_cast<char const*>(
                                         type_info.local_type_name))
@@ -380,13 +383,11 @@ StatusRecord StatementHandle::PopulateIrd(
             ? ""
             : std::string(
                   reinterpret_cast<char const*>(type_info.literal_prefix));
-
     descriptor_record.literal_suffix =
         type_info.literal_suffix == nullptr
             ? ""
             : std::string(
                   reinterpret_cast<char const*>(type_info.literal_suffix));
-
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);

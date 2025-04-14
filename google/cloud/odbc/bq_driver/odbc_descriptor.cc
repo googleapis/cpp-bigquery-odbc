@@ -370,6 +370,12 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           ? handle->GetDescriptorRecord(rec_number)
           : default_descriptor_record;
   StatusRecord result = StatusRecord::Ok();
+  // Now you can check:
+  if ((handle->HasDescriptorRecord(rec_number))) {
+    std::cout << "first" << std::endl;
+  } else {
+    std::cout << "second" << std::endl;
+  }
   switch (field_identifier) {
     case SQL_DESC_AUTO_UNIQUE_VALUE:
       IntValueToOutputBufferResponse(descriptor_record.auto_unique_value,
@@ -395,8 +401,12 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_CONCISE_TYPE:
-      IntValueToOutputBufferResponse(descriptor_record.concise_type, out_value,
-                                     value_string_len);
+      std::cout << "concise type= " << descriptor_record.concise_type
+                << std::endl;
+      std::cout << "value_string_len= " << value_string_len << std::endl;
+      IntValueToOutputBufferResponse(
+          static_cast<SQLLEN>(descriptor_record.concise_type), out_value,
+          value_string_len);
       break;
     case SQL_DESC_DATA_PTR:
       AddressToPointer(descriptor_record.data_ptr, out_value, value_string_len);
@@ -498,8 +508,9 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_TYPE:
-      IntValueToOutputBufferResponse(descriptor_record.type, out_value,
-                                     value_string_len);
+      IntValueToOutputBufferResponse(
+          static_cast<SQLLEN>(descriptor_record.type), out_value,
+          value_string_len);
       break;
     case SQL_DESC_TYPE_NAME:
       result = StringValueToOutputBufferResponse(
