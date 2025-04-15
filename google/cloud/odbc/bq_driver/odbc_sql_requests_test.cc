@@ -775,6 +775,77 @@ TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
   EXPECT_EQ("String data, right truncated",
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
+  
+TEST(SQLMoreResultsInternal, Fail_NullHandle) {
+  SQLRETURN status = SQLMoreResultsInternal(nullptr);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLMoreResultsInternal, Fail_InvalidHandle) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLRETURN status = SQLMoreResultsInternal(&conn_handle);
+  EXPECT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLMoreResultsInternal, Fail_StatementCanceled) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.EnableCancellation();
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  ASSERT_EQ(1, stmt_handle.GetDiagnostics().GetStatusRecords().size());
+  EXPECT_EQ(SQLStates::k_HY008(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ("Operation canceled",
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+TEST(SQLMoreResultsInternal, Async_Success) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  stmt_handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
+
+  std::promise<StatusRecord> promise;
+  std::future<StatusRecord> future = promise.get_future();
+  stmt_handle.SetFutureMoreResultsQuery(std::move(future));
+
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+}
+
+TEST(SQLMoreResultsInternal, NoMoreJobData) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  // stmt_handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_OFF);
+
+  // Simulate some job data that gets deleted
+  stmt_handle.SetJobData("job_id", "SELECT");
+  stmt_handle.DeleteNextJobData();  // Should remove the only job
+
+  ASSERT_FALSE(stmt_handle.HasJobData());  // Make sure no jobs left
+
+  SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
+
+  EXPECT_EQ(SQL_NO_DATA, status);
+}
+
+TEST(SQLMoreResultsInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+  StatementHandle handle =
+      CreateStmtHandleWithState(StmtStates::kStatementStillExecuting);
+  std::future<StatusRecord> fut_query =
+      std::async(std::launch::async, []() { return StatusRecord::Ok(); });
+  handle.SetFutureMoreResultsQuery(std::move(fut_query));
+  handle.EnableCancellation();
+
+  SQLRETURN status = SQLMoreResultsInternal(&handle);
+
+  ASSERT_FALSE(handle.IsOperationCanceled());
+  ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
+
+  EXPECT_EQ(SQLStates::k_HY008(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
+              HasSubstr("Operation canceled"));
+}
 
 TEST(SQLPutDataInternal, InvalidStatementState) {
   StatementHandle stmt_handle = CreateStatementHandle();

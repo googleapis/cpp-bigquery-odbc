@@ -406,7 +406,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
           GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
                        static_cast<SQLSMALLINT>(field_identifier), char_attr,
                        static_cast<SQLINTEGER>(char_attr_buffer_len),
-                       reinterpret_cast<SQLINTEGER*>(char_attr_string_len));
+                       reinterpret_cast<SQLSMALLINT*>(char_attr_string_len));
       break;
     default:
       result = GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),

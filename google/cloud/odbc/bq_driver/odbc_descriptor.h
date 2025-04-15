@@ -49,7 +49,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
 google::cloud::odbc_internal::StatusRecordOr<SQLRETURN> GetDescField(
     google::cloud::odbc_bq_driver_internal::DescriptorHandle* handle,
     SQLSMALLINT rec_number, SQLSMALLINT field_identifier, SQLPOINTER out_value,
-    SQLINTEGER value_buffer_len, SQLINTEGER* value_string_len);
+    SQLINTEGER value_buffer_len, SQLSMALLINT* value_string_len);
 
 SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,

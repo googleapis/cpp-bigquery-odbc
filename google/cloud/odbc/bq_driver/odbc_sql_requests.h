@@ -74,6 +74,9 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
                              SQLLEN str_len_or_ind_ptr);
+
+SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_REQUESTS_H
