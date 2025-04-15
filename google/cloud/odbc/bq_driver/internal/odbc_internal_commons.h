@@ -91,7 +91,7 @@ enum BQDataType {
 struct ColumnSchema {
   int col_index;
   BQDataType col_type;
-  BQDataType array_type;
+  bool is_mode_repeated;
 };
 bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
@@ -138,8 +138,8 @@ inline bool IsDSValueNull(DSValue const& value) {
 }
 // converting the given string to Numeric number
 // getting scale ,precision, sign and the value from sting parameter
-void GetNumericDetailsFromStr(std::string const& src_dsval,
-                              SQL_NUMERIC_STRUCT& numst);
+odbc_internal::StatusRecord GetNumericDetailsFromStr(
+    std::string const& src_dsval, SQL_NUMERIC_STRUCT& numst);
 inline void StringToDSValue(std::string const& str, DSValue& value) {
   value.resize(str.size());
   std::copy(str.begin(), str.end(), value.begin());

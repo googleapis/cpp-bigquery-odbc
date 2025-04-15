@@ -402,7 +402,7 @@ TEST(CreateResultSetDSRow, BoolField) {
   expected_sql_columns.field_schema = field_schema;
   expected_sql_columns.col_size = 1;
   expected_sql_columns.buf_len = 1;
-  expected_sql_columns.octet_len = SQL_NULL_DATA;
+  expected_sql_columns.octet_len = 16384;
   expected_sql_columns.dec_digits = SQL_NULL_DATA;
   expected_sql_columns.radix = 10;
   expected_sql_columns.data_type = SQL_BIT;
@@ -487,8 +487,8 @@ TEST(CreateResultSetDSRow, TimestampField) {
   expected_sql_columns.col_size = 26;
   expected_sql_columns.buf_len = 16;
   expected_sql_columns.dec_digits = 6;
-  expected_sql_columns.octet_len = SQL_NULL_DATA;
-  expected_sql_columns.radix = 10;
+  expected_sql_columns.octet_len = 16384;
+  expected_sql_columns.radix = 2;
   expected_sql_columns.data_type = SQL_TYPE_TIMESTAMP;
   expected_sql_columns.nullable = 1;
   expected_sql_columns.sql_data_type = SQL_DATETIME;
@@ -515,8 +515,8 @@ TEST(CreateResultSetDSRow, DateTimeField) {
   expected_sql_columns.col_size = 26;
   expected_sql_columns.buf_len = 16;
   expected_sql_columns.dec_digits = 6;
-  expected_sql_columns.octet_len = SQL_NULL_DATA;
-  expected_sql_columns.radix = 10;
+  expected_sql_columns.octet_len = 16384;
+  expected_sql_columns.radix = 2;
   expected_sql_columns.data_type = SQL_TYPE_TIMESTAMP;
   expected_sql_columns.nullable = 1;
   expected_sql_columns.sql_data_type = SQL_DATETIME;

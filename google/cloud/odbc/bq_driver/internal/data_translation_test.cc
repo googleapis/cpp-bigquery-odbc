@@ -248,7 +248,8 @@ TEST(GetNumericDetailsFromStr, To_Numeric_Val) {
   SQLSCHAR scale = 2;
   SQLCHAR sign = 1; /* 0 for negative, 1 for positive */
   SQLCHAR val[SQL_MAX_NUMERIC_LEN] = "12166";
-  GetNumericDetailsFromStr(str_input, numst);
+  auto status_record = GetNumericDetailsFromStr(str_input, numst);
+  EXPECT_TRUE(status_record.ok());
   EXPECT_EQ(numst.precision, precision);
   EXPECT_EQ(numst.sign, sign);
   EXPECT_EQ(numst.scale, scale);
@@ -306,7 +307,7 @@ TEST(ConvertFromNumericDSValue, To_SQL_C_Numeric) {
     StringToDSValue("42", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
 
-    EXPECT_EQ(numeric_struct.val[0], 42);
+    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 42);
     EXPECT_EQ(numeric_struct.sign, 1);  // Positive number
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
   }
@@ -316,7 +317,7 @@ TEST(ConvertFromNumericDSValue, To_SQL_C_Numeric) {
     StringToDSValue("-99", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
 
-    EXPECT_EQ(numeric_struct.val[0], 99);
+    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 99);
     EXPECT_EQ(numeric_struct.sign, 0);  // Negative number
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
   }
@@ -345,9 +346,27 @@ TEST(ConvertFromNumericDSValue, To_SQL_C_Numeric) {
     DSValue ds_value;
     StringToDSValue("-0.00000000000000000000000000000000000001", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
-    EXPECT_EQ(status_record.sql_state,
-              SQLStates::k_22003());  // Expect "Numeric value out of range"
-    EXPECT_EQ(status_record.message, "Numeric value out of range");
+
+    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 0);
+    EXPECT_EQ(numeric_struct.scale, 0);
+    EXPECT_EQ(numeric_struct.sign, 1);
+    EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
+    EXPECT_EQ(status_record.CalculateReturnCode(), SQL_SUCCESS);
+  }
+
+  {
+    DSValue ds_value;
+    StringToDSValue("0.123456789123456789", ds_value);
+    StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
+
+    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 123456789);
+    EXPECT_EQ(numeric_struct.scale, 9);
+    EXPECT_EQ(numeric_struct.sign, 1);
+    EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
+    EXPECT_EQ(status_record.sql_state, SQLStates::k_01S07());
+    EXPECT_EQ(status_record.message,
+              "Fractional truncation (loss of precision)");
+    EXPECT_EQ(status_record.CalculateReturnCode(), SQL_SUCCESS_WITH_INFO);
   }
 }
 

@@ -70,8 +70,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kTime:
       return ConvertFromTimeDSValue(ds_val, data);
     case BQDataType::kJson:
-    case BQDataType::kStruct:
       return ConvertFromJsonDSValue(ds_val, data);
+    case BQDataType::kStruct:
+      return ConvertFromStructDSValue(ds_val, data);
     case BQDataType::kArray:
       return ConvertFromArrayDSValue(ds_val, data);
     case BQDataType::kTimeStamp:
@@ -165,8 +166,13 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
     SQLLEN row_offset = row_num * elem_size;
     SQLLEN row_offset_ind = row_num * elem_size_ind;
 
+    BQDataType bq_data_type = col_schema.col_type;
+    if (col_schema.is_mode_repeated) {
+      bq_data_type = BQDataType::kArray;
+    }
+
     StatusRecord status_record = WriteToApplicationBuffer(
-        ds_val, col_schema.col_type, col_desc, bind_offset + row_offset,
+        ds_val, bq_data_type, col_desc, bind_offset + row_offset,
         bind_offset + row_offset_ind);
     if (!status_record.ok()) {
       return status_record;

@@ -568,8 +568,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   RowSchema const& schema = result_set.row_schema;
   BQDataType bq_data_type;
   for (auto const& col_schema : schema) {
-    if (col_schema.col_index == column_number - 1)
-      bq_data_type = col_schema.col_type;
+    if (col_schema.col_index == column_number - 1) {
+      if (col_schema.is_mode_repeated) {
+        bq_data_type = BQDataType::kArray;
+      } else {
+        bq_data_type = col_schema.col_type;
+      }
+    }
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 

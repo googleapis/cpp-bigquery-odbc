@@ -60,10 +60,10 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
 
 std::string ConvertLanguageDialect(std::string language_dialect) {
   std::string language_dialect_value;
-  if (language_dialect == "Standard SQL") {
+  if (language_dialect == "GoogleSQL") {
     language_dialect_value =
         std::to_string(static_cast<int>(LanguageDialect::kStandardSQL));
-  } else if (language_dialect == "Legacy SQL") {
+  } else if (language_dialect == "LegacySQL") {
     language_dialect_value =
         std::to_string(static_cast<int>(LanguageDialect::kLegacySQL));
   } else
@@ -148,6 +148,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string proxy_pwd = GetValueOrDefault(section, proxy_pwd_key);
   std::string proxy_pwd_enc =
       EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
+  std::string encryption_type_value =
+      GetValueOrDefault(section, encryption_type);
 
   DriverForm form;
   AdvanceOptions advance_form;
@@ -181,6 +183,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {allow_large_results_key, allow_large_results},
         {use_default_large_results_dataset_key,
          use_default_large_results_dataset},
+        {encryption_type, encryption_type_value},
         {proxy_check_key, proxy_check},
         {proxy_host_key, proxy_host},
         {proxy_port_key, proxy_port},
@@ -232,6 +235,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     allow_large_results = advance_form.GetAllowLargeResults();
     use_default_large_results_dataset =
         advance_form.GetUseDefaultLargeResults();
+    encryption_type_value = advance_form.GetEncryptionType();
     proxy_check = proxy_form.GetProxyCheck();
     proxy_host = proxy_form.GetProxyHost();
     proxy_port = proxy_form.GetProxyPort();

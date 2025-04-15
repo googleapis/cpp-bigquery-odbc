@@ -19,8 +19,6 @@
 
 namespace google::cloud::odbc_tests {
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 struct ExpectedResults {
   std::string bq_type;
   SQLSMALLINT param_size_source = 0;
@@ -78,7 +76,7 @@ void CheckLength(std::shared_ptr<ODBCHandles> conn, SQLSMALLINT param_number,
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
   EXPECT_EQ(expected, buffer_length);
 #else
-  SQLSMALLINT out_desc_len;
+  SQLULEN out_desc_len;
   SQLRETURN status = SQLGetDescField(conn->ipd, param_number, SQL_DESC_LENGTH,
                                      &out_desc_len, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_LENGTH)", conn);
@@ -169,7 +167,5 @@ TEST(SQLDescribeParam, DescribeAllParams) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

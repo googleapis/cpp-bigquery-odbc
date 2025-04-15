@@ -67,8 +67,10 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       status_record = ConvertFromTimeDSValue(ds_val, data);
       break;
     case BQDataType::kJson:
-    case BQDataType::kStruct:
       status_record = ConvertFromJsonDSValue(ds_val, data);
+      break;
+    case BQDataType::kStruct:
+      status_record = ConvertFromStructDSValue(ds_val, data);
       break;
     case BQDataType::kTimeStamp:
     case BQDataType::kDatetime:
@@ -85,6 +87,9 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       break;
     case BQDataType::kBool:
       status_record = ConvertFromBooleanDSValue(ds_val, data);
+      break;
+    case BQDataType::kArray:
+      status_record = ConvertFromArrayDSValue(ds_val, data);
       break;
     default:
       status_record = {SQLStates::k_HYC00(), "Data type not supported"};
