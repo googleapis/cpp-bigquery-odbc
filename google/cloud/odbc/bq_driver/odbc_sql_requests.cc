@@ -359,6 +359,7 @@ SQLRETURN HandleAsyncGetResults(StatementHandle& stmt_handle,
     // Reset the state to not prepared so it can be executed again.
     stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
   }
+  stmt_handle.SetNullFutureMoreResultsQuery();  // Clean up after execution
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 
@@ -1102,11 +1103,7 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   // Handle pending async future if already set
   auto future_opt = stmt_handle.GetPossibleFutureMoreResults();
   if (future_opt.has_value()) {
-    SQLRETURN status = HandleAsyncGetResults(stmt_handle, async_enable);
-    if (status != SQL_STILL_EXECUTING) {
-      stmt_handle.SetNullFutureMoreResultsQuery();  // Clean up after execution
-    }
-    return status;
+    return HandleAsyncGetResults(stmt_handle, async_enable);
   }
 
   // Prepare for next result set: discard previous job data
