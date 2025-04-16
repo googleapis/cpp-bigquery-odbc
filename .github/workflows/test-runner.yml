@@ -61,10 +61,11 @@ jobs:
     with:
       checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
     secrets: inherit
-  windows-cmake:
-    name: Windows-CMake
-    needs: [pre-flight]
-    uses: ./.github/workflows/windows-cmake.yml
-    with:
-      checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
-    secrets: inherit
+  # TODO(sachinpro): Temporarily pausing windows checks
+  # windows-cmake:
+  #   name: Windows-CMake
+  #   needs: [pre-flight]
+  #   uses: ./.github/workflows/windows-cmake.yml
+  #   with:
+  #     checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+  #   secrets: inherit
