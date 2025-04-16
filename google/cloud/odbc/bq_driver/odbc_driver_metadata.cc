@@ -560,15 +560,15 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   auto filtered_procedure_data_status = FetchBQSQLProceduresData(
       conn_handle, project_filter, dataset_filter, proc_filter, metadata_id);
+  if (!filtered_procedure_data_status) {
+    return LogAndReturnCode(handle, filtered_procedure_data_status);
+  }
 
   ResultSet final_result_set;
   if (filtered_procedure_data_status.GetValue().empty()) {
     handle.SetResultSet(final_result_set);
     handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
     return SQL_SUCCESS;
-  }
-  if (!filtered_procedure_data_status) {
-    return LogAndReturnCode(handle, filtered_procedure_data_status);
   }
 
   StatusRecordOr<ResultSet> procedure_result_set_status =
