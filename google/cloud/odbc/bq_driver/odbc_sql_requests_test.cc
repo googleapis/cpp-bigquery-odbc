@@ -775,7 +775,7 @@ TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
   EXPECT_EQ("String data, right truncated",
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
-  
+
 TEST(SQLMoreResultsInternal, Fail_NullHandle) {
   SQLRETURN status = SQLMoreResultsInternal(nullptr);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
