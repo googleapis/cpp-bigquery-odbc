@@ -7,7 +7,6 @@ EXPORTS
     SQLBrowseConnectW @6
     SQLBulkOperations @7
     SQLCancel @8
-    SQLCancelHandle @9
     SQLCloseCursor @10
     SQLColAttribute @11
     SQLColAttributeW @12
@@ -106,7 +105,6 @@ EXPORTS
     SQLSetDescFieldW @105
     SQLSetDescRec @106
     SQLSetEnvAttr @107
-    SQLSetPos @108
     SQLSetStmtAttr @109
     SQLSetStmtAttrW @110
     SQLSpecialColumns @111

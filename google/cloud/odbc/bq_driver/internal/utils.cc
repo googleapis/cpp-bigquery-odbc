@@ -22,6 +22,8 @@
 #ifdef _WIN32
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
+#include <filesystem>
+namespace fs = std::filesystem;
 #endif
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -193,11 +195,11 @@ HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id) {
-  return CreateWindowEx(0, "EDIT", "",
-                        WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT |
-                            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
-                        x, y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(
+      0, "EDIT", "",
+      WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
+          ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
+      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 }
 
 // Helper function to create a combo box (dropdown)
@@ -257,6 +259,69 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
       parent, (HMENU)id, GetModuleHandle(NULL), NULL);
 
   return h_hyperlink;
+}
+void setWindowIcon(HWND hwnd) {
+  fs::path source_path(__FILE__);
+  fs::path absolute_path = fs::absolute(source_path);
+  fs::path project_dir = absolute_path;
+  // Traverse up to find the project directory (by checking for .git file)
+  while (project_dir.has_parent_path()) {
+    if (fs::exists(project_dir / ".git")) {
+      break;
+    }
+    project_dir = project_dir.parent_path();
+  }
+
+  fs::path const ICON_RELATIVE_PATH =
+      "ci/installer/InstallerProj/Assets/bq.ico";
+  fs::path icon_path = project_dir / ICON_RELATIVE_PATH;
+  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.string().c_str(), IMAGE_ICON,
+                                   32, 32, LR_LOADFROMFILE);
+  if (!h_icon) {
+    MessageBoxA(hwnd,
+                ("Failed to load icon from: " + icon_path.string()).c_str(),
+                "Error", MB_OK | MB_ICONERROR);
+    return;
+  }
+  // Set the window icon
+  SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
+  SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+}
+
+LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+                                   LPARAM l_param, UINT_PTR sub_id,
+                                   DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);  // Close the parent dialog
+    return 0;                                      // Mark message as handled
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
+
+LRESULT CALLBACK ComboBoxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN) {
+    if (w_param == VK_ESCAPE) {
+      SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
+      return 0;
+    } else if (w_param == VK_RETURN) {
+      HWND h_ok = GetDlgItem(GetParent(hwnd), IDOK);
+      if (h_ok) SendMessage(GetParent(hwnd), WM_COMMAND, IDOK, (LPARAM)h_ok);
+      return 0;
+    }
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
+}
+
+LRESULT CALLBACK CheckboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
+                                      LPARAM l_param, UINT_PTR sub_id,
+                                      DWORD_PTR ref_data) {
+  if (msg == WM_KEYDOWN && w_param == VK_ESCAPE) {
+    SendMessage(GetParent(hwnd), WM_CLOSE, 0, 0);
+    return 0;
+  }
+  return DefSubclassProc(hwnd, msg, w_param, l_param);
 }
 
 #else
@@ -517,9 +582,11 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
     in_str_len = wstr.size();
     // Calculating length based on SQLWCHAR size in different plateform and
     // compiler.
+#ifndef _WIN32
     if (sizeof(SQLWCHAR) == 2) {
       in_str_len = in_str_len * sizeof(SQLWCHAR);
     }
+#endif  // _WIN32
   }
   stmt_txt_wstr.reserve(in_str_len);
   for (SQLINTEGER i = 0; i < in_str_len; ++i) {

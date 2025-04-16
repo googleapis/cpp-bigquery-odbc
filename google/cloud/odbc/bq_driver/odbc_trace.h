@@ -641,6 +641,10 @@ void TraceFunctionEntry_SQLBulkOperations(SQLHSTMT statement_handle,
 void TraceFunctionExit_SQLBulkOperations(SQLRETURN ret_code,
                                          TraceOptions& opts);
 
+void TraceFunctionEntry_SQLMoreResults(SQLHSTMT statement_handle,
+                                       TraceOptions& opts);
+
+void TraceFunctionExit_SQLMoreResults(SQLRETURN ret_code, TraceOptions& opts);
 #ifdef _WIN32
 void TraceFunctionEntry_ConfigDSN(HWND hwndParent, WORD fRequest,
                                   LPCSTR lpszDriver, LPCSTR lpszAttributes,

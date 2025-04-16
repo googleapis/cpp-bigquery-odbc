@@ -41,6 +41,10 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   std::string src_str;
   switch (src_data.type) {
     case SQL_C_CHAR: {
+      if (src_buf == nullptr || result_len <= 0) {
+        src_str = "";
+        break;
+      }
       src_str = std::string(static_cast<char*>(src_buf), result_len);
       break;
     }
@@ -96,7 +100,7 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
   SQLLEN* src_result_len = src_data.result_len;
 
   auto* src_val = static_cast<uint8_t*>(src_buf);
-  if (!src_val || !src_result_len || *src_result_len <= 0) {
+  if (!src_val || !src_result_len || *src_result_len < 0) {
     return StatusRecord{SQLStates::k_HY000(), "Invalid binary data"};
   }
 

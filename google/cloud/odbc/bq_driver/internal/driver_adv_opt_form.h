@@ -16,9 +16,11 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_ADV_OPT_FORM_H
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <commctrl.h>
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:145
+// NEXTID:148
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -36,6 +38,12 @@ static int const kIdcOKButton = 141;
 static int const kIdcCancelButton = 142;
 static int const kIdcLanguageDialectComboBox = 143;
 static int const kIdcVariableCheckbox = 144;
+static int const KIdcLargeResultHeader = 145;
+static int const kIdcEncryptionKeyComboBox = 146;
+static int const kIdcHyperlink2 = 147;
+
+inline constexpr char kBigQueryDocsURL[] =
+    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 
 class AdvanceOptions {
  public:
@@ -56,6 +64,9 @@ class AdvanceOptions {
   }
   inline std::string const& GetDatasetName() const { return adv_dataset_name_; }
   inline std::string const& GetEncryptionKey() const { return encryption_key_; }
+  inline std::string const& GetEncryptionType() const {
+    return encryption_type_;
+  }
   inline std::string const& GetSessionLocation() const {
     return session_location_;
   }
@@ -111,6 +122,7 @@ class AdvanceOptions {
   static std::string activation_threshold_checkbox_;
   static std::string allow_large_results_;
   static std::string use_default_large_results_;
+  static std::string encryption_type_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);

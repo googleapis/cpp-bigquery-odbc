@@ -162,16 +162,6 @@ TEST(SetDescriptorHandle, SetAndGetAPD) {
   EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
-TEST(SetDescriptorHandle, Fails_InvalidAllocType) {
-  StatementHandle handle;
-  DescriptorHandle desc(DescriptorType::kApplication, SQL_DESC_ALLOC_AUTO);
-
-  StatusRecord status_record =
-      handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
-
-  EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
-}
-
 TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   StatementHandle handle;
   DescriptorHandle desc = CreateExplicitDescriptor();

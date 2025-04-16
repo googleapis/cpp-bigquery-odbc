@@ -56,19 +56,22 @@ struct NativeDataTypesStruct {
 
 TableSchema CreateTableSchema() {
   TableSchema schema;
-  TableFieldSchema f1, f2, f3, f4, f5, f6;
+  TableFieldSchema f1, f2, f3, f4, f5, f6, f7;
   f1.type = "STRING";
   f2.type = "STRING";
   f3.type = "STRING";
   f4.type = "STRING";
   f5.type = "INTEGER";
   f6.type = "STRING";
+  f7.type = "INTEGER";
+  f7.mode = "REPEATED";
   schema.fields.emplace_back(f1);
   schema.fields.emplace_back(f2);
   schema.fields.emplace_back(f3);
   schema.fields.emplace_back(f4);
   schema.fields.emplace_back(f5);
   schema.fields.emplace_back(f6);
+  schema.fields.emplace_back(f7);
   return schema;
 }
 
@@ -113,13 +116,15 @@ GetQueryResults CreateGetQueryResults() {
 
 void AssertResults(StatusRecordOr<ResultSet> status_record_or) {
   EXPECT_EQ(status_record_or->rows.size(), 2);
-  EXPECT_EQ(status_record_or->row_schema.size(), 6);
+  EXPECT_EQ(status_record_or->row_schema.size(), 7);
   EXPECT_EQ(status_record_or->row_schema[0].col_type, BQDataType::kString);
   EXPECT_EQ(status_record_or->row_schema[1].col_type, BQDataType::kString);
   EXPECT_EQ(status_record_or->row_schema[2].col_type, BQDataType::kString);
   EXPECT_EQ(status_record_or->row_schema[3].col_type, BQDataType::kString);
   EXPECT_EQ(status_record_or->row_schema[4].col_type, BQDataType::kInt64);
   EXPECT_EQ(status_record_or->row_schema[5].col_type, BQDataType::kString);
+  EXPECT_EQ(status_record_or->row_schema[6].col_type, BQDataType::kInt64);
+  EXPECT_TRUE(status_record_or->row_schema[6].is_mode_repeated);
   std::string data;
   DSValueToString(status_record_or->rows[0][0], data);
   EXPECT_EQ(data, "table-catalog-1");

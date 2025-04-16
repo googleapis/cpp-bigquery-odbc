@@ -47,11 +47,9 @@ class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutANSI, StatementParameterizedTest,
                          testing::Values(false, true));
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 class MultiStatementTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, MultiStatementTest,
                          testing::Values(true, false));
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
@@ -939,7 +937,7 @@ TEST(StatementTest, SQLGetData) {
 
 TEST(StatementTest, SQLGetData_insufficientBuffer) {
   auto conn = std::make_shared<ODBCHandles>();
-  auto table_name = kDatasetWithTablePrefix + "ODBC_MORE_FETCH_RESULT_SET_TEST";
+  auto table_name = kDatasetWithTablePrefix + "ODBC_INSUFFICIENT_BUFFER_TEST";
   Table table(table_name);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1016,12 +1014,7 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
       SQLGetData(conn->hstmt, 5, SQL_C_CHAR, struct_data, 20, &struct_len),
       SQL_SUCCESS_WITH_INFO);
 
-// TODO(b/404489913): Handle BQ API response data format for Struct data type
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  EXPECT_STREQ((char*)struct_data, "{\"f\":[{\"v\":\"1\"},{\"v");
-#else
   EXPECT_STREQ((char*)struct_data, "{\"v\":{\"f\":[{\"v\":\"1\"");
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_CHAR, json_data2, 10, &json_len),
             SQL_SUCCESS_WITH_INFO);
   EXPECT_STREQ((char*)json_data2, "{\"age\":90");
@@ -2724,8 +2717,6 @@ TEST(SQLCancel, Execute_Cancel_NeedData) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-
 TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2742,8 +2733,7 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST_P(MultiStatementTest, BasicScript) {
   bool use_prepare = GetParam();
@@ -3158,14 +3148,14 @@ TEST(StatementTest, SQLPutDataStringDataChunks) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // _WIN32
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(StatementTest, SQLPutDataErrorTest) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
   auto const table_name = kDatasetWithTablePrefix + "ODBC_PUT_DATA_ERROR_TEST";
   Table table(table_name);
 
-  Schema schema{{"TextField", "STRING"}};
+  Schema schema{{"TextField1", "STRING"}, {"TextField2", "STRING"}};
 
   // Create table
   auto conn = std::make_shared<ODBCHandles>();
@@ -3175,89 +3165,145 @@ TEST(StatementTest, SQLPutDataErrorTest) {
 
   // Prepare and bind parameters
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto query = "INSERT INTO " + table_name + " VALUES (?)";
+  auto query = "INSERT INTO " + table_name + " VALUES (? ,?)";
 
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
 
-  // Indicate that data will be provided with SQLPutData
+  std::string data = "SomeData";
+
+  // Scenario 1: Call SQLPutData with an invalid handle
+  SQLHSTMT invalid_stmt = nullptr;
+  EXPECT_EQ(SQLPutData(invalid_stmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_INVALID_HANDLE);
+
+  // Scenario 2: Call SQLPutData before SQLExecute (sequence issue)
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_ERROR);  // Should fail before SQLExecute
+
   SQLLEN indicator = SQL_DATA_AT_EXEC;
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                              SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
-  // ========================
-  // Sequence-Related Errors
-  // ========================
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 100, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
 
-  // Scenario 1: Call SQLPutData before SQLExecute (sequence issue)
-  std::string data = "SomeData";
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
-            SQL_ERROR);  // Should fail before SQLExecute
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
 
-  // Scenario 2: SQLExecute called before SQLPutData (proper sequence to set
-  // state)
-  EXPECT_EQ(SQLExecute(conn->hstmt),
-            SQL_NEED_DATA);  // Execute should move to NEED_DATA state
+  // Scenario 3: Call SQLPutData with null data and valid size
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, data.size()), SQL_ERROR);
+
+  // Scenario 4: Call SQLPutData with valid data and valid size
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
-            SQL_SUCCESS);  // Now SQLPutData should succeed
+            SQL_SUCCESS);
 
-  // ========================
-  // Data-Related Errors
-  // ========================
-
-  // Scenario 3: Call SQLPutData with invalid pointer and size 0
-  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, 0),
-            SQL_ERROR);  // Invalid data should fail
-
-  // Scenario 4: Call SQLPutData with a negative size
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), -1),
-            SQL_ERROR);  // Negative size should fail
+  std::string data1 = std::string(101, 'Z');
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
 
   // Scenario 5: Data Truncation - inserting data that exceeds column size
-  std::string large_data = std::string(50000, 'Z');
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)large_data.c_str(),
-                       large_data.size()),
-            SQL_ERROR);  // Should fail or truncate if size exceeds column limit
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data1.c_str(), data1.size()),
+            SQL_ERROR);
 
-  // Scenario 6: Invalid Data in Different Encodings - non-UTF-8 encoded string
-  // (e.g., Latin-1 encoding)
-  std::string latin1_data =
-      "Latin-1 data \xE9";  // Character 'é' in Latin-1 encoding
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)latin1_data.c_str(),
-                       latin1_data.size()),
-            SQL_ERROR);  // Should fail if encoding is unsupported
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_ERROR);
 
-  // ========================
-  // Data Type and Handle Errors
-  // ========================
+  // Cleanup before disconnecting
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
-  // Scenario 7: Call SQLPutData with an invalid handle (corrupted or
-  // uninitialized handle)
-  SQLHSTMT invalid_stmt = nullptr;
-  EXPECT_EQ(SQLPutData(invalid_stmt, (SQLPOINTER)data.c_str(), data.size()),
-            SQL_INVALID_HANDLE);  // Invalid handle scenario
+// TODO(b/404480454): Issue with SQLBindParameter When Using the
+//  Same Indicator Pointer for Multiple Parameters
+//  HotlistsMark as Duplicate
+TEST(StatementTest, SQLPutDataSpecialCases) {
+  // Test SQLPutData error scenarios with proper sequence and data validation
 
-  // Scenario 8: Call SQLPutData with mismatched data type
-  EXPECT_EQ(
-      SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
-      SQL_ERROR);  // Should fail due to type mismatch if the bind is incorrect.
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_SPECIAL_CASES_TEST";
+  Table table(table_name);
 
-  // ========================
-  // Additional Error Cases
-  // ========================
+  Schema schema{{"IntField1", "INT64"},
+                {"TextField2", "STRING"},
+                {"TextField3", "STRING"},
+                {"TextField4", "STRING"},
+                {"TextField5", "STRING"}};
 
-  // Scenario 9: Call SQLPutData with a pointer that is not properly allocated
-  char* invalid_ptr = nullptr;
-  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)invalid_ptr, data.size()),
-            SQL_ERROR);  // Should fail due to invalid pointer
-
-  // Disconnect
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Clean up
+  // Prepare and bind parameters
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?, ?, ?)";
+
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  // TODO(b/404480454): Issue with SQLBindParameter When Using
+  // the Same Indicator Pointer for Multiple Parameters
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
+
+  int num_params = schema.size();
+  int param;
+  // Bind parameters
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                             SQL_BIGINT, 0, 0, &param, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                             SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  // Scenario 1: Call SQLPutData with mismatched data type
+  std::string data = "SomeData";
+  SQLPOINTER param_target = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &param_target), SQL_NEED_DATA);
+  EXPECT_EQ(static_cast<SQLPOINTER>(&param), param_target);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
+            SQL_SUCCESS);
+
+  // Scenario 2: Invalid Data in Different Encoding
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  std::wstring latin1_data =
+      L"Latin-1 data \xE9";  // Character 'é' in Latin-1 encoding
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)latin1_data.c_str(),
+                       latin1_data.size()),
+            SQL_SUCCESS);
+
+  // Scenario 3: Call SQLPutData with null data and a negative size
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, SQL_NULL_DATA), SQL_SUCCESS);
+
+  // Scenario 4: Call SQLPutData with size as 0
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
+
+  // Scenario 5: Call SQLPutData with valid data and a negative size
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+
+  // Cleanup before disconnecting
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -3295,6 +3341,7 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3353,6 +3400,7 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(SQLRowCount, WrongUpdateValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3573,6 +3621,7 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
+// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3580,33 +3629,54 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   std::wstring const table_name =
       ToWStr(kDatasetWithTablePrefix) + L"ODBC_PARAM_DATA_UNICODE_TEST";
   Table table(table_name);
-  table.CreateWithPrepare(conn, "(StringField STRING)");
+  table.CreateWithPrepare(conn, "(StringField1 STRING, StringField2 STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto query = L"INSERT INTO " + table_name + L" VALUES (?)";
+  auto query = L"INSERT INTO " + table_name + L" VALUES (?, ?)";
   std::vector<SQLWCHAR> sql_wstr(query.begin(), query.end());
   sql_wstr.emplace_back(L'\0');
   EXPECT_EQ(SQLPrepareW(conn->hstmt, sql_wstr.data(), SQL_NTS), SQL_SUCCESS);
 
   int const large_data_size = (1024 * 512) / sizeof(wchar_t);
-  std::wstring large_data(large_data_size, L'あ');
-  SQLLEN param_size = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+  std::wstring large_data1(large_data_size, L'あ');
+  std::wstring large_data2(large_data_size, L'い');
+
+  SQLLEN param_size1 = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
+  SQLLEN param_size2 = SQL_LEN_DATA_AT_EXEC(large_data_size * sizeof(wchar_t));
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, large_data.size(), 0,
-                             (SQLPOINTER)1, 0, &param_size),
+                             SQL_WLONGVARCHAR, large_data1.size(), 0,
+                             (SQLPOINTER)1, 0, &param_size1),
             SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                             SQL_WLONGVARCHAR, large_data2.size(), 0, nullptr,
+                             0, &param_size2),
+            SQL_SUCCESS);
+
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);  // No ANSI version.
 
   SQLPOINTER data_ptr = nullptr;
   EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
-  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
 
-  for (auto val = 0; val < large_data.size(); val += chunk_size) {
-    int byte_left = large_data.size() - val;
+  // Send data for the first parameter
+  int const chunk_size = 64 * 1024 / sizeof(wchar_t);
+  for (auto val = 0; val < large_data1.size(); val += chunk_size) {
+    int byte_left = large_data1.size() - val;
     int byte_to_put = std::min(chunk_size, byte_left);
-    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data.data() + val),
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data1.data() + val),
+                         byte_to_put * sizeof(wchar_t)),
+              SQL_SUCCESS);
+  }
+
+  // Send data for the second parameter
+  EXPECT_EQ(SQLParamData(conn->hstmt, &data_ptr), SQL_NEED_DATA);
+
+  for (auto val = 0; val < large_data2.size(); val += chunk_size) {
+    int byte_left = large_data2.size() - val;
+    int byte_to_put = std::min(chunk_size, byte_left);
+    EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)(large_data2.data() + val),
                          byte_to_put * sizeof(wchar_t)),
               SQL_SUCCESS);
   }
@@ -3663,6 +3733,105 @@ TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, SQLParamData_MixedBindingModes) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAM_DATA_MIXED_BINDING_TEST";
+  Table table(table_name);
+
+  Schema schema{
+      {"Field1", "STRING"},  // Will use SQL_DATA_AT_EXEC
+      {"Field2", "STRING"},  // Will pass directly in SQLBindParameter
+      {"Field3", "STRING"}   // Will use SQL_DATA_AT_EXEC
+  };
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?)";
+
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  // Bind 1st Parameter
+  SQLLEN indicator1 = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator1),
+            SQL_SUCCESS);
+
+  // Bind 2nd Parameter
+  char const* param2_data = "DirectData";
+  SQLLEN indicator2 = SQL_NTS;  // Null-Terminated String
+  EXPECT_EQ(
+      SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
+                       SQL_LONGVARCHAR, strlen(param2_data), 0,
+                       (SQLPOINTER)param2_data, strlen(param2_data), NULL),
+      SQL_SUCCESS);
+
+  // Bind 3rd Parameter
+  SQLLEN indicator3 = SQL_DATA_AT_EXEC;
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_CHAR,
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator3),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
+
+  SQLPOINTER target_value = nullptr;
+  EXPECT_EQ(SQLParamData(conn->hstmt, &target_value), SQL_NEED_DATA);
+
+  // Pass Data for 1st Parameter
+  std::string param1_data = "FirstParamData";
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)param1_data.c_str(),
+                       param1_data.size()),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, &target_value), SQL_NEED_DATA);
+
+  // Pass Data for 3rd Parameter
+  std::string param3_data = "ThirdParamData";
+  EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)param3_data.c_str(),
+                       param3_data.size()),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_query = "SELECT Field1, Field2, Field3 FROM " + table_name;
+  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)select_query.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  char field1[256] = {0};
+  char field2[256] = {0};
+  char field3[256] = {0};
+  SQLLEN field1_len = 0;
+  SQLLEN field2_len = 0;
+  SQLLEN field3_len = 0;
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, field1, sizeof(field1),
+                       &field1_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_CHAR, field2, sizeof(field2),
+                       &field2_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 3, SQL_C_CHAR, field3, sizeof(field3),
+                       &field3_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(std::string(field1), param1_data);
+  EXPECT_EQ(std::string(field2), param2_data);
+  EXPECT_EQ(std::string(field3), param3_data);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);

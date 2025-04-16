@@ -68,6 +68,10 @@ SQLSMALLINT const kSqlColumnLen = kColumn.length();
 SQLSMALLINT const kSqlPKTableLen = kPKTable.length();
 SQLSMALLINT const kSqlFKTableLen = kFKTable.length();
 
+std::string const kProcedure = "procedure";
+SQLCHAR* const kSqlProcedure = ToSqlChar(kProcedure.c_str());
+SQLSMALLINT const kSqlProcedureLen = kProcedure.length();
+
 // Helper class and functions specific to odbc metadata unit tests.
 namespace {
 class OdbcMetadataConnectionHandleTest : public ConnectionHandle {
@@ -887,7 +891,8 @@ TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
 }
 
 TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, -7, kSqlDataset, kSqlDatasetLen, kSqlPKTable,
@@ -901,7 +906,8 @@ TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, -7, kSqlPKTable,
@@ -915,7 +921,8 @@ TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
@@ -929,7 +936,8 @@ TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
@@ -943,7 +951,8 @@ TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
 }
 
 TEST(SQLColumnsInternal, Failure_CatalogNameIsSearchPattern) {
-  StatementHandle handle;
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
       &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
@@ -997,6 +1006,78 @@ TEST(SQLGetInfoInternal, NotConnectedSQL_ODBC_VER) {
   EXPECT_EQ(kDriverVersion, actual);
   EXPECT_EQ(str_len_ptr, 5);
   FreeHandles();
+}
+
+TEST(SQLProcedureInternal, InvalidStatementHandle) {
+  SQLRETURN ret =
+      SQLProcedureInternal(nullptr, nullptr, 0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_INVALID_HANDLE);
+}
+
+TEST(SQLProcedureInternal, NullConnectionHandle) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+  SQLRETURN ret =
+      SQLProcedureInternal(&handle, nullptr, 0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLProcedureInternal, Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status =
+      SQLProcedureInternal(&handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+                           kSqlDatasetLen, kSqlProcedure, kSqlProcedureLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+}
+
+TEST(SQLProcedureColumnsInternal, InvalidStatementHandle) {
+  SQLRETURN ret = SQLProcedureColumnsInternal(nullptr, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_INVALID_HANDLE);
+}
+
+TEST(SQLProcedureColumnsInternal, NullConnectionHandle) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+  SQLRETURN ret = SQLProcedureColumnsInternal(&handle, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLProcedureColumnsInternal,
+     Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLProcedureColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlProcedure, kSqlProcedureLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+}
+
+TEST(SQLProcedureColumnsInternal, Failure_CatalogNameIsSearchPattern) {
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLProcedureColumnsInternal(
+      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlProcedure, kSqlProcedureLen, kSqlColumn,
+      kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Catalog name cannot be a search pattern");
 }
 
 }  // namespace google::cloud::odbc_bq_driver

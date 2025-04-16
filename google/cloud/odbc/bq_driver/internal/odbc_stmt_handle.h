@@ -40,8 +40,7 @@ enum class StmtStates {
   kStatementExecutedWithoutRs,
   kStatementExecutedWithRs,
   kNeedsParams,
-  kNeedsPutData,
-  kStatementAsyncGetResults,
+  kNeedsPutData
 };
 
 class ConnectionHandle;
@@ -264,7 +263,7 @@ class StatementHandle : public Handle {
   // Needed for cancellation and re-execution of asynchronous more results
   // requests.
   std::optional<std::future<StatusRecord>> future_more_results_query_;
-  // stack of pair of jobs Ids and respective statement types.
+  // vector of pair of jobs Ids and respective statement types.
   std::vector<std::pair<std::string, std::string>> job_data_;
   bool is_statement_prepared_ = false;
 };

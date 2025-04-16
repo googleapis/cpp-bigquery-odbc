@@ -24,11 +24,7 @@ using ::testing::HasSubstr;
 // driver manager enabled.
 std::string GetDriverName() {
 #ifdef _WIN32
-#ifdef DRIVER_MANAGER_TESTING_ENABLED
-  return "Google BigQuery ODBC Driver";
-#else
   return "Simba ODBC Driver for Google BigQuery";
-#endif
 #else
 #ifdef DRIVER_MANAGER_TESTING_ENABLED
   return "Google BigQuery ODBC Driver";
@@ -1033,7 +1029,6 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string key_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-
   std::string driver_name = GetDriverName();
   std::string conn_str =
       "DRIVER={" + driver_name +

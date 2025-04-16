@@ -84,7 +84,6 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
   log_file_path_ =
       attributes_map.count(kLogFile) > 0 ? attributes_map.at(kLogFile) : "";
 }
-
 void LogTraceDialog::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -223,6 +222,9 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
     p_this = (LogTraceDialog*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   }
   switch (u_msg) {
+    case WM_CREATE:
+      setWindowIcon(hwnd);
+      break;
     case WM_INITDIALOG: {
       p_this->parent_hwnd = hwnd;  // Store parent window handle
 

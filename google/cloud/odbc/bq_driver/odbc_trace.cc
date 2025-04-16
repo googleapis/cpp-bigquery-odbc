@@ -2231,7 +2231,7 @@ void TraceFunctionEntry_SQLProcedureColumnsW(
     SQLSMALLINT catalog_name_len, SQLWCHAR* schema_name,
     SQLSMALLINT schema_name_len, SQLWCHAR* proc_name, SQLSMALLINT proc_name_len,
     SQLWCHAR* col_name, SQLSMALLINT col_name_len, TraceOptions& opts) {
-  StatusRecordOr<std::string> utf8_catalog_name;
+  StatusRecordOr<std::string> utf8_catalog_name = std::string();
   if (catalog_name_len > 0 || catalog_name_len == SQL_NTS) {
     utf8_catalog_name = ConvertSQLWCHARToString(catalog_name, catalog_name_len);
     if (!utf8_catalog_name) {

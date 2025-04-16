@@ -35,8 +35,7 @@ struct FixedColumnMetadata {
 
 // Internal Helper functions used in SQLColumns API implementation.
 odbc_internal::StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
-    ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
-        field_schema);
+    std::string const& type);
 
 odbc_internal::StatusRecordOr<::google::cloud::optional<SQLINTEGER>> GetColSize(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&

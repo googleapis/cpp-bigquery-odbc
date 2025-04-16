@@ -150,15 +150,17 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   SQLSMALLINT table_length = table ? strlen(table) : 0;
   SQLSMALLINT column_length = column ? strlen(column) : 0;
   if (use_ansi) {
-    status = SQLColumnsA(conn->hstmt, (SQLCHAR*)project_id.c_str(),
-                         project_id.length(), (SQLCHAR*)dataset, dataset_length,
-                         (SQLCHAR*)table, table_length, (SQLCHAR*)column,
-                         column_length);
+    status = SQLColumnsA(
+        conn->hstmt,
+        (project_id.empty() ? nullptr : (SQLCHAR*)project_id.c_str()),
+        project_id.length(), (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+        table_length, (SQLCHAR*)column, column_length);
   } else {
-    status = SQLColumns(conn->hstmt, (SQLCHAR*)project_id.c_str(),
-                        project_id.length(), (SQLCHAR*)dataset, dataset_length,
-                        (SQLCHAR*)table, table_length, (SQLCHAR*)column,
-                        column_length);
+    status = SQLColumns(
+        conn->hstmt,
+        (project_id.empty() ? nullptr : (SQLCHAR*)project_id.c_str()),
+        project_id.length(), (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
+        table_length, (SQLCHAR*)column, column_length);
   }
   CheckError(status, "SQLColumns", conn, use_ansi);
 

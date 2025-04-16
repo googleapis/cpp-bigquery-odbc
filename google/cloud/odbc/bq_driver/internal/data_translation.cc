@@ -41,23 +41,11 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   SQLDOUBLE numeric_no = *conversion_status;
   switch (dest_data.type) {
     case SQL_C_NUMERIC: {
-      std::string num_str = str_input;
-      if (num_str.front() == '-') num_str = num_str.substr(1);  // Remove sign
-
-      size_t num_digits = 0;
-      for (char c : num_str) {
-        if (std::isdigit(c)) {
-          ++num_digits;
-        }
-        if (num_digits > kMaxNumericPrecision) break;  // Early exit
-      }
-      if (num_digits > kMaxNumericPrecision ||
-          num_digits < kMinNumericPrecision) {
-        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
-      }
-
       SQL_NUMERIC_STRUCT numst;
-      GetNumericDetailsFromStr(str_input, numst);
+      status_record = GetNumericDetailsFromStr(str_input, numst);
+      if (status_record.sql_state == SQLStates::k_22003()) {
+        return status_record;
+      }
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
           dest_data.buf);  // convert the pointer to type
       *dest_val = numst;   // fill the value
@@ -713,10 +701,8 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
-StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
-                                    DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
+StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
+                                             DataBuffer& dest_data) {
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
   SQLLEN buffer_length = dest_data.buflen;
@@ -724,32 +710,52 @@ StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
 
   switch (dest_type) {
     case SQL_C_CHAR: {
-      StatusRecord status_record =
-          StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
-      return status_record;
+      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
       if (!wide_string.Ok()) {
-        StatusRecord status_record =
-            StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
-        break;
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Conversion to UTF-16 failed"};
       }
       return WStrToOutputBufferResponse(
           wide_string.GetValue(), dest_buf, buffer_length, src_str.length(),
-          src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
-      break;
+          src_str.length(), reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
       return StringValueToOutputBufferResponse<SQLLEN>(
           src_str.c_str(), dest_buf, buffer_length, res_len);
     }
-
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
   return StatusRecord::Ok();
+}
+
+StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
+                                    DataBuffer& dest_data) {
+  std::string src_str;
+  DSValueToString(src_dsval, src_str);
+  return ConvertStringToJsonOutputBuffer(src_str, dest_data);
+}
+
+StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
+                                      DataBuffer& dest_data) {
+  std::string src_str;
+  DSValueToString(src_dsval, src_str);
+
+  try {
+    nlohmann::json original_json = nlohmann::json::parse(src_str);
+    nlohmann::json wrapped_json;
+    wrapped_json["v"] = original_json;
+    src_str = wrapped_json.dump();
+  } catch (std::exception const& e) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid JSON in DSValue: " + std::string(e.what())};
+  }
+
+  return ConvertStringToJsonOutputBuffer(src_str, dest_data);
 }
 
 StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,

@@ -27,8 +27,6 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kTimeCharLength = 8;
-constexpr int kMaxNumericPrecision = 38;
-constexpr int kMinNumericPrecision = 1;
 
 // Checks if an arithmetic value can be converted to another accurately.
 template <typename SrcType, typename DestType>
@@ -292,6 +290,10 @@ odbc_internal::StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
 
 odbc_internal::StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
                                                     DataBuffer& dest_data);
+
+odbc_internal::StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
+                                                     DataBuffer& dest_data);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

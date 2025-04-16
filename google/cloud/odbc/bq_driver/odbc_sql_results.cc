@@ -407,7 +407,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
           GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
                        static_cast<SQLSMALLINT>(field_identifier), char_attr,
                        static_cast<SQLINTEGER>(char_attr_buffer_len),
-                       reinterpret_cast<SQLINTEGER*>(char_attr_string_len));
+                       reinterpret_cast<SQLSMALLINT*>(char_attr_string_len));
       break;
     default:
       result = GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
@@ -569,8 +569,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   RowSchema const& schema = result_set.row_schema;
   BQDataType bq_data_type;
   for (auto const& col_schema : schema) {
-    if (col_schema.col_index == column_number - 1)
-      bq_data_type = col_schema.col_type;
+    if (col_schema.col_index == column_number - 1) {
+      if (col_schema.is_mode_repeated) {
+        bq_data_type = BQDataType::kArray;
+      } else {
+        bq_data_type = col_schema.col_type;
+      }
+    }
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
