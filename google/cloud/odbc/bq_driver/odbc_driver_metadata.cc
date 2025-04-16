@@ -589,4 +589,103 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLProcedureColumnsInternal(
+    SQLHSTMT stmt_handle, SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR* schema_name, SQLSMALLINT schema_name_len, SQLCHAR* proc_name,
+    SQLSMALLINT proc_name_len, SQLCHAR* column_name,
+    SQLSMALLINT column_name_len) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  StatusRecordOr<SQLULEN> attr_status =
+      handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  if (!attr_status) {
+    return LogAndReturnCode(handle, attr_status);
+  }
+  SQLULEN metadata_id = *attr_status;
+
+  if (handle.GetConnectionHandle() == nullptr) {
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  if (!conn_handle.IsConnected()) {
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_08S01(),
+                             "Connection to the data source is broken"});
+  }
+
+  if (catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                             sizeof(current_catalog), &catalog_len);
+    catalog_name = current_catalog;
+    catalog_name_len = catalog_len;
+  }
+
+  auto input_param_status = ValidateProcedureColumnParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, proc_name,
+      proc_name_len, metadata_id);
+  if (!input_param_status.Ok()) {
+    return LogAndReturnCode(handle, input_param_status);
+  }
+
+  std::string s_catalog_name = ToCharStr(catalog_name);
+  std::string s_dataset_name = ToCharStr(schema_name, kMatchAll);
+  std::string s_proc_name = ToCharStr(proc_name, kMatchAll);
+
+  std::string s_column_name;
+  if (column_name_len != 0) {
+    s_column_name = ToCharStr(column_name, kMatchAll);
+  }
+
+  if (metadata_id == SQL_TRUE) {
+    SanitizeIdentifierArgument(s_dataset_name);
+    SanitizeIdentifierArgument(s_proc_name);
+    SanitizeIdentifierArgument(s_column_name);
+  }
+
+  auto filtered_procedure_data_status = FetchBQProceduresData(
+      conn_handle, s_catalog_name, s_dataset_name, s_proc_name, metadata_id);
+
+  if (!filtered_procedure_data_status) {
+    return LogAndReturnCode(handle, filtered_procedure_data_status);
+  }
+
+  ResultSet final_result_set;
+  if (filtered_procedure_data_status.GetValue().empty()) {
+    handle.SetResultSet(final_result_set);
+    handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+    return SQL_SUCCESS;
+  }
+
+  for (auto const& bq_proc : *filtered_procedure_data_status) {
+    StatusRecordOr<ResultSet> procedure_result_set_status =
+        ProcessProcedureColumnResults(bq_proc, s_column_name, metadata_id);
+
+    if (!procedure_result_set_status) {
+      return LogAndReturnCode(handle, procedure_result_set_status);
+    }
+
+    if (!procedure_result_set_status->rows.empty()) {
+      final_result_set.row_schema = procedure_result_set_status->row_schema;
+      final_result_set.rows.insert(final_result_set.rows.end(),
+                                   procedure_result_set_status->rows.begin(),
+                                   procedure_result_set_status->rows.end());
+    }
+  }
+
+  handle.SetResultSet(final_result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver

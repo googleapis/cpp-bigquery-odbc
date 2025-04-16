@@ -1036,4 +1036,48 @@ TEST(SQLProcedureInternal, Failure_InvalidConnectionHandle_NotConnected) {
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
+TEST(SQLProcedureColumnsInternal, InvalidStatementHandle) {
+  SQLRETURN ret = SQLProcedureColumnsInternal(nullptr, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_INVALID_HANDLE);
+}
+
+TEST(SQLProcedureColumnsInternal, NullConnectionHandle) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+  SQLRETURN ret = SQLProcedureColumnsInternal(&handle, nullptr, 0, nullptr, 0,
+                                              nullptr, 0, nullptr, 0);
+  EXPECT_EQ(ret, SQL_ERROR);
+}
+
+TEST(SQLProcedureColumnsInternal,
+     Failure_InvalidConnectionHandle_NotConnected) {
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLProcedureColumnsInternal(
+      &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset, kSqlDatasetLen,
+      kSqlProcedure, kSqlProcedureLen, kSqlColumn, kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_08S01());
+  EXPECT_EQ(status_record.message, "Connection to the data source is broken");
+}
+
+TEST(SQLProcedureColumnsInternal, Failure_CatalogNameIsSearchPattern) {
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
+
+  SQLRETURN status = SQLProcedureColumnsInternal(
+      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlProcedure, kSqlProcedureLen, kSqlColumn,
+      kSqlColumnLen);
+
+  ASSERT_EQ(SQL_ERROR, status);
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
+  EXPECT_EQ(status_record.message, "Catalog name cannot be a search pattern");
+}
+
 }  // namespace google::cloud::odbc_bq_driver

@@ -920,8 +920,6 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 struct ExpectedProcedureColumnValues {
   std::string procedure_catalog;
   std::string procedure_schema;
@@ -1461,8 +1459,6 @@ TEST(SQLProcedureColumns, ProcedureWithInOutParameters) {
   procedure.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct ExpectedProcedureValues {
   std::string procedure_catalog;

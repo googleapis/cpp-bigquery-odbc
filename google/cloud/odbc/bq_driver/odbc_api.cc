@@ -121,6 +121,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLGetStmtAttrW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLNativeSqlW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrepareW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLPrimaryKeysW;
+using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLProcedureColumns;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLProcedureColumnsW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLProcedures;
 using ::google::cloud::odbc_bq_driver::TraceFunctionEntry_SQLProceduresW;
@@ -155,6 +156,7 @@ using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLGetStmtAttrW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLNativeSqlW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrepareW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLPrimaryKeysW;
+using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLProcedureColumns;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLProcedureColumnsW;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLProcedures;
 using ::google::cloud::odbc_bq_driver::TraceFunctionExit_SQLProceduresW;
@@ -3469,13 +3471,30 @@ SQLRETURN SQL_API SQLProcedureColumns(
     SQLCHAR* schemaName, SQLSMALLINT schemaNameLen, SQLCHAR* procName,
     SQLSMALLINT procNameLen, SQLCHAR* columnName, SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
+  bool is_tracing_enabled = IsTracingEnabled("SQLProcedureColumns");
 
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
   // Call to Trace function entry in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) {
+    TraceFunctionEntry_SQLProcedureColumns(
+        statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+        procName, procNameLen, columnName, columnNameLen, *(*kTraceOption));
+  }
 
   // Call to common internal function for SQLProcedureColumns and
   // SQLProcedureColumnsW in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLProcedureColumnsInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      procName, procNameLen, columnName, columnNameLen);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  if (is_tracing_enabled) {
+    TraceFunctionExit_SQLProcedureColumns(rc, *(*kTraceOption));
+  }
 
   return rc;
 }
@@ -3489,6 +3508,12 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
     SQLSMALLINT procNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   bool is_tracing_enabled = IsTracingEnabled("SQLProcedureColumnsW");
+
+  // Call to Acquire mutex for statement handle in odbc_lock.h.
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
@@ -3544,6 +3569,11 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
   // Call to common internal function for SQLProcedureColumns and
   // SQLProcedureColumnsW in odbc_driver_metadata.h.
   // Handle Unicode conversion of output parameters.
+  rc = google::cloud::odbc_bq_driver::SQLProcedureColumnsInternal(
+      statementHandle, ToSqlChar(utf8_catalog_name->c_str()), catalogNameLen,
+      ToSqlChar(utf8_schema_name->c_str()), schemaNameLen,
+      ToSqlChar(utf8_proc_name->c_str()), procNameLen,
+      ToSqlChar(utf8_col_name->c_str()), columnNameLen);
 
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
