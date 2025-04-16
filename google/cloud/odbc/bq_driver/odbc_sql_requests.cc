@@ -415,8 +415,10 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   // Unbind previous descriptor records and populate IRD.
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.UnbindAllDescriptorRecordsFrom(0);
-  google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
-      ird, ds_status_record_or->schema);
+  // TODO(Suresh): Update only required  descriptor fields, not entire
+  // descriptor.
+  // google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
+  //     ird, ds_status_record_or->schema);
 
   return StatusRecord::Ok();
 }

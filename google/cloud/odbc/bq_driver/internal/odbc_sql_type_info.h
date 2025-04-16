@@ -98,15 +98,17 @@ TypeInfoRow const kBqDateTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("DATE")),  // type_name
     SQL_TYPE_DATE,                                  // data_type
     10,                                             // col_size
-    const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>("'")),  // literal_prefix
-    const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>("'")),  // literal_suffix
-    nullptr,                                        // create_params
-    1,                                              // nullable
-    0,                                              // case_sensitive
-    2,                                              // searchable
-    0,                                              // unsigned_attribute
-    0,                                              // fixed_prec_scale
-    NULL,                                           // auto_unique_value
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("'")),  // literal_prefix //
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("'")),  // literal_suffix //
+    nullptr,                                     // create_params
+    1,                                           // nullable
+    0,                                           // case_sensitive
+    2,                                           // searchable
+    0,                                           // unsigned_attribute
+    0,                                           // fixed_prec_scale
+    NULL,                                        // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("DATE")),  // local_type_name
     0,                                              // minimum_scale
@@ -122,17 +124,17 @@ TypeInfoRow const kBqFloat64TypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("FLOAT64")),  // type_name
     SQL_DOUBLE,                                        // data_type
     53,                                                // col_size
-    nullptr,                                           // literal_prefix
-
-    nullptr,                                           // literal_suffix
-
-    nullptr,                                      // create_params
-    1,                                            // nullable
-    0,                                            // case_sensitive
-    2,                                            // searchable
-    0,                                            // unsigned_attribute
-    0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_prefix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_suffix
+    nullptr,                                    // create_params
+    1,                                          // nullable
+    0,                                          // case_sensitive
+    2,                                          // searchable
+    0,                                          // unsigned_attribute
+    0,                                          // fixed_prec_scale
+    NULL,                                       // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("FLOAT64")),  // local_type_name
     0,                                                 // minimum_scale
@@ -152,13 +154,13 @@ TypeInfoRow const kBqTimeTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("'")),  // literal_prefix
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("'")),  // literal_suffix
-    nullptr,                                      // create_params
-    1,                                            // nullable
-    0,                                            // case_sensitive
-    3,                                            // searchable
-    0,                                            // unsigned_attribute
-    0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    nullptr,                                     // create_params
+    1,                                           // nullable
+    0,                                           // case_sensitive
+    3,                                           // searchable
+    0,                                           // unsigned_attribute
+    0,                                           // fixed_prec_scale
+    NULL,                                        // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("TIME")),  // local_type_name
     0,                                              // minimum_scale
@@ -178,13 +180,13 @@ TypeInfoRow const kBqTimestampTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("'")),  // literal_prefix
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("'")),  // literal_suffix
-    nullptr,                                      // create_params
-    1,                                            // nullable
-    0,                                            // case_sensitive
-    3,                                            // searchable
-    0,                                            // unsigned_attribute
-    0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    nullptr,                                     // create_params
+    1,                                           // nullable
+    0,                                           // case_sensitive
+    3,                                           // searchable
+    0,                                           // unsigned_attribute
+    0,                                           // fixed_prec_scale
+    NULL,                                        // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("TIMESTAMP")),  // local_type_name
     0,                                                   // minimum_scale
@@ -230,13 +232,13 @@ TypeInfoRow const kBqBytesTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("0x")),  // literal_prefix
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("")),  // literal_suffix
-    nullptr,                                     // create_params
-    1,                                           // nullable
-    0,                                           // case_sensitive
-    2,                                           // searchable
-    0,                                           // unsigned_attribute
-    0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    nullptr,                                    // create_params
+    1,                                          // nullable
+    0,                                          // case_sensitive
+    2,                                          // searchable
+    0,                                          // unsigned_attribute
+    0,                                          // fixed_prec_scale
+    NULL,                                       // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("BYTES")),  // local_type_name
     0,                                               // minimum_scale
@@ -408,8 +410,10 @@ TypeInfoRow const kBqNumericTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("NUMERIC")),  // type_name
     SQL_NUMERIC,                                       // data_type
     38,                                                // col_size
-    nullptr,                                           // literal_prefix
-    nullptr,                                           // literal_suffix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_prefix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_suffix
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("PRECISION,SCALE")),  // create_params
     1,                                                         // nullable
@@ -433,8 +437,10 @@ TypeInfoRow const kBqBignumericTypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("BIGNUMERIC")),  // type_name
     SQL_NUMERIC,                                          // data_type
     77,                                                   // col_size
-    nullptr,                                              // literal_prefix
-    nullptr,                                              // literal_suffix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_prefix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("")),  // literal_suffix
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("PRECISION,SCALE")),  // create_params
     1,                                                         // nullable

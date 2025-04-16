@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 
 namespace google::cloud::odbc_tests {
-
 struct ColAttributeRow {
   std::string literal_prefix;
   std::string literal_suffix;
@@ -269,22 +268,27 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
 
-  memset(col_attr, 0, kBufferLength);
-  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_TABLE_NAME,
-                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-  CheckError(status,
-             "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
-             conn);
-  col = reinterpret_cast<char*>(col_attr);
-  EXPECT_EQ(kTableName, col);
+  // On Windows, the existing driver incorrectly returns an empty value for
+  // descriptors like base_table_name and catalog_name, which is a bug.
+  if (kIsBqDriver) {
+    memset(col_attr, 0, kBufferLength);
+    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_TABLE_NAME,
+                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+    CheckError(status,
+               "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
+               conn);
+    col = reinterpret_cast<char*>(col_attr);
+    EXPECT_EQ(kTableName, col);
 
-  memset(col_attr, 0, kBufferLength);
-  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_CATALOG_NAME,
-                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
-             conn);
-  col = reinterpret_cast<char*>(col_attr);
-  EXPECT_EQ(kCatalogName, col);
+    memset(col_attr, 0, kBufferLength);
+    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_CATALOG_NAME,
+                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+    CheckError(status,
+               "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
+               conn);
+    col = reinterpret_cast<char*>(col_attr);
+    EXPECT_EQ(kCatalogName, col);
+  }
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_LABEL, (SQLPOINTER)col_attr,
@@ -327,21 +331,25 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
 
-  memset(col_attr, 0, kBufferLength);
-  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_SCHEMA_NAME,
-                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME),
-             conn);
-  col = reinterpret_cast<char*>(col_attr);
-  EXPECT_EQ(kDatasetName, col);
+  // On Windows, the existing driver incorrectly returns an empty value for
+  // descriptors like schema_name and table_name, which is a bug.
+  if (kIsBqDriver) {
+    memset(col_attr, 0, kBufferLength);
+    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_SCHEMA_NAME,
+                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+    CheckError(status,
+               "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME), conn);
+    col = reinterpret_cast<char*>(col_attr);
+    EXPECT_EQ(kDatasetName, col);
 
-  memset(col_attr, 0, kBufferLength);
-  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TABLE_NAME,
-                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
-             conn);
-  col = reinterpret_cast<char*>(col_attr);
-  EXPECT_EQ(kTableName, col);
+    memset(col_attr, 0, kBufferLength);
+    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TABLE_NAME,
+                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+    CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
+               conn);
+    col = reinterpret_cast<char*>(col_attr);
+    EXPECT_EQ(kTableName, col);
+  }
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TYPE_NAME,
@@ -419,12 +427,18 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              conn);
   EXPECT_EQ(col_attr_row.num_prec_radix, col_attr_int);
 
-  col_attr_int = 0;
-  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                           &col_attr_int);
-  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_OCTET_LENGTH),
-             conn);
-  EXPECT_EQ(col_attr_row.octet_length, col_attr_int);
+  // On Windows, the existing driver incorrectly returns an invalid value for
+  // descriptors like octet_length (e.g., 1653), whereas it behaves correctly on
+  // Linux.
+  if (kIsBqDriver) {
+    col_attr_int = 0;
+    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0,
+                             NULL, &col_attr_int);
+    CheckError(status,
+               "SQLColAttribute " + std::to_string(SQL_DESC_OCTET_LENGTH),
+               conn);
+    EXPECT_EQ(col_attr_row.octet_length, col_attr_int);
+  }
 
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_PRECISION, NULL, 0, NULL,
@@ -492,19 +506,12 @@ TEST(SQLColAttribute, CheckAllAttributes) {
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)select_stmt.c_str(),
                            select_stmt.size());
   CheckError(status, "SQLPrepare", conn);
-
-#ifndef _WIN32
   for (int i = 1; i <= kDataTypesColumns.size(); i++) {
-    // TODO(b/357794946): Handle SQLColAttribute Api Null Values WRT SIMBA(WIN).
     CheckAttributes(i, conn);
   }
-#endif /* WIN32 */
-
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 std::string const kTableNameWide =
     kTableNamePrefix + "ODBC_SQLColAttribute_Wide";
@@ -521,10 +528,6 @@ TEST(SQLColAttributeW, CheckBaseColumnName) {
                            select_stmt.size());
   CheckError(status, "SQLPrepare", conn);
 
-#ifndef _WIN32
-  // TODO(b/357794946): Handle SQLColAttribute Api Null Values WRT SIMBA(WIN).
-  std::string col;
-
   // Checking string attributes
   SQLWCHAR col_attr[kBufferLength] = {0};
   status = SQLColAttributeW(conn->hstmt, 1, SQL_DESC_BASE_COLUMN_NAME,
@@ -532,8 +535,6 @@ TEST(SQLColAttributeW, CheckBaseColumnName) {
   CheckError(status,
              "SQLColAttributeW " + std::to_string(SQL_DESC_BASE_COLUMN_NAME),
              conn);
-
-#endif /* WIN32 */
 
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

@@ -238,7 +238,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
   if (!response.GetValue()
            .statistics.job_query_stats.referenced_tables.empty()) {
-    auto table_ref_ptr =
+    auto* table_ref_ptr =
         response.GetValue().statistics.job_query_stats.referenced_tables.data();
     table_fields = *table_ref_ptr;
   } else {
@@ -257,8 +257,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
       this->GetDescriptorHandle(DescriptorType::kIPD);
   ipd_desc_handle.ClearDescriptorRecordsMap();
   auto job_statistics = (*response).statistics;
-  StatusRecord ipd_response =
-      PopulateIpd(ipd_desc_handle, job_statistics, table_fields);
+  StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
   if (!ipd_response.ok()) {
     return ipd_response;
   }
@@ -316,7 +315,7 @@ StatusRecord StatementHandle::PopulateIrd(
     descriptor_record.table_name = table_fields.table_id;
     descriptor_record.label = res.name;
     descriptor_record.type = type_info.sql_data_type;
-    descriptor_record.concise_type = type_status_record.GetValue();
+    descriptor_record.SetConciseType(*type_status_record, DescriptorType::kIRD);
     descriptor_record.local_type_name =
         type_info.local_type_name ? std::string(reinterpret_cast<char const*>(
                                         type_info.local_type_name))
@@ -380,13 +379,11 @@ StatusRecord StatementHandle::PopulateIrd(
             ? ""
             : std::string(
                   reinterpret_cast<char const*>(type_info.literal_prefix));
-
     descriptor_record.literal_suffix =
         type_info.literal_suffix == nullptr
             ? ""
             : std::string(
                   reinterpret_cast<char const*>(type_info.literal_suffix));
-
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);
@@ -402,10 +399,8 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   return attributes_[attribute];
 }
 
-StatusRecord StatementHandle::PopulateIpd(
-    DescriptorHandle& handle, JobStatistics const& job_statistics,
-    google::cloud::bigquery_v2_minimal_internal::TableReference const&
-        table_fields) {
+StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
+                                          JobStatistics const& job_statistics) {
   if (handle.GetType() != DescriptorType::kIPD) {
     return StatusRecord(
         {SQLStates::k_HY024(),

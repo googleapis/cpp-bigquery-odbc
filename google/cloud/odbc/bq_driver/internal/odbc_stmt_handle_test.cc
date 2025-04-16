@@ -312,9 +312,7 @@ TEST(PopulateIpd, InvalidDescHandle) {
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
   JobStatistics job_statistics;
-  google::cloud::bigquery_v2_minimal_internal::TableReference table_fields;
-  StatusRecord ipd_res =
-      handle.PopulateIpd(desc_handle, job_statistics, table_fields);
+  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(!ipd_res.ok());
   EXPECT_EQ(ipd_res.sql_state, SQLStates::k_HY024());
 }
@@ -343,10 +341,7 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   job_qry_statistics.undeclared_query_parameters = query_params;
   job_statistics.job_query_stats = job_qry_statistics;
 
-  google::cloud::bigquery_v2_minimal_internal::TableReference table_fields;
-
-  StatusRecord ipd_res =
-      handle.PopulateIpd(desc_handle, job_statistics, table_fields);
+  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(ipd_res.ok());
 
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
