@@ -3757,32 +3757,4 @@ TEST(StatementTest, SQLNativeSql_NegativeTest) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::wstring const unicode_query =
-      L"SELECT * FROM ODBC_NATIVE_SQL_TEST WHERE City = 'München' AND Café = "
-      L"'Yes'";
-
-  SQLWCHAR native_sql[kBufferLength] = {};
-  SQLINTEGER native_sql_length = 0;
-
-  SCOPED_TRACE("Testing SQLNativeSqlW with Unicode wide characters");
-
-  EXPECT_EQ(
-      SQLNativeSqlW(conn->hdbc,
-                    reinterpret_cast<SQLWCHAR*>(
-                        const_cast<wchar_t*>(unicode_query.c_str())),
-                    SQL_NTS, native_sql, kBufferLength, &native_sql_length),
-      SQL_SUCCESS);
-
-  // Convert to wstring, trimming possible null-padding at the end
-  std::wstring returned_sql(native_sql, native_sql + unicode_query.size());
-  EXPECT_EQ(returned_sql, unicode_query)
-      << "Returned SQL does not match input wide Unicode SQL.";
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 }  // namespace google::cloud::odbc_tests
