@@ -2179,6 +2179,7 @@ SQLRETURN SQL_API SQLNativeSql(SQLHDBC connectionHandle,
 
   return rc;
 }
+
 ////////////////////////////////////////
 // Unicode version of SQLNativeSql.
 ////////////////////////////////////////
@@ -2233,12 +2234,20 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
       return utf16_out_stmt_txt.GetCalculatedReturnCode();
     }
 
-    std::memset(outStatementText, '\0',
-                outStatementTextBufferLen * sizeof(SQLWCHAR));
+    std::vector<SQLWCHAR> sql_w_str(utf16_out_stmt_txt->begin(),
+                                    utf16_out_stmt_txt->end());
+    sql_w_str.emplace_back(L'\0');
 
-    std::memcpy((SQLWCHAR*)outStatementText,
-                ToSqlWChar(utf16_out_stmt_txt->data()),
-                utf16_out_stmt_txt->size() * sizeof(SQLWCHAR));
+    size_t out_stmt_txt_len =
+        std::min(static_cast<size_t>(outStatementTextBufferLen),
+                 utf16_out_stmt_txt->size());
+    std::memset(outStatementText, '\0', out_stmt_txt_len * sizeof(SQLWCHAR));
+    std::memcpy(outStatementText, sql_w_str.data(),
+                out_stmt_txt_len * sizeof(SQLWCHAR));
+
+    if (out_stmt_txt_len < static_cast<size_t>(outStatementTextBufferLen)) {
+      outStatementText[out_stmt_txt_len] = '\0';
+    }
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));

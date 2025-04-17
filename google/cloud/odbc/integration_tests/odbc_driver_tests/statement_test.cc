@@ -3940,4 +3940,31 @@ TEST(StatementTest, SQLNativeSql_NegativeTest) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLWCHAR native_sql[kBufferLength];
+  SQLINTEGER native_sql_length = 0;
+
+  SCOPED_TRACE("Testing full match of SQLNativeSqlW with Unicode query");
+  std::wstring sql_query = L"SELECT N'東京'";  // Full Unicode query
+
+  std::vector<SQLWCHAR> sqlWStr(sql_query.begin(), sql_query.end());
+  sqlWStr.emplace_back(L'\0');
+
+  SQLWCHAR* statementText = sqlWStr.data();
+  SQLINTEGER length = sqlWStr.size();
+
+  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, statementText, length, native_sql,
+                          sizeof(native_sql), &native_sql_length),
+            SQL_SUCCESS);
+
+  std::wstring returned_sql(native_sql, native_sql + native_sql_length);
+
+  EXPECT_STREQ(sql_query.data(), returned_sql.data());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
