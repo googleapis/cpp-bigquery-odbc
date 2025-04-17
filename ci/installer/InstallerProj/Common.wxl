@@ -21,8 +21,8 @@ limitations under the License.
 
 	<String Id="ProductNameFolder">Google BigQuery Driver</String>
 
-	<String Id="ProductName_x86">Google BigQuery Driver 32</String>
-	<String Id="ProductName_x64">Google BigQuery Driver 64</String>
+	<String Id="ProductName_x86">Google BigQuery Driver (32-bit) </String>
+	<String Id="ProductName_x64">Google BigQuery Driver (64-bit) </String>
 
 	<String Id="Description">This is a description</String>
 	<String Id="Comments">Some comment</String>
