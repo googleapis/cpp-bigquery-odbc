@@ -18,6 +18,7 @@
 //////////////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
@@ -232,6 +233,7 @@ using google::cloud::odbc_bq_driver_internal::IsFieldIdentifierString;
 using google::cloud::odbc_bq_driver_internal::IsInfoTypeString;
 using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
+using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using google::cloud::odbc_internal::StatusRecord;
 
 using ::google::cloud::odbc_bq_driver::HandleLock;
@@ -2232,13 +2234,10 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
                          utf16_out_stmt_txt.GetStatusRecord().message);
       return utf16_out_stmt_txt.GetCalculatedReturnCode();
     }
-
-    std::memset(outStatementText, '\0',
-                outStatementTextBufferLen * sizeof(SQLWCHAR));
-
-    std::memcpy((SQLWCHAR*)outStatementText,
-                ToSqlWChar(utf16_out_stmt_txt->data()),
-                utf16_out_stmt_txt->size() * sizeof(SQLWCHAR));
+    SQLLEN out_len = 0;
+    WStrToOutputBufferResponse(
+        *utf16_out_stmt_txt, outStatementText, outStatementTextBufferLen,
+        utf16_out_stmt_txt->size(), utf16_out_stmt_txt->size(), &out_len);
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));

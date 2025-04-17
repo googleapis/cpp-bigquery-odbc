@@ -223,7 +223,7 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
   auto status_record = odbc_internal::StatusRecord::Ok();
   std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
 
-  auto* dest = static_cast<SQLWCHAR*>(dest_buf);
+  auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
   if (buffer_length > src_len) {
     if (res_len) {
       *res_len = src_len * sizeof(SQLWCHAR);
