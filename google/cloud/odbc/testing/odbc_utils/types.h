@@ -131,7 +131,7 @@ TypeInfoRow const kBqFloat64TypeInfoRow = {
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("FLOAT64")),  // type_name
     SQL_DOUBLE,                                        // data_type
-    15,                                                // col_size
+    53,                                                // col_size
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("\"")),  // literal_prefix
     const_cast<SQLCHAR*>(

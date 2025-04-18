@@ -339,6 +339,7 @@ StatusRecord StatementHandle::PopulateIrd(
       descriptor_record.sql_desc_unsigned =
           (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
     } else if (local_type_name == "FLOAT64") {
+      descriptor_record.precision = 15;
       descriptor_record.sql_desc_unsigned =
           (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
       descriptor_record.SetNumPrecRadix(2);
@@ -372,8 +373,6 @@ StatusRecord StatementHandle::PopulateIrd(
                                        type_info.col_size,
                                        descriptor_record.precision);
     }
-
-    descriptor_record.length = type_info.col_size;
     descriptor_record.literal_prefix =
         type_info.literal_prefix == nullptr
             ? ""

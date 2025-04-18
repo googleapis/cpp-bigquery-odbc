@@ -410,7 +410,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
                            &col_attr_int);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_LENGTH),
              conn);
-  EXPECT_EQ(info_row.col_size, col_attr_int);
+    EXPECT_EQ(info_row.col_size, col_attr_int);
 
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_NULLABLE, NULL, 0, NULL,
