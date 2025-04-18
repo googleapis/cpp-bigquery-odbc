@@ -477,9 +477,12 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                        reinterpret_cast<SQLSMALLINT*>(char_attr_string_len));
       break;
     default:
+      std::optional<SQLLEN> cast_target_type =
+          numeric_attribute ? std::optional<SQLLEN>(*numeric_attribute)
+                            : std::nullopt;
       result = GetDescField(&ird, static_cast<SQLSMALLINT>(column_number),
                             static_cast<SQLSMALLINT>(field_identifier),
-                            numeric_attribute, 0, nullptr);
+                            numeric_attribute, 0, nullptr, cast_target_type);
   }
   return LogAndReturnCode(stmt_handle, result);
 }
