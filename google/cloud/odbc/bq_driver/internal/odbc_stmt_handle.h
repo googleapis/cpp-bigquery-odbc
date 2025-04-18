@@ -29,6 +29,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
+using google::cloud::bigquery_v2_minimal_internal::TableReference;
 
 // These are the states statement handle maintains for validations in ODBC APIs
 // using it.
@@ -75,7 +76,8 @@ class StatementHandle : public Handle {
 
   static odbc_internal::StatusRecord PopulateIrd(
       DescriptorHandle& descriptor_handle,
-      google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema);
+      google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
+      TableReference const& table_fields);
 
   static odbc_internal::StatusRecord PopulateIpd(
       DescriptorHandle& handle,

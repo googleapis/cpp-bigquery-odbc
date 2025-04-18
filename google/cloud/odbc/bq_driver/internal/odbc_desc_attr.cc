@@ -294,6 +294,114 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
   return StatusRecord::Ok();
 }
 
+StatusRecord DescriptorRecord::SetDisplaySize(SQLSMALLINT type,
+                                              SQLINTEGER value,
+                                              SQLINTEGER precision) {
+  if (!type) {
+    return StatusRecord{SQLStates::k_HY092(),
+                        "Invalid attribute/option identifier"};
+  }
+  switch (type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+      display_size = value;
+      break;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      display_size = 2 * value;
+      break;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      display_size = precision + 2;
+      break;
+    case SQL_SMALLINT:
+      display_size = 6;
+      break;
+    case SQL_INTEGER:
+      display_size = 11;
+      break;
+    case SQL_BIGINT:
+      display_size = 20;
+      break;
+    case SQL_REAL:
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      display_size = 24;
+      break;
+    case SQL_DATE:
+      display_size = 10;
+      break;
+    case SQL_TIME:
+      display_size = 8;
+      break;
+    case SQL_TIMESTAMP:
+      display_size = 19;
+      break;
+    default:
+      display_size = value;
+      break;
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecord DescriptorRecord::SetOctetLength(SQLSMALLINT type,
+                                              SQLINTEGER value,
+                                              SQLINTEGER precision) {
+  if (!type) {
+    return StatusRecord{SQLStates::k_HY092(),
+                        "Invalid attribute/option identifier"};
+  }
+  switch (type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+      octet_length = 4 * precision;
+      break;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      octet_length = value;
+      break;
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+      octet_length = value * sizeof(SQLWCHAR);
+      break;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      octet_length = (precision + 2);
+      break;
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT:
+      octet_length = 20;
+      break;
+    case SQL_REAL:
+      octet_length = sizeof(SQLREAL);
+      break;
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      octet_length = sizeof(SQLDOUBLE);
+      break;
+    case SQL_GUID:
+      octet_length = 16;
+      break;
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_DATE:
+      octet_length = 6;
+      break;
+    case SQL_TYPE_TIMESTAMP:
+      octet_length = 16;
+      break;
+    default:
+      octet_length = value;
+      break;
+  }
+  return StatusRecord::Ok();
+}
+
 StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
                                        DescriptorType const& desc_type) {
   if (value == SQL_INTERVAL) {

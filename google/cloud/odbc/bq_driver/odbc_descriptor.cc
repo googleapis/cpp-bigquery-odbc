@@ -299,7 +299,8 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                                        SQLSMALLINT field_identifier,
                                        SQLPOINTER out_value,
                                        SQLINTEGER value_buffer_len,
-                                       SQLSMALLINT* value_string_len) {
+                                       SQLSMALLINT* value_string_len,
+                                       std::optional<SQLLEN> cast_target_type) {
   std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     return StatusRecord{SQLStates::k_HY091(),
@@ -395,8 +396,15 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_CONCISE_TYPE:
-      IntValueToOutputBufferResponse(descriptor_record.concise_type, out_value,
-                                     value_string_len);
+      // Cast descriptor_record.type to SQLLEN, to prevent truncation
+      // or garbage value when the field is smaller (e.g., SQLSMALLINT).
+      if (cast_target_type.has_value()) {
+        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.concise_type);
+        IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
+      } else {
+        IntValueToOutputBufferResponse(descriptor_record.concise_type,
+                                       out_value, value_string_len);
+      }
       break;
     case SQL_DESC_DATA_PTR:
       AddressToPointer(descriptor_record.data_ptr, out_value, value_string_len);
@@ -498,8 +506,15 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_TYPE:
-      IntValueToOutputBufferResponse(descriptor_record.type, out_value,
-                                     value_string_len);
+      // Cast descriptor_record.type to SQLLEN, to prevent truncation
+      // or garbage value when the field is smaller (e.g., SQLSMALLINT).
+      if (cast_target_type.has_value()) {
+        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.type);
+        IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
+      } else {
+        IntValueToOutputBufferResponse(descriptor_record.type, out_value,
+                                       value_string_len);
+      }
       break;
     case SQL_DESC_TYPE_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
