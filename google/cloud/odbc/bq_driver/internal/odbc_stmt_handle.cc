@@ -235,10 +235,20 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     return pop_response;
   }
 
+  TableReference table_fields;
+  auto table_ref =
+      response.GetValue().statistics.job_query_stats.referenced_tables;
+  if (!table_ref.empty()) {
+    auto table_ref_ptr = table_ref.data();
+    table_fields = *table_ref_ptr;
+  } else {
+    table_fields = response.GetValue().configuration.query.destination_table;
+  }
+
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
   desc_handle.ClearDescriptorRecordsMap();
-  StatusRecord ird_response = PopulateIrd(desc_handle, schema);
+  StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
   if (!ird_response.ok()) {
     return ird_response;
   }
@@ -262,7 +272,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 }
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
-                                          TableSchema const& schema) {
+                                          TableSchema const& schema,
+                                          TableReference const& table_fields) {
   if (&descriptor_handle == nullptr ||
       descriptor_handle.GetType() != DescriptorType::kIRD) {
     return StatusRecord{SQLStates::k_HY024(),
@@ -292,6 +303,42 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     GetTypeInfoFromBQType(type_status_record.GetValue(), res.type,
                           res.mode == array_field, type_info);
 
+    // descriptor_record.length = type_info.col_size; //Need to verify
+    descriptor_record.base_column_name = res.name;
+    descriptor_record.base_table_name = table_fields.table_id;
+    descriptor_record.catalog_name = table_fields.project_id;
+    descriptor_record.schema_name = table_fields.dataset_id;
+    descriptor_record.table_name = table_fields.table_id;
+    descriptor_record.label = res.name;
+
+    descriptor_record.local_type_name =
+        type_info.local_type_name
+            ? std::string(reinterpret_cast<char*>(type_info.local_type_name))
+            : "";
+    descriptor_record.type_name =
+        type_info.type_name
+            ? std::string(reinterpret_cast<char*>(type_info.type_name))
+            : "";
+
+    descriptor_record.case_sensitive = type_info.case_sensitive;
+    // descriptor_record.SetNumPrecRadix(type_info.num_prec_radix); //need to
+    // verify
+    if (descriptor_record.local_type_name == "BIGNUMERIC" ||
+        descriptor_record.local_type_name == "INT64" ||
+        descriptor_record.local_type_name == "NUMERIC") {
+      descriptor_record.SetNumPrecRadix(kNumPrecRadixForExactNumeric);
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+    } else if (descriptor_record.local_type_name == "FLOAT64") {
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+      descriptor_record.SetNumPrecRadix(kNumPrecRadixForApproximateNumeric);
+    } else {
+      descriptor_record.sql_desc_unsigned =
+          (type_info.unsigned_attribute) ? SQL_FALSE : SQL_TRUE;
+      descriptor_record.SetNumPrecRadix(kDefaultIntervalPrecision);
+    }
+
     if (res.type == "TIME" || res.type == "DATETIME") {
       descriptor_record.precision = 6;
       descriptor_record.scale = 6;
@@ -304,6 +351,17 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                         : type_info.interval_precision;
       descriptor_record.scale = type_info.maximum_scale;
     }
+    if (res.type == "DATETIME") {
+      descriptor_record.octet_length = 16;
+    } else {
+      descriptor_record.SetOctetLength(type_status_record.GetValue(),
+                                       type_info.col_size,
+                                       descriptor_record.precision);
+    }
+    if (res.type == "INTERVAL" || res.type == "JSON") {
+      descriptor_record.case_sensitive = 1;
+    }
+
     if (type_status_record.GetValue() == SQL_DOUBLE) {
       // hard-coding to 15 to have the same behaviour as internal driver
       descriptor_record.length = 15;
@@ -315,7 +373,33 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                  : (res.mode == nullable_required)
                                      ? SQL_NULLABLE
                                      : SQL_NO_NULLS;
+    if (descriptor_record.local_type_name == "BIGNUMERIC" ||
+        descriptor_record.local_type_name == "FLOAT64" ||
+        descriptor_record.local_type_name == "NUMERIC") {
+      descriptor_record.literal_prefix = "";
+      descriptor_record.literal_suffix = "";
+    } else if (descriptor_record.local_type_name == "BYTES") {
+      descriptor_record.literal_prefix = "0x";
+      descriptor_record.literal_suffix = "";
+    } else if (descriptor_record.local_type_name == "DATE" ||
+               descriptor_record.local_type_name == "TIME" ||
+               descriptor_record.local_type_name == "TIMESTAMP") {
+      descriptor_record.literal_prefix = "'";
+      descriptor_record.literal_suffix = "'";
+    } else {
+      descriptor_record.literal_prefix =
+          type_info.literal_prefix == nullptr
+              ? ""
+              : std::string(reinterpret_cast<char*>(type_info.literal_prefix));
 
+      descriptor_record.literal_suffix =
+          type_info.literal_suffix == nullptr
+              ? ""
+              : std::string(reinterpret_cast<char*>(type_info.literal_suffix));
+    }
+    descriptor_record.SetDisplaySize(type_status_record.GetValue(),
+                                     type_info.col_size,
+                                     descriptor_record.precision);
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();

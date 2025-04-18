@@ -187,6 +187,8 @@ void GetTypeInfoFromBQType(SQLSMALLINT const& sql_type,
     type_info = kBqBoolTypeInfoRow;
   } else if (bq_type == "FLOAT") {
     type_info = kBqFloat64TypeInfoRow;
+  } else if (bq_type == "STRUCT" || bq_type == "RECORD") {
+    type_info = kBqStructTypeInfoRow;
   } else {
     if (kSqlToBqDataTypes.count(sql_type) > 0 &&
         kSqlToBqDataTypes.at(sql_type).count(bq_type) > 0) {
