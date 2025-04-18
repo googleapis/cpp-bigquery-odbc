@@ -268,8 +268,9 @@ TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
 
   PostQueryResults post_results = CreatePostQueryResults();
 
+  TableReference table_schema;
   StatusRecord ird_response =
-      handle.PopulateIrd(desc_handle, post_results.schema);
+      handle.PopulateIrd(desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(!ird_response.ok());
   EXPECT_EQ(ird_response.sql_state, SQLStates::k_HY024());
 }
@@ -282,8 +283,9 @@ TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
 
   PostQueryResults post_results = CreatePostQueryResults();
 
+  TableReference table_schema;
   StatusRecord ird_response =
-      handle.PopulateIrd(desc_handle, post_results.schema);
+      handle.PopulateIrd(desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(ird_response.ok());
 
   DescriptorRecord descriptor_record;

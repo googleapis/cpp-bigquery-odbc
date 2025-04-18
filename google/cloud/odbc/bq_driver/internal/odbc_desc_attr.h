@@ -63,6 +63,10 @@ struct DescriptorRecord {
                                              DescriptorType const& desc_type);
   odbc_internal::StatusRecord SetDataPointer(SQLPOINTER data_ptr,
                                              DescriptorType const& desc_type);
+  odbc_internal::StatusRecord SetDisplaySize(SQLSMALLINT type, SQLINTEGER value,
+                                             SQLINTEGER precision);
+  odbc_internal::StatusRecord SetOctetLength(SQLSMALLINT type, SQLINTEGER value,
+                                             SQLINTEGER precision);
   [[nodiscard]] odbc_internal::StatusRecord ConsistencyCheck() const;
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
