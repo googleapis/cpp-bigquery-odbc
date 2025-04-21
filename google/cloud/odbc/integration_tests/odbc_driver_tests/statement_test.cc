@@ -746,12 +746,12 @@ TEST(StatementTest, SQLFetchScroll) {
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
 
   // TODO(b/409920791): Fix segmentation fault when disconnecting.
-  //  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // // Delete table
-  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  // table.Drop(conn);
-  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Columns) {
