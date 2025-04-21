@@ -32,6 +32,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -446,8 +447,11 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   // Unbind previous descriptor records and populate IRD.
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.UnbindAllDescriptorRecordsFrom(0);
-  // google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
-  //     ird, ds_status_record_or->schema);
+
+  // temporary fix for PopulateIrd function, Need to handle separately.
+  TableReference table_fields;
+  google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
+      ird, ds_status_record_or->schema, table_fields);
 
   return StatusRecord::Ok();
 }
