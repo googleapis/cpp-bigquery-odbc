@@ -655,7 +655,9 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   status = SQLExecute(conn->hstmt);  // No ANSI version
   CheckError(status, "SQLExecute", conn);
   while (1) {
-    status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);  // No ANSI version
+    // status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);  // No ANSI
+    // version
+    status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA_FOUND) {
       break;
     }
@@ -715,7 +717,9 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
 
     SqlToCdataTypes(col_ptr);
     // Allocate memory for column data using dynamic memory.
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    // col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    auto result_set = std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->data = result_set.get();
     BindCol(conn, col_ptr, i + 1);
   }
 
@@ -763,9 +767,9 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
     }
   }
   // Clean up allocated memory
-  for (int i = 0; i < num_cols; i++) {
-    delete[] cols[i]->data;
-  }
+  // for (int i = 0; i < num_cols; i++) {
+  //   delete[] cols[i]->data;
+  // }
   return std::make_shared<Results>(results);
 }
 
