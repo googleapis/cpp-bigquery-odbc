@@ -632,13 +632,13 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, 1);
-    // auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
-    // col_ptr->result_set = result_set.get();
-    col_ptr->result_set = new SQLCHAR[rs_size * col_ptr->data_size];
-    
+    // auto result_set = std::make_unique<SQLCHAR[]>(rs_size *
+    // col_ptr->data_size); col_ptr->result_set = result_set.get();
+    //  col_ptr->result_set = new SQLCHAR[rs_size * col_ptr->data_size];
 
-//     auto result_set = std::shared_ptr<SQLCHAR[]>(new SQLCHAR[rs_size * col_ptr->data_size]);
-// col_ptr->result_set = result_set.get();  
+    auto result_set =
+        std::shared_ptr<SQLCHAR[]>(new SQLCHAR[rs_size * col_ptr->data_size]);
+    col_ptr->result_set = result_set.get();
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -679,9 +679,9 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     }
   }
   // Clean up allocated memory
-  for (int i = 0; i < num_cols; i++) {
-    delete[] cols[i]->result_set;
-  }
+  // for (int i = 0; i < num_cols; i++) {
+  //   delete[] cols[i]->result_set
+  // }
   return std::make_shared<Results>(results);
 }
 
