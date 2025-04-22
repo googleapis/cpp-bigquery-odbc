@@ -60,9 +60,9 @@ StdRows const kSampleData{
 
 StdUnicodeRows const kUnicodeSampleData{
     {1, L"हिंदी", L"中国人"},
-    {2, L"नमस्ते", L"你好"},
-    {3, L"परीक्षण", L"测试"},
-};
+    {2, L"random string 1", L"random string 2"},
+    // The test case doesn't fetch the values below
+    {3, L"untested val 1", L"untested val 2"}};
 
 StdRows const kRowCountSampleData{
     {"Row 1", 1, 1.1}, {"Row 2", 2, 2.2}, {"Row 3", 3, 3.3}};
@@ -286,10 +286,24 @@ TEST(StatementTest, SQLFetch_Unicode) {
   // Execute a read query and check whether the results returned are as expected
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
-  auto const query = "SELECT Hindi, Chinese FROM " + table_name;
+  // The IntegerField value is supposed to be unique and used as an index to
+  // sort
+  auto const query =
+      "SELECT Hindi, Chinese FROM " + table_name + " ORDER BY IntegerField";
+
+  SQLULEN max_rows = 9193;
+  SQLRETURN status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, &max_rows, 0, nullptr);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_MAX_ROWS)", conn);
+  EXPECT_EQ(max_rows, 0);
+
+  // validating if SQL_ATTR_MAX_ROWS attr works.
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)2, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_MAX_ROWS)", conn);
+
   auto results = *FetchResults(conn, query, true);
-  VerifyColumnWiseUnicodeResults(kUnicodeSampleData, results,
-                                 std::vector<std::string>());
+  VerifyColumnWiseUnicodeResults({kUnicodeSampleData[0], kUnicodeSampleData[1]},
+                                 results, std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

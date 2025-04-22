@@ -46,6 +46,7 @@ using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
@@ -286,11 +287,23 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     return rs_status_record_or.GetStatusRecord();
   }
 
+  // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
+  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return max_rows_status.GetStatusRecord();
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *rs_status_record_or;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
+
   // Determine execution state based on statement type
   if (statement_type == "SELECT" ||
       (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-    stmt_handle.SetResultSet(*rs_status_record_or);
+    stmt_handle.SetResultSet(result_set);
   } else {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
