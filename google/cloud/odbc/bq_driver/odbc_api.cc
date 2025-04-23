@@ -2511,7 +2511,7 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
-    TraceFunctionExit_SQLDescribeParam(rc, *(*kTraceOption));
+    TraceFunctionExit_SQLColAttribute(rc, *(*kTraceOption));
 
   return rc;
 }
@@ -2534,6 +2534,9 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
   SQLCHAR character_attrib_val[kBufferLength] = "Not Set";
   StatusRecordOr<std::wstring> updated_out_character_attr_status;
   updated_character_attrib_val = (SQLPOINTER)character_attrib_val;
+  // reset characterAttribute buffer to make sure it doesn't contain garbage or
+  // cache value.
+  std::memset(characterAttribute, 0, characterAttributeBufferLen);
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
@@ -2551,7 +2554,7 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
       &character_attribute_string_len, numericAttribute);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && character_attribute_string_len > 0) {
+  if (SQL_SUCCEEDED(rc) && character_attribute_string_len >= 0) {
     if (IsFieldIdentifierString(fieldIdentifier)) {
       updated_out_character_attr_status = ConvertSQLPointerToSQLWChar(
           updated_character_attrib_val, characterAttributeBufferLen);
