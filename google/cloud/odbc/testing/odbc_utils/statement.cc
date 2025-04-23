@@ -632,8 +632,8 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, 1);
-    auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
-    col_ptr->result_set = result_set.get();
+    // Allocate memory for column resultset using dynamic memory.
+    col_ptr->result_set = new SQLCHAR[rs_size * col_ptr->data_size];
 
     std::string col_name = (char*)col_ptr->name;
 
@@ -672,6 +672,10 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
         results[col_name].push_back((char*)data);
       }
     }
+  }
+  // Clean up allocated memory
+  for (int i = 0; i < num_cols; i++) {
+    delete[] cols[i]->result_set;
   }
   return std::make_shared<Results>(results);
 }
