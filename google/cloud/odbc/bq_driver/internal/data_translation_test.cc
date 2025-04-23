@@ -1991,8 +1991,8 @@ TEST(ConvertFromBytesDSValue, WCharDataEmptyInput) {
   dest_data.type = SQL_C_WCHAR;
 
   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
-  ASSERT_FALSE(status.ok());
-  ASSERT_EQ(status.sql_state, SQLStates::k_01004());
+  ASSERT_TRUE(status.ok());
+  ASSERT_EQ(std::wstring(reinterpret_cast<wchar_t*>(dest_buf.data())), L"");
 }
 
 TEST(ConvertFromBytesDSValue, WCharDataNullBuffer) {
