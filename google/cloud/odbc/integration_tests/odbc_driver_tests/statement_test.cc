@@ -3415,6 +3415,7 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
 }
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(SQLRowCount, WrongUpdateValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3445,6 +3446,8 @@ TEST(SQLRowCount, WrongUpdateValidation) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(SQLRowCount, NonExistentTable) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3463,8 +3466,6 @@ TEST(SQLRowCount, NonExistentTable) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLRowCount, SameValueUpdate) {
   auto conn = std::make_shared<ODBCHandles>();
