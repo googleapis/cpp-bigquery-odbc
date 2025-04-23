@@ -598,20 +598,20 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   SQLRETURN status;
   SQLULEN num_rows_fetched = 0;
 
-  status =
-      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
-                     0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
+  // status =
+  //     SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN,
+  //                    0);  // Ansi version not supported by UniXODBC.
+  // CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
 
-  status =
-      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
-                     0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
+  // status =
+  //     SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
+  //                    0);  // Ansi version not supported by UniXODBC.
+  // CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
 
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                          (SQLPOINTER)&num_rows_fetched,
-                          0);  // Ansi version not supported by UniXODBC.
-  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
+  // status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
+  //                         (SQLPOINTER)&num_rows_fetched,
+  //                         0);  // Ansi version not supported by UniXODBC.
+  // CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
