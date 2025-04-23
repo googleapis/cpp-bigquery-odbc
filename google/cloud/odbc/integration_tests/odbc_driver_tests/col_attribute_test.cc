@@ -258,7 +258,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   std::string col_expected;
   TypeInfoRow info_row = kDataTypesColumns[i - 1].info_row;
   ColAttributeRow col_attr_row = kDataTypesColumns[i - 1].col_attribute_row;
-
+  std::string empty_str = "";
   // Checking string attributes
   SQLCHAR col_attr[kBufferLength];
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_COLUMN_NAME,
@@ -268,27 +268,32 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              conn);
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
-  // existing driver return empty result for SQL_DESC_BASE_TABLE_NAME and
-  // SQL_DESC_CATALOG_NAME.
-  if (kIsBqDriver) {
-    memset(col_attr, 0, kBufferLength);
-    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_TABLE_NAME,
-                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-    CheckError(status,
-               "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
-               conn);
-    col = reinterpret_cast<char*>(col_attr);
-    EXPECT_EQ(kTableName, col);
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_BASE_TABLE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status,
+             "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
+             conn);
+  col = reinterpret_cast<char*>(col_attr);
+//  On windows, existing driver return empty str for SQL_DESC_BASE_TABLE_NAME.
+#ifdef WIN32
+  EXPECT_EQ(kIsBqDriver ? kTableName : empty_str, col);
+#else
+  EXPECT_EQ(kTableName, col);
+#endif  // WIN32
 
-    memset(col_attr, 0, kBufferLength);
-    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_CATALOG_NAME,
-                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-    CheckError(status,
-               "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
-               conn);
-    col = reinterpret_cast<char*>(col_attr);
-    EXPECT_EQ(kCatalogName, col);
-  }
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_CATALOG_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
+             conn);
+  col = reinterpret_cast<char*>(col_attr);
+//  On windows, existing driver return empty str for SQL_DESC_CATALOG_NAME.
+#ifdef WIN32
+  EXPECT_EQ(kIsBqDriver ? kCatalogName : empty_str, col);
+#else
+  EXPECT_EQ(kCatalogName, col);
+#endif  // WIN32
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_LABEL, (SQLPOINTER)col_attr,
@@ -330,25 +335,32 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_NAME), conn);
   col = reinterpret_cast<char*>(col_attr);
   EXPECT_EQ(kDataTypesColumns[i - 1].col_name, col);
-  // existing driver return empty result for SQL_DESC_SCHEMA_NAME and
-  // SQL_DESC_TABLE_NAME.
-  if (kIsBqDriver) {
-    memset(col_attr, 0, kBufferLength);
-    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_SCHEMA_NAME,
-                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-    CheckError(status,
-               "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME), conn);
-    col = reinterpret_cast<char*>(col_attr);
-    EXPECT_EQ(kDatasetName, col);
 
-    memset(col_attr, 0, kBufferLength);
-    status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TABLE_NAME,
-                             (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
-    CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
-               conn);
-    col = reinterpret_cast<char*>(col_attr);
-    EXPECT_EQ(kTableName, col);
-  }
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_SCHEMA_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME),
+             conn);
+  col = reinterpret_cast<char*>(col_attr);
+  //  On windows, existing driver return empty str for SQL_DESC_SCHEMA_NAME.
+#ifdef WIN32
+  EXPECT_EQ(kIsBqDriver ? kDatasetName : empty_str, col);
+#else
+  EXPECT_EQ(kDatasetName, col);
+#endif  // WIN32
+
+  memset(col_attr, 0, kBufferLength);
+  status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TABLE_NAME,
+                           (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
+  CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
+             conn);
+  col = reinterpret_cast<char*>(col_attr);
+#ifdef WIN32
+  EXPECT_EQ(kIsBqDriver ? kTableName : empty_str, col);
+#else
+  EXPECT_EQ(kTableName, col);
+#endif  // WIN32
+
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TYPE_NAME,
                            (SQLPOINTER)col_attr, kBufferLength, NULL, NULL);
@@ -435,7 +447,18 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
                            &col_attr_int);
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_OCTET_LENGTH),
              conn);
+//  On windows, existing driver return invalie value e.g.16384 for some
+//  datatypes.
+#ifdef WIN32
+  if (col == "GEOGRAPHY" || col == "INTERVAL" || col == "JSON" ||
+      col == "STRING" || col == "STRUCT" || col == "ARRAY") {
+    EXPECT_EQ(16384, col_attr_int);
+  } else {
+    EXPECT_EQ(col_attr_row.octet_length, col_attr_int);
+  }
+#else
   EXPECT_EQ(col_attr_row.octet_length, col_attr_int);
+#endif  // WIN32/
 
   col_attr_int = 0;
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_PRECISION, NULL, 0, NULL,

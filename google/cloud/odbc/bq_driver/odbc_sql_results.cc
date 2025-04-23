@@ -410,6 +410,9 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                        reinterpret_cast<SQLSMALLINT*>(char_attr_string_len));
       break;
     default:
+      // SQLColAttribute expects some descriptor fields to return values as
+      // SQLLEN, but their default type is SQLSMALLINT. This datatype mismatch
+      // leads to truncation or incorrect (garbage) values during conversion.
       std::optional<SQLLEN> cast_target_type =
           numeric_attribute ? std::optional<SQLLEN>(*numeric_attribute)
                             : std::nullopt;
