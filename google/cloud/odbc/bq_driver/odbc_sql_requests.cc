@@ -430,7 +430,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.UnbindAllDescriptorRecordsFrom(0);
 
-  // temporary fix for PopulateIrd function, Need to handle separately.
+  // TODO(b/413273776): Handle PopulateIrd call in SQLMoreResults
   TableReference table_fields;
   google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
       ird, ds_status_record_or->schema, table_fields);
