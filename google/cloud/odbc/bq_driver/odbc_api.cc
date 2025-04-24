@@ -33,6 +33,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #endif  //_WIN32
@@ -227,6 +228,7 @@ using ::google::cloud::odbc_bq_driver::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::ConnectionAttr;
 using google::cloud::odbc_bq_driver_internal::ConnectionValueType;
 using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
+using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::IsDiagIdentifierString;
 using google::cloud::odbc_bq_driver_internal::IsFieldIdentifierString;
 using google::cloud::odbc_bq_driver_internal::IsInfoTypeString;
@@ -2234,20 +2236,15 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
       return utf16_out_stmt_txt.GetCalculatedReturnCode();
     }
 
-    std::vector<SQLWCHAR> sql_w_str(utf16_out_stmt_txt->begin(),
-                                    utf16_out_stmt_txt->end());
-    sql_w_str.emplace_back(L'\0');
+    WStrToOutputBufferResponse(
+      *utf16_out_stmt_txt,
+      outStatementText,
+      outStatementTextBufferLen,
+      utf16_out_stmt_txt->length(),
+      utf16_out_stmt_txt->length(),
+      reinterpret_cast<SQLLEN*>(outStatementTextLen)
+    );
 
-    size_t out_stmt_txt_len =
-        std::min(static_cast<size_t>(outStatementTextBufferLen),
-                 utf16_out_stmt_txt->size());
-    std::memset(outStatementText, '\0', out_stmt_txt_len * sizeof(SQLWCHAR));
-    std::memcpy(outStatementText, sql_w_str.data(),
-                out_stmt_txt_len * sizeof(SQLWCHAR));
-
-    if (out_stmt_txt_len < static_cast<size_t>(outStatementTextBufferLen)) {
-      outStatementText[out_stmt_txt_len] = '\0';
-    }
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));

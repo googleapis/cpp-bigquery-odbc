@@ -3950,13 +3950,10 @@ TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
   SCOPED_TRACE("Testing full match of SQLNativeSqlW with Unicode query");
   std::wstring sql_query = L"SELECT N'東京'";  // Full Unicode query
 
-  std::vector<SQLWCHAR> sqlWStr(sql_query.begin(), sql_query.end());
-  sqlWStr.emplace_back(L'\0');
+  std::vector<SQLWCHAR> sql_wstr(sql_query.begin(), sql_query.end());
+  sql_wstr.emplace_back(L'\0');
 
-  SQLWCHAR* statementText = sqlWStr.data();
-  SQLINTEGER length = sqlWStr.size();
-
-  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, statementText, length, native_sql,
+  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, sql_wstr.data(), sql_wstr.size(), native_sql,
                           sizeof(native_sql), &native_sql_length),
             SQL_SUCCESS);
 
