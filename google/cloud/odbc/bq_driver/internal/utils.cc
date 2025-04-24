@@ -464,7 +464,7 @@ std::vector<std::string> SplitTableTypes(std::string const& table_types) {
 
 StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (utf_16_str.empty()) {
-    return StatusRecord{SQLStates::k_HY000(), "utf16 string is empty/Null"};
+    return std::string();
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
@@ -524,7 +524,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
 
 StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
   if (utf_8_str.empty()) {
-    return std::wstring(L"");
+    return std::wstring();
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar

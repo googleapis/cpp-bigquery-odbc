@@ -1522,7 +1522,7 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
 
 std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (utf_16_str.empty()) {
-    throw std::runtime_error(" utf16 string is empty/Null");
+    return std::string();
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
@@ -1579,7 +1579,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
 
 std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
   if (utf_8_str.empty()) {
-    throw std::runtime_error("utf_8_str string isempty/Null");
+    return std::wstring();
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
@@ -1637,7 +1637,7 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
 
 std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   if (((in_str != nullptr) && (in_str[0] == '\0'))) {
-    throw std::runtime_error("in_str string is empty/Null");
+    return std::string();
   }
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
