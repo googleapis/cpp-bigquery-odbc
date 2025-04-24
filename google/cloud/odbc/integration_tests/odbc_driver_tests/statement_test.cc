@@ -3953,8 +3953,8 @@ TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
   std::vector<SQLWCHAR> sql_wstr(sql_query.begin(), sql_query.end());
   sql_wstr.emplace_back(L'\0');
 
-  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, sql_wstr.data(), sql_wstr.size(), native_sql,
-                          sizeof(native_sql), &native_sql_length),
+  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, sql_wstr.data(), sql_wstr.size(),
+                          native_sql, sizeof(native_sql), &native_sql_length),
             SQL_SUCCESS);
 
   std::wstring returned_sql(native_sql, native_sql + native_sql_length);
