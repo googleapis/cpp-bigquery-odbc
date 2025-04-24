@@ -450,8 +450,7 @@ TEST(UnicodeConversion, EmptyData_Utf16ToUtf8) {
   std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
   sqlWStr.emplace_back(L'\0');
   auto result_str = Utf16ToUtf8(sqlWStr.data());
-  EXPECT_THAT(result_str, StatusRecordIs(SQLStates::k_HY000(),
-                                         HasSubstr("string is empty/Null")));
+  ASSERT_TRUE(result_str->empty());
 }
 
 TEST(DiagIdentifierString, IsDiagIdentifierString_true) {
