@@ -2247,7 +2247,6 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
                                utf16_out_stmt_txt->size(),
                                &out_len);
     std::cout<<"out string len2: "<<out_len<<std::endl;
-    *outStatementTextLen = static_cast<SQLINTEGER>(out_len);
     std::cout<<"out string len3: "<<*outStatementTextLen<<std::endl;
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
