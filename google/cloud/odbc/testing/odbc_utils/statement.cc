@@ -632,8 +632,9 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
     cols[i] = col_ptr;
 
     DescribeCol(conn, col_ptr, 1);
-    auto result_set = std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
-    col_ptr->result_set = result_set.get();
+    col_ptr->result_set_owner =
+        std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
+    col_ptr->result_set = col_ptr->result_set_owner.get();
 
     std::string col_name = (char*)col_ptr->name;
 

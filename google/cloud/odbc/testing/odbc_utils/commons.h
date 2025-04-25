@@ -111,7 +111,8 @@ struct Column {
   SQLPOINTER data;  // Returned column data
   TestingDataBuffer data_buf;
   SQLCHAR* result_set;  // Returned column data for a result set
-  SQLULEN data_size;    // max size of column data
+  std::unique_ptr<SQLCHAR[]> result_set_owner;  // Owns the buffer
+  SQLULEN data_size;                            // max size of column data
   // We need to allocate space for data_len_ptr in case the caller doesn't
   // explicitly set that.
   SQLLEN data_len;  // size of data returned
