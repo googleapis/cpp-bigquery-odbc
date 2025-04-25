@@ -2241,11 +2241,13 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
     //             utf16_out_stmt_txt->size());
     std::cout<<"out string len1: "<<utf16_out_stmt_txt->size()<<std::endl;
     std::cout<<"buff len1: "<<outStatementTextBufferLen<<std::endl;
-
+    SQLLEN out_len = 0;
     WStrToOutputBufferResponse(*utf16_out_stmt_txt, outStatementText,
                                outStatementTextBufferLen, utf16_out_stmt_txt->size(),
                                utf16_out_stmt_txt->size(),
-                               reinterpret_cast<SQLLEN*>(outStatementTextLen));
+                               &out_len);
+    std::cout<<"out string len2: "<<out_len<<std::endl;
+    *outStatementTextLen = static_cast<SQLINTEGER>(out_len);
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));
