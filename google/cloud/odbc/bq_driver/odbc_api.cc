@@ -2239,7 +2239,9 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
     //size_t out_stmt_txt_len =
     //    std::min(static_cast<size_t>(outStatementTextBufferLen),
     //             utf16_out_stmt_txt->size());
-    std::cout<<"len1: "<<utf16_out_stmt_txt->size()<<std::endl;
+    std::cout<<"out string len1: "<<utf16_out_stmt_txt->size()<<std::endl;
+    std::cout<<"buff len1: "<<outStatementTextBufferLen<<std::endl;
+
     WStrToOutputBufferResponse(*utf16_out_stmt_txt, outStatementText,
                                outStatementTextBufferLen, utf16_out_stmt_txt->size(),
                                utf16_out_stmt_txt->size(),
