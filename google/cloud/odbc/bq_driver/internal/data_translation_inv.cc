@@ -51,7 +51,8 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
     case SQL_C_WCHAR: {
       auto* wchar_buf = static_cast<SQLWCHAR*>(src_buf);
       if ((result_len > 0) || (result_len == SQL_NTS)) {
-        auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
+        auto utf8_res =
+            ConvertSQLWCHARToString(wchar_buf, result_len / sizeof(wchar_t));
         if (!utf8_res) {
           return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
         }

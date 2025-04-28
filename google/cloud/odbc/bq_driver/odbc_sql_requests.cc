@@ -1050,7 +1050,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     }
 
     // First chunk of data, allocate fresh buffer
-    buffer = malloc(str_len_or_ind_ptr);
+    buffer = malloc(str_len_or_ind_ptr + sizeof(wchar_t));
     if (buffer == nullptr) {
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_HY001(), "Memory allocation error."});
@@ -1060,7 +1060,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   } else {
     // Additional chunks: allocate new buffer large enough to hold old + new
     // data
-    size_t new_size = apd_rec.octet_length + str_len_or_ind_ptr;
+    size_t new_size =
+        apd_rec.octet_length + str_len_or_ind_ptr + sizeof(wchar_t);
 
     void* new_buffer = realloc(apd_rec.data_ptr, new_size);
     if (new_buffer == nullptr) {
@@ -1077,6 +1078,16 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Update descriptor only after successful allocation
   apd_rec.data_ptr = buffer;
   apd_rec.octet_length += str_len_or_ind_ptr;
+  std::cout << "apd_rec.octet_length " << apd_rec.octet_length << std::endl;
+
+  if (apd_rec.type == SQL_C_CHAR) {
+    // CHAR: null-terminate as char
+    reinterpret_cast<char*>(apd_rec.data_ptr)[apd_rec.octet_length] = '\0';
+  } else if (apd_rec.type == SQL_C_WCHAR) {
+    // WCHAR: null-terminate as wchar_t
+    reinterpret_cast<wchar_t*>(
+        apd_rec.data_ptr)[apd_rec.octet_length / sizeof(wchar_t)] = L'\0';
+  }
 
   if (apd_rec.indicator_ptr) {
     switch (apd_rec.type) {
