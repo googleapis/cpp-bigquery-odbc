@@ -22,6 +22,7 @@ limitations under the License.
         <ComponentGroup Id="ProductComponents">
             <ComponentRef Id="DriverFilesComponent" />
             <ComponentRef Id="ODBCRegistrySettings" />
+            <ComponentRef Id="InstallerIconComponent"/>
         </ComponentGroup>
     <CustomAction Id="RemoveAllDriverDSNs"
                   Directory="INSTALLFOLDER"
@@ -49,6 +50,15 @@ limitations under the License.
                 <File Id="zlib1.dll" Name="zlib1.dll" />
             </Component>
 
+                <Directory Id="AssetsFolder" Name="assets">
+                    <Component Id="InstallerIconComponent" Guid="*">
+                        <File Id="InstallerIconFile"
+                              Name="bq.ico"
+                              Source="$(var.ProjectDir)\Assets\bq.ico"
+                              KeyPath="yes" />
+                    </Component>
+                </Directory>
+
             <Component Id="CreateAndRemoveFolder" Guid="*">
                 <CreateFolder />
                 <RemoveFolder Id="INSTALLFOLDER" On="uninstall" />
@@ -72,10 +82,11 @@ limitations under the License.
                 <!-- DSN Configuration -->
                 <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]">
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
-                    <RegistryValue Name="Catalog" Type="string" Value="your_catalog_id" />
+                    <RegistryValue Name="Catalog" Type="string" Value="" />
                     <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="1" />
+                    <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
                     <RegistryValue Name="AllowLargeResults" Type="string" Value="0" />
                     <RegistryValue Name="LargeResultsDataSetId" Type="string" Value="_odbc_temp_tables" />
                     <RegistryValue Name="LargeResultsTempTableExpirationTime" Type="string" Value="3600000" />
