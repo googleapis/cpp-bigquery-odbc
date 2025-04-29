@@ -14,15 +14,13 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_form_proxy.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
-#include <commctrl.h>  // Required for SetWindowSubclass
+#include <commctrl.h>
 #include <shellapi.h>
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 
 char const ProxyOptions::CLASS_NAME[] = "ProxyOptClass";
-constexpr char kBigQueryDocsURL[] =
-    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 
 // Default proxy checkbox value
 std::string ProxyOptions::proxy_check_ = "0";
@@ -134,7 +132,7 @@ void ProxyOptions::InitControls() {
 
   HWND h_hyperlink = CreateHyperlinkLabel(
       proxy_hwnd, "BigQuery documentation", kLabelWidth - 36, kButtonY,
-      kLabelWidth - 30, kLabelHeight, kIdcHyperlink1);
+      kLabelWidth - 50, kLabelHeight, kIdcHyperlink1);
   SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_ok_button = CreateButton(proxy_hwnd, "OK", kOkButtonX, kButtonY,

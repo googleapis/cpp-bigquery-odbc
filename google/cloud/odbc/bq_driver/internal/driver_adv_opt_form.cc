@@ -371,9 +371,9 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
                                 kButtonY + 10, kWidth + 110, kHeight, 0);
   SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_hyperlink = CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation",
-                                          144, kButtonY + 10, kWidth + 100,
-                                          kHeight, kIdcHyperlink2);
+  HWND h_hyperlink =
+      CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
+                           kButtonY + 10, kWidth + 90, kHeight, kIdcHyperlink2);
   SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 

@@ -321,6 +321,11 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                        "Auth String cannot be empty for DSN-less usecase"};
       return LogAndReturnCode(handle_ref, status_record);
     }
+    if (!IsValidEmail(user_name_str)) {
+      auto status_record = StatusRecord{
+          SQLStates::k_HY090(), "Username needs to be an email address"};
+      return LogAndReturnCode(handle_ref, status_record);
+    }
     dsn_section["OAUTHMECHANISM"] = std::to_string(
         static_cast<int>(OauthMechanism::kServiceAndUserAccount));
     dsn_section["KEYFILEPATH"] = auth_string_str;

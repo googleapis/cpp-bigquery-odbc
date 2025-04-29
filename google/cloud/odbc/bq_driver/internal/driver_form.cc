@@ -16,9 +16,12 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include <commctrl.h>
 #include <regex>
 #include <shellapi.h>
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bigquery_client_interface::Oauth;
@@ -34,14 +37,14 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
-constexpr char kBigQueryDocsURL[] = "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
+
 std::string DriverForm::dsn_name_;
 std::string DriverForm::key_file_path_;
-std::string DriverForm::o_auth_mechanism_;
+std::string DriverForm::o_auth_mechanism_ = "Service Authentication";
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
-std::string DriverForm::encrypt_data_;
-std::string DriverForm::min_tls_version_;
+std::string DriverForm::encrypt_data_ = "For Current User Only";
+std::string DriverForm::min_tls_version_ = "1.2";
 std::string DriverForm::trusted_cert_;
 std::string DriverForm::description_;
 std::string const kDsnName = "DSN";
@@ -60,7 +63,8 @@ std::string const kRefreshToken = "RefreshToken";
 int const kBtnWidth = 68;
 int const kBtnHeight = 17;
 int const kEditComboBoxWidth = 203;
-int const kEditComboBoxHeight = 17;
+int const kComboBoxHeight = 100;
+int const kEditBoxHeight = 17;
 int const kLabelWidth = 150;
 int const kLabelHeight = 20;
 int const kCheckboxWidth = 15;
@@ -189,6 +193,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   }
 
   ODBCBQClient& bq_client = **bq_client_ptr;
+
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
     result_set_status = GetResultSetForProjects(bq_client, metadata_id);
@@ -198,7 +203,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   }
 
   if (!result_set_status.Ok()) {
-    return StatusRecord{SQLStates::k_HY000(), "Failed to fetch result set."};
+    return result_set_status.GetStatusRecord();
   }
 
   ResultSet const& result_set = *result_set_status;
@@ -216,6 +221,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
 
   return row_string;
 }
+
 int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
                     PWSTR p_cmd_line, int n_cmd_show) {
   DriverForm DriverForm;
@@ -230,6 +236,7 @@ int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
 
   return 0;
 }
+
 HWND DriverForm::GetHwnd() const { return m_hwnd; }
 DriverForm::DriverForm(HWND parent_hwnd)
     : m_hwnd(NULL), m_parent_hwnd(parent_hwnd) {}
@@ -239,35 +246,36 @@ DriverForm::~DriverForm() {
     DestroyWindow(m_hwnd);
   }
 }
-void OpenFileDialog(HWND hwnd, HWND h_edit,
-                    char const* mock_file_path = nullptr) {
+
+void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path,
+                    char const* file_filter, char const* default_ext) {
   if (mock_file_path) {
     // Directly set the test file path to the edit control if provided
     SetWindowText(h_edit, mock_file_path);
     return;
   }
+
   OPENFILENAME ofn;
   char sz_file[260] = {0};  // Buffer for file path
 
-  // Initialize OPENFILENAME structure
   ZeroMemory(&ofn, sizeof(ofn));
   ofn.lStructSize = sizeof(ofn);
   ofn.hwndOwner = hwnd;
   ofn.lpstrFile = sz_file;
   ofn.nMaxFile = sizeof(sz_file);
-  ofn.lpstrFilter = "JSON Files\0*.JSON\0All Files\0*.*\0";
+  ofn.lpstrFilter = file_filter;
   ofn.nFilterIndex = 1;
   ofn.lpstrFileTitle = NULL;
   ofn.nMaxFileTitle = 0;
   ofn.lpstrInitialDir = NULL;
+  ofn.lpstrDefExt = default_ext;  // Default extension if user omits one
   ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-  // Display the Open File dialog
   if (GetOpenFileName(&ofn)) {
-    // Set the selected file path to the edit control
     SetWindowText(h_edit, sz_file);
   }
 }
+
 void DriverForm::SetValues(Section const& attributes_map) {
   dsn_name_ = GetValueOrDefault(attributes_map, kDsnName);
   key_file_path_ = GetValueOrDefault(attributes_map, kKeyFilePath);
@@ -289,6 +297,7 @@ void DriverForm::SetValues(Section const& attributes_map) {
     o_auth_mechanism_ = "";
   }
 }
+
 HFONT CreateCustomFont(int font_size) {
   LOGFONT log_font = {};
   HFONT h_font = NULL;
@@ -304,148 +313,217 @@ HFONT CreateCustomFont(int font_size) {
 void SetControlFont(HWND hwnd, HFONT font) {
   SendMessage(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
 }
-void DriverForm::InitControls() {
-  HFONT h_font = CreateFont(
-    -10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-    OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-    DEFAULT_PITCH | FF_SWISS, "Inter");
-  HBRUSH hBrushGrey = CreateSolidBrush(RGB(224, 224, 224)); // -10 is equal to 10px
 
-  HWND h_dsn_name_header = CreateLabel(m_hwnd, "Data source name:", kAxisX, kAxisY, kLabelWidth,
-    kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_dsn_name_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-  HWND h_dsn_name_edit = CreateEditBox(m_hwnd, kAxisX+170, kAxisY, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDSNEdit);
-  SendMessage(h_dsn_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+void DriverForm::InitControls() {
+  HFONT h_font =
+      CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                 OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                 DEFAULT_PITCH | FF_SWISS, "Inter");
+  HBRUSH h_brush_grey =
+      CreateSolidBrush(RGB(224, 224, 224));  // -10 is equal to 10px
+
+  HWND h_dsn_name_header =
+      CreateLabel(m_hwnd, "Data source name:", kAxisX, kAxisY, kLabelWidth,
+                  kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_dsn_name_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_dsn_name_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcDSNEdit);
+  SendMessage(h_dsn_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_dsn_name_edit, dsn_name_.c_str());
   if (!dsn_name_.empty()) {
     SendMessage(h_dsn_name_edit, EM_SETREADONLY, TRUE, 0);
   }
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDSNEdit), InputSubclassProc, 0, 0);
 
-  HWND h_description_header = CreateLabel(m_hwnd, "Description:", kAxisX,kAxisY+28, kLabelWidth-50,
-    kLabelHeight, WS_VISIBLE | SS_LEFT);
-   SendMessage(h_description_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                           
+  HWND h_description_header =
+      CreateLabel(m_hwnd, "Description:", kAxisX, kAxisY + 28, kLabelWidth - 50,
+                  kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_description_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_description_edit =
-      CreateEditBox(m_hwnd, kAxisX+170, kAxisY+28, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDescriptionEdit);
-      SendMessage(h_description_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 28, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcDescriptionEdit);
+  SendMessage(h_description_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDescriptionEdit), InputSubclassProc,
+                    0, 0);
 
   HWND h_encrypt_data_header =
-      CreateLabel(m_hwnd, "Encrypt sensitive data:", kAxisX, kAxisY+56, kLabelWidth, kLabelHeight,
-                  WS_VISIBLE | SS_LEFT);
-      SendMessage(h_encrypt_data_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                               
+      CreateLabel(m_hwnd, "Encrypt sensitive data:", kAxisX, kAxisY + 56,
+                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_encrypt_data_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_encrypt_data_combo_box =
-      CreateComboBox(m_hwnd, kAxisX+170, kAxisY+56, kEditComboBoxWidth, kEditComboBoxHeight, kIdcEncryptDataComboBox);
-      SendMessage(h_encrypt_data_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-   
-      HWND h_group_box = CreateGroupBox(
-        m_hwnd, "Authentication",
-        kAxisX-5, kAxisY+90, KGroupBoxWidth, KGroupBoxHeight,
-        kIdcGroupBox);    
-        SendMessage(h_group_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 56, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcEncryptDataComboBox);
+  SendMessage(h_encrypt_data_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcEncryptDataComboBox),
+                    ComboBoxSubclassProc, 0, 0);
 
-  HWND h_auth_header = CreateLabel(m_hwnd, "OAuth mechanism:", kAxisX+5, kAxisY+115, kLabelWidth, kLabelHeight,
-                                   WS_VISIBLE | SS_LEFT);
-      SendMessage(h_auth_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+  HWND h_group_box =
+      CreateGroupBox(m_hwnd, "Authentication", kAxisX - 5, kAxisY + 90,
+                     KGroupBoxWidth, KGroupBoxHeight, kIdcGroupBox);
+  SendMessage(h_group_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_auth_header =
+      CreateLabel(m_hwnd, "OAuth mechanism:", kAxisX + 5, kAxisY + 115,
+                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_auth_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_auth_combo_box =
-      CreateComboBox(m_hwnd, kAxisX+170, kAxisY+115, kEditComboBoxWidth, kEditComboBoxHeight, kIdcAuthBox);
-      SendMessage(h_auth_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                              
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 115, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcAuthBox);
+  SendMessage(h_auth_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcAuthBox), ComboBoxSubclassProc, 0,
+                    0);
 
-  HWND h_key_file_path_header = CreateLabel(m_hwnd, "Key file path:", kAxisX+5, kAxisY+145,
-    kLabelWidth-50, kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                             
+  HWND h_key_file_path_header =
+      CreateLabel(m_hwnd, "Key file path:", kAxisX + 5, kAxisY + 145,
+                  kLabelWidth - 50, kLabelHeight, kIdcKeyFileHeader);
+  SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_key_file_edit =
-      CreateEditBox(m_hwnd,kAxisX+170, kAxisY+145, kEditComboBoxWidth, kEditComboBoxHeight, kIdcKeyfileEdit);
-      SendMessage(h_key_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 145, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcKeyfileEdit);
+  SendMessage(h_key_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcKeyfileEdit), InputSubclassProc, 0,
+                    0);
 
   HWND h_browse_button =
-      CreateButton(m_hwnd, "Browse...",kAxisX+170, kAxisY+170, kBtnWidth+8, kBtnHeight, kIdcBrowseButton);
-      SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
-      
-  HWND h_drive_scope_checkbox = CreateCheckBox(
-    m_hwnd, "", kAxisX + 5, kAxisY + 195, kCheckboxWidth, kCheckboxHeight, kIdcDriveScopeCheckbox);
-SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+      CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 170,
+                   kBtnWidth + 8, kBtnHeight, kIdcBrowseButton);
+  SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-HWND h_drive_scope_label = CreateLabel(m_hwnd, "Request Google Drive scope access", 
-  kAxisX+25, kAxisY + 195, kLabelWidth+70, kLabelHeight, WS_VISIBLE | SS_LEFT);
-SendMessage(h_drive_scope_label, WM_SETFONT, (WPARAM)h_font, TRUE);   
+  HWND h_drive_scope_checkbox =
+      CreateCheckBox(m_hwnd, "", kAxisX + 5, kAxisY + 195, kCheckboxWidth,
+                     kCheckboxHeight, kIdcDriveScopeCheckbox);
+  SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDriveScopeCheckbox),
+                    CheckboxSubclassProc, 0, 0);
 
-HWND h_ssl_header = CreateGroupBox(
-  m_hwnd, "SSL Options", kAxisX - 5, kAxisY + 250, KGroupBoxWidth, KGroupBoxHeight - 4, kIdcGroupBox);
- SendMessage(h_ssl_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                        
-  HWND h_min_tls_header = CreateLabel(m_hwnd, "Minimum TLS version:", kAxisX+5, kAxisY+275,
-    kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-       SendMessage(h_min_tls_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                                                  
+  HWND h_drive_scope_label = CreateLabel(
+      m_hwnd, "Request Google Drive scope access", kAxisX + 25, kAxisY + 195,
+      kLabelWidth + 70, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_drive_scope_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_ssl_header =
+      CreateGroupBox(m_hwnd, "SSL Options", kAxisX - 5, kAxisY + 250,
+                     KGroupBoxWidth, KGroupBoxHeight - 4, kIdcGroupBox);
+  SendMessage(h_ssl_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_min_tls_header =
+      CreateLabel(m_hwnd, "Minimum TLS version:", kAxisX + 5, kAxisY + 275,
+                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_min_tls_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_min_tls_combo_box =
-      CreateComboBox(m_hwnd, kAxisX+170, kAxisY+275, kEditComboBoxWidth, kEditComboBoxHeight, kIdcMinTLSComboBox);
-      SendMessage(h_min_tls_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 275, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcMinTLSComboBox);
+  SendMessage(h_min_tls_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcMinTLSComboBox),
+                    ComboBoxSubclassProc, 0, 0);
 
-      HWND h_system_trust_store_checkbox = CreateCheckBox(
-  m_hwnd, "", kAxisX+5, kAxisY+300, kCheckboxWidth, kCheckboxHeight, kIdcSystemTrustStoreCheckbox);
-SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_system_trust_store_checkbox =
+      CreateCheckBox(m_hwnd, "", kAxisX + 5, kAxisY + 300, kCheckboxWidth,
+                     kCheckboxHeight, kIdcSystemTrustStoreCheckbox);
+  SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcSystemTrustStoreCheckbox),
+                    CheckboxSubclassProc, 0, 0);
 
-HWND h_system_trust_label = CreateLabel(m_hwnd, "Use system trust store", 
-  kAxisX+25, kAxisY+300, kLabelWidth+70, kLabelHeight, WS_VISIBLE | SS_LEFT);
-SendMessage(h_system_trust_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_system_trust_label =
+      CreateLabel(m_hwnd, "Use system trust store", kAxisX + 25, kAxisY + 300,
+                  kLabelWidth + 70, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_system_trust_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_trusted_cert_header = CreateLabel(m_hwnd, "Trusted certificate:", kAxisX+5,
-    kAxisY+325, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_trusted_cert_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+  HWND h_trusted_cert_header =
+      CreateLabel(m_hwnd, "Trusted certificate:", kAxisX + 5, kAxisY + 325,
+                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_trusted_cert_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_trusted_cert_edit =
-      CreateEditBox(m_hwnd, kAxisX+170, kAxisY+325, kEditComboBoxWidth, kEditComboBoxHeight, kIdcTrustedCertEdit);
-      SendMessage(h_trusted_cert_edit, WM_SETFONT, (WPARAM)h_font, TRUE);                                          
-  HWND h_trusted_cert_browse_button = CreateButton(
-      m_hwnd, "Browse...", kAxisX+170, kAxisY+350, kBtnWidth+8, kBtnHeight, kIdcTrustedCertBrowseButton);
-      SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 325, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcTrustedCertEdit);
+  SendMessage(h_trusted_cert_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcTrustedCertEdit), InputSubclassProc,
+                    0, 0);
+  HWND h_trusted_cert_browse_button =
+      CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 350,
+                   kBtnWidth + 8, kBtnHeight, kIdcTrustedCertBrowseButton);
+  SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_catalog_header =
-      CreateLabel(m_hwnd, "Project* :", kAxisX, kAxisY+385, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_catalog_header, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      CreateLabel(m_hwnd, "Project:", kAxisX, kAxisY + 385, kLabelWidth,
+                  kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_catalog_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_catalog_box =
-      CreateComboBox(m_hwnd, kAxisX+170, kAxisY+385, kEditComboBoxWidth, kEditComboBoxHeight, kIdcCatlogBOX);
-      SendMessage(h_catalog_box, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 385, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcCatlogBOX);
+  SendMessage(h_catalog_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcCatlogBOX), ComboBoxSubclassProc, 0,
+                    0);
   HWND h_dataset_header =
-      CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY+413, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-      SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_gcp_parent_folder_header = CreateLabel(m_hwnd, "GCP Parent Folder:", kAxisX, kAxisY+441, kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+      CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY + 413, kLabelWidth,
+                  kLabelHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_gcp_parent_folder_header =
+      CreateLabel(m_hwnd, "GCP parent folder:", kAxisX, kAxisY + 441,
+                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_gcp_parent_folder_header, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_gcp_parent_folder_text = CreateEditBox(m_hwnd,  kAxisX+170,  kAxisY+441, kEditComboBoxWidth, kEditComboBoxHeight, kIdcGcpFolder);
+  HWND h_gcp_parent_folder_text =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 441, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcGcpFolder);
   SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcGcpFolder), InputSubclassProc, 0, 0);
   HWND h_dataset_box =
-      CreateComboBox(m_hwnd, kAxisX+170, kAxisY+413, kEditComboBoxWidth, kEditComboBoxHeight, kIdcDatasetBOX);
-      SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);  
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 413, kEditComboBoxWidth,
+                     kComboBoxHeight, kIdcDatasetBOX);
+  SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDatasetBOX), ComboBoxSubclassProc, 0,
+                    0);
 
-    // Documentation Hyperlink
-    HWND h_doc_text = CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX,kAxisY+470 , kLabelWidth+10, kLabelHeight, 0);
-    SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-    
-    HWND h_hyperlink = CreateHyperlinkLabel(m_hwnd, "BigQuery documentation",
-      kAxisX+135, kAxisY+470, kLabelWidth, kLabelHeight, 
-      kIdcHyperlink3);
-    SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);    
-  HWND h_proxy_options_button = CreateButton(
-      m_hwnd, "Proxy options...", kAxisX, kAxisY+500, KOptionsBtnHeight, kBtnHeight, kIdcProxyOptionsButton);
-      SendMessage(h_proxy_options_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-  HWND h_login_button = CreateButton(m_hwnd, "Logging options...", kAxisX+154, kAxisY+500,
-                                     KOptionsBtnHeight, kBtnHeight, kIdcLoggingBtn);     
-      SendMessage(h_login_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
-                                        
-  HWND h_advance_opt_button = CreateButton(m_hwnd, "Advance options...", kAxisX+308,
-    kAxisY+500, KOptionsBtnHeight, kBtnHeight, kIdcAdvanceOptBtn);
-      SendMessage(h_advance_opt_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // Documentation Hyperlink
+  HWND h_doc_text =
+      CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX, kAxisY + 470,
+                  kLabelWidth + 10, kLabelHeight, 0);
+  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_version_text = CreateLabel(m_hwnd, "v3.0.5.1011 (64 bit)", kAxisX,kAxisY+530 , kLabelWidth-55, kLabelHeight-8, 0);
-       SendMessage(h_version_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_hyperlink = CreateHyperlinkLabel(
+      m_hwnd, "BigQuery documentation", kAxisX + 135, kAxisY + 470, kLabelWidth,
+      kLabelHeight, kIdcHyperlink3);
+  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_proxy_options_button =
+      CreateButton(m_hwnd, "Proxy options...", kAxisX, kAxisY + 500,
+                   KOptionsBtnHeight, kBtnHeight, kIdcProxyOptionsButton);
+  SendMessage(h_proxy_options_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_login_button =
+      CreateButton(m_hwnd, "Logging options...", kAxisX + 154, kAxisY + 500,
+                   KOptionsBtnHeight, kBtnHeight, kIdcLoggingBtn);
+  SendMessage(h_login_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_advance_opt_button =
+      CreateButton(m_hwnd, "Advanced options...", kAxisX + 308, kAxisY + 500,
+                   KOptionsBtnHeight, kBtnHeight, kIdcAdvanceOptBtn);
+  SendMessage(h_advance_opt_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  std::string KVersion = kDriverVer;
+#ifdef _WIN64
+  KVersion += " (64 bit)";
+#else
+  KVersion += " (32 bit)";
+#endif
+
+  HWND h_version_text =
+      CreateLabel(m_hwnd, KVersion.c_str(), kAxisX, kAxisY + 530,
+                  kLabelWidth - 55, kLabelHeight - 8, 0);
+  SendMessage(h_version_text, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_test_button =
-      CreateButton(m_hwnd, "Test...", kAxisX+201, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonTest);
-      SendMessage(h_test_button, WM_SETFONT, (WPARAM)h_font, TRUE);                                    
-      EnableWindow(h_test_button, FALSE);
+      CreateButton(m_hwnd, "Test...", kAxisX + 201, kAxisY + 530, kBtnWidth,
+                   kBtnHeight, kIdcButtonTest);
+  SendMessage(h_test_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+  EnableWindow(h_test_button, FALSE);
 
-  HWND h_ok_button = CreateButton(m_hwnd, "OK",kAxisX+291, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonOk);
-  SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);                           
+  HWND h_ok_button = CreateButton(m_hwnd, "OK", kAxisX + 291, kAxisY + 530,
+                                  kBtnWidth, kBtnHeight, kIdcButtonOk);
+  SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
   EnableWindow(h_ok_button, FALSE);
   HWND h_cancel_button =
-      CreateButton(m_hwnd, "Cancel", kAxisX+381, kAxisY+530, kBtnWidth, kBtnHeight, kIdcButtonCancel);
-      SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE); 
+      CreateButton(m_hwnd, "Cancel", kAxisX + 381, kAxisY + 530, kBtnWidth,
+                   kBtnHeight, kIdcButtonCancel);
+  SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SendMessage(h_encrypt_data_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "For Current User Only");
@@ -497,7 +575,7 @@ void DriverForm::Show() {
   int yPos = (screen_height - window_height) / 2;
 
   m_hwnd = CreateWindowEx(
-    WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
+      WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
       WS_OVERLAPPEDWINDOW, xPos, yPos, window_width, window_height, NULL, NULL,
       GetModuleHandle(NULL), this);
 
@@ -518,17 +596,6 @@ void DriverForm::Show() {
     UpdateWindow(m_hwnd);
   }
 }
-
-StatusRecord DriverForm::IsValidEmail(std::string const& email) {
-  std::regex const pattern(R"((\w+)(\.|\-)?(\w*)@(\w+)(\.\w+)+)");
-  if (std::regex_match(email, pattern)) {
-    return StatusRecord::Ok();
-  } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Email does not match the required pattern."};
-  }
-}
-
 void EvaluateFields(HWND hwnd) {
   char dsn_buffer[256] = {0};
   char key_buffer[256] = {0};
@@ -592,6 +659,26 @@ void HandleDropdown(HWND hwnd, int control_id, char const* field_type,
   }
 }
 
+void CheckAuthentication(HWND hwnd) {
+  HWND h_language_box = GetDlgItem(hwnd, kIdcAuthBox);
+  char language_buffer[256] = {0};
+  GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
+
+  HWND h_browse = GetDlgItem(hwnd, kIdcBrowseButton);
+  HWND h_keyfile_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
+  HWND h_keyfile_header = GetDlgItem(hwnd, kIdcKeyFileHeader);
+
+  if (strcmp(language_buffer, "Application Default Credentials") == 0) {
+    ShowWindow(h_browse, SW_HIDE);
+    ShowWindow(h_keyfile_edit, SW_HIDE);
+    ShowWindow(h_keyfile_header, SW_HIDE);
+  } else {
+    ShowWindow(h_browse, SW_SHOW);
+    ShowWindow(h_keyfile_edit, SW_SHOW);
+    ShowWindow(h_keyfile_header, SW_SHOW);
+  }
+}
+
 void HandleSelectionChange(HWND hwnd, int control_id) {
   HWND h_control = GetDlgItem(hwnd, control_id);
   int selected_index = SendMessage(h_control, CB_GETCURSEL, 0, 0);
@@ -601,34 +688,38 @@ void HandleSelectionChange(HWND hwnd, int control_id) {
                 reinterpret_cast<LPARAM>(selected_value));
     SetWindowText(h_control, selected_value);
   }
+  CheckAuthentication(hwnd);
+  EvaluateFields(hwnd);
 }
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
   DriverForm* p_this =
       reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-      static HBRUSH hBrush = CreateSolidBrush(RGB(224, 224, 224)); // #E0E0E0 color              
+  static HBRUSH h_brush =
+      CreateSolidBrush(RGB(224, 224, 224));  // #E0E0E0 color
   switch (u_msg) {
     case WM_CREATE:
+      setWindowIcon(hwnd);
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
       break;
     case WM_CTLCOLORBTN: {
-        HDC hdcButton = (HDC)w_param;
-        SetBkMode(hdcButton, TRANSPARENT);
-        return (LRESULT)hBrush; // Set button background color
-      }
+      HDC hdc_button = (HDC)w_param;
+      SetBkMode(hdc_button, TRANSPARENT);
+      return (LRESULT)h_brush;  // Set button background color
+    }
     case WM_ERASEBKGND: {
-        HDC hdc = (HDC)w_param;
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));   
-        FillRect(hdc, &rc, hBrush);
-        DeleteObject(hBrush);
-        return 1; // Indicate we handled the background redraw
+      HDC hdc = (HDC)w_param;
+      RECT rc;
+      GetClientRect(hwnd, &rc);
+      HBRUSH h_brush = CreateSolidBrush(RGB(240, 240, 240));
+      FillRect(hdc, &rc, h_brush);
+      DeleteObject(h_brush);
+      return 1;  // Indicate we handled the background redraw
     }
     case WM_LBUTTONDOWN: {
       POINT pt;
       GetCursorPos(&pt);
-      ScreenToClient(hwnd, &pt);  
+      ScreenToClient(hwnd, &pt);
       HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink3);
       RECT rect;
       GetClientRect(h_hyperlink, &rect);
@@ -639,28 +730,28 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       break;
     }
     case WM_CTLCOLORSTATIC: {
-      HDC hdcStatic = (HDC)w_param;
-      HWND hwndStatic = (HWND)l_param;
+      HDC hdc_static = (HDC)w_param;
+      HWND hwnd_static = (HWND)l_param;
 
-      if (GetDlgCtrlID(hwndStatic) == kIdcHyperlink3) {
-          SetTextColor(hdcStatic, RGB(0, 0, 255));  // Set text color to blue
-          SetBkMode(hdcStatic, TRANSPARENT);  // Transparent background
-          static HFONT hFontUnderline = NULL;
-          if (!hFontUnderline) {
-              LOGFONT lf;
-              HFONT hFont = (HFONT)SendMessage(hwndStatic, WM_GETFONT, 0, 0);
-              if (hFont && GetObject(hFont, sizeof(LOGFONT), &lf)) {
-                  lf.lfUnderline = TRUE;  // Enable underline
-                  hFontUnderline = CreateFontIndirect(&lf);
-              }
+      if (GetDlgCtrlID(hwnd_static) == kIdcHyperlink3) {
+        SetTextColor(hdc_static, RGB(0, 0, 255));  // Set text color to blue
+        SetBkMode(hdc_static, TRANSPARENT);        // Transparent background
+        static HFONT h_font_underline = NULL;
+        if (!h_font_underline) {
+          LOGFONT lf;
+          HFONT h_font = (HFONT)SendMessage(hwnd_static, WM_GETFONT, 0, 0);
+          if (h_font && GetObject(h_font, sizeof(LOGFONT), &lf)) {
+            lf.lfUnderline = TRUE;  // Enable underline
+            h_font_underline = CreateFontIndirect(&lf);
           }
-          if (hFontUnderline) {
-              SelectObject(hdcStatic, hFontUnderline);
-          }
-            return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
+        }
+        if (h_font_underline) {
+          SelectObject(hdc_static, h_font_underline);
+        }
+        return (LRESULT)GetSysColorBrush(COLOR_3DFACE);
       }
       break;
-  }
+    }
     case WM_KEYDOWN:
       if (w_param == VK_ESCAPE) {
         SendMessage(hwnd, WM_CLOSE, 0, 0);
@@ -673,16 +764,26 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       if (w_param == VK_TAB) {
         return 0;
       }
-      break;  
+      break;
     case WM_COMMAND:
       if (HIWORD(w_param) == EN_UPDATE || HIWORD(w_param) == EN_CHANGE) {
+        CheckAuthentication(hwnd);
         EvaluateFields(hwnd);
       }
-     if (LOWORD(w_param) == kIdcHyperlink3 && HIWORD(w_param) == STN_CLICKED) {
-      ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
-      break; }
+      if (LOWORD(w_param) == kIdcHyperlink3 && HIWORD(w_param) == STN_CLICKED) {
+        ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
+        break;
+      }
       switch (LOWORD(w_param)) {
         case kIdcAuthBox:
+          EvaluateFields(hwnd);
+          switch (HIWORD(w_param)) {
+            case CBN_SELCHANGE:
+              HandleSelectionChange(hwnd,
+                                    kIdcAuthBox);  // Update UI on selection
+              break;
+          }
+          break;
         case kIdcDSNEdit:
         case kIdcKeyfileEdit: {
           EvaluateFields(hwnd);
@@ -693,7 +794,8 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         } break;
         case kIdcTrustedCertBrowseButton: {
           HWND h_edit = GetDlgItem(hwnd, kIdcTrustedCertEdit);
-          OpenFileDialog(hwnd, h_edit);
+          OpenFileDialog(hwnd, h_edit, nullptr,
+                         "PEM (*.pem)\0*.pem\0All Files (*.*)\0*.*\0", "pem");
         } break;
         case kIdcLoggingBtn: {
           SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -805,7 +907,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                        MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
             return 0;
           } else {
-            MessageBox(hwnd, "Connection Failed!", "Error",
+            MessageBox(hwnd, status.message.c_str(), "Error",
                        MB_OK | MB_ICONERROR);
             return 0;
           }

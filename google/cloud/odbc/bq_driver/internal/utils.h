@@ -179,6 +179,9 @@ LRESULT CALLBACK CheckboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                       LPARAM l_param, UINT_PTR sub_id,
                                       DWORD_PTR ref_data);
 
+inline constexpr char kBigQueryDocsURL[] =
+    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
+
 inline std::string GetValueOrDefault(Section const& attribute_map,
                                      std::string const& key) {
   auto it = std::find_if(

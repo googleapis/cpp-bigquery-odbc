@@ -261,33 +261,35 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
   return h_hyperlink;
 }
 void setWindowIcon(HWND hwnd) {
-  fs::path source_path(__FILE__);
-  fs::path absolute_path = fs::absolute(source_path);
-  fs::path project_dir = absolute_path;
-  // Traverse up to find the project directory (by checking for .git file)
-  while (project_dir.has_parent_path()) {
-    if (fs::exists(project_dir / ".git")) {
-      break;
-    }
-    project_dir = project_dir.parent_path();
-  }
+  HMODULE hModule = NULL;
+  // Get handle to the module containing this function
+  GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    (LPCTSTR)setWindowIcon, &hModule);
 
-  fs::path const ICON_RELATIVE_PATH =
-      "ci/installer/InstallerProj/Assets/bq.ico";
-  fs::path icon_path = project_dir / ICON_RELATIVE_PATH;
-  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.string().c_str(), IMAGE_ICON,
-                                   32, 32, LR_LOADFROMFILE);
-  if (!h_icon) {
-    MessageBoxA(hwnd,
-                ("Failed to load icon from: " + icon_path.string()).c_str(),
-                "Error", MB_OK | MB_ICONERROR);
+  wchar_t dllPath[MAX_PATH];
+  GetModuleFileNameW(hModule, dllPath, MAX_PATH);
+
+  // Strip filename to get directory
+  std::wstring path(dllPath);
+  size_t pos = path.find_last_of(L"\\/");
+  if (pos == std::wstring::npos) return;
+  std::wstring dir = path.substr(0, pos);
+
+  // Compose icon path (e.g., DLL directory + "\\assets\\bq.ico")
+  std::wstring iconPath = dir + L"\\assets\\bq.ico";
+
+  HICON hIcon = (HICON)LoadImageW(NULL, iconPath.c_str(), IMAGE_ICON, 32, 32,
+                                  LR_LOADFROMFILE);
+
+  if (!hIcon) {
+    OutputDebugStringW(
+        (L"Failed to load icon at: " + iconPath + L"\n").c_str());
     return;
   }
-  // Set the window icon
-  SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
-  SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+  SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+  SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 }
-
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data) {

@@ -13,13 +13,13 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
+#include <commctrl.h>
 #include <shellapi.h>
 #include <shlobj.h>
+#pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
-constexpr char kBigQueryDocsURL[] =
-    "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 
 std::string const kLogLevel = "LogLevel";
 std::string const kLogFile = "LogFile";
@@ -98,6 +98,8 @@ void LogTraceDialog::InitControls() {
       CreateComboBox(parent_hwnd, KAxisX + 205, KAxisY, kComboBoxWidth,
                      KComboBoxHeight, kIdclogTraceBox);
   SendMessage(h_log_level_box, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdclogTraceBox),
+                    ComboBoxSubclassProc, 0, 0);
 
   HWND h_log_file_add = CreateLabel(parent_hwnd, "Log path:", KAxisX,
                                     KAxisY + 30, KLabelWidth, kLabelHeight, 0);
@@ -148,7 +150,7 @@ void LogTraceDialog::InitControls() {
 
   HWND h_hyperlink = CreateHyperlinkLabel(
       parent_hwnd, "BigQuery documentation", KAxisX + 125, KAxisY + 160,
-      KLabelWidth + 70, kLabelHeight, kIdcHyperlink);
+      KLabelWidth + 40, kLabelHeight, kIdcHyperlink);
   SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_btn_ok =
@@ -175,6 +177,13 @@ void LogTraceDialog::InitControls() {
   EnableWindow(h_log_browse_btn, enable_controls);
   EnableWindow(h_max_files_edit, enable_controls);  // Disable max files edit
   EnableWindow(h_max_size_edit, enable_controls);   // Disable max size edit
+
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcLogFileEdit), InputSubclassProc,
+                    0, 0);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcMaxFilesEdit),
+                    InputSubclassProc, 0, 0);
+  SetWindowSubclass(GetDlgItem(parent_hwnd, kIdcMaxSizeEdit), InputSubclassProc,
+                    0, 0);
 }
 
 void LogTraceDialog::Show() {
@@ -188,6 +197,10 @@ void LogTraceDialog::Show() {
   wc_logging.lpfnWndProc = LogTraceDialog::LogTraceProc;
   wc_logging.hInstance = GetModuleHandle(NULL);
   wc_logging.lpszClassName = CLASS_NAME;
+  INITCOMMONCONTROLSEX icc;
+  icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
+  icc.dwICC = ICC_STANDARD_CLASSES;  // Load standard control classes
+  InitCommonControlsEx(&icc);
 
   RegisterClass(&wc_logging);
 
@@ -212,7 +225,7 @@ void LogTraceDialog::Show() {
 
 LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
                                               WPARAM w_param, LPARAM l_param) {
-  static HFONT hFontHyperlink = NULL;
+  static HFONT h_font_hyperlink = NULL;
   LogTraceDialog* p_this = NULL;
   if (u_msg == WM_NCCREATE) {
     CREATESTRUCT* p_create = (CREATESTRUCT*)l_param;
@@ -262,13 +275,13 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
         SetTextColor(hdc_static, RGB(0, 0, 255));
         SetBkMode(hdc_static, TRANSPARENT);
 
-        if (!hFontHyperlink) {
-          hFontHyperlink = CreateFont(
+        if (!h_font_hyperlink) {
+          h_font_hyperlink = CreateFont(
               -10, 0, 0, 0, FW_NORMAL, FALSE, TRUE, FALSE, DEFAULT_CHARSET,
               OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
               VARIABLE_PITCH, "Inter");
         }
-        SelectObject(hdc_static, hFontHyperlink);
+        SelectObject(hdc_static, h_font_hyperlink);
         return (LRESULT)GetStockObject(NULL_BRUSH);
       }
       break;
@@ -341,6 +354,35 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
               EnableWindow(h_max_size_edit,
                            enable_controls);  // Disable max size if LOG_OFF
               log_level_ = selected_value;
+              HWND h_path_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+              char path_buffer[256] = {0};
+              GetWindowTextA(h_path_edit, path_buffer, sizeof(path_buffer));
+
+              HWND h_ok_button = GetDlgItem(hwnd, kIdcLogBtnOk);
+              if (path_buffer[0] == '\0') {
+                EnableWindow(h_ok_button, FALSE);
+              } else {
+                EnableWindow(h_ok_button, TRUE);
+              }
+            }
+          }
+          break;
+        }
+        case kIdcLogFileEdit: {
+          HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
+          char log_buffer[256] = {0};
+          GetWindowTextA(h_log_trace, log_buffer, sizeof(log_buffer));
+
+          HWND h_path_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+          char path_buffer[256] = {0};
+          GetWindowTextA(h_path_edit, path_buffer, sizeof(path_buffer));
+
+          HWND h_ok_button = GetDlgItem(hwnd, kIdcLogBtnOk);
+          if (log_buffer == kLogTrace) {
+            if (path_buffer[0] == '\0') {
+              EnableWindow(h_ok_button, FALSE);  // Disable OK
+            } else {
+              EnableWindow(h_ok_button, TRUE);  // Enable OK
             }
           }
           break;
