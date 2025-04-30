@@ -26,9 +26,13 @@ RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
         build-essential \
+        # Dependency for arrow
+        bison \
         clang \
         cmake \
         curl \
+        # Dependency for arrow
+        flex \
         gawk \
         git \
         gcc \
@@ -216,3 +220,24 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
         -S . -B cmake-out -GNinja && \
     cmake --build cmake-out -- -j $(nproc) && \
     cmake --build cmake-out --target install
+
+# Dependency for arrow
+WORKDIR /var/tmp/bison
+RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
+# Dependency for arrow
+WORKDIR /var/tmp/flex
+RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh -disableMetrics

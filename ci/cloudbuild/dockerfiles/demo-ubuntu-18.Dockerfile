@@ -19,8 +19,12 @@ RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
         build-essential \
+        # Dependency for arrow
+        bison \
         clang \
         curl \
+        # Dependency for arrow
+        flex \
         gawk \
         git \
         gcc \
@@ -172,6 +176,11 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     cmake --build cmake-out --target install && \
     ldconfig && \
     cd /var/tmp && rm -fr build
+
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 # Install sccache
 WORKDIR /var/tmp/sccache

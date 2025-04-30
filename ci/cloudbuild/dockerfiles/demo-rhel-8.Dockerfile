@@ -21,7 +21,7 @@ RUN dnf makecache && \
         xz clang clang-analyzer clang-tools-extra \
         diffutils findutils gcc-c++ git \
         libtool libcurl-devel llvm make ninja-build \
-        openssl-devel patch \
+        openssl-devel patch perl-IPC-Cmd \
         tar unzip wget which zip zlib-devel
 
 # Sets root's password to the empty string to enable users to get a root shell
@@ -171,6 +171,22 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     cmake --build cmake-out --target install && \
     ldconfig && cd /var/tmp && rm -fr build
 
+# Dependency for arrow
+WORKDIR /var/tmp/bison
+RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
+# Dependency for arrow
+WORKDIR /var/tmp/flex
+RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
 # Install sccache from https://github.com/mozilla/sccache
 WORKDIR /var/tmp/sccache
 RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
@@ -179,6 +195,13 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh
+
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.
 RUN ldconfig /usr/local/lib*
+
+RUN echo 'Dockerfile Done!'

@@ -26,7 +26,8 @@ ARG NCPU=4
 RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc gcc-c++ git gzip libcurl-devel libopenssl-devel \
-        libtool make patch tar wget which zlib zlib-devel-static
+        libtool make patch tar wget which zlib zlib-devel-static \
+        zip unzip tar
 # ```
 
 # ```bash
@@ -179,6 +180,22 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
 
 ## [DONE packaging.md]
 
+# Dependency for arrow
+WORKDIR /var/tmp/bison
+RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
+# Dependency for arrow
+WORKDIR /var/tmp/flex
+RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
+    tar -zxf - --strip-components=1 && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install
+
 # Install sccache from https://github.com/mozilla/sccache
 WORKDIR /var/tmp/sccache
 RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
@@ -186,6 +203,11 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mkdir -p /usr/local/bin && \
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
+
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.
