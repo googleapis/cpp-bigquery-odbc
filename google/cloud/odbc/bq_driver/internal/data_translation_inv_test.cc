@@ -357,7 +357,7 @@ TEST(ConvertFromBuffer, From_SQL_C_WCHAR_Basic) {
   wstr[value.size()] = 0;
 
   // Case 1: Explicitly set buffer length
-  SQLLEN data_size = value.size();
+  SQLLEN data_size = value.size() * sizeof(SQLWCHAR);
   DataBuffer data = {SQL_C_WCHAR, wstr, 50 * sizeof(SQLWCHAR), &data_size};
   StatusRecordOr<std::string> conv_status;
 

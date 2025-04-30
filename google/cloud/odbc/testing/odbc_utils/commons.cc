@@ -1526,7 +1526,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int utf8Length = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1, NULL,
+  int utf8Length = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1, NULL,
                                        0, NULL, NULL);
   if (utf8Length == 0) {
     throw std::runtime_error(
@@ -1537,7 +1537,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   std::string utf8Str(utf8Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int result = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1,
+  int result = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1,
                                    &utf8Str[0], utf8Length, NULL, NULL);
   if (result == 0) {
     throw std::runtime_error("Error while converting wstring to string");
@@ -1584,14 +1584,14 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
   int utf16Length =
-      MultiByteToWideChar(CP_ACP, 0, utf_8_str.c_str(), -1, NULL, 0);
+      MultiByteToWideChar(CP_UTF8, 0, utf_8_str.c_str(), -1, NULL, 0);
   if (utf16Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting string to wstring");
   }
   std::wstring utf16Str(utf16Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
-  int result = MultiByteToWideChar(CP_ACP, 0, utf_8_str.c_str(), -1,
+  int result = MultiByteToWideChar(CP_UTF8, 0, utf_8_str.c_str(), -1,
                                    &utf16Str[0], utf16Length);
   if (result == 0) {
     throw std::runtime_error("Error while converting string to wstring");
