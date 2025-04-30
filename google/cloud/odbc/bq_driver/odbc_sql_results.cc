@@ -744,12 +744,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
 }
 
-SQLRETURN SQL_API SQLNativeSqlInternal(SQLHDBC connection_handle,
-                                       SQLCHAR* in_statement_text,
-                                       SQLINTEGER in_statement_text_len,
-                                       SQLCHAR* out_statement_text,
-                                       SQLINTEGER out_statement_text_buffer_len,
-                                       SQLINTEGER* out_statement_text_len) {
+SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
+                               SQLCHAR* in_statement_text,
+                               SQLINTEGER in_statement_text_len,
+                               SQLCHAR* out_statement_text,
+                               SQLINTEGER out_statement_text_buffer_len,
+                               SQLINTEGER* out_statement_text_len) {
   // Validate the connection handle
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);

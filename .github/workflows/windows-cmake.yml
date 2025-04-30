@@ -19,7 +19,6 @@ jobs:
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
     permissions:
       contents: 'read'
-      id-token: 'none'
     strategy:
       # Continue other builds even if one fails
       fail-fast: false
@@ -34,14 +33,15 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
-      SCCACHE_GCS_RW_MODE: READ_WRITE
-      SCCACHE_IGNORE_SERVER_IO_ERROR: 1
+      # TODO(sachinpro): Temporarily not using sccache
+      # SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
+      # SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
+      # SCCACHE_GCS_RW_MODE: READ_WRITE
+      # SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: google-github-actions/auth@v2
@@ -70,8 +70,10 @@ jobs:
       shell: powershell
       run: |
         Write-Output "Downloading service account key from Secret Manager..."
-        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="service_account_auth_keys.json"
-        Write-Output "Downloaded service account key"
+        $keyPath = "service_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
+        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
+        Write-Output "Downloaded service account key to: $absoluteKeyPath"
 
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
         $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
@@ -83,15 +85,16 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-    - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
-      shell: bash
-      run: |
-        mkdir -p /c/Users/runneradmin/.cargo/bin
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
-          tar -zxf - --strip-components=1
-        chmod +x sccache.exe
-        mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    # TODO(sachinpro): Temporarily not using sccache
+    # - name: Download and Install sccache
+    #   working-directory: "${{runner.temp}}"
+    #   shell: bash
+    #   run: |
+    #     mkdir -p /c/Users/runneradmin/.cargo/bin
+    #     curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
+    #       tar -zxf - --strip-components=1
+    #     chmod +x sccache.exe
+    #     mv sccache.exe /c/Users/runneradmin/.cargo/bin
     - name: Download and Install vcpkg
       shell: bash
       run: |
@@ -120,8 +123,8 @@ jobs:
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
-        export GOOGLE_APPLICATION_CREDENTIALS="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
+        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="D:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
+        export GOOGLE_APPLICATION_CREDENTIALS="D:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
         if [ "${{ matrix.msvc }}" == "msvc-2022" ]; then
           ci/gha/builds/windows-cmake-integration.sh
         else

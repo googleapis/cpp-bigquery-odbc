@@ -78,7 +78,7 @@ TIMEFORMAT="==> 🕑 CMake build done in %R seconds"
 time {
   # Always run //google/cloud:status_test in case the list of targets has
   # no unit tests.
-  io::run cmake --build "${CMAKE_OUT}"
+  io::run cmake --build "${CMAKE_OUT}" --parallel 16
 }
 
 if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
