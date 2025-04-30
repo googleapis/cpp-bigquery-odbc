@@ -1189,10 +1189,12 @@ StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
     wrapped_json["v"] = original_json;
     src_str = wrapped_json.dump();
   } catch (std::exception const& e) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Invalid JSON in DSValue: " + std::string(e.what())};
+    // If the try above failed, it implies that the json didn't
+    //  follow the rest API response.
+    // It might be because the application is using HTAPI.
+    // We can return the string response as it is, in this case.
+    return ConvertStringToJsonOutputBuffer(src_str, dest_data);
   }
-
   return ConvertStringToJsonOutputBuffer(src_str, dest_data);
 }
 

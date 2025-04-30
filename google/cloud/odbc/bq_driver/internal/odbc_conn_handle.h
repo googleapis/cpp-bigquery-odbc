@@ -69,7 +69,7 @@ struct Dsn {
   bool use_default_large_results_dataset = true;
   std::string large_results_dataset_id;
   bool allow_htapi = false;
-  std::string htapi_activation_threshold;
+  std::string htapi_activation_threshold = "10000";
   std::string large_table_expiration_time;
 
   /////////////////////////////////////////////////////////////////

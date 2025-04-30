@@ -97,6 +97,7 @@ endif ()
 add_library(google_cloud_odbc_bq_driver_internal STATIC ${COMMON_SOURCES})
 
 set(COMMON_LIBS
+    Arrow::arrow_static
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
