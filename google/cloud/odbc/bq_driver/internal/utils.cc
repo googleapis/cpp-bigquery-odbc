@@ -24,9 +24,8 @@
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 #include <filesystem>
 namespace fs = std::filesystem;
-#endif
-
 HINSTANCE g_hDllInstance = NULL;
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
@@ -182,9 +181,9 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 // Helper function to create a static label
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id) {
-  return CreateWindowEx(
-      0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
-      width, height, parent, (HMENU)id, g_hDllInstance, NULL);
+  return CreateWindowEx(0, "STATIC", text,
+                        WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
+                        width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 // Helper function to create an edit box
@@ -206,9 +205,9 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
 
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
-  return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
+  return CreateWindowEx(0, "COMBOBOX", NULL,
+                        WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x, y,
+                        width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
@@ -236,8 +235,8 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-                        x, y, width, height, parent, (HMENU)id,
-                        g_hDllInstance, NULL);
+                        x, y, width, height, parent, (HMENU)id, g_hDllInstance,
+                        NULL);
 }
 HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
@@ -256,22 +255,21 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
 }
 HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
-  HWND h_hyperlink = CreateWindowEx(
-      0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y, width, height,
-      parent, (HMENU)id, g_hDllInstance, NULL);
+  HWND h_hyperlink =
+      CreateWindowEx(0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y,
+                     width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   return h_hyperlink;
 }
 
-extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason, LPVOID lpReserved)
-{
-    switch (ul_reason)
-    {
+extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
+                                 LPVOID lpReserved) {
+  switch (ul_reason) {
     case DLL_PROCESS_ATTACH:
-        g_hDllInstance = hModule;  
-        break;
-    }
-    return TRUE;
+      g_hDllInstance = hModule;
+      break;
+  }
+  return TRUE;
 }
 
 void setWindowIcon(HWND hwnd) {

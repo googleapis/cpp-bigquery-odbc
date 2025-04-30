@@ -25,6 +25,7 @@
 #undef max
 #undef GetJob
 #include <winreg.h>
+extern HINSTANCE g_hDllInstance;
 #endif  //_WIN32
 
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -39,9 +40,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-// Declaration (use extern)
-extern HINSTANCE g_hDllInstance;
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -280,7 +278,6 @@ inline int GetWholeDigitCount(std::string& src_str) {
   }
   return digit_count;
 }
-
 
 odbc_internal::StatusRecord PopulateOutputConnectionString(
     SQLCHAR* out_conn_str, SQLSMALLINT out_conn_str_buflen,

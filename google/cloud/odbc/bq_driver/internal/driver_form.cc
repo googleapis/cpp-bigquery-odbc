@@ -98,10 +98,10 @@ Authentication CreateAuthentication(Section& dsn_section) {
     auth_int = 0;
   }
   auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  // TODO(shivamd-gpartner): DSN section entries should be capitalized
+  // TODO(b/385136383): DSN section entries should be capitalized
   // to be consistent with ConnectionHandle::SetUp function.
   auth.oauth.credentials_file_path = dsn_section[kKeyFilePath];
-  // TODO(shivamd-gpartner): DSN section entries should be capitalized to be
+  // TODO(b/385136383): DSN section entries should be capitalized to be
   // consistent with ConnectionHandle::SetUp function.
   auth.refresh_token = dsn_section[kRefreshToken];
   return auth;
@@ -133,12 +133,16 @@ StatusRecord DriverForm::TestODBCConnection(
   } else if (oauth_mechanism == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    return StatusRecord{SQLStates::k_HY000(),"Application Default Credentials is not supported at the moment."};
+    // TODO(b/414877049): Remove the error code once Application Default
+    // Credentials OAuth Mechanism is implemented.
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuthMechanism 'Application Default Credentials' not "
+                        "supported at the moment."};
   } else {
-  return StatusRecord{SQLStates::k_HY000(),
+    return StatusRecord{SQLStates::k_HY000(),
                         "OAuthMechanism must be 'Service Authentication' or "
                         "'Application Default Credentials'."};
-  }                    
+  }
 
   (*section)[kOAuthMechanism] = oauth_value;
 
@@ -157,8 +161,7 @@ StatusRecord DriverForm::TestODBCConnection(
   auto ret = ConnectUsingRegistryDsn(auth);
 
   if (!ret.ok()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        ret.message};
+    return StatusRecord{SQLStates::k_HY000(), ret.message};
   }
 
   return StatusRecord::Ok();
@@ -181,6 +184,11 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kApplicationDefault;
+    // TODO(b/414877049): Remove the error code once Application Default
+    // Credentials OAuth Mechanism is done.
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuthMechanism 'Application Default Credentials' not "
+                        "supported at the moment."};
   } else {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kExternalUser;
@@ -190,8 +198,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   auto bq_client_ptr =
       ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
   if (!bq_client_ptr) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Failed to create BigQuery client."};
+    return bq_client_ptr.GetStatusRecord();
   }
 
   ODBCBQClient& bq_client = **bq_client_ptr;
@@ -576,10 +583,10 @@ void DriverForm::Show() {
   int xPos = (screen_width - window_width) / 2;
   int yPos = (screen_height - window_height) / 2;
 
-  m_hwnd = CreateWindowEx(
-      WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
-      WS_OVERLAPPEDWINDOW, xPos, yPos, window_width, window_height, NULL, NULL,
-      g_hDllInstance, this);
+  m_hwnd = CreateWindowEx(WS_EX_TOPMOST, CLASS_NAME,
+                          "BigQuery ODBC Driver data source setup",
+                          WS_OVERLAPPEDWINDOW, xPos, yPos, window_width,
+                          window_height, NULL, NULL, g_hDllInstance, this);
 
   if (m_hwnd) {
     InitControls();
