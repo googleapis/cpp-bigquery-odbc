@@ -59,7 +59,7 @@ ProxyOptions::~ProxyOptions() {
   if (proxy_hwnd) {
     DestroyWindow(proxy_hwnd);
   }
-  UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
+  UnregisterClass(CLASS_NAME, g_hDllInstance);
 }
 
 void ProxyOptions::InitControls() {
@@ -172,7 +172,7 @@ void ProxyOptions::Show(HWND hwnd) {
 
   WNDCLASS wc_proxy = {};
   wc_proxy.lpfnWndProc = ProxyOptions::ProxyOptProc;
-  wc_proxy.hInstance = GetModuleHandle(NULL);
+  wc_proxy.hInstance = g_hDllInstance;
   wc_proxy.lpszClassName = CLASS_NAME;
   INITCOMMONCONTROLSEX icc;
   icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -191,7 +191,7 @@ void ProxyOptions::Show(HWND hwnd) {
   proxy_hwnd = CreateWindowEx(WS_EX_CONTROLPARENT, CLASS_NAME, "Proxy options",
                               WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos,
                               y_pos, window_width, window_height + 6, NULL,
-                              NULL, GetModuleHandle(NULL), this);
+                              NULL, g_hDllInstance, this);
 
   if (proxy_hwnd) {
     InitControls();
@@ -316,14 +316,6 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
         if (!temp_port.empty()) {
           int port = atoi(temp_port.c_str());
           is_valid_port = (port >= 0 && port < kMaxPortNumber);
-        }
-        if (!is_valid_port) {
-          std::string error_msg =
-              "[Google][BigQuery] (1060) Invalid port: '" + temp_port +
-              "'.\nValid values are in the range [0, 65535].";
-          MessageBoxA(hwnd, error_msg.c_str(), "DSN Configuration Error",
-                      MB_ICONWARNING | MB_OK);
-          return 0;
         }
         proxy_port_ = temp_port;
         GetControlText(hwnd, kIdcProxyHostName, proxy_host_);

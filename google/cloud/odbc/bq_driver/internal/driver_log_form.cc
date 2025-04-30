@@ -47,7 +47,7 @@ LogTraceDialog::~LogTraceDialog() {
   if (parent_hwnd) {
     DestroyWindow(parent_hwnd);
   }
-  UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
+  UnregisterClass(CLASS_NAME, g_hDllInstance);
 }
 
 void OpenFolderDialog(HWND hwnd, HWND h_edit,
@@ -195,7 +195,7 @@ void LogTraceDialog::Show() {
 
   WNDCLASS wc_logging = {};
   wc_logging.lpfnWndProc = LogTraceDialog::LogTraceProc;
-  wc_logging.hInstance = GetModuleHandle(NULL);
+  wc_logging.hInstance = g_hDllInstance;
   wc_logging.lpszClassName = CLASS_NAME;
   INITCOMMONCONTROLSEX icc;
   icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -214,7 +214,7 @@ void LogTraceDialog::Show() {
   parent_hwnd = CreateWindowEx(0, CLASS_NAME, "Logging options",
                                WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, x_pos,
                                y_pos, window_width, window_height, parent_hwnd,
-                               NULL, GetModuleHandle(NULL), this);
+                               NULL, g_hDllInstance, this);
 
   if (parent_hwnd) {
     InitControls();

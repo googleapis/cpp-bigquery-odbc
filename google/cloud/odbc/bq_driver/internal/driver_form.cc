@@ -74,19 +74,20 @@ int const kAxisX = 15;
 int const KOptionsBtnHeight = 105;
 int const KGroupBoxWidth = 470;
 int const KGroupBoxHeight = 129;
-SQLRETURN ConnectUsingRegistryDsn(Authentication auth) {
+
+StatusRecord ConnectUsingRegistryDsn(Authentication auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
-    return SQL_ERROR;
+    return response.GetStatusRecord();
   }
   auto client = *response;
 
   StatusRecordOr<AccessToken> access_token_resp = client->GetOAuth2Token();
   if (!access_token_resp) {
-    return SQL_ERROR;
+    return access_token_resp.GetStatusRecord();
   }
-  return SQL_SUCCESS;
+  return StatusRecord::Ok();
 }
 Authentication CreateAuthentication(Section& dsn_section) {
   Authentication auth;
@@ -132,11 +133,12 @@ StatusRecord DriverForm::TestODBCConnection(
   } else if (oauth_mechanism == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
+    return StatusRecord{SQLStates::k_HY000(),"Application Default Credentials is not supported at the moment."};
   } else {
-    return StatusRecord{SQLStates::k_HY000(),
+  return StatusRecord{SQLStates::k_HY000(),
                         "OAuthMechanism must be 'Service Authentication' or "
                         "'Application Default Credentials'."};
-  }
+  }                    
 
   (*section)[kOAuthMechanism] = oauth_value;
 
@@ -152,11 +154,11 @@ StatusRecord DriverForm::TestODBCConnection(
 
   Authentication auth = CreateAuthentication(*section);
 
-  SQLRETURN ret = ConnectUsingRegistryDsn(auth);
+  auto ret = ConnectUsingRegistryDsn(auth);
 
-  if (!SQL_SUCCEEDED(ret)) {
+  if (!ret.ok()) {
     return StatusRecord{SQLStates::k_HY000(),
-                        "Failed to establish ODBC connection."};
+                        ret.message};
   }
 
   return StatusRecord::Ok();
@@ -561,7 +563,7 @@ void DriverForm::Show() {
 
   WNDCLASS wc = {};
   wc.lpfnWndProc = WindowProc;
-  wc.hInstance = GetModuleHandle(NULL);
+  wc.hInstance = g_hDllInstance;
   wc.lpszClassName = CLASS_NAME;
 
   RegisterClass(&wc);
@@ -577,7 +579,7 @@ void DriverForm::Show() {
   m_hwnd = CreateWindowEx(
       WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
       WS_OVERLAPPEDWINDOW, xPos, yPos, window_width, window_height, NULL, NULL,
-      GetModuleHandle(NULL), this);
+      g_hDllInstance, this);
 
   if (m_hwnd) {
     InitControls();

@@ -93,7 +93,7 @@ AdvanceOptions::~AdvanceOptions() {
   if (adv_hwnd) {
     DestroyWindow(adv_hwnd);
   }
-  UnregisterClass(CLASS_NAME, GetModuleHandle(NULL));
+  UnregisterClass(CLASS_NAME, g_hDllInstance);
 }
 
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
@@ -738,7 +738,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   }
   WNDCLASS wc_adv = {};
   wc_adv.lpfnWndProc = AdvanceOptions::AdvanceOptProc;
-  wc_adv.hInstance = GetModuleHandle(NULL);
+  wc_adv.hInstance = g_hDllInstance;
   wc_adv.lpszClassName = CLASS_NAME;
   wc_adv.hbrBackground =
       (HBRUSH)(COLOR_WINDOW + 1);  // Sets background to white
@@ -759,7 +759,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   adv_hwnd = CreateWindowEx(
       0, CLASS_NAME, "Advanced Options",
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_DLGFRAME, x_pos, y_pos,
-      window_width, window_height, hwnd, NULL, GetModuleHandle(NULL), this);
+      window_width, window_height, hwnd, NULL, g_hDllInstance, this);
   if (adv_hwnd) {
     HFONT h_font =
         CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,

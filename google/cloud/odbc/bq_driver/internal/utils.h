@@ -40,6 +40,9 @@
 #include <string>
 #include <vector>
 
+// Declaration (use extern)
+extern HINSTANCE g_hDllInstance;
+
 namespace google::cloud::odbc_bq_driver_internal {
 
 using Section = std::map<std::string, std::string>;
@@ -277,6 +280,7 @@ inline int GetWholeDigitCount(std::string& src_str) {
   }
   return digit_count;
 }
+
 
 odbc_internal::StatusRecord PopulateOutputConnectionString(
     SQLCHAR* out_conn_str, SQLSMALLINT out_conn_str_buflen,

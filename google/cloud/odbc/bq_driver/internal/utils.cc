@@ -26,6 +26,8 @@
 namespace fs = std::filesystem;
 #endif
 
+HINSTANCE g_hDllInstance = NULL;
+
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -182,7 +184,7 @@ HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id) {
   return CreateWindowEx(
       0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
-      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 // Helper function to create an edit box
@@ -190,7 +192,7 @@ HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
       0, "EDIT", "",
       WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
@@ -199,21 +201,21 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
       0, "EDIT", "",
       WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
           ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
       0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
                   int height, int id) {
   HWND hButton = CreateWindowEx(
       0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_FLAT, x, y,
-      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   // Disable Windows theme to remove any rounding
   if (hButton) {
@@ -228,14 +230,14 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "BUTTON", text,
                         WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
-                        height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+                        height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 // Helper function to create a group box
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
                         x, y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
+                        g_hDllInstance, NULL);
 }
 HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
@@ -243,7 +245,7 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
       WS_EX_CLIENTEDGE, "EDIT", text,
       WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER |
           ES_RIGHT,  // ES_NUMBER restricts input to numbers
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   if (hEditBox) {
     SendMessage(hEditBox, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT),
@@ -256,10 +258,22 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
   HWND h_hyperlink = CreateWindowEx(
       0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y, width, height,
-      parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      parent, (HMENU)id, g_hDllInstance, NULL);
 
   return h_hyperlink;
 }
+
+extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason, LPVOID lpReserved)
+{
+    switch (ul_reason)
+    {
+    case DLL_PROCESS_ATTACH:
+        g_hDllInstance = hModule;  
+        break;
+    }
+    return TRUE;
+}
+
 void setWindowIcon(HWND hwnd) {
   HMODULE hModule = NULL;
   // Get handle to the module containing this function
