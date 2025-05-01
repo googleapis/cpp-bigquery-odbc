@@ -1150,163 +1150,170 @@ ExpectedProcedureColumnValues CreateExpectedInOutStringParam(
 }
 
 void ValidateProcedureColumns(
-    SQLHSTMT h_stmt,
-    std::vector<ExpectedProcedureColumnValues> const& expected_columns) {
-  SQLCHAR procedure_catalog[128] = {0}, procedure_schema[128] = {0},
-          procedure_name[128] = {0};
-  SQLCHAR column_name[128] = {0}, type_name[128] = {0}, remarks[256] = {0},
-          column_default[128] = {0};
-  SQLCHAR is_nullable[10] = {0};
-  SQLSMALLINT column_type = 0, data_type = 0, decimal_digits = 0,
-              num_prec_radix = 0;
-  SQLSMALLINT nullable = 0, sql_data_type = 0, datetime_sub = 0,
-              ordinal_position = 0;
-  SQLINTEGER column_size = 0, buffer_length = 0, char_octet_length = 0;
-  SQLLEN ind = 0;
+  SQLHSTMT h_stmt,
+  std::vector<ExpectedProcedureColumnValues> const& expected_columns) {
+SQLCHAR procedure_catalog[128] = {0}, procedure_schema[128] = {0},
+        procedure_name[128] = {0};
+SQLCHAR column_name[128] = {0}, type_name[128] = {0}, remarks[256] = {0},
+        column_default[128] = {0};
+SQLCHAR is_nullable[10] = {0};
+SQLSMALLINT column_type = 0, data_type = 0, decimal_digits = 0,
+            num_prec_radix = 0;
+SQLSMALLINT nullable = 0, sql_data_type = 0, datetime_sub = 0,
+            ordinal_position = 0;
+SQLINTEGER column_size = 0, buffer_length = 0, char_octet_length = 0;
+SQLLEN ind = 0;
 
-  for (auto const& expected : expected_columns) {
-    SQLRETURN ret = SQLFetch(h_stmt);
-    if (ret == SQL_NO_DATA) {
-      FAIL() << "SQLProcedureColumns returned fewer rows than expected.";
-    }
-    ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
-
-    EXPECT_EQ(SQLGetData(h_stmt, 1, SQL_C_CHAR, procedure_catalog,
-                         sizeof(procedure_catalog), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(procedure_catalog),
-                 expected.procedure_catalog.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 2, SQL_C_CHAR, procedure_schema,
-                         sizeof(procedure_schema), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(procedure_schema),
-                 expected.procedure_schema.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 3, SQL_C_CHAR, procedure_name,
-                         sizeof(procedure_name), &ind),
-              SQL_SUCCESS);
-
-    EXPECT_STREQ(reinterpret_cast<char*>(procedure_name),
-                 expected.procedure_name.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 4, SQL_C_CHAR, column_name,
-                         sizeof(column_name), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(column_name),
-                 expected.column_name.c_str());
-
-    EXPECT_EQ(SQLGetData(h_stmt, 5, SQL_C_SSHORT, &column_type, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(column_type, expected.column_type);
-
-    EXPECT_EQ(SQLGetData(h_stmt, 6, SQL_C_SSHORT, &data_type, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(
-        SQLGetData(h_stmt, 7, SQL_C_CHAR, type_name, sizeof(type_name), &ind),
-        SQL_SUCCESS);
-    EXPECT_EQ(data_type, expected.data_type);
-
-    EXPECT_EQ(SQLGetData(h_stmt, 8, SQL_C_SSHORT, &column_size, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(column_size, expected.column_size);
-    EXPECT_EQ(SQLGetData(h_stmt, 9, SQL_C_SSHORT, &buffer_length, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(buffer_length, expected.buffer_length);
-    EXPECT_EQ(SQLGetData(h_stmt, 10, SQL_C_SSHORT, &decimal_digits, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(decimal_digits, expected.decimal_digits);
-    EXPECT_EQ(SQLGetData(h_stmt, 11, SQL_C_SSHORT, &num_prec_radix, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(num_prec_radix, expected.num_pred_radix);
-    EXPECT_EQ(SQLGetData(h_stmt, 12, SQL_C_SSHORT, &nullable, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(nullable, expected.nullable);
-    EXPECT_EQ(
-        SQLGetData(h_stmt, 13, SQL_C_CHAR, remarks, sizeof(remarks), &ind),
-        SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(remarks), expected.remarks.c_str());
-    EXPECT_EQ(SQLGetData(h_stmt, 14, SQL_C_CHAR, column_default,
-                         sizeof(column_default), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(column_default),
-                 expected.column_default.c_str());
-    EXPECT_EQ(SQLGetData(h_stmt, 15, SQL_C_SSHORT, &sql_data_type, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(sql_data_type, expected.sql_data_type);
-    EXPECT_EQ(SQLGetData(h_stmt, 16, SQL_C_SSHORT, &datetime_sub, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_EQ(datetime_sub, expected.datetime_sub);
-    EXPECT_EQ(
-        SQLGetData(h_stmt, 17, SQL_C_SSHORT, &char_octet_length, 10, &ind),
-        SQL_SUCCESS);
-    EXPECT_EQ(char_octet_length, expected.char_octet_length);
-    EXPECT_EQ(SQLGetData(h_stmt, 18, SQL_C_SSHORT, &ordinal_position, 10, &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(type_name),
-                 expected.type_name.c_str());
-
-    EXPECT_EQ(ordinal_position, expected.ordinal_position);
-
-    EXPECT_EQ(SQLGetData(h_stmt, 19, SQL_C_CHAR, is_nullable,
-                         sizeof(is_nullable), &ind),
-              SQL_SUCCESS);
-    EXPECT_STREQ(reinterpret_cast<char*>(is_nullable),
-                 expected.is_nullable.c_str());
+int column_index = 1;
+for (auto const& expected : expected_columns) {
+  std::cout << "Fetching row for expected column #" << column_index++ << "...\n";
+  SQLRETURN ret = SQLFetch(h_stmt);
+  if (ret == SQL_NO_DATA) {
+    FAIL() << "SQLProcedureColumns returned fewer rows than expected.";
   }
-  EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
-      << "SQLProcedureColumns returned more rows than expected.";
+  ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
+
+  SQLGetData(h_stmt, 1, SQL_C_CHAR, procedure_catalog, sizeof(procedure_catalog), &ind);
+  std::cout << "Procedure Catalog: " << procedure_catalog << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(procedure_catalog), expected.procedure_catalog.c_str());
+
+  SQLGetData(h_stmt, 2, SQL_C_CHAR, procedure_schema, sizeof(procedure_schema), &ind);
+  std::cout << "Procedure Schema: " << procedure_schema << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(procedure_schema), expected.procedure_schema.c_str());
+
+  SQLGetData(h_stmt, 3, SQL_C_CHAR, procedure_name, sizeof(procedure_name), &ind);
+  std::cout << "Procedure Name: " << procedure_name << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(procedure_name), expected.procedure_name.c_str());
+
+  SQLGetData(h_stmt, 4, SQL_C_CHAR, column_name, sizeof(column_name), &ind);
+  std::cout << "Column Name: " << column_name << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(column_name), expected.column_name.c_str());
+
+  SQLGetData(h_stmt, 5, SQL_C_SSHORT, &column_type, 10, &ind);
+  std::cout << "Column Type: " << column_type << "\n";
+  EXPECT_EQ(column_type, expected.column_type);
+
+  SQLGetData(h_stmt, 6, SQL_C_SSHORT, &data_type, 10, &ind);
+  SQLGetData(h_stmt, 7, SQL_C_CHAR, type_name, sizeof(type_name), &ind);
+  std::cout << "Data Type: " << data_type << ", Type Name: " << type_name << "\n";
+  EXPECT_EQ(data_type, expected.data_type);
+  EXPECT_STREQ(reinterpret_cast<char*>(type_name), expected.type_name.c_str());
+
+  SQLGetData(h_stmt, 8, SQL_C_SSHORT, &column_size, 10, &ind);
+  std::cout << "Column Size: " << column_size << "\n";
+  EXPECT_EQ(column_size, expected.column_size);
+
+  SQLGetData(h_stmt, 9, SQL_C_SSHORT, &buffer_length, 10, &ind);
+  std::cout << "Buffer Length: " << buffer_length << "\n";
+  EXPECT_EQ(buffer_length, expected.buffer_length);
+
+  SQLGetData(h_stmt, 10, SQL_C_SSHORT, &decimal_digits, 10, &ind);
+  std::cout << "Decimal Digits: " << decimal_digits << "\n";
+  EXPECT_EQ(decimal_digits, expected.decimal_digits);
+
+  SQLGetData(h_stmt, 11, SQL_C_SSHORT, &num_prec_radix, 10, &ind);
+  std::cout << "Num Prec Radix: " << num_prec_radix << "\n";
+  EXPECT_EQ(num_prec_radix, expected.num_pred_radix);
+
+  SQLGetData(h_stmt, 12, SQL_C_SSHORT, &nullable, 10, &ind);
+  std::cout << "Nullable: " << nullable << "\n";
+  EXPECT_EQ(nullable, expected.nullable);
+
+  SQLGetData(h_stmt, 13, SQL_C_CHAR, remarks, sizeof(remarks), &ind);
+  std::cout << "Remarks: " << remarks << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(remarks), expected.remarks.c_str());
+
+  SQLGetData(h_stmt, 14, SQL_C_CHAR, column_default, sizeof(column_default), &ind);
+  std::cout << "Column Default: " << column_default << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(column_default), expected.column_default.c_str());
+
+  SQLGetData(h_stmt, 15, SQL_C_SSHORT, &sql_data_type, 10, &ind);
+  std::cout << "SQL Data Type: " << sql_data_type << "\n";
+  EXPECT_EQ(sql_data_type, expected.sql_data_type);
+
+  SQLGetData(h_stmt, 16, SQL_C_SSHORT, &datetime_sub, 10, &ind);
+  std::cout << "Datetime Sub: " << datetime_sub << "\n";
+  EXPECT_EQ(datetime_sub, expected.datetime_sub);
+
+  SQLGetData(h_stmt, 17, SQL_C_SSHORT, &char_octet_length, 10, &ind);
+  std::cout << "Char Octet Length: " << char_octet_length << "\n";
+  EXPECT_EQ(char_octet_length, expected.char_octet_length);
+
+  SQLGetData(h_stmt, 18, SQL_C_SSHORT, &ordinal_position, 10, &ind);
+  std::cout << "Ordinal Position: " << ordinal_position << "\n";
+  EXPECT_EQ(ordinal_position, expected.ordinal_position);
+
+  SQLGetData(h_stmt, 19, SQL_C_CHAR, is_nullable, sizeof(is_nullable), &ind);
+  std::cout << "Is Nullable: " << is_nullable << "\n";
+  EXPECT_STREQ(reinterpret_cast<char*>(is_nullable), expected.is_nullable.c_str());
+
+  std::cout << "Validation of current column completed.\n\n";
+}
+
+std::cout << "Checking for unexpected extra rows...\n";
+EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
+    << "SQLProcedureColumns returned more rows than expected.";
+std::cout << "All expected procedure columns validated successfully.\n";
 }
 
 void TestSQLProcedureColumns(std::string const& catalog_name,
-                             std::string const& procedure_suffix) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string const& procedure_suffix) {
+auto conn = std::make_shared<ODBCHandles>();
+std::cout << "Connecting to the database...\n";
+EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string procedure_name =
-      kDatasetWithTablePrefix + "TEST_PROCEDURE_" + procedure_suffix;
+std::string procedure_name =
+kDatasetWithTablePrefix + "TEST_PROCEDURE_" + procedure_suffix;
 
-  // Create Procedure
-  std::string create_procedure_query = "CREATE OR REPLACE PROCEDURE " +
-                                       procedure_name +
-                                       "(param1 INT64, param2 STRING) "
-                                       "BEGIN "
-                                       "END;";
-  SQLRETURN ret = SQLExecDirect(
-      conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
-  EXPECT_EQ(ret, SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+std::string create_procedure_query = "CREATE OR REPLACE PROCEDURE " +
+            procedure_name +
+            "(param1 INT64, param2 STRING) "
+            "BEGIN "
+            "END;";
+std::cout << "Creating procedure: " << procedure_name << "\n";
+SQLRETURN ret = SQLExecDirect(
+conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
+EXPECT_EQ(ret, SQL_SUCCESS);
+std::cout << "Procedure created successfully.\n";
 
-  // Reconnect for SQLProcedureColumns
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string procedure_pattern =
-      kTableNamePrefix + "TEST_PROCEDURE_" + procedure_suffix;
+EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+std::cout << "Disconnected after creating procedure.\n";
 
-  ret = SQLProcedureColumns(
-      conn->hstmt, catalog_name.empty() ? NULL : (SQLCHAR*)catalog_name.c_str(),
-      catalog_name.empty() ? 0 : SQL_NTS, (SQLCHAR*)kDatasetName.c_str(),
-      SQL_NTS,
-      (SQLCHAR*)procedure_pattern.c_str(),  // Wildcard match
-      SQL_NTS, NULL, 0);
+std::cout << "Reconnecting to run SQLProcedureColumns...\n";
+EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+std::string procedure_pattern =
+kTableNamePrefix + "TEST_PROCEDURE_" + procedure_suffix;
 
-  EXPECT_EQ(ret, SQL_SUCCESS);
+std::cout << "Calling SQLProcedureColumns for procedure: " << procedure_pattern << "\n";
+ret = SQLProcedureColumns(
+conn->hstmt, catalog_name.empty() ? NULL : (SQLCHAR*)catalog_name.c_str(),
+catalog_name.empty() ? 0 : SQL_NTS, (SQLCHAR*)kDatasetName.c_str(),
+SQL_NTS,
+(SQLCHAR*)procedure_pattern.c_str(),
+SQL_NTS, NULL, 0);
 
-  // Validate results allowing for any prefix
-  std::vector<ExpectedProcedureColumnValues> expected_columns = {
-      CreateExpectedInt64Param(procedure_pattern),
-      CreateExpectedStringParam(procedure_pattern),
-  };
+EXPECT_EQ(ret, SQL_SUCCESS);
+std::cout << "SQLProcedureColumns executed successfully.\n";
 
-  // Validate procedure columns
-  ValidateProcedureColumns(conn->hstmt, expected_columns);
+std::vector<ExpectedProcedureColumnValues> expected_columns = {
+CreateExpectedInt64Param(procedure_pattern),
+CreateExpectedStringParam(procedure_pattern),
+};
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+std::cout << "Validating returned procedure columns...\n";
+ValidateProcedureColumns(conn->hstmt, expected_columns);
+std::cout << "Validation completed.\n";
 
-  // Cleanup
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Procedure procedure(procedure_name);
-  procedure.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+std::cout << "Disconnected after validation.\n";
+
+std::cout << "Reconnecting for cleanup...\n";
+EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+Procedure procedure(procedure_name);
+std::cout << "Dropping procedure: " << procedure_name << "\n";
+procedure.DropWithPrepare(conn);
+EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+std::cout << "Cleanup completed. Test finished.\n";
 }
 
 TEST(SQLProcedureColumns, BasicProcedure) {
