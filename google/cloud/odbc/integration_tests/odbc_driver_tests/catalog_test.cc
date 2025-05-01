@@ -1365,7 +1365,7 @@ TEST(SQLProcedureColumns, ComplexProcedure) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Cleanup
+  // Cleanup 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   Procedure procedure(procedure_name);
   procedure.DropWithPrepare(conn);
