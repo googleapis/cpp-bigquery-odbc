@@ -70,8 +70,10 @@ jobs:
       shell: powershell
       run: |
         Write-Output "Downloading service account key from Secret Manager..."
-        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="service_account_auth_keys.json"
-        Write-Output "Downloaded service account key"
+        $keyPath = "service_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
+        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
+        Write-Output "Downloaded service account key to: $absoluteKeyPath"
 
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
         $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
@@ -120,8 +122,8 @@ jobs:
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
-        export GOOGLE_APPLICATION_CREDENTIALS="C:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
+        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="D:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
+        export GOOGLE_APPLICATION_CREDENTIALS="D:\\a\\cpp-bigquery-odbc\\cpp-bigquery-odbc\\service_account_auth_keys.json"
         if [ "${{ matrix.msvc }}" == "msvc-2022" ]; then
           ci/gha/builds/windows-cmake-integration.sh
         else
