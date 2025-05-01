@@ -34,6 +34,8 @@ add_library(
     commons.h
     connection.cc
     connection.h
+    data_translation_utils.cc
+    data_translation_utils.h
     descriptor.cc
     descriptor.h
     properties.cc
