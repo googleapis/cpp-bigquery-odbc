@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/testing/odbc_utils/data_translation_utils.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <nlohmann/json.hpp>
@@ -1861,102 +1862,40 @@ TEST(DataTranslationTest, From_SQL_Bytes_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-struct DateBasicTestStruct {
-  // The target C type SQLGetData will convert SQL type to
-  SQLSMALLINT target_c_type;
-  // The value that should be returned by SQLGetData if it succeeds
-  SQL_DATE_STRUCT value;
-  // The status that should be returned by SQLGetData for this C Type
-  SQLRETURN status;
-};
-
-std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
-    {SQL_C_CHAR, {2024, 2, 20}, SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, {2024, 3, 20}, SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, {2024, 4, 20}, SQL_SUCCESS},
-    {SQL_C_WCHAR, {2024, 7, 20}, SQL_SUCCESS},
-    {SQL_C_BINARY, {2024, 5, 20}, SQL_SUCCESS},
-    {SQL_C_USHORT, {2024, 6, 20}, SQL_ERROR},
-    {SQL_C_DOUBLE, {2024, 1, 20}, SQL_ERROR},
-};
-
-// TODO(b/365915498): Data translation Utilities
 void TestTranslationsFromDate(std::shared_ptr<ODBCHandles> conn,
                               std::string query) {
-  SQLRETURN status;
-  SQLCHAR data[kBufferLength];
-  SQLLEN strlen_or_ind;
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query.c_str());
+  auto return_result = FetchDateConversionResults(conn, query);
+  for (size_t i = 0; i < kConversionFromDateTestData.size(); ++i) {
+    auto const& expected = kConversionFromDateTestData[i];
+    auto const& actual = return_result[i];
 
-  int row_count = 0;
-
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
-
-  for (auto const& expected : kConversionFromDateTestData) {
-    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
-                        kBufferLength, &strlen_or_ind);
-
-    CheckError(status, "SQLBindCol", conn);
-
-    status = SQLFetch(conn->hstmt);
-
-    if (status == SQL_NO_DATA) {
-      break;
-    }
-    if (!SQL_SUCCEEDED(status)) {
-      EXPECT_EQ(SQL_ERROR, expected.status);
-      break;
-    }
-    EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string expected_val = FormatDate(expected.value);
-    std::string returned_val;
+    EXPECT_EQ(actual.status, expected.status);
+    std::string expected_val_str = FormatDate(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
-        std::string returned_val = reinterpret_cast<char*>(data);
-        EXPECT_EQ(returned_val, expected_val);
+        EXPECT_EQ(actual.return_str_val, expected_val_str);
         break;
       }
       case SQL_C_WCHAR: {
-        std::wstring wstr = reinterpret_cast<wchar_t*>(data);
-        std::string returned_val_utf8 =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 10);
-        EXPECT_STREQ(returned_val_utf8.data(), expected_val.data());
+        ASSERT_TRUE(actual.return_str_val.has_value());
+        EXPECT_STREQ(actual.return_str_val->c_str(), expected_val_str.c_str());
         break;
       }
       case SQL_C_BINARY: {
-        if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
-          SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
-          returned_val = FormatDate(*date);
-          EXPECT_EQ(returned_val, expected_val);
-        }
+        ASSERT_TRUE(actual.return_str_val.has_value());
+        EXPECT_EQ(actual.return_str_val->c_str(), expected_val_str);
         break;
       }
-      case SQL_C_TYPE_DATE: {
-        SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
-        EXPECT_EQ(date->year, expected.value.year);
-        EXPECT_EQ(date->month, expected.value.month);
-        EXPECT_EQ(date->day, expected.value.day);
-        break;
-      }
-
+      case SQL_C_TYPE_DATE:
       case SQL_C_TYPE_TIMESTAMP: {
-        SQL_TIMESTAMP_STRUCT* timestamp =
-            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        EXPECT_EQ(timestamp->year, expected.value.year);
-        EXPECT_EQ(timestamp->month, expected.value.month);
-        EXPECT_EQ(timestamp->day, expected.value.day);
-
+        EXPECT_EQ(actual.value.year, expected.value.year);
+        EXPECT_EQ(actual.value.month, expected.value.month);
+        EXPECT_EQ(actual.value.day, expected.value.day);
         break;
       }
       default:
         break;
     }
-    ++row_count;
   }
 }
 
@@ -1994,102 +1933,45 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-struct TimeBasicTestStruct {
-  // The target C type
-  SQLSMALLINT target_c_type;
-  // The value that should be returned
-  SQL_TIME_STRUCT value;
-  // The status that should be returned for this C Type
-  SQLRETURN status;
-};
 
-std::vector<TimeBasicTestStruct> const kConversionFromTimeTestData{
-
-    {SQL_C_CHAR, {11, 20, 20}, SQL_SUCCESS},
-    {SQL_C_TYPE_TIME, {22, 45, 54}, SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, {2, 36, 29}, SQL_SUCCESS},
-    {SQL_C_WCHAR, {19, 07, 20}, SQL_SUCCESS},
-    {SQL_C_BINARY, {04, 06, 07}, SQL_SUCCESS},
-
-};
-// TODO (b/365915498):
-// Remove assertions &
-// Move as  utility function to testing/odbc_utils
 void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
                               std::string query) {
-  SQLRETURN status;
-  SQLPOINTER data[kBufferLength];
-  SQLLEN strlen_or_ind;
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query.c_str());
+  auto return_result = FetchTimeConversionResults(conn, query);
+  for (size_t i = 0; i < kConversionFromTimeTestData.size(); ++i) {
+    auto const& expected = kConversionFromTimeTestData[i];
+    auto const& actual = return_result[i];
 
-  int row_count = 0;
-
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
-
-  for (auto const& expected : kConversionFromTimeTestData) {
-    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
-                        kBufferLength, &strlen_or_ind);
-    CheckError(status, "SQLBindCol", conn);
-    status = SQLFetch(conn->hstmt);
-    if (status == SQL_NO_DATA) {
-      break;
-    }
-    if (SQL_SUCCEEDED(status)) {
-      CheckError(status, "SQLFetch", conn);
-    }
-
+    EXPECT_EQ(actual.status, expected.status);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
-        std::string returned_val = reinterpret_cast<char*>(data);
         std::string expected_val = FormatTimetoString(expected.value);
         expected_val.append(".000000");
-        EXPECT_EQ(returned_val, expected_val);
+        EXPECT_EQ(actual.return_val_str, expected_val);
         break;
       }
       case SQL_C_WCHAR: {
-        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
-        std::string returned_val =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+        ASSERT_TRUE(actual.return_val_str.has_value());
         std::string expected_val = FormatTimetoString(expected.value);
         expected_val.append(".000000");
-        EXPECT_STREQ(returned_val.c_str(), expected_val.c_str());
+        EXPECT_STREQ(actual.return_val_str->c_str(), expected_val.c_str());
         break;
       }
       case SQL_C_BINARY: {
-        if (strlen_or_ind == sizeof(SQL_TIME_STRUCT)) {
-          SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
-          std::string expected_val = FormatTimetoString(expected.value);
-          std::string returned_val = FormatTimetoString(*time);
-          EXPECT_EQ(returned_val, expected_val);
-        }
+        ASSERT_TRUE(actual.return_val_str.has_value());
+        std::string expected_val = FormatTimetoString(expected.value);
+        EXPECT_EQ(actual.return_val_str, expected_val);
         break;
       }
-      case SQL_C_TYPE_TIME: {
-        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
-        EXPECT_EQ(time->hour, expected.value.hour);
-        EXPECT_EQ(time->minute, expected.value.minute);
-        EXPECT_EQ(time->second, expected.value.second);
-        break;
-      }
-
+      case SQL_C_TYPE_TIME:
       case SQL_C_TYPE_TIMESTAMP: {
-        SQL_TIMESTAMP_STRUCT* timestamp =
-            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        EXPECT_EQ(timestamp->hour, expected.value.hour);
-        EXPECT_EQ(timestamp->minute, expected.value.minute);
-        EXPECT_EQ(timestamp->second, expected.value.second);
+        EXPECT_EQ(actual.value.hour, expected.value.hour);
+        EXPECT_EQ(actual.value.minute, expected.value.minute);
+        EXPECT_EQ(actual.value.second, expected.value.second);
         break;
       }
-      default: {
+      default:
         break;
-      }
     }
-    ++row_count;
   }
 }
 
