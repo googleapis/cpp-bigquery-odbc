@@ -1249,7 +1249,6 @@ for (auto const& expected : expected_columns) {
 
   std::cout << "Validation of current column completed.\n\n";
 }
-
 std::cout << "Checking for unexpected extra rows...\n";
 EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
     << "SQLProcedureColumns returned more rows than expected.";
