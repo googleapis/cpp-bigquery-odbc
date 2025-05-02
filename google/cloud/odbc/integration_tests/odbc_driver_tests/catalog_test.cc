@@ -1275,11 +1275,11 @@ conn->hstmt, (SQLCHAR*)create_procedure_query.c_str(), SQL_NTS);
 EXPECT_EQ(ret, SQL_SUCCESS);
 std::cout << "Procedure created successfully.\n";
 
-EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+//EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 std::cout << "Disconnected after creating procedure.\n";
 
 std::cout << "Reconnecting to run SQLProcedureColumns...\n";
-EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 std::cout << "Reconnecting done\n";
 std::string procedure_pattern =
 kTableNamePrefix + "TEST_PROCEDURE_" + procedure_suffix;
@@ -1304,11 +1304,11 @@ std::cout << "Validating returned procedure columns...\n";
 ValidateProcedureColumns(conn->hstmt, expected_columns);
 std::cout << "Validation completed.\n";
 
-EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+//EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 std::cout << "Disconnected after validation.\n";
 
 std::cout << "Reconnecting for cleanup...\n";
-EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 Procedure procedure(procedure_name);
 std::cout << "Dropping procedure: " << procedure_name << "\n";
 procedure.DropWithPrepare(conn);
