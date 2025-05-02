@@ -176,11 +176,7 @@ inline odbc_internal::StatusRecord TimestampToOutputBufferResponse(
   dest_timestamp->hour = conn_timestamp.hour;
   dest_timestamp->minute = conn_timestamp.minute;
   dest_timestamp->second = conn_timestamp.second;
-
-  if (conn_timestamp.fraction != 0) {
-    status_record = odbc_internal::StatusRecord{
-        odbc_internal::SQLStates::k_01S07(), "Timestamp data, right truncated"};
-  }
+  dest_timestamp->fraction = conn_timestamp.fraction;
 
   return status_record;
 }

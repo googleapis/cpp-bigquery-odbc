@@ -271,6 +271,14 @@ std::vector<Int64BasicTestStruct> const kConversionFromInt64TestData{
     {SQL_C_BIT, 0, SQL_SUCCESS},
     {SQL_C_BIT, 1, SQL_SUCCESS},
     {SQL_C_BIT, 2, SQL_ERROR},
+    {SQL_C_SHORT, 32767, SQL_SUCCESS},   // max short
+    {SQL_C_SHORT, -32768, SQL_SUCCESS},  // min short
+    {SQL_C_SHORT, 32768, SQL_ERROR},     // overflow
+    {SQL_C_SHORT, -32769, SQL_ERROR},    // underflow
+    {SQL_C_NUMERIC, 1234567890123456789LL, SQL_SUCCESS},
+    {SQL_C_NUMERIC, -1234567890123456789LL, SQL_SUCCESS},
+    {SQL_C_NUMERIC, 9223372036854775807LL, SQL_SUCCESS},  // max int64
+    {SQL_C_NUMERIC, -9223372036854775807LL, SQL_SUCCESS},
 };
 
 StdAllTypesRows const kConversionFromDifferentTestData{
@@ -404,6 +412,17 @@ void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
         case SQL_C_BIT: {
           SQLCHAR* returned_val = (SQLCHAR*)data;
           EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_SHORT: {
+          SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+          EXPECT_EQ(*returned_val, expected.value);
+          break;
+        }
+        case SQL_C_NUMERIC: {
+          SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
+          EXPECT_EQ(std::stod(SQLNumericToString(returned_val)),
+                    expected.value);
           break;
         }
         default: {
@@ -956,9 +975,15 @@ struct BooleanBasicTestStruct {
 };
 
 std::vector<BooleanBasicTestStruct> const kConversionFromBooleanTestData{
-    {SQL_C_CHAR, '1', SQL_SUCCESS},  {SQL_C_BIT, 0, SQL_SUCCESS},
-    {SQL_C_BINARY, 1, SQL_SUCCESS},  {SQL_C_WCHAR, L'1', SQL_SUCCESS},
-    {SQL_C_DOUBLE, 0, SQL_SUCCESS},  {SQL_C_LONG, 1, SQL_SUCCESS},
+    {SQL_C_CHAR, '1', SQL_SUCCESS},   {SQL_C_BIT, 0, SQL_SUCCESS},
+    {SQL_C_BINARY, 1, SQL_SUCCESS},   {SQL_C_WCHAR, L'1', SQL_SUCCESS},
+    {SQL_C_DOUBLE, 0, SQL_SUCCESS},   {SQL_C_LONG, 1, SQL_SUCCESS},
+    {SQL_C_STINYINT, 0, SQL_SUCCESS}, {SQL_C_UTINYINT, 0, SQL_SUCCESS},
+    {SQL_C_TINYINT, 1, SQL_SUCCESS},  {SQL_C_SBIGINT, 1, SQL_SUCCESS},
+    {SQL_C_UBIGINT, 0, SQL_SUCCESS},  {SQL_C_SSHORT, 0, SQL_SUCCESS},
+    {SQL_C_USHORT, 1, SQL_SUCCESS},   {SQL_C_SHORT, 1, SQL_SUCCESS},
+    {SQL_C_SLONG, 0, SQL_SUCCESS},    {SQL_C_ULONG, 1, SQL_SUCCESS},
+    {SQL_C_FLOAT, 1, SQL_SUCCESS},    {SQL_C_NUMERIC, 1, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, 0, SQL_ERROR},
 };
 
@@ -1030,10 +1055,76 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
         EXPECT_DOUBLE_EQ(returned_val, expected_val);
         break;
       }
-      case SQL_C_LONG: {
+      case SQL_C_LONG:
+      case SQL_C_SLONG: {
         SQLINTEGER returned_val = *reinterpret_cast<SQLINTEGER*>(data);
         SQLINTEGER expected_val = static_cast<SQLINTEGER>(expected.value);
         EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_ULONG: {
+        SQLUINTEGER returned_val = *reinterpret_cast<SQLUINTEGER*>(data);
+        SQLUINTEGER expected_val = static_cast<SQLUINTEGER>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_STINYINT:
+      case SQL_C_TINYINT: {
+        SQLSCHAR returned_val = *reinterpret_cast<SQLSCHAR*>(data);
+        SQLSCHAR expected_val = static_cast<SQLSCHAR>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_UTINYINT: {
+        SQLCHAR returned_val = *reinterpret_cast<SQLCHAR*>(data);
+        SQLCHAR expected_val = static_cast<SQLCHAR>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_SBIGINT: {
+        SQLBIGINT returned_val = *reinterpret_cast<SQLBIGINT*>(data);
+        SQLBIGINT expected_val = static_cast<SQLBIGINT>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_UBIGINT: {
+        SQLUBIGINT returned_val = *reinterpret_cast<SQLUBIGINT*>(data);
+        SQLUBIGINT expected_val = static_cast<SQLUBIGINT>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_SSHORT:
+      case SQL_C_SHORT: {
+        SQLSMALLINT returned_val = *reinterpret_cast<SQLSMALLINT*>(data);
+        SQLSMALLINT expected_val = static_cast<SQLSMALLINT>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_USHORT: {
+        SQLUSMALLINT returned_val = *reinterpret_cast<SQLUSMALLINT*>(data);
+        SQLUSMALLINT expected_val = static_cast<SQLUSMALLINT>(expected.value);
+        EXPECT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_FLOAT: {
+        SQLREAL returned_val = *reinterpret_cast<SQLREAL*>(data);
+        SQLREAL expected_val = static_cast<SQLREAL>(expected.value);
+        EXPECT_FLOAT_EQ(returned_val, expected_val);
+        break;
+      }
+      case SQL_C_NUMERIC: {
+        SQL_NUMERIC_STRUCT* returned_val =
+            reinterpret_cast<SQL_NUMERIC_STRUCT*>(data);
+        SQL_NUMERIC_STRUCT expected_val{};
+        expected_val.precision = 1;
+        expected_val.scale = 0;
+        expected_val.sign = expected.value == 0 ? 0 : 1;
+        expected_val.val[0] = static_cast<uint8_t>(expected.value);
+
+        EXPECT_EQ(returned_val->precision, expected_val.precision);
+        EXPECT_EQ(returned_val->scale, expected_val.scale);
+        EXPECT_EQ(returned_val->sign, expected_val.sign);
+        EXPECT_EQ(returned_val->val[0], expected_val.val[0]);
         break;
       }
       default:

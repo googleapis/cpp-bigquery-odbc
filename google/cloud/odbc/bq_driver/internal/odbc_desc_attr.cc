@@ -198,6 +198,7 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
     case SQL_C_LONG:
     case SQL_C_STINYINT:
     case SQL_C_UTINYINT:
+    case SQL_C_TINYINT:
     case SQL_C_SBIGINT:
     case SQL_C_UBIGINT:
       type = concise_type = value;

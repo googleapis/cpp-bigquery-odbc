@@ -178,9 +178,19 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   SQLLEN* res_len = dest_data.result_len;
 
   if (dest_type == SQL_C_CHAR) {
-    StatusRecord status_record =
-        StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
-    return status_record;
+    return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+  }
+  if (dest_type == SQL_C_WCHAR) {
+    int src_len = src_str.length();
+    StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
+    if (!wstr.Ok()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "SQL_C_WCHAR Conversion Failed"};
+    }
+
+    return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
+                                      dest_data.buflen, src_len,
+                                      dest_data.buflen, dest_data.result_len);
   }
   if (dest_type >= SQL_C_INTERVAL_YEAR &&
       dest_type <= SQL_C_INTERVAL_MINUTE_TO_SECOND) {
@@ -516,6 +526,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
       timestamp->hour = dest_time.hour;
       timestamp->minute = dest_time.minute;
       timestamp->second = dest_time.second;
+      timestamp->fraction = 0;
       if (res_len) {
         *res_len = sizeof(SQL_TIMESTAMP_STRUCT);
       }
@@ -757,6 +768,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
       timestamp->hour = 0;
       timestamp->minute = 0;
       timestamp->second = 0;
+      timestamp->fraction = 0;
       if (res_len) {
         *res_len = sizeof(SQL_TIMESTAMP_STRUCT);
       }
@@ -1163,38 +1175,82 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
       break;
     }
 
-    case SQL_C_LONG: {
-      if (dest_data.buflen < sizeof(SQLINTEGER)) {
-        status_record = StatusRecord{SQLStates::k_01004(),
-                                     "Long integer data, right truncated"};
-      } else {
-        *reinterpret_cast<SQLINTEGER*>(dest_data.buf) =
-            static_cast<SQLINTEGER>(conn_bool);
-      }
+    case SQL_C_LONG:
+    case SQL_C_SLONG: {
+      *reinterpret_cast<SQLINTEGER*>(dest_data.buf) =
+          static_cast<SQLINTEGER>(conn_bool);
+      break;
+    }
+
+    case SQL_C_ULONG: {
+      *reinterpret_cast<SQLUINTEGER*>(dest_data.buf) =
+          static_cast<SQLUINTEGER>(conn_bool);
       break;
     }
 
     case SQL_C_BIT: {
-      if (dest_data.buflen < sizeof(SQLCHAR)) {
-        status_record =
-            StatusRecord{SQLStates::k_01004(), "Bit data, right truncated"};
-      } else {
-        *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
-            conn_bool ? static_cast<SQLCHAR>(1) : static_cast<SQLCHAR>(0);
-      }
+      *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
+          conn_bool ? static_cast<SQLCHAR>(1) : static_cast<SQLCHAR>(0);
       break;
     }
 
     case SQL_C_DOUBLE: {
-      if (dest_data.buflen < sizeof(SQLDOUBLE)) {
-        status_record =
-            StatusRecord{SQLStates::k_01004(), "Double data, right truncated"};
-      } else {
-        *reinterpret_cast<SQLDOUBLE*>(dest_data.buf) = conn_bool ? 1.0 : 0.0;
-      }
+      *reinterpret_cast<SQLDOUBLE*>(dest_data.buf) = conn_bool ? 1.0 : 0.0;
       break;
     }
 
+    case SQL_C_FLOAT: {
+      *reinterpret_cast<SQLREAL*>(dest_data.buf) = conn_bool ? 1.0F : 0.0F;
+      break;
+    }
+
+    case SQL_C_STINYINT:
+    case SQL_C_TINYINT: {
+      *reinterpret_cast<SQLSCHAR*>(dest_data.buf) =
+          static_cast<SQLSCHAR>(conn_bool);
+      break;
+    }
+
+    case SQL_C_UTINYINT: {
+      *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
+          static_cast<SQLCHAR>(conn_bool);
+      break;
+    }
+
+    case SQL_C_SSHORT:
+    case SQL_C_SHORT: {
+      *reinterpret_cast<SQLSMALLINT*>(dest_data.buf) =
+          static_cast<SQLSMALLINT>(conn_bool);
+      break;
+    }
+
+    case SQL_C_USHORT: {
+      *reinterpret_cast<SQLUSMALLINT*>(dest_data.buf) =
+          static_cast<SQLUSMALLINT>(conn_bool);
+      break;
+    }
+
+    case SQL_C_SBIGINT: {
+      *reinterpret_cast<SQLBIGINT*>(dest_data.buf) =
+          static_cast<SQLBIGINT>(conn_bool);
+      break;
+    }
+
+    case SQL_C_UBIGINT: {
+      *reinterpret_cast<SQLUBIGINT*>(dest_data.buf) =
+          static_cast<SQLUBIGINT>(conn_bool);
+      break;
+    }
+
+    case SQL_C_NUMERIC: {
+      auto* numeric = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_data.buf);
+      std::memset(numeric, 0, sizeof(SQL_NUMERIC_STRUCT));
+      numeric->precision = 1;
+      numeric->scale = 0;
+      numeric->sign = conn_bool ? 1 : 0;
+      numeric->val[0] = conn_bool ? 1 : 0;
+      break;
+    }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }

@@ -1022,38 +1022,6 @@ TEST(ConvertFromTimestampDSValue, convertToTime_Success) {
   ASSERT_TRUE(status.ok());
 }
 
-TEST(ConvertFromTimestampDSValue, convertToTimestamp_InsufficientBuffer) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 01;
-  Timestamp.minute = 59;
-  Timestamp.second = 43;
-  Timestamp.fraction = 123456;
-  SQLLEN result_len = 0;
-  DSValue src_dsval;
-  TimestampToDSValue(Timestamp, src_dsval);
-
-  // Ensure alignment for SQL_TIMESTAMP_STRUCT
-  alignas(SQL_TIMESTAMP_STRUCT) char dest_buf[sizeof(SQL_TIMESTAMP_STRUCT)];
-  DataBuffer dest_data = {SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf),
-                          &result_len};
-  auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
-  SQL_TIMESTAMP_STRUCT* data =
-      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_data.buf);
-
-  EXPECT_EQ(data->year, Timestamp.year);
-  EXPECT_EQ(data->month, Timestamp.month);
-  EXPECT_EQ(data->day, Timestamp.day);
-  EXPECT_EQ(data->hour, Timestamp.hour);
-  EXPECT_EQ(data->minute, Timestamp.minute);
-  EXPECT_EQ(data->second, Timestamp.second);
-  EXPECT_EQ(result_len, sizeof(SQL_TIMESTAMP_STRUCT));
-  EXPECT_EQ(status.sql_state, SQLStates::k_01S07());
-  ASSERT_FALSE(status.ok());
-}
-
 TEST(ConvertFromTimestampDSValue, convertToTimestamp_Success) {
   SQL_TIMESTAMP_STRUCT Timestamp;
   Timestamp.year = 0;

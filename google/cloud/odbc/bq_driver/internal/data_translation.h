@@ -69,8 +69,6 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
   return StatusRecord::Ok();
 }
 
-// Assuming that DSValue hosts fixed-length arithmetic data, this converts it to
-// the destination data type in the DataBuffer
 template <typename SrcType>
 inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data) {
@@ -223,6 +221,53 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
         return StatusRecord::Ok();
       }
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
+    case SQL_C_SHORT: {
+      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
+      StatusRecord status_record =
+          CheckLimitsArithmetic<SrcType, SQLSMALLINT>(src_val);
+      // In case of 'Numeric value out of range'(22003), no need to populate the
+      // buffer
+      if (status_record.sql_state != SQLStates::k_22003()) {
+        *dest_val = static_cast<SQLSMALLINT>(src_val);
+        if (res_len) {
+          *res_len = sizeof(SQLSMALLINT);
+        }
+      }
+      return status_record;
+    }
+    case SQL_WCHAR: {
+      std::string str = std::to_string(src_val);
+      int src_len = str.length();
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(str);
+
+      StatusRecord status_record = WStrToOutputBufferResponse(
+          wstr.GetValue(), dest_data.buf, dest_data.buflen, src_len,
+          dest_data.buflen, dest_data.result_len);
+      if (status_record.sql_state == SQLStates::k_01004()) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
+      return status_record;
+    }
+    case SQL_C_NUMERIC: {
+      auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_buf);
+      memset(dest_val, 0, sizeof(SQL_NUMERIC_STRUCT));
+      dest_val->precision = 19;
+      dest_val->scale = 0;
+      dest_val->sign = src_val < 0 ? 0 : 1;
+      auto abs_val = static_cast<uint64_t>(src_val < 0 ? -src_val : src_val);
+      size_t i = 0;
+      while (abs_val > 0 && i < sizeof(dest_val->val)) {
+        dest_val->val[i++] = static_cast<unsigned char>(abs_val & 0xFF);
+        abs_val >>= 8;
+      }
+      if (abs_val > 0) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
+      if (res_len) {
+        *res_len = sizeof(SQL_NUMERIC_STRUCT);
+      }
+      return StatusRecord::Ok();
     }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
