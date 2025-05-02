@@ -182,6 +182,141 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     return status_record;
   }
+  if (dest_type >= SQL_C_INTERVAL_YEAR &&
+      dest_type <= SQL_C_INTERVAL_MINUTE_TO_SECOND) {
+    auto* dest_val = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+    dest_val->interval_type = static_cast<SQLINTERVAL>(dest_type);
+    dest_val->interval_sign = 1;
+
+    std::string str = src_str;
+    if (!str.empty() && str[0] == '-') {
+      dest_val->interval_sign = -1;
+      str = str.substr(1);
+    }
+
+    int y = 0;
+    int m = 0;
+    int d = 0;
+    int h = 0;
+    int min = 0;
+    int s = 0;
+
+    switch (dest_type) {
+      case SQL_C_INTERVAL_YEAR:
+        if (sscanf(str.c_str(), "%d", &y) == 1) {
+          dest_val->intval.year_month.year = y;
+          dest_val->intval.year_month.month = 0;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_MONTH:
+        if (sscanf(str.c_str(), "%d", &m) == 1) {
+          dest_val->intval.year_month.year = 0;
+          dest_val->intval.year_month.month = m;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_YEAR_TO_MONTH:
+        if (sscanf(str.c_str(), "%d-%d", &y, &m) == 2) {
+          dest_val->intval.year_month.year = y;
+          dest_val->intval.year_month.month = m;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_DAY:
+        if (sscanf(str.c_str(), "%d", &d) == 1) {
+          dest_val->intval.day_second.day = d;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_HOUR:
+        if (sscanf(str.c_str(), "%d", &h) == 1) {
+          dest_val->intval.day_second.hour = h;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_MINUTE:
+        if (sscanf(str.c_str(), "%d", &min) == 1) {
+          dest_val->intval.day_second.minute = min;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_SECOND:
+        if (sscanf(str.c_str(), "%d", &s) == 1) {
+          dest_val->intval.day_second.second = s;
+          dest_val->intval.day_second.fraction = 0;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_DAY_TO_HOUR:
+        if (sscanf(str.c_str(), "%d %d", &d, &h) == 2) {
+          dest_val->intval.day_second.day = d;
+          dest_val->intval.day_second.hour = h;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_DAY_TO_MINUTE:
+        if (sscanf(str.c_str(), "%d %d:%d", &d, &h, &min) == 3) {
+          dest_val->intval.day_second.day = d;
+          dest_val->intval.day_second.hour = h;
+          dest_val->intval.day_second.minute = min;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_DAY_TO_SECOND:
+        if (sscanf(str.c_str(), "%d %d:%d:%d", &d, &h, &min, &s) == 4) {
+          dest_val->intval.day_second.day = d;
+          dest_val->intval.day_second.hour = h;
+          dest_val->intval.day_second.minute = min;
+          dest_val->intval.day_second.second = s;
+          dest_val->intval.day_second.fraction = 0;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+        if (sscanf(str.c_str(), "%d:%d", &h, &min) == 2) {
+          dest_val->intval.day_second.hour = h;
+          dest_val->intval.day_second.minute = min;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_HOUR_TO_SECOND:
+        if (sscanf(str.c_str(), "%d:%d:%d", &h, &min, &s) == 3) {
+          dest_val->intval.day_second.hour = h;
+          dest_val->intval.day_second.minute = min;
+          dest_val->intval.day_second.second = s;
+          dest_val->intval.day_second.fraction = 0;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+        if (sscanf(str.c_str(), "%d:%d", &min, &s) == 2) {
+          dest_val->intval.day_second.minute = min;
+          dest_val->intval.day_second.second = s;
+          dest_val->intval.day_second.fraction = 0;
+        } else {
+          return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
+        }
+        break;
+      default:
+        return StatusRecord{SQLStates::k_22003(), "Invalid interval type"};
+    }
+
+    if (res_len) *res_len = sizeof(SQL_INTERVAL_STRUCT);
+    return StatusRecord::Ok();
+  }
 
   // TODO(sachinpro): This assumes that SQLDOUBLE is a safe container for all
   // arithmetic types, which is not true for int64 which has a range(-2^63 to

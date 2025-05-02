@@ -93,7 +93,24 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_BIT, "0", SQL_SUCCESS},
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
-};
+    {SQL_C_INTERVAL_DAY, "20", SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY_TO_HOUR, "5 12", SQL_SUCCESS},  // 5 days, 12 hours
+    {SQL_C_INTERVAL_DAY_TO_MINUTE, "3 10:25",
+     SQL_SUCCESS},  // 3 days, 10 hours, 25 minutes
+    {SQL_C_INTERVAL_DAY_TO_SECOND, "2 04:12:35",
+     SQL_SUCCESS},  // 2 days, 4 hours, 12 minutes, 35 seconds
+    {SQL_C_INTERVAL_HOUR, "12", SQL_SUCCESS},
+    {SQL_C_INTERVAL_HOUR_TO_MINUTE, "08:45",
+     SQL_SUCCESS},  // 8 hours, 45 minutes
+    {SQL_C_INTERVAL_HOUR_TO_SECOND, "06:30:15",
+     SQL_SUCCESS},  // 6 hours, 30 minutes, 15 seconds
+    {SQL_C_INTERVAL_MINUTE, "55", SQL_SUCCESS},
+    {SQL_C_INTERVAL_MINUTE_TO_SECOND, "45:20",
+     SQL_SUCCESS},  // 45 minutes, 20 seconds
+    {SQL_C_INTERVAL_SECOND, "30", SQL_SUCCESS},
+    {SQL_C_INTERVAL_MONTH, "7", SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR, "2", SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR_TO_MONTH, "3-5", SQL_SUCCESS}};
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_NUMERIC, "1234567891234567891", SQL_SUCCESS,
@@ -582,6 +599,86 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
             } else if (expected.target_c_type == SQL_C_BIT) {
               SQLCHAR* returned_val = (SQLCHAR*)data;
               EXPECT_EQ(*returned_val, std::stod(expected.value));
+            } else if (expected.target_c_type == SQL_C_INTERVAL_YEAR ||
+                       expected.target_c_type == SQL_C_INTERVAL_MONTH ||
+                       expected.target_c_type == SQL_C_INTERVAL_YEAR_TO_MONTH) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int years = 0, months = 0;
+              if (expected.target_c_type == SQL_C_INTERVAL_YEAR_TO_MONTH) {
+                sscanf(expected.value.c_str(), "%d-%d", &years, &months);
+              } else if (expected.target_c_type == SQL_C_INTERVAL_YEAR) {
+                years = std::stoi(expected.value);
+              } else if (expected.target_c_type == SQL_C_INTERVAL_MONTH) {
+                months = std::stoi(expected.value);
+              }
+              EXPECT_EQ(returned_val->intval.year_month.year, years);
+              EXPECT_EQ(returned_val->intval.year_month.month, months);
+            } else if (expected.target_c_type == SQL_C_INTERVAL_DAY) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int days = std::stoi(expected.value);
+              EXPECT_EQ(returned_val->intval.day_second.day, days);
+            } else if (expected.target_c_type == SQL_C_INTERVAL_HOUR) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int hours = std::stoi(expected.value);
+              EXPECT_EQ(returned_val->intval.day_second.hour, hours);
+            } else if (expected.target_c_type == SQL_C_INTERVAL_MINUTE) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int minutes = std::stoi(expected.value);
+              EXPECT_EQ(returned_val->intval.day_second.minute, minutes);
+            } else if (expected.target_c_type == SQL_C_INTERVAL_SECOND) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int seconds = std::stoi(expected.value);
+              EXPECT_EQ(returned_val->intval.day_second.second, seconds);
+            }
+
+            else if (expected.target_c_type == SQL_C_INTERVAL_DAY_TO_HOUR) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int d, h;
+              sscanf(expected.value.c_str(), "%d %d", &d, &h);
+              EXPECT_EQ(returned_val->intval.day_second.day, d);
+              EXPECT_EQ(returned_val->intval.day_second.hour, h);
+
+            } else if (expected.target_c_type == SQL_C_INTERVAL_DAY_TO_MINUTE) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int d, h, m;
+              sscanf(expected.value.c_str(), "%d %d:%d", &d, &h, &m);
+              EXPECT_EQ(returned_val->intval.day_second.day, d);
+              EXPECT_EQ(returned_val->intval.day_second.hour, h);
+              EXPECT_EQ(returned_val->intval.day_second.minute, m);
+
+            } else if (expected.target_c_type == SQL_C_INTERVAL_DAY_TO_SECOND) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int d, h, m, s;
+              sscanf(expected.value.c_str(), "%d %d:%d:%d", &d, &h, &m, &s);
+              EXPECT_EQ(returned_val->intval.day_second.day, d);
+              EXPECT_EQ(returned_val->intval.day_second.hour, h);
+              EXPECT_EQ(returned_val->intval.day_second.minute, m);
+              EXPECT_EQ(returned_val->intval.day_second.second, s);
+
+            } else if (expected.target_c_type ==
+                       SQL_C_INTERVAL_HOUR_TO_MINUTE) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int h, m;
+              sscanf(expected.value.c_str(), "%d:%d", &h, &m);
+              EXPECT_EQ(returned_val->intval.day_second.hour, h);
+              EXPECT_EQ(returned_val->intval.day_second.minute, m);
+
+            } else if (expected.target_c_type ==
+                       SQL_C_INTERVAL_HOUR_TO_SECOND) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int h, m, s;
+              sscanf(expected.value.c_str(), "%d:%d:%d", &h, &m, &s);
+              EXPECT_EQ(returned_val->intval.day_second.hour, h);
+              EXPECT_EQ(returned_val->intval.day_second.minute, m);
+              EXPECT_EQ(returned_val->intval.day_second.second, s);
+
+            } else if (expected.target_c_type ==
+                       SQL_C_INTERVAL_MINUTE_TO_SECOND) {
+              SQL_INTERVAL_STRUCT* returned_val = (SQL_INTERVAL_STRUCT*)data;
+              int m, s;
+              sscanf(expected.value.c_str(), "%d:%d", &m, &s);
+              EXPECT_EQ(returned_val->intval.day_second.minute, m);
+              EXPECT_EQ(returned_val->intval.day_second.second, s);
             }
             row_count++;
           }
