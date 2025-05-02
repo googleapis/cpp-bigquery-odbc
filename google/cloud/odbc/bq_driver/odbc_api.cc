@@ -2536,7 +2536,7 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
   updated_character_attrib_val = (SQLPOINTER)character_attrib_val;
   // reset characterAttribute buffer to make sure it doesn't contain garbage or
   // cache value.
-  std::memset(characterAttribute, 0, characterAttributeBufferLen);
+  std::memset(characterAttribute, '\0', characterAttributeBufferLen);
 
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
@@ -2576,8 +2576,13 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
                   characterAttributeBufferLen);
     }
   }
-  if (characterAttributeStringLen)
+  if (characterAttributeStringLen) {
     *characterAttributeStringLen = character_attribute_string_len;
+#ifdef WIN32
+    *characterAttributeStringLen =
+        character_attribute_string_len * sizeof(SQLWCHAR);
+#endif  // WIN32
+  }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionExit_SQLColAttributeW(rc, *(*kTraceOption));

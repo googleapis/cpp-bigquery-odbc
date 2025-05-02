@@ -28,8 +28,8 @@
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
-using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::bigquery_v2_minimal_internal::TableReference;
+using ::google::cloud::odbc_internal::SQLStates;
 
 // These are the states statement handle maintains for validations in ODBC APIs
 // using it.

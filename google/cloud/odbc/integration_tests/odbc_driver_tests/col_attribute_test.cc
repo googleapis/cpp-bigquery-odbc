@@ -275,12 +275,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
              "SQLColAttribute " + std::to_string(SQL_DESC_BASE_TABLE_NAME),
              conn);
   col = reinterpret_cast<char*>(col_attr);
-//  On windows, existing driver return empty str for SQL_DESC_BASE_TABLE_NAME.
-#ifdef WIN32
-  EXPECT_EQ(kIsBqDriver ? kTableName : "", col);
-#else
   EXPECT_EQ(kTableName, col);
-#endif  // WIN32
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_CATALOG_NAME,
@@ -288,12 +283,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_CATALOG_NAME),
              conn);
   col = reinterpret_cast<char*>(col_attr);
-//  On windows, existing driver return empty str for SQL_DESC_CATALOG_NAME.
-#ifdef WIN32
-  EXPECT_EQ(kIsBqDriver ? kCatalogName : "", col);
-#else
   EXPECT_EQ(kCatalogName, col);
-#endif  // WIN32
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_LABEL, (SQLPOINTER)col_attr,
@@ -342,12 +332,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_SCHEMA_NAME),
              conn);
   col = reinterpret_cast<char*>(col_attr);
-  //  On windows, existing driver return empty str for SQL_DESC_SCHEMA_NAME.
-#ifdef WIN32
-  EXPECT_EQ(kIsBqDriver ? kDatasetName : "", col);
-#else
   EXPECT_EQ(kDatasetName, col);
-#endif  // WIN32
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TABLE_NAME,
@@ -355,11 +340,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   CheckError(status, "SQLColAttribute " + std::to_string(SQL_DESC_TABLE_NAME),
              conn);
   col = reinterpret_cast<char*>(col_attr);
-#ifdef WIN32
-  EXPECT_EQ(kIsBqDriver ? kTableName : "", col);
-#else
   EXPECT_EQ(kTableName, col);
-#endif  // WIN32
 
   memset(col_attr, 0, kBufferLength);
   status = SQLColAttribute(conn->hstmt, i, SQL_DESC_TYPE_NAME,
