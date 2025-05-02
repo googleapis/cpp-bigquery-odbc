@@ -1280,6 +1280,7 @@ std::cout << "Disconnected after creating procedure.\n";
 
 std::cout << "Reconnecting to run SQLProcedureColumns...\n";
 EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+std::cout << "Reconnecting done\n";
 std::string procedure_pattern =
 kTableNamePrefix + "TEST_PROCEDURE_" + procedure_suffix;
 
