@@ -3238,7 +3238,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   SQLCHAR* sqlchar_table_name = nullptr;
   if (schemaName)
     {
-      sqlchar_table_name = ToSqlChar(utf8_schema_name->data());}
+      sqlchar_table_name = ToSqlChar(utf8_table_name->data());}
 
   StatusRecordOr<std::string> utf8_col_name;
   if (columnNameLen > 0 || columnNameLen == SQL_NTS) {
