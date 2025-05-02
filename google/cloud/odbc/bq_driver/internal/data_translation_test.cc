@@ -1592,13 +1592,16 @@ TEST(ConvertFromGeographyDSValue, InsufficientBufferForWChar) {
   StringToDSValue(geo_str, src_dsval);
 
   SQLWCHAR dest_buf[2];
-  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
+  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf,
+                          sizeof(dest_buf) / sizeof(SQLWCHAR)};
 
   auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
 
-  EXPECT_THAT(status, StatusRecIs(SQLStates::k_22003(),
-                                  StrEq("Buffer length is insufficient")));
-  EXPECT_EQ(dest_buf[0], L'\0');
+  EXPECT_THAT(status,
+              StatusRecIs(SQLStates::k_01004(), StrEq("Data truncated")));
+
+  EXPECT_EQ(dest_buf[0], L'P');
+  EXPECT_EQ(dest_buf[1], L'\0');
 }
 
 TEST(ConvertFromGeographyDSValue, InvalidConversion) {

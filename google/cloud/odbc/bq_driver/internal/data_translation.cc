@@ -20,6 +20,23 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
+template <typename TargetType>
+odbc_internal::StatusRecord ConvertNumeric(SQLDOUBLE numeric_no,
+                                           DataBuffer& dest_data) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
+
+  auto* dest_val = reinterpret_cast<TargetType*>(dest_data.buf);
+  auto status_record = CheckLimitsArithmetic<SQLDOUBLE, TargetType>(numeric_no);
+  if (status_record.sql_state != SQLStates::k_22003()) {
+    *dest_val = static_cast<TargetType>(numeric_no);
+    if (dest_data.result_len) {
+      *dest_data.result_len = sizeof(TargetType);
+    }
+  }
+  return status_record;
+}
+
 odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                                       DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
@@ -72,95 +89,63 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                  dest_data.result_len);
       return status_record;
     }
-    case SQL_C_FLOAT: {
-      auto* dest_val = reinterpret_cast<SQLREAL*>(dest_data.buf);
-      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLREAL>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = numeric_no;
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLREAL);
-        }
-      }
-      return status_record;
-    }
-    case SQL_C_DOUBLE: {
-      auto* dest_val = reinterpret_cast<SQLDOUBLE*>(dest_data.buf);
-      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLDOUBLE>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = numeric_no;
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLDOUBLE);
-        }
-      }
-      return status_record;
-    }
-    case SQL_C_SSHORT: {
-      auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_data.buf);
-      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLSMALLINT>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLSMALLINT>(numeric_no);
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLSMALLINT);
-        }
-      }
-      return status_record;
-    }
-    case SQL_C_USHORT: {
-      auto* dest_val = reinterpret_cast<SQLUSMALLINT*>(dest_data.buf);
-      status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffe
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLUSMALLINT);
-        }
-      }
-      return status_record;
-    }
-    case SQL_C_SLONG: {
-      auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_data.buf);
-      status_record = CheckLimitsArithmetic<SQLDOUBLE, SQLINTEGER>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLINTEGER>(numeric_no);
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLINTEGER);
-        }
-      }
-      return status_record;
-    }
-    case SQL_C_ULONG: {
-      auto* dest_val = reinterpret_cast<SQLUINTEGER*>(dest_data.buf);
-      status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLUSMALLINT>(numeric_no);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLUSMALLINT>(numeric_no);
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLUSMALLINT);
-        }
-      }
-      return status_record;
-    }
+    case SQL_C_FLOAT:
+      return ConvertNumeric<SQLREAL>(numeric_no, dest_data);
+    case SQL_C_DOUBLE:
+      return ConvertNumeric<SQLDOUBLE>(numeric_no, dest_data);
+    case SQL_C_SSHORT:
+    case SQL_C_SHORT:
+      return ConvertNumeric<SQLSMALLINT>(numeric_no, dest_data);
+    case SQL_C_USHORT:
+      return ConvertNumeric<SQLUSMALLINT>(numeric_no, dest_data);
+    case SQL_C_SLONG:
+    case SQL_C_LONG:
+      return ConvertNumeric<SQLINTEGER>(numeric_no, dest_data);
+    case SQL_C_ULONG:
+      return ConvertNumeric<SQLUINTEGER>(numeric_no, dest_data);
+    case SQL_C_STINYINT:
+      return ConvertNumeric<SQLSCHAR>(numeric_no, dest_data);
+    case SQL_C_TINYINT:
+    case SQL_C_UTINYINT:
+      return ConvertNumeric<SQLCHAR>(numeric_no, dest_data);
     case SQL_C_BIT: {
-      auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_data.buf);
       if (numeric_no == 0 || numeric_no == 1) {
-        *dest_val = static_cast<SQLCHAR>(numeric_no);
+        *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
+            static_cast<SQLCHAR>(numeric_no);
         return StatusRecord::Ok();
       }
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
+    case SQL_C_SBIGINT: {
+      SQLBIGINT bigint_val = std::stoll(str_input);
+      *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLBIGINT);
+        return StatusRecord::Ok();
+      }
+      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
+    case SQL_C_UBIGINT: {
+      if (!str_input.empty() && str_input[0] == '-') {
+        return StatusRecord{SQLStates::k_22003(),
+                            "Negative value cannot be stored in unsigned type"};
+      }
+      try {
+        SQLUBIGINT val = std::stoull(str_input);
+        *reinterpret_cast<SQLUBIGINT*>(dest_data.buf) = val;
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLUBIGINT);
+        }
+        return StatusRecord::Ok();
+      } catch (std::out_of_range const&) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      } catch (std::invalid_argument const&) {
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      }
+    }
   }
+
   return status_record;
 }
 
@@ -327,6 +312,79 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     if (res_len) *res_len = sizeof(SQL_INTERVAL_STRUCT);
     return StatusRecord::Ok();
   }
+  if (dest_type == SQL_C_TYPE_DATE) {
+    auto* dest_val = reinterpret_cast<DATE_STRUCT*>(dest_buf);
+    int y;
+    int m;
+    int d;
+    char dash1;
+    char dash2;
+    std::istringstream ss(src_str);
+    if (ss >> y >> dash1 >> m >> dash2 >> d && dash1 == '-' && dash2 == '-') {
+      dest_val->year = y;
+      dest_val->month = m;
+      dest_val->day = d;
+      if (res_len) *res_len = sizeof(DATE_STRUCT);
+      return StatusRecord::Ok();
+    }
+    return StatusRecord{SQLStates::k_22003(), "Invalid date format"};
+  }
+  if (dest_type == SQL_C_TYPE_TIME) {
+    auto* dest_val = reinterpret_cast<TIME_STRUCT*>(dest_buf);
+    int h;
+    int m;
+    int s;
+    char colon1;
+    char colon2;
+    std::istringstream ss(src_str);
+    if (ss >> h >> colon1 >> m >> colon2 >> s && colon1 == ':' &&
+        colon2 == ':') {
+      dest_val->hour = h;
+      dest_val->minute = m;
+      dest_val->second = s;
+      if (res_len) *res_len = sizeof(TIME_STRUCT);
+      return StatusRecord::Ok();
+    }
+    return StatusRecord{SQLStates::k_22003(), "Invalid time format"};
+  }
+  if (dest_type == SQL_C_TYPE_TIMESTAMP) {
+    auto* dest_val = reinterpret_cast<TIMESTAMP_STRUCT*>(dest_buf);
+    if (src_str.size() >= 19 && (src_str[10] == ' ' || src_str[10] == 'T') &&
+        src_str[4] == '-' && src_str[7] == '-' && src_str[13] == ':' &&
+        src_str[16] == ':') {
+      dest_val->year = std::stoi(src_str.substr(0, 4));
+      dest_val->month = std::stoi(src_str.substr(5, 2));
+      dest_val->day = std::stoi(src_str.substr(8, 2));
+      dest_val->hour = std::stoi(src_str.substr(11, 2));
+      dest_val->minute = std::stoi(src_str.substr(14, 2));
+      dest_val->second = std::stoi(src_str.substr(17, 2));
+      dest_val->fraction = 0;
+
+      if (res_len) *res_len = sizeof(TIMESTAMP_STRUCT);
+      return StatusRecord::Ok();
+    }
+    return StatusRecord{SQLStates::k_22003(), "Invalid timestamp format"};
+  }
+
+  if (dest_type == SQL_C_STINYINT) {
+    auto* dest_val = reinterpret_cast<int8_t*>(dest_buf);
+    *dest_val = static_cast<int8_t>(std::stoi(src_str));
+    if (res_len) {
+      *res_len = sizeof(int8_t);
+      return StatusRecord::Ok();
+    }
+    return StatusRecord{SQLStates::k_22003(), "Invalid tinyint value"};
+  }
+
+  if (dest_type == SQL_C_UTINYINT) {
+    auto* dest_val = reinterpret_cast<uint8_t*>(dest_buf);
+    *dest_val = static_cast<uint8_t>(std::stoul(src_str));
+    if (res_len) {
+      *res_len = sizeof(uint8_t);
+      return StatusRecord::Ok();
+    }
+    return StatusRecord{SQLStates::k_22003(), "Invalid unsigned tinyint value"};
+  }
 
   // TODO(sachinpro): This assumes that SQLDOUBLE is a safe container for all
   // arithmetic types, which is not true for int64 which has a range(-2^63 to
@@ -369,32 +427,23 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       return status_record;
     }
     case SQL_C_SBIGINT: {
-      auto* dest_val = reinterpret_cast<SQLBIGINT*>(dest_buf);
-      StatusRecord status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLBIGINT>(src_val);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLBIGINT>(src_val);
-        if (res_len) {
-          *res_len = sizeof(SQLBIGINT);
-        }
+      auto* dest_val = reinterpret_cast<int64_t*>(dest_buf);
+      *dest_val = std::stoll(src_str);
+      if (res_len) {
+        *res_len = sizeof(int64_t);
+        return StatusRecord::Ok();
       }
-      return status_record;
+      return StatusRecord{SQLStates::k_22003(), "Invalid bigint value"};
     }
     case SQL_C_UBIGINT: {
-      auto* dest_val = reinterpret_cast<SQLUBIGINT*>(dest_buf);
-      StatusRecord status_record =
-          CheckLimitsArithmetic<SQLDOUBLE, SQLUBIGINT>(src_val);
-      // In case of 'Numeric value out of range'(22003), no need to populate the
-      // buffer
-      if (status_record.sql_state != SQLStates::k_22003()) {
-        *dest_val = static_cast<SQLUBIGINT>(src_val);
-        if (res_len) {
-          *res_len = sizeof(SQLUBIGINT);
-        }
+      auto* dest_val = reinterpret_cast<uint64_t*>(dest_buf);
+      *dest_val = std::stoull(src_str);
+      if (res_len) {
+        *res_len = sizeof(uint64_t);
+        return StatusRecord::Ok();
       }
-      return status_record;
+      return StatusRecord{SQLStates::k_22003(),
+                          "Invalid unsigned bigint value"};
     }
     case SQL_C_SSHORT: {
       auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
@@ -459,6 +508,15 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         return StatusRecord::Ok();
       }
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
+    case SQL_C_BINARY: {
+      auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
+      std::memcpy(dest_val, src_str.data(), src_str.size());
+      reinterpret_cast<char*>(dest_val)[src_str.size()] = '\0';
+      if (res_len) {
+        *res_len = static_cast<SQLLEN>(src_str.size());
+      }
+      return StatusRecord::Ok();
     }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
@@ -1278,6 +1336,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_WCHAR: {
+      int src_len = src_str.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
       if (!wstr) {
         status_record = StatusRecord{SQLStates::k_HY000(),
@@ -1285,13 +1344,13 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
         break;
       }
       std::memset(dest_data.buf, 0, buffer_length);
+      std::wstring const& wide_str = wstr.GetValue();
 
-      return WStrToOutputBufferResponse(
-          wstr.GetValue(), dest_data.buf, buffer_length, src_str.length(),
-          src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
+      status_record = WStrToOutputBufferResponse(
+          wide_str, dest_data.buf, buffer_length, src_len, buffer_length,
+          reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
-
     default: {
       status_record =
           StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};

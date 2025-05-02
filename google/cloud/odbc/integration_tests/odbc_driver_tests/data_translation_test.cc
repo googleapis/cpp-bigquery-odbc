@@ -93,6 +93,18 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_BIT, "0", SQL_SUCCESS},
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
+    {SQL_C_SBIGINT, "9223372036854775807", SQL_SUCCESS},
+    {SQL_C_UBIGINT, "18446744073709551615", SQL_SUCCESS},
+    {SQL_C_STINYINT, "127", SQL_SUCCESS},
+    {SQL_C_STINYINT, "-128", SQL_SUCCESS},
+    {SQL_C_UTINYINT, "255", SQL_SUCCESS},
+    {SQL_C_BINARY, "1", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "2024-01-01", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "1999-12-31", SQL_SUCCESS},
+    {SQL_C_TYPE_TIME, "14:30:15", SQL_SUCCESS},
+    {SQL_C_TYPE_TIME, "00:00:00", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2024-01-01 12:34:56", SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP, "2000-01-01 00:00:00", SQL_SUCCESS},
     {SQL_C_INTERVAL_DAY, "20", SQL_SUCCESS},
     {SQL_C_INTERVAL_DAY_TO_HOUR, "5 12", SQL_SUCCESS},  // 5 days, 12 hours
     {SQL_C_INTERVAL_DAY_TO_MINUTE, "3 10:25",
@@ -174,6 +186,18 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_BIT, "1", SQL_SUCCESS},
     {SQL_C_BIT, "2", SQL_ERROR},
     {SQL_C_WCHAR, "99999999999999999999999999999.999999999", SQL_SUCCESS},
+    {SQL_C_STINYINT, "-128", SQL_SUCCESS},
+    {SQL_C_UTINYINT, "255", SQL_SUCCESS},
+    {SQL_C_UTINYINT, "-1", SQL_ERROR},
+    {SQL_C_TINYINT, "100", SQL_SUCCESS},
+    {SQL_C_SBIGINT, "-9223372036854775807", SQL_SUCCESS},
+    {SQL_C_SBIGINT, "9223372036854775807", SQL_SUCCESS},
+    {SQL_C_UBIGINT, "1844674407370955161", SQL_SUCCESS},
+    {SQL_C_UBIGINT, "-1", SQL_ERROR},
+    {SQL_C_SHORT, "32767", SQL_SUCCESS},
+    {SQL_C_SHORT, "-32768", SQL_SUCCESS},
+    {SQL_C_LONG, "2147483647", SQL_SUCCESS},
+    {SQL_C_LONG, "-2147483648", SQL_SUCCESS},
 };
 
 std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
@@ -536,6 +560,41 @@ void TestTranslationsFromNumeric(
 
           break;
         }
+        case SQL_C_STINYINT: {
+          SQLSCHAR* returned_val = (SQLSCHAR*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_UTINYINT: {
+          SQLCHAR* returned_val = (SQLCHAR*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_TINYINT: {
+          SQLCHAR* returned_val = (SQLCHAR*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_SBIGINT: {
+          SQLBIGINT* returned_val = (SQLBIGINT*)data;
+          EXPECT_EQ(*returned_val, std::stoll(expected.value));
+          break;
+        }
+        case SQL_C_UBIGINT: {
+          SQLUBIGINT* returned_val = (SQLUBIGINT*)data;
+          EXPECT_EQ(*returned_val, std::stoull(expected.value));
+          break;
+        }
+        case SQL_C_SHORT: {
+          SQLSMALLINT* returned_val = (SQLSMALLINT*)data;
+          EXPECT_EQ(*returned_val, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_LONG: {
+          SQLINTEGER* returned_val = (SQLINTEGER*)data;
+          EXPECT_EQ(*returned_val, std::stol(expected.value));
+          break;
+        }
         default: {
           FAIL() << "case not handled!" << std::endl;
         }
@@ -618,6 +677,53 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
             } else if (expected.target_c_type == SQL_C_BIT) {
               SQLCHAR* returned_val = (SQLCHAR*)data;
               EXPECT_EQ(*returned_val, std::stod(expected.value));
+            } else if (expected.target_c_type == SQL_C_BINARY) {
+              std::vector<uint8_t> expected_binary(expected.value.begin(),
+                                                   expected.value.end());
+              std::vector<uint8_t> returned_binary(
+                  (uint8_t*)data, (uint8_t*)data + expected_binary.size());
+              EXPECT_EQ(returned_binary, expected_binary);
+            } else if (expected.target_c_type == SQL_C_TYPE_DATE) {
+              DATE_STRUCT* returned_val = (DATE_STRUCT*)data;
+              std::tm expected_tm = {};
+              std::istringstream ss(expected.value);
+              ss >> std::get_time(&expected_tm, "%Y-%m-%d");
+              EXPECT_EQ(returned_val->year, expected_tm.tm_year + 1900);
+              EXPECT_EQ(returned_val->month, expected_tm.tm_mon + 1);
+              EXPECT_EQ(returned_val->day, expected_tm.tm_mday);
+            } else if (expected.target_c_type == SQL_C_TYPE_TIME) {
+              TIME_STRUCT* returned_val = (TIME_STRUCT*)data;
+              std::tm expected_tm = {};
+              std::istringstream ss(expected.value);
+              ss >> std::get_time(&expected_tm, "%H:%M:%S");
+              EXPECT_EQ(returned_val->hour, expected_tm.tm_hour);
+              EXPECT_EQ(returned_val->minute, expected_tm.tm_min);
+              EXPECT_EQ(returned_val->second, expected_tm.tm_sec);
+            } else if (expected.target_c_type == SQL_C_TYPE_TIMESTAMP) {
+              TIMESTAMP_STRUCT* returned_val = (TIMESTAMP_STRUCT*)data;
+              std::tm expected_tm = {};
+              std::istringstream ss(expected.value);
+              ss >> std::get_time(&expected_tm, "%Y-%m-%d %H:%M:%S");
+              EXPECT_EQ(returned_val->year, expected_tm.tm_year + 1900);
+              EXPECT_EQ(returned_val->month, expected_tm.tm_mon + 1);
+              EXPECT_EQ(returned_val->day, expected_tm.tm_mday);
+              EXPECT_EQ(returned_val->hour, expected_tm.tm_hour);
+              EXPECT_EQ(returned_val->minute, expected_tm.tm_min);
+              EXPECT_EQ(returned_val->second, expected_tm.tm_sec);
+            } else if (expected.target_c_type == SQL_C_STINYINT) {
+              int8_t* returned_val = (int8_t*)data;
+              EXPECT_EQ(*returned_val,
+                        static_cast<int8_t>(std::stoi(expected.value)));
+            } else if (expected.target_c_type == SQL_C_UTINYINT) {
+              uint8_t* returned_val = (uint8_t*)data;
+              EXPECT_EQ(*returned_val,
+                        static_cast<uint8_t>(std::stoul(expected.value)));
+            } else if (expected.target_c_type == SQL_C_SBIGINT) {
+              SQLBIGINT* returned_val = (SQLBIGINT*)data;
+              EXPECT_EQ(*returned_val, std::stoll(expected.value));
+            } else if (expected.target_c_type == SQL_C_UBIGINT) {
+              SQLUBIGINT* returned_val = (SQLUBIGINT*)data;
+              EXPECT_EQ(*returned_val, std::stoull(expected.value));
             } else if (expected.target_c_type == SQL_C_INTERVAL_YEAR ||
                        expected.target_c_type == SQL_C_INTERVAL_MONTH ||
                        expected.target_c_type == SQL_C_INTERVAL_YEAR_TO_MONTH) {
