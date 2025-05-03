@@ -22,8 +22,6 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-constexpr int kUnsupportedCharBufSize = 256;
-
 // Helper functions
 namespace {
 StatusRecord InvalidType(SQLUSMALLINT info_type) {

@@ -45,6 +45,8 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
+    # TODO(sachinpro): remove this when we are able to compile arrow for bazel
+    defines = ["NO_ARROW"],
     visibility = ["//:__pkg__"],
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",

@@ -25,11 +25,13 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::Options;
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery::storage::v1::DataFormat::ARROW;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetReference;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
@@ -599,12 +601,24 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kInt64: {
-            SQLBIGINT l_data = std::stoll(data);
+            SQLBIGINT l_data;
+            try {
+              l_data = std::stoll(data);
+            } catch (std::exception const& ex) {
+              return StatusRecord{SQLStates::k_HY000(),
+                                  "data cannot be parsed as long long"};
+            }
             ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
             break;
           }
           case BQDataType::kFloat64: {
-            SQLDOUBLE d_data = std::stod(data);
+            SQLDOUBLE d_data;
+            try {
+              d_data = std::stod(data);
+            } catch (std::exception const& ex) {
+              return StatusRecord{SQLStates::k_HY000(),
+                                  "data cannot be parsed as double"};
+            }
             ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
             break;
           }
@@ -632,7 +646,13 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kTimeStamp: {
-            double unix_timestamp = std::stod(data);
+            double unix_timestamp;
+            try {
+              unix_timestamp = std::stod(data);
+            } catch (std::exception const& ex) {
+              return StatusRecord{SQLStates::k_HY000(),
+                                  "data cannot be parsed as double"};
+            }
             SQL_TIMESTAMP_STRUCT time_struct;
             ConvertUnixTimestampToTimestampStruct(unix_timestamp, time_struct);
             TimestampToDSValue(time_struct, row_val);
@@ -720,6 +740,10 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
 }
 
 StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
+  // If the variant holds `ResultSet`(case of HT API), return it directly
+  if (absl::holds_alternative<ResultSet>(query_results.data_source_results)) {
+    return absl::get<ResultSet>(query_results.data_source_results);
+  }
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
     return ProcessPostQueryResults(
@@ -802,6 +826,8 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
   Options options;
   return bq_client->CancelJob(project_id, job_id, location, options);
 }
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
     ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
@@ -897,7 +923,7 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
 
 StatusRecord ProcessRecordBatch(
     std::shared_ptr<arrow::Schema> schema,
-    std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet result_set) {
+    std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set) {
   for (std::int64_t row = 0; row < record_batch->num_rows(); ++row) {
     DSRow rs_row;
     for (std::int64_t col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
@@ -951,8 +977,12 @@ StatusRecord ProcessRecordBatch(
           break;
         }
         case arrow::Type::DATE32: {
-          SQL_DATE_STRUCT date_struct = ConvertStringToDateStruct(data);
-          DateToDSValue(date_struct, row_val);
+          StatusRecordOr<SQL_DATE_STRUCT> date_struct =
+              ConvertStringToDateStruct(data);
+          if (!date_struct.Ok()) {
+            return date_struct.GetStatusRecord();
+          }
+          DateToDSValue(*date_struct, row_val);
           break;
         }
         case arrow::Type::BINARY: {
@@ -1057,14 +1087,70 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
         }
       }
     }
+
+    return result_set;
   }
 
-  return StatusRecord::Ok();
+  return StatusRecord{SQLStates::k_HY000(),
+                      "No valid stream found to read results"};
 }
+
+StatusRecordOr<ResultSet> FetchBQDataRead(
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+  QueryRequest query_request = post_query_request.query_request();
+  std::string query = query_request.query();
+  Job job;
+  job.configuration.query.query = query;
+  job.configuration.query.use_query_cache = true;
+  job.configuration.dry_run = false;
+  job.configuration.query.allow_large_results = true;
+  job.configuration.query.use_legacy_sql = false;
+  job.configuration.query.create_disposition = "CREATE_IF_NEEDED";
+  job.configuration.query.write_disposition = "WRITE_TRUNCATE";
+  job.configuration.query.query_parameters = query_request.query_parameters();
+
+  std::string catalog_name = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  if (!default_dataset.empty()) {
+    job.configuration.query.default_dataset.project_id = catalog_name;
+    job.configuration.query.default_dataset.dataset_id = default_dataset;
+  }
+
+  job.configuration.query.parameter_mode = "POSITIONAL";
+
+  Options opt;
+
+  auto insert_response = conn_handle.GetClient()->InsertJob(
+      conn_handle.GetDsn().catalog, job, opt);
+  if (!insert_response.Ok()) {
+    return insert_response.GetStatusRecord();
+  }
+
+  auto rs_status = FetchBQDataReadArrow(
+      conn_handle, insert_response->configuration.query.destination_table);
+  if (!rs_status) {
+    return rs_status.GetStatusRecord();
+  }
+  return *rs_status;
+}
+
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 // TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    auto read_status = FetchBQDataRead(conn_handle, post_query_request);
+    if (!read_status) {
+      return read_status.GetStatusRecord();
+    }
+    DSResults results;
+    results.data_source_results = *read_status;
+    return results;
+  }
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
     LOG(ERROR) << "FetchBQData:: Connection to the data source is broken.";
@@ -1088,6 +1174,7 @@ StatusRecordOr<DSResults> FetchBQData(
                << pq_status.GetStatusRecord().message;
     return pq_status.GetStatusRecord();
   }
+
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
