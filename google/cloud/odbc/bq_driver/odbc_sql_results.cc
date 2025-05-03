@@ -165,8 +165,9 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
-    StatusRecord status_record = {SQLStates::k_HY010(),
-                                  "No statement has been executed"};
+    StatusRecord status_record = {
+        SQLStates::k_HY010(),
+        "No statement has been executed with a resultset"};
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -206,7 +207,8 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
-    status_record = {SQLStates::k_HY010(), "No statement has been executed"};
+    status_record = {SQLStates::k_HY010(),
+                     "No statement has been executed with result set"};
     return LogAndReturnCode(handle, status_record);
   }
 

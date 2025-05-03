@@ -43,7 +43,10 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-find_package(Arrow REQUIRED)
+# Arrow is not supported on 32-bit systems
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    find_package(Arrow REQUIRED)
+endif ()
 
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)

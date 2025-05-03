@@ -446,6 +446,41 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(
+      Connect(kDefaultConnectionString +
+                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
+              conn),
+      SQL_SUCCESS);
+  std::string query =
+      R"(SELECT )"
+      R"(CAST(123 AS INT64) AS int_col1,)"
+      R"('example string' AS str_col,)"
+      R"(CAST(3.14 AS FLOAT64) AS float_col,)"
+      R"(TRUE AS bool_col,)"
+      R"(NUMERIC '12345.6789' AS numeric_col,)"
+      R"(BIGNUMERIC '9876543210987654321.123456789012345678' AS bignumeric_col,)"
+      R"(PARSE_JSON('{"name": "John", "age": 30}') AS json_col,)";
+  RowWiseResults const kValidationData{
+      {
+          {0, "123"},
+          {1, "example string"},
+          {2, "3.14"},
+          {3, "1"},
+          {4, "12345.6789"},
+          {5, "9876543210987654321.123456789012345678"},
+          {6, "{\"age\":30,\"name\":\"John\"}"},
+      },
+  };
+  // The table name here doesn't matter because we didn't create one.
+  Table table("Random_table_name");
+  RowWiseResults const& results = table.Fetch(conn, query);
+  VerifyRowWiseResults(results, kValidationData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLExecDirectW) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

@@ -88,6 +88,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
       return ConvertFromBytesDSValue(ds_val, data);
     case BQDataType::kRange:
       return ConvertFromRangeDSValue(ds_val, data);
+    case BQDataType::kBigNumeric:
+    case BQDataType::kNumeric:
+      return ConvertFromNumericDSValue(ds_val, data);
   }
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }

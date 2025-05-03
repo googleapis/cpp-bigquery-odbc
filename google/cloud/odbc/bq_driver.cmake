@@ -97,12 +97,17 @@ endif ()
 add_library(google_cloud_odbc_bq_driver_internal STATIC ${COMMON_SOURCES})
 
 set(COMMON_LIBS
-    Arrow::arrow_static
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
     odbc_bq_client_interface
     odbc_internal)
+
+# Add Arrow::arrow_static conditionally for 64-bit build
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    list(APPEND COMMON_LIBS Arrow::arrow_static)
+    message(STATUS "Arrow::arrow_static added for 64-bit build.")
+endif ()
 
 # Add Windows-specific libraries only if compiling on Windows
 if (WIN32)
