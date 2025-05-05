@@ -955,8 +955,12 @@ void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
   std::string actual_message(reinterpret_cast<char*>(buf));
   EXPECT_EQ(actual_message.size(), string_length_ptr);
 
+  if (kIsBqDriver) {
+    EXPECT_THAT(actual_message, ::testing::HasSubstr(expected_message_regex));
+  } else {
     EXPECT_THAT(actual_message,
                 ::testing::ContainsRegex(expected_message_regex));
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
@@ -1190,15 +1194,17 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 #endif  // _WIN32
 
   // TODO(b/383449326): Add other connection attributes for the connection
+  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
+  if (kIsBqDriver) {
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(
+        conn->hdbc, "HY000", 0,
+        "[Google][ODBC BigQuery Driver] Invalid Connection String");
+  } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
-    int native_error_code;
-    #ifdef _WIN32 
-    native_error_code = 50404;
-#else
-native_error_code = 0;
-#endif
-    CheckDiagnosticRecord(conn->hdbc, "HY000",
-      native_error_code, "Invalid connection string");
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
+                          "Invalid connection string");
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1246,17 +1252,17 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-  // if (kIsBqDriver) {
-  //   EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-  //   CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
-  //                         "[Google][ODBC BigQuery Driver] Connection Error: "
-  //                         "Non Requested connection attribute");
-  // } else {
+  if (kIsBqDriver) {
+    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+                          "[Google][ODBC BigQuery Driver] Connection Error: "
+                          "Non Requested connection attribute");
+  } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
- // }
+  }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {

@@ -24,6 +24,7 @@
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 #include <filesystem>
 namespace fs = std::filesystem;
+HINSTANCE g_hDllInstance = NULL;
 #endif
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -180,9 +181,9 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 // Helper function to create a static label
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id) {
-  return CreateWindowEx(
-      0, "STATIC", text, WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
-      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(0, "STATIC", text,
+                        WS_VISIBLE | WS_CHILD | SS_LEFT | SS_NOTIFY, x, y,
+                        width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 // Helper function to create an edit box
@@ -190,7 +191,7 @@ HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
   return CreateWindowEx(
       0, "EDIT", "",
       WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
@@ -199,21 +200,21 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
       0, "EDIT", "",
       WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_MULTILINE |
           ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
-  return CreateWindowEx(
-      0, "COMBOBOX", NULL, WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x,
-      y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  return CreateWindowEx(0, "COMBOBOX", NULL,
+                        WS_TABSTOP | WS_VISIBLE | WS_CHILD | CBS_DROPDOWN, x, y,
+                        width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 
 HWND CreateButton(HWND parent, char const* text, int x, int y, int width,
                   int height, int id) {
   HWND hButton = CreateWindowEx(
       0, "BUTTON", text, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_FLAT, x, y,
-      width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   // Disable Windows theme to remove any rounding
   if (hButton) {
@@ -228,14 +229,14 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "BUTTON", text,
                         WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX, x, y, width,
-                        height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+                        height, parent, (HMENU)id, g_hDllInstance, NULL);
 }
 // Helper function to create a group box
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id) {
   return CreateWindowEx(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-                        x, y, width, height, parent, (HMENU)id,
-                        GetModuleHandle(NULL), NULL);
+                        x, y, width, height, parent, (HMENU)id, g_hDllInstance,
+                        NULL);
 }
 HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
@@ -243,7 +244,7 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
       WS_EX_CLIENTEDGE, "EDIT", text,
       WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_NUMBER |
           ES_RIGHT,  // ES_NUMBER restricts input to numbers
-      x, y, width, height, parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   if (hEditBox) {
     SendMessage(hEditBox, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT),
@@ -254,40 +255,53 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
 }
 HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id) {
-  HWND h_hyperlink = CreateWindowEx(
-      0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y, width, height,
-      parent, (HMENU)id, GetModuleHandle(NULL), NULL);
+  HWND h_hyperlink =
+      CreateWindowEx(0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_NOTIFY, x, y,
+                     width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   return h_hyperlink;
 }
-void setWindowIcon(HWND hwnd) {
-  fs::path source_path(__FILE__);
-  fs::path absolute_path = fs::absolute(source_path);
-  fs::path project_dir = absolute_path;
-  // Traverse up to find the project directory (by checking for .git file)
-  while (project_dir.has_parent_path()) {
-    if (fs::exists(project_dir / ".git")) {
-      break;
-    }
-    project_dir = project_dir.parent_path();
-  }
 
-  fs::path const ICON_RELATIVE_PATH =
-      "ci/installer/InstallerProj/Assets/bq.ico";
-  fs::path icon_path = project_dir / ICON_RELATIVE_PATH;
-  HICON h_icon = (HICON)LoadImageA(NULL, icon_path.string().c_str(), IMAGE_ICON,
-                                   32, 32, LR_LOADFROMFILE);
-  if (!h_icon) {
-    MessageBoxA(hwnd,
-                ("Failed to load icon from: " + icon_path.string()).c_str(),
-                "Error", MB_OK | MB_ICONERROR);
-    return;
+extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
+                                 LPVOID lpReserved) {
+  switch (ul_reason) {
+    case DLL_PROCESS_ATTACH:
+      g_hDllInstance = hModule;
+      break;
   }
-  // Set the window icon
-  SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)h_icon);
-  SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)h_icon);
+  return TRUE;
 }
 
+void setWindowIcon(HWND hwnd) {
+  HMODULE hModule = NULL;
+  // Get handle to the module containing this function
+  GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    (LPCTSTR)setWindowIcon, &hModule);
+
+  wchar_t dllPath[MAX_PATH];
+  GetModuleFileNameW(hModule, dllPath, MAX_PATH);
+
+  // Strip filename to get directory
+  std::wstring path(dllPath);
+  size_t pos = path.find_last_of(L"\\/");
+  if (pos == std::wstring::npos) return;
+  std::wstring dir = path.substr(0, pos);
+
+  // Compose icon path (e.g., DLL directory + "\\assets\\bq.ico")
+  std::wstring iconPath = dir + L"\\assets\\bq.ico";
+
+  HICON hIcon = (HICON)LoadImageW(NULL, iconPath.c_str(), IMAGE_ICON, 32, 32,
+                                  LR_LOADFROMFILE);
+
+  if (!hIcon) {
+    OutputDebugStringW(
+        (L"Failed to load icon at: " + iconPath + L"\n").c_str());
+    return;
+  }
+  SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+  SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+}
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data) {
@@ -510,7 +524,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
 
 StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
   if (utf_8_str.empty()) {
-    return std::wstring();
+    return StatusRecord{SQLStates::k_HY000(), "utf_8_str string isempty/Null"};
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
