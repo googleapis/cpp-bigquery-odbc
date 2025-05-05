@@ -55,13 +55,13 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  if (schema_name.empty() || schema_name_len <= 0) {
+  if (schema_name.empty() || (schema_name_len <= 0 && schema_name_len != SQL_NTS)) {
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter schema_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  if (table_name.empty() || table_name_len <= 0) {
+  if (table_name.empty() || (table_name_len <= 0 && table_name_len != SQL_NTS)) {
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter table_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
