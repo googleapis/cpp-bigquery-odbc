@@ -3418,8 +3418,6 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 TEST(SQLRowCount, WrongUpdateValidation) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3449,8 +3447,6 @@ TEST(SQLRowCount, WrongUpdateValidation) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLRowCount, NonExistentTable) {
   auto conn = std::make_shared<ODBCHandles>();
