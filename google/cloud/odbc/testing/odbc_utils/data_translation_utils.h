@@ -80,6 +80,32 @@ struct IntervalArthemeticTestStruct {
   SQLRETURN status;
 };
 
+inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
+                                                 SQLSMALLINT sign,
+                                                 SQLUSMALLINT year,
+                                                 SQLUSMALLINT month) {
+  SQL_INTERVAL_STRUCT result;
+  result.interval_type = type;
+  result.interval_sign = sign;
+  result.intval.year_month.year = year;
+  result.intval.year_month.month = month;
+  return result;
+}
+
+inline SQL_INTERVAL_STRUCT MakeDaySecondInterval(
+    SQLINTERVAL type, SQLSMALLINT sign, SQLINTEGER day, SQLINTEGER hour,
+    SQLINTEGER minute, SQLINTEGER second, SQLUINTEGER fraction) {
+  SQL_INTERVAL_STRUCT result;
+  result.interval_type = type;
+  result.interval_sign = sign;
+  result.intval.day_second.day = day;
+  result.intval.day_second.hour = hour;
+  result.intval.day_second.minute = minute;
+  result.intval.day_second.second = second;
+  result.intval.day_second.fraction = fraction;
+  return result;
+}
+
 std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
     {SQL_C_CHAR, {2024, 2, 20}, std::nullopt, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, {2024, 3, 20}, std::nullopt, SQL_SUCCESS},
@@ -127,131 +153,98 @@ std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
 
 // TODO(b/368251064): Remove designated identifiers to support C++17.
 std::vector<IntervalBasicTestStruct> const kConversionYearMonthIntervalTestData{
-    {SQL_C_CHAR,
-     {SQL_IS_YEAR, 1, {.year_month = {3, 0}}},
-     std::nullopt,
+    {SQL_C_CHAR, MakeYearMonthInterval(SQL_IS_YEAR, 1, 3, 0), std::nullopt,
      SQL_SUCCESS},
-    {SQL_C_INTERVAL_YEAR,
-     {SQL_IS_YEAR, 1, {.year_month = {5, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
-    {SQL_C_INTERVAL_MONTH,
-     {SQL_IS_MONTH, 1, {.year_month = {0, 8}}},
-     std::nullopt,
-     SQL_SUCCESS},
-    {SQL_C_DOUBLE,
-     {SQL_IS_YEAR, 1, {.year_month = {9, 0}}},
-     std::nullopt,
+
+    {SQL_C_INTERVAL_YEAR, MakeYearMonthInterval(SQL_IS_YEAR, 1, 5, 0),
+     std::nullopt, SQL_SUCCESS},
+
+    {SQL_C_INTERVAL_MONTH, MakeYearMonthInterval(SQL_IS_MONTH, 1, 0, 8),
+     std::nullopt, SQL_SUCCESS},
+
+    {SQL_C_DOUBLE, MakeYearMonthInterval(SQL_IS_YEAR, 1, 9, 0), std::nullopt,
      SQL_ERROR},
-    {SQL_C_WCHAR,
-     {SQL_IS_YEAR_TO_MONTH, 1, {.year_month = {2, 5}}},
-     std::nullopt,
-     SQL_SUCCESS},
+
+    {SQL_C_WCHAR, MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 1, 2, 5),
+     std::nullopt, SQL_SUCCESS},
+
     {SQL_C_INTERVAL_YEAR_TO_MONTH,
-     {SQL_IS_YEAR_TO_MONTH, 1, {.year_month = {1, 6}}},
-     std::nullopt,
+     MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 1, 1, 6), std::nullopt,
      SQL_SUCCESS},
-    {SQL_C_FLOAT,
-     {SQL_IS_MONTH, 1, {.year_month = {0, 9}}},
-     std::nullopt,
+
+    {SQL_C_FLOAT, MakeYearMonthInterval(SQL_IS_MONTH, 1, 0, 9), std::nullopt,
      SQL_ERROR},
 };
 
 // TODO(b/368251064): Remove designated identifiers to support C++17.
 std::vector<IntervalBasicTestStruct> const kConversionDaySecondIntervalTestData{
-    {SQL_C_CHAR,
-     {SQL_IS_DAY, 1, {.day_second = {5, 0, 0, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
-    {SQL_C_WCHAR,
-     {SQL_IS_HOUR, 1, {.day_second = {0, 2, 0, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
-    {SQL_C_INTERVAL_DAY,
-     {SQL_IS_DAY, 1, {.day_second = {15, 0, 0, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
-    {SQL_C_FLOAT,
-     {SQL_IS_MINUTE, 1, {.day_second = {0, 0, 45, 0, 0}}},
-     std::nullopt,
-     SQL_ERROR},
-    {SQL_C_INTERVAL_HOUR,
-     {SQL_IS_HOUR, 1, {.day_second = {0, 20, 0, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
+    {SQL_C_CHAR, MakeDaySecondInterval(SQL_IS_DAY, 1, 5, 0, 0, 0, 0),
+     std::nullopt, SQL_SUCCESS},
+    {SQL_C_WCHAR, MakeDaySecondInterval(SQL_IS_HOUR, 1, 0, 2, 0, 0, 0),
+     std::nullopt, SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY, MakeDaySecondInterval(SQL_IS_DAY, 1, 15, 0, 0, 0, 0),
+     std::nullopt, SQL_SUCCESS},
+    {SQL_C_FLOAT, MakeDaySecondInterval(SQL_IS_MINUTE, 1, 0, 0, 45, 0, 0),
+     std::nullopt, SQL_ERROR},
+    {SQL_C_INTERVAL_HOUR, MakeDaySecondInterval(SQL_IS_HOUR, 1, 0, 20, 0, 0, 0),
+     std::nullopt, SQL_SUCCESS},
     {SQL_C_INTERVAL_MINUTE,
-     {SQL_IS_MINUTE, 1, {.day_second = {0, 0, 45, 0, 0}}},
-     std::nullopt,
+     MakeDaySecondInterval(SQL_IS_MINUTE, 1, 0, 0, 45, 0, 0), std::nullopt,
      SQL_SUCCESS},
     {SQL_C_INTERVAL_SECOND,
-     {SQL_IS_SECOND, 1, {.day_second = {0, 0, 0, 10, 0}}},
-     std::nullopt,
+     MakeDaySecondInterval(SQL_IS_SECOND, 1, 0, 0, 0, 10, 0), std::nullopt,
      SQL_SUCCESS},
     {SQL_C_DOUBLE,
-     {SQL_IS_DAY_TO_HOUR, 1, {.day_second = {10, 14, 0, 0, 0}}},
-     std::nullopt,
-     SQL_ERROR},
+     MakeDaySecondInterval(SQL_IS_DAY_TO_HOUR, 1, 10, 14, 0, 0, 0),
+     std::nullopt, SQL_ERROR},
     {SQL_C_INTERVAL_DAY_TO_HOUR,
-     {SQL_IS_DAY_TO_HOUR, 1, {.day_second = {10, 14, 0, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_DAY_TO_HOUR, 1, 10, 14, 0, 0, 0),
+     std::nullopt, SQL_SUCCESS},
     {SQL_C_INTERVAL_DAY_TO_MINUTE,
-     {SQL_IS_DAY_TO_MINUTE, 1, {.day_second = {1, 5, 30, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_DAY_TO_MINUTE, 1, 1, 5, 30, 0, 0),
+     std::nullopt, SQL_SUCCESS},
     {SQL_C_INTERVAL_DAY_TO_SECOND,
-     {SQL_IS_DAY_TO_SECOND, 1, {.day_second = {2, 1, 2, 20, 500}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_DAY_TO_SECOND, 1, 2, 1, 2, 20, 500),
+     std::nullopt, SQL_SUCCESS},
     {SQL_C_INTERVAL_HOUR_TO_MINUTE,
-     {SQL_IS_HOUR_TO_MINUTE, 1, {.day_second = {0, 9, 45, 0, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_HOUR_TO_MINUTE, 1, 0, 9, 45, 0, 0),
+     std::nullopt, SQL_SUCCESS},
     {SQL_C_INTERVAL_HOUR_TO_SECOND,
-     {SQL_IS_HOUR_TO_SECOND, 1, {.day_second = {0, 11, 10, 25, 0}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_HOUR_TO_SECOND, 1, 0, 11, 10, 25, 0),
+     std::nullopt, SQL_SUCCESS},
+
     {SQL_C_BIT,
-     {SQL_IS_DAY_TO_SECOND, 1, {.day_second = {2, 1, 2, 20, 500}}},
-     std::nullopt,
-     SQL_ERROR},
+     MakeDaySecondInterval(SQL_IS_DAY_TO_SECOND, 1, 2, 1, 2, 20, 500),
+     std::nullopt, SQL_ERROR},
+
     {SQL_C_INTERVAL_MINUTE_TO_SECOND,
-     {SQL_IS_MINUTE_TO_SECOND, 1, {.day_second = {0, 0, 50, 10, 100}}},
-     std::nullopt,
-     SQL_SUCCESS},
+     MakeDaySecondInterval(SQL_IS_MINUTE_TO_SECOND, 1, 0, 0, 50, 10, 100),
+     std::nullopt, SQL_SUCCESS},
 };
 
 // TODO(b/368251064): Remove designated identifiers to support C++17.
 std::vector<IntervalBasicTestStruct> const
     kConversionFromSinglePrecisionIntervalData{
-        {SQL_C_STINYINT,
-         {SQL_IS_YEAR, 1, {.year_month = {1, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_UTINYINT,
-         {SQL_IS_DAY, 1, {.day_second = {6, 0, 0, 0, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_SSHORT,
-         {SQL_IS_HOUR, 1, {.day_second = {0, 12, 0, 0, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_USHORT,
-         {SQL_IS_MINUTE, 1, {.day_second = {0, 0, 20, 0, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_ULONG,
-         {SQL_IS_DAY, 1, {.day_second = {4, 0, 0, 0, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_SBIGINT,
-         {SQL_IS_HOUR, 1, {.day_second = {0, 3, 0, 0, 0}}},
-         std::nullopt,
-         SQL_SUCCESS},
-        {SQL_C_NUMERIC,
-         {SQL_IS_MONTH, 1, {.year_month = {0, 8}}},
-         std::nullopt,
-         SQL_SUCCESS},
+        {SQL_C_STINYINT, MakeYearMonthInterval(SQL_IS_YEAR, 1, 1, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_UTINYINT, MakeDaySecondInterval(SQL_IS_DAY, 1, 6, 0, 0, 0, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_SSHORT, MakeDaySecondInterval(SQL_IS_HOUR, 1, 0, 12, 0, 0, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_USHORT, MakeDaySecondInterval(SQL_IS_MINUTE, 1, 0, 0, 20, 0, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_ULONG, MakeDaySecondInterval(SQL_IS_DAY, 1, 4, 0, 0, 0, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_SBIGINT, MakeDaySecondInterval(SQL_IS_HOUR, 1, 0, 3, 0, 0, 0),
+         std::nullopt, SQL_SUCCESS},
+
+        {SQL_C_NUMERIC, MakeYearMonthInterval(SQL_IS_MONTH, 1, 0, 8),
+         std::nullopt, SQL_SUCCESS},
     };
 
 std::vector<DateBasicTestStruct> FetchDateConversionResults(
