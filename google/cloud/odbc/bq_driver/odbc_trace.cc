@@ -122,12 +122,10 @@ void TraceFunctionEntry_SQLDriverConnectW(
     SQLWCHAR* out_conn_str, SQLSMALLINT out_conn_str_buf_len,
     SQLSMALLINT* out_conn_str_len, SQLUSMALLINT driver_completion,
     TraceOptions& opts) {
+      auto* out_conn_str_temp = reinterpret_cast<SQLCHAR*>(out_conn_str);
   StatusRecordOr<std::string> utf8_in_connection_str;
-  auto* out_conn_str_temp = reinterpret_cast<SQLCHAR*>(out_conn_str);
-  std::wstring in_connection_wstr(
-      reinterpret_cast<wchar_t const*>(in_connection_str));
-  auto in_connection_wstr_len = wcslen(in_connection_wstr.data());
-  if (in_connection_wstr_len > 0) {
+  SQLCHAR* sqlchar_in_connection_str = nullptr;
+  if (in_connection_str) {
     utf8_in_connection_str =
         ConvertSQLWCHARToString(in_connection_str, in_connection_str_len);
     if (!utf8_in_connection_str) {
@@ -135,10 +133,11 @@ void TraceFunctionEntry_SQLDriverConnectW(
                          utf8_in_connection_str.GetStatusRecord().message);
       return;
     }
+    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
   }
 
   TraceFunctionEntry_SQLDriverConnect(connection_handle, window_handle,
-                                      ToSqlChar(utf8_in_connection_str->data()),
+                                      sqlchar_in_connection_str,
                                       in_connection_str_len, out_conn_str_temp,
                                       out_conn_str_buf_len, out_conn_str_len,
                                       driver_completion, opts);

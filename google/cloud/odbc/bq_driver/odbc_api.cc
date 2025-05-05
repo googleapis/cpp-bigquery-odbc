@@ -3491,6 +3491,7 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
                          utf8_catalog_name.GetStatusRecord().message);
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
+    std::cout<<"catalog_name inside api "<<utf8_catalog_name->data()<<std::endl;
     sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
     if(catalogNameLen && catalogNameLen != SQL_NTS) 
     catalogNameLen = utf8_catalog_name->length();

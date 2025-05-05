@@ -278,7 +278,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
           "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   auto catalog_name =
       (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
-
+std::cout<<"catalog_name "<<catalog_name<<std::endl;
   // Make sure we treat the catalog arguments as OA (ordinary arguments).
   // See here for more info on catalog function arguments:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16

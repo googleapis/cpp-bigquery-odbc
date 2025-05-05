@@ -47,6 +47,8 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len) {
   // Input validation of required parameters.
+  std::cout<<"catalog fetch "<<catalog_name<<std::endl;
+  std::cout<<"catalog length fetch "<<catalog_name_len<<std::endl;
   if (catalog_name.empty() || catalog_name_len <= 0) {
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter catalog_name cannot be empty"};
