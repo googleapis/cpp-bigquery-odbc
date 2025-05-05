@@ -2216,7 +2216,11 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
                        utf8_in_stmt_txt.GetStatusRecord().message);
     return utf8_in_stmt_txt.GetCalculatedReturnCode();
   }
+
+  // Update the input data size only for non-windows platforms
+#ifndef _WIN32
   inStatementTextLen = utf8_in_stmt_txt->length();
+#endif  // _WIN32
 
   // Call to common internal function for SQLNativeSql and SQLNativeSqlW
   // in odbc_sql_requests.h.
@@ -2237,9 +2241,11 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
       return utf16_out_stmt_txt.GetCalculatedReturnCode();
     }
     SQLLEN out_len = 0;
-    WStrToOutputBufferResponse(
-        *utf16_out_stmt_txt, outStatementText, outStatementTextBufferLen,
-        utf16_out_stmt_txt->size(), utf16_out_stmt_txt->size(), &out_len);
+    if (outStatementText) {
+      WStrToOutputBufferResponse(
+          *utf16_out_stmt_txt, outStatementText, outStatementTextBufferLen,
+          utf16_out_stmt_txt->size(), utf16_out_stmt_txt->size(), &out_len);
+    }
   }
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled) TraceFunctionExit_SQLNativeSqlW(rc, *(*kTraceOption));

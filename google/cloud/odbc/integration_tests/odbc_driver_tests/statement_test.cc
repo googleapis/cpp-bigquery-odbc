@@ -3915,8 +3915,8 @@ TEST(StatementTest, SQLNativeSql_NegativeTest) {
     SCOPED_TRACE("Testing null outStatementText");
     std::string sql_query = "SELECT * FROM DummyTable";
     EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
-                           nullptr, 0, &native_sql_length),
-              SQL_SUCCESS_WITH_INFO);
+                           nullptr, sizeof(native_sql), &native_sql_length),
+              SQL_SUCCESS);
     EXPECT_EQ(native_sql_length, sql_query.size());
   }
 
@@ -3941,6 +3941,34 @@ TEST(StatementTest, SQLNativeSql_NegativeTest) {
         SQL_SUCCESS_WITH_INFO);
     EXPECT_EQ(small_buffer_length, sql_query.size());
   }
+
+  // Zero outStatementTextBufferLen, but valid SQL should still return
+  // SQL_SUCCESS_WITH_INFO and fill length
+  {
+    SCOPED_TRACE("Testing zero outStatementTextBufferLen");
+    std::string sql_query = "SELECT * FROM DummyTable";
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                           native_sql, 0, &native_sql_length),
+              SQL_SUCCESS_WITH_INFO);
+    EXPECT_EQ(native_sql_length, sql_query.size());
+  }
+
+// simba driver returning SQL_SUCCESS for windows platform
+//  but giving SQL_SUCCESS_WITH_INFO for non_windows platforms
+#if defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
+  //  Null outStatementText and Zero outStatementTextBufferLen, but valid SQL
+  //  should still return SQL_SUCCESS and
+  // full length
+  {
+    SCOPED_TRACE(
+        "Testing null outStatementText and zero outStatementTextBufferLen");
+    std::string sql_query = "SELECT * FROM DummyTable";
+    EXPECT_EQ(SQLNativeSql(conn->hdbc, (SQLCHAR*)sql_query.c_str(), SQL_NTS,
+                           nullptr, 0, &native_sql_length),
+              SQL_SUCCESS_WITH_INFO);
+    EXPECT_EQ(native_sql_length, sql_query.size());
+  }
+#endif  // _WIN32
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
