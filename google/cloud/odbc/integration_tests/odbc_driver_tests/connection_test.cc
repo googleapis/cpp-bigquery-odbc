@@ -1195,16 +1195,16 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-  if (kIsBqDriver) {
-    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-    CheckDiagnosticRecord(
-        conn->hdbc, "HY000", 0,
-        "[Google][ODBC BigQuery Driver] Invalid Connection String");
-  } else {
+  // if (kIsBqDriver) {
+  //   EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+  //   CheckDiagnosticRecord(
+  //       conn->hdbc, "HY000", 0,
+  //       "[Google][ODBC BigQuery Driver] Invalid Connection String");
+  // } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
-  }
+ // }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1252,17 +1252,17 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
 
   // TODO(b/383449326): Add other connection attributes for the connection
   // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
-  if (kIsBqDriver) {
-    EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
-    CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
-                          "[Google][ODBC BigQuery Driver] Connection Error: "
-                          "Non Requested connection attribute");
-  } else {
+  // if (kIsBqDriver) {
+  //   EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
+  //   CheckDiagnosticRecord(conn->hdbc, "HY000", 0,
+  //                         "[Google][ODBC BigQuery Driver] Connection Error: "
+  //                         "Non Requested connection attribute");
+  // } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
     CheckDiagnosticRecord(
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
-  }
+ // }
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
