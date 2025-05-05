@@ -3493,8 +3493,10 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
     }
     std::cout<<"catalog_name inside api "<<utf8_catalog_name->data()<<std::endl;
     sqlchar_category_name = ToSqlChar(utf8_catalog_name->data());
+    std::cout<<"catalogNameLen inside api "<<catalogNameLen<<std::endl;
     if(catalogNameLen && catalogNameLen != SQL_NTS) 
     catalogNameLen = utf8_catalog_name->length();
+    std::cout<<"catalogNameLen inside api2 "<<catalogNameLen<<std::endl;
   }
 
   StatusRecordOr<std::string> utf8_schema_name;

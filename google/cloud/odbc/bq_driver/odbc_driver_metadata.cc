@@ -258,6 +258,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
 
   StatementHandle& handle = *(*handle_result);
 std::cout<<"catalog name internal "<<(char*)catalog_name<<std::endl;
+std::cout<<"catalogNameLen name internal "<<catalog_name_len<<std::endl;
   // First fetch the primary keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
       FetchPrimaryKeysFromDataSource(handle, ToCharStr(catalog_name),

@@ -49,7 +49,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   // Input validation of required parameters.
   std::cout<<"catalog fetch "<<catalog_name<<std::endl;
   std::cout<<"catalog length fetch "<<catalog_name_len<<std::endl;
-  if (catalog_name.empty() || catalog_name_len <= 0) {
+  if (catalog_name.empty() || (catalog_name_len <= 0 && catalog_name_len != SQL_NTS)) {
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter catalog_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
