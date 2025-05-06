@@ -311,7 +311,9 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
               dml_stats.inserted_row_count == 0) ||
              (statement_type == "DELETE" && dml_stats.deleted_row_count == 0)) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-    return StatusRecord{"02000", "No data found"};
+    // Note: The message is not supposed to be propagated to the application in
+    // case of SQL_NO_DATA
+    return StatusRecord{SQLStates::k_SQL_NO_DATA(), "No data found"};
   } else {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
@@ -1021,9 +1023,6 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   // STEP 4: Synchronous execution
   // *****************************************************************
   StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
-  if (execute_status.sql_state == "02000") {
-    return SQL_NO_DATA;
-  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 

@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "absl/types/variant.h"
 #include <chrono>
@@ -43,6 +44,12 @@ SQLRETURN LogAndReturnCode(
     Handle& handle, odbc_internal::StatusRecordOr<T> const& status_record_or) {
   if (!status_record_or) {
     auto status_record = status_record_or.GetStatusRecord();
+    // Handling special case for SQL_NO_DATA where we are not supposed to have
+    // an error diagnostic message
+    if (status_record.sql_state ==
+        google::cloud::odbc_internal::SQLStates::k_SQL_NO_DATA()) {
+      return SQL_NO_DATA;
+    }
     handle.GetDiagnostics().AddStatusRecord(status_record);
     TracePrintInternal(*(*kTraceOption), status_record.message);
   }
@@ -52,6 +59,12 @@ SQLRETURN LogAndReturnCode(
 inline SQLRETURN LogAndReturnCode(
     Handle& handle, odbc_internal::StatusRecord const& status_record) {
   if (!status_record.ok()) {
+    // Handling special case for SQL_NO_DATA where we are not supposed to have
+    // an error diagnostic message
+    if (status_record.sql_state ==
+        google::cloud::odbc_internal::SQLStates::k_SQL_NO_DATA()) {
+      return SQL_NO_DATA;
+    }
     handle.GetDiagnostics().AddStatusRecord(status_record);
     TracePrintInternal(*(*kTraceOption), status_record.message);
   }
