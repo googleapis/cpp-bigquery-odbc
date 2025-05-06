@@ -974,7 +974,10 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   std::string interval_src_str;
 
   DSValueToString(src_dsval, interval_src_str);
-  ConvertStringToIntervalStruct(interval_src_str, conn_interval);
+  auto status = ConvertStringToIntervalStruct(interval_src_str, conn_interval);
+  if (!status.ok()) {
+    return StatusRecord{status.sql_state, status.message};
+  }
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;

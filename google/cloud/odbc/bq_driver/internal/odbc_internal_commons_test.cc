@@ -992,16 +992,22 @@ TEST(ConvertStringToIntervalStruct, neg_interval_str) {
 TEST(ConvertStringToIntervalStruct, Invalid_interval_str) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_invalid_str = "0-1";
-  EXPECT_THROW(
-      ConvertStringToIntervalStruct(interval_invalid_str, interval_struct),
-      std::invalid_argument);
+  auto result =
+      ConvertStringToIntervalStruct(interval_invalid_str, interval_struct);
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
+  EXPECT_THAT(result.message,
+              ::testing::HasSubstr("Invalid interval string format"));
 }
 
 TEST(ConvertStringToIntervalStruct, Empty_str) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string empty_str = "";
-  EXPECT_THROW(ConvertStringToIntervalStruct(empty_str, interval_struct),
-               std::invalid_argument);
+  auto result = ConvertStringToIntervalStruct(empty_str, interval_struct);
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
+  EXPECT_THAT(result.message,
+              ::testing::HasSubstr("Interval string can't be empty"));
 }
 
 bool CompareTimestampStruct(const SQL_TIMESTAMP_STRUCT& ts1,

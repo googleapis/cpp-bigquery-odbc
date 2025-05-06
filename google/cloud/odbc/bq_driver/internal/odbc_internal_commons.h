@@ -339,8 +339,8 @@ std::string FormatIntervalToString(SQL_INTERVAL_STRUCT interval);
 odbc_internal::StatusRecord ConvertUnixTimestampToTimestampStruct(
     double unix_timestamp, SQL_TIMESTAMP_STRUCT& timestamp_struct);
 
-void ConvertStringToIntervalStruct(std::string const& interval_str,
-                                   SQL_INTERVAL_STRUCT& interval_struct);
+odbc_internal::StatusRecord ConvertStringToIntervalStruct(
+    std::string const& interval_str, SQL_INTERVAL_STRUCT& interval_struct);
 
 inline void GetSinglePrecisionInterval(
     const SQL_INTERVAL_STRUCT interval_struct, SQLUINTEGER& value) {

@@ -28,6 +28,7 @@
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
+using ::google::cloud::odbc_internal::SQLStates;
 
 // These are the states statement handle maintains for validations in ODBC APIs
 // using it.
@@ -219,11 +220,11 @@ class StatementHandle : public Handle {
   }
 
   // Gets next the job ID and statement type as a pair in the vector
-  std::pair<std::string, std::string> GetNextJobData() const {
+  StatusRecordOr<std::pair<std::string, std::string>> GetNextJobData() const {
     if (!job_data_.empty()) {
       return job_data_.back();
     }
-    throw std::runtime_error("No job data available");
+    return StatusRecord{SQLStates::k_HY000(), "No job data available"};
   }
 
   // Deletes next the job ID and statement type as a pair in the vector

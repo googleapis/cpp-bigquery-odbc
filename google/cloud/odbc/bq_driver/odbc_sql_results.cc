@@ -547,7 +547,11 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
       prepared_job->statistics.job_query_stats.statement_type;
   std::string sub_operation_type;
   if (stmt_handle.HasJobData()) {
-    sub_operation_type = stmt_handle.GetNextJobData().second;
+    auto job_status = stmt_handle.GetNextJobData();
+    if (!job_status.Ok()) {
+      return LogAndReturnCode(stmt_handle, job_status.GetStatusRecord());
+    }
+    sub_operation_type = job_status.GetValue().second;
   }
 
   DmlStats dml_stats = stmt_handle.GetDSResults().dml_stats;

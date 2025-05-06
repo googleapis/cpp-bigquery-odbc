@@ -132,8 +132,11 @@ StatusRecordOr<DSResults> ExecuteScript(
   if (!stmt_handle.HasJobData()) {
     return results;
   }
-
-  auto job_data = stmt_handle.GetNextJobData();
+  auto job_status = stmt_handle.GetNextJobData();
+  if (!job_status.Ok()) {
+    return job_status.GetStatusRecord();
+  }
+  auto job_data = job_status.GetValue();
   std::string job_id = job_data.first;
   std::string statement_type = job_data.second;
 

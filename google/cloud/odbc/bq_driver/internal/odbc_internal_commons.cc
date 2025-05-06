@@ -204,10 +204,12 @@ StatusRecord ConvertUnixTimestampToTimestampStruct(
   return StatusRecord::Ok();
 }
 
-SQL_DATE_STRUCT ConvertStringToDateStruct(std::string const& date_str) {
+StatusRecordOr<SQL_DATE_STRUCT> ConvertStringToDateStruct(
+    std::string const& date_str) {
   if (date_str.empty() || date_str.size() < SQL_DATE_LEN) {
-    throw std::invalid_argument(
-        "Invalid date string format: the string is either empty or too short.");
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid date string format: the string is either empty or too short."};
   }
   int year = std::stoi(date_str.substr(0, 4));
   int month = std::stoi(date_str.substr(5, 2));
@@ -232,11 +234,11 @@ SQL_TIME_STRUCT ConvertToTimeStruct(std::string const& time_str) {
   return time;
 }
 
-void ConvertStringToIntervalStruct(std::string const& interval_str,
-                                   SQL_INTERVAL_STRUCT& interval_struct) {
+StatusRecord ConvertStringToIntervalStruct(
+    std::string const& interval_str, SQL_INTERVAL_STRUCT& interval_struct) {
   if (interval_str.empty()) {
-    throw std::invalid_argument("Interval string can't be empty.");
-    return;
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Interval string can't be empty."};
   }
 
   int year = 0;
@@ -252,9 +254,9 @@ void ConvertStringToIntervalStruct(std::string const& interval_str,
   if (matched_items == 6) {
     fraction = 0;
   } else if (matched_items != 7) {
-    throw std::invalid_argument("Invalid interval string format");
-    return;
+    return StatusRecord{SQLStates::k_HY000(), "Invalid interval string format"};
   }
+
   interval_struct.interval_sign =
       (year < 0 || month < 0 || day < 0 || hour < 0 || minute < 0 || second < 0)
           ? -1
@@ -274,7 +276,13 @@ void ConvertStringToIntervalStruct(std::string const& interval_str,
         interval_struct.intval.year_month.year = static_cast<SQLUINTEGER>(year);
         interval_struct.intval.year_month.month =
             static_cast<SQLUINTEGER>(month);
+      } else {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid year-month interval."};
       }
+    } else {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Year-month interval must not include day/time."};
     }
   } else if (day != 0 || hour != 0 || minute != 0 || second != 0) {
     if (hour == 0 && minute == 0 && second == 0) {
@@ -329,6 +337,7 @@ void ConvertStringToIntervalStruct(std::string const& interval_str,
           static_cast<SQLUINTEGER>(second);
     }
   }
+  return StatusRecord::Ok();
 }
 
 std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
@@ -531,8 +540,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kDate: {
-            SQL_DATE_STRUCT date_struct = ConvertStringToDateStruct(data);
-            DateToDSValue(date_struct, row_val);
+            auto date_struct = ConvertStringToDateStruct(data);
+            if (!date_struct.Ok()) {
+              return date_struct.GetStatusRecord();
+            }
+            DateToDSValue(date_struct.GetValue(), row_val);
             break;
           }
           case BQDataType::kTime: {

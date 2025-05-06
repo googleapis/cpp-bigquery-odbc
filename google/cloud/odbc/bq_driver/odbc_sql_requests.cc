@@ -277,7 +277,11 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
 
   // If the statement was a script, retrieve sub-statement type
   if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
-    sub_statement_type = stmt_handle.GetNextJobData().second;
+    auto job_status = stmt_handle.GetNextJobData();
+    if (!job_status.Ok()) {
+      return job_status.GetStatusRecord();
+    }
+    sub_statement_type = job_status.GetValue().second;
   }
 
   // Process DSResults into a ResultSet
@@ -398,7 +402,11 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   }
 
   // Retrieve job data (job ID and statement type).
-  auto [job_id, statement_type] = stmt_handle.GetNextJobData();
+  auto job_status = stmt_handle.GetNextJobData();
+  if (!job_status.Ok()) {
+    return job_status.GetStatusRecord();
+  }
+  auto [job_id, statement_type] = stmt_handle.GetNextJobData().GetValue();
 
   // Fetch query results from BigQuery.
   Options options;
