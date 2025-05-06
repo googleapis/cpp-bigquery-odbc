@@ -75,21 +75,15 @@ jobs:
         $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
         Write-Output "Downloaded service account key to: $absoluteKeyPath"
 
-        Write-Output "Setting ABSOLUTE_KEY_PATH environment variable for subsequent steps..."
-        "ABSOLUTE_KEY_PATH=$absoluteKeyPath" | Add-Content -Path $env:GITHUB_ENV
+        if (-not (Test-Path -Path "C:\b" -PathType Container)) {
+            New-Item -Path "C:\b" -ItemType Directory -Force
+        }
+        Copy-Item -Path $absoluteKeyPath -Destination "C:\b\service_account_auth_keys.json"
 
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
-        $regTemplateFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
-        $processedRegFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_processed_$arch.reg"
-
-        Write-Output "Processing .reg template file: $regTemplateFilePath"
-
-        $escapedAbsoluteKeyPath = $absoluteKeyPath -replace '\\', '\\'
-
-        (Get-Content -Path $regTemplateFilePath -Raw) -replace '{{ABSOLUTE_KEY_PATH}}', $escapedAbsoluteKeyPath | Set-Content -Path $processedRegFilePath
-
-        Write-Output "Running DSN creation script from $processedRegFilePath ..."
-        reg import $processedRegFilePath
+        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
+        Write-Output "Running DSN creation script from $regFilePath ..."
+        reg import $regFilePath
         Write-Output "DSN creation completed."
     - name: Dynamic Configuration
       id: dynamic
@@ -134,8 +128,8 @@ jobs:
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=${ABSOLUTE_KEY_PATH}
-        export GOOGLE_APPLICATION_CREDENTIALS=${ABSOLUTE_KEY_PATH}
+        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
+        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
         if [ "${{ matrix.msvc }}" == "msvc-2022" ]; then
           ci/gha/builds/windows-cmake-integration.sh
         else
