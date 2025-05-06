@@ -153,4 +153,84 @@ std::vector<TimeBasicTestStruct> FetchTimeConversionResults(
   }
   return results;
 }
+
+std::vector<DateTimeBasicTestStruct> FetchDateTimeConversionResults(
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query) {
+  SQLRETURN status;
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  std::vector<DateTimeBasicTestStruct> results;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  for (auto const& expected : kConversionFromDateTimeTestData) {
+    SQLPOINTER data[kBufferLength] = {0};
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+
+    DateTimeBasicTestStruct result;
+    result.target_c_type = expected.target_c_type;
+    result.value = {};
+    result.return_val_str = std::nullopt;
+    result.status = SQL_ERROR;
+
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    result.status = status;
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR: {
+        result.return_val_str = reinterpret_cast<char*>(data);
+        break;
+      }
+      case SQL_C_WCHAR: {
+        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
+        result.return_val_str =
+            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+        break;
+      }
+      case SQL_C_BINARY: {
+        result.return_val_str =
+            FormatTimeStamp(*reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data));
+        break;
+      }
+      case SQL_C_TYPE_DATE: {
+        SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+        result.value.year = date->year;
+        result.value.month = date->month;
+        result.value.day = date->day;
+        break;
+      }
+      case SQL_C_TYPE_TIMESTAMP: {
+        result.value = *reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+        break;
+      }
+      case SQL_C_TYPE_TIME: {
+        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+        result.value.hour = time->hour;
+        result.value.minute = time->minute;
+        result.value.second = time->second;
+        break;
+      }
+      case SQL_C_SLONG:
+      case SQL_C_DOUBLE:
+      case SQL_C_USHORT: {
+        result.status = expected.status;
+        break;
+      }
+      default:
+        break;
+    }
+    results.emplace_back(result);
+  }
+  return results;
+}
+
 }  // namespace google::cloud::odbc_tests

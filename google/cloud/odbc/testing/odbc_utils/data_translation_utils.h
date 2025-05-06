@@ -41,6 +41,17 @@ struct TimeBasicTestStruct {
   SQLRETURN status;
 };
 
+struct DateTimeBasicTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQL_TIMESTAMP_STRUCT value;
+  // Optional string representation of the returned value
+  std::optional<std::string> return_val_str;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
 std::vector<DateBasicTestStruct> const kConversionFromDateTestData{
     {SQL_C_CHAR, {2024, 2, 20}, std::nullopt, SQL_SUCCESS},
     {SQL_C_TYPE_DATE, {2024, 3, 20}, std::nullopt, SQL_SUCCESS},
@@ -59,10 +70,40 @@ std::vector<TimeBasicTestStruct> const kConversionFromTimeTestData{
     {SQL_C_BINARY, {04, 06, 07}, std::nullopt, SQL_SUCCESS},
 };
 
+std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
+    {SQL_C_WCHAR,
+     {2024, 02, 20, 10, 20, 30, 123112},
+     std::nullopt,
+     SQL_SUCCESS},
+    {SQL_C_BINARY,
+     {2024, 03, 20, 00, 00, 00, 000000},
+     std::nullopt,
+     SQL_SUCCESS},
+    {SQL_C_TYPE_DATE,
+     {2024, 04, 20, 10, 20, 30, 123112},
+     std::nullopt,
+     SQL_SUCCESS},
+    {SQL_C_TYPE_TIME,
+     {2024, 05, 20, 10, 2, 30, 123112},
+     std::nullopt,
+     SQL_SUCCESS},
+    {SQL_C_TYPE_TIMESTAMP,
+     {2024, 06, 20, 11, 2, 30, 12311},
+     std::nullopt,
+     SQL_SUCCESS},
+    {SQL_C_CHAR, {2024, 2, 20}, std::nullopt, SQL_SUCCESS},
+    {SQL_C_SLONG, {2024, 01, 20, 10, 20, 30, 123112}, std::nullopt, SQL_ERROR},
+    {SQL_C_DOUBLE, {2024, 1, 20}, std::nullopt, SQL_ERROR},
+    {SQL_C_USHORT, {2024, 6, 20}, std::nullopt, SQL_ERROR},
+};
+
 std::vector<DateBasicTestStruct> FetchDateConversionResults(
     std::shared_ptr<ODBCHandles> const& conn, std::string const& query);
 
 std::vector<TimeBasicTestStruct> FetchTimeConversionResults(
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query);
+
+std::vector<DateTimeBasicTestStruct> FetchDateTimeConversionResults(
     std::shared_ptr<ODBCHandles> const& conn, std::string const& query);
 
 }  // namespace google::cloud::odbc_tests

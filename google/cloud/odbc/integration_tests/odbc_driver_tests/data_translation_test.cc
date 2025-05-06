@@ -2092,99 +2092,53 @@ TEST(DataTranslationTest, From_Json_to_ALL) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-struct DateTimeBasicTestStruct {
-  // The target C type SQLGetData will convert SQL type to
-  SQLSMALLINT target_c_type;
-  // The value that should be returned by SQLGetData if it succeeds
-  SQL_TIMESTAMP_STRUCT value;
-  // The status that should be returned by SQLGetData for this C Type
-  SQLRETURN status;
-};
-
-std::vector<DateTimeBasicTestStruct> const kConversionFromDateTimeTestData{
-    {SQL_C_WCHAR, {2024, 02, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
-    {SQL_C_BINARY, {2024, 03, 20, 00, 00, 00, 000000}, SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, {2024, 04, 20, 10, 20, 30, 123112}, SQL_SUCCESS},
-    {SQL_C_TYPE_TIME, {2024, 05, 20, 10, 2, 30, 123112}, SQL_SUCCESS},
-    {SQL_C_TYPE_TIMESTAMP, {2024, 06, 20, 11, 2, 30, 12311}, SQL_SUCCESS},
-    {SQL_C_SLONG, {2024, 01, 20, 10, 20, 30, 123112}, SQL_ERROR},
-    {SQL_C_DOUBLE, {2024, 1, 20}, SQL_ERROR},
-    {SQL_C_CHAR, {2024, 2, 20}, SQL_SUCCESS},
-    {SQL_C_USHORT, {2024, 6, 20}, SQL_ERROR},
-};
-
 void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
                                   std::string query) {
-  SQLRETURN status;
-  SQLPOINTER data[kBufferLength];
-  SQLLEN strlen_or_ind;
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query.c_str());
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  auto return_result = FetchDateTimeConversionResults(conn, query);
+  for (size_t i = 0; i < kConversionFromDateTimeTestData.size(); i++) {
+    auto const& expected = kConversionFromDateTimeTestData[i];
+    auto const& actual = return_result[i];
 
-  for (auto const& expected : kConversionFromDateTimeTestData) {
-    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
-                        kBufferLength, &strlen_or_ind);
-    CheckError(status, "SQLBindCol", conn);
-
-    status = SQLFetch(conn->hstmt);
-
-    if (status == SQL_NO_DATA) {
-      break;
-    }
-
-    if (!SQL_SUCCEEDED(status)) {
-      EXPECT_EQ(SQL_ERROR, expected.status);
-      break;
-    }
-    EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string expected_val = FormatTimeStamp(expected.value);
+    std::string expected_str_val = FormatTimeStamp(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
-        std::string returned_val = reinterpret_cast<char*>(data);
-        EXPECT_EQ(returned_val, expected_val);
+        EXPECT_EQ(actual.return_val_str, expected_str_val);
         break;
       }
       case SQL_C_WCHAR: {
-        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
-        std::string returned_val =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
-        EXPECT_STREQ(returned_val.data(), expected_val.data());
+        ASSERT_TRUE(actual.return_val_str.has_value());
+        EXPECT_STREQ(actual.return_val_str->c_str(), expected_str_val.c_str());
         break;
       }
       case SQL_C_BINARY: {
-        SQL_TIMESTAMP_STRUCT* timestamp =
-            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        std::string returned_val = FormatTimeStamp(*timestamp);
-        EXPECT_EQ(returned_val, expected_val);
+        ASSERT_TRUE(actual.return_val_str.has_value());
+        EXPECT_EQ(actual.return_val_str->c_str(), expected_str_val);
         break;
       }
       case SQL_C_TYPE_DATE: {
-        SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
-        EXPECT_EQ(date->year, expected.value.year);
-        EXPECT_EQ(date->month, expected.value.month);
-        EXPECT_EQ(date->day, expected.value.day);
+        EXPECT_EQ(actual.value.year, expected.value.year);
+        EXPECT_EQ(actual.value.month, expected.value.month);
+        EXPECT_EQ(actual.value.day, expected.value.day);
         break;
       }
       case SQL_C_TYPE_TIMESTAMP: {
-        SQL_TIMESTAMP_STRUCT* timestamp =
-            reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        EXPECT_EQ(timestamp->year, expected.value.year);
-        EXPECT_EQ(timestamp->month, expected.value.month);
-        EXPECT_EQ(timestamp->day, expected.value.day);
-        EXPECT_EQ(timestamp->hour, expected.value.hour);
-        EXPECT_EQ(timestamp->minute, expected.value.minute);
-        EXPECT_EQ(timestamp->second, expected.value.second);
+        EXPECT_EQ(actual.value.year, expected.value.year);
+        EXPECT_EQ(actual.value.month, expected.value.month);
+        EXPECT_EQ(actual.value.day, expected.value.day);
+        EXPECT_EQ(actual.value.hour, expected.value.hour);
+        EXPECT_EQ(actual.value.second, expected.value.second);
         break;
       }
       case SQL_C_TYPE_TIME: {
-        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
-        EXPECT_EQ(time->hour, expected.value.hour);
-        EXPECT_EQ(time->minute, expected.value.minute);
-        EXPECT_EQ(time->second, expected.value.second);
+        EXPECT_EQ(actual.value.hour, expected.value.hour);
+        EXPECT_EQ(actual.value.minute, expected.value.minute);
+        EXPECT_EQ(actual.value.second, expected.value.second);
+        break;
+      }
+      case SQL_C_SLONG:
+      case SQL_C_DOUBLE:
+      case SQL_C_USHORT: {
+        EXPECT_EQ(actual.status, expected.status);
         break;
       }
       default:
