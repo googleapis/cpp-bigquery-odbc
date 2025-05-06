@@ -233,4 +233,233 @@ std::vector<DateTimeBasicTestStruct> FetchDateTimeConversionResults(
   return results;
 }
 
+std::vector<IntervalBasicTestStruct> FetchIntervalConversionResults(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<IntervalBasicTestStruct> test_data) {
+  SQLRETURN status;
+  char read_stmt[kBufferLength];
+  SQLCHAR data_char[kBufferLength];
+  SQLLEN strlen_or_ind;
+  StrToChar(read_stmt, query.c_str());
+
+  std::vector<IntervalBasicTestStruct> results;
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn);
+
+  for (auto const& expected : test_data) {
+    std::cout << "target_c_type 1: " << expected.target_c_type << std::endl;
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data_char,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+    status = SQLFetch(conn->hstmt);
+
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    IntervalBasicTestStruct result;
+    result.target_c_type = expected.target_c_type;
+    result.interval_value = {};
+    result.return_val_str = std::nullopt;
+    result.status = SQL_ERROR;
+
+    result.status = status;
+    SQL_INTERVAL_STRUCT* return_val =
+        reinterpret_cast<SQL_INTERVAL_STRUCT*>(data_char);
+
+    switch (expected.target_c_type) {
+      case SQL_C_CHAR: {
+        result.return_val_str = reinterpret_cast<char*>(data_char);
+        break;
+      }
+      case SQL_C_WCHAR: {
+        SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
+        result.return_val_str = ConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR*>(data_char), length);
+        break;
+      }
+      case SQL_C_INTERVAL_YEAR: {
+        result.interval_value.interval_sign = return_val->interval_sign;
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.year_month.year =
+            return_val->intval.year_month.year;
+        break;
+      }
+      case SQL_C_INTERVAL_MONTH: {
+        result.interval_value.interval_sign = return_val->interval_sign;
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.year_month.month =
+            return_val->intval.year_month.month;
+        break;
+      }
+      case SQL_C_INTERVAL_YEAR_TO_MONTH: {
+        result.interval_value.interval_sign = return_val->interval_sign;
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.year_month.year =
+            return_val->intval.year_month.year;
+        result.interval_value.intval.year_month.month =
+            return_val->intval.year_month.month;
+        break;
+      }
+      case SQL_C_INTERVAL_DAY: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.day =
+            return_val->intval.day_second.day;
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        break;
+      }
+      case SQL_C_INTERVAL_SECOND: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.second =
+            return_val->intval.day_second.second;
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_HOUR: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.day =
+            return_val->intval.day_second.day;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_MINUTE: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.day =
+            return_val->intval.day_second.day;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_SECOND: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.day =
+            return_val->intval.day_second.day;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        result.interval_value.intval.day_second.second =
+            return_val->intval.day_second.second;
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR_TO_MINUTE: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR_TO_SECOND: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.hour =
+            return_val->intval.day_second.hour;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        result.interval_value.intval.day_second.second =
+            return_val->intval.day_second.second;
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
+        result.interval_value.interval_type = return_val->interval_type;
+        result.interval_value.intval.day_second.minute =
+            return_val->intval.day_second.minute;
+        result.interval_value.intval.day_second.second =
+            return_val->intval.day_second.second;
+        break;
+      }
+      default:
+        break;
+    }
+    results.emplace_back(result);
+  }
+  return results;
+}
+
+std::vector<IntervalArthemeticTestStruct> FetchIntervalArtheConvertResults(
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+
+  std::vector<IntervalArthemeticTestStruct> results;
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecDirect", conn);
+
+  for (auto const& expected : kConversionFromSinglePrecisionIntervalData) {
+    status = SQLBindCol(conn->hstmt, 1, expected.target_c_type, data,
+                        kBufferLength, &strlen_or_ind);
+    CheckError(status, "SQLBindCol", conn);
+    status = SQLFetch(conn->hstmt);
+    CheckError(status, "SQLFetch", conn);
+
+    IntervalArthemeticTestStruct result;
+    result.status = expected.target_c_type;
+    result.value = {};
+    result.status = expected.status;
+
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    result.status = status;
+    switch (expected.target_c_type) {
+      case SQL_C_STINYINT: {
+        result.value.int_t = *reinterpret_cast<int8_t*>(data);
+        break;
+      }
+      case SQL_C_UTINYINT: {
+        result.value.unit_t = *reinterpret_cast<uint8_t*>(data);
+        break;
+      }
+      case SQL_C_SSHORT: {
+        result.value.sql_smallint = *reinterpret_cast<SQLSMALLINT*>(data);
+        break;
+      }
+      case SQL_C_USHORT: {
+        result.value.sql_usmallint = *reinterpret_cast<SQLUSMALLINT*>(data);
+        break;
+      }
+      case SQL_C_ULONG: {
+        result.value.sql_uninteger = *reinterpret_cast<SQLUINTEGER*>(data);
+        break;
+      }
+      case SQL_C_SBIGINT: {
+        result.value.sql_bigint = *reinterpret_cast<SQLBIGINT*>(data);
+        break;
+      }
+      case SQL_C_NUMERIC: {
+        SQL_NUMERIC_STRUCT num = *reinterpret_cast<SQL_NUMERIC_STRUCT*>(data);
+        result.value.numeric = num;
+        break;
+      }
+      default:
+        break;
+    }
+    results.emplace_back(result);
+  }
+  return results;
+}
+
 }  // namespace google::cloud::odbc_tests
