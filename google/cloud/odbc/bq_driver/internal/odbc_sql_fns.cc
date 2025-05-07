@@ -103,17 +103,25 @@ odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
 }
 
 odbc_internal::StatusRecord PopulateSupportedODBC2Functions(
-    SQLUSMALLINT* supportedFunction) {
-  if (!supportedFunction) {
-    return StatusRecord{SQLStates::k_HY024(),
-                        "Argument supportedFunction cannot be null"};
-  }
-  // Populate ODBC 2 functions only.
-  for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
-    supportedFunction[i] = static_cast<SQLUSMALLINT>(
-        IsOdbcFunctionIdSupported(static_cast<UWORD>(i)));
-  }
-  return StatusRecord::Ok();
+  SQLUSMALLINT* supportedFunction) {
+std::cerr << "[DEBUG] Entering PopulateSupportedODBC2Functions\n";
+
+if (!supportedFunction) {
+  std::cerr << "[ERROR] supportedFunction is null\n";
+  return StatusRecord{SQLStates::k_HY024(),
+                      "Argument supportedFunction cannot be null"};
+}
+
+// Populate ODBC 2 functions only.
+for (int i = SQL_ODBC2_API_START; i <= SQL_ODBC2_API_LAST; i++) {
+  supportedFunction[i] = static_cast<SQLUSMALLINT>(
+      IsOdbcFunctionIdSupported(static_cast<UWORD>(i)));
+  std::cerr << "[DEBUG] Function ID " << i
+            << " supported: " << supportedFunction[i] << "\n";
+}
+
+std::cerr << "[DEBUG] Exiting PopulateSupportedODBC2Functions with OK status\n";
+return StatusRecord::Ok();
 }
 
 bool IsOdbcFunctionIdSupported(UWORD fid) {

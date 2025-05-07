@@ -130,52 +130,74 @@ SQLRETURN HandleConnectionInformationTypes(
 }  // namespace
 
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
-                                  SQLUSMALLINT function_id,
-                                  SQLUSMALLINT* supported_fn) {
-  StatusRecordOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(connection_handle);
-  if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
-    return handle_result.GetCalculatedReturnCode();
-  }
+  SQLUSMALLINT function_id,
+  SQLUSMALLINT* supported_fn) {
+std::cerr << "[DEBUG] Entering SQLGetFunctionsInternal\n";
+std::cerr << "[DEBUG] function_id = " << function_id << "\n";
 
-  ConnectionHandle* handle = *handle_result;
-  if (!supported_fn) {
-    auto status_record = StatusRecord{SQLStates::k_HY024(),
-                                      "Argument supported_fn cannot be null"};
-    return LogAndReturnCode(*handle, status_record);
-  }
+StatusRecordOr<ConnectionHandle*> handle_result =
+ValidateConnectionHandle(connection_handle);
+if (!handle_result) {
+std::cerr << "[ERROR] Invalid connection handle\n";
+TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+return handle_result.GetCalculatedReturnCode();
+}
 
-  switch (function_id) {
-    case SQL_API_ODBC3_ALL_FUNCTIONS: {
-      StatusRecord status_record =
-          PopulateSupportedODBC3Functions(supported_fn);
-      return LogAndReturnCode(*handle, status_record);
-    }
-    case SQL_API_ALL_FUNCTIONS: {
-      StatusRecord status_record =
-          PopulateSupportedODBC2Functions(supported_fn);
-      return LogAndReturnCode(*handle, status_record);
-    }
-    default:
-      break;
-  }
-  if (IsFunctionIdOdbc3(function_id)) {
-    SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
-    StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
-    if (!status_record.ok()) {
-      return LogAndReturnCode(*handle, status_record);
-    }
-    *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
-  } else if (IsFunctionIdOdbc2(function_id)) {
-    SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
-    StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
-    if (!status_record.ok()) {
-      return LogAndReturnCode(*handle, status_record);
-    }
-    *supported_fn = odbc2_fns[function_id];
-  }
-  return SQL_SUCCESS;
+ConnectionHandle* handle = *handle_result;
+
+if (!supported_fn) {
+std::cerr << "[ERROR] supported_fn is null\n";
+auto status_record = StatusRecord{SQLStates::k_HY024(),
+      "Argument supported_fn cannot be null"};
+return LogAndReturnCode(*handle, status_record);
+}
+
+switch (function_id) {
+case SQL_API_ODBC3_ALL_FUNCTIONS: {
+std::cerr << "[DEBUG] Populating supported ODBC3 functions (ALL)\n";
+StatusRecord status_record =
+PopulateSupportedODBC3Functions(supported_fn);
+std::cerr << "[DEBUG] Populate result: " << status_record.message << "\n";
+return LogAndReturnCode(*handle, status_record);
+}
+case SQL_API_ALL_FUNCTIONS: {
+std::cerr << "[DEBUG] Populating supported ODBC2 functions (ALL)\n";
+StatusRecord status_record =
+PopulateSupportedODBC2Functions(supported_fn);
+std::cerr << "[DEBUG] Populate result: " << status_record.message << "\n";
+return LogAndReturnCode(*handle, status_record);
+}
+default:
+std::cerr << "[DEBUG] Handling individual function_id check\n";
+break;
+}
+
+if (IsFunctionIdOdbc3(function_id)) {
+std::cerr << "[DEBUG] Detected as ODBC3 function\n";
+SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
+StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
+if (!status_record.ok()) {
+std::cerr << "[ERROR] Failed to populate ODBC3 functions: " << status_record.message << "\n";
+return LogAndReturnCode(*handle, status_record);
+}
+*supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
+std::cerr << "[DEBUG] Function support = " << *supported_fn << "\n";
+} else if (IsFunctionIdOdbc2(function_id)) {
+std::cerr << "[DEBUG] Detected as ODBC2 function\n";
+SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
+StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
+if (!status_record.ok()) {
+std::cerr << "[ERROR] Failed to populate ODBC2 functions: " << status_record.message << "\n";
+return LogAndReturnCode(*handle, status_record);
+}
+*supported_fn = odbc2_fns[function_id];
+std::cerr << "[DEBUG] Function support = " << *supported_fn << "\n";
+} else {
+std::cerr << "[WARN] function_id not recognized as ODBC2 or ODBC3\n";
+}
+
+std::cerr << "[DEBUG] Exiting SQLGetFunctionsInternal with SQL_SUCCESS\n";
+return SQL_SUCCESS;
 }
 
 SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,

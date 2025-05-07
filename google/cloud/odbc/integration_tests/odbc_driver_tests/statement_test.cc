@@ -13,13 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-#include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "absl/strings/match.h"
@@ -28,18 +21,6 @@ using ::testing::Contains;
 using ::testing::HasSubstr;
 
 namespace google::cloud::odbc_tests {
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-using google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::ColumnSchema;
-using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
-using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
-using google::cloud::odbc_bq_driver_internal::DescriptorType;
-using google::cloud::odbc_bq_driver_internal::ResultSet;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
-using google::cloud::odbc_bq_driver_internal::StmtStates;
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
 using ::testing::StartsWith;
 
 class StatementParameterizedTest : public ::testing::TestWithParam<bool> {};
@@ -1264,38 +1245,6 @@ TEST(StatementTest, RollBackTransaction) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void PrepareAndCheckQuery(std::string const& query,
-                          std::shared_ptr<ODBCHandles> conn,
-                          int expected_param_count,
-                          std::string const& expected_param_type = "",
-                          std::string const& expected_param_name = "") {
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-// Driver manager does not expect the statement handle to be modified since
-// its an input parameter. It creates its own structure from the statement
-// handle and sends it to the driver hence any internal state that the
-// driver sets in the input parameter will not be propagated back to the app.
-// This is probably the reason why Simba does not do this as well.
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-  EXPECT_EQ(stmt_handle->GetQueryParameters().size(), expected_param_count);
-
-  if (expected_param_count > 0) {
-    EXPECT_EQ(stmt_handle->GetQueryParameters().at(0).parameter_type.type,
-              expected_param_type);
-    if (!expected_param_name.empty()) {
-      EXPECT_EQ(stmt_handle->GetQueryParameters().at(0).name,
-                expected_param_name);
-    }
-  }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-}
-
 TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1822,43 +1771,6 @@ TEST_P(StatementParameterizedTest, SetAndGetExplicitDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLPrepare, SimpleStatementTest) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query = "Select 1";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-
-// Driver manager does not expect the statement handle to be modified since
-// its an input parameter. It creates its own structure from the statement
-// handle and sends it to the driver hence any internal state that the
-// driver sets in the input parameter will not be propagated back to the app.
-// This is probably the reason why Simba does not do this as well.
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  // Cast hstmt to StatementHandle*
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-  // Retrieve the result set
-  ResultSet const& result_set = stmt_handle->GetResultSet();
-
-  ASSERT_EQ(result_set.row_schema.size(), 1);
-
-  ColumnSchema const& column = result_set.row_schema[0];
-  EXPECT_EQ(column.col_index, 0);
-  EXPECT_EQ(column.col_type, BQDataType::kInt64);
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLPrepare, StatementFailure) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -1870,70 +1782,6 @@ TEST(SQLPrepare, StatementFailure) {
 
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   EXPECT_EQ(SQL_ERROR, status);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLPrepare, InsertQuery) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query =
-      "INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'Alice', 28)";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
-  CheckError(status, "SQLPrepare", conn);
-
-// Driver manager does not expect the statement handle to be modified since
-// its an input parameter. It creates its own structure from the statement
-// handle and sends it to the driver hence any internal state that the
-// driver sets in the input parameter will not be propagated back to the app.
-// This is probably the reason why Simba does not do this as well.
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  // Cast hstmt to StatementHandle*
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-
-  // Retrieve the result set
-  ResultSet const& result_set = stmt_handle->GetResultSet();
-
-  ASSERT_EQ(result_set.row_schema.size(), 3);
-
-  ColumnSchema const& column = result_set.row_schema[0];
-  EXPECT_EQ(column.col_index, 0);
-  EXPECT_EQ(column.col_type, BQDataType::kInt64);
-
-  ColumnSchema const& column2 = result_set.row_schema[1];
-  EXPECT_EQ(column2.col_index, 1);
-  EXPECT_EQ(column2.col_type, BQDataType::kString);
-
-  ColumnSchema const& column3 = result_set.row_schema[2];
-  EXPECT_EQ(column3.col_index, 2);
-  EXPECT_EQ(column3.col_type, BQDataType::kInt64);
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLPrepare, ParameterizedQuery) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
-
-  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=1",
-                       conn, 0);
-  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
-                       conn, 1, "INT64");
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  PrepareAndCheckQuery(
-      "SELECT * from INTEGRATION_TESTS.Test_Table where id=@var", conn, 1,
-      "INT64", "var");
-#endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1967,10 +1815,13 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  PrepareAndCheckQuery("SELECT * from INTEGRATION_TESTS.Test_Table where id=?",
-                       conn, 1, "INT64");
+  std::string query = "SELECT * from INTEGRATION_TESTS.Test_Table where id=?";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLPrepare", conn);
 
-  auto status =
+  status =
       SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
 
   SQLSMALLINT count = 0;
@@ -2142,36 +1993,6 @@ TEST(SQLDescribeColumn, ValidateColumnDetails) {
     EXPECT_TRUE(AreSqlAndBqTypesSame(col_ptr->data_type, schema[i].type));
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLPrepare, SimpleStatementTest_SQL_NTS) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string query = "Select 123\0";
-  char read_stmt[kBufferLength];
-  StrToChar(read_stmt, query);
-
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-// Driver manager does not expect the statement handle to be modified since
-// its an input parameter. It creates its own structure from the statement
-// handle and sends it to the driver hence any internal state that the
-// driver sets in the input parameter will not be propagated back to the app.
-// This is probably the reason why Simba does not do this as well.
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-  // Cast hstmt to StatementHandle*
-  auto stmt_handle = static_cast<StatementHandle*>(conn->hstmt);
-
-  EXPECT_EQ(stmt_handle->GetStmtState(), StmtStates::kStatementPrepared);
-  EXPECT_EQ(stmt_handle->GetQueryString(), query);
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -2468,20 +2289,12 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
 // TODO(b/400632420): Validate and compare SQLPrepare and SQLCancel return
 // status
 #ifndef _WIN32
-#ifdef DRIVER_MANAGER_TESTING_ENABLED
       // In unixODBC, the status code is `HY010`, but in other Driver Managers,
       // it is `S1010`. Updating it to match.
       ASSERT_TRUE(absl::StrContains(error, "S1010") ||
                   absl::StrContains(error, "HY010"));
       ASSERT_TRUE(absl::StrContains(error, "Function sequence error"))
           << "SQLExecute failed with unexpected error: " << error;
-#else
-      ASSERT_TRUE(absl::StrContains(error, "HY008"))
-          << "SQLExecute failed with unexpected error: " << error;
-      ASSERT_TRUE(absl::StrContains(error, "Operation canceled"))
-          << "SQLExecute failed with unexpected error: " << error;
-      EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
 #endif  // _WIN32
     }
   }

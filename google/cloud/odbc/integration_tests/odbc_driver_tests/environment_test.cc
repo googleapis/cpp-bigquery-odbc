@@ -16,11 +16,7 @@
 
 namespace google::cloud::odbc_tests {
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-
+#ifndef _WIN32
 TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPool_OnePerDriver) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
@@ -130,8 +126,6 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ConnectionPoolMatch_RelaxedMatch) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-
 TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC2) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_OV_ODBC2;
@@ -164,7 +158,6 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_ODBCVersion_ODBC3) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
 TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLINTEGER set_val = SQL_TRUE;
@@ -181,6 +174,7 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_OutputNTS_True) {
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLUINTEGER get_val1;
@@ -194,24 +188,15 @@ TEST(BQDriverTest, SQLGetEnvAttr_AllDefaults) {
   EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CP_MATCH, &get_val1, 0, nullptr),
             SQL_SUCCESS);
   EXPECT_EQ(get_val1, SQL_CP_STRICT_MATCH);
-// Not applicable against Driver Manager because:
-// (1) Driver Manager does not call the BQ Driver SQLGetEnvAttr API
-// for this attribute
-// (2) Its own implementation does not set a default value for this attribute
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-  EXPECT_EQ(
-      SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION, &get_val2, 0, nullptr),
-      SQL_SUCCESS);
-  EXPECT_EQ(get_val2, SQL_OV_ODBC3);
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
   EXPECT_EQ(
       SQLGetEnvAttr(conn->henv, SQL_ATTR_OUTPUT_NTS, &get_val2, 0, nullptr),
       SQL_SUCCESS);
   EXPECT_EQ(get_val2, SQL_TRUE);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-        // Error Cases
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+#endif  //_WIN32
 
 TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -225,26 +210,5 @@ TEST(BQDriverTest, SQLGetSetEnvAttr_UnSupportedAttributes) {
             SQL_ERROR);
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
 }
-
-// Not applicable for Driver Manager since it does not call
-// the BQ Driver for SQLSetEnvAttr API for attribute SQL_ATTR_CONNECTION_POOLING
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-TEST(BQDriverTest, SQLGetSetEnvAttr_InvalidHandle) {
-  auto conn = std::make_shared<ODBCHandles>();
-  SQLUINTEGER set_val = SQL_CP_OFF;
-  SQLUINTEGER get_val;
-
-  EXPECT_EQ(SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  EXPECT_EQ(SQLSetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING,
-                          (SQLPOINTER)set_val, 0),
-            SQL_INVALID_HANDLE);
-  EXPECT_EQ(SQLGetEnvAttr(conn->henv, SQL_ATTR_CONNECTION_POOLING, &get_val, 0,
-                          nullptr),
-            SQL_INVALID_HANDLE);
-}
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

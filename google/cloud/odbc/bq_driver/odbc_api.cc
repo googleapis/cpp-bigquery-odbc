@@ -931,30 +931,43 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetfunctions-function
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLGetFunctions(SQLHDBC connectionHandle,
-                                  SQLUSMALLINT functionId,
-                                  SQLUSMALLINT* supportedFunction) {
-  SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
-  bool is_tracing_enabled = IsTracingEnabled("SQLGetFunctions");
+  SQLUSMALLINT functionId,
+  SQLUSMALLINT* supportedFunction) {
+SQLRETURN rc = SQL_SUCCESS;
+SQLRETURN status;
+bool is_tracing_enabled = IsTracingEnabled("SQLGetFunctions");
 
-  HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
-  if (!lock.isLocked()) {
-    return SQL_INVALID_HANDLE;
-  }
-  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-  if (is_tracing_enabled)
-    TraceFunctionEntry_SQLGetFunctions(connectionHandle, functionId,
-                                       supportedFunction, *(*kTraceOption));
+std::cerr << "[DEBUG] Entering SQLGetFunctions\n";
+std::cerr << "[DEBUG] functionId = " << functionId << "\n";
 
-  // Call to internal function for SQLGetFunctions in odbc_driver_metadata.h.
-  rc = ::google::cloud::odbc_bq_driver::SQLGetFunctionsInternal(
-      connectionHandle, functionId, supportedFunction);
+HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
+if (!lock.isLocked()) {
+std::cerr << "[ERROR] Invalid connection handle\n";
+return SQL_INVALID_HANDLE;
+}
 
-  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
-  if (is_tracing_enabled)
-    TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOption));
+if (is_tracing_enabled) {
+std::cerr << "[TRACE] Tracing enabled: calling TraceFunctionEntry_SQLGetFunctions\n";
+TraceFunctionEntry_SQLGetFunctions(connectionHandle, functionId,
+       supportedFunction, *(*kTraceOption));
+}
 
-  return rc;
+std::cerr << "[DEBUG] Calling internal SQLGetFunctionsInternal\n";
+rc = ::google::cloud::odbc_bq_driver::SQLGetFunctionsInternal(
+connectionHandle, functionId, supportedFunction);
+
+std::cerr << "[DEBUG] Internal function returned: rc = " << rc << "\n";
+if (supportedFunction) {
+std::cerr << "[DEBUG] supportedFunction = " << *supportedFunction << "\n";
+}
+
+if (is_tracing_enabled) {
+std::cerr << "[TRACE] Tracing enabled: calling TraceFunctionExit_SQLGetFunctions\n";
+TraceFunctionExit_SQLGetFunctions(rc, *(*kTraceOption));
+}
+
+std::cerr << "[DEBUG] Exiting SQLGetFunctions\n";
+return rc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
