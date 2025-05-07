@@ -20,16 +20,14 @@ using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
-// TODO(b/402379435): Update '#ifdef DRIVER_MANAGER_TESTING_ENABLED' after
-// driver manager enabled.
 std::string GetDriverName() {
 #ifdef _WIN32
   return "Simba ODBC Driver for Google BigQuery";
 #else
-#ifdef DRIVER_MANAGER_TESTING_ENABLED
-  return "Google BigQuery ODBC Driver";
-#else
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
   return "Simba Google BigQuery ODBC Connector";
+#else
+  return "Google BigQuery ODBC Driver";
 #endif
 
 #endif  // _WIN32
@@ -386,23 +384,6 @@ void AssertBQDriverSQLGetInfo(std::shared_ptr<ODBCHandles> conn) {
   }
 }
 
-void AssertUnSupportedFnsODBC2(SQLUSMALLINT* odbc2_fns) {
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLERROR]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLPARAMOPTIONS]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETSCROLLOPTIONS]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETPARAM]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLALLOCCONNECT]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLALLOCENV]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLALLOCSTMT]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLFREECONNECT]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLFREEENV]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLGETCONNECTOPTION]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLGETSTMTOPTION]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETCONNECTOPTION]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLSETSTMTOPTION]);
-  EXPECT_EQ(SQL_FALSE, odbc2_fns[SQL_API_SQLTRANSACT]);
-}
-
 void AssertSupportedFnsODBC3(SQLUSMALLINT* odbc3_fns) {
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLALLOCHANDLE));
   EXPECT_EQ(SQL_TRUE, SQL_FUNC_EXISTS(odbc3_fns, SQL_API_SQLGETDESCFIELD));
@@ -487,8 +468,12 @@ void VerifyDriverInfo(std::shared_ptr<ODBCHandles> conn) {
   std::vector<int> driver_odbc_versions =
       GetMajorMinorVer(conn->metadata.driver_odbc_ver);
   EXPECT_EQ(driver_odbc_versions[0], 3);
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+  EXPECT_EQ(conn->metadata.driver_name, "Google ODBC Driver For BigQuery");
+#else
   EXPECT_EQ(conn->metadata.driver_name,
             "Simba ODBC Driver for Google BigQuery");
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }
 
 void SetAttr(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false) {
@@ -1310,10 +1295,6 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
   }
 }
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 TEST(DriverInfoTest, SQLGetInfo) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1347,33 +1328,7 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#else
-
-// Simba Driver and DriverManager doesn't support DSNLess SQLConnect API
-// with credentials file path
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
-TEST(BQDriverConnectionTest, SQLConnect_DSNLess) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string path_to_file_with_credentials =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-  EXPECT_EQ(
-      ConnectDsnLess(kServiceAccountEmail, path_to_file_with_credentials, conn),
-      SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-// Simba Driver doesn't support DSNLess SQLConnect API with credentials file
-// path.
-TEST(BQDriverConnectionTest, SQLConnectA_DSNLess) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string path_to_file_with_credentials =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-  EXPECT_EQ(ConnectDsnLess(kServiceAccountEmail, path_to_file_with_credentials,
-                           conn, true),
-            SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
+#ifndef _WIN32
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -1406,10 +1361,15 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_ENV)", conn);
 }
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
+
+#endif  //_WIN32
+
 // This test should not be run for Simba Driver since different values are
 // returned between google and Simba for some information types. For more
 // details please look at design doc: http://goto.google.com/sql-get-info-design
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(BQDriverTest, SQLGetInfo) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1472,32 +1432,7 @@ TEST(BQDriverTest, SQLGetFunctions_ODBC3_FunctionIdNotSupported) {
   EXPECT_EQ(SQL_FALSE, supported);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#ifndef DRIVER_MANAGER_TESTING_ENABLED
 
-TEST(BQDriverTest, SQLGetFunctions_ODBC2_FunctionIdNotSupported) {
-  auto conn = std::make_shared<ODBCHandles>();
-  SQLUSMALLINT supported;
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(SQL_SUCCESS,
-            SQLGetFunctions(conn->hdbc, SQL_API_SQLERROR, &supported));
-
-  EXPECT_EQ(SQL_FALSE, supported);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(BQDriverTest, SQLGetFunctions_ODBC2_AllUnSupported) {
-  auto conn = std::make_shared<ODBCHandles>();
-  SQLUSMALLINT odbc2_fns[100];
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(SQL_SUCCESS,
-            SQLGetFunctions(conn->hdbc, SQL_API_ALL_FUNCTIONS, odbc2_fns));
-  AssertUnSupportedFnsODBC2(odbc2_fns);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-#endif  // DRIVER_MANAGER_TESTING_ENABLED
 // Negative test cases for SQLGetFunctions
 
 TEST(SQLGetFunctionsInternal, SQLGetFunctions_ODBC2_NullConnectionHandle) {

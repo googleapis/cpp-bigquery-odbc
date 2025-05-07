@@ -73,14 +73,6 @@ set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 
-# Some integration tests are not applicable for Driver Manager testing. We
-# propagate the DRIVER_MANAGER_TESTING_ENABLED variable so those tests can be
-# disabled as needed. Driver Manager testing only comes into play for shared
-# object.
-if (BUILD_SHARED_LIBS)
-    add_definitions(-DDRIVER_MANAGER_TESTING_ENABLED)
-endif ()
-
 include(bq_driver.cmake)
 
 add_subdirectory(integration_tests)
