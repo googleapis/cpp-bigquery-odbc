@@ -3811,69 +3811,77 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_PARAM_TEST";
-
   Table table(table_name);
+
   // Create Table
   table.CreateWithPrepare(conn, "(Name STRING, Age INT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Prepare a multi-statement with INSERT + SELECT
+  // Reconnect for test execution
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Multi-statement script with parameters: INSERT + SELECT
   std::string insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?);";
   std::string select_stmt = "SELECT * FROM " + table_name + " WHERE Age = ?;";
   std::string script = insert_stmt + select_stmt;
 
   auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)script.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
+  ASSERT_EQ(status, SQL_SUCCESS) << "SQLPrepare failed";
 
-  // Parameters: Name, Age for INSERT, Age for SELECT
+  // Bind parameters: Name, Age for INSERT; Age for SELECT
   std::string name = "TestUser";
   SQLLEN name_ind = SQL_NTS;
   int64_t insert_age = 35;
   int64_t select_age = 35;
   SQLLEN age_ind = 0;
 
-  status =
+  ASSERT_EQ(
       SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR,
-                       0, 0, (SQLPOINTER)name.c_str(), 0, &name_ind);
-  CheckError(status, "SQLBindParameter (name)", conn);
+                       0, 0, (SQLPOINTER)name.c_str(), 0, &name_ind),
+      SQL_SUCCESS);
+  ASSERT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                             SQL_BIGINT, 0, 0, &insert_age, 0, &age_ind),
+            SQL_SUCCESS);
+  ASSERT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                             SQL_BIGINT, 0, 0, &select_age, 0, &age_ind),
+            SQL_SUCCESS);
 
-  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                            SQL_BIGINT, 0, 0, &insert_age, 0, &age_ind);
-  CheckError(status, "SQLBindParameter (insert_age)", conn);
-
-  status = SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                            SQL_BIGINT, 0, 0, &select_age, 0, &age_ind);
-  CheckError(status, "SQLBindParameter (select_age)", conn);
-
+  // Execute the combined script
   status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+  ASSERT_EQ(status, SQL_SUCCESS) << "SQLExecute failed";
 
-  SQLSMALLINT num_cols;
-  SQLLEN row_count;
+  SQLSMALLINT num_cols = -1;
+  SQLLEN row_count = -1;
 
+  // Step 1: Check result for INSERT
   // INSERT
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  SQLNumResultCols(conn->hstmt, &num_cols);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
   EXPECT_EQ(SQLRowCount(conn->hstmt, &row_count), SQL_SUCCESS);
   EXPECT_EQ(row_count, 1);
 
-  // SELECT
-  EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
-  status = SQLNumResultCols(conn->hstmt, &num_cols);
-  EXPECT_EQ(num_cols, 2);  // Name, Age
+  // Step 2: Move to SELECT result set
+  ASSERT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
 
+  SQLNumResultCols(conn->hstmt, &num_cols);
+  EXPECT_EQ(num_cols, 2);  // SELECT * => 2 columns: Name, Age
+
+  // Bind output columns
+  char fetched_name[100] = {0};
   int64_t fetched_age = 0;
-  char fetched_name[100];
   SQLLEN fetched_name_ind = 0, fetched_age_ind = 0;
 
-  // Bind and fetch SELECT result
-  SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, fetched_name, sizeof(fetched_name),
-             &fetched_name_ind);
-  SQLBindCol(conn->hstmt, 2, SQL_C_SBIGINT, &fetched_age, 0, &fetched_age_ind);
+  ASSERT_EQ(SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, fetched_name,
+                       sizeof(fetched_name), &fetched_name_ind),
+            SQL_SUCCESS);
+  ASSERT_EQ(SQLBindCol(conn->hstmt, 2, SQL_C_SBIGINT, &fetched_age, 0,
+                       &fetched_age_ind),
+            SQL_SUCCESS);
 
   ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
 
+  // No more results after SELECT
   EXPECT_EQ(SQLMoreResults(conn->hstmt), SQL_NO_DATA);
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
 
