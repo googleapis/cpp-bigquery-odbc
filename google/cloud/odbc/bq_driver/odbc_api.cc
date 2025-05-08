@@ -455,10 +455,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
         *(*kTraceOption));
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_in_connection_str;
-  std::wstring in_Connection_wstr(
-      reinterpret_cast<wchar_t const*>(inConnectionString));
-  auto in_Connection_wstr_len = wcslen(in_Connection_wstr.data());
-  if (in_Connection_wstr_len > 0) {
+  SQLCHAR* sqlchar_in_connection_str = nullptr;
+  if (inConnectionString) {
     utf8_in_connection_str =
         ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
     if (!utf8_in_connection_str) {
@@ -466,7 +464,9 @@ SQLRETURN SQL_API SQLDriverConnectW(
                          utf8_in_connection_str.GetStatusRecord().message);
       return utf8_in_connection_str.GetCalculatedReturnCode();
     }
-    inConnectionStringLen = utf8_in_connection_str->length();
+    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
+    if (inConnectionStringLen && inConnectionStringLen != SQL_NTS)
+      inConnectionStringLen = utf8_in_connection_str->length();
   }
   // outConnectionString is an output value that is not populated by the user.
   // This should not be unicode converted if it is empty. Instead we send a
@@ -476,7 +476,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   // Call to internal common function for SQLDriverConnect and
   // SQLDriverConnectW in odbc_connection.h.
   rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-      connectionHandle, windowHandle, ToSqlChar(utf8_in_connection_str->data()),
+      connectionHandle, windowHandle, sqlchar_in_connection_str,
       inConnectionStringLen, out_conn_str, outConnectionStringBufferLen,
       &out_conn_str_len, driverCompletion);
 
@@ -582,8 +582,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
         outConnectionStringLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
+  SQLCHAR* sqlchar_in_connection_str = nullptr;
   StatusRecordOr<std::string> utf8_in_connection_str;
-  if (inConnectionStringLen > 0 || inConnectionStringLen == SQL_NTS) {
+  if (inConnectionString) {
     utf8_in_connection_str =
         ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
     if (!utf8_in_connection_str) {
@@ -591,7 +592,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                          utf8_in_connection_str.GetStatusRecord().message);
       return utf8_in_connection_str.GetCalculatedReturnCode();
     }
-    inConnectionStringLen = utf8_in_connection_str->length();
+    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
+    if (inConnectionStringLen && inConnectionStringLen != SQL_NTS)
+      inConnectionStringLen = utf8_in_connection_str->length();
   }
   // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
   // in odbc_connection.h.
@@ -600,9 +603,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
   SQLCHAR* out_connection_string =
       reinterpret_cast<SQLCHAR*>(outConnectionString);
   rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
-      connectionHandle, ToSqlChar(utf8_in_connection_str->data()),
-      inConnectionStringLen, out_connection_string,
-      outConnectionStringBufferLen, outConnectionStringLen);
+      connectionHandle, sqlchar_in_connection_str, inConnectionStringLen,
+      out_connection_string, outConnectionStringBufferLen,
+      outConnectionStringLen);
 
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) {
@@ -719,7 +722,8 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                        utf8_server_name.GetStatusRecord().message);
     return utf8_server_name.GetCalculatedReturnCode();
   }
-  serverNameLen = utf8_server_name->length();
+  if (serverNameLen && serverNameLen != SQL_NTS)
+    serverNameLen = utf8_server_name->length();
 
   // User name and Auth strings are optional. Make sure they are non-empty
   // before converting to unicode.
@@ -736,7 +740,8 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                          utf8_user_name.GetStatusRecord().message);
       return utf8_user_name.GetCalculatedReturnCode();
     }
-    userNameLen = utf8_user_name->length();
+    if (userNameLen && userNameLen != SQL_NTS)
+      userNameLen = utf8_user_name->length();
   }
 
   size_t w_auth_str_len = 0;
@@ -752,7 +757,8 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                          utf8_auth_str.GetStatusRecord().message);
       return utf8_auth_str.GetCalculatedReturnCode();
     }
-    authStringLen = utf8_auth_str->length();
+    if (authStringLen && authStringLen != SQL_NTS)
+      authStringLen = utf8_auth_str->length();
   } else if (w_user_name_len > 0) {
     // It is an error to supply a username without a auth string.
     auto status = StatusRecord{
@@ -1811,19 +1817,22 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_stmt_txt;
-  if (statementTextLen > 0 || statementTextLen == SQL_NTS) {
+  SQLCHAR* sqlchar_stmt_txt = nullptr;
+  if (statementText) {
     utf8_stmt_txt = ConvertSQLWCHARToString(statementText, statementTextLen);
     if (!utf8_stmt_txt) {
       TracePrintInternal(*(*kTraceOption),
                          utf8_stmt_txt.GetStatusRecord().message);
       return utf8_stmt_txt.GetCalculatedReturnCode();
     }
-    if (statementTextLen != SQL_NTS) statementTextLen = utf8_stmt_txt->length();
+    sqlchar_stmt_txt = ToSqlChar(utf8_stmt_txt->data());
+    if (statementTextLen && statementTextLen != SQL_NTS)
+      statementTextLen = utf8_stmt_txt->length();
   }
   // Call to common internal function for SQLPrepare and SQLPrepareW
   // in odbc_sql_requests.h.
   rc = google::cloud::odbc_bq_driver::SQLPrepareInternal(
-      statementHandle, ToSqlChar(utf8_stmt_txt->data()), statementTextLen);
+      statementHandle, sqlchar_stmt_txt, statementTextLen);
 
   // Handle Unicode conversion of output parameters.
   // Call to Trace Unicode function exit in odbc_trace.h if tracing is enabled.
@@ -2009,19 +2018,24 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
                                   "Invalid string length"};
     return status_record.CalculateReturnCode();
   }
-  StatusRecordOr<std::string> utf8_cur_name =
-      ConvertSQLWCHARToString(cursorName, cursorNameLen);
-  if (!utf8_cur_name) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf8_cur_name.GetStatusRecord().message);
-    return utf8_cur_name.GetCalculatedReturnCode();
+  SQLCHAR* sqlchar_cur_name = nullptr;
+  StatusRecordOr<std::string> utf8_cur_name;
+  if (cursorName) {
+    utf8_cur_name = ConvertSQLWCHARToString(cursorName, cursorNameLen);
+    if (!utf8_cur_name) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf8_cur_name.GetStatusRecord().message);
+      return utf8_cur_name.GetCalculatedReturnCode();
+    }
+    sqlchar_cur_name = ToSqlChar(utf8_cur_name->data());
+    if (cursorNameLen && cursorNameLen != SQL_NTS)
+      cursorNameLen = utf8_cur_name->length();
   }
-  cursorNameLen = utf8_cur_name->length();
 
   // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
   // in odbc_sql_requests.h.
   rc = ::google::cloud::odbc_bq_driver::SQLSetCursorNameInternal(
-      statementHandle, ToSqlChar(utf8_cur_name->data()), cursorNameLen);
+      statementHandle, sqlchar_cur_name, cursorNameLen);
 
   // Handle Unicode conversion of output parameters.
 

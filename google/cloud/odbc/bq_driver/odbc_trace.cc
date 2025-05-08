@@ -122,12 +122,10 @@ void TraceFunctionEntry_SQLDriverConnectW(
     SQLWCHAR* out_conn_str, SQLSMALLINT out_conn_str_buf_len,
     SQLSMALLINT* out_conn_str_len, SQLUSMALLINT driver_completion,
     TraceOptions& opts) {
-  StatusRecordOr<std::string> utf8_in_connection_str;
   auto* out_conn_str_temp = reinterpret_cast<SQLCHAR*>(out_conn_str);
-  std::wstring in_connection_wstr(
-      reinterpret_cast<wchar_t const*>(in_connection_str));
-  auto in_connection_wstr_len = wcslen(in_connection_wstr.data());
-  if (in_connection_wstr_len > 0) {
+  StatusRecordOr<std::string> utf8_in_connection_str;
+  SQLCHAR* sqlchar_in_connection_str = nullptr;
+  if (in_connection_str) {
     utf8_in_connection_str =
         ConvertSQLWCHARToString(in_connection_str, in_connection_str_len);
     if (!utf8_in_connection_str) {
@@ -135,13 +133,13 @@ void TraceFunctionEntry_SQLDriverConnectW(
                          utf8_in_connection_str.GetStatusRecord().message);
       return;
     }
+    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
   }
 
-  TraceFunctionEntry_SQLDriverConnect(connection_handle, window_handle,
-                                      ToSqlChar(utf8_in_connection_str->data()),
-                                      in_connection_str_len, out_conn_str_temp,
-                                      out_conn_str_buf_len, out_conn_str_len,
-                                      driver_completion, opts);
+  TraceFunctionEntry_SQLDriverConnect(
+      connection_handle, window_handle, sqlchar_in_connection_str,
+      in_connection_str_len, out_conn_str_temp, out_conn_str_buf_len,
+      out_conn_str_len, driver_completion, opts);
 }
 
 void TraceFunctionExit_SQLDriverConnectW(SQLRETURN ret_code,
@@ -197,18 +195,24 @@ void TraceFunctionEntry_SQLBrowseConnectW(SQLHDBC connection_handle,
                                           SQLSMALLINT* out_conn_str_len,
                                           TraceOptions& opts) {
   auto* out_conn_str_temp = reinterpret_cast<SQLCHAR*>(out_conn_str);
-  StatusRecordOr<std::string> utf8_in_connection_str =
-      ConvertSQLWCHARToString(in_conn_str, in_conn_str_len);
-  if (!utf8_in_connection_str) {
-    TracePrintInternal(opts, utf8_in_connection_str.GetStatusRecord().message);
-    return;
+  SQLCHAR* sqlchar_in_connection_str = nullptr;
+  StatusRecordOr<std::string> utf8_in_connection_str;
+  if (in_conn_str) {
+    utf8_in_connection_str =
+        ConvertSQLWCHARToString(in_conn_str, in_conn_str_len);
+    if (!utf8_in_connection_str) {
+      TracePrintInternal(opts,
+                         utf8_in_connection_str.GetStatusRecord().message);
+      return;
+    }
+    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
+    if (in_conn_str_len && in_conn_str_len != SQL_NTS)
+      in_conn_str_len = utf8_in_connection_str->length();
   }
-  in_conn_str_len = utf8_in_connection_str->length();
 
   TraceFunctionEntry_SQLBrowseConnect(
-      connection_handle, ToSqlChar(utf8_in_connection_str->data()),
-      in_conn_str_len, out_conn_str_temp, out_conn_str_buf_len,
-      out_conn_str_len, opts);
+      connection_handle, sqlchar_in_connection_str, in_conn_str_len,
+      out_conn_str_temp, out_conn_str_buf_len, out_conn_str_len, opts);
 }
 
 void TraceFunctionExit_SQLBrowseConnectW(SQLRETURN ret_code,
@@ -952,15 +956,19 @@ void TraceFunctionEntry_SQLPrepareW(SQLHSTMT statement_handle,
                                     SQLWCHAR* stmt_txt, SQLINTEGER stmt_txt_len,
                                     TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_stmt_txt;
-  if (stmt_txt_len > 0 || stmt_txt_len == SQL_NTS) {
+  SQLCHAR* sqlchar_stmt_txt = nullptr;
+  if (stmt_txt) {
     utf8_stmt_txt = ConvertSQLWCHARToString(stmt_txt, stmt_txt_len);
     if (!utf8_stmt_txt) {
       TracePrintInternal(opts, utf8_stmt_txt.GetStatusRecord().message);
       return;
     }
+    sqlchar_stmt_txt = ToSqlChar(utf8_stmt_txt->data());
+    if (stmt_txt_len && stmt_txt_len != SQL_NTS)
+      stmt_txt_len = utf8_stmt_txt->length();
   }
-  TraceFunctionEntry_SQLPrepare(
-      statement_handle, ToSqlChar(utf8_stmt_txt->data()), stmt_txt_len, opts);
+  TraceFunctionEntry_SQLPrepare(statement_handle, sqlchar_stmt_txt,
+                                stmt_txt_len, opts);
 }
 
 void TraceFunctionExit_SQLPrepareW(SQLRETURN ret_code, TraceOptions& opts) {
@@ -1100,16 +1108,19 @@ void TraceFunctionEntry_SQLSetCursorNameW(SQLHSTMT statement_handle,
                                           SQLSMALLINT cur_name_len,
                                           TraceOptions& opts) {
   StatusRecordOr<std::string> utf8_cur_name;
-  if (cur_name_len > 0 || cur_name_len == SQL_NTS) {
+  SQLCHAR* sqlchar_cur_name = nullptr;
+  if (cur_name) {
     utf8_cur_name = ConvertSQLWCHARToString(cur_name, cur_name_len);
     if (!utf8_cur_name) {
       TracePrintInternal(opts, utf8_cur_name.GetStatusRecord().message);
       return;
     }
-    cur_name_len = utf8_cur_name->length();
+    sqlchar_cur_name = ToSqlChar(utf8_cur_name->data());
+    if (cur_name_len && cur_name_len != SQL_NTS)
+      cur_name_len = utf8_cur_name->length();
   }
-  TraceFunctionEntry_SQLSetCursorName(
-      statement_handle, ToSqlChar(utf8_cur_name->data()), cur_name_len, opts);
+  TraceFunctionEntry_SQLSetCursorName(statement_handle, sqlchar_cur_name,
+                                      cur_name_len, opts);
 }
 
 void TraceFunctionExit_SQLSetCursorNameW(SQLRETURN ret_code,
