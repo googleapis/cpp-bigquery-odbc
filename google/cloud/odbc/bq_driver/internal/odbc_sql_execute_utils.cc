@@ -118,10 +118,15 @@ StatusRecordOr<DSResults> ExecuteScript(
   auto all_jobs_status =
       bq_client->ListAllJobs(pq_status->job_reference.project_id,
                              pq_status->job_reference.job_id, list_job_options);
+  if (!all_jobs_status) {
+    return all_jobs_status.GetStatusRecord();
+  }
 
   for (auto const& job_status : all_jobs_status.GetValue()) {
     if (job_status.statistics.job_query_stats.statement_type !=
-        "CREATE_PROCEDURE") {
+            "CREATE_PROCEDURE" &&
+        job_status.statistics.script_statistics.evaluation_kind.value ==
+            "STATEMENT") {
       stmt_handle.SetJobData(
           job_status.job_reference.job_id,
           job_status.statistics.job_query_stats.statement_type);
