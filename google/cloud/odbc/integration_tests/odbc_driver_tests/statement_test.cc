@@ -3854,7 +3854,6 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
   SQLLEN row_count = -1;
 
   // Step 1: Check result for INSERT
-  // INSERT
   SQLNumResultCols(conn->hstmt, &num_cols);
   EXPECT_EQ(num_cols, 0);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_ERROR);
@@ -3865,7 +3864,7 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
   ASSERT_EQ(SQLMoreResults(conn->hstmt), SQL_SUCCESS);
 
   SQLNumResultCols(conn->hstmt, &num_cols);
-  EXPECT_EQ(num_cols, 2);  // SELECT * => 2 columns: Name, Age
+  EXPECT_EQ(num_cols, 2);
 
   // Bind output columns
   char fetched_name[100] = {0};
