@@ -3812,20 +3812,18 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
 
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SCRIPTS_PARAM_TEST";
 
-  // Create table separately
-  std::string create_stmt =
-      "CREATE OR REPLACE TABLE " + table_name + " (Name STRING, Age INT64);";
-  SQLRETURN status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS);
-  CheckError(status, "SQLExecDirect (CREATE TABLE)", conn);
-  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  Table table(table_name);
+  // Create Table
+  table.CreateWithPrepare(
+      conn, "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Prepare a multi-statement with INSERT + SELECT
   std::string insert_stmt = "INSERT INTO " + table_name + " VALUES (?, ?);";
   std::string select_stmt = "SELECT * FROM " + table_name + " WHERE Age = ?;";
   std::string script = insert_stmt + select_stmt;
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)script.c_str(), SQL_NTS);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)script.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
 
   // Parameters: Name, Age for INSERT, Age for SELECT
@@ -3883,7 +3881,6 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
   // Cleanup
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
