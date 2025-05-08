@@ -3814,8 +3814,7 @@ TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
 
   Table table(table_name);
   // Create Table
-  table.CreateWithPrepare(
-      conn, "(IntegerField INTEGER, Hindi STRING, Chinese STRING)");
+  table.CreateWithPrepare(conn, "(Name STRING, Age INT64)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Prepare a multi-statement with INSERT + SELECT
