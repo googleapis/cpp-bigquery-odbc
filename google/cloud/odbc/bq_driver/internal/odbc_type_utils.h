@@ -45,8 +45,11 @@ struct Interval {
 
 static std::vector<Interval> const kDatetimeTypes = {
     {SQL_TYPE_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
+    {SQL_DATE, SQL_C_TYPE_DATE, SQL_CODE_DATE},
     {SQL_TYPE_TIME, SQL_C_TYPE_TIME, SQL_CODE_TIME},
+    {SQL_TIME, SQL_C_TYPE_TIME, SQL_CODE_TIME},
     {SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
+    {SQL_TIMESTAMP, SQL_C_TYPE_TIMESTAMP, SQL_CODE_TIMESTAMP},
 };
 
 static std::vector<Interval> const kIntervalTypes = {

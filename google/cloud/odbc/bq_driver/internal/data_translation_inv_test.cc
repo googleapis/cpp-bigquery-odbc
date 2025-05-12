@@ -496,4 +496,39 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(conversion_result.GetStatusRecord().message,
             "Conversion is unsupported");
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIME) {
+  TIME_STRUCT time_val = {14, 30, 45};  // 14:30:45
+  SQLLEN data_size = sizeof(TIME_STRUCT);
+  DataBuffer data = {SQL_C_TYPE_TIME, &time_val, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  // Time types
+  conv_status = ConvertFromBuffer(data, SQL_TIME);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(FormatTimetoString(time_val), *conv_status);
+
+  std::time_t t = std::time(nullptr);
+  std::tm* now = std::localtime(&t);
+
+  TIMESTAMP_STRUCT expected;
+  expected.year = now->tm_year + 1900;
+  expected.month = now->tm_mon + 1;
+  expected.day = now->tm_mday;
+  expected.hour = time_val.hour;
+  expected.minute = time_val.minute;
+  expected.second = time_val.second;
+  expected.fraction = 0;
+
+  conv_status = ConvertFromBuffer(data, SQL_TIMESTAMP);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(FormatTimestampToString(expected), *conv_status);
+
+  // Unsupported type
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

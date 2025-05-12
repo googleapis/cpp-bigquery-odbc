@@ -3485,4 +3485,147 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DataTranslationTest, SQL_C_TYPE_TIME_To_SQL_TIME) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_EMPTY_TIME_TEST";
+  Table table(table_name);
+  Schema schema{
+      {"Time", "TIME"},
+  };
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert Data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  SQL_TIME_STRUCT input_time = {14, 15, 16};  // 2:15:16 PM
+  SQLLEN empty_time_len = sizeof(SQL_TIME_STRUCT);
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+                             SQL_TIME, 0, 0, &input_time, 0, &empty_time_len),
+            SQL_SUCCESS);
+  auto status = SQLExecute(conn->hstmt);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  // Validate Data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt = "SELECT Time FROM " + table_name;
+  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  SQL_TIME_STRUCT fetched_time = {};
+  SQLLEN fetched_len = 0;
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_TYPE_TIME, &fetched_time,
+                       sizeof(fetched_time), &fetched_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(fetched_time.hour, 14);
+  EXPECT_EQ(fetched_time.minute, 15);
+  EXPECT_EQ(fetched_time.second, 16);
+  EXPECT_EQ(fetched_len, sizeof(SQL_TIME_STRUCT));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, SQL_C_TYPE_TIME_To_SQL_TIMESTAMP) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_TIME_TO_TIMESTAMP_TEST";
+  Table table(table_name);
+  Schema schema{
+      {"TimeAsTimestamp", "TIMESTAMP"},
+  };
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert Data using SQL_TIME_STRUCT
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  SQL_TIME_STRUCT input_time = {10, 20, 30};  // 10:20:30 AM
+  SQLLEN input_time_len = sizeof(SQL_TIME_STRUCT);
+
+  EXPECT_EQ(
+      SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+                       SQL_TIMESTAMP, 0, 0, &input_time, 0, &input_time_len),
+      SQL_SUCCESS);
+
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
+  // Validate fetched TIMESTAMP
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt = "SELECT TimeAsTimestamp FROM " + table_name;
+  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  TIME_STRUCT fetched_ts = {};
+  SQLLEN fetched_len = 0;
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_TYPE_TIME, &fetched_ts,
+                       sizeof(fetched_ts), &fetched_len),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(fetched_ts.hour, 10);
+  EXPECT_EQ(fetched_ts.minute, 20);
+  EXPECT_EQ(fetched_ts.second, 30);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, SQL_C_TYPE_TIME_To_SQL_CHAR_fail) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_TIME_TO_CHAR_TEST";
+  Table table(table_name);
+  Schema schema{
+      {"TimeAsChar", "STRING"},
+  };
+
+  // Create table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert using formatted string from SQL_TIME_STRUCT
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?)";
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+
+  SQL_TIME_STRUCT time_value = {14, 5, 9};  // 14:05:09
+  SQLLEN input_time_len = sizeof(SQL_TIME_STRUCT);
+
+  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+                             SQL_CHAR, 0, 0, &time_value, 0, &input_time_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_ERROR);
+
+  // Cleanup
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

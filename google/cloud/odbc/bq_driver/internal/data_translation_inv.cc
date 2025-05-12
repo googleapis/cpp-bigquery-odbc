@@ -161,6 +161,42 @@ StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
   }
 }
 
+StatusRecordOr<std::string> ConvertFromTimeBuffer(DataBuffer& src_data,
+                                                  SQLSMALLINT sql_type) {
+  SQLPOINTER src_buf = src_data.buf;
+  SQLLEN* src_result_len = src_data.result_len;
+
+  auto* time_struct = static_cast<TIME_STRUCT*>(src_buf);
+  if (!time_struct || !src_result_len || *src_result_len < 0) {
+    return StatusRecord{SQLStates::k_HY000(), "Invalid time data"};
+  }
+
+  switch (sql_type) {
+    case SQL_TIME:
+    case SQL_TYPE_TIME: {
+      return FormatTimetoString(*time_struct);
+    }
+    case SQL_TIMESTAMP:
+    case SQL_TYPE_TIMESTAMP: {
+      SQL_TIMESTAMP_STRUCT timestamp_struct = {};
+
+      std::time_t t = std::time(nullptr);
+      std::tm* tm = std::localtime(&t);
+
+      timestamp_struct.year = tm->tm_year + 1900;
+      timestamp_struct.month = tm->tm_mon + 1;
+      timestamp_struct.day = tm->tm_mday;
+      timestamp_struct.hour = time_struct->hour;
+      timestamp_struct.minute = time_struct->minute;
+      timestamp_struct.second = time_struct->second;
+      timestamp_struct.fraction = 0;
+      return FormatTimestampToString(timestamp_struct);
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -255,6 +291,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_BINARY: {
       auto conv_status = ConvertFromBinaryBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_TYPE_TIME: {
+      auto conv_status = ConvertFromTimeBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }
