@@ -861,23 +861,24 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
-  status = SQLNumParams(conn->hstmt, &num_params);  // No ANSI version.
+  status = SQLNumParams(conn->hstmt, &num_params);
   CheckError(status, "SQLNumParams", conn);
+
+  std::vector<SQLLEN> chunk_sizes(num_params, 0);
 
   for (int i = 0; i < num_params; i++) {
     status = SQLDescribeParam(conn->hstmt, i + 1, &data_type, &bytes_left,
-                              &decimal_digits, &nullable);  // No ANSI version.
+                              &decimal_digits, &nullable);
     CheckError(status, "SQLDescribeParam", conn);
 
     SQLULEN param_bytes = kBufferLength;
-    SQLLEN chunk_size = SQL_LEN_DATA_AT_EXEC(param_bytes);
+    chunk_sizes[i] = SQL_LEN_DATA_AT_EXEC(param_bytes);
     data_ptr = data_to_insert[i];
-    // TODO(b/391091200): This should ideally be done based on the parameter
-    // descriptions: data_type and bytes_left
+
     status = SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                               SQL_LONGVARCHAR, param_bytes, 0,
                               (SQLPOINTER)data_ptr, 0,
-                              &chunk_size);  // No ANSI version.
+                              &chunk_sizes[i]);
     CheckError(status, "SQLBindParameter", conn);
   }
 
