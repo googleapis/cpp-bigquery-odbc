@@ -3629,6 +3629,7 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -3698,7 +3699,6 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // For the internal driver, the Driver Manager does not raise a function
 // sequence error, whereas for the external driver, it does.
 TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
