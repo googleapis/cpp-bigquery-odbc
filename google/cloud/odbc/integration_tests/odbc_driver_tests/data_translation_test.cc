@@ -3591,4 +3591,239 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+template <typename T>
+struct DataInversionTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  T value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<DataInversionTestStruct<SQL_TIME_STRUCT>> const
+    kConversionFromTimeInverseTestData = {
+        {SQL_TYPE_TIME, {12, 34, 56}, SQL_SUCCESS},
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+        {SQL_CHAR, {8, 15, 0}, SQL_ERROR},
+#else
+        {SQL_CHAR, {8, 15, 0}, SQL_SUCCESS},
+        {SQL_WCHAR, {23, 59, 59}, SQL_SUCCESS},
+        {SQL_TYPE_TIMESTAMP, {12, 10, 10}, SQL_SUCCESS},
+        {SQL_TYPE_DATE, {12, 10, 10}, SQL_ERROR},
+#endif
+};
+
+void InsertTimeParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInversionTestStruct<SQL_TIME_STRUCT>> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const& data = test_data[i];
+    SQLLEN data_len = sizeof(SQL_TIME_STRUCT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+    EXPECT_EQ(status, SQL_SUCCESS);
+
+    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+                              data.target_c_type, data_len, 0,
+                              (SQLPOINTER)&data.value, 0, &data_len);
+    CheckError(status, "SQLBindParameter", conn);
+
+    if (status != SQL_SUCCESS) continue;
+
+    status = SQLExecute(conn->hstmt);
+    EXPECT_EQ(status, data.status);
+  }
+}
+
+void ValidateTimeParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInversionTestStruct<SQL_TIME_STRUCT>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQL_TIME_STRUCT out_val = {};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      continue;
+    }
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_TYPE_TIME, &out_val,
+                         sizeof(SQL_TIME_STRUCT), &out_len),
+              SQL_SUCCESS);
+
+    EXPECT_EQ(status, test_case.status);
+    EXPECT_EQ(out_val.hour, test_case.value.hour);
+    EXPECT_EQ(out_val.minute, test_case.value.minute);
+    EXPECT_EQ(out_val.second, test_case.value.second);
+  }
+}
+
+TEST(DataTranslationTest, Parametrized_TIME_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_TIME_DATA_TRANSLATION";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, TimeField TIME)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertTimeParametrizedData(conn, table_name,
+                             kConversionFromTimeInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT TimeField FROM " + table_name + " ORDER BY Index";
+  ValidateTimeParametrizedData(conn, select_stmt,
+                               kConversionFromTimeInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+std::vector<DataInversionTestStruct<SQL_TIMESTAMP_STRUCT>> const
+    kConversionFromTimestampInverseTestData = {
+        {SQL_TYPE_TIMESTAMP, {2024, 2, 20, 5, 3, 20, 0}, SQL_SUCCESS},
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+        {SQL_CHAR, {2024, 2, 20, 5, 7, 20, 0}, SQL_ERROR},
+#else
+        {SQL_TYPE_TIME, {2024, 2, 20, 5, 3, 20, 0}, SQL_SUCCESS},
+        {SQL_TYPE_DATE, {2024, 2, 20, 5, 3, 20, 0}, SQL_SUCCESS},
+        {SQL_CHAR, {2024, 2, 20, 5, 2, 20, 0}, SQL_SUCCESS},
+        {SQL_WCHAR, {2024, 2, 20, 5, 7, 20, 0}, SQL_SUCCESS},
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+};
+
+void InsertTimestampParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInversionTestStruct<SQL_TIMESTAMP_STRUCT>> const&
+        test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const& data = test_data[i];
+    SQLLEN data_len = sizeof(SQL_TIMESTAMP_STRUCT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+    EXPECT_EQ(status, SQL_SUCCESS);
+
+    status = SQLBindParameter(
+        conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+        data.target_c_type, data_len, 0, (SQLPOINTER)&data.value, 0, &data_len);
+    CheckError(status, "SQLBindParameters", conn);
+
+    if (status != SQL_SUCCESS) {
+      continue;
+    }
+
+    status = SQLExecute(conn->hstmt);
+    EXPECT_EQ(status, data.status);
+  }
+}
+
+void ValidateTimestampParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInversionTestStruct<TIMESTAMP_STRUCT>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  TIMESTAMP_STRUCT out_val = {};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      continue;
+    }
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_TYPE_TIMESTAMP, &out_val,
+                         sizeof(TIMESTAMP_STRUCT), &out_len),
+              SQL_SUCCESS);
+    if (status == SQL_ERROR) {
+      continue;
+    }
+    EXPECT_EQ(status, test_case.status);
+    if (test_case.target_c_type == SQL_TYPE_DATE) {
+      EXPECT_EQ(out_val.year, test_case.value.year);
+      EXPECT_EQ(out_val.month, test_case.value.month);
+      EXPECT_EQ(out_val.day, test_case.value.day);
+      EXPECT_EQ(out_val.hour, 0);
+      EXPECT_EQ(out_val.minute, 0);
+      EXPECT_EQ(out_val.second, 0);
+      EXPECT_EQ(out_val.fraction, 0);
+    } else if (test_case.target_c_type == SQL_TYPE_TIME) {
+      EXPECT_EQ(out_val.year, 1970);
+      EXPECT_EQ(out_val.month, 1);
+      EXPECT_EQ(out_val.day, 1);
+      EXPECT_EQ(out_val.hour, test_case.value.hour);
+      EXPECT_EQ(out_val.minute, test_case.value.minute);
+      EXPECT_EQ(out_val.second, test_case.value.second);
+      EXPECT_EQ(out_val.fraction, 0);
+    } else {
+      EXPECT_EQ(out_val.year, test_case.value.year);
+      EXPECT_EQ(out_val.month, test_case.value.month);
+      EXPECT_EQ(out_val.day, test_case.value.day);
+      EXPECT_EQ(out_val.hour, test_case.value.hour);
+      EXPECT_EQ(out_val.minute, test_case.value.minute);
+      EXPECT_EQ(out_val.second, test_case.value.second);
+      EXPECT_EQ(out_val.fraction, test_case.value.fraction);
+    }
+  }
+}
+
+TEST(DataTranslationTest, Parametrized_TIMESTAMP_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_TIMESTAMP_DATA_TRANSLATION";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, TimestampField TIMESTAMP)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertTimestampParametrizedData(conn, table_name,
+                                  kConversionFromTimestampInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT TimestampField FROM " + table_name + " ORDER BY Index";
+  ValidateTimestampParametrizedData(conn, select_stmt,
+                                    kConversionFromTimestampInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

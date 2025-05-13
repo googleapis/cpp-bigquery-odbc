@@ -496,4 +496,67 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(conversion_result.GetStatusRecord().message,
             "Conversion is unsupported");
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIME) {
+  TIME_STRUCT ts_val = {14, 30, 45};
+  SQLLEN data_size = sizeof(TIME_STRUCT);
+  DataBuffer data = {SQL_C_TYPE_TIME, &ts_val, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  std::string const expected_time = "14:30:45";
+
+  // Supported timestamp-compatible types
+  std::vector<SQLSMALLINT> supported_types = {
+      SQL_TYPE_TIMESTAMP, SQL_TYPE_TIME, SQL_CHAR,     SQL_VARCHAR,
+      SQL_LONGVARCHAR,    SQL_WCHAR,     SQL_WVARCHAR, SQL_WLONGVARCHAR,
+  };
+
+  for (SQLSMALLINT sql_type : supported_types) {
+    conv_status = ConvertFromBuffer(data, sql_type);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, expected_time);
+  }
+
+  // Unsupported SQL type (e.g., SQL_INTEGER)
+  conv_status = ConvertFromBuffer(data, SQL_INTEGER);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIMESTAMP) {
+  TIMESTAMP_STRUCT ts_val = {2024, 5, 9, 14, 30, 45, 123456};
+  SQLLEN data_size = sizeof(TIMESTAMP_STRUCT);
+  DataBuffer data = {SQL_C_TYPE_TIMESTAMP, &ts_val, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  std::string const expected_timestamp = "2024-05-09 14:30:45.123456";
+
+  // Supported timestamp-compatible types
+  std::vector<SQLSMALLINT> supported_types = {
+      SQL_TYPE_TIMESTAMP, SQL_CHAR,     SQL_VARCHAR,      SQL_LONGVARCHAR,
+      SQL_WCHAR,          SQL_WVARCHAR, SQL_WLONGVARCHAR,
+  };
+
+  for (SQLSMALLINT sql_type : supported_types) {
+    conv_status = ConvertFromBuffer(data, sql_type);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, expected_timestamp);
+  }
+
+  conv_status = ConvertFromBuffer(data, SQL_TYPE_DATE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(*conv_status, "2024-05-09 00:00:00.000000");
+
+  conv_status = ConvertFromBuffer(data, SQL_TYPE_TIME);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(*conv_status, "1970-01-01 14:30:45.000000");
+
+  // Unsupported SQL type (e.g., SQL_INTEGER)
+  conv_status = ConvertFromBuffer(data, SQL_INTEGER);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
