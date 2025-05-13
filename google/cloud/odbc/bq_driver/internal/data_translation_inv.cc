@@ -303,6 +303,25 @@ StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
   }
 }
 
+StatusRecordOr<std::string> ConvertFromDateBuffer(DataBuffer src_data,
+                                                  SQLSMALLINT sql_type) {
+  SQL_DATE_STRUCT src_val = *reinterpret_cast<SQL_DATE_STRUCT*>(src_data.buf);
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+    case SQL_TYPE_DATE: {
+      return FormatDateToString(src_val);
+      break;
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -424,6 +443,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_NUMERIC: {
       auto conv_status = ConvertFromNumericBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_TYPE_DATE: {
+      auto conv_status = ConvertFromDateBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }

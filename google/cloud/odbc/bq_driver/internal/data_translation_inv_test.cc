@@ -621,4 +621,43 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
   }
 }
 
+
+TEST(ConvertFromBuffer, From_SQL_C_Type_Date) {
+  SQL_DATE_STRUCT date_data_first = {2024, 5, 13};
+  SQL_DATE_STRUCT date_data_sec = {1999, 12, 31};
+
+  SQLLEN data_size = sizeof(SQL_DATE_STRUCT);
+
+  DataBuffer date_buf_first = {SQL_C_TYPE_DATE, &date_data_first, data_size,
+                               &data_size};
+
+  DataBuffer date_buf_sec = {SQL_C_TYPE_DATE, &date_data_sec, data_size,
+                             &data_size};
+
+  StatusRecordOr<std::string> conversion_result;
+
+  // SQL_TYPE_DATE
+  conversion_result = ConvertFromBuffer(date_buf_first, SQL_TYPE_DATE);
+  EXPECT_TRUE(conversion_result);
+  EXPECT_EQ(*conversion_result, "2024-05-13");
+
+  // SQL_CHAR
+  conversion_result = ConvertFromBuffer(date_buf_sec, SQL_CHAR);
+  EXPECT_TRUE(conversion_result);
+  EXPECT_EQ(*conversion_result, "1999-12-31");
+
+  // SQL_WCHAR
+  conversion_result = ConvertFromBuffer(date_buf_first, SQL_WCHAR);
+  EXPECT_TRUE(conversion_result);
+  EXPECT_EQ(*conversion_result, "2024-05-13");
+
+  // Unsupported target SQL type (SQL_INTEGER)
+  conversion_result = ConvertFromBuffer(date_buf_first, SQL_INTEGER);
+  EXPECT_FALSE(conversion_result);
+  EXPECT_EQ(conversion_result.GetStatusRecord().sql_state,
+            SQLStates::k_HY000());
+  EXPECT_EQ(conversion_result.GetStatusRecord().message,
+            "Conversion is unsupported");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
