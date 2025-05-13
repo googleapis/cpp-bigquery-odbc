@@ -877,8 +877,7 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
 
     status = SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                               SQL_LONGVARCHAR, param_bytes, 0,
-                              (SQLPOINTER)data_ptr, 0,
-                              &chunk_sizes[i]);
+                              (SQLPOINTER)data_ptr, 0, &chunk_sizes[i]);
     CheckError(status, "SQLBindParameter", conn);
   }
 

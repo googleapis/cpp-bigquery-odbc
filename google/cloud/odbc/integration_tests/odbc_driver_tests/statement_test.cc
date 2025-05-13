@@ -3259,7 +3259,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   // TODO(b/404480454): Issue with SQLBindParameter When Using
   // the Same Indicator Pointer for Multiple Parameters
-  std::vector<SQLLEN> indicator(5,SQL_DATA_AT_EXEC);
+  std::vector<SQLLEN> indicator(5, SQL_DATA_AT_EXEC);
   int num_params = schema.size();
   int param;
   // Bind parameters
