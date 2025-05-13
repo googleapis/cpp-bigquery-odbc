@@ -471,8 +471,8 @@ ConstructNamedParametersPostQueryRequest(
         google::cloud::bigquery_v2_minimal_internal::QueryParameter> const&
         named_query_params);
 
-SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
-    std::string const& date_str);
+odbc_internal::StatusRecordOr<SQL_TIMESTAMP_STRUCT>
+ConvertStringToTimestampStruct(std::string const& date_str);
 
 enum class LanguageDialect {
   kStandardSQL = 1,

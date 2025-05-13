@@ -1021,45 +1021,46 @@ TEST(ConvertStringToTimestampStruct, ValidDateWithoutFraction) {
   std::string date_str = "2024-10-04 12:30:45";
   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 0};
 
-  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
-  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
 }
 
 TEST(ConvertStringToTimestampStruct, ValidDateWithFraction) {
   std::string date_str = "2024-10-04 12:30:45.123456";
   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
 
-  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
-  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
 }
 
 TEST(ConvertStringToTimestampStruct, ValidDateWithShortFraction) {
   std::string date_str = "2024-10-04 12:30:45.123";
   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123000};
 
-  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
-  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
 }
 
 TEST(ConvertStringToTimestampStruct, ValidDateNoFraction) {
   std::string date_str = "2024-10-04 12:30:45";
   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 0};
 
-  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
-  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
 }
 
 TEST(ConvertStringToTimestampStruct, EmptyDateString) {
   std::string date_str = "";
-  EXPECT_THROW(ConvertStringToTimestampStruct(date_str), std::invalid_argument);
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_FALSE(result.Ok());
 }
 
 TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
   std::string date_str = "2024-10-04 12:30:45.1234567";
   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
 
-  SQL_TIMESTAMP_STRUCT result = ConvertStringToTimestampStruct(date_str);
-  EXPECT_TRUE(CompareTimestampStruct(result, expected));
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
 }
 
 TEST(BooleanToDSValue, CheckBooleanTrue) {

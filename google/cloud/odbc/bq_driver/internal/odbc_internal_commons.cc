@@ -441,26 +441,43 @@ std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
   return std::string(buffer);
 }
 
-SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
+StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
     std::string const& date_str) {
+  std::string cleaned_date_str = date_str;
+  std::replace(cleaned_date_str.begin(), cleaned_date_str.end(), 'T', ' ');
+
   SQL_TIMESTAMP_STRUCT date_struct = {};
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  int second;
+  char fraction_str[10] = "0";
 
-  int year = std::stoi(date_str.substr(0, 4));
-  int month = std::stoi(date_str.substr(5, 2));
-  int day = std::stoi(date_str.substr(8, 2));
-  int hour = std::stoi(date_str.substr(11, 2));
-  int minute = std::stoi(date_str.substr(14, 2));
-  int second = std::stoi(date_str.substr(17, 2));
+  int matched =
+      std::sscanf(cleaned_date_str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%6s",
+                  &year, &month, &day, &hour, &minute, &second, fraction_str);
 
-  int fraction = 0;
-  std::size_t dot_pos = date_str.find('.', 19);
-  if (dot_pos != std::string::npos) {
-    std::string fraction_str = date_str.substr(dot_pos + 1);
-    fraction_str = fraction_str.substr(0, 6);
-    while (fraction_str.length() < 6) {
-      fraction_str += "0";
+  if (matched < 6) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "String not correctly converted to timestamp"};
+  }
+
+  SQLUINTEGER fraction = 0;
+  if (matched == 7) {
+    int len = 0;
+    for (char ch : std::string(fraction_str)) {
+      if (!std::isdigit(ch)) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Fractional part is not a valid number"};
+      }
+      fraction = fraction * 10 + (ch - '0');
+      ++len;
     }
-    fraction = std::stoi(fraction_str);
+    for (; len < 6; ++len) {
+      fraction *= 10;
+    }
   }
 
   date_struct.year = static_cast<SQLSMALLINT>(year);
@@ -469,7 +486,7 @@ SQL_TIMESTAMP_STRUCT ConvertStringToTimestampStruct(
   date_struct.hour = static_cast<SQLUSMALLINT>(hour);
   date_struct.minute = static_cast<SQLUSMALLINT>(minute);
   date_struct.second = static_cast<SQLUSMALLINT>(second);
-  date_struct.fraction = static_cast<SQLUINTEGER>(fraction);
+  date_struct.fraction = fraction;
 
   return date_struct;
 }
@@ -564,9 +581,11 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kDatetime: {
-            SQL_TIMESTAMP_STRUCT time_struct =
-                ConvertStringToTimestampStruct(data);
-            TimestampToDSValue(time_struct, row_val);
+            auto time_struct = ConvertStringToTimestampStruct(data);
+            if (!time_struct.Ok()) {
+              return time_struct.GetStatusRecord();
+            }
+            TimestampToDSValue(time_struct.GetValue(), row_val);
             break;
           }
           case BQDataType::kBytes: {
