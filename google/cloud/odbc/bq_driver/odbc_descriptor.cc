@@ -294,14 +294,13 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   return LogAndReturnCode(*(*handle_result), status_record);
 }
 
-template <typename T>
 StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                                        SQLSMALLINT rec_number,
                                        SQLSMALLINT field_identifier,
                                        SQLPOINTER out_value,
                                        SQLINTEGER value_buffer_len,
                                        SQLSMALLINT* value_string_len,
-                                       std::optional<T> cast_target_type) {
+                                       bool is_type_sqllen) {
   std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     return StatusRecord{SQLStates::k_HY091(),
@@ -399,8 +398,8 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     case SQL_DESC_CONCISE_TYPE:
       // Cast descriptor_record.type to T datatype, to prevent truncation
       // or garbage value when the field is smaller (e.g., SQLSMALLINT).
-      if (cast_target_type.has_value()) {
-        T cast_val = static_cast<T>(descriptor_record.concise_type);
+      if (is_type_sqllen) {
+        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.concise_type);
         IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
       } else {
         IntValueToOutputBufferResponse(descriptor_record.concise_type,
@@ -509,8 +508,8 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     case SQL_DESC_TYPE:
       // Cast descriptor_record.type to T datatype, to prevent truncation
       // or garbage value when the field is smaller (e.g., SQLSMALLINT).
-      if (cast_target_type.has_value()) {
-        T cast_val = static_cast<T>(descriptor_record.type);
+      if (is_type_sqllen) {
+        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.type);
         IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
       } else {
         IntValueToOutputBufferResponse(descriptor_record.type, out_value,
