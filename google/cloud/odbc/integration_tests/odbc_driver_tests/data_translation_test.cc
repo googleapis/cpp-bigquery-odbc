@@ -1341,6 +1341,7 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     }
 
     EXPECT_EQ(SQL_SUCCESS, expected.status);
+    std::cout<<"strlen_or_ind "<<strlen_or_ind<<std::endl;
     std::string str_int(reinterpret_cast<char*>(data_int));
     if (expected.target_c_type == SQL_C_WCHAR) {
       str_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),

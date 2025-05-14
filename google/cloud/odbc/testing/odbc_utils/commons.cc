@@ -1653,7 +1653,6 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
     stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
   }
   std::cout<<"here2 in_str_len "<<in_str_len<<std::endl;
-  stmt_txt_wstr.push_back(L'\0');
   return Utf16ToUtf8(stmt_txt_wstr);
 }
 
