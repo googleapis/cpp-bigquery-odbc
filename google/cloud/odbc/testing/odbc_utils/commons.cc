@@ -1527,8 +1527,8 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int utf8Length = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1, NULL,
-                                       0, NULL, NULL);
+  int utf8Length = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
+                                       NULL, 0, NULL, NULL);
   if (utf8Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting wstring to string");
