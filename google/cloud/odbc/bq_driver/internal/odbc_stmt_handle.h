@@ -151,6 +151,11 @@ class StatementHandle : public Handle {
     return prepared_job_;
   }
 
+  void SetPreparedJob(
+      ::google::cloud::bigquery_v2_minimal_internal::Job const& job) {
+    prepared_job_ = job;
+  }
+
   void SetNullPreparedJob() { prepared_job_ = std::nullopt; }
 
   // `StmtStates` will get updated when SQLExecute is called.
@@ -236,10 +241,22 @@ class StatementHandle : public Handle {
     }
   }
 
+  SQLUSMALLINT GetCurrentParamIndex() const { return current_param_index_; }
+
+  inline void SetCurrentParamIndex(SQLUSMALLINT param_index) {
+    current_param_index_ = param_index;
+  }
+
+  inline void SetNeedData(bool need_data) { is_need_data_ = need_data; }
+
+  bool GetNeedData() const { return is_need_data_; }
+
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
+  SQLUSMALLINT current_param_index_ = 0;
+  bool is_need_data_ = false;
 
  private:
   std::shared_ptr<Query> query_;

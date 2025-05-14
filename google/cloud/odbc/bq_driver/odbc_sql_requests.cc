@@ -216,7 +216,8 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
 // @param stmt_handle The statement handle
 // @param failure_state The state which should be set if there is any failure.
 StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
-                                    StmtStates failure_state) {
+                                    StmtStates failure_state,
+                                    bool is_data_buff_req = false) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
@@ -239,8 +240,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
 
   std::vector<QueryParameter>& query_params = stmt_handle.GetQueryParameters();
   if (!query_params.empty()) {
-    StatusRecord status =
-        ConstructPositionalQueryParams(apd, ipd, query_params);
+    StatusRecord status = ConstructPositionalQueryParams(apd, ipd, query_params,
+                                                         is_data_buff_req);
     if (!status.ok()) {
       return status;
     }
@@ -885,6 +886,10 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
+  if (!execute_status.ok()) {
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    return SQL_NEED_DATA;
+  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 
@@ -1162,6 +1167,168 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
     return LogAndReturnCode(stmt_handle, fetch_status);
   }
 
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
+                             SQLLEN str_len_or_ind_ptr) {
+  // Validate statement handle
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& stmt_handle = *(*handle_result);
+
+  if (data == nullptr && str_len_or_ind_ptr > 0) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_HY009(), "Invalid use of null pointer."});
+  }
+
+  // Ensure statement is in kNeedsPutData state
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_HY010(),
+                      "Function sequence error: Incorrect statement state."});
+  }
+
+  SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
+  if (param_index > stmt_handle.GetParamCount()) {
+    return LogAndReturnCode(
+        stmt_handle,
+        {SQLStates::k_HY000(), "No parameter currently expecting data."});
+  }
+
+  // Get the parameter descriptor handles
+  DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
+  DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
+
+  if (!apd.HasDescriptorRecord(param_index)) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_07002(),
+                      "Descriptor record does not exist for parameter."});
+  }
+
+  DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_index);
+  DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_index);
+
+  // Validate string/buffer length
+  if ((data != nullptr && str_len_or_ind_ptr < 0) &&
+      str_len_or_ind_ptr != SQL_NTS && str_len_or_ind_ptr != SQL_NULL_DATA) {
+    return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
+                                          "Invalid string or buffer length."});
+  }
+
+  // Handle NULL data
+  if (str_len_or_ind_ptr == SQL_NULL_DATA ||
+      (str_len_or_ind_ptr == 0 && data)) {
+    apd_rec.data_buffer.assign(1,
+                               '\0');  // store empty string as null-terminated
+    stmt_handle.SetNeedData(true);
+    return SQL_SUCCESS;
+  }
+
+  // Handling SQL_DATA_AT_EXEC and  SQL_LEN_DATA_AT_EXEC(size) and
+  SQLLEN column_size = 0;
+  if (*apd_rec.indicator_ptr <= SQL_LEN_DATA_AT_EXEC_OFFSET) {
+    // Calculate the column size from SQL_LEN_DATA_AT_EXEC(size)
+    column_size = -(*apd_rec.indicator_ptr - SQL_LEN_DATA_AT_EXEC_OFFSET);
+  } else if (*apd_rec.indicator_ptr == SQL_DATA_AT_EXEC && ipd_rec.length > 0) {
+    // Use the column size if provided in SQLBindParameter
+    column_size = ipd_rec.length;
+  } else {
+    // Allow unbounded data size
+    column_size = -1;
+  }
+
+  // Data Length Mismatch Handling
+  if (column_size != -1) {
+    SQLLEN buffered_data_len = apd_rec.data_buffer.size() + str_len_or_ind_ptr;
+
+    // Only check length mismatch if the column size is defined
+    if (buffered_data_len > column_size) {
+      return LogAndReturnCode(
+          stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
+    }
+    if (buffered_data_len == column_size) {
+      stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    }
+  }
+
+  // Handle data insertion if valid
+  if (data && str_len_or_ind_ptr > 0) {
+    char const* char_data = static_cast<char const*>(data);
+    apd_rec.data_buffer.insert(apd_rec.data_buffer.end(), char_data,
+                               char_data + str_len_or_ind_ptr);
+  }
+
+  // Mark that data is needed
+  stmt_handle.SetNeedData(true);
+
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
+                               SQLPOINTER* param_or_target_value) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(statement_handle);
+  if (!handle_result) {
+    TracePrintInternal(*(*kTraceOption),
+                       handle_result.GetStatusRecord().message);
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle* handle = *handle_result;
+
+  bool is_need_data = handle->GetNeedData();
+  if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
+    return LogAndReturnCode(
+        *handle, {SQLStates::k_HY010(),
+                  "Function sequence error: Incorrect statement state"});
+  }
+
+  if (handle->GetPreparedJob().has_value()) {
+    Job prepared_job = handle->GetPreparedJob().value();
+    std::string stmt_type =
+        prepared_job.statistics.job_query_stats.statement_type;
+    if (stmt_type == "UPDATE" || stmt_type == "DELETE") {
+      return SQL_NO_DATA;
+    }
+  }
+
+  auto param_num = handle->GetCurrentParamIndex();
+  if (param_num > handle->GetParamCount()) {
+    return LogAndReturnCode(*handle,
+                            {SQLStates::k_HY000(), "Parameter out of bounds"});
+  }
+
+  DescriptorHandle& apd = handle->GetDescriptorHandle(DescriptorType::kAPD);
+  ++param_num;
+  while (param_num <= handle->GetParamCount()) {
+    auto param = apd.GetDescriptorRecord(param_num);
+    if ((!param.indicator_ptr) || (*(param.indicator_ptr) == SQL_NTS)) {
+      param_num++;
+      continue;
+    }
+
+    if (param.indicator_ptr != nullptr ||
+        *(param.indicator_ptr) == SQL_DATA_AT_EXEC ||
+        *(param.indicator_ptr) <= SQL_LEN_DATA_AT_EXEC(0)) {
+      if (param_or_target_value != nullptr) {
+        *param_or_target_value = param.data_ptr;
+      }
+      handle->SetCurrentParamIndex(param_num);
+      handle->SetStmtState(StmtStates::kNeedsPutData);
+      handle->SetNeedData(false);
+      return SQL_NEED_DATA;
+    }
+  }
+
+  StatusRecord execute_status =
+      ActuallyProcessExecute(*handle, StmtStates::kStatementPrepared, true);
+  if (!execute_status.ok()) {
+    return LogAndReturnCode(*handle, execute_status);
+  }
   return SQL_SUCCESS;
 }
 

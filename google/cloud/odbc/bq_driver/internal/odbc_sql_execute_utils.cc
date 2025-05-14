@@ -32,26 +32,56 @@ using google::cloud::odbc_internal::SQLStates;
 
 StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
-    std::vector<QueryParameter>& basic_query_params) {
+    std::vector<QueryParameter>& basic_query_params, bool is_data_buff_req) {
   for (int param_ind = 0; param_ind < basic_query_params.size(); param_ind++) {
     if (!apd.HasDescriptorRecord(param_ind + 1)) {
       return StatusRecord{
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
     }
+
     DescriptorRecord& apd_rec = apd.GetDescriptorRecord(param_ind + 1);
     // SQL_NULL_DATA implies the application wants to use empty data.
     if (apd_rec.indicator_ptr != nullptr &&
         *apd_rec.indicator_ptr == SQL_NULL_DATA) {
       continue;
     }
-    if (apd_rec.data_ptr == nullptr) {
+
+    bool is_data_at_exec = false;
+    if (apd_rec.indicator_ptr &&
+        (*(apd_rec.indicator_ptr) == SQL_DATA_AT_EXEC ||
+         *(apd_rec.indicator_ptr) <= SQL_LEN_DATA_AT_EXEC_OFFSET)) {
+      is_data_at_exec = true;
+    }
+
+    if (!is_data_buff_req && is_data_at_exec) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "The bound param is set for SQL_DATA_AT_EXEC/SQL_LEN_DATA_AT_EXEC"};
+    }
+
+    if (!is_data_buff_req && apd_rec.data_ptr == nullptr) {
       return StatusRecord{SQLStates::k_HY009(),
                           "The bound param buffer was null"};
     }
 
-    DataBuffer data = {apd_rec.concise_type, apd_rec.data_ptr,
-                       apd_rec.octet_length, apd_rec.octet_length_ptr};
+    // If a data buffer is needed (e.g., for SQLPutData or SQLParamData) and
+    // it's not empty, use it; otherwise, use the original pointer from the
+    // application.
+    SQLPOINTER buff =
+        ((is_data_buff_req && is_data_at_exec) && !apd_rec.data_buffer.empty())
+            ? static_cast<SQLPOINTER>(apd_rec.data_buffer.data())
+            : apd_rec.data_ptr;
+    DataBuffer data;
+    SQLLEN octet_length = static_cast<SQLLEN>(apd_rec.data_buffer.size());
+    SQLLEN* octet_length_ptr = &octet_length;
+
+    if (is_data_buff_req && is_data_at_exec) {
+      data = {apd_rec.concise_type, buff, octet_length, octet_length_ptr};
+    } else {
+      data = {apd_rec.concise_type, buff, apd_rec.octet_length,
+              apd_rec.octet_length_ptr};
+    }
 
     DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_ind + 1);
     if (!ipd.HasDescriptorRecord(param_ind + 1)) {
