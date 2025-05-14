@@ -3476,8 +3476,8 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
 }
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
-// It is giving segmentation fault due to invalid memory accessing
-// and fixed in PR: 1039
+// TODO(b/406173318):It is giving segmentation fault due to invalid memory
+// accessing
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
