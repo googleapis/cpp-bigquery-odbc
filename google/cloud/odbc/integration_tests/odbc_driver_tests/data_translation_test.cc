@@ -1539,6 +1539,7 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
     EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string str(reinterpret_cast<char*>(data));
     if (expected.target_c_type == SQL_C_WCHAR) {
+      std::cout<<"here1\n";
       str = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
     }
     try {
