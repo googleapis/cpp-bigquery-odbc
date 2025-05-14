@@ -3197,14 +3197,13 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_ERROR);  // Should fail before SQLExecute
 
-  SQLLEN indicator1 = SQL_DATA_AT_EXEC;
-  SQLLEN indicator2 = SQL_DATA_AT_EXEC;
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator1),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 100, 0, nullptr, 0, &indicator2),
+                             SQL_LONGVARCHAR, 100, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
@@ -3259,28 +3258,28 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   // TODO(b/404480454): Issue with SQLBindParameter When Using
   // the Same Indicator Pointer for Multiple Parameters
-  std::vector<SQLLEN> indicator(5, SQL_DATA_AT_EXEC);
+  SQLLEN indicator = SQL_DATA_AT_EXEC;
   int num_params = schema.size();
   int param;
   // Bind parameters
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                             SQL_BIGINT, 0, 0, &param, 0, &indicator[0]),
+                             SQL_BIGINT, 0, 0, &param, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator[1]),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 3, SQL_PARAM_INPUT, SQL_C_WCHAR,
-                             SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator[2]),
+                             SQL_WLONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator[3]),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLBindParameter(conn->hstmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator[4]),
+                             SQL_LONGVARCHAR, 0, 0, nullptr, 0, &indicator),
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
