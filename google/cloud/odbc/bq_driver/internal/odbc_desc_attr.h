@@ -15,10 +15,10 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_ATTR_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_DESC_ATTR_H
 
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-
 namespace google::cloud::odbc_bq_driver_internal {
 
 inline constexpr SQLINTEGER kNumPrecRadixForNonNumeric = 0;
@@ -103,6 +103,7 @@ struct DescriptorRecord {
   SQLSMALLINT unnamed = SQL_NAMED;
   SQLSMALLINT sql_desc_unsigned = SQL_TRUE;
   SQLSMALLINT updatable = SQL_ATTR_READONLY;
+  DSValue data_buffer;
 
  private:
   void SetIntervalType(Interval const& entry, DescriptorType desc_type);
