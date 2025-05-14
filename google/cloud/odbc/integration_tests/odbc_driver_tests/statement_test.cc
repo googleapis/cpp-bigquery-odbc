@@ -3476,7 +3476,8 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
 }
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
-// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
+// It is giving segmentation fault due to invalid memory accessing
+// and fixed in PR: 1039
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
