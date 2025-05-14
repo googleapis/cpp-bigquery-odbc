@@ -3078,6 +3078,8 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
@@ -3107,7 +3109,6 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   // TODO(b/404480454): Issue with SQLBindParameter When Using
   // the Same Indicator Pointer for Multiple Parameters
   SQLLEN indicator = SQL_DATA_AT_EXEC;
-
   int num_params = schema.size();
   int param;
   // Bind parameters
@@ -3168,6 +3169,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
