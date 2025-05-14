@@ -105,12 +105,33 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
     std::vector<std::string> input_col_values;
     if (col_name.compare("Hindi")) {
       for (auto data : input_data) {
-        std::string dataStr = Utf16ToUtf8(data.str_field2);
+        std::string dataStr;
+#ifdef _WIN32
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
+        dataStr = Utf16ToUtf8(data.str_field2, CP_ACP);
+#else
+        dataStr = Utf16ToUtf8(data.str_field2);
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#else
+        dataStr = Utf16ToUtf8(data.str_field2);
+#endif  //_WIN32
         input_col_values.emplace_back(dataStr);
       }
     } else if (col_name.compare("Chinese")) {
       for (auto data : input_data) {
-        std::string dataStr = Utf16ToUtf8(data.str_field1);
+        std::string dataStr;
+#ifdef _WIN32
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+
+        dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
+#else
+        dataStr = Utf16ToUtf8(data.str_field1);
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#else
+        dataStr = Utf16ToUtf8(data.str_field1);
+#endif  //_WIN32
+
         input_col_values.emplace_back(dataStr);
       }
     }
