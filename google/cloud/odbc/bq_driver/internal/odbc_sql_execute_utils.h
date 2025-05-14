@@ -28,7 +28,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 odbc_internal::StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
     std::vector<::google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
-        basic_query_params);
+        basic_query_params,
+    bool is_data_buff_req = false);
 
 /*
  * @brief Executes a script (SQL query) using the given statement and connection
