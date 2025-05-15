@@ -33,13 +33,6 @@
 #include <stdlib.h>
 #include <string>
 #include <thread>
-#ifdef _WIN32
-#include <windows.h>
-using Utf16CodePageType = UINT;  // Use Windows UINT type
-#else
-using Utf16CodePageType =
-    unsigned int;  // Use standard unsigned int on non-Windows
-#endif
 
 namespace google::cloud::odbc_tests {
 
