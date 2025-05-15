@@ -659,4 +659,31 @@ TEST(ConvertFromBuffer, From_SQL_C_Type_Date) {
             "Conversion is unsupported");
 }
 
+TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIME) {
+  TIME_STRUCT ts_val = {14, 30, 45};
+  SQLLEN data_size = sizeof(TIME_STRUCT);
+  DataBuffer data = {SQL_C_TYPE_TIME, &ts_val, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  std::string const expected_time = "14:30:45";
+
+  // Supported timestamp-compatible types
+  std::vector<SQLSMALLINT> supported_types = {
+      SQL_TYPE_TIME, SQL_CHAR,     SQL_VARCHAR,      SQL_LONGVARCHAR,
+      SQL_WCHAR,     SQL_WVARCHAR, SQL_WLONGVARCHAR,
+  };
+
+  for (SQLSMALLINT sql_type : supported_types) {
+    conv_status = ConvertFromBuffer(data, sql_type);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, expected_time);
+  }
+
+  // Unsupported SQL type (e.g., SQL_INTEGER)
+  conv_status = ConvertFromBuffer(data, SQL_INTEGER);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
