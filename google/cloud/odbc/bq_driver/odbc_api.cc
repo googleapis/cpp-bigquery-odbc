@@ -2209,18 +2209,20 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
         outStatementTextBufferLen, outStatementTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
-  StatusRecordOr<std::string> utf8_in_stmt_txt =
-      ConvertSQLWCHARToString(inStatementText, inStatementTextLen);
-  if (!utf8_in_stmt_txt) {
-    TracePrintInternal(*(*kTraceOption),
-                       utf8_in_stmt_txt.GetStatusRecord().message);
-    return utf8_in_stmt_txt.GetCalculatedReturnCode();
+  StatusRecordOr<std::string> utf8_in_stmt_txt;
+  SQLCHAR* sqlchar_in_stmt_txt = nullptr;
+  if (inStatementText) {
+    utf8_in_stmt_txt =
+        ConvertSQLWCHARToString(inStatementText, inStatementTextLen);
+    if (!utf8_in_stmt_txt) {
+      TracePrintInternal(*(*kTraceOption),
+                         utf8_in_stmt_txt.GetStatusRecord().message);
+      return utf8_in_stmt_txt.GetCalculatedReturnCode();
+    }
+    sqlchar_in_stmt_txt = ToSqlChar(utf8_in_stmt_txt->data());
+    if (inStatementTextLen && inStatementTextLen != SQL_NTS)
+      inStatementTextLen = utf8_in_stmt_txt->length();
   }
-
-  // Update the input data size only for non-windows platforms
-#ifndef _WIN32
-  inStatementTextLen = utf8_in_stmt_txt->length();
-#endif  // _WIN32
 
   // Call to common internal function for SQLNativeSql and SQLNativeSqlW
   // in odbc_sql_requests.h.
@@ -2228,7 +2230,7 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   // parameter.
   // Handle Unicode conversion of output parameters.
   rc = ::google::cloud::odbc_bq_driver::SQLNativeSqlInternal(
-      connectionHandle, ToSqlChar(utf8_in_stmt_txt->data()), inStatementTextLen,
+      connectionHandle, sqlchar_in_stmt_txt, inStatementTextLen,
       out_statement_text, outStatementTextBufferLen, outStatementTextLen);
 
   std::string outStatementTextStr = (char*)out_statement_text;
