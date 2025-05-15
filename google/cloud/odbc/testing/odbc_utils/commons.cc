@@ -1642,6 +1642,7 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   }
   std::wstring stmt_txt_wstr;
   std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
+  std::wcout<<"wstr "<<wstr<<std::endl;
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len = wstr.size();
     if (sizeof(SQLWCHAR) == 2) {
