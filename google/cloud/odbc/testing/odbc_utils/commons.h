@@ -338,6 +338,17 @@ inline std::string WStrToStr(std::wstring const& wstr) {
   return converter.to_bytes(wstr);
 }
 
+inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
+                                                 SQLUINTEGER year,
+                                                 SQLUINTEGER month) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_type = type;
+  interval.interval_sign = 0;
+  interval.intval.year_month.year = year;
+  interval.intval.year_month.month = month;
+  return interval;
+}
+
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {

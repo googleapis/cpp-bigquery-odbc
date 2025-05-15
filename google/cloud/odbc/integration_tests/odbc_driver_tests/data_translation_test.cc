@@ -4031,4 +4031,132 @@ TEST(DataTranslationTest, Parametrized_TIME_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
+    kConversionFromYearMonthIntervalInverseTestData = {
+        {SQL_INTERVAL_YEAR, MakeYearMonthInterval(SQL_IS_YEAR, 3, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_MONTH, MakeYearMonthInterval(SQL_IS_MONTH, 0, 4),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_YEAR_TO_MONTH,
+         MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 3, 5), SQL_SUCCESS},
+};
+
+void InsertYearMonthIntervalParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const data = test_data[i];
+    SQLLEN data_len = sizeof(SQL_INTERVAL_STRUCT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+    //  Get sql to c datatype
+    auto col_ptr = std::make_shared<Column>();
+    col_ptr->data_type = data.target_c_type;
+    SqlToCdataTypes(col_ptr);
+    SQLSMALLINT c_type = col_ptr->data_type;
+
+    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, c_type,
+                              data.target_c_type, data_len, 0,
+                              (SQLPOINTER)&data.value, 0, 0);
+
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLBindParameter", conn);
+    }
+
+    status = SQLExecute(conn->hstmt);  // No ANSI version.
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLExecute", conn);
+    }
+  }
+}
+
+void ValidateYearMonthIntervalParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQL_INTERVAL_STRUCT out_val = {};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      break;
+    }
+    status = SQLGetData(conn->hstmt, 1, SQL_C_INTERVAL_YEAR_TO_MONTH, &out_val,
+                        kBufferLength, &out_len);
+    if (status == SQL_ERROR) {
+      CheckError(status, "SQLGetData", conn);
+    }
+    switch (test_case.target_c_type) {
+      case SQL_C_INTERVAL_YEAR: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.year_month.year,
+                  test_case.value.intval.year_month.year);
+        break;
+      }
+      case SQL_C_INTERVAL_MONTH: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.year_month.month,
+                  test_case.value.intval.year_month.month);
+        break;
+      }
+      case SQL_C_INTERVAL_YEAR_TO_MONTH: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.year_month.year,
+                  test_case.value.intval.year_month.year);
+        EXPECT_EQ(out_val.intval.year_month.month,
+                  test_case.value.intval.year_month.month);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
+// The existing driver doesn't support inverse data translation for interval
+// datatype.
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(DataTranslationTest, Parametrized_SQL_Year_Month_Interval_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix +
+      "ODBC_PARAMETRIZED_DATA_TRANSLATION_YEAR_MONTH_INTERVAL";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, IntervalField INTERVAL)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertYearMonthIntervalParametrizedData(
+      conn, table_name, kConversionFromYearMonthIntervalInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT IntervalField FROM " + table_name + " ORDER BY Index";
+  ValidateYearMonthIntervalParametrizedData(
+      conn, select_stmt, kConversionFromYearMonthIntervalInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }  // namespace google::cloud::odbc_tests

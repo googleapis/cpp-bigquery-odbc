@@ -366,6 +366,46 @@ StatusRecordOr<std::string> ConvertFromTimeBuffer(DataBuffer& src_data,
   }
 }
 
+StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
+                                                      SQLSMALLINT sql_type) {
+  SQL_INTERVAL_STRUCT interval_struct =
+      *reinterpret_cast<SQL_INTERVAL_STRUCT*>(src_data.buf);
+
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR: {
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_YEAR: {
+      if (interval_struct.interval_type != SQL_IS_YEAR) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Year Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_MONTH: {
+      if (interval_struct.interval_type != SQL_IS_MONTH) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Month Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_YEAR_TO_MONTH: {
+      if (interval_struct.interval_type != SQL_IS_YEAR_TO_MONTH) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Year To Month Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -501,6 +541,15 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_TYPE_TIME: {
       auto conv_status = ConvertFromTimeBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_INTERVAL_YEAR:
+    case SQL_C_INTERVAL_MONTH:
+    case SQL_C_INTERVAL_YEAR_TO_MONTH: {
+      auto conv_status = ConvertFromIntervalBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }
