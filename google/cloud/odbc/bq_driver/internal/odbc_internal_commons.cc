@@ -341,7 +341,7 @@ StatusRecord ConvertStringToIntervalStruct(
 }
 
 std::string FormatNumericToString(SQL_NUMERIC_STRUCT numeric) {
-  unsigned long long value = 0;
+  uint64_t value = 0;
 
   for (int i = numeric.precision - 1; i >= 0; --i) {
     value = (value << 8) + numeric.val[i];

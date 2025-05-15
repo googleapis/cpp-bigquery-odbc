@@ -49,7 +49,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
       // In case of 'Numeric value out of range'(22003), we should throw error
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLREAL dest_val = static_cast<SQLREAL>(src_val);
+        auto dest_val = static_cast<SQLREAL>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
@@ -69,7 +69,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLBIGINT>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLBIGINT dest_val = src_val;
+        SQLBIGINT dest_val = static_cast<SQLBIGINT>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
@@ -79,7 +79,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLSMALLINT>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLSMALLINT dest_val = src_val;
+        SQLSMALLINT dest_val = static_cast<SQLSMALLINT>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
@@ -99,7 +99,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLINTEGER>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLINTEGER dest_val = src_val;
+        SQLINTEGER dest_val = static_cast<SQLINTEGER>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
