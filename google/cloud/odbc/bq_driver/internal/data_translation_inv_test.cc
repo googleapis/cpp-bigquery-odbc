@@ -496,4 +496,74 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(conversion_result.GetStatusRecord().message,
             "Conversion is unsupported");
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_INTERVAL_STRUCT) {
+  SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
+  StatusRecordOr<std::string> conv_status;
+  // 1. SQL_CHAR
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_YEAR_TO_MONTH, 0, {2, 6}};
+    DataBuffer data = {SQL_C_INTERVAL_YEAR_TO_MONTH, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "2-6 0 0:0:0");
+  }
+  // 2. SQL_INTERVAL_YEAR
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_YEAR, 0, {5, 0}};  // 5 years
+    DataBuffer data = {SQL_C_INTERVAL_YEAR, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_YEAR);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "5-0 0 0:0:0");
+  }
+  // 3. SQL_INTERVAL_MONTH
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_MONTH, 0, {0, 15}};  // 15 months
+    DataBuffer data = {SQL_C_INTERVAL_MONTH, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_MONTH);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "0-15 0 0:0:0");
+  }
+  // 4. SQL_INTERVAL_YEAR
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_MONTH, 0, {0, 8}};  // Wrong type
+    DataBuffer data = {SQL_C_INTERVAL_YEAR, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_YEAR);
+    EXPECT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+    EXPECT_EQ(conv_status.GetStatusRecord().message,
+              "Invalid Year Interval value");
+  }
+  // 6. SQL_INTEGER
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_DAY, 0, {2, 0}};
+    DataBuffer data = {SQL_C_INTERVAL_YEAR_TO_MONTH, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTEGER);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "2");
+  }
+
+  // 7. SQL_BIGINT
+  {
+    SQL_INTERVAL_STRUCT interval = {};
+    interval.interval_type = SQL_IS_MINUTE;
+    interval.interval_sign = 0;
+    interval.intval.day_second.minute = 18;
+    DataBuffer data = {SQL_C_INTERVAL_MINUTE, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "18");
+  }
+
+  // 8. Unsupported conversion
+  {
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_YEAR_TO_MONTH, 0, {1, 1}};
+    DataBuffer data = {SQL_C_INTERVAL_YEAR_TO_MONTH, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, -999);  // Invalid type
+    EXPECT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+    EXPECT_EQ(conv_status.GetStatusRecord().message,
+              "Conversion is unsupported");
+  }
+}
 }  // namespace google::cloud::odbc_bq_driver_internal
