@@ -161,6 +161,82 @@ StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
   }
 }
 
+StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
+                                                     SQLSMALLINT sql_type) {
+  auto numeric_struct = *reinterpret_cast<SQL_NUMERIC_STRUCT*>(src_data.buf);
+  std::string src_str = FormatNumericToString(numeric_struct);
+  auto double_val = ConvertToDouble(src_str);
+  if (!double_val) {
+    return double_val.GetStatusRecord();
+  }
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC: {
+      return src_str;
+    }
+    case SQL_REAL:
+    case SQL_FLOAT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLREAL>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_DOUBLE: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLDOUBLE>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_BIT: {
+      if (*double_val != 0 && *double_val != 1) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
+      return std::to_string((*double_val == 0) ? 0 : 1);
+    }
+    case SQL_TINYINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLCHAR>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_SMALLINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLSMALLINT>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_INTEGER: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLINTEGER>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_BIGINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLBIGINT>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -210,6 +286,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       }
       return *conv_status;
     }
+    case SQL_C_SHORT:
     case SQL_C_SSHORT: {
       auto src_val = *reinterpret_cast<SQLSMALLINT*>(src_buf);
       auto conv_status =
@@ -228,6 +305,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       }
       return *conv_status;
     }
+    case SQL_C_LONG:
     case SQL_C_SLONG: {
       auto src_val = *reinterpret_cast<SQLINTEGER*>(src_buf);
       auto conv_status =
@@ -255,6 +333,30 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_BINARY: {
       auto conv_status = ConvertFromBinaryBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_STINYINT: {
+      auto src_val = *reinterpret_cast<int8_t*>(src_buf);
+      auto conv_status = ConvertFromArithmeticValue<int8_t>(src_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_TINYINT:
+    case SQL_C_UTINYINT: {
+      auto src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
+      auto conv_status = ConvertFromArithmeticValue<SQLCHAR>(src_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_NUMERIC: {
+      auto conv_status = ConvertFromNumericBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }

@@ -49,7 +49,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
       // In case of 'Numeric value out of range'(22003), we should throw error
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLREAL dest_val = src_val;
+        SQLREAL dest_val = static_cast<SQLREAL>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;

@@ -496,4 +496,201 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(conversion_result.GetStatusRecord().message,
             "Conversion is unsupported");
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
+  // SQL_C_TINYINT
+  {
+    SQLCHAR value = 200;
+    SQLLEN data_size = sizeof(SQLCHAR);
+    DataBuffer data = {SQL_C_TINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+
+  // SQL_C_STINYINT
+  {
+    int8_t value = -100;
+    SQLLEN data_size = sizeof(int8_t);
+    DataBuffer data = {SQL_C_STINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+
+  // SQL_C_UTINYINT
+  {
+    SQLCHAR value = 250;
+    SQLLEN data_size = sizeof(SQLCHAR);
+    DataBuffer data = {SQL_C_UTINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_LONG) {
+  SQLINTEGER value = 123456;
+  SQLLEN data_size = sizeof(SQLINTEGER);
+  DataBuffer data = {SQL_C_LONG, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  // Overflow case for SQL_SMALLINT
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+
+  // Overflow case for SQL_TINYINT
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+
+TEST(ConvertFromBuffer, From_SQL_C_SHORT) {
+  SQLSMALLINT value = 32000;
+  SQLLEN data_size = sizeof(SQLSMALLINT);
+  DataBuffer data = {SQL_C_SHORT, &value, 0, &data_size};
+  StatusRecordOr<std::string> conv_status;
+
+  conv_status = ConvertFromBuffer(data, SQL_CHAR);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stof(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(value, std::stod(*conv_status));
+
+  conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+
+  // Valid conversion to SQL_SMALLINT (fits within range)
+  conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+  ASSERT_STATUS_RECORD_OK(conv_status);
+  EXPECT_EQ(std::to_string(value), *conv_status);
+
+  // Overflow case for SQL_TINYINT
+  conv_status = ConvertFromBuffer(data, SQL_TINYINT);
+  EXPECT_FALSE(conv_status);
+  EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  EXPECT_EQ(conv_status.GetStatusRecord().message,
+            "Numeric value out of range");
+}
+TEST(ConvertFromBuffer, From_SQL_Numeric_to_AllTypes) {
+  SQL_NUMERIC_STRUCT numeric_base = {};
+  numeric_base.scale = 1;
+  numeric_base.precision = 4;
+  numeric_base.sign = 1;
+
+  long long scaled_val = static_cast<long long>(123.5 * 10);  // scale 1
+
+  for (size_t i = 0; i < sizeof(numeric_base.val); ++i) {
+    numeric_base.val[i] =
+        static_cast<unsigned char>((scaled_val >> (i * 8)) & 0xFF);
+  }
+  SQLLEN data_size = sizeof(SQL_NUMERIC_STRUCT);
+  DataBuffer data = {SQL_C_NUMERIC, &numeric_base, 0, &data_size};
+
+  // SQL_REAL
+  auto conv_real = ConvertFromBuffer(data, SQL_REAL);
+  ASSERT_STATUS_RECORD_OK(conv_real);
+  EXPECT_EQ(*conv_real, "123.500000");
+
+  // SQL_FLOAT
+  auto conv_float = ConvertFromBuffer(data, SQL_FLOAT);
+  ASSERT_STATUS_RECORD_OK(conv_float);
+  EXPECT_EQ(*conv_float, "123.500000");
+
+  // SQL_DOUBLE
+  auto conv_double = ConvertFromBuffer(data, SQL_DOUBLE);
+  ASSERT_STATUS_RECORD_OK(conv_double);
+  EXPECT_EQ(*conv_double, "123.500000");
+
+  // SQL_INTEGER
+  auto conv_int = ConvertFromBuffer(data, SQL_INTEGER);
+  ASSERT_STATUS_RECORD_OK(conv_int);
+  EXPECT_EQ(*conv_int, "123");
+
+  // SQL_BIGINT
+  auto conv_bigint = ConvertFromBuffer(data, SQL_BIGINT);
+  ASSERT_STATUS_RECORD_OK(conv_bigint);
+  EXPECT_EQ(*conv_bigint, "123");
+
+  // SQL_BIT (invalid case)
+  {
+    SQL_NUMERIC_STRUCT bit_numeric_invalid = {2, 0, 1, {2}};
+    DataBuffer bit_data_invalid = {SQL_C_NUMERIC, &bit_numeric_invalid, 0,
+                                   &data_size};
+    auto conv_status = ConvertFromBuffer(bit_data_invalid, SQL_BIT);
+    ASSERT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_22003());
+  }
+  // Unsupported type
+  {
+    auto conv_status = ConvertFromBuffer(data, SQL_TYPE_DATE);
+    ASSERT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+  }
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

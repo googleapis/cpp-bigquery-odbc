@@ -3591,4 +3591,208 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+template <typename T>
+struct DataInverseTestStruct {
+  // The target C type SQLGetData will convert SQL type to
+  SQLSMALLINT target_c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  T value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<DataInverseTestStruct<SQLBIGINT>> const
+    kConversionFromArithmeticInverseTestData = {
+        {SQL_C_LONG, 12345, SQL_SUCCESS},   {SQL_C_SHORT, 12347, SQL_SUCCESS},
+        {SQL_C_TINYINT, 100, SQL_SUCCESS},  {SQL_C_STINYINT, -50, SQL_SUCCESS},
+        {SQL_C_UTINYINT, 250, SQL_SUCCESS},
+};
+
+std::vector<DataInverseTestStruct<std::string>> const
+    kConversionFromNumericInverseTestData = {
+        {SQL_CHAR, "10", SQL_SUCCESS},
+        {SQL_TINYINT, "42", SQL_SUCCESS},
+        {SQL_SMALLINT, "32767", SQL_SUCCESS},
+        {SQL_INTEGER, "-2147483648", SQL_SUCCESS},
+        {SQL_BIGINT, "-9007199254740992", SQL_SUCCESS},
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+        // existing driver not updating scale value in numeric struct.
+        {SQL_DECIMAL, "12345.6789", SQL_SUCCESS},
+        {SQL_DOUBLE, "987654.321", SQL_SUCCESS},
+        {SQL_BIT, "1", SQL_SUCCESS},  // Not supported by existing driver
+        {SQL_NUMERIC, "99999.999",
+         SQL_SUCCESS},  // Not supported by existing driver
+#endif                  // BQ_DRIVER_INTEGRATION_TESTS
+};
+
+void InsertArithmeticParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInverseTestStruct<SQLBIGINT>> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const data = test_data[i];
+    SQLLEN data_len = sizeof(SQLBIGINT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?,?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT,
+                              data.target_c_type, SQL_INTEGER, 0, 0,
+                              (SQLPOINTER)&data.value, 0, &data_len);
+
+    if (status != SQL_SUCCESS) {
+      continue;
+    }
+    status = SQLExecute(conn->hstmt);  // No ANSI version.
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLExecute", conn);
+    }
+  }
+}
+
+void ValidateArithmeticParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInverseTestStruct<SQLBIGINT>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQLBIGINT out_val = 0;
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      continue;  // Skip this row and move to the next
+    }
+    status = SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &out_val,
+                        sizeof(SQLBIGINT), &out_len);
+    EXPECT_EQ(status, SQL_SUCCESS);
+    EXPECT_EQ(out_val, test_case.value);
+  }
+}
+
+void InsertNumericParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInverseTestStruct<std::string>> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const data = test_data[i];
+    auto numeric_value = ConvertStringToNumeric(data.value);
+    SQLLEN data_len = sizeof(SQL_NUMERIC_STRUCT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+
+    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_NUMERIC,
+                              data.target_c_type, numeric_value.precision,
+                              numeric_value.scale, (SQLPOINTER)&numeric_value,
+                              sizeof(numeric_value), &data_len);
+
+    if (status != SQL_SUCCESS) {
+      continue;
+    }
+    status = SQLExecute(conn->hstmt);
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLExecute", conn);
+    }
+  }
+}
+
+void ValidateNumericParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInverseTestStruct<std::string>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQL_NUMERIC_STRUCT out_val = {0};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      continue;
+    }
+    status = SQLGetData(conn->hstmt, 1, SQL_C_NUMERIC, &out_val,
+                        sizeof(SQL_NUMERIC_STRUCT), &out_len);
+    if (status == SQL_ERROR) {
+      continue;  // Skip this row and move to the next
+    }
+    std::string return_val = SQLNumericToString(out_val);
+    EXPECT_EQ(status, test_case.status);
+    EXPECT_EQ(return_val, test_case.value);
+  }
+}
+
+TEST(DataTranslationTest, Parametrized_SQL_Arthemetic_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAMETRIZED_DATA_TRANSLATION_ARTHMETIC";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, IntField INT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertArithmeticParametrizedData(conn, table_name,
+                                   kConversionFromArithmeticInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT IntField  FROM " + table_name + " ORDER BY Index";
+  ValidateArithmeticParametrizedData(conn, select_stmt,
+                                     kConversionFromArithmeticInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, Parametrized_SQL_Numeric_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAMETRIZED_DATA_TRANSLATION_NUMERIC";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, NumericField NUMERIC(38,9))");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertNumericParametrizedData(conn, table_name,
+                                kConversionFromNumericInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT NumericField  FROM " + table_name + " ORDER BY Index";
+  ValidateNumericParametrizedData(conn, select_stmt,
+                                  kConversionFromNumericInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 }  // namespace google::cloud::odbc_tests

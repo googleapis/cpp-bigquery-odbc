@@ -340,6 +340,28 @@ StatusRecord ConvertStringToIntervalStruct(
   return StatusRecord::Ok();
 }
 
+std::string FormatNumericToString(SQL_NUMERIC_STRUCT numeric) {
+  unsigned long long value = 0;
+
+  for (int i = numeric.precision - 1; i >= 0; --i) {
+    value = (value << 8) + numeric.val[i];
+  }
+  std::string result = std::to_string(value);
+  if (numeric.scale > 0) {
+    if (result.length() <= numeric.scale) {
+      result =
+          "0." + std::string(numeric.scale - result.length(), '0') + result;
+    } else {
+      result.insert(result.length() - numeric.scale, ".");
+    }
+  }
+  if (numeric.sign == 0) {
+    result = "-" + result;
+  }
+
+  return result;
+}
+
 std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
   char buffer[80];
   switch (interval.interval_type) {

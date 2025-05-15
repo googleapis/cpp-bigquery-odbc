@@ -1714,4 +1714,34 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
   return ret;
 }
 
+SQL_NUMERIC_STRUCT ConvertStringToNumeric(std::string const& numeric_str) {
+  SQL_NUMERIC_STRUCT numeric = {};
+  numeric.sign = (numeric_str[0] == '-') ? 0 : 1;  // 1=positive, 0=negative
+
+  std::string clean_str = numeric_str;
+  if (clean_str[0] == '-' || clean_str[0] == '+') {
+    clean_str.erase(0, 1);  // Remove sign
+  }
+  // Find decimal point and compute scale
+  auto dot_pos = clean_str.find('.');
+  numeric.scale =
+      (dot_pos != std::string::npos) ? (clean_str.length() - dot_pos - 1) : 0;
+
+  // Remove decimal point for integer conversion
+  std::string digits_only = clean_str;
+  digits_only.erase(std::remove(digits_only.begin(), digits_only.end(), '.'),
+                    digits_only.end());
+  numeric.precision = static_cast<SQLCHAR>(digits_only.length());
+
+  // Convert string to int64 (scaled by 10^scale)
+  int64_t scaled_value =
+      std::abs(std::stoll(digits_only));  // Throws if overflow
+
+  // Store as little-endian in numeric.val (first 8 bytes)
+  for (int i = 0; i < 8; ++i) {
+    numeric.val[i] = (scaled_value >> (i * 8)) & 0xFF;
+  }
+  return numeric;
+}
+
 }  // namespace google::cloud::odbc_tests
