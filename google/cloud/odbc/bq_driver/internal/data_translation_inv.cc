@@ -406,6 +406,38 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
   }
 }
 
+StatusRecordOr<std::string> ConvertFromTimestampBuffer(DataBuffer& src_data,
+                                                       SQLSMALLINT sql_type) {
+  auto* src_val = static_cast<TIMESTAMP_STRUCT*>(src_data.buf);
+  if (!src_val || !src_data.result_len || *src_data.result_len < 0) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Data value is not a valid timestamp"};
+  }
+
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+    case SQL_TIMESTAMP:
+    case SQL_TYPE_TIMESTAMP: {
+      return FormatTimestampToString(*src_val);
+    }
+    case SQL_TYPE_DATE: {
+      SQL_DATE_STRUCT date = {src_val->year, src_val->month, src_val->day};
+      return FormatDateToString(date);
+    }
+    case SQL_TYPE_TIME: {
+      SQL_TIME_STRUCT time = {src_val->hour, src_val->minute, src_val->second};
+      return FormatTimetoString(time);
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
                                               SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -550,6 +582,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_INTERVAL_MONTH:
     case SQL_C_INTERVAL_YEAR_TO_MONTH: {
       auto conv_status = ConvertFromIntervalBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_TYPE_TIMESTAMP: {
+      auto conv_status = ConvertFromTimestampBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }

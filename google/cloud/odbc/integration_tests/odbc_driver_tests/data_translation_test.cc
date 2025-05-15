@@ -3591,12 +3591,12 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-template <typename T>
+template <typename CType>
 struct DataInverseTestStruct {
-  // The target C type SQLGetData will convert SQL type to
-  SQLSMALLINT target_c_type;
-  // The value that should be returned by SQLGetData if it succeeds
-  T value;
+  // The target SQL type
+  SQLSMALLINT target_sql_type;
+  // The value that should be used by the application
+  CType value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
@@ -3626,7 +3626,7 @@ void InsertDateParametrizedData(
                               SQL_INTEGER, 0, 0, &i, 0, nullptr);
 
     status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
-                              data.target_c_type, 10, 0,
+                              data.target_sql_type, 10, 0,
                               (SQLPOINTER)&data.value, 0, &data_len);
 
     if (status != SQL_SUCCESS) {
@@ -3758,7 +3758,7 @@ void InsertArithmeticParametrizedData(
     status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
                               SQL_INTEGER, 0, 0, &i, 0, nullptr);
     status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT,
-                              data.target_c_type, SQL_INTEGER, 0, 0,
+                              data.target_sql_type, SQL_INTEGER, 0, 0,
                               (SQLPOINTER)&data.value, 0, &data_len);
 
     if (status != SQL_SUCCESS) {
@@ -3860,7 +3860,7 @@ void InsertNumericParametrizedData(
                               SQL_INTEGER, 0, 0, &i, 0, nullptr);
 
     status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_NUMERIC,
-                              data.target_c_type, numeric_value.precision,
+                              data.target_sql_type, numeric_value.precision,
                               numeric_value.scale, (SQLPOINTER)&numeric_value,
                               sizeof(numeric_value), &data_len);
 
@@ -3964,7 +3964,7 @@ void InsertTimeParametrizedData(
     EXPECT_EQ(status, SQL_SUCCESS);
 
     status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
-                              data.target_c_type, data_len, 0,
+                              data.target_sql_type, data_len, 0,
                               (SQLPOINTER)&data.value, 0, &data_len);
     CheckError(status, "SQLBindParameter", conn);
 
@@ -4031,6 +4031,125 @@ TEST(DataTranslationTest, Parametrized_TIME_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+std::vector<DataInverseTestStruct<SQL_TIMESTAMP_STRUCT>> const
+    kConversionFromTimestampInverseTestData = {
+        {SQL_TYPE_TIMESTAMP, {2024, 2, 20, 5, 3, 20, 0}, SQL_SUCCESS},
+        {SQL_TIMESTAMP, {2024, 2, 20, 5, 3, 20, 0}, SQL_SUCCESS},
+// Existing driver doesnt support these conversions but our driver does.
+// This is done acc to
+// https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/c-to-sql-timestamp?view=sql-server-ver16
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+        {SQL_CHAR, {2024, 2, 20, 5, 7, 20, 0}, SQL_ERROR},
+#else
+        {SQL_CHAR, {2025, 2, 20, 5, 2, 20, 0}, SQL_SUCCESS},
+        {SQL_WCHAR, {2023, 5, 30, 6, 7, 20, 0}, SQL_SUCCESS},
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+};
+
+void InsertTimestampParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<DataInverseTestStruct<SQL_TIMESTAMP_STRUCT>> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const& data = test_data[i];
+    SQLLEN data_len = sizeof(SQL_TIMESTAMP_STRUCT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+    EXPECT_EQ(status, SQL_SUCCESS);
+    status =
+        SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+                         data.target_sql_type, data_len, 0,
+                         (SQLPOINTER)&data.value, 0, &data_len);
+    CheckError(status, "SQLBindParameters", conn);
+
+    if (status != SQL_SUCCESS) {
+      continue;
+    }
+
+    status = SQLExecute(conn->hstmt);
+    EXPECT_EQ(status, data.status);
+  }
+}
+
+void ValidateTimestampParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<DataInverseTestStruct<TIMESTAMP_STRUCT>> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  TIMESTAMP_STRUCT out_val = {};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      continue;
+    }
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_TYPE_TIMESTAMP, &out_val,
+                         sizeof(TIMESTAMP_STRUCT), &out_len),
+              SQL_SUCCESS);
+    if (status == SQL_ERROR) {
+      continue;
+    }
+    EXPECT_EQ(status, test_case.status);
+    if (test_case.target_sql_type == SQL_TYPE_DATE) {
+      EXPECT_EQ(out_val.year, test_case.value.year);
+      EXPECT_EQ(out_val.month, test_case.value.month);
+      EXPECT_EQ(out_val.day, test_case.value.day);
+    } else if (test_case.target_sql_type == SQL_TYPE_TIME) {
+      EXPECT_EQ(out_val.hour, test_case.value.hour);
+      EXPECT_EQ(out_val.minute, test_case.value.minute);
+      EXPECT_EQ(out_val.second, test_case.value.second);
+    } else {
+      EXPECT_EQ(out_val.year, test_case.value.year);
+      EXPECT_EQ(out_val.month, test_case.value.month);
+      EXPECT_EQ(out_val.day, test_case.value.day);
+      EXPECT_EQ(out_val.hour, test_case.value.hour);
+      EXPECT_EQ(out_val.minute, test_case.value.minute);
+      EXPECT_EQ(out_val.second, test_case.value.second);
+      EXPECT_EQ(out_val.fraction, test_case.value.fraction);
+    }
+  }
+}
+
+TEST(DataTranslationTest, Parametrized_TIMESTAMP_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_TIMESTAMP_DATA_TRANSLATION";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, TimestampField TIMESTAMP)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertTimestampParametrizedData(conn, table_name,
+                                  kConversionFromTimestampInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT TimestampField FROM " + table_name + " ORDER BY Index";
+  ValidateTimestampParametrizedData(conn, select_stmt,
+                                    kConversionFromTimestampInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
     kConversionFromYearMonthIntervalInverseTestData = {
         {SQL_INTERVAL_YEAR, MakeYearMonthInterval(SQL_IS_YEAR, 3, 0),
@@ -4057,12 +4176,12 @@ void InsertYearMonthIntervalParametrizedData(
                               SQL_INTEGER, 0, 0, &i, 0, nullptr);
     //  Get sql to c datatype
     auto col_ptr = std::make_shared<Column>();
-    col_ptr->data_type = data.target_c_type;
+    col_ptr->data_type = data.target_sql_type;
     SqlToCdataTypes(col_ptr);
     SQLSMALLINT c_type = col_ptr->data_type;
 
     status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, c_type,
-                              data.target_c_type, data_len, 0,
+                              data.target_sql_type, data_len, 0,
                               (SQLPOINTER)&data.value, 0, 0);
 
     if (status != SQL_SUCCESS) {
@@ -4098,7 +4217,7 @@ void ValidateYearMonthIntervalParametrizedData(
     if (status == SQL_ERROR) {
       CheckError(status, "SQLGetData", conn);
     }
-    switch (test_case.target_c_type) {
+    switch (test_case.target_sql_type) {
       case SQL_C_INTERVAL_YEAR: {
         EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
         EXPECT_EQ(out_val.intval.year_month.year,
