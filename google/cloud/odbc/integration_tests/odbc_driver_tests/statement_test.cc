@@ -106,12 +106,18 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
     if (col_name.compare("Hindi")) {
       for (auto data : input_data) {
         std::string dataStr;
+        // For the Simba driver in Unicode mode on Windows, data is received
+        // encoded in CP_ACP but is transmitted as UTF-8. In contrast, our
+        // driver consistently uses UTF-8 for Unicode data, as required by the
+        // BigQuery client API. Converting UTF-8 back to ACP in our case
+        // introduces an unnecessary two-step process, which can negatively
+        // impact performance.
 #ifdef _WIN32
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 
-        dataStr = Utf16ToUtf8(data.str_field2, CP_ACP);
-#else
         dataStr = Utf16ToUtf8(data.str_field2);
+#else
+        dataStr = Utf16ToUtf8(data.str_field2, CP_ACP);
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #else
         dataStr = Utf16ToUtf8(data.str_field2);
@@ -122,11 +128,11 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
       for (auto data : input_data) {
         std::string dataStr;
 #ifdef _WIN32
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 
-        dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
-#else
         dataStr = Utf16ToUtf8(data.str_field1);
+#else
+        dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #else
         dataStr = Utf16ToUtf8(data.str_field1);

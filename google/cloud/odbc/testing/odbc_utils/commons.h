@@ -33,13 +33,6 @@
 #include <stdlib.h>
 #include <string>
 #include <thread>
-#ifdef _WIN32
-#include <windows.h>
-using Utf16CodePageType = UINT;  // Use Windows UINT type
-#else
-using Utf16CodePageType =
-    unsigned int;  // Use standard unsigned int on non-Windows
-#endif
 
 namespace google::cloud::odbc_tests {
 
@@ -645,7 +638,7 @@ void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
                     TestingDataBuffer* columns);
 
 std::string Utf16ToUtf8(std::wstring const& utf_16_str,
-                        Utf16CodePageType code_page = 65001 /* UTF-8 */);
+                        unsigned int code_page = 65001 /* UTF-8 */);
 
 std::wstring Utf8ToUtf16(std::string const& utf_8_str);
 
