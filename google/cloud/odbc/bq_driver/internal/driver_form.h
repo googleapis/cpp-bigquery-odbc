@@ -103,6 +103,7 @@ class DriverForm {
   static std::string min_tls_version_;
   static std::string trusted_cert_;
   static std::string description_;
+  static Section last_saved_values_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                      LPARAM l_param);
   HWND m_hwnd;

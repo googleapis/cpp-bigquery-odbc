@@ -47,6 +47,7 @@ std::string DriverForm::encrypt_data_ = "For Current User Only";
 std::string DriverForm::min_tls_version_ = "1.2";
 std::string DriverForm::trusted_cert_;
 std::string DriverForm::description_;
+Section DriverForm::last_saved_values_;
 std::string const kDsnName = "DSN";
 std::string const kEmail = "Email";
 std::string const kOAuthMechanism = "OAuthMechanism";
@@ -286,6 +287,7 @@ void OpenFileDialog(HWND hwnd, HWND h_edit, char const* mock_file_path,
 }
 
 void DriverForm::SetValues(Section const& attributes_map) {
+  last_saved_values_ = attributes_map;
   dsn_name_ = GetValueOrDefault(attributes_map, kDsnName);
   key_file_path_ = GetValueOrDefault(attributes_map, kKeyFilePath);
   catalog_ = GetValueOrDefault(attributes_map, kCatalog);
@@ -733,6 +735,7 @@ void HandleSelectionChange(HWND hwnd, int control_id) {
   CheckAuthentication(hwnd);
   EvaluateFields(hwnd);
 }
+
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
   DriverForm* p_this =
@@ -1072,17 +1075,10 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           // Retains previous values in the child form if OK is clicked there
           // but Cancel is clicked in the main form. Ensures no data entered in
           // either form is saved in such cases.
-          HWND h_dsn = GetDlgItem(hwnd, kIdcDSNEdit);
-          char dsn_buffer[256];
-          GetWindowText(h_dsn, dsn_buffer, sizeof(dsn_buffer));
-
-          std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_buffer;
-          auto res = GetSectionWin(registry_key);
-          Section prev_section = *res.GetValue();
           AdvanceOptions adv_form = AdvanceOptions();
           ProxyOptions proxy_form = ProxyOptions();
-          adv_form.SetValues(prev_section);
-          proxy_form.SetValues(prev_section);
+          adv_form.SetValues(last_saved_values_);
+          proxy_form.SetValues(last_saved_values_);
           DestroyWindow(hwnd);
         }
       }

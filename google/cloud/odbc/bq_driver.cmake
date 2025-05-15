@@ -105,7 +105,14 @@ set(COMMON_LIBS
 
 # Add Windows-specific libraries only if compiling on Windows
 if (WIN32)
-    list(APPEND COMMON_LIBS user32 gdi32)
+    list(
+        APPEND
+        COMMON_LIBS
+        user32
+        gdi32
+        odbccp32
+        legacy_stdio_definitions
+        legacy_stdio_wide_specifiers)
 endif ()
 
 # Link the collected libraries to the target
