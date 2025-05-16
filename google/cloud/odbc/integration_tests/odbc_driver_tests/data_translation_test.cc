@@ -1341,7 +1341,6 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     }
 
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::cout<<"strlen_or_ind "<<strlen_or_ind<<std::endl;
     std::string str_int(reinterpret_cast<char*>(data_int));
     if (expected.target_c_type == SQL_C_WCHAR) {
       str_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),
@@ -1540,7 +1539,6 @@ void TestArrayStructData(std::shared_ptr<ODBCHandles> conn, std::string query) {
     EXPECT_EQ(SQL_SUCCESS, expected.status);
     std::string str(reinterpret_cast<char*>(data));
     if (expected.target_c_type == SQL_C_WCHAR) {
-      std::cout<<"here1\n";
       str = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), SQL_NTS);
     }
     try {
