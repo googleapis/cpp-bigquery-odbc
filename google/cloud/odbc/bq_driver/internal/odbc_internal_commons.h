@@ -336,6 +336,8 @@ inline void DSValueToBoolean(DSValue const& value, bool& bool_val) {
 
 std::string FormatIntervalToString(SQL_INTERVAL_STRUCT interval);
 
+std::string FormatNumericToString(SQL_NUMERIC_STRUCT numeric);
+
 odbc_internal::StatusRecord ConvertUnixTimestampToTimestampStruct(
     double unix_timestamp, SQL_TIMESTAMP_STRUCT& timestamp_struct);
 
