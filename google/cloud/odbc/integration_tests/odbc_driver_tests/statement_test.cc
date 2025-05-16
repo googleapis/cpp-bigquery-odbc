@@ -167,7 +167,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   SQLCHAR bool_data = SQL_TRUE;
   SQLLEN bool_len = SQL_DATA_AT_EXEC;
 
-  int int_data = 42;
+  int64_t int_data = 42;
   SQLLEN int_len = SQL_DATA_AT_EXEC;
 
   double float_data = 3.14;
@@ -231,7 +231,7 @@ std::cout<<"===============inside validate  1"<<std::endl;
   SQLCHAR result_bool = 0;
   SQLLEN result_bool_len = 0;
 
-  SQLLEN result_int = 0;
+  int64_t result_int = 0;
   SQLLEN result_int_len = 0;
 
   double result_float = 0.0;
@@ -3203,13 +3203,13 @@ std::cout<<"===============adding prints before put"<<std::endl;
   std::cout<<"===============adding prints before validate"<<std::endl;
   ValidateAllPutData(conn, table_name);
   std::cout<<"===============adding prints after validate"<<std::endl;
-  //EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-  //EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  //table.DropWithPrepare(conn);
-  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
