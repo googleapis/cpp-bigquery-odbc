@@ -1445,6 +1445,9 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     return StatusRecord{SQLStates::k_01004(),
                         "UTF-8 to UTF-16 conversion failed."};
   }
+  std::wcout<<"utf16_str "<<*utf16_str<<std::endl;
+  utf16_str->push_back(L'\0');
+  std::wcout<<"utf16_str "<<*utf16_str<<std::endl;
 
   std::wstring const& utf16_value = utf16_str.GetValue();
   size_t const required_size = utf16_str.GetValue().length() * sizeof(SQLWCHAR);
