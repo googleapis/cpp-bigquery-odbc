@@ -496,4 +496,76 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(conversion_result.GetStatusRecord().message,
             "Conversion is unsupported");
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
+  // SQL_C_TINYINT
+  {
+    SQLCHAR value = 200;
+    SQLLEN data_size = sizeof(SQLCHAR);
+    DataBuffer data = {SQL_C_TINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+
+  // SQL_C_STINYINT
+  {
+    int8_t value = -100;
+    SQLLEN data_size = sizeof(int8_t);
+    DataBuffer data = {SQL_C_STINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+
+  // SQL_C_UTINYINT
+  {
+    SQLCHAR value = 250;
+    SQLLEN data_size = sizeof(SQLCHAR);
+    DataBuffer data = {SQL_C_UTINYINT, &value, 0, &data_size};
+    StatusRecordOr<std::string> conv_status;
+
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    EXPECT_EQ(std::to_string(value), *conv_status);
+
+    conv_status = ConvertFromBuffer(data, SQL_FLOAT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stof(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_DOUBLE);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(value, std::stod(*conv_status));
+
+    conv_status = ConvertFromBuffer(data, SQL_BIGINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(std::to_string((SQLBIGINT)value), *conv_status);
+  }
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

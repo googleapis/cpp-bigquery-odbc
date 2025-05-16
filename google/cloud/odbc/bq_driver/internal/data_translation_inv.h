@@ -69,7 +69,8 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLBIGINT>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLBIGINT dest_val = src_val;
+        auto dest_val = static_cast<SQLBIGINT>(
+            +src_val);  // + unary promotes src_val to int.
         return std::to_string(dest_val);
       }
       return check_status;
@@ -79,7 +80,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLSMALLINT>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLSMALLINT dest_val = src_val;
+        auto dest_val = static_cast<SQLSMALLINT>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
@@ -99,7 +100,7 @@ StatusRecordOr<std::string> ConvertFromArithmeticValue(SrcType src_val,
           CheckLimitsArithmetic<SrcType, SQLINTEGER>(src_val);
       if (check_status.sql_state != SQLStates::k_22003()) {
         // We need to typecast it to dest type once
-        SQLINTEGER dest_val = src_val;
+        auto dest_val = static_cast<SQLINTEGER>(src_val);
         return std::to_string(dest_val);
       }
       return check_status;
