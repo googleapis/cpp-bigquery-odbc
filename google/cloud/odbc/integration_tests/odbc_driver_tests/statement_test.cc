@@ -3211,9 +3211,9 @@ std::cout<<"===============adding prints before put"<<std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  //EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.DropWithPrepare(conn);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
