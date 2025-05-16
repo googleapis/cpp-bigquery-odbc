@@ -197,24 +197,20 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   auto query = "INSERT INTO " + table_name + " VALUES (?, ?, ?, ?, ?)";
   EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS),
             SQL_SUCCESS);
-  std::cout << "===============inside pudata 1" << std::endl;
   for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT,
                                fields[i].c_type, fields[i].sql_type, 0, 0,
                                nullptr, 0, fields[i].str_len_or_ind_ptr),
               SQL_SUCCESS);
   }
-  std::cout << "===============inside pudata 2" << std::endl;
   // Execute and provide data using SQLPutData
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
   SQLPOINTER param = nullptr;
-  std::cout << "===============inside pudata 3" << std::endl;
   for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(SQLParamData(conn->hstmt, &param), SQL_NEED_DATA);
     EXPECT_EQ(SQLPutData(conn->hstmt, fields[i].data_ptr, fields[i].data_size),
               SQL_SUCCESS);
   }
-  std::cout << "===============inside pudata 4" << std::endl;
   // Finalize data execution
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 }
@@ -230,7 +226,6 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
             SQL_SUCCESS);
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
-  std::cout << "===============inside validate  1" << std::endl;
   // Define validation fields
   SQLCHAR result_bool = 0;
   SQLLEN result_bool_len = 0;
@@ -258,7 +253,6 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
       {result_binary, sizeof(result_binary), SQL_C_BINARY, SQL_LONGVARBINARY,
        &result_binary_len},
   };
-  std::cout << "===============inside validate 2" << std::endl;
   // Fetch and validate data
   for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(SQLGetData(conn->hstmt, i + 1, validations[i].c_type,
@@ -266,20 +260,15 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
                          validations[i].str_len_or_ind_ptr),
               SQL_SUCCESS);
   }
-  std::cout << "===============inside validate 3" << std::endl;
   // Assertions for validation
   EXPECT_EQ(result_bool, SQL_TRUE);
   EXPECT_EQ(result_int, 42);
   EXPECT_DOUBLE_EQ(result_float, 3.14);
-  std::cout << "===============inside validate 4" << std::endl;
   EXPECT_EQ(std::string((char*)result_string), "");
-  std::cout << "===============inside validate 5" << std::endl;
   std::vector<uint8_t> expected_binary = {0xDE, 0xAD, 0xBE, 0xEF};
   EXPECT_EQ(result_binary_len, expected_binary.size());
-  std::cout << "===============inside validate 6" << std::endl;
   EXPECT_TRUE(std::equal(result_binary, result_binary + result_binary_len,
                          expected_binary.begin()));
-  std::cout << "===============inside validate 7" << std::endl;
 }
 
 TEST(StatementTest, SQLFetch_Unicode) {
@@ -3077,8 +3066,6 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
@@ -3168,16 +3155,10 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#if defined(_WIN32) && !defined(_WIN64)
+
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST_SIMBA";
-#else
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST_BQ_DRIVER";
-#endif
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
   Table table(table_name);
 
   Schema schema{{"BoolField", "BOOL"},
@@ -3191,18 +3172,14 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, getSchemaStr(schema));
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  std::cout << "===============adding prints before put" << std::endl;
   // Insert and validate data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   PutAllDataTypes(conn, table_name);
-  std::cout << "===============adding prints after put" << std::endl;
   EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::cout << "===============adding prints before validate" << std::endl;
   ValidateAllPutData(conn, table_name);
-  std::cout << "===============adding prints after validate" << std::endl;
   EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -3211,7 +3188,7 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   // table.DropWithPrepare(conn);
   // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
+
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
