@@ -1636,7 +1636,7 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
 #endif
 }
 
-/*std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
+std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   if (((in_str != nullptr) && (in_str[0] == '\0'))) {
     return std::string();
   }
@@ -1655,32 +1655,7 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str) {
   }
   std::cout<<"here2 in_str_len "<<in_str_len<<std::endl;
   return Utf16ToUtf8(stmt_txt_wstr);
-}*/
-
-std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
-  if (in_str == nullptr || (in_str_len == SQL_NTS && in_str[0] == '\0')) {
-    throw std::runtime_error("Input SQLWCHAR string is empty or null");
-  }
-
-  // If length is SQL_NTS, calculate it using wcslen
-  if (in_str_len == SQL_NTS) {
-    in_str_len = static_cast<SQLINTEGER>(wcslen(reinterpret_cast<const wchar_t*>(in_str)));
-  }
-
-  // Directly create the wide string using the specified length
-  std::wstring stmt_txt_wstr(reinterpret_cast<wchar_t const*>(in_str), in_str_len);
-
-  // Debug output
-  std::wcout << L"Converted WString: " << stmt_txt_wstr << std::endl;
-for(int i =0; i<stmt_txt_wstr.length();i++){
-  std::wcout<<"here "<<stmt_txt_wstr.at(i)<<std::endl;
 }
-  std::cout << "Length: " << in_str_len << std::endl;
-
-  // Convert to UTF-8 and return
-  return Utf16ToUtf8(stmt_txt_wstr);
-}
-
 
 std::string ConvertHexToChar(std::string const& hex_str) {
   std::vector<char> chars;
