@@ -218,11 +218,11 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
   std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
-
+std::cout<<"wstr_data "<<wstr_data.data()<<std::endl;
   auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
   if (buffer_length > src_len) {
     if (res_len) {
-      *res_len = (src_len+1) * sizeof(SQLWCHAR);
+      *res_len = src_len * sizeof(SQLWCHAR);
     }
     std::memcpy(dest, wstr_data.data(), (src_len) * sizeof(SQLWCHAR));
     dest[src_len] = L'\0';

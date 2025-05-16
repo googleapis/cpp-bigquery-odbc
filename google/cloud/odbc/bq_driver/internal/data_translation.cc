@@ -979,9 +979,6 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
       if (!wide_string.Ok()) {
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
-      std::wcout<<"utwide_string6_str "<<*wide_string<<std::endl;
-      wide_string->push_back(L'\0');
-  std::wcout<<"wide_string "<<*wide_string<<std::endl;
       return WStrToOutputBufferResponse(
           *wide_string, dest_data.buf, dest_data.buflen, src_str.length(),
           src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
