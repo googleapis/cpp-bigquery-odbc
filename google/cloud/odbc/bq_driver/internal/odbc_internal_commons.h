@@ -363,6 +363,9 @@ inline void GetSinglePrecisionInterval(
     case SQL_IS_MINUTE:
       value = interval_struct.intval.day_second.minute;
       break;
+    case SQL_IS_SECOND:
+      value = interval_struct.intval.day_second.second;
+      break;
     default:
       status_record = odbc_internal::StatusRecord{
           odbc_internal::SQLStates::k_07006(),
