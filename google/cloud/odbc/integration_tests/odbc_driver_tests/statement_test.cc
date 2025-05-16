@@ -3486,9 +3486,6 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-// TODO(b/406173318):It is giving segmentation fault due to invalid memory
-// accessing
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3556,7 +3553,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // For the internal driver, the Driver Manager does not raise a function
 // sequence error, whereas for the external driver, it does.
 TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
