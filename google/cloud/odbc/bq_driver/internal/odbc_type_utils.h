@@ -217,28 +217,23 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
-
-  //std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
-  SQLINTEGER actual_len = static_cast<SQLINTEGER>(wstr.size());
-
-  // Ensure the source length does not exceed the actual string length
-  src_len = std::min(src_len, actual_len);
-
+  std::cout<<"src_len "<<src_len<<std::endl;
+  std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
+std::wcout<<"wstr_data "<<wstr_data.data()<<std::endl;
+std::wcout<<"wstr_data size "<<wstr_data.size()<<std::endl;
   auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-  if (buffer_length >= (src_len + 1) * sizeof(SQLWCHAR)) {
+  if (buffer_length > src_len) {
     if (res_len) {
       *res_len = src_len * sizeof(SQLWCHAR);
     }
-    std::memcpy(dest, wstr.data(), src_len * sizeof(SQLWCHAR));
+    std::memcpy(dest, wstr_data.data(), (src_len) * sizeof(SQLWCHAR));
     dest[src_len] = L'\0';
-  } else if (supp_max_len <= buffer_length &&  buffer_length >= sizeof(SQLWCHAR)) {
-    SQLINTEGER copy_len = (buffer_length / sizeof(SQLWCHAR)) - 1;
-  copy_len = std::min(copy_len, src_len);
+  } else if (supp_max_len <= buffer_length && buffer_length <= src_len) {
     if (res_len) {
-      *res_len = copy_len * sizeof(SQLWCHAR);
+      *res_len = buffer_length * sizeof(SQLWCHAR);
     }
-    std::memcpy(dest, wstr.data(), copy_len * sizeof(SQLWCHAR));
-    dest[copy_len] = L'\0';
+    std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
+    dest[buffer_length - 1] = L'\0';
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
   } else {
