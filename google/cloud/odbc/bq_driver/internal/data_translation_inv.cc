@@ -213,6 +213,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       }
       return *conv_status;
     }
+    case SQL_C_SHORT:
     case SQL_C_SSHORT: {
       auto src_val = *reinterpret_cast<SQLSMALLINT*>(src_buf);
       auto conv_status =
@@ -231,6 +232,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       }
       return *conv_status;
     }
+    case SQL_C_LONG:
     case SQL_C_SLONG: {
       auto src_val = *reinterpret_cast<SQLINTEGER*>(src_buf);
       auto conv_status =
@@ -258,6 +260,23 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_BINARY: {
       auto conv_status = ConvertFromBinaryBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_STINYINT: {
+      auto src_val = *reinterpret_cast<int8_t*>(src_buf);
+      auto conv_status = ConvertFromArithmeticValue<int8_t>(src_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_TINYINT:
+    case SQL_C_UTINYINT: {
+      auto src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
+      auto conv_status = ConvertFromArithmeticValue<SQLCHAR>(src_val, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }
