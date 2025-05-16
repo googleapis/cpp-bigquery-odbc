@@ -218,21 +218,21 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
   std::cout<<"src_len "<<src_len<<std::endl;
-  //std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.begin()+src_len);
-std::wcout<<"wstr_data "<<wstr.data()<<std::endl;
-std::wcout<<"wstr_data size "<<wstr.size()<<std::endl;
+  std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
+std::wcout<<"wstr_data "<<wstr_data.data()<<std::endl;
+std::wcout<<"wstr_data size "<<wstr_data.size()<<std::endl;
   auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
   if (buffer_length > src_len) {
     if (res_len) {
       *res_len = src_len * sizeof(SQLWCHAR);
     }
-    std::memcpy(dest, wstr.data(), (src_len) * sizeof(SQLWCHAR));
+    std::memcpy(dest, wstr_data.data(), (src_len) * sizeof(SQLWCHAR));
     dest[src_len] = L'\0';
   } else if (supp_max_len <= buffer_length && buffer_length <= src_len) {
     if (res_len) {
       *res_len = buffer_length * sizeof(SQLWCHAR);
     }
-    std::memcpy(dest, wstr.data(), (buffer_length) * sizeof(SQLWCHAR));
+    std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
     dest[buffer_length - 1] = L'\0';
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
