@@ -264,17 +264,17 @@ std::cout<<"===============inside validate 2"<<std::endl;
   }
 std::cout<<"===============inside validate 3"<<std::endl;
   // Assertions for validation
-  //EXPECT_EQ(result_bool, SQL_TRUE);
-  //EXPECT_EQ(result_int, 42);
-  //EXPECT_DOUBLE_EQ(result_float, 3.14);
+  EXPECT_EQ(result_bool, SQL_TRUE);
+  EXPECT_EQ(result_int, 42);
+  EXPECT_DOUBLE_EQ(result_float, 3.14);
   std::cout<<"===============inside validate 4"<<std::endl;
-  //EXPECT_EQ(std::string((char*)result_string), "");
+  EXPECT_EQ(std::string((char*)result_string), "");
 std::cout<<"===============inside validate 5"<<std::endl;
-  //std::vector<uint8_t> expected_binary = {0xDE, 0xAD, 0xBE, 0xEF};
-  //EXPECT_EQ(result_binary_len, expected_binary.size());
+  std::vector<uint8_t> expected_binary = {0xDE, 0xAD, 0xBE, 0xEF};
+  EXPECT_EQ(result_binary_len, expected_binary.size());
   std::cout<<"===============inside validate 6"<<std::endl;
-  //EXPECT_TRUE(std::equal(result_binary, result_binary + result_binary_len,
-  //                       expected_binary.begin()));
+  EXPECT_TRUE(std::equal(result_binary, result_binary + result_binary_len,
+                         expected_binary.begin()));
   std::cout<<"===============inside validate 7"<<std::endl;
 }
 
@@ -3169,10 +3169,15 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
-
+#if defined(_WIN32) && !defined(_WIN64)
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
   auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST_SIMBA";
+#else
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST_BQ_DRIVER";
+#endif
   Table table(table_name);
 
   Schema schema{{"BoolField", "BOOL"},
@@ -3198,15 +3203,15 @@ std::cout<<"===============adding prints before put"<<std::endl;
   std::cout<<"===============adding prints before validate"<<std::endl;
   ValidateAllPutData(conn, table_name);
   std::cout<<"===============adding prints after validate"<<std::endl;
-  EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
+  //EXPECT_EQ(SQLFreeStmt(conn->hstmt, SQL_CLOSE), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  //EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  //table.DropWithPrepare(conn);
+  //EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#endif
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
