@@ -1037,8 +1037,8 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                 RetrieveFieldText(hwnd, kIdcCatlogBOX, catalog_buffer,
                                   sizeof(catalog_buffer));
                 if (catalog_buffer[0] == '\0') {
-                  MessageBox(hwnd, "Please choose a catalog first.",
-                             "Missing Catalog", MB_OK | MB_ICONWARNING);
+                  MessageBox(hwnd, "Please choose a Project first.",
+                             "Missing Project", MB_OK | MB_ICONWARNING);
                   HWND h_dataset = GetDlgItem(hwnd, kIdcDatasetBOX);
                   if (h_dataset) {
                     SendMessage(h_dataset, CB_RESETCONTENT, 0, 0);
