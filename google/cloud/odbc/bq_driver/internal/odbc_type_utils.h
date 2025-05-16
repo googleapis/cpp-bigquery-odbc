@@ -214,7 +214,7 @@ inline odbc_internal::StatusRecord TimeToOutputBufferResponse(
 }
 
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
-    std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
+    std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
   std::cout<<"src_len "<<src_len<<std::endl;
