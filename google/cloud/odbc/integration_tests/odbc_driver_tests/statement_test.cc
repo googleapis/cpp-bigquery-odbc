@@ -167,7 +167,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
   SQLCHAR bool_data = SQL_TRUE;
   SQLLEN bool_len = SQL_DATA_AT_EXEC;
 
-  SQLLEN int_data = 42;
+  int int_data = 42;
   SQLLEN int_len = SQL_DATA_AT_EXEC;
 
   double float_data = 3.14;
