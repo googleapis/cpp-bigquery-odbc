@@ -94,6 +94,154 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   return StatusRecord::Ok();
 }
 
+std::string ParseIntervalToBuffer(SQLSMALLINT type, SQLDOUBLE value,
+                                  SQLCHAR sign) {
+  SQL_INTERVAL_STRUCT interval_struct = {};
+  switch (type) {
+    case SQL_INTERVAL_YEAR: {
+      interval_struct.interval_type = SQL_IS_YEAR;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.year_month.year = static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    case SQL_INTERVAL_MONTH: {
+      interval_struct.interval_type = SQL_IS_MONTH;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.year_month.month = static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    case SQL_INTERVAL_DAY: {
+      interval_struct.interval_type = SQL_IS_DAY;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    case SQL_INTERVAL_HOUR: {
+      interval_struct.interval_type = SQL_IS_HOUR;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    case SQL_INTERVAL_MINUTE: {
+      interval_struct.interval_type = SQL_IS_MINUTE;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.day_second.minute =
+          static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    case SQL_INTERVAL_SECOND: {
+      interval_struct.interval_type = SQL_IS_SECOND;
+      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
+      interval_struct.intval.day_second.second =
+          static_cast<SQLUINTEGER>(value);
+      break;
+    }
+    default:
+      break;
+  }
+  return FormatIntervalToString(interval_struct);
+}
+
+StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
+                                                     SQLSMALLINT sql_type) {
+  auto numeric_struct = *reinterpret_cast<SQL_NUMERIC_STRUCT*>(src_data.buf);
+  std::string src_str = FormatNumericToString(numeric_struct);
+  auto double_val = ConvertToDouble(src_str);
+  if (!double_val) {
+    return double_val.GetStatusRecord();
+  }
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC: {
+      return src_str;
+    }
+    case SQL_REAL:
+    case SQL_FLOAT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLREAL>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_DOUBLE: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLDOUBLE>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_BIT: {
+      if (*double_val != 0 && *double_val != 1) {
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
+      return std::to_string((*double_val == 0) ? 0 : 1);
+    }
+    case SQL_TINYINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLCHAR>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_SMALLINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLSMALLINT>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_INTEGER: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLINTEGER>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_BIGINT: {
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLBIGINT>(*double_val, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_INTERVAL_YEAR: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_YEAR, *double_val,
+                                   numeric_struct.sign);
+    }
+    case SQL_INTERVAL_MONTH: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_MONTH, *double_val,
+                                   numeric_struct.sign);
+    }
+    case SQL_INTERVAL_DAY: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_DAY, *double_val,
+                                   numeric_struct.sign);
+    }
+    case SQL_INTERVAL_HOUR: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_HOUR, *double_val,
+                                   numeric_struct.sign);
+    }
+    case SQL_INTERVAL_MINUTE: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_MINUTE, *double_val,
+                                   numeric_struct.sign);
+    }
+    case SQL_INTERVAL_SECOND: {
+      return ParseIntervalToBuffer(SQL_INTERVAL_SECOND, *double_val,
+                                   numeric_struct.sign);
+    }
+    default:
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+  }
+}
+
 StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
                                                     SQLSMALLINT sql_type) {
   SQLPOINTER src_buf = src_data.buf;
@@ -255,6 +403,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_BINARY: {
       auto conv_status = ConvertFromBinaryBuffer(src_data, sql_type);
+      if (!conv_status) {
+        return conv_status.GetStatusRecord();
+      }
+      return *conv_status;
+    }
+    case SQL_C_NUMERIC: {
+      auto conv_status = ConvertFromNumericBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }

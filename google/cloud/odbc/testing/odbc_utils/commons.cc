@@ -229,6 +229,31 @@ std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric) {
   return result;
 }
 
+SQL_NUMERIC_STRUCT ConvertStringToNumeric(std::string const& numeric_str) {
+  SQL_NUMERIC_STRUCT numeric = {};
+  numeric.sign = (numeric_str[0] == '-') ? 0 : 1;  // 1=positive, 0=negative
+
+  std::string clean_str = numeric_str;
+  if (clean_str[0] == '-' || clean_str[0] == '+') {
+    clean_str.erase(0, 1);  // Remove sign
+  }
+  auto dot_pos = clean_str.find('.');
+  numeric.scale =
+      (dot_pos != std::string::npos) ? (clean_str.length() - dot_pos - 1) : 0;
+
+  std::string digits_only = clean_str;
+  digits_only.erase(std::remove(digits_only.begin(), digits_only.end(), '.'),
+                    digits_only.end());
+  numeric.precision = static_cast<SQLCHAR>(digits_only.length());
+  int64_t scaled_value =
+      std::abs(std::stoll(digits_only));  // Throws if overflow
+
+  for (int i = 0; i < 8; ++i) {
+    numeric.val[i] = (scaled_value >> (i * 8)) & 0xFF;
+  }
+  return numeric;
+}
+
 SQLRETURN GetCancelErrorDetails(std::string const& api, SQLHANDLE handle,
                                 std::string& error_details) {
   if (handle == nullptr) {
