@@ -1544,7 +1544,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-std::wcout<<L"here in common "<<utf_16_str<<std::endl;
+  std::wcout << L"here in common " << utf_16_str << std::endl;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
@@ -1640,11 +1640,8 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   if (((in_str != nullptr) && (in_str[0] == '\0'))) {
     return std::string();
   }
-  if (in_str_len == SQL_NTS || in_str_len == 0) {
-    in_str_len = 0;
-    while (in_str[in_str_len] != L'\0') {
-      ++in_str_len;
-    }
+  if (in_str_len == SQL_NTS || in_str_len == NULL) {
+    in_str_len = static_cast<SQLINTEGER>(wcslen(in_str));
   }
 
   // Directly create a wide string
