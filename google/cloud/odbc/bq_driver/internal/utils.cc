@@ -622,26 +622,18 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   if (in_str == nullptr) {
     return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
   }
-  if (in_str_len == 0 || in_str[0] == '\0') {
+  if (((in_str != nullptr) && (in_str[0] == '\0'))) {
     return std::string();
   }
-  std::wstring stmt_txt_wstr;
-  std::wstring wstr(reinterpret_cast<wchar_t const*>(in_str));
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
-    in_str_len = wstr.size();
-    // Calculating length based on SQLWCHAR size in different plateform and
-    // compiler.
-#ifndef _WIN32
-    if (sizeof(SQLWCHAR) == 2) {
-      in_str_len = in_str_len * sizeof(SQLWCHAR);
-    }
-#endif  // _WIN32
+    in_str_len =
+        static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
   }
-  stmt_txt_wstr.reserve(in_str_len);
-  for (SQLINTEGER i = 0; i < in_str_len; ++i) {
-    stmt_txt_wstr.push_back(static_cast<wchar_t>(in_str[i]));
-  }
-  return Utf16ToUtf8(stmt_txt_wstr);
+
+  // Directly create a wide string
+  std::wstring wstr(in_str, in_str + in_str_len);
+
+  return Utf16ToUtf8(wstr);
 }
 
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier) {
