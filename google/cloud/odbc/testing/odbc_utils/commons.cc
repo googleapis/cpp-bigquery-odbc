@@ -1544,7 +1544,6 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-  std::wcout << L"here in common " << utf_16_str << std::endl;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
