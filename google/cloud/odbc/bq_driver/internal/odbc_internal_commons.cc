@@ -441,6 +441,27 @@ std::string FormatIntervalToString(const SQL_INTERVAL_STRUCT interval) {
   return std::string(buffer);
 }
 
+std::string FormatNumericToString(SQL_NUMERIC_STRUCT numeric) {
+  uint64_t value = 0;
+
+  for (int i = numeric.precision - 1; i >= 0; --i) {
+    value = (value << 8) + numeric.val[i];
+  }
+  std::string result = std::to_string(value);
+  if (numeric.scale > 0) {
+    if (result.length() <= numeric.scale) {
+      result =
+          "0." + std::string(numeric.scale - result.length(), '0') + result;
+    } else {
+      result.insert(result.length() - numeric.scale, ".");
+    }
+  }
+  if (numeric.sign == 0) {
+    result = "-" + result;
+  }
+  return result;
+}
+
 StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
     std::string const& date_str) {
   std::string cleaned_date_str = date_str;

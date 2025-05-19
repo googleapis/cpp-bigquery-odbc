@@ -573,6 +573,8 @@ std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval);
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric);
 
+SQL_NUMERIC_STRUCT ConvertStringToNumeric(std::string const& numeric_str);
+
 void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
                        std::string create_table_schema, bool use_ansi = false);
 
