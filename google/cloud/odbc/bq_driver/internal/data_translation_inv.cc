@@ -153,7 +153,28 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
   switch (sql_type) {
     case SQL_CHAR:
     case SQL_VARCHAR:
-    case SQL_LONGVARCHAR:
+    case SQL_LONGVARCHAR: {
+      if (src_str.length() > src_data.buflen) {
+        return StatusRecord{SQLStates::k_22001(),
+                            "String data, right truncated"};
+      }
+      return src_str;
+    }
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR: {
+      auto wstr = Utf8ToUtf16(src_str);
+      if (!wstr) {
+        return wstr.GetStatusRecord();
+      }
+      auto byte_len = wstr->length() * sizeof(SQLWCHAR);
+      std::cout << "byte len " << byte_len << std::endl;
+      if (byte_len > src_data.buflen) {
+        return StatusRecord{SQLStates::k_22001(),
+                            "String data, right truncated"};
+      }
+      return src_str;
+    }
     case SQL_DECIMAL:
     case SQL_NUMERIC: {
       return src_str;

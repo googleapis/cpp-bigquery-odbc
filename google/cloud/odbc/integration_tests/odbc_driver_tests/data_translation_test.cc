@@ -3610,6 +3610,7 @@ std::vector<DataInverseTestStruct<std::string>> const
         {SQL_BIGINT, "-9007199254740992", SQL_SUCCESS},
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
         // existing driver not updating scale value in numeric struct.
+        {SQL_WCHAR, "12345.678", SQL_SUCCESS},
         {SQL_DECIMAL, "12345.6789", SQL_SUCCESS},
         {SQL_DOUBLE, "987654.321", SQL_SUCCESS},
         {SQL_BIT, "1", SQL_SUCCESS},  // Not supported by existing driver
