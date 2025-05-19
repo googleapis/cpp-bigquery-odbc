@@ -1647,7 +1647,6 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
 
   // Directly create a wide string
   std::wstring wstr(in_str, in_str + in_str_len);
-  std::wcout << "Converted Wide Stringgg: " << wstr << std::endl;
 
   return Utf16ToUtf8(wstr);
 }
