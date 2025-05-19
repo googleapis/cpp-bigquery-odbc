@@ -1641,7 +1641,8 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
     return std::string();
   }
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
-    in_str_len = static_cast<SQLINTEGER>(wcslen(in_str));
+    in_str_len =
+        static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
   }
 
   // Directly create a wide string
