@@ -105,7 +105,8 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
     std::string const& utf_8_str);
 
 #ifdef _WIN32
-odbc_internal::StatusRecordOr<std::string>Utf8ToACP(const std::string& utf8Str);
+odbc_internal::StatusRecordOr<std::string> Utf8ToACP(
+    std::string const& utf8Str);
 #endif
 
 odbc_internal::StatusRecordOr<std::string> ConvertSQLWCHARToString(

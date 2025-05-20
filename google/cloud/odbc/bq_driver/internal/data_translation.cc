@@ -164,7 +164,12 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
 
   if (dest_type == SQL_C_CHAR) {
 #ifdef _WIN32
-    src_str = Utf8ToACP(src_str);
+    auto str = Utf8ToUtf16(src_str);
+    if (!str.Ok()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "UTF8 to ACP Conversion Failed"};
+    }
+    src_str = *str;
 #endif
     return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
   }
