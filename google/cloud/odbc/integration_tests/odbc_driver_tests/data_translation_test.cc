@@ -3641,7 +3641,7 @@ std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
     kConversionFromIntervalInverseTestData = {
         {SQL_INTERVAL_YEAR, MakeYearMonthInterval(SQL_IS_YEAR, 3, 0),
          SQL_SUCCESS},
-        {SQL_INTERVAL_MONTH, MakeYearMonthInterval(SQL_IS_MONTH, 0, 42),
+        {SQL_INTERVAL_MONTH, MakeYearMonthInterval(SQL_IS_MONTH, 0, 4),
          SQL_SUCCESS},
         {SQL_INTERVAL_YEAR_TO_MONTH,
          MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 3, 5), SQL_SUCCESS},
@@ -3678,7 +3678,7 @@ std::vector<InverseIntervalTestStruct> const
         {SQL_CHAR, SQL_C_INTERVAL_YEAR,
          MakeYearMonthInterval(SQL_IS_YEAR, 3, 0), SQL_SUCCESS},
         {SQL_TINYINT, SQL_C_INTERVAL_MONTH,
-         MakeYearMonthInterval(SQL_IS_MONTH, 0, 42), SQL_SUCCESS},
+         MakeYearMonthInterval(SQL_IS_MONTH, 0, 4), SQL_SUCCESS},
         {SQL_SMALLINT, SQL_C_INTERVAL_DAY,
          MakeDaySecondInterval(SQL_IS_DAY, 10, 0, 0, 0, 0), SQL_SUCCESS},
         {SQL_INTEGER, SQL_C_INTERVAL_HOUR,
@@ -3744,7 +3744,7 @@ void ValidateYearMonthIntervalParametrizedData(
       break;
     }
     status = SQLGetData(conn->hstmt, 1, SQL_C_INTERVAL_YEAR_TO_MONTH, &out_val,
-                        sizeof(SQL_INTERVAL_STRUCT), &out_len);
+                        kBufferLength, &out_len);
     if (status == SQL_ERROR) {
       CheckError(status, "SQLGetData", conn);
     }
@@ -3902,8 +3902,8 @@ void ValidateIntervalArithmeticParametrizedData(
     if (status == SQL_NO_DATA || status == SQL_ERROR) {
       continue;
     }
-    status = SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &out_val,
-                        sizeof(SQLBIGINT), &out_len);
+    status = SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &out_val, kBufferLength,
+                        &out_len);
     CheckError(status, "SQLGetData", conn);
     if (status == SQL_ERROR) {
       continue;
