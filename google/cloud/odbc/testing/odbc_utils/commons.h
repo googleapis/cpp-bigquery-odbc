@@ -637,8 +637,7 @@ void BindColManually(std::shared_ptr<ODBCHandles> conn,
 void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
                     TestingDataBuffer* columns);
 
-std::string Utf16ToUtf8(std::wstring const& utf_16_str,
-                        unsigned int code_page = 65001 /* UTF-8 */);
+std::string Utf16ToUtf8(std::wstring const& utf_16_str);
 
 std::wstring Utf8ToUtf16(std::string const& utf_8_str);
 

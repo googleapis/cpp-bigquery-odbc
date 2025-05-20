@@ -105,38 +105,38 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
     std::vector<std::string> input_col_values;
     if (col_name.compare("Hindi")) {
       for (auto data : input_data) {
-        std::string dataStr;
+        std::string dataStr = Utf16ToUtf8(data.str_field2);
         // For the Simba driver in Unicode mode on Windows, data is received
         // encoded in CP_ACP but is transmitted as UTF-8. In contrast, our
         // driver consistently uses UTF-8 for Unicode data, as required by the
         // BigQuery client API. Converting UTF-8 back to ACP in our case
         // introduces an unnecessary two-step process, which can negatively
         // impact performance.
-#ifdef _WIN32
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+        // #ifdef _WIN32
+        // #ifdef BQ_DRIVER_INTEGRATION_TESTS
 
-        dataStr = Utf16ToUtf8(data.str_field2);
-#else
-        dataStr = Utf16ToUtf8(data.str_field2, CP_ACP);
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#else
-        dataStr = Utf16ToUtf8(data.str_field2);
-#endif  //_WIN32
+        //         dataStr = Utf16ToUtf8(data.str_field2);
+        // #else
+        //         dataStr = Utf16ToUtf8(data.str_field2, CP_ACP);
+        // #endif  // BQ_DRIVER_INTEGRATION_TESTS
+        // #else
+        //         dataStr = Utf16ToUtf8(data.str_field2);
+        // #endif  //_WIN32
         input_col_values.emplace_back(dataStr);
       }
     } else if (col_name.compare("Chinese")) {
       for (auto data : input_data) {
-        std::string dataStr;
-#ifdef _WIN32
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
+        std::string dataStr = Utf16ToUtf8(data.str_field1);
+        // #ifdef _WIN32
+        // #ifdef BQ_DRIVER_INTEGRATION_TESTS
 
-        dataStr = Utf16ToUtf8(data.str_field1);
-#else
-        dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-#else
-        dataStr = Utf16ToUtf8(data.str_field1);
-#endif  //_WIN32
+        //         dataStr = Utf16ToUtf8(data.str_field1);
+        // #else
+        //         dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
+        // #endif  // BQ_DRIVER_INTEGRATION_TESTS
+        // #else
+        //         dataStr = Utf16ToUtf8(data.str_field1);
+        // #endif  //_WIN32
 
         input_col_values.emplace_back(dataStr);
       }

@@ -1520,8 +1520,7 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   return ts.str();
 }
 
-std::string Utf16ToUtf8(std::wstring const& utf_16_str,
-                        unsigned int code_page) {
+std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (utf_16_str.empty()) {
     return std::string();
   }
