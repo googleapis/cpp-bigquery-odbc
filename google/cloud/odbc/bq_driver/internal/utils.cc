@@ -617,6 +617,34 @@ StatusRecordOr<std::wstring> Utf8ToUtf16(std::string const& utf_8_str) {
 #endif
 }
 
+#ifdef _WIN32
+StatusRecordOr<std::string> Utf8ToACP(std::string const& utf8Str) {
+  // Step 1: Convert UTF-8 to UTF-16 (wide char)
+  int wide_len =
+      MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
+  if (wide_len == 0) {
+    return {};  // conversion failed
+  }
+
+  std::vector<wchar_t> wide_str(wide_len);
+  MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, wide_str.data(),
+                      wide_len);
+
+  // Step 2: Convert UTF-16 to ACP (ANSI Code Page)
+  int acp_len = WideCharToMultiByte(CP_ACP, 0, wide_str.data(), -1, nullptr, 0,
+                                    nullptr, nullptr);
+  if (acp_len == 0) {
+    return {};  // conversion failed
+  }
+
+  std::vector<char> acp_str(acp_len);
+  WideCharToMultiByte(CP_ACP, 0, wide_str.data(), -1, acp_str.data(), acp_len,
+                      nullptr, nullptr);
+
+  return std::string(acp_str.data());
+}
+#endif
+
 StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
                                                     SQLINTEGER in_str_len) {
   if (in_str == nullptr) {

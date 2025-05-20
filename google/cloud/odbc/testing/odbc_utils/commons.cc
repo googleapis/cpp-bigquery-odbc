@@ -1520,15 +1520,14 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   return ts.str();
 }
 
-std::string Utf16ToUtf8(std::wstring const& utf_16_str,
-                        unsigned int code_page) {
+std::string Utf16ToUtf8(std::wstring const& utf_16_str) {
   if (utf_16_str.empty()) {
     return std::string();
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int utf8Length = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
-                                       NULL, 0, NULL, NULL);
+  int utf8Length = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1, NULL,
+                                       0, NULL, NULL);
   if (utf8Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting wstring to string");
@@ -1538,7 +1537,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
   std::string utf8Str(utf8Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int result = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
+  int result = WideCharToMultiByte(CP_ACP, 0, utf_16_str.c_str(), -1,
                                    &utf8Str[0], utf8Length, NULL, NULL);
   if (result == 0) {
     throw std::runtime_error("Error while converting wstring to string");

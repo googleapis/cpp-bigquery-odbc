@@ -163,6 +163,14 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   SQLLEN* res_len = dest_data.result_len;
 
   if (dest_type == SQL_C_CHAR) {
+#ifdef _WIN32
+    auto acp_str = Utf8ToACP(src_str);
+    if (!acp_str.Ok()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "UTF8 to ACP Conversion Failed"};
+    }
+    return StringValueToOutputBufferResponse(acp_str->c_str(), dest_data);
+#endif
     return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
   }
   if (dest_type == SQL_C_WCHAR) {
@@ -915,6 +923,14 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
 
   switch (dest_type) {
     case SQL_C_CHAR: {
+#ifdef _WIN32
+      auto acp_str = Utf8ToACP(src_str);
+      if (!acp_str.Ok()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "UTF8 to ACP Conversion Failed"};
+      }
+      return StringValueToOutputBufferResponse(acp_str->c_str(), dest_data);
+#endif
       return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     }
     case SQL_C_WCHAR: {
@@ -972,6 +988,14 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
 
   switch (dest_data.type) {
     case SQL_C_CHAR: {
+#ifdef _WIN32
+      auto acp_str = Utf8ToACP(src_str);
+      if (!acp_str.Ok()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "UTF8 to ACP Conversion Failed"};
+      }
+      return StringValueToOutputBufferResponse(acp_str->c_str(), dest_data);
+#endif
       return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     }
     case SQL_C_WCHAR: {
