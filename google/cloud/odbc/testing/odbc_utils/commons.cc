@@ -230,28 +230,66 @@ std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric) {
 }
 
 SQL_NUMERIC_STRUCT ConvertStringToNumeric(std::string const& numeric_str) {
-  SQL_NUMERIC_STRUCT numeric = {};
-  numeric.sign = (numeric_str[0] == '-') ? 0 : 1;  // 1=positive, 0=negative
+  SQL_NUMERIC_STRUCT numeric_struct = {};
+  std::string num_str;
+  bool is_negative = false;
+  size_t decimal_pos = std::string::npos;
 
-  std::string clean_str = numeric_str;
-  if (clean_str[0] == '-' || clean_str[0] == '+') {
-    clean_str.erase(0, 1);  // Remove sign
+  // Parse sign and find decimal point
+  size_t start = numeric_str.find_first_not_of(" \t");
+  if (start != std::string::npos && numeric_str[start] == '-') {
+    is_negative = true;
+    start++;
   }
-  auto dot_pos = clean_str.find('.');
-  numeric.scale =
-      (dot_pos != std::string::npos) ? (clean_str.length() - dot_pos - 1) : 0;
 
-  std::string digits_only = clean_str;
-  digits_only.erase(std::remove(digits_only.begin(), digits_only.end(), '.'),
-                    digits_only.end());
-  numeric.precision = static_cast<SQLCHAR>(digits_only.length());
-  int64_t scaled_value =
-      std::abs(std::stoll(digits_only));  // Throws if overflow
-
-  for (int i = 0; i < 8; ++i) {
-    numeric.val[i] = (scaled_value >> (i * 8)) & 0xFF;
+  // Extract all digits (both integral and fractional)
+  for (size_t i = start; i < numeric_str.size(); i++) {
+    if (isdigit(numeric_str[i])) {
+      num_str += numeric_str[i];
+    } else if (numeric_str[i] == '.' && decimal_pos == std::string::npos) {
+      decimal_pos = num_str.length();
+    }
   }
-  return numeric;
+
+  // Handle cases where decimal point was at end or not found
+  if (decimal_pos == std::string::npos) {
+    decimal_pos = num_str.length();
+  }
+
+  // Remove leading zeros except if it's the only digit before decimal
+  if (num_str.length() > 1) {
+    size_t first_non_zero = num_str.find_first_not_of('0');
+    if (first_non_zero != std::string::npos && first_non_zero < decimal_pos) {
+      num_str.erase(0, first_non_zero);
+      decimal_pos -= first_non_zero;
+    } else if (first_non_zero == std::string::npos) {
+      num_str = "0";
+      decimal_pos = 1;
+    }
+  }
+
+  // Calculate precision and scale
+  numeric_struct.precision = static_cast<SQLCHAR>(num_str.length());
+  numeric_struct.scale = static_cast<SQLSCHAR>(num_str.length() - decimal_pos);
+  numeric_struct.sign = is_negative ? 0 : 1;
+
+  // Convert to binary (little-endian)
+  memset(numeric_struct.val, 0, SQL_MAX_NUMERIC_LEN);
+  std::string bigint_str = num_str;  // Full number without decimal
+  uint64_t value = 0;
+
+  try {
+    value = std::stoull(bigint_str);
+  } catch (...) {
+    throw std::runtime_error("Numeric value out of range");
+  }
+
+  // Store in little-endian format
+  for (size_t i = 0; i < sizeof(value) && i < SQL_MAX_NUMERIC_LEN; i++) {
+    numeric_struct.val[i] = static_cast<SQLCHAR>((value >> (i * 8)) & 0xFF);
+  }
+
+  return numeric_struct;
 }
 
 SQLRETURN GetCancelErrorDetails(std::string const& api, SQLHANDLE handle,

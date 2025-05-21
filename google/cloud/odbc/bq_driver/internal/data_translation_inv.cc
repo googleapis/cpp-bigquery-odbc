@@ -97,8 +97,9 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
   return StatusRecord::Ok();
 }
 
-std::string ParseIntervalToBuffer(SQLSMALLINT type, SQLDOUBLE value,
-                                  SQLCHAR sign) {
+StatusRecordOr<std::string> ParseIntervalToBuffer(SQLSMALLINT type,
+                                                  SQLDOUBLE value,
+                                                  SQLCHAR sign) {
   SQL_INTERVAL_STRUCT interval_struct = {};
   switch (type) {
     case SQL_INTERVAL_YEAR: {
@@ -140,6 +141,8 @@ std::string ParseIntervalToBuffer(SQLSMALLINT type, SQLDOUBLE value,
       break;
     }
     default:
+      return StatusRecord{SQLStates::k_HY000(),
+                          "invalid single-field interval type"};
       break;
   }
   return FormatIntervalToString(interval_struct);

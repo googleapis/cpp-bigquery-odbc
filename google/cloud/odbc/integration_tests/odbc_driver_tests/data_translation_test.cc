@@ -3755,8 +3755,8 @@ void ValidateNumericParametrizedData(
     if (status == SQL_NO_DATA) {
       continue;
     }
-    status = SQLGetData(conn->hstmt, 1, SQL_C_NUMERIC, &out_val,
-                        sizeof(SQL_NUMERIC_STRUCT), &out_len);
+    status = SQLGetData(conn->hstmt, 1, SQL_C_NUMERIC, &out_val, kBufferLength,
+                        &out_len);
     if (status == SQL_ERROR) {
       continue;  // Skip this row and move to the next
     }
