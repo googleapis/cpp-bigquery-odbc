@@ -86,7 +86,12 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
   dsn_.sessions_enabled =
       (!sessions_enabled.empty() && sessions_enabled != "0");
-
+  // Disable query cache if CACHEQUERY is set to "false" or "0" in the DSN
+  // section.
+  std::string query_cache = dsn_section["USEQUERYCACHE"];
+  if (query_cache == "false" || query_cache == "0") {
+    dsn_.is_query_cache = false;
+  }
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
   std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];

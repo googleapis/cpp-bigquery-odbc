@@ -177,15 +177,15 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   if (!transaction_status.ok()) {
     return transaction_status;
   }
+  ConnectionHandle& conn_handle = *GetConnectionHandle();
 
   Job req;
   req.configuration.query.query = query;
-  req.configuration.query.use_query_cache = true;
+  req.configuration.query.use_query_cache = conn_handle.GetDsn().is_query_cache;
   req.configuration.dry_run = true;
   req.configuration.query.use_legacy_sql = false;
 
   // Add default dataset from the config
-  ConnectionHandle& conn_handle = *GetConnectionHandle();
   std::string catalog_name = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   if (!default_dataset.empty()) {

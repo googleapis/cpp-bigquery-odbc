@@ -95,13 +95,11 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
     }
     auto sections = *sections_status;
 
-    Section temp_section;
     for (auto const& [key, value] : (*sections)[dsn_name]) {
       std::string upper_key = key;
       GetUpperStr(upper_key);
-      temp_section[upper_key] = value;
+      dsn_section[upper_key] = value;
     }
-    dsn_section = temp_section;
   }
   return StatusRecord::Ok();
 }
@@ -245,6 +243,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
 
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
+      GetUpperStr(property);
       if (!dsn_section[property].empty()) {
         dsn_section[property] = it.second;
       }
