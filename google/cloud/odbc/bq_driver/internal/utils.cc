@@ -637,9 +637,13 @@ StatusRecordOr<std::string> Utf8ToACP(std::string const& utf8Str) {
     return {};  // conversion failed
   }
 
-  std::vector<char> acp_str(acp_len);
+  std::string acp_str(acp_len, '\0');
   WideCharToMultiByte(CP_ACP, 0, wide_str.data(), -1, acp_str.data(), acp_len,
                       nullptr, nullptr);
+  if (acp_str.find('?') != std::string::npos) {
+    // Conversion was lossy → fallback to raw UTF-8 bytes
+    return utf8Str;
+  }
 
   return std::string(acp_str.data());
 }
