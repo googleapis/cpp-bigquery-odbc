@@ -621,7 +621,6 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
   }
 }
 
-
 TEST(ConvertFromBuffer, From_SQL_C_Type_Date) {
   SQL_DATE_STRUCT date_data_first = {2024, 5, 13};
   SQL_DATE_STRUCT date_data_sec = {1999, 12, 31};

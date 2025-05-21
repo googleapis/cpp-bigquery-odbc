@@ -3658,7 +3658,7 @@ void ValidateDateParametrizedData(
       continue;
     }
     status = SQLGetData(conn->hstmt, 1, SQL_C_TYPE_DATE, &out_val,
-                        sizeof(SQL_DATE_STRUCT), &out_len);
+                        kBufferLength, &out_len);
     CheckError(status, "SQLGetData", conn);
     if (status == SQL_ERROR) {
       continue;
@@ -3692,6 +3692,42 @@ TEST(DataTranslationTest, Parametrized_SQL_Date_to_all) {
       "SELECT DateField FROM " + table_name + " ORDER BY Index";
   ValidateDateParametrizedData(conn, select_stmt,
                                kConversionFromDateInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+std::vector<DataInverseTestStruct<SQL_DATE_STRUCT>> const
+    kConversionFromDateToTimestampInverseTestData = {
+        {SQL_TYPE_TIMESTAMP, {2024, 1, 10}, SQL_SUCCESS},
+};
+
+TEST(DataTranslationTest, Parametrized_SQL_Date_to_Timestamp) {
+  auto const table_name =
+      kDatasetWithTablePrefix +
+      "ODBC_PARAMETRIZED_DATA_TRANSLATION_DATE_TO_TIMESTAMP";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, TimestampField TIMESTAMP)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertDateParametrizedData(conn, table_name,
+                             kConversionFromDateToTimestampInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT TimestampField FROM " + table_name + " ORDER BY Index";
+  ValidateDateParametrizedData(conn, select_stmt,
+                               kConversionFromDateToTimestampInverseTestData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // // Delete table

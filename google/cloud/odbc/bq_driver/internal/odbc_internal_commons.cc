@@ -341,10 +341,6 @@ StatusRecord ConvertStringToIntervalStruct(
 }
 
 StatusRecordOr<std::string> FormatDateToString(SQL_DATE_STRUCT date) {
-  if (date.year < 0 || date.month < 1 || date.month > 12 || date.day < 1 ||
-      date.day > 31) {
-    StatusRecord{SQLStates::k_HY000(), "Invalid Date"};
-  }
   std::ostringstream oss;
   oss << std::setfill('0');
   oss << std::setw(4) << date.year << "-" << std::setw(2) << date.month << "-"
