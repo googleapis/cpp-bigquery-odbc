@@ -110,9 +110,7 @@ if (WIN32)
         COMMON_LIBS
         user32
         gdi32
-        odbccp32
-        legacy_stdio_definitions
-        legacy_stdio_wide_specifiers)
+        odbccp32)
 endif ()
 
 # Link the collected libraries to the target
