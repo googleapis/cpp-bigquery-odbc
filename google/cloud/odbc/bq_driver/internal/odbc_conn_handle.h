@@ -56,6 +56,7 @@ struct Dsn {
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
+  bool is_query_cache = true;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////

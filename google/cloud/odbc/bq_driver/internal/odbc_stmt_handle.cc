@@ -181,7 +181,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
   Job req;
   req.configuration.query.query = query;
-  req.configuration.query.use_query_cache = true;
+  req.configuration.query.use_query_cache = conn_handle.GetDsn().is_query_cache;
   req.configuration.dry_run = true;
   req.configuration.query.use_legacy_sql =
       conn_handle.GetDsn().is_bq_legacy_sql;
