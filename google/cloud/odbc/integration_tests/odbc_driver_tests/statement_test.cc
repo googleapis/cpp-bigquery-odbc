@@ -127,16 +127,9 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
         std::string data_str;
 #ifdef _WIN32
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-
-<<<<<<< HEAD
         data_str = Utf16ToUtf8(data.str_field1);
 #else
         data_str = Utf16ToUtf8(data.str_field1, CP_ACP);
-=======
-        dataStr = Utf16ToUtf8(data.str_field1);
-#else
-        dataStr = Utf16ToUtf8(data.str_field1, CP_ACP);
->>>>>>> 27524f14 (updated as per review comments)
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 #else
         data_str = Utf16ToUtf8(data.str_field1);
