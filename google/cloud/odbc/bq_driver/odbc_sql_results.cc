@@ -317,16 +317,28 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
   StatementHandle& handle = *(*handle_result);
 
   ResultSet result_set;
+  SQLULEN row_count = 0;
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return max_rows_status.GetCalculatedReturnCode();
+  }
+  SQLULEN max_rows = *max_rows_status;
+
   if (data_type == SQL_ALL_TYPES) {
     for (auto [sql_data_type, bq_data_type_info] : kSqlToBqDataTypes) {
       for (auto [bq_data_type, type_info] : bq_data_type_info) {
+        if (max_rows != 0 && row_count >= max_rows) break;
         result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+        ++row_count;
       }
+      if (max_rows != 0 && row_count >= max_rows) break;
     }
   } else {
     if (kSqlToBqDataTypes.count(data_type)) {
       for (auto [bq_data_type, type_info] : kSqlToBqDataTypes.at(data_type)) {
+        if (max_rows != 0 && row_count >= max_rows) break;
         result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+        ++row_count;
       }
     }
   }

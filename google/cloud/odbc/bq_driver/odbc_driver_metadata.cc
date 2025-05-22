@@ -275,7 +275,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
-    return LogAndReturnCode(handle,max_rows_status);
+    return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
   ResultSet& result_set = *rs_status_record_or;
@@ -327,7 +327,7 @@ SQLRETURN SQLForeignKeysInternal(
   }
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
-    return LogAndReturnCode(handle,max_rows_status);
+    return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
   ResultSet& result_set = *rs_status_record_or;
@@ -412,7 +412,18 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, result_set_status);
   }
 
-  handle.SetResultSet(*result_set_status);
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle, max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *result_set_status;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
+
+  handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
 }
@@ -492,6 +503,12 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   // Process Table Results for each table returned from the list above.
+  auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle, max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+
   ResultSet final_result_set;
   for (auto const& bq_table : *filtered_tables_data_status) {
     StatusRecordOr<ResultSet> table_result_set_status =
@@ -501,12 +518,18 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       return LogAndReturnCode(handle, table_result_set_status);
     }
     if (!table_result_set_status->rows.empty()) {
-      // Set the row schema
-      final_result_set.row_schema = table_result_set_status->row_schema;
-      // Append the result set rows to the final results.
+      if (final_result_set.row_schema.empty()) {
+        final_result_set.row_schema = table_result_set_status->row_schema;
+      }
+
       final_result_set.rows.insert(final_result_set.rows.end(),
                                    table_result_set_status->rows.begin(),
                                    table_result_set_status->rows.end());
+
+      if (max_rows != 0 && final_result_set.rows.size() >= max_rows) {
+        final_result_set.rows.resize(max_rows);
+        break;
+      }
     }
   }
 
@@ -584,6 +607,12 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, filtered_procedure_data_status);
   }
 
+  auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle, max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+
   ResultSet final_result_set;
   if (filtered_procedure_data_status.GetValue().empty()) {
     handle.SetResultSet(final_result_set);
@@ -603,6 +632,10 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     final_result_set.rows.insert(final_result_set.rows.end(),
                                  procedure_result_set_status->rows.begin(),
                                  procedure_result_set_status->rows.end());
+
+    if (max_rows != 0 && final_result_set.rows.size() > max_rows) {
+      final_result_set.rows.resize(max_rows);
+    }
   }
   handle.SetResultSet(final_result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
@@ -679,6 +712,11 @@ SQLRETURN SQLProcedureColumnsInternal(
   if (!filtered_procedure_data_status) {
     return LogAndReturnCode(handle, filtered_procedure_data_status);
   }
+  auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle, max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
 
   ResultSet final_result_set;
   if (filtered_procedure_data_status.GetValue().empty()) {
@@ -700,6 +738,10 @@ SQLRETURN SQLProcedureColumnsInternal(
       final_result_set.rows.insert(final_result_set.rows.end(),
                                    procedure_result_set_status->rows.begin(),
                                    procedure_result_set_status->rows.end());
+      if (max_rows != 0 && final_result_set.rows.size() >= max_rows) {
+        final_result_set.rows.resize(max_rows);
+        break;
+      }
     }
   }
 
