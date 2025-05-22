@@ -3068,8 +3068,6 @@ TEST(StatementTest, SQLPutDataErrorTest) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-// TODO(b/406173318): UTF16ToUTF8 invalid conversion for windows and Linux DM
 TEST(StatementTest, SQLPutDataSpecialCases) {
   // Test SQLPutData error scenarios with proper sequence and data validation
 
@@ -3159,7 +3157,6 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
@@ -3469,9 +3466,6 @@ TEST(StatementTest, SQLParamData_InvalidStatementHandle) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-// TODO(b/406173318):It is giving segmentation fault due to invalid memory
-// accessing
 TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3540,6 +3534,7 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // For the internal driver, the Driver Manager does not raise a function
 // sequence error, whereas for the external driver, it does.
 TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
