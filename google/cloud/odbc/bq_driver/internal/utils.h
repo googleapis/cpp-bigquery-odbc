@@ -261,16 +261,7 @@ inline void SanitizeIdentifierArgument(std::string& id_arg) {
 #ifdef _WIN32
 std::string ConvertLPCSTRToString(LPCSTR lpsz_attributes);
 
-odbc_internal::StatusRecord AddDSNToRegistry(std::string const& dsn_name,
-                                             std::string const& driver,
-                                             Section const& section);
-
 odbc_internal::StatusRecord AddLogTraceToRegistry(Section const& section);
-
-odbc_internal::StatusRecord EditDSNInRegistry(std::string const& dsn_name,
-                                              Section const& section);
-
-odbc_internal::StatusRecord RemoveDSNFromRegistry(std::string const& dsn_name);
 
 #endif  // _WIN32
 

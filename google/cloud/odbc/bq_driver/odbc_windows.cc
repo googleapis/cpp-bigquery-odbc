@@ -23,12 +23,10 @@
 
 namespace google::cloud::odbc_bq_driver {
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-using google::cloud::odbc_bq_driver_internal::AddDSNToRegistry;
 using google::cloud::odbc_bq_driver_internal::AddLogTraceToRegistry;
 using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
-using google::cloud::odbc_bq_driver_internal::EditDSNInRegistry;
 using google::cloud::odbc_bq_driver_internal::EncryptPassword;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
@@ -40,7 +38,6 @@ using google::cloud::odbc_bq_driver_internal::LogLevel;
 using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
 using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::ProxyOptions;
-using google::cloud::odbc_bq_driver_internal::RemoveDSNFromRegistry;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::Trim;
 using google::cloud::odbc_internal::StatusRecordOr;
