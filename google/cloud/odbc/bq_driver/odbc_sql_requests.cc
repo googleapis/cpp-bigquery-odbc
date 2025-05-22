@@ -430,10 +430,21 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
 
   // Process query results into a result set if it's a SELECT statement.
   auto rs_status_record_or = ProcessQueryResults(results);
+  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return max_rows_status.GetStatusRecord();
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *rs_status_record_or;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
+
   if (!rs_status_record_or || statement_type != "SELECT") {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   } else {
-    stmt_handle.SetResultSet(*rs_status_record_or);
+    stmt_handle.SetResultSet(result_set);
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   }
 
