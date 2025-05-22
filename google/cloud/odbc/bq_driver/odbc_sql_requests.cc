@@ -32,7 +32,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
-using google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -229,10 +228,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     return query_timeout_status.GetStatusRecord();
   }
   int query_timeout = *query_timeout_status;
-
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
-
   std::vector<QueryParameter> basic_query_params =
       stmt_handle.GetQueryParameters();
   DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
@@ -245,7 +242,11 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     if (!status.ok()) {
       return status;
     }
-
+    for(auto param: query_params)
+    {
+      std::cout<<"name: "<<param.name<<std::endl;
+      std::cout<<"name: "<<param.parameter_value.value<<std::endl;
+    }
     QueryRequest query_request = post_request.query_request();
     query_request.set_query_parameters(query_params);
     post_request.set_query_request(query_request);
@@ -448,11 +449,8 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   // Unbind previous descriptor records and populate IRD.
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.UnbindAllDescriptorRecordsFrom(0);
-
-  // TODO(b/413273776): Handle PopulateIrd call in SQLMoreResults
-  TableReference table_fields;
-  google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
-      ird, ds_status_record_or->schema, table_fields);
+  //google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
+  //    ird, ds_status_record_or->schema);
 
   return StatusRecord::Ok();
 }
@@ -1225,7 +1223,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
                                           "Invalid string or buffer length."});
   }
-
   // Handle NULL data
   if (str_len_or_ind_ptr == SQL_NULL_DATA ||
       (str_len_or_ind_ptr == 0 && data)) {
@@ -1234,7 +1231,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     stmt_handle.SetNeedData(true);
     return SQL_SUCCESS;
   }
-
   // Handling SQL_DATA_AT_EXEC and  SQL_LEN_DATA_AT_EXEC(size) and
   SQLLEN column_size = 0;
   if (*apd_rec.indicator_ptr <= SQL_LEN_DATA_AT_EXEC_OFFSET) {
@@ -1247,7 +1243,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     // Allow unbounded data size
     column_size = -1;
   }
-
   // Data Length Mismatch Handling
   if (column_size != -1) {
     SQLLEN buffered_data_len = apd_rec.data_buffer.size() + str_len_or_ind_ptr;
@@ -1261,7 +1256,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
       stmt_handle.SetStmtState(StmtStates::kNeedsParams);
     }
   }
-
   // Handle data insertion if valid
   if (data && str_len_or_ind_ptr > 0) {
     char const* char_data = static_cast<char const*>(data);
@@ -1271,7 +1265,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   // Mark that data is needed
   stmt_handle.SetNeedData(true);
-
   return SQL_SUCCESS;
 }
 
@@ -1313,6 +1306,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   ++param_num;
   while (param_num <= handle->GetParamCount()) {
     auto param = apd.GetDescriptorRecord(param_num);
+
     if ((!param.indicator_ptr) || (*(param.indicator_ptr) == SQL_NTS)) {
       param_num++;
       continue;
@@ -1330,7 +1324,6 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       return SQL_NEED_DATA;
     }
   }
-
   StatusRecord execute_status =
       ActuallyProcessExecute(*handle, StmtStates::kStatementPrepared, true);
   if (!execute_status.ok()) {
