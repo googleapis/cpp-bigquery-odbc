@@ -3148,7 +3148,6 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
@@ -3586,6 +3585,7 @@ TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
 // For the internal driver, the Driver Manager does not raise a function
 // sequence error, whereas for the external driver, it does.
 TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
