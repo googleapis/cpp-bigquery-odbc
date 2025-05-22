@@ -273,9 +273,19 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   if (!rs_status_record_or) {
     return LogAndReturnCode(handle, rs_status_record_or);
   }
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle,max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *rs_status_record_or;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
 
   // Store the resultset in statement handle.
-  handle.SetResultSet(*rs_status_record_or);
+  handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return rc;
 }
@@ -315,9 +325,19 @@ SQLRETURN SQLForeignKeysInternal(
   if (!rs_status_record_or) {
     return LogAndReturnCode(handle, rs_status_record_or);
   }
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return LogAndReturnCode(handle,max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *rs_status_record_or;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
 
   // Store the resultset in statement handle.
-  handle.SetResultSet(*rs_status_record_or);
+  handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return rc;
 }
