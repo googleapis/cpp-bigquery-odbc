@@ -304,17 +304,14 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
 
-  auto dml_stats = ds_status_record_or.GetValue().dml_stats;
-
   // Determine execution state based on statement type
   if (statement_type == "SELECT" ||
       (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
     stmt_handle.SetResultSet(result_set);
-  } else if ((statement_type == "UPDATE" && dml_stats.updated_row_count == 0) ||
-             (statement_type == "INSERT" &&
-              dml_stats.inserted_row_count == 0) ||
-             (statement_type == "DELETE" && dml_stats.deleted_row_count == 0)) {
+  } else if ((statement_type == "UPDATE" || statement_type == "INSERT" ||
+              statement_type == "DELETE") &&
+             ds_status_record_or->num_dml_affected_rows == 0) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
     // Note: The message is not supposed to be propagated to the application in
     // case of SQL_NO_DATA
@@ -424,13 +421,9 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   results.data_source_results = *ds_status_record_or;
 
   // Assign affected row count based on statement type.
-  std::int64_t affected_rows = ds_status_record_or->num_dml_affected_rows;
-  if (statement_type == "INSERT") {
-    results.dml_stats.inserted_row_count = affected_rows;
-  } else if (statement_type == "UPDATE") {
-    results.dml_stats.updated_row_count = affected_rows;
-  } else if (statement_type == "DELETE") {
-    results.dml_stats.deleted_row_count = affected_rows;
+  if (statement_type == "INSERT" || statement_type == "UPDATE" ||
+      statement_type == "DELETE") {
+    results.num_dml_affected_rows = ds_status_record_or->num_dml_affected_rows;
   }
 
   stmt_handle.SetDSResults(results);

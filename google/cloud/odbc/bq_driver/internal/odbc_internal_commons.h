@@ -387,7 +387,7 @@ struct DSResults {
                 google::cloud::bigquery_v2_minimal_internal::PostQueryResults,
                 google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
       data_source_results;
-  google::cloud::bigquery_v2_minimal_internal::DmlStats dml_stats;
+  std::int64_t num_dml_affected_rows = 0;
   // We need optional here because:
   //   1) In async execution, PostQuery might not have finished.
   //   2) No job has been created using JOB_CREATION_OPTIONAL

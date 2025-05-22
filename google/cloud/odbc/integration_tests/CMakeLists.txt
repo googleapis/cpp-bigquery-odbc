@@ -128,9 +128,6 @@ function (odbc_define_demo_tests)
     target_include_directories(all_demo_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
     target_compile_features(all_demo_tests PUBLIC cxx_std_17)
-
-    include(GoogleTest)
-    gtest_discover_tests(all_demo_tests)
 endfunction ()
 
 function (odbc_define_examples)

@@ -110,7 +110,7 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
 
   DSResults results;
-  results.dml_stats = pq_status->dml_stats;
+  results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.data_source_results = *pq_status;
 
   // Retrieve job information
@@ -156,13 +156,9 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
 
   // Assign DML row counts
-  std::int64_t dml_affected_rows = gq_status->num_dml_affected_rows;
-  if (statement_type == "INSERT") {
-    results.dml_stats.inserted_row_count = dml_affected_rows;
-  } else if (statement_type == "UPDATE") {
-    results.dml_stats.updated_row_count = dml_affected_rows;
-  } else if (statement_type == "DELETE") {
-    results.dml_stats.deleted_row_count = dml_affected_rows;
+  if (statement_type == "INSERT" || statement_type == "UPDATE" ||
+      statement_type == "DELETE") {
+    results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
   }
   results.data_source_results = *gq_status;
   stmt_handle.SetDSResults(results);

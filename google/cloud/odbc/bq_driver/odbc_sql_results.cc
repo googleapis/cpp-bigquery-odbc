@@ -26,7 +26,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::bigquery_v2_minimal_internal::DmlStats;
 using google::cloud::odbc_bq_driver_internal::BQDataType;
 using google::cloud::odbc_bq_driver_internal::CheckTargetType;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -557,13 +556,10 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
     sub_operation_type = job_status.GetValue().second;
   }
 
-  DmlStats dml_stats = stmt_handle.GetDSResults().dml_stats;
-  if (operation == "INSERT" || sub_operation_type == "INSERT") {
-    *row_count = dml_stats.inserted_row_count;
-  } else if (operation == "UPDATE" || sub_operation_type == "UPDATE") {
-    *row_count = dml_stats.updated_row_count;
-  } else if (operation == "DELETE" || sub_operation_type == "DELETE") {
-    *row_count = dml_stats.deleted_row_count;
+  if (operation == "INSERT" || sub_operation_type == "INSERT" ||
+      operation == "UPDATE" || sub_operation_type == "UPDATE" ||
+      operation == "DELETE" || sub_operation_type == "DELETE") {
+    *row_count = stmt_handle.GetDSResults().num_dml_affected_rows;
   } else {
     *row_count = -1;
   }

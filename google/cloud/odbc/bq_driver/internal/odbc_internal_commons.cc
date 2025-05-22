@@ -746,7 +746,7 @@ StatusRecordOr<DSResults> FetchBQData(
     return pq_status.GetStatusRecord();
   }
   DSResults results;
-  results.dml_stats = pq_status->dml_stats;
+  results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results
@@ -760,6 +760,7 @@ StatusRecordOr<DSResults> FetchBQData(
     if (!gq_status) {
       return gq_status.GetStatusRecord();
     }
+    results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
     results.data_source_results = *gq_status;
   }
   if (!conn_handle.IsSessionStarted() &&
