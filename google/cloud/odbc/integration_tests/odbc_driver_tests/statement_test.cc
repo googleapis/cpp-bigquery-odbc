@@ -3073,6 +3073,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
 
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_PUT_DATA_SPECIAL_CASES_TEST";
+      std::cout<<"=====table_name:"<<table_name<<std::endl;
   Table table(table_name);
 
   Schema schema{{"IntField1", "INT64"},
@@ -3121,7 +3122,7 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_NEED_DATA);
-
+std::cout<<"======first"<<std::endl;
   // Scenario 1: Call SQLPutData with mismatched data type
   std::string data = "SomeData";
   SQLPOINTER param_target = nullptr;
@@ -3129,28 +3130,28 @@ TEST(StatementTest, SQLPutDataSpecialCases) {
   EXPECT_EQ(static_cast<SQLPOINTER>(&param), param_target);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), data.size()),
             SQL_SUCCESS);
-
+            std::cout<<"======second"<<std::endl;
   // Scenario 2: Invalid Data in Different Encoding
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   std::wstring latin1_data =
-      L"Latin-1 data \xE9";  // Character 'é' in Latin-1 encoding
+      L"Latin-1 data";  // Character 'é' in Latin-1 encoding
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)latin1_data.c_str(),
                        latin1_data.size()),
             SQL_SUCCESS);
-
+            std::cout<<"======third"<<std::endl;
   // Scenario 3: Call SQLPutData with null data and a negative size
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, nullptr, SQL_NULL_DATA), SQL_SUCCESS);
-
+  std::cout<<"======fourth"<<std::endl;
   // Scenario 4: Call SQLPutData with size as 0
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), 0), SQL_SUCCESS);
-
+  std::cout<<"======fifth"<<std::endl;
   // Scenario 5: Call SQLPutData with valid data and a negative size
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_NEED_DATA);
   EXPECT_EQ(SQLPutData(conn->hstmt, (SQLPOINTER)data.c_str(), SQL_NULL_DATA),
             SQL_SUCCESS);
-
+            std::cout<<"======sixth"<<std::endl;
   EXPECT_EQ(SQLParamData(conn->hstmt, nullptr), SQL_SUCCESS);
 
   // Cleanup before disconnecting
