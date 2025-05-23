@@ -1229,7 +1229,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Handle NULL data
   if (str_len_or_ind_ptr == SQL_NULL_DATA ||
       (str_len_or_ind_ptr == 0 && data)) {
-    apd_rec.data_buffer.assign(1,
+    apd_rec.data_buffer.assign(sizeof(SQLWCHAR),
                                '\0');  // store empty string as null-terminated
     stmt_handle.SetNeedData(true);
     return SQL_SUCCESS;
@@ -1330,7 +1330,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       return SQL_NEED_DATA;
     }
   }
-
+std::cout<<"sending the data back"<<std::endl;
   StatusRecord execute_status =
       ActuallyProcessExecute(*handle, StmtStates::kStatementPrepared, true);
   if (!execute_status.ok()) {
