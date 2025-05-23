@@ -523,7 +523,6 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   }
   return utf8Str;
 #else
-std::wcout<<"======utf_16_str:"<<utf_16_str<<std::endl;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
@@ -626,13 +625,11 @@ StatusRecordOr<std::string> ConvertSQLWCHARToString(SQLWCHAR* in_str,
   if (((in_str != nullptr) && (in_str[0] == '\0'))) {
     return std::string();
   }
-  if (in_str_len == SQL_NTS || in_str_len == NULL || in_str_len == 0) {
+  if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len =
         static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
   }
-  std::cout<<"in_str0=========:"<<in_str[0]<<std::endl;
-  std::cout<<"in_str1=========:"<<in_str[1]<<std::endl;
-  std::cout<<"=====in_str_lenws:"<<in_str_len<<std::endl;
+
   // Directly create a wide string
   std::wstring wstr(in_str, in_str + in_str_len);
 
