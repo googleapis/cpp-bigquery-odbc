@@ -1222,7 +1222,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Handle NULL data
   if (str_len_or_ind_ptr == SQL_NULL_DATA ||
       (str_len_or_ind_ptr == 0 && data)) {
-    apd_rec.data_buffer.assign(1,
+    apd_rec.data_buffer.assign(sizeof(apd.GetType()),
                                '\0');  // store empty string as null-terminated
     stmt_handle.SetNeedData(true);
     return SQL_SUCCESS;
