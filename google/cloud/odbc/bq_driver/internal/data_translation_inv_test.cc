@@ -501,8 +501,7 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
   // SQL_C_TINYINT
   {
     SQLCHAR value = 200;
-    SQLLEN data_size = sizeof(SQLCHAR);
-    DataBuffer data = {SQL_C_TINYINT, &value, 0, &data_size};
+    DataBuffer data = {SQL_C_TINYINT, &value, 0, nullptr};
     StatusRecordOr<std::string> conv_status;
 
     conv_status = ConvertFromBuffer(data, SQL_CHAR);
@@ -523,9 +522,8 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
 
   // SQL_C_STINYINT
   {
-    int8_t value = -100;
-    SQLLEN data_size = sizeof(int8_t);
-    DataBuffer data = {SQL_C_STINYINT, &value, 0, &data_size};
+    SQLSCHAR value = -100;
+    DataBuffer data = {SQL_C_STINYINT, &value, 0, nullptr};
     StatusRecordOr<std::string> conv_status;
 
     conv_status = ConvertFromBuffer(data, SQL_CHAR);
@@ -547,8 +545,7 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
   // SQL_C_UTINYINT
   {
     SQLCHAR value = 250;
-    SQLLEN data_size = sizeof(SQLCHAR);
-    DataBuffer data = {SQL_C_UTINYINT, &value, 0, &data_size};
+    DataBuffer data = {SQL_C_UTINYINT, &value, 0, nullptr};
     StatusRecordOr<std::string> conv_status;
 
     conv_status = ConvertFromBuffer(data, SQL_CHAR);

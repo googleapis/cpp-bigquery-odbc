@@ -266,8 +266,9 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       return *conv_status;
     }
     case SQL_C_STINYINT: {
-      auto src_val = *reinterpret_cast<int8_t*>(src_buf);
-      auto conv_status = ConvertFromArithmeticValue<int8_t>(src_val, sql_type);
+      auto src_val = *reinterpret_cast<SQLSCHAR*>(src_buf);
+      auto conv_status =
+          ConvertFromArithmeticValue<SQLSCHAR>(src_val, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
       }
