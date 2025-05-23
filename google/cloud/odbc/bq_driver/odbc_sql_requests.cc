@@ -242,10 +242,11 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     if (!status.ok()) {
       return status;
     }
-    for(auto param: query_params)
-    {
-      std::cout<<"name: "<<param.name<<std::endl;
-      std::cout<<"name: "<<param.parameter_value.value<<std::endl;
+    for (auto param : query_params) {
+      std::string name = param.name;
+      std::string value = param.parameter_value.value;
+      std::cout << "name: " << name << std::endl;
+      std::cout << "name: " << value << std::endl;
     }
     QueryRequest query_request = post_request.query_request();
     query_request.set_query_parameters(query_params);
@@ -449,8 +450,8 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   // Unbind previous descriptor records and populate IRD.
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.UnbindAllDescriptorRecordsFrom(0);
-  //google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
-  //    ird, ds_status_record_or->schema);
+  // google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
+  //     ird, ds_status_record_or->schema);
 
   return StatusRecord::Ok();
 }
