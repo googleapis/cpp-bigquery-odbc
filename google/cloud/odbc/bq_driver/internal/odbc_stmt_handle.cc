@@ -177,15 +177,16 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   if (!transaction_status.ok()) {
     return transaction_status;
   }
+  ConnectionHandle& conn_handle = *GetConnectionHandle();
 
   Job req;
   req.configuration.query.query = query;
   req.configuration.query.use_query_cache = true;
   req.configuration.dry_run = true;
-  req.configuration.query.use_legacy_sql = false;
+  req.configuration.query.use_legacy_sql =
+      conn_handle.GetDsn().is_bq_legacy_sql;
 
   // Add default dataset from the config
-  ConnectionHandle& conn_handle = *GetConnectionHandle();
   std::string catalog_name = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   if (!default_dataset.empty()) {
@@ -193,17 +194,19 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     req.configuration.query.default_dataset.dataset_id = default_dataset;
   }
 
-  std::regex positional_pattern(R"(\?)");
-  std::regex named_pattern(R"([:@]\w+)");
+  if (!conn_handle.GetDsn().is_bq_legacy_sql) {
+    std::regex positional_pattern(R"(\?)");
+    std::regex named_pattern(R"([:@]\w+)");
 
-  // Check for positional parameters
-  if (std::regex_search(query, positional_pattern)) {
-    req.configuration.query.parameter_mode = "POSITIONAL";
-  }
+    // Check for positional parameters
+    if (std::regex_search(query, positional_pattern)) {
+      req.configuration.query.parameter_mode = "POSITIONAL";
+    }
 
-  // Check for named parameters
-  if (std::regex_search(query, named_pattern)) {
-    req.configuration.query.parameter_mode = "NAMED";
+    // Check for named parameters
+    if (std::regex_search(query, named_pattern)) {
+      req.configuration.query.parameter_mode = "NAMED";
+    }
   }
   if (conn_handle.IsSessionStarted()) {
     req.configuration.query.connection_properties.push_back(
@@ -216,11 +219,9 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
-
   if (!response.Ok()) {
     return response.GetStatusRecord();
   }
-
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {
