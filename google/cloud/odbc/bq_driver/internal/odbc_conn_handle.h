@@ -49,6 +49,7 @@ struct Dsn {
   std::string key_file_path;
   std::string o_auth_mechanism;
   std::string list_projects_parent;
+
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.
@@ -56,6 +57,7 @@ struct Dsn {
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
+  std::uint32_t row_fetched_per_block = 100000;
   bool is_query_cache = true;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.

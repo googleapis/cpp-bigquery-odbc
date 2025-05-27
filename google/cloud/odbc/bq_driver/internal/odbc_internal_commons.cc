@@ -901,6 +901,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
   bool is_job_creation_required = conn_handle.GetDsn().is_job_creation_required;
+  std::uint32_t max_row_per_block = conn_handle.GetDsn().row_fetched_per_block;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
@@ -908,6 +909,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_query(query_str);
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  query_request.set_max_results(max_row_per_block);
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }
