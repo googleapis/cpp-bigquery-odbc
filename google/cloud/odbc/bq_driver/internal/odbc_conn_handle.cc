@@ -89,7 +89,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string max_row_fetched = dsn_section["ROWSFETCHEDPERBLOCK"];
   if (!max_row_fetched.empty()) {
     dsn_.row_fetched_per_block = std::stoi(max_row_fetched);
-  }  
+  }
   // Disable query cache if CACHEQUERY is set to "false" or "0" in the DSN
   // section.
   std::string query_cache = dsn_section["USEQUERYCACHE"];
