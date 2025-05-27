@@ -179,7 +179,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
 
   DataField fields[] = {
       {&bool_data, sizeof(bool_data), SQL_C_BIT, SQL_BIT, &bool_len},
-      {&int_data, sizeof(int_data), SQL_C_LONG, SQL_INTEGER, &int_len},
+      {&int_data, sizeof(int_data), SQL_C_SLONG, SQL_INTEGER, &int_len},
       {&float_data, sizeof(float_data), SQL_C_DOUBLE, SQL_DOUBLE, &float_len},
       {(SQLPOINTER)text_data.c_str(), static_cast<SQLLEN>(text_data.size()),
        SQL_C_CHAR, SQL_LONGVARCHAR, &string_len},
@@ -243,7 +243,7 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   DataField validations[] = {
       {&result_bool, sizeof(result_bool), SQL_C_BIT, SQL_BIT, &result_bool_len},
-      {&result_int, sizeof(result_int), SQL_C_LONG, SQL_INTEGER,
+      {&result_int, sizeof(result_int), SQL_C_SLONG, SQL_INTEGER,
        &result_int_len},
       {&result_float, sizeof(result_float), SQL_C_DOUBLE, SQL_DOUBLE,
        &result_float_len},
