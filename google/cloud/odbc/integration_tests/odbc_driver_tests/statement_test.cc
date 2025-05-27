@@ -229,7 +229,7 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
   SQLCHAR result_bool = 0;
   SQLLEN result_bool_len = 0;
 
-  SQLLEN result_int = 0;
+  SQLBIGINT result_int = 0;
   SQLLEN result_int_len = 0;
 
   double result_float = 0.0;
