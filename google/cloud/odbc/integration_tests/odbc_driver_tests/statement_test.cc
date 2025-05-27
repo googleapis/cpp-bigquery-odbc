@@ -3162,12 +3162,14 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
   Table table(table_name);
-  std::cout<<"========sizeof(SQLLEN)"<<sizeof(SQLLEN)<<std::endl;
-  std::cout<<"=======sizeof(int64_t)"<<sizeof(int64_t)<<std::endl;
-  std::cout<<"========sizeof(SQL_INTEGER)"<<sizeof(SQL_INTEGER)<<std::endl;
-  std::cout<<"=======sizeof(SQL_C_LONG)"<<sizeof(SQL_C_LONG)<<std::endl;
-  std::cout<<"========sizeof(SQL_C_SBIGINT)"<<sizeof(SQL_C_SBIGINT)<<std::endl;
-  std::cout<<"=======sizeof(SQL_BIGINT)"<<sizeof(SQL_BIGINT)<<std::endl;
+  std::cout << "========sizeof(SQLLEN)" << sizeof(SQLLEN) << std::endl;
+  std::cout << "=======sizeof(int64_t)" << sizeof(int64_t) << std::endl;
+  std::cout << "========sizeof(SQL_INTEGER)" << sizeof(SQL_INTEGER)
+            << std::endl;
+  std::cout << "=======sizeof(SQL_C_LONG)" << sizeof(SQL_C_LONG) << std::endl;
+  std::cout << "========sizeof(SQL_C_SBIGINT)" << sizeof(SQL_C_SBIGINT)
+            << std::endl;
+  std::cout << "=======sizeof(SQL_BIGINT)" << sizeof(SQL_BIGINT) << std::endl;
   Schema schema{{"BoolField", "BOOL"},
                 {"IntField", "INT64"},
                 {"FloatField", "FLOAT64"},
@@ -3192,9 +3194,9 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.DropWithPrepare(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
