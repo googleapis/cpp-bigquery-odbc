@@ -72,11 +72,11 @@ StatusRecord ConstructPositionalQueryParams(
         ((is_data_buff_req && is_data_at_exec) && !apd_rec.data_buffer.empty())
             ? static_cast<SQLPOINTER>(apd_rec.data_buffer.data())
             : apd_rec.data_ptr;
-    DataBuffer data;
-    SQLLEN octet_length = static_cast<SQLLEN>(apd_rec.data_buffer.size());
-    SQLLEN* octet_length_ptr = &octet_length;
 
+    DataBuffer data;
     if (is_data_buff_req && is_data_at_exec) {
+      SQLLEN octet_length = static_cast<SQLLEN>(apd_rec.data_buffer.size());
+      SQLLEN* octet_length_ptr = &octet_length;
       data = {apd_rec.concise_type, buff, octet_length, octet_length_ptr};
     } else {
       data = {apd_rec.concise_type, buff, apd_rec.octet_length,
