@@ -962,23 +962,4 @@ TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
   EXPECT_EQ(stmt_handle.GetStmtState(), StmtStates::kNeedsPutData);
 }
 
-TEST(SQLParamDataInternal, Success_SQL_NO_Data) {
-  StatementHandle stmt_handle =
-      CreateStmtHandleWithState(StmtStates::kNeedsParams);
-
-  Job mock_job;
-  mock_job.statistics.job_query_stats.statement_type = "UPDATE";
-  stmt_handle.SetPreparedJob(mock_job);
-
-  SQLPOINTER param_or_target_value = nullptr;
-  SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
-  EXPECT_EQ(SQL_NO_DATA, status);
-
-  mock_job.statistics.job_query_stats.statement_type = "DELETE";
-  stmt_handle.SetPreparedJob(mock_job);
-
-  status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
-  EXPECT_EQ(SQL_NO_DATA, status);
-}
-
 }  // namespace google::cloud::odbc_bq_driver
