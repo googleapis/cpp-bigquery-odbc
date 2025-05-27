@@ -1184,6 +1184,12 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_HY009(), "Invalid use of null pointer."});
   }
+  // Ensure statement is in kNeedsPutData state
+  if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+    return LogAndReturnCode(
+        stmt_handle, {SQLStates::k_HY010(),
+                      "Function sequence error: Incorrect statement state."});
+  }
 
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
   if (param_index > stmt_handle.GetParamCount()) {
@@ -1273,6 +1279,12 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
   bool is_need_data = handle->GetNeedData();
+  if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
+    return LogAndReturnCode(
+        *handle, {SQLStates::k_HY010(),
+                  "Function sequence error: Incorrect statement state"});
+  }
+
   auto param_num = handle->GetCurrentParamIndex();
   if (param_num > handle->GetParamCount()) {
     return LogAndReturnCode(*handle,
