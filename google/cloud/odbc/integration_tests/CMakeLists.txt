@@ -69,11 +69,6 @@ function (odbc_define_tests)
 
     # Setting BQ_DRIVER_INTEGRATION_TESTS runs tests only for Google Driver
     if (BQ_DRIVER_INTEGRATION_TESTS)
-        if (NOT BUILD_SHARED_LIBS)
-            set(odbc_driver_tests_src
-                ${odbc_driver_tests_src}
-                odbc_driver_tests/internal/connection_test.cc)
-        endif ()
         add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
     endif ()
 
@@ -88,23 +83,7 @@ function (odbc_define_tests)
     target_compile_features(all_tests PUBLIC cxx_std_17)
 
     include(GoogleTest)
-    # For shared libraries it might take a lot longer for GTest discovery than
-    # default of 5 seconds depending on the size of the shared lib. PRE_TEST
-    # mode has been added for efficiency so the tests are discovered quickly.
-    if (BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
-        gtest_discover_tests(
-            all_tests
-            # Parameterized tests is currently not supported by GoogleTest for
-            # shared library objects. Its not able to instantiate the tests.
-            TEST_FILTER
-            "-DescriptorTypeParameterizedTest:-StatementParameterizedTest"
-            DISCOVERY_MODE
-            PRE_TEST
-            DISCOVERY_TIMEOUT
-            300)
-    else ()
-        gtest_discover_tests(all_tests)
-    endif ()
+    gtest_discover_tests(all_tests)
 endfunction ()
 
 function (odbc_define_demo_tests)
@@ -161,13 +140,11 @@ function (odbc_define_examples)
         # google_cloud_odbc_bq_driver target
         if (BQ_DRIVER_INTEGRATION_TESTS)
             add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
-            target_link_libraries(${target} google_cloud_odbc_bq_driver)
+        endif ()
+        if (WIN32)
+            target_link_libraries(${target} odbc32)
         else ()
-            if (WIN32)
-                target_link_libraries(${target} odbc32)
-            else ()
-                target_link_libraries(${target} odbc)
-            endif ()
+            target_link_libraries(${target} odbc)
         endif ()
         target_include_directories(${target} PUBLIC ${CMAKE_SOURCE_DIR})
         target_include_directories(${target} PRIVATE $ENV{ODBC_INCLUDE_PATH})

@@ -54,21 +54,10 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     add_definitions(-DBQ_DRIVER_INTEGRATION_TESTS)
 endif ()
 
-# Linking works as follows for shared and static BQ ODBC Driver library.
-if (NOT BUILD_SHARED_LIBS AND BQ_DRIVER_INTEGRATION_TESTS)
-    # Use google_cloud_odbc_bq_driver with static target if we are building
-    # static BQ Driver target
-    target_link_libraries(google_cloud_odbc_testing_odbc_utils
-                          google_cloud_odbc_bq_driver)
+if (WIN32)
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32)
 else ()
-    # in case of dynamic linking no need to link with
-    # google_cloud_odbc_bq_driver, as driver will be loaded according to the DSN
-    # configuration. target
-    if (WIN32)
-        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc32)
-    else ()
-        target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc)
-    endif ()
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils odbc)
 endif ()
 
 create_bazel_config(google_cloud_odbc_testing_odbc_utils YEAR 2024)

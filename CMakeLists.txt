@@ -26,4 +26,13 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# If BQ_DRIVER_INTEGRATION_TESTS is enabled then we need to build the
+# google_cloud_odbc_bq_driver as a shared library with
+# CMAKE_POSITION_INDEPENDENT_CODE ON as static linking is not supported for ODBC
+# drivers.
+if (BQ_DRIVER_INTEGRATION_TESTS)
+    set(BUILD_SHARED_LIBS ON)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif ()
+
 add_subdirectory(google/cloud/odbc)

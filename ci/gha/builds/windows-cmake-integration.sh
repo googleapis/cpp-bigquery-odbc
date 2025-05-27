@@ -46,7 +46,6 @@ fi
 # [2]: https://stackoverflow.com/questions/3775406
 args+=("-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:NO")
 
-# TODO(b/379091255): Set -DODBC_EXAMPLES=ON
 args+=("-DODBC_EXAMPLES=OFF")
 args+=("-DODBC_INTEGRATION_TESTING=ON")
 args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
@@ -57,8 +56,6 @@ if [ "$BUILD_SHARD" == "Core" ]; then
   args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
 else
   args+=("-DBQ_DRIVER_INTEGRATION_TESTS=ON")
-  args+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
-  args+=("-DBUILD_SHARED_LIBS=ON")
 fi
 
 io::log_h1 "Starting Build"
