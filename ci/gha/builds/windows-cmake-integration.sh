@@ -94,8 +94,11 @@ if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
   done
   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
 fi
+ls -l "C:/Program Files (x86)/Windows Kits/10/Debuggers/x86/gflags.exe"
 
+"/c/Program Files (x86)/Windows Kits/10/Debuggers/x86/gflags.exe" /p /enable all_tests.exe /full
+# --- END OF ADDED DIAGNOSTIC SECTION ---
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
-  io::run ctest "${ctest_args[@]}" --test-dir "${CMAKE_OUT}" -LE integration-test
+  io::run ctest "${ctest_args[@]}" --test-dir "${CMAKE_OUT}"  --gtest_catch_exceptions=0 --gtest_break_on_failure -LE integration-test
 }

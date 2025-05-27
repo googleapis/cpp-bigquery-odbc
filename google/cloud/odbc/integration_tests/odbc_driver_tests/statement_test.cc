@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "absl/strings/match.h"
 #include <gmock/gmock.h>
+
 using ::testing::Contains;
 using ::testing::HasSubstr;
 
@@ -179,7 +180,7 @@ void PutAllDataTypes(std::shared_ptr<ODBCHandles> conn,
 
   DataField fields[] = {
       {&bool_data, sizeof(bool_data), SQL_C_BIT, SQL_BIT, &bool_len},
-      {&int_data, sizeof(int_data), SQL_C_LONG, SQL_INTEGER, &int_len},
+      {&int_data, sizeof(int_data), SQL_C_SBIGINT, SQL_BIGINT, &int_len},
       {&float_data, sizeof(float_data), SQL_C_DOUBLE, SQL_DOUBLE, &float_len},
       {(SQLPOINTER)text_data.c_str(), static_cast<SQLLEN>(text_data.size()),
        SQL_C_CHAR, SQL_LONGVARCHAR, &string_len},
@@ -243,7 +244,7 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   DataField validations[] = {
       {&result_bool, sizeof(result_bool), SQL_C_BIT, SQL_BIT, &result_bool_len},
-      {&result_int, sizeof(result_int), SQL_C_LONG, SQL_INTEGER,
+      {&result_int, sizeof(result_int), SQL_C_SBIGINT, SQL_BIGINT,
        &result_int_len},
       {&result_float, sizeof(result_float), SQL_C_DOUBLE, SQL_DOUBLE,
        &result_float_len},
@@ -3162,12 +3163,7 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_PUT_DATA_MULTIPLE_TYPES_TEST";
   Table table(table_name);
-  std::cout<<"========sizeof(SQLLEN)"<<sizeof(SQLLEN)<<std::endl;
-  std::cout<<"=======sizeof(int64_t)"<<sizeof(int64_t)<<std::endl;
-  std::cout<<"========sizeof(SQL_INTEGER)"<<sizeof(SQL_INTEGER)<<std::endl;
-  std::cout<<"=======sizeof(SQL_C_LONG)"<<sizeof(SQL_C_LONG)<<std::endl;
-  std::cout<<"========sizeof(SQL_C_SBIGINT)"<<sizeof(SQL_C_SBIGINT)<<std::endl;
-  std::cout<<"=======sizeof(SQL_BIGINT)"<<sizeof(SQL_BIGINT)<<std::endl;
+
   Schema schema{{"BoolField", "BOOL"},
                 {"IntField", "INT64"},
                 {"FloatField", "FLOAT64"},
@@ -3539,6 +3535,9 @@ TEST(StatementTest, SQLParamData_UnicodeWideChar) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+// For the internal driver, the Driver Manager does not raise a function
+// sequence error, whereas for the external driver, it does.
 TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3596,6 +3595,7 @@ TEST(StatementTest, SQLParamData_ValidateSQLFetchStates) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLParamData_StringLengthMissMatch) {
   auto conn = std::make_shared<ODBCHandles>();
