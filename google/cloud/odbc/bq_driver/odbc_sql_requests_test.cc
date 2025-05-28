@@ -929,6 +929,7 @@ TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
       CreateStmtHandleWithState(StmtStates::kNeedsParams);
 
   stmt_handle.SetCurrentParamIndex(1);
+  stmt_handle.SetNeedData(true);
   SQLPOINTER param_or_target_value = nullptr;
   SQLRETURN status = SQLParamDataInternal(&stmt_handle, &param_or_target_value);
   EXPECT_EQ(SQL_ERROR, status);
@@ -941,6 +942,7 @@ TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
 TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kNeedsParams);
+  stmt_handle.SetNeedData(true);
 
   DescriptorRecord param_record;
   SQLLEN indicator_value = SQL_DATA_AT_EXEC;
