@@ -887,7 +887,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (!execute_status.ok()) {
-    stmt_handle.SetNeedData(true);
+    stmt_handle.SetNeedParams(true);
     return SQL_NEED_DATA;
   }
   return LogAndReturnCode(stmt_handle, execute_status);
@@ -1223,7 +1223,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
       (str_len_or_ind_ptr == 0 && data)) {
     apd_rec.data_buffer.assign(sizeof(apd.GetType()),
                                '\0');  // store empty string as null-terminated
-    stmt_handle.SetNeedData(true);
+    stmt_handle.SetNeedParams(true);
     return SQL_SUCCESS;
   }
 
@@ -1259,7 +1259,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Mark that data is needed
-  stmt_handle.SetNeedData(true);
+  stmt_handle.SetNeedParams(true);
 
   return SQL_SUCCESS;
 }
@@ -1275,8 +1275,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   }
 
   StatementHandle* handle = *handle_result;
-  bool is_need_data = handle->GetNeedData();
-  if (!is_need_data) {
+  if (!handle->GetNeedParams()) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1305,7 +1304,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       }
       handle->SetCurrentParamIndex(param_num);
       handle->SetStmtState(StmtStates::kNeedsPutData);
-      handle->SetNeedData(false);
+      handle->SetNeedParams(false);
       return SQL_NEED_DATA;
     }
   }

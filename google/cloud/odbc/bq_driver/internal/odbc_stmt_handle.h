@@ -247,16 +247,16 @@ class StatementHandle : public Handle {
     current_param_index_ = param_index;
   }
 
-  inline void SetNeedData(bool need_data) { is_need_data_ = need_data; }
+  inline void SetNeedParams(bool need_data) { is_need_params_ = need_data; }
 
-  bool GetNeedData() const { return is_need_data_; }
+  bool GetNeedParams() const { return is_need_params_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
   SQLUSMALLINT current_param_index_ = 0;
-  bool is_need_data_ = false;
+  bool is_need_params_ = false;
 
  private:
   std::shared_ptr<Query> query_;
