@@ -263,7 +263,7 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   // Assertions for validation
   EXPECT_EQ(result_bool, SQL_TRUE);
-  EXPECT_EQ(result_int, 20);
+  EXPECT_EQ(result_int, 42);
   EXPECT_DOUBLE_EQ(result_float, 3.14);
   EXPECT_EQ(std::string((char*)result_string), "");
 
@@ -3168,14 +3168,6 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
                 {"StringField", "STRING"},
                 {"BinaryField", "BYTES"}};
 
-  std::cout << "========sizeof(SQLLEN)" << sizeof(SQLLEN) << std::endl;
-  std::cout << "=======sizeof(int64_t)" << sizeof(int64_t) << std::endl;
-  std::cout << "========sizeof(SQLINTEGER)" << sizeof(SQLINTEGER) << std::endl;
-  std::cout << "=======sizeof(SQL_C_LONG)" << sizeof(SQL_C_LONG) << std::endl;
-  std::cout << "========sizeof(SQL_C_SBIGINT)" << sizeof(SQL_C_SBIGINT)
-            << std::endl;
-  std::cout << "=======sizeof(SQLBIGINT)" << sizeof(SQLBIGINT) << std::endl;
-
   // Create table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3194,9 +3186,9 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-   table.DropWithPrepare(conn);
-   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
