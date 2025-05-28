@@ -247,16 +247,18 @@ class StatementHandle : public Handle {
     current_param_index_ = param_index;
   }
 
-  inline void SetNeedParams(bool need_params) { is_need_params_ = need_params; }
+  inline void SetIsPartialPutdataCalled(bool partial_putdata_called) {
+    is_partial_putdata_called = partial_putdata_called;
+  }
 
-  bool GetNeedParams() const { return is_need_params_; }
+  bool GetIsPartialPutdataCalled() const { return is_partial_putdata_called; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
   SQLUSMALLINT current_param_index_ = 0;
-  bool is_need_params_ = false;
+  bool is_partial_putdata_called = false;
 
  private:
   std::shared_ptr<Query> query_;

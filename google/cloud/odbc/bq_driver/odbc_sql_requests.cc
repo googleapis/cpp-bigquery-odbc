@@ -1222,23 +1222,21 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Handle NULL data
   if (str_len_or_ind_ptr == SQL_NULL_DATA ||
       (str_len_or_ind_ptr == 0 && data)) {
-    apd_rec.data_buffer.assign(sizeof(apd.GetType()),
-                               '\0');  // store empty string as null-terminated
-    stmt_handle.SetNeedParams(true);
+    // store empty string as null-terminated
+    apd_rec.data_buffer.assign(sizeof(apd.GetType()), '\0');
+    // Mark SQLPutData called at lease once
+    stmt_handle.SetIsPartialPutdataCalled(true);
     return SQL_SUCCESS;
   }
 
   // Handling SQL_DATA_AT_EXEC and  SQL_LEN_DATA_AT_EXEC(size) and
-  SQLLEN column_size = 0;
+  SQLLEN column_size = -1;
   if (*apd_rec.indicator_ptr <= SQL_LEN_DATA_AT_EXEC_OFFSET) {
     // Calculate the column size from SQL_LEN_DATA_AT_EXEC(size)
     column_size = -(*apd_rec.indicator_ptr - SQL_LEN_DATA_AT_EXEC_OFFSET);
   } else if (*apd_rec.indicator_ptr == SQL_DATA_AT_EXEC && ipd_rec.length > 0) {
     // Use the column size if provided in SQLBindParameter
     column_size = ipd_rec.length;
-  } else {
-    // Allow unbounded data size
-    column_size = -1;
   }
 
   // Data Length Mismatch Handling
@@ -1262,8 +1260,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
                                char_data + str_len_or_ind_ptr);
   }
 
-  // Mark that data is needed
-  stmt_handle.SetNeedParams(true);
+  // Mark SQLPutData called at lease once
+  stmt_handle.SetIsPartialPutdataCalled(true);
 
   return SQL_SUCCESS;
 }
@@ -1280,7 +1278,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
   if (handle->GetStmtState() != StmtStates::kNeedsParams &&
-      !handle->GetNeedParams()) {
+      !handle->GetIsPartialPutdataCalled()) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1309,7 +1307,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
       }
       handle->SetCurrentParamIndex(param_num);
       handle->SetStmtState(StmtStates::kNeedsPutData);
-      handle->SetNeedParams(false);
+      handle->SetIsPartialPutdataCalled(false);
       return SQL_NEED_DATA;
     }
   }
