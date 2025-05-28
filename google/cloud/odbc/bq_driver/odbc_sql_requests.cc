@@ -1228,16 +1228,13 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   }
 
   // Handling SQL_DATA_AT_EXEC and  SQL_LEN_DATA_AT_EXEC(size) and
-  SQLLEN column_size = 0;
+  SQLLEN column_size = -1;
   if (*apd_rec.indicator_ptr <= SQL_LEN_DATA_AT_EXEC_OFFSET) {
     // Calculate the column size from SQL_LEN_DATA_AT_EXEC(size)
     column_size = -(*apd_rec.indicator_ptr - SQL_LEN_DATA_AT_EXEC_OFFSET);
   } else if (*apd_rec.indicator_ptr == SQL_DATA_AT_EXEC && ipd_rec.length > 0) {
     // Use the column size if provided in SQLBindParameter
     column_size = ipd_rec.length;
-  } else {
-    // Allow unbounded data size
-    column_size = -1;
   }
 
   // Data Length Mismatch Handling
@@ -1246,6 +1243,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     // Only check length mismatch if the column size is defined
     if (buffered_data_len > column_size) {
+      stmt_handle.SetStmtState(StmtStates::kNeedsParams);
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
