@@ -56,7 +56,7 @@ StatusRecord ConstructPositionalQueryParams(
 
     if (!is_data_buff_req && is_data_at_exec) {
       return StatusRecord{
-          SQLStates::k_HY000(),
+          SQLStates::k_SQL_NEED_DATA(),
           "The bound param is set for SQL_DATA_AT_EXEC/SQL_LEN_DATA_AT_EXEC"};
     }
 
