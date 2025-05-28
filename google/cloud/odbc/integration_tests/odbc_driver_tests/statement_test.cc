@@ -3168,6 +3168,14 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
                 {"StringField", "STRING"},
                 {"BinaryField", "BYTES"}};
 
+  std::cout << "========sizeof(SQLLEN)" << sizeof(SQLLEN) << std::endl;
+  std::cout << "=======sizeof(int64_t)" << sizeof(int64_t) << std::endl;
+  std::cout << "========sizeof(SQLINTEGER)" << sizeof(SQLINTEGER) << std::endl;
+  std::cout << "=======sizeof(SQL_C_LONG)" << sizeof(SQL_C_LONG) << std::endl;
+  std::cout << "========sizeof(SQL_C_SBIGINT)" << sizeof(SQL_C_SBIGINT)
+            << std::endl;
+  std::cout << "=======sizeof(SQLBIGINT)" << sizeof(SQLBIGINT) << std::endl;
+
   // Create table
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
