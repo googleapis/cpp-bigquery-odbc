@@ -248,17 +248,18 @@ class StatementHandle : public Handle {
   }
 
   inline void SetIsPartialPutdataCalled(bool partial_putdata_called) {
-    is_partial_putdata_called = partial_putdata_called;
+    is_partial_putdata_called_ = partial_putdata_called;
   }
 
-  bool GetIsPartialPutdataCalled() const { return is_partial_putdata_called; }
+  bool GetIsPartialPutdataCalled() const { return is_partial_putdata_called_; }
 
  protected:
   StmtStates stmt_state_ = StmtStates::kStatementNotPrepared;
   ResultSet result_set_;
   std::string query_str_;
   SQLUSMALLINT current_param_index_ = 0;
-  bool is_partial_putdata_called = false;
+  // Needed for handling partial put data calls
+  bool is_partial_putdata_called_ = false;
 
  private:
   std::shared_ptr<Query> query_;
