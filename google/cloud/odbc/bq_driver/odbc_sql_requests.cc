@@ -887,7 +887,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecord execute_status =
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (!execute_status.ok()) {
-    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    stmt_handle.SetNeedData(true);
     return SQL_NEED_DATA;
   }
   return LogAndReturnCode(stmt_handle, execute_status);
@@ -1249,9 +1249,6 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
-    if (buffered_data_len == column_size) {
-      stmt_handle.SetStmtState(StmtStates::kNeedsParams);
-    }
   }
 
   // Handle data insertion if valid
@@ -1279,7 +1276,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   StatementHandle* handle = *handle_result;
   bool is_need_data = handle->GetNeedData();
-  if (handle->GetStmtState() != StmtStates::kNeedsParams && !is_need_data) {
+  if (!is_need_data) {
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
