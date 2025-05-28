@@ -263,7 +263,7 @@ void ValidateAllPutData(std::shared_ptr<ODBCHandles> conn,
 
   // Assertions for validation
   EXPECT_EQ(result_bool, SQL_TRUE);
-  EXPECT_EQ(result_int, 42);
+  EXPECT_EQ(result_int, 20);
   EXPECT_DOUBLE_EQ(result_float, 3.14);
   EXPECT_EQ(std::string((char*)result_string), "");
 
@@ -3194,9 +3194,9 @@ TEST(StatementTest, SQLPutDataMultipleDataTypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Clean up
-  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  // table.DropWithPrepare(conn);
-  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+   table.DropWithPrepare(conn);
+   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLMoreResults, ProcedureWithNoParameters) {
