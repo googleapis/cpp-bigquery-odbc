@@ -3203,23 +3203,26 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
 
   std::string procedure_name =
       kDatasetWithTablePrefix + "ODBC_PROCEDURE_INSERT_NO_PARAMS";
-  std::string procedure_create = "CREATE OR REPLACE PROCEDURE " +
-                                 procedure_name +
-                                 "()\n"
-                                 "BEGIN\n"
-                                 "  INSERT INTO " +
-                                 table_name +
-                                 " VALUES(1, 'John Doe');\n"
-                                 "  SELECT * FROM " +
-                                 table_name +
-                                 ";\n"
-                                 "END";
+  std::string procedure_create =
+      "CREATE OR REPLACE PROCEDURE " + procedure_name +
+      "()\n"
+      "BEGIN\n"
+      "  INSERT INTO " +
+      table_name +
+      " VALUES(1, 'John Doe') , (2, 'Jack'),(3, 'Jameson');\n"
+      "  SELECT * FROM " +
+      table_name +
+      ";\n"
+      "END";
 
   SQLRETURN status =
       SQLPrepare(conn->hstmt, (SQLCHAR*)procedure_create.c_str(), SQL_NTS);
   CheckError(status, "SQLPrepare", conn);
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
+
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+            SQL_SUCCESS);
 
   // Call the procedure
   std::string procedure_call = "CALL " + procedure_name + "();";

@@ -23,7 +23,7 @@ Catalog::~Catalog() = default;
 std::vector<SQLTableResult> Catalog::GetTables(
     std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
     char const* dataset, char const* table, char const* table_type,
-    bool use_ansi) {
+    bool use_ansi, int rows_expected) {
   SQLRETURN status;
   int const res_cols = 5;
 
@@ -90,7 +90,9 @@ std::vector<SQLTableResult> Catalog::GetTables(
     results.push_back(
         {project_name, dataset_name, table_name, table_type_name, description});
   }
-
+  if (rows_expected >= 0) {
+    EXPECT_EQ(results.size(), rows_expected);
+  }
   return results;
 }
 

@@ -209,7 +209,8 @@ void TestSQLColumns(std::string const column,
                     std::vector<SQLColumnsResult>& expected_results,
                     bool use_identifier = false,
                     std::string const& schema = kSQLColumnsTableSchema,
-                    std::string const& columns_table = kSqlColumnsTable) {
+                    std::string const& columns_table = kSqlColumnsTable,
+                    bool check_max_rows = false) {
   auto conn = std::make_shared<ODBCHandles>();
   std::cout << "Creating table with schema : " << schema << std::endl;
   // Create table for SQLColumns.
@@ -228,11 +229,20 @@ void TestSQLColumns(std::string const column,
                             (SQLPOINTER)SQL_FALSE, 0);
   }
   CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                          columns_table.c_str(), column.c_str());
-  VerifyColumnsResults(results, expected_results);
+  if (check_max_rows) {
+    ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+              SQL_SUCCESS);
+    std::vector<SQLColumnsResult> results =
+        Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                            columns_table.c_str(), column.c_str());
+    std::vector<SQLColumnsResult> single_expected{expected_results[0]};
+    VerifyColumnsResults(results, single_expected);
+  } else {
+    std::vector<SQLColumnsResult> results =
+        Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                            columns_table.c_str(), column.c_str());
+    VerifyColumnsResults(results, expected_results);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -496,10 +506,11 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_TRUE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
-
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)2, 0),
+            SQL_SUCCESS);
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         (table_names[0] + "   ").c_str());
+                         (table_names[0] + "   ").c_str(), nullptr, false, 2);
 
   int count_tables = 0;
   for (auto const& result : results) {
@@ -692,6 +703,10 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
                               10, 1, 10, 12, SQL_NULL_DATA, 11});
   // Fetch all columns
   TestSQLColumns("%", expected_results);
+
+  // TEST SQL_MAX_ROWS
+  TestSQLColumns("%", expected_results, false, kSQLColumnsTableSchema,
+                 kSqlColumnsTable, true);
 }
 
 TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
@@ -796,10 +811,16 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
+
+  // Set max rows to 1
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+            SQL_SUCCESS);
+
   RowWiseResults primary_keys = Catalog::GetPrimaryKeys(
       conn, kCatalogFnsDataset, kCatalogDatasetTableWithPK);
-  VerifyRowWiseResults(primary_keys, kCatalogPrimaryKeysExpected);
-
+  EXPECT_EQ(primary_keys.size(), 1);
+  RowWiseResults single_row_expected{kCatalogPrimaryKeysExpected[0]};
+  VerifyRowWiseResults(primary_keys, single_row_expected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -866,11 +887,18 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
+
+  // Set max rows to 1
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+            SQL_SUCCESS);
+
   auto foreign_keys = Catalog::GetForeignKeys(
       conn, kCatalogFnsDataset, kTableCustomer, kTableOrders); /* both PK and
       FK
                                                 table supplied*/
-  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
+  EXPECT_EQ(foreign_keys.size(), 1);
+  RowWiseResults single_row_expected{kCatalogForeignKeysExpected[0]};
+  VerifyRowWiseResults(foreign_keys, single_row_expected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -1151,7 +1179,8 @@ ExpectedProcedureColumnValues CreateExpectedInOutStringParam(
 
 void ValidateProcedureColumns(
     SQLHSTMT h_stmt,
-    std::vector<ExpectedProcedureColumnValues> const& expected_columns) {
+    std::vector<ExpectedProcedureColumnValues> const& expected_columns,
+    bool check_max_rows = false) {
   SQLCHAR procedure_catalog[128] = {0}, procedure_schema[128] = {0},
           procedure_name[128] = {0};
   SQLCHAR column_name[128] = {0}, type_name[128] = {0}, remarks[256] = {0},
@@ -1163,12 +1192,13 @@ void ValidateProcedureColumns(
               ordinal_position = 0;
   SQLINTEGER column_size = 0, buffer_length = 0, char_octet_length = 0;
   SQLLEN ind = 0;
-
+  int row_count = 0;
   for (auto const& expected : expected_columns) {
     SQLRETURN ret = SQLFetch(h_stmt);
     if (ret == SQL_NO_DATA) {
       FAIL() << "SQLProcedureColumns returned fewer rows than expected.";
     }
+    row_count++;
     ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
 
     EXPECT_EQ(SQLGetData(h_stmt, 1, SQL_C_CHAR, procedure_catalog,
@@ -1253,6 +1283,9 @@ void ValidateProcedureColumns(
               SQL_SUCCESS);
     EXPECT_STREQ(reinterpret_cast<char*>(is_nullable),
                  expected.is_nullable.c_str());
+  }
+  if (check_max_rows) {
+    EXPECT_EQ(row_count, 1);
   }
   EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
       << "SQLProcedureColumns returned more rows than expected.";
@@ -1450,7 +1483,22 @@ TEST(SQLProcedureColumns, ProcedureWithInOutParameters) {
       CreateExpectedInOutStringParam(procedure_pattern)};
   // Call validation function
   ValidateProcedureColumns(conn->hstmt, expected_values);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+            SQL_SUCCESS);
+
+  ret = SQLProcedureColumns(
+      conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+      (SQLCHAR*)procedure_pattern.c_str(), SQL_NTS, NULL, 0);
+  EXPECT_EQ(ret, SQL_SUCCESS);
+
+  std::vector<ExpectedProcedureColumnValues> expected_values2 = {
+      CreateExpectedInOutInt64Param(procedure_pattern)};
+  // Call validation function
+  ValidateProcedureColumns(conn->hstmt, expected_values2, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Cleanup
@@ -1487,6 +1535,7 @@ void ValidateSQLProcedures(
   SQLSMALLINT num_input_params, num_output_params, num_result_sets,
       procedure_type;
   SQLLEN ind = 0;
+  int row_count = 0;
 
   for (auto const& expected : expected_procedures) {
     SQLRETURN ret = SQLFetch(h_stmt);
@@ -1494,6 +1543,7 @@ void ValidateSQLProcedures(
       FAIL() << "SQLProcedures returned fewer rows than expected.";
     }
     ASSERT_TRUE(ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO);
+    row_count++;
 
     EXPECT_EQ(SQLGetData(h_stmt, 1, SQL_C_CHAR, procedure_catalog,
                          sizeof(procedure_catalog), &ind),
@@ -1533,6 +1583,8 @@ void ValidateSQLProcedures(
               SQL_SUCCESS);
     EXPECT_EQ(procedure_type, expected.procedure_type);
   }
+  EXPECT_EQ(row_count, 1)
+      << "SQL_ATTR_MAX_ROWS=1 should limit SQLProcedures to 1 row";
 
   EXPECT_EQ(SQLFetch(h_stmt), SQL_NO_DATA)
       << "SQLProcedures returned more rows than expected.";
@@ -1564,6 +1616,8 @@ void CallSQLProcedures(std::shared_ptr<ODBCHandles> conn,
                        std::string const& pattern,
                        std::vector<ExpectedProcedureValues>& expected_values) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
+            SQL_SUCCESS);
   SQLRETURN ret =
       SQLProcedures(conn->hstmt, NULL, 0, (SQLCHAR*)kDatasetName.c_str(),
                     SQL_NTS, (SQLCHAR*)pattern.c_str(), SQL_NTS);
