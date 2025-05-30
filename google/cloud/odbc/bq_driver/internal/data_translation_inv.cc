@@ -98,46 +98,39 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
 }
 
 StatusRecordOr<std::string> ParseIntervalToBuffer(SQLSMALLINT type,
-                                                  SQLDOUBLE value,
-                                                  SQLCHAR sign) {
+                                                  SQLUINTEGER value,
+                                                  SQLSMALLINT sign) {
   SQL_INTERVAL_STRUCT interval_struct = {};
+  interval_struct.interval_sign = sign;
   switch (type) {
     case SQL_INTERVAL_YEAR: {
       interval_struct.interval_type = SQL_IS_YEAR;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.year_month.year = static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.year_month.year = value;
       break;
     }
     case SQL_INTERVAL_MONTH: {
       interval_struct.interval_type = SQL_IS_MONTH;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.year_month.month = static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.year_month.month = value;
       break;
     }
     case SQL_INTERVAL_DAY: {
       interval_struct.interval_type = SQL_IS_DAY;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.day_second.day = static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.day_second.day = value;
       break;
     }
     case SQL_INTERVAL_HOUR: {
       interval_struct.interval_type = SQL_IS_HOUR;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.day_second.hour = static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.day_second.hour = value;
       break;
     }
     case SQL_INTERVAL_MINUTE: {
       interval_struct.interval_type = SQL_IS_MINUTE;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.day_second.minute =
-          static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.day_second.minute = value;
       break;
     }
     case SQL_INTERVAL_SECOND: {
       interval_struct.interval_type = SQL_IS_SECOND;
-      interval_struct.interval_sign = static_cast<SQLSMALLINT>(sign);
-      interval_struct.intval.day_second.second =
-          static_cast<SQLUINTEGER>(value);
+      interval_struct.intval.day_second.second = value;
       break;
     }
     default:
@@ -228,29 +221,15 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       }
       return *conv_status;
     }
-    case SQL_INTERVAL_YEAR: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_YEAR, *double_val,
-                                   numeric_struct.sign);
-    }
-    case SQL_INTERVAL_MONTH: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_MONTH, *double_val,
-                                   numeric_struct.sign);
-    }
-    case SQL_INTERVAL_DAY: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_DAY, *double_val,
-                                   numeric_struct.sign);
-    }
-    case SQL_INTERVAL_HOUR: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_HOUR, *double_val,
-                                   numeric_struct.sign);
-    }
-    case SQL_INTERVAL_MINUTE: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_MINUTE, *double_val,
-                                   numeric_struct.sign);
-    }
+    case SQL_INTERVAL_YEAR:
+    case SQL_INTERVAL_MONTH:
+    case SQL_INTERVAL_DAY:
+    case SQL_INTERVAL_HOUR:
+    case SQL_INTERVAL_MINUTE:
     case SQL_INTERVAL_SECOND: {
-      return ParseIntervalToBuffer(SQL_INTERVAL_SECOND, *double_val,
-                                   numeric_struct.sign);
+      auto value = static_cast<SQLUINTEGER>(*double_val);
+      auto sign = static_cast<SQLSMALLINT>(numeric_struct.sign);
+      return ParseIntervalToBuffer(sql_type, value, sign);
     }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};

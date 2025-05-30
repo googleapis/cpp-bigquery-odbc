@@ -55,8 +55,6 @@ bool const kIsUnixODBC =
     "true";
 
 constexpr SQLSMALLINT kBufferLength = 1024;
-constexpr int kMaxNumericScale = 9;
-constexpr int kMaxNumericPrecision = 38;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
 
