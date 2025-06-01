@@ -512,8 +512,9 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
   return date_struct;
 }
 
-StatusRecordOr<ResultSet> ProcessResultSetRows(
-    TableSchema const& schema, std::vector<RowData> const& rows) {
+StatusRecordOr<ResultSet> ProcessResultSetRows(TableSchema const& schema,
+                                               std::vector<RowData> const& rows,
+                                               SQLUINTEGER default_string_len) {
   ResultSet result_set;
   // Populate the schema for each row. The row schema
   // indicates how they should converted back for the application buffers in
@@ -554,7 +555,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kString: {
-            StringToDSValue(data, row_val);
+            std::string truncated = data.substr(0, default_string_len - 1);
+            StringToDSValue(truncated, row_val);
             break;
           }
           case BQDataType::kInt64: {
@@ -648,7 +650,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
 }
 
 StatusRecordOr<ResultSet> ProcessPostQueryResults(
-    PostQueryResults const& post_query_results) {
+    PostQueryResults const& post_query_results,
+    SQLUINTEGER default_string_len) {
   if (!post_query_results.job_complete) {
     // If this method is being called then the assumption is PostQueryResults
     // contains all the results which in turn means job_complete would be set to
@@ -658,11 +661,11 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
   return ProcessResultSetRows(post_query_results.schema,
-                              post_query_results.rows);
+                              post_query_results.rows, default_string_len);
 }
 
 StatusRecordOr<ResultSet> ProcessGetQueryResults(
-    GetQueryResults const& get_query_results) {
+    GetQueryResults const& get_query_results, SQLUINTEGER default_string_len) {
   if (!get_query_results.job_complete) {
     // If this method is being called then the assumption is GetQueryResults
     // contains all the results which in turn means job_complete would be set to
@@ -674,11 +677,13 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
   return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
 
-StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
+StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results,
+                                              SQLUINTEGER default_string_len) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
     return ProcessPostQueryResults(
-        absl::get<PostQueryResults>(query_results.data_source_results));
+        absl::get<PostQueryResults>(query_results.data_source_results),
+        default_string_len);
   }
   if (absl::holds_alternative<GetQueryResults>(
           query_results.data_source_results)) {

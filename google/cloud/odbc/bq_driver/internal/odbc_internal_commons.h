@@ -417,18 +417,21 @@ CancelBQJob(ConnectionHandle& conn_handle, std::string const& job_id,
 odbc_internal::StatusRecordOr<ResultSet> ProcessResultSetRows(
     google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
     std::vector<google::cloud::bigquery_v2_minimal_internal::RowData> const&
-        rows);
+        rows,
+    SQLUINTEGER default_string_len = 16384);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(
     google::cloud::bigquery_v2_minimal_internal::PostQueryResults const&
-        post_query_results);
+        post_query_results,
+    SQLUINTEGER default_string_len = 16384);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
     google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
-        get_query_results);
+        get_query_results,
+    SQLUINTEGER default_string_len = 16384);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
-    DSResults const& query_results);
+    DSResults const& query_results, SQLUINTEGER default_string_len = 16384);
 
 odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery_v2_minimal_internal::RowData>>

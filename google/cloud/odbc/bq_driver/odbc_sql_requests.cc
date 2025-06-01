@@ -287,7 +287,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
 
   // Process DSResults into a ResultSet
-  auto rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
+  auto rs_status_record_or = ProcessQueryResults(
+      *ds_status_record_or, conn_handle.GetDsn().default_string_column_length);
   if (!rs_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
     return rs_status_record_or.GetStatusRecord();
@@ -430,7 +431,8 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   stmt_handle.SetDSResults(results);
 
   // Process query results into a result set if it's a SELECT statement.
-  auto rs_status_record_or = ProcessQueryResults(results);
+  auto rs_status_record_or = ProcessQueryResults(
+      results, conn_handle.GetDsn().default_string_column_length);
   auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
     return max_rows_status.GetStatusRecord();

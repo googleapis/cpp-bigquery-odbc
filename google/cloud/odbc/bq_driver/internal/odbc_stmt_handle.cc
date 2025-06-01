@@ -248,6 +248,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
+  desc_handle.SetConnectionHandle(&conn_handle);
   desc_handle.ClearDescriptorRecordsMap();
   StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
   if (!ird_response.ok()) {
@@ -283,6 +284,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
   std::string const nullable = "NULLABLE";
   std::string const nullable_required = "REQUIRED";
   std::string const array_field = "REPEATED";
+  ConnectionHandle& conn_handle = *(descriptor_handle.GetConnectionHandle());
   for (int i = 0; i < schema.fields.size(); ++i) {
     auto const& res = schema.fields[i];
     DescriptorRecord descriptor_record;
@@ -364,6 +366,9 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (type_status_record.GetValue() == SQL_DOUBLE) {
       // hard-coding to 15 to have the same behaviour as existing driver
       descriptor_record.length = 15;
+    } else if (res.type == "STRING") {
+      descriptor_record.length =
+          conn_handle.GetDsn().default_string_column_length;
     } else {
       descriptor_record.length = type_info.col_size;
     }

@@ -57,6 +57,7 @@ struct Dsn {
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
   bool is_query_cache = true;
+  std::uint32_t default_string_column_length = 16384;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////

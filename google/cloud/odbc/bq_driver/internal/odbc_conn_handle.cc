@@ -86,6 +86,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
   dsn_.sessions_enabled =
       (!sessions_enabled.empty() && sessions_enabled != "0");
+  std::string string_column_length = dsn_section["DEFAULTSTRINGCOLUMNLENGTH"];
+  if (!string_column_length.empty()) {
+    dsn_.default_string_column_length = std::stoi(string_column_length);
+  }
   // Disable query cache if CACHEQUERY is set to "false" or "0" in the DSN
   // section.
   std::string query_cache = dsn_section["USEQUERYCACHE"];
