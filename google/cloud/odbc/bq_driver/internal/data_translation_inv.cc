@@ -227,9 +227,9 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
     case SQL_INTERVAL_HOUR:
     case SQL_INTERVAL_MINUTE:
     case SQL_INTERVAL_SECOND: {
-      auto value = static_cast<SQLUINTEGER>(*double_val);
-      auto sign = static_cast<SQLSMALLINT>(numeric_struct.sign);
-      return ParseIntervalToBuffer(sql_type, value, sign);
+      return ParseIntervalToBuffer(
+          sql_type, static_cast<SQLUINTEGER>(*double_val),
+          static_cast<SQLSMALLINT>(numeric_struct.sign));
     }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};

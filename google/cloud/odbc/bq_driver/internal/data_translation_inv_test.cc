@@ -502,8 +502,7 @@ TEST(ConvertFromBuffer, From_SQL_Numeric_to_AllTypes) {
   numeric_base.scale = 1;
   numeric_base.precision = 4;
   numeric_base.sign = 1;
-
-  long long scaled_val = static_cast<long long>(123.5 * 10);  // scale 1
+  long long scaled_val = 1235;
 
   for (size_t i = 0; i < sizeof(numeric_base.val); ++i) {
     numeric_base.val[i] =
