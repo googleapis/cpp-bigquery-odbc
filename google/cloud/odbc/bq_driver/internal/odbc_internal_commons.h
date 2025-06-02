@@ -427,8 +427,7 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessPostQueryResults(
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessGetQueryResults(
     google::cloud::bigquery_v2_minimal_internal::GetQueryResults const&
-        get_query_results,
-    SQLUINTEGER default_string_len = 16384);
+        get_query_results);
 
 odbc_internal::StatusRecordOr<ResultSet> ProcessQueryResults(
     DSResults const& query_results, SQLUINTEGER default_string_len = 16384);

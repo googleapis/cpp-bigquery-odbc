@@ -665,7 +665,7 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
 }
 
 StatusRecordOr<ResultSet> ProcessGetQueryResults(
-    GetQueryResults const& get_query_results, SQLUINTEGER default_string_len) {
+    GetQueryResults const& get_query_results) {
   if (!get_query_results.job_complete) {
     // If this method is being called then the assumption is GetQueryResults
     // contains all the results which in turn means job_complete would be set to
