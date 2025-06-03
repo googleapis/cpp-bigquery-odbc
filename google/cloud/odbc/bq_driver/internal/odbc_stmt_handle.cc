@@ -366,7 +366,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (type_status_record.GetValue() == SQL_DOUBLE) {
       // hard-coding to 15 to have the same behaviour as existing driver
       descriptor_record.length = 15;
-    } else if (res.type == "STRING") {
+    } else if (type_status_record.GetValue() == SQL_VARCHAR) {
       descriptor_record.length =
           conn_handle.GetDsn().default_string_column_length;
     } else {
