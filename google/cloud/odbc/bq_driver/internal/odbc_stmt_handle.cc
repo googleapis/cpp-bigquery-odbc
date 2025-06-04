@@ -222,7 +222,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   req.configuration.query.connection_properties = combined_properties;
 
   Options opt;
-
+std::cout<<"SQLMoreResults kanchan:: reuest job "<<req.DebugString("here ")<<std::endl;
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
   if (!response.Ok()) {
