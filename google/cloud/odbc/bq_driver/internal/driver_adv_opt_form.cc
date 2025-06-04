@@ -537,12 +537,12 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_query_properties_edit, query_properties_buffer,
                         sizeof(query_properties_buffer));
           query_properties_ = query_properties_buffer;
-          auto parse_result = ParseQueryProperties(query_properties_);  
+          auto parse_result = ParseQueryProperties(query_properties_);
 
           if (!parse_result) {
             MessageBox(h_query_properties_edit,
                        parse_result.GetStatusRecord().message.c_str(), "Error",
-                       MB_OK | MB_ICONERROR);  
+                       MB_OK | MB_ICONERROR);
           }
 
           HWND h_activation_threshold =
