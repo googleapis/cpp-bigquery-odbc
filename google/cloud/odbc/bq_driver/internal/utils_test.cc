@@ -473,6 +473,20 @@ TEST(IsFieldIdentifierString, IsFieldIdentifierString_false) {
   EXPECT_FALSE(IsFieldIdentifierString(SQL_DESC_MAXIMUM_SCALE));
 }
 
+TEST(ParseStringToInteger, ParseStringToInteger_valid) {
+  std::string str = "16384";
+  auto status = ParseStringToInteger(str);
+  EXPECT_EQ(*status, 16384);
+}
+
+TEST(ParseStringToInteger, ParseStringToInteger_invalid) {
+  std::string str = "abc";
+  auto status = ParseStringToInteger(str);
+  EXPECT_THAT(status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Input value must be an integer")));
+}
+
 TEST(IsInfoTypeString, IsInfoTypeString_true) {
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME));
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME_SEPARATOR));

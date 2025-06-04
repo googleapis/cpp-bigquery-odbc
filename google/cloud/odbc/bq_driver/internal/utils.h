@@ -287,6 +287,8 @@ std::string Base64Encode(uint8_t const* data, int length);
 odbc_internal::StatusRecordOr<std::vector<ConnectionProperty>>
 ParseQueryProperties(std::string const& input);
 
+odbc_internal::StatusRecordOr<SQLUINTEGER> ParseStringToInteger(
+    std::string const& input);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

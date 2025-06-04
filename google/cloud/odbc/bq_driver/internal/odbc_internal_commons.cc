@@ -520,8 +520,9 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
   return date_struct;
 }
 
-StatusRecordOr<ResultSet> ProcessResultSetRows(
-    TableSchema const& schema, std::vector<RowData> const& rows) {
+StatusRecordOr<ResultSet> ProcessResultSetRows(TableSchema const& schema,
+                                               std::vector<RowData> const& rows,
+                                               SQLUINTEGER default_string_len) {
   ResultSet result_set;
   // Populate the schema for each row. The row schema
   // indicates how they should converted back for the application buffers in
@@ -562,7 +563,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kString: {
-            StringToDSValue(data, row_val);
+            std::string truncated = data.substr(0, default_string_len - 1);
+            StringToDSValue(truncated, row_val);
             break;
           }
           case BQDataType::kInt64: {
@@ -577,12 +579,14 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           }
           case BQDataType::kJson:
           case BQDataType::kStruct: {
-            StringToDSValue(data, row_val);
+            std::string truncated = data.substr(0, default_string_len - 1);
+            StringToDSValue(truncated, row_val);
             break;
           }
           case BQDataType::kArray: {
             BQDataType array_type = result_set.row_schema[i].col_type;
-            ArrayJsonToDSValue(data, row_val, array_type);
+            std::string truncated = data.substr(0, default_string_len - 1);
+            ArrayJsonToDSValue(truncated, row_val, array_type);
             break;
           }
           case BQDataType::kDate: {
@@ -656,7 +660,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
 }
 
 StatusRecordOr<ResultSet> ProcessPostQueryResults(
-    PostQueryResults const& post_query_results) {
+    PostQueryResults const& post_query_results,
+    SQLUINTEGER default_string_len) {
   if (!post_query_results.job_complete) {
     // If this method is being called then the assumption is PostQueryResults
     // contains all the results which in turn means job_complete would be set to
@@ -666,7 +671,7 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
         "Internal Error: Unexpected value for job_complete: expecting true"};
   }
   return ProcessResultSetRows(post_query_results.schema,
-                              post_query_results.rows);
+                              post_query_results.rows, default_string_len);
 }
 
 StatusRecordOr<ResultSet> ProcessGetQueryResults(
@@ -682,11 +687,13 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
   return ProcessResultSetRows(get_query_results.schema, get_query_results.rows);
 }
 
-StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
+StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results,
+                                              SQLUINTEGER default_string_len) {
   if (absl::holds_alternative<PostQueryResults>(
           query_results.data_source_results)) {
     return ProcessPostQueryResults(
-        absl::get<PostQueryResults>(query_results.data_source_results));
+        absl::get<PostQueryResults>(query_results.data_source_results),
+        default_string_len);
   }
   if (absl::holds_alternative<GetQueryResults>(
           query_results.data_source_results)) {
@@ -930,6 +937,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
   bool is_job_creation_required = conn_handle.GetDsn().is_job_creation_required;
+  std::uint32_t max_row_per_block = conn_handle.GetDsn().row_fetched_per_block;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
@@ -937,6 +945,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_query(query_str);
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  query_request.set_max_results(max_row_per_block);
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }

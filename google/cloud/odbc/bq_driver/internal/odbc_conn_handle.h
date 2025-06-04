@@ -59,6 +59,8 @@ struct Dsn {
   bool sessions_enabled = false;
   bool is_query_cache = true;
   std::vector<ConnectionProperty> connection_properties;
+  std::uint32_t row_fetched_per_block = 100000;
+  std::uint32_t default_string_column_length = 16384;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////
