@@ -284,11 +284,6 @@ odbc_internal::StatusRecord PopulateOutputConnectionString(
 
 std::string Base64Encode(uint8_t const* data, int length);
 
-// odbc_internal::StatusRecord ValidateQueryProperties(std::string const&
-// input);
-
-// std::vector<ConnectionProperty> ParseQueryProperties(std::string const&
-// input);
 odbc_internal::StatusRecordOr<std::vector<ConnectionProperty>>
 ParseQueryProperties(std::string const& input);
 
