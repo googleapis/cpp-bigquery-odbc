@@ -92,6 +92,13 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (query_cache == "false" || query_cache == "0") {
     dsn_.is_query_cache = false;
   }
+
+  std::string connection_properties = dsn_section["QUERYPROPERTIES"];
+  auto parse_result = ParseQueryProperties(connection_properties);
+  if (parse_result) {
+    dsn_.connection_properties = *parse_result;
+  }
+
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
   std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];

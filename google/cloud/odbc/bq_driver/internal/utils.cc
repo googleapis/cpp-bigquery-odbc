@@ -925,4 +925,39 @@ bool CheckTargetType(int c_type) {
   }
 }
 
+StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
+    std::string const& input) {
+  std::vector<ConnectionProperty> properties;
+  std::vector<std::string> splits = Split(input, ",");
+
+  for (std::string& property_str : splits) {
+    Trim(property_str);
+    if (property_str.empty()) {
+      continue;  // Skip empty entries
+    }
+
+    std::vector<std::string> property_splits = Split(property_str, "=", 2);
+    if (property_splits.size() < 2) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Invalid Query Property Format: Missing '=' or value"};
+    }
+
+    std::string key = property_splits[0];
+    std::string value =
+        Join(property_splits, "=", 1);  // In case value contains '='
+    Trim(key);
+    Trim(value);
+
+    if (key.empty()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Invalid Query Property Format: Empty key name"};
+    }
+
+    properties.emplace_back(ConnectionProperty{key, value});
+  }
+
+  return properties;  // Return the vector of properties on success
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

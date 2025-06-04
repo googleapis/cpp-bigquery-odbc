@@ -680,6 +680,28 @@ TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
   EXPECT_TRUE(returned.query_request().connection_properties().empty());
 }
 
+TEST(ConstructBasicPostQueryRequest, IncludesConnectionProperties) {
+  std::string query_str = "SELECT 1";
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["CATALOG"] = kTestCatalog;
+  dsn_section["QUERYPROPERTIES"] = "key1=value1, key2=value2";
+  conn_handle.SetUp(dsn_section, "TestDSN");
+
+  PostQueryRequest returned =
+      ConstructBasicPostQueryRequest(conn_handle, query_str);
+
+  auto const& connection_properties =
+      returned.query_request().connection_properties();
+  ASSERT_EQ(connection_properties.size(), 2);
+
+  EXPECT_EQ(connection_properties[0].key, "key1");
+  EXPECT_EQ(connection_properties[0].value, "value1");
+
+  EXPECT_EQ(connection_properties[1].key, "key2");
+  EXPECT_EQ(connection_properties[1].value, "value2");
+}
+
 TEST(ConstructBasicPostQueryRequest, Basic_SetTimeout) {
   ConnectionHandle conn_handle;
   PostQueryRequest returned =

@@ -18,6 +18,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
+using google::cloud::odbc_internal::StatusRecord;
 
 char const AdvanceOptions::CLASS_NAME[] = "AdvanceOptClass";
 
@@ -536,6 +537,15 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_query_properties_edit, query_properties_buffer,
                         sizeof(query_properties_buffer));
           query_properties_ = query_properties_buffer;
+          auto parse_result = ParseQueryProperties(query_properties_);  //
+
+          // Corrected check for StatusRecordOr success
+          if (!parse_result) {
+            // Corrected way to get the error message
+            MessageBox(h_query_properties_edit,
+                       parse_result.GetStatusRecord().message.c_str(), "Error",
+                       MB_OK | MB_ICONERROR);  //
+          }
 
           HWND h_activation_threshold =
               GetDlgItem(hwnd, kIdcActivationThresholdEdit);

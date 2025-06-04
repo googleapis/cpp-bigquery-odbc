@@ -29,6 +29,7 @@ extern HINSTANCE g_hDllInstance;
 #endif  //_WIN32
 
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
 #include <codecvt>
@@ -46,6 +47,7 @@ extern bool g_suppress_dropdown;
 
 using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
+using google::cloud::bigquery_v2_minimal_internal::ConnectionProperty;
 
 static std::string const kBase64Chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -281,6 +283,15 @@ odbc_internal::StatusRecord PopulateOutputConnectionString(
     bool is_conn_str_empty = true);
 
 std::string Base64Encode(uint8_t const* data, int length);
+
+// odbc_internal::StatusRecord ValidateQueryProperties(std::string const&
+// input);
+
+// std::vector<ConnectionProperty> ParseQueryProperties(std::string const&
+// input);
+odbc_internal::StatusRecordOr<std::vector<ConnectionProperty>>
+ParseQueryProperties(std::string const& input);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

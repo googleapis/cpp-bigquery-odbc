@@ -726,4 +726,39 @@ TEST(ConnectionHandle, ValidateExternalUser_Fail_JSON) {
             "JSON Credentials File path is empty for external user");
 }
 
+TEST(ConnectionHandle, DsnSetup_QueryProperties_ParsedCorrectly) {
+  Section dsn_section;
+  dsn_section["QUERYPROPERTIES"] = "key1=value1, key2=value2";
+
+  ConnectionHandle handle;
+  dsn_section["CATALOG"] = "TestCatalog";  // Add if SetUp requires a catalog
+  handle.SetUp(dsn_section, "TestDSN");
+
+  auto const& props_vec =
+      handle.GetDsn().connection_properties;  // props_vec is
+                                              // std::vector<ConnectionProperty>
+  ASSERT_EQ(props_vec.size(), 2);
+
+  // Access elements and then their members
+  auto const& prop0 =
+      props_vec[0];  // This should be a ConnectionProperty object
+  auto const& prop1 =
+      props_vec[1];  // This should be a ConnectionProperty object
+
+  EXPECT_EQ(prop0.key, "key1");
+  EXPECT_EQ(prop0.value, "value1");
+  EXPECT_EQ(prop1.key, "key2");
+  EXPECT_EQ(prop1.value, "value2");
+}
+
+TEST(ConnectionHandle, DsnSetup_QueryProperties_EmptyString) {
+  Section dsn_section;
+  dsn_section["QUERYPROPERTIES"] = "";  // Empty string
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN_EmptyQueryProps");
+
+  // Expect connection_properties to be empty
+  EXPECT_TRUE(handle.GetDsn().connection_properties.empty());
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

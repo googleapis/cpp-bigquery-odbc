@@ -57,6 +57,7 @@ struct Dsn {
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
   bool is_query_cache = true;
+  std::vector<ConnectionProperty> connection_properties;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////
