@@ -156,9 +156,6 @@ StatusRecordOr<DSResults> ExecuteScript(
             "CREATE_PROCEDURE" &&
         job_status.statistics.script_statistics.evaluation_kind.value ==
             "STATEMENT") {
-      std::cout << "SQLMoreResults:: SetJob Details "
-                << job_status.statistics.job_query_stats.statement_type
-                << std::endl;
       stmt_handle.SetJobData(
           job_status.job_reference.job_id,
           job_status.statistics.job_query_stats.statement_type);

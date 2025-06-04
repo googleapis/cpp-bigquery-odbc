@@ -1154,7 +1154,6 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
     return HandleAsyncGetResults(stmt_handle, async_enable);
   }
   std::cout << "SQLMoreResults:: GetJob details "
-            << stmt_handle.GetNextJobData()->first << " *** "
             << stmt_handle.GetNextJobData()->second << std::endl;
   // Prepare for next result set: discard previous job data
   stmt_handle.DeleteNextJobData();
