@@ -86,6 +86,20 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
   dsn_.sessions_enabled =
       (!sessions_enabled.empty() && sessions_enabled != "0");
+  std::string max_row_fetched = dsn_section["ROWSFETCHEDPERBLOCK"];
+  if (!max_row_fetched.empty()) {
+    auto status = ParseStringToInteger(max_row_fetched);
+    if (status) {
+      dsn_.row_fetched_per_block = status.GetValue();
+    }
+  }
+  std::string string_column_length = dsn_section["DEFAULTSTRINGCOLUMNLENGTH"];
+  if (!string_column_length.empty()) {
+    auto status = ParseStringToInteger(string_column_length);
+    if (status) {
+      dsn_.default_string_column_length = status.GetValue();
+    }
+  }
   // Disable query cache if CACHEQUERY is set to "false" or "0" in the DSN
   // section.
   std::string query_cache = dsn_section["USEQUERYCACHE"];

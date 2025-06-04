@@ -654,6 +654,23 @@ bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier) {
   }
 }
 
+StatusRecordOr<SQLUINTEGER> ParseStringToInteger(std::string const& input) {
+  SQLUINTEGER value = 0;
+  for (char c : input) {
+    if (!std::isdigit(c)) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Input value must be an integer"};
+    }
+    int digit = c - '0';
+    if (value > (std::numeric_limits<SQLUINTEGER>::max() - digit) / 10) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Input value value is too large"};
+    }
+    value = value * 10 + digit;
+  }
+  return value;  // success
+}
+
 bool IsFieldIdentifierString(SQLSMALLINT FieldIdentifier) {
   switch (FieldIdentifier) {
     case SQL_DESC_BASE_COLUMN_NAME:

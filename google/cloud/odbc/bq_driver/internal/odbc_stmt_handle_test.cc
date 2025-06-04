@@ -32,6 +32,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
@@ -277,10 +278,10 @@ TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
 
 TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
   StatementHandle handle = CreateStatementHandle();
-
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIRD);
-
+  desc_handle.SetConnectionHandle(&conn_handle);
   PostQueryResults post_results = CreatePostQueryResults();
 
   TableReference table_schema;
