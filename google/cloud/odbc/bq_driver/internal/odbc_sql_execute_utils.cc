@@ -164,6 +164,7 @@ StatusRecordOr<DSResults> ExecuteScript(
           job_status.statistics.job_query_stats.statement_type);
     }
   }
+  std::cout<<" SQLMoreResults:: After setting size "<<stmt_handle.JobDataSize()<<std::endl;
 
   // Fetch query results if job data is available
   if (!stmt_handle.HasJobData()) {

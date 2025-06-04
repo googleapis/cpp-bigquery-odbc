@@ -220,6 +220,8 @@ class StatementHandle : public Handle {
 
   bool HasJobData() const { return !job_data_.empty(); }
 
+  int JobDataSize() const { return job_data_.size(); }
+
   void SetJobData(std::string const& job_id,
                   std::string const& statement_type) {
     // Store the job ID and statement type as a pair in the vector

@@ -1153,6 +1153,8 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   if (future_opt.has_value()) {
     return HandleAsyncGetResults(stmt_handle, async_enable);
   }
+  std::cout << "SQLMoreResults:: Job size "
+            << stmt_handle.JobDataSize() <<  std::endl;
   // Prepare for next result set: discard previous job data
   stmt_handle.DeleteNextJobData();
 
@@ -1162,6 +1164,9 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
     return SQL_NO_DATA;
   }
+  std::cout << "SQLMoreResults:: GetJob details "
+            << stmt_handle.GetNextJobData()->first << " *** "
+            << stmt_handle.GetNextJobData()->second << std::endl;
 
   // If async is enabled, launch new future to fetch next result set
   if (async_enable == SQL_ASYNC_ENABLE_ON) {
