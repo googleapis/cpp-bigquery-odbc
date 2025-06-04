@@ -349,6 +349,20 @@ inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
   return interval;
 }
 
+inline SQL_INTERVAL_STRUCT MakeDaySecondInterval(
+    SQLINTERVAL type, SQLUINTEGER day, SQLUINTEGER hour, SQLUINTEGER minute,
+    SQLUINTEGER second, SQLUINTEGER fraction) {
+  SQL_INTERVAL_STRUCT interval = {};
+  interval.interval_type = type;
+  interval.interval_sign = 0;
+  interval.intval.day_second.day = day;
+  interval.intval.day_second.hour = hour;
+  interval.intval.day_second.minute = minute;
+  interval.intval.day_second.second = second;
+  interval.intval.day_second.fraction = fraction;
+  return interval;
+}
+
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
 inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {

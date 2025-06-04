@@ -4041,7 +4041,37 @@ std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
          MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 3, 5), SQL_SUCCESS},
 };
 
-void InsertYearMonthIntervalParametrizedData(
+std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
+    kConversionFromDaySecondIntervalInverseTestData = {
+        {SQL_INTERVAL_DAY, MakeDaySecondInterval(SQL_IS_DAY, 10, 0, 0, 0, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_HOUR, MakeDaySecondInterval(SQL_IS_HOUR, 0, 15, 0, 0, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_MINUTE,
+         MakeDaySecondInterval(SQL_IS_MINUTE, 0, 0, 30, 0, 0), SQL_SUCCESS},
+        {SQL_INTERVAL_SECOND,
+         MakeDaySecondInterval(SQL_IS_SECOND, 0, 0, 0, 45, 0), SQL_SUCCESS},
+        {SQL_INTERVAL_DAY_TO_HOUR,
+         MakeDaySecondInterval(SQL_IS_DAY_TO_HOUR, 12, 6, 0, 0, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_DAY_TO_MINUTE,
+         MakeDaySecondInterval(SQL_IS_DAY_TO_MINUTE, 5, 4, 20, 0, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_DAY_TO_SECOND,
+         MakeDaySecondInterval(SQL_IS_DAY_TO_SECOND, 2, 8, 15, 50, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_HOUR_TO_MINUTE,
+         MakeDaySecondInterval(SQL_IS_HOUR_TO_MINUTE, 0, 10, 25, 0, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_HOUR_TO_SECOND,
+         MakeDaySecondInterval(SQL_IS_HOUR_TO_SECOND, 0, 14, 0, 33, 0),
+         SQL_SUCCESS},
+        {SQL_INTERVAL_MINUTE_TO_SECOND,
+         MakeDaySecondInterval(SQL_IS_MINUTE_TO_SECOND, 0, 0, 45, 55, 0),
+         SQL_SUCCESS},
+};
+
+void InsertIntervalParametrizedData(
     std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
     std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
   for (int i = 0; i < test_data.size(); i++) {
@@ -4076,7 +4106,7 @@ void InsertYearMonthIntervalParametrizedData(
   }
 }
 
-void ValidateYearMonthIntervalParametrizedData(
+void ValidateIntervalParametrizedData(
     std::shared_ptr<ODBCHandles> conn, std::string const& query,
     std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
   SQLRETURN status =
@@ -4119,6 +4149,86 @@ void ValidateYearMonthIntervalParametrizedData(
                   test_case.value.intval.year_month.month);
         break;
       }
+      case SQL_C_INTERVAL_DAY: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.day,
+                  test_case.value.intval.day_second.day);
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.minute,
+                  test_case.value.intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_SECOND: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.second,
+                  test_case.value.intval.day_second.second);
+        EXPECT_EQ(out_val.intval.day_second.fraction,
+                  test_case.value.intval.day_second.fraction);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_HOUR: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.day,
+                  test_case.value.intval.day_second.day);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_MINUTE: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.day,
+                  test_case.value.intval.day_second.day);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        EXPECT_EQ(out_val.intval.day_second.minute,
+                  test_case.value.intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_DAY_TO_SECOND: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.day,
+                  test_case.value.intval.day_second.day);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        EXPECT_EQ(out_val.intval.day_second.minute,
+                  test_case.value.intval.day_second.minute);
+        EXPECT_EQ(out_val.intval.day_second.second,
+                  test_case.value.intval.day_second.second);
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR_TO_MINUTE: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        EXPECT_EQ(out_val.intval.day_second.minute,
+                  test_case.value.intval.day_second.minute);
+        break;
+      }
+      case SQL_C_INTERVAL_HOUR_TO_SECOND: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.hour,
+                  test_case.value.intval.day_second.hour);
+        EXPECT_EQ(out_val.intval.day_second.second,
+                  test_case.value.intval.day_second.second);
+        break;
+      }
+      case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
+        EXPECT_EQ(out_val.interval_type, test_case.value.interval_type);
+        EXPECT_EQ(out_val.intval.day_second.minute,
+                  test_case.value.intval.day_second.minute);
+        EXPECT_EQ(out_val.intval.day_second.second,
+                  test_case.value.intval.day_second.second);
+        break;
+      }
       default:
         break;
     }
@@ -4141,7 +4251,7 @@ TEST(DataTranslationTest, Parametrized_SQL_Year_Month_Interval_to_all) {
 
   // Insert data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  InsertYearMonthIntervalParametrizedData(
+  InsertIntervalParametrizedData(
       conn, table_name, kConversionFromYearMonthIntervalInverseTestData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -4149,8 +4259,39 @@ TEST(DataTranslationTest, Parametrized_SQL_Year_Month_Interval_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string select_stmt =
       "SELECT IntervalField FROM " + table_name + " ORDER BY Index";
-  ValidateYearMonthIntervalParametrizedData(
+  ValidateIntervalParametrizedData(
       conn, select_stmt, kConversionFromYearMonthIntervalInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, Parametrized_SQL_Day_Second_Interval_to_all) {
+  auto const table_name =
+      kDatasetWithTablePrefix +
+      "ODBC_PARAMETRIZED_DATA_TRANSLATION_DAY_SECOND_INTERVAL";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, IntervalField INTERVAL)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertIntervalParametrizedData(
+      conn, table_name, kConversionFromDaySecondIntervalInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT IntervalField FROM " + table_name + " ORDER BY Index";
+  ValidateIntervalParametrizedData(
+      conn, select_stmt, kConversionFromDaySecondIntervalInverseTestData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

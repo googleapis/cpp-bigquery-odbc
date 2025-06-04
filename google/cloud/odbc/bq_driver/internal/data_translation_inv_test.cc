@@ -734,4 +734,71 @@ TEST(ConvertFromBuffer, From_SQL_C_YEAR_MONTH_INTERVAL_STRUCT) {
               "Conversion is unsupported");
   }
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_DAY_SECOND_INTERVAL_STRUCT) {
+  SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
+  StatusRecordOr<std::string> conv_status;
+  // 1. SQL_CHAR
+  {
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_DAY_TO_SECOND,
+        0,
+        {.day_second = {3, 4, 5, 6,
+                        789000}}  // 3 days, 4 hrs, 5 mins, 6.789 secs
+    };
+    DataBuffer data = {SQL_C_INTERVAL_DAY_TO_SECOND, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_CHAR);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "0-0 3 4:5:6.000789000");
+  }
+  // 2. SQL_INTERVAL_DAY
+  {
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_DAY, 0, {.day_second = {10, 0, 0, 0, 0}}  // 10 days
+    };
+    DataBuffer data = {SQL_C_INTERVAL_DAY, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_DAY);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "0-0 10 0:0:0");
+  }
+  // 3. SQL_INTERVAL_SECOND
+  {
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_SECOND,
+        0,
+        {.day_second = {0, 0, 0, 15, 123000}}  // 15.123 seconds
+    };
+    DataBuffer data = {SQL_C_INTERVAL_SECOND, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_SECOND);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "0-0 0 0:0:15.000123000");
+  }
+  // 4. Invalid type mismatch
+  {
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_MINUTE,  // real type is MINUTE
+        0,
+        {.day_second = {0, 0, 40, 0, 0}}  // 40 minutes
+    };
+    DataBuffer data = {SQL_C_INTERVAL_HOUR, &interval, 0,
+                       &data_size};  // expected HOUR
+    conv_status = ConvertFromBuffer(data, SQL_INTERVAL_HOUR);
+    EXPECT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+    EXPECT_EQ(conv_status.GetStatusRecord().message,
+              "Invalid Hour Interval value");
+  }
+  // 5. Unsupported SQL type
+  {
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_DAY_TO_SECOND, 0, {.day_second = {1, 2, 3, 4, 0}}  // 1d 2h 3m 4s
+    };
+    DataBuffer data = {SQL_C_INTERVAL_DAY_TO_SECOND, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, -999);  // Invalid SQL type
+    EXPECT_FALSE(conv_status);
+    EXPECT_EQ(conv_status.GetStatusRecord().sql_state, SQLStates::k_HY000());
+    EXPECT_EQ(conv_status.GetStatusRecord().message,
+              "Conversion is unsupported");
+  }
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -401,6 +401,75 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
       }
       return FormatIntervalToString(interval_struct);
     }
+    case SQL_INTERVAL_DAY: {
+      if (interval_struct.interval_type != SQL_IS_DAY) {
+        return StatusRecord{SQLStates::k_HY000(), "Invalid Day Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_HOUR: {
+      if (interval_struct.interval_type != SQL_IS_HOUR) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Hour Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_MINUTE: {
+      if (interval_struct.interval_type != SQL_IS_MINUTE) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Minute Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_SECOND: {
+      if (interval_struct.interval_type != SQL_IS_SECOND) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Second Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_DAY_TO_HOUR: {
+      if (interval_struct.interval_type != SQL_IS_DAY_TO_HOUR) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Day To Hour Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_DAY_TO_MINUTE: {
+      if (interval_struct.interval_type != SQL_IS_DAY_TO_MINUTE) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Day To Minute Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_DAY_TO_SECOND: {
+      if (interval_struct.interval_type != SQL_IS_DAY_TO_SECOND) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Day To Second Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_HOUR_TO_MINUTE: {
+      if (interval_struct.interval_type != SQL_IS_HOUR_TO_MINUTE) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Hour To Minute Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_HOUR_TO_SECOND: {
+      if (interval_struct.interval_type != SQL_IS_HOUR_TO_SECOND) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Hour To Second Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
+    case SQL_INTERVAL_MINUTE_TO_SECOND: {
+      if (interval_struct.interval_type != SQL_IS_MINUTE_TO_SECOND) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid Minute To Second Interval value"};
+      }
+      return FormatIntervalToString(interval_struct);
+    }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
@@ -548,7 +617,17 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     }
     case SQL_C_INTERVAL_YEAR:
     case SQL_C_INTERVAL_MONTH:
-    case SQL_C_INTERVAL_YEAR_TO_MONTH: {
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:
+    case SQL_C_INTERVAL_DAY:
+    case SQL_C_INTERVAL_HOUR:
+    case SQL_C_INTERVAL_MINUTE:
+    case SQL_C_INTERVAL_SECOND:
+    case SQL_C_INTERVAL_DAY_TO_HOUR:
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:
+    case SQL_C_INTERVAL_DAY_TO_SECOND:
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
       auto conv_status = ConvertFromIntervalBuffer(src_data, sql_type);
       if (!conv_status) {
         return conv_status.GetStatusRecord();
