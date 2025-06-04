@@ -152,6 +152,7 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
 
   for (auto const& job_status : all_jobs_status.GetValue()) {
+    std::cout<<"SQLMoreResults:: SetJob Details "<<job_status.statistics.job_query_stats.statement_type<<std::endl;
     if (job_status.statistics.job_query_stats.statement_type !=
             "CREATE_PROCEDURE" &&
         job_status.statistics.script_statistics.evaluation_kind.value ==

@@ -1138,7 +1138,7 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
     return LogAndReturnCode(stmt_handle,
                             {SQLStates::k_HY008(), "Operation canceled"});
   }
-
+std::cout<<"SQLMoreResults:: here inside SQLMoreResultsInternal\n";
   // Get async execution attribute
   StatusRecordOr<SQLULEN> async_enable_status =
       stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
@@ -1153,12 +1153,13 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   if (future_opt.has_value()) {
     return HandleAsyncGetResults(stmt_handle, async_enable);
   }
-
+  std::cout<<"SQLMoreResults:: GetJob details "<<stmt_handle.GetNextJobData()->first<<"***"<<stmt_handle.GetNextJobData()->second<<std::endl;
   // Prepare for next result set: discard previous job data
   stmt_handle.DeleteNextJobData();
 
   // If no more job data exists, return SQL_NO_DATA
   if (!stmt_handle.HasJobData()) {
+    std::cout<<"SQLMoreResults:: Has No job\n";
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
     return SQL_NO_DATA;
   }
