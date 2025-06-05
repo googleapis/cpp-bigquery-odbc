@@ -150,7 +150,7 @@ StatusRecordOr<DSResults> ExecuteScript(
   if (!all_jobs_status) {
     return all_jobs_status.GetStatusRecord();
   }
-std::cout<<"SQLMoreResults kanchan:: All Jobs size "<<all_jobs_status->size()<<std::endl;
+std::cout<<"SQLMoreResults kanchan:: All Jobs  "<<all_jobs_status->size()<<std::endl;
   for (auto const& job_status : all_jobs_status.GetValue()) {
     std::cout << "SQLMoreResults:: SetJob Details "
                 << job_status.statistics.job_query_stats.statement_type
