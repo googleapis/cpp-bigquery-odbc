@@ -1046,7 +1046,7 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   // *****************************************************************
   // STEP 4: Synchronous execution
   // *****************************************************************
-  std::cout<<"kanchan SQLExecDirect Internal\n";
+  std::cout<<"kanchan SQLExecDirect Internal \n";
   StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
   if (execute_status.sql_state == SQLStates::k_SQL_NEED_DATA()) {
     stmt_handle.SetStmtState(StmtStates::kNeedsParams);
