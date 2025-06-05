@@ -313,11 +313,13 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   } else if ((statement_type == "UPDATE" || statement_type == "INSERT" ||
               statement_type == "DELETE") &&
              ds_status_record_or->num_dml_affected_rows == 0) {
+    std::cout<<"kanchan here 1\n";
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
     // Note: The message is not supposed to be propagated to the application in
     // case of SQL_NO_DATA
     return StatusRecord{SQLStates::k_SQL_NO_DATA(), "No data found"};
   } else {
+    std::cout<<"kanchan here 2\n";
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
@@ -443,6 +445,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   }
 
   if (!rs_status_record_or || statement_type != "SELECT") {
+    std::cout<<"kanchan here 3\n";
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   } else {
     stmt_handle.SetResultSet(result_set);
