@@ -543,6 +543,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             MessageBox(h_query_properties_edit,
                        parse_result.GetStatusRecord().message.c_str(), "Error",
                        MB_OK | MB_ICONERROR);
+            return 0;
           }
 
           HWND h_activation_threshold =
