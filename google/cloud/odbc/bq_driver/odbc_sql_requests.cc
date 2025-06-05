@@ -1044,6 +1044,10 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   // STEP 4: Synchronous execution
   // *****************************************************************
   StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
+  if (execute_status.sql_state == SQLStates::k_SQL_NEED_DATA()) {
+    stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    return SQL_NEED_DATA;
+  }
   return LogAndReturnCode(stmt_handle, execute_status);
 }
 

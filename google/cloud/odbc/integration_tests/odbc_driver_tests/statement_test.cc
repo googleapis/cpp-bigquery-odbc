@@ -446,8 +446,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 TEST(StatementTest, SQLExecDirectW) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -459,12 +457,13 @@ TEST(StatementTest, SQLExecDirectW) {
   table.CreateW(conn, L"(string_field STRING)");
 
   std::wstring const string_field = L"Some Test String नमस्ते";
-  SQLWCHAR insert_stmt[kBufferLength];
-  swprintf(insert_stmt, kBufferLength, L"INSERT INTO %ls VALUES ('%ls')",
-           table_name.c_str(), string_field.c_str());
+  std::wstring query =
+      L"INSERT INTO " + table_name + L" VALUES ('" + string_field + L"')";
+  std::vector<SQLWCHAR> insert_stmt(query.begin(), query.end());
+  insert_stmt.emplace_back(L'\0');
 
   SQLRETURN status =
-      SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt, SQL_NTS);
+      SQLExecDirectW(conn->hstmt, (SQLWCHAR*)insert_stmt.data(), SQL_NTS);
   CheckError(status, "SQLExecDirectW", conn);
 
   table.DropW(conn);
@@ -529,8 +528,6 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn, true), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLNumParams) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -2427,8 +2424,6 @@ TEST(SQLCancel, ExecDirect_CancelAsync_StillExecuting) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 /////////////////////////////////////////////////////////
 // 2. Tests for cancelling operations that need more data
 // at execution.
@@ -2589,7 +2584,6 @@ TEST(SQLCloseCursor, CloseCursorAfterUsingExecDirect) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST_P(MultiStatementTest, BasicScript) {
   bool use_prepare = GetParam();
