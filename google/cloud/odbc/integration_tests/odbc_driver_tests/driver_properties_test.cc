@@ -493,10 +493,6 @@ TEST(SQLGetTypeInfoTestAnsi, Unsupported_SQL_REAL) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// This preprocessor flag is used to disable tests for unimplemented bq_driver
-// ODBC APIs
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 // No ANSI version for SQLGetFunctions
 TEST(DriverPropertiesTest, SQLGetFunctions) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -504,7 +500,4 @@ TEST(DriverPropertiesTest, SQLGetFunctions) {
   EXPECT_EQ(GetAllFunctions(conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-
 }  // namespace google::cloud::odbc_tests

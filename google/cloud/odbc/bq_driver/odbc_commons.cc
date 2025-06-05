@@ -93,7 +93,9 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       std::set<std::pair<StatementHandle*, DescriptorType>> pairs =
           desc_handle->GetAssociatedStatementHandles();
       for (auto const& [stmt_handle, type] : pairs) {
-        stmt_handle->SetDescriptorHandle(type, nullptr);
+        if (stmt_handle && stmt_handle->kType == HandleType::kStmtHandle) {
+          stmt_handle->SetDescriptorHandle(type, nullptr);
+        }
       }
       if (desc_handle->GetConnectionHandle()) {
         desc_handle->GetConnectionHandle()->GetDescriptorHandles().erase(
