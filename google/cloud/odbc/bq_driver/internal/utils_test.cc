@@ -697,19 +697,19 @@ TEST(ParseConnectionString, null_terminating_string) {
   ASSERT_STATUS_RECORD_OK(section_resp_status);
 }
 
-TEST(ParseQueryPropertiesTest, EmptyString) {
+TEST(ParseQueryPropertiesTest, EmptyString) { 
   auto result = ParseQueryProperties("");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_TRUE(result->empty());
 }
 
-TEST(ParseQueryPropertiesTest, StringWithOnlySpaces) {
+TEST(ParseQueryPropertiesTest, StringWithOnlySpaces) { 
   auto result = ParseQueryProperties("   ");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_TRUE(result->empty());
 }
 
-TEST(ParseQueryPropertiesTest, SingleValidProperty) {
+TEST(ParseQueryPropertiesTest, SingleValidProperty) { 
   auto result = ParseQueryProperties("key1=value1");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 1);
@@ -717,7 +717,7 @@ TEST(ParseQueryPropertiesTest, SingleValidProperty) {
   EXPECT_EQ((*result)[0].value, "value1");
 }
 
-TEST(ParseQueryPropertiesTest, MultipleValidProperties) {
+TEST(ParseQueryPropertiesTest, MultipleValidProperties) { 
   auto result = ParseQueryProperties("key1=value1,key2=value2,key3=value3");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 3);
@@ -729,7 +729,7 @@ TEST(ParseQueryPropertiesTest, MultipleValidProperties) {
   EXPECT_EQ((*result)[2].value, "value3");
 }
 
-TEST(ParseQueryPropertiesTest, PropertiesWithSpacesAroundCommaAndEquals) {
+TEST(ParseQueryPropertiesTest, PropertiesWithSpacesAroundCommaAndEquals) { 
   auto result = ParseQueryProperties("  key1 = value1  ,  key2  =  value2  ");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 2);
@@ -737,70 +737,6 @@ TEST(ParseQueryPropertiesTest, PropertiesWithSpacesAroundCommaAndEquals) {
   EXPECT_EQ((*result)[0].value, "value1");
   EXPECT_EQ((*result)[1].key, "key2");
   EXPECT_EQ((*result)[1].value, "value2");
-}
-
-TEST(ParseQueryPropertiesTest, PropertyValueContainsEquals) {
-  auto result = ParseQueryProperties("key1=value1=part2,key2=value2");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 2);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1=part2");
-  EXPECT_EQ((*result)[1].key, "key2");
-  EXPECT_EQ((*result)[1].value, "value2");
-}
-
-TEST(ParseQueryPropertiesTest, EmptyPropertyPartsAreSkipped) {
-  auto result = ParseQueryProperties("key1=value1,,key2=value2");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 2);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1");
-  EXPECT_EQ((*result)[1].key, "key2");
-  EXPECT_EQ((*result)[1].value, "value2");
-}
-
-TEST(ParseQueryPropertiesTest, TrailingComma) {
-  auto result = ParseQueryProperties("key1=value1,");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 1);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1");
-}
-
-TEST(ParseQueryPropertiesTest, LeadingComma) {
-  auto result = ParseQueryProperties(",key1=value1");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 1);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1");
-}
-
-TEST(ParseQueryPropertiesTest, ValueCanBeEmpty) {
-  auto result = ParseQueryProperties("key1=,key2=value2");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 2);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "");
-  EXPECT_EQ((*result)[1].key, "key2");
-  EXPECT_EQ((*result)[1].value, "value2");
-}
-
-TEST(ParseQueryPropertiesTest, ValueCanBeEmptyAtEnd) {
-  auto result = ParseQueryProperties("key1=value1,key2=");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 2);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1");
-  EXPECT_EQ((*result)[1].key, "key2");
-  EXPECT_EQ((*result)[1].value, "");
-}
-
-TEST(ParseQueryPropertiesTest, SemicolonAsPartOfValueNotSeparator) {
-  auto result = ParseQueryProperties("key1=value1;key2=value2");
-  ASSERT_STATUS_RECORD_OK(result);
-  ASSERT_EQ(result->size(), 1);
-  EXPECT_EQ((*result)[0].key, "key1");
-  EXPECT_EQ((*result)[0].value, "value1;key2=value2");
 }
 
 #endif  //_WIN32

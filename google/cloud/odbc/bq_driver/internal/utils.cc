@@ -927,25 +927,40 @@ bool CheckTargetType(int c_type) {
 
 StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
     std::string const& input) {
+
+  std::string temp_input = input;
+  Trim(temp_input); 
+
+  if (temp_input.empty()) {
+    return std::vector<ConnectionProperty>{};
+  }    
   std::vector<ConnectionProperty> properties;
   std::vector<std::string> splits = Split(input, ",");
 
   for (std::string& property_str : splits) {
     Trim(property_str);
-    if (property_str.empty()) {
-      continue;  // Skip empty entries
+
+  if (property_str.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Malformed list of key-value pairs. Property not separated by an equals sign (=)."};
+  }
+
+    if (property_str.find(';') != std::string::npos) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Malformed list of key-value pairs. Multiple properties not separated by a comma (,)."}; // Desired Simba error
     }
 
     std::vector<std::string> property_splits = Split(property_str, "=", 2);
-    if (property_splits.size() < 2) {
+    if (property_splits.size() != 2) {
       return StatusRecord{
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Missing '=' or value"};
     }
 
     std::string key = property_splits[0];
-    std::string value =
-        Join(property_splits, "=", 1);  // In case value contains '='
+    std::string value =property_splits[1]; 
     Trim(key);
     Trim(value);
 
@@ -953,11 +968,15 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
       return StatusRecord{SQLStates::k_HY000(),
                           "Invalid Query Property Format: Empty key name"};
     }
-
+     if (value.find('=') != std::string::npos) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Invalid Query Property Format: Value for key '"+ key +"' contains an unexpected '='. Values cannot contain '='."};
+    }
     properties.emplace_back(ConnectionProperty{key, value});
   }
 
-  return properties;  // Return the vector of properties on success
+  return properties;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
