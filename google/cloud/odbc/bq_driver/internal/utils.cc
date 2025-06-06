@@ -968,6 +968,11 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
       return StatusRecord{SQLStates::k_HY000(),
                           "Invalid Query Property Format: Empty key name"};
     }
+    if (value.empty()) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Invalid Query Property Format: Empty value for key '" + key + "'"};
+    }
     if (value.find('=') != std::string::npos) {
       return StatusRecord{
           SQLStates::k_HY000(),
