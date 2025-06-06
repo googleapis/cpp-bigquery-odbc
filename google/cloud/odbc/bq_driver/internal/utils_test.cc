@@ -697,19 +697,19 @@ TEST(ParseConnectionString, null_terminating_string) {
   ASSERT_STATUS_RECORD_OK(section_resp_status);
 }
 
-TEST(ParseQueryPropertiesTest, EmptyString) { 
+TEST(ParseQueryPropertiesTest, EmptyString) {
   auto result = ParseQueryProperties("");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_TRUE(result->empty());
 }
 
-TEST(ParseQueryPropertiesTest, StringWithOnlySpaces) { 
+TEST(ParseQueryPropertiesTest, StringWithOnlySpaces) {
   auto result = ParseQueryProperties("   ");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_TRUE(result->empty());
 }
 
-TEST(ParseQueryPropertiesTest, SingleValidProperty) { 
+TEST(ParseQueryPropertiesTest, SingleValidProperty) {
   auto result = ParseQueryProperties("key1=value1");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 1);
@@ -717,7 +717,7 @@ TEST(ParseQueryPropertiesTest, SingleValidProperty) {
   EXPECT_EQ((*result)[0].value, "value1");
 }
 
-TEST(ParseQueryPropertiesTest, MultipleValidProperties) { 
+TEST(ParseQueryPropertiesTest, MultipleValidProperties) {
   auto result = ParseQueryProperties("key1=value1,key2=value2,key3=value3");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 3);
@@ -729,7 +729,7 @@ TEST(ParseQueryPropertiesTest, MultipleValidProperties) {
   EXPECT_EQ((*result)[2].value, "value3");
 }
 
-TEST(ParseQueryPropertiesTest, PropertiesWithSpacesAroundCommaAndEquals) { 
+TEST(ParseQueryPropertiesTest, PropertiesWithSpacesAroundCommaAndEquals) {
   auto result = ParseQueryProperties("  key1 = value1  ,  key2  =  value2  ");
   ASSERT_STATUS_RECORD_OK(result);
   ASSERT_EQ(result->size(), 2);

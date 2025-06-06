@@ -733,11 +733,12 @@ TEST(ConnectionHandle, DsnSetup_QueryProperties_ParsedCorrectly) {
   ConnectionHandle handle;
   handle.SetUp(dsn_section, "TestDSN");
 
-  std::vector<ConnectionProperty> const& props_vec = handle.GetDsn().connection_properties;
+  std::vector<ConnectionProperty> const& props_vec =
+      handle.GetDsn().connection_properties;
   ASSERT_EQ(props_vec.size(), 2);
 
-ConnectionProperty const& prop0 = props_vec[0];
-ConnectionProperty const& prop1 = props_vec[1];
+  ConnectionProperty const& prop0 = props_vec[0];
+  ConnectionProperty const& prop1 = props_vec[1];
 
   EXPECT_EQ(prop0.key, "key1");
   EXPECT_EQ(prop0.value, "value1");
@@ -747,7 +748,7 @@ ConnectionProperty const& prop1 = props_vec[1];
 
 TEST(ConnectionHandle, DsnSetup_QueryProperties_EmptyString) {
   Section dsn_section;
-  dsn_section["QUERYPROPERTIES"] = "";  
+  dsn_section["QUERYPROPERTIES"] = "";
 
   ConnectionHandle handle;
   handle.SetUp(dsn_section, "TestDSN_EmptyQueryProps");
