@@ -949,7 +949,7 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
       return StatusRecord{
           SQLStates::k_HY000(),
           "Malformed list of key-value pairs. Multiple properties not "
-          "separated by a comma (,)."};  // Desired Simba error
+          "separated by a comma (,)."};
     }
 
     std::vector<std::string> property_splits = Split(property_str, "=", 2);
