@@ -944,8 +944,7 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
                           "Malformed list of key-value pairs. Property not "
                           "separated by an equals sign (=)."};
     }
-
-    if (property_str.find(';') != std::string::npos) {
+    if (absl::StrContains(property_str, ';')) {
       return StatusRecord{
           SQLStates::k_HY000(),
           "Malformed list of key-value pairs. Multiple properties not "
@@ -973,12 +972,13 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Empty value for key '" + key + "'"};
     }
-    if (value.find('=') != std::string::npos) {
+    if (absl::StrContains(value, '=')) {
       return StatusRecord{
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Value for key '" + key +
               "' contains an unexpected '='. Values cannot contain '='."};
     }
+
     properties.emplace_back(ConnectionProperty{key, value});
   }
 
