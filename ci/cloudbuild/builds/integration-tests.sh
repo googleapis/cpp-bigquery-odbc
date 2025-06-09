@@ -42,6 +42,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
+  -DUSE_SANITIZER=Address \
   -DODBC_DEMO_TESTING=OFF \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=ON
