@@ -23,7 +23,6 @@ project(
 set(PROJECT_VERSION_PRE_RELEASE "rc")
 
 include(CTest)
-include(sanitizers.cmake)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
