@@ -2233,8 +2233,9 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLNativeSqlW(
-        connectionHandle, inStatementText, inStatementTextLen, outStatementText,
-        outStatementTextBufferLen, outStatementTextLen, *(*kTraceOption));
+        connectionHandle, inStatementText, inStatementTextLen,
+        (SQLWCHAR*)out_statement_text, outStatementTextBufferLen,
+        outStatementTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_in_stmt_txt;
@@ -2615,12 +2616,17 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
             updated_out_character_attr_status.GetStatusRecord().message);
         return updated_out_character_attr_status.GetCalculatedReturnCode();
       }
-      std::memcpy(
-          characterAttribute,
-          (SQLPOINTER)ToSqlWChar(updated_out_character_attr_status->data()),
-          characterAttributeBufferLen);
-      character_attribute_string_len =
-          updated_out_character_attr_status->length();
+      std::wstring const& wstr = *updated_out_character_attr_status;
+      size_t const bytes_to_copy =
+          std::min<size_t>(static_cast<size_t>(characterAttributeBufferLen),
+                           wstr.size() * sizeof(SQLWCHAR));
+
+      std::memcpy(characterAttribute, wstr.data(), bytes_to_copy);
+      if (characterAttributeBufferLen >= sizeof(SQLWCHAR)) {
+        SQLWCHAR* wchar_buf = static_cast<SQLWCHAR*>(characterAttribute);
+        wchar_buf[bytes_to_copy / sizeof(SQLWCHAR)] = 0;
+      }
+      character_attribute_string_len = static_cast<SQLSMALLINT>(wstr.size());
 
     } else {
       std::memcpy(characterAttribute, (SQLPOINTER)updated_character_attrib_val,
