@@ -746,7 +746,6 @@ TEST(ParseQueryPropertiesTest, MalformedSemicolonSeparator) {
                                        "Multiple properties not separated by a "
                                        "comma (,).")));
 }
-
 TEST(ParseQueryPropertiesTest, MalformedMissingProperty) {
   auto result = ParseQueryProperties("key1=value1,,key2=value2");
   EXPECT_THAT(result,
