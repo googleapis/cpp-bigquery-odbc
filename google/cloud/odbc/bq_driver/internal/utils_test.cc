@@ -745,8 +745,8 @@ TEST(ParseQueryPropertiesTest, MalformedSemicolonSeparator) {
                              HasSubstr("Malformed list of key-value pairs. "
                                        "Multiple properties not separated by a "
                                        "comma (,).")));
-                             } 
-                             
+}
+
 TEST(ParseQueryPropertiesTest, MalformedMissingProperty) {
   auto result = ParseQueryProperties("key1=value1,,key2=value2");
   EXPECT_THAT(result,
@@ -760,14 +760,15 @@ TEST(ParseQueryPropertiesTest, MissingEquals) {
   EXPECT_THAT(result, StatusRecordIs(SQLStates::k_HY000(),
                                      HasSubstr("Invalid Query Property Format: "
                                                "Missing '=' or value")));
-}   
+}
 TEST(ParseQueryPropertiesTest, MultiplePropertiesOneEmptyValue) {
   auto result = ParseQueryProperties("key1=value1,key2=");
   EXPECT_THAT(
       result,
       StatusRecordIs(
           SQLStates::k_HY000(),
-          HasSubstr("Invalid Query Property Format: Empty value for key 'key2'")));
-}                          
+          HasSubstr(
+              "Invalid Query Property Format: Empty value for key 'key2'")));
+}
 #endif  //_WIN32
 }  // namespace google::cloud::odbc_bq_driver_internal
