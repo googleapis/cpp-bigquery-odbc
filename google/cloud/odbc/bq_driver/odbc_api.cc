@@ -914,7 +914,12 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       std::vector<SQLWCHAR> sql_w_str(utf16_info_val->begin(),
                                       utf16_info_val->end());
       sql_w_str.emplace_back(L'\0');
-      std::memcpy(infoValue, sql_w_str.data(), infoValueBufferLen);
+      std::size_t bytes_available =
+          static_cast<std::size_t>(infoValueBufferLen);
+      std::size_t bytes_to_copy =
+          std::min(sql_w_str.size() * sizeof(SQLWCHAR), bytes_available);
+
+      std::memcpy(infoValue, sql_w_str.data(), bytes_to_copy);
     } else {
       std::memcpy(infoValue, info_val_buffer, info_val_buffer_len);
     }

@@ -26,23 +26,27 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# Enable AddressSanitizer automatically in all builds on UNIX
-if (UNIX)
-  string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
+if (ENABLE_SANITIZER)
+    if (UNIX)
+        message(STATUS "Building with AddressSanitizer")
 
-  message(STATUS "Building with AddressSanitizer")
+        # Add sanitizer flags to compiler
+        set(CMAKE_C_FLAGS
+            "${CMAKE_C_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer -g"
+        )
+        set(CMAKE_CXX_FLAGS
+            "${CMAKE_CXX_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer -g"
+        )
 
-  if (BUILD_TYPE_UPPER STREQUAL "DEBUG")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer")
-  else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-  endif()
-
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
-endif()
+        # Add sanitizer flags to linker
+        set(CMAKE_EXE_LINKER_FLAGS
+            "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_SHARED_LINKER_FLAGS
+            "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+    else ()
+        message(WARNING "AddressSanitizer is only supported on UNIX platforms")
+    endif ()
+endif ()
 
 # If BQ_DRIVER_INTEGRATION_TESTS is enabled then we need to build the
 # google_cloud_odbc_bq_driver as a shared library with
