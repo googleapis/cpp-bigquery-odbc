@@ -836,4 +836,39 @@ TEST(ConvertFromBuffer, From_SQL_C_DAY_SECOND_INTERVAL_STRUCT) {
               "Conversion is unsupported");
   }
 }
+
+TEST(ConvertFromBuffer, From_SQL_C_INTERVAL_Single_Precision) {
+  SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
+  StatusRecordOr<std::string> conv_status;
+  {  // SQL_INTERVAL_DAY
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_DAY, 0, {.day_second = {3, 0, 0, 0, 0}}};
+    DataBuffer data = {SQL_C_INTERVAL_DAY, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_DECIMAL);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "3");
+  }
+  {  // SQL_INTERVAL_HOUR
+    SQL_INTERVAL_STRUCT interval = {
+        SQL_IS_HOUR, 0, {.day_second = {0, 12, 0, 0, 0}}};  // 12 hours
+    DataBuffer data = {SQL_C_INTERVAL_HOUR, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_SMALLINT);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "12");
+  }
+  {  // SQL_INTERVAL_YEAR
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_YEAR, 0, {5, 0}};  // 5 years
+    DataBuffer data = {SQL_C_INTERVAL_YEAR, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_INTEGER);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "5");
+  }
+  {  // SQL_INTERVAL_MONTH
+    SQL_INTERVAL_STRUCT interval = {SQL_IS_MONTH, 0, {0, 4}};
+    DataBuffer data = {SQL_C_INTERVAL_YEAR, &interval, 0, &data_size};
+    conv_status = ConvertFromBuffer(data, SQL_NUMERIC);
+    ASSERT_STATUS_RECORD_OK(conv_status);
+    EXPECT_EQ(*conv_status, "4");
+  }
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

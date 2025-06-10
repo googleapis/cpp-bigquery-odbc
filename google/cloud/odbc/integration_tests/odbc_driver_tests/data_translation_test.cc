@@ -4190,6 +4190,35 @@ std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
          SQL_SUCCESS},
 };
 
+struct InverseIntervalTestStruct {
+  // The sql type SQLBindParameter will convert c type to
+  SQLSMALLINT sql_type;
+  // The c-type SQLBindParameter will convert to sql type
+  SQLSMALLINT c_type;
+  // The value that should be returned by SQLGetData if it succeeds
+  SQL_INTERVAL_STRUCT value;
+  // The status that should be returned by SQLGetData for this C Type
+  SQLRETURN status;
+};
+
+std::vector<InverseIntervalTestStruct> const
+    kConversionFromIntervalArithmeticInverseTestData = {
+        {SQL_CHAR, SQL_C_INTERVAL_YEAR,
+         MakeYearMonthInterval(SQL_IS_YEAR, 3, 0), SQL_SUCCESS},
+        {SQL_TINYINT, SQL_C_INTERVAL_MONTH,
+         MakeYearMonthInterval(SQL_IS_MONTH, 0, 4), SQL_SUCCESS},
+        {SQL_SMALLINT, SQL_C_INTERVAL_DAY,
+         MakeDaySecondInterval(SQL_IS_DAY, 10, 0, 0, 0, 0), SQL_SUCCESS},
+        {SQL_INTEGER, SQL_C_INTERVAL_HOUR,
+         MakeDaySecondInterval(SQL_IS_HOUR, 0, 15, 0, 0, 0), SQL_SUCCESS},
+        {SQL_BIGINT, SQL_C_INTERVAL_MINUTE,
+         MakeDaySecondInterval(SQL_IS_MINUTE, 0, 0, 30, 0, 0), SQL_SUCCESS},
+        {SQL_DECIMAL, SQL_C_INTERVAL_SECOND,
+         MakeDaySecondInterval(SQL_IS_SECOND, 0, 0, 0, 45, 0), SQL_SUCCESS},
+        {SQL_NUMERIC, SQL_C_INTERVAL_HOUR,
+         MakeDaySecondInterval(SQL_IS_HOUR, 0, 23, 0, 0, 0), SQL_SUCCESS},
+};
+
 void InsertIntervalParametrizedData(
     std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
     std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
@@ -4354,6 +4383,95 @@ void ValidateIntervalParametrizedData(
   }
 }
 
+void InsertIntervalArithmeticParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& table_name,
+    std::vector<InverseIntervalTestStruct> const& test_data) {
+  for (int i = 0; i < test_data.size(); i++) {
+    auto const data = test_data[i];
+    SQLLEN data_len = sizeof(SQLBIGINT);
+
+    std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+    CheckError(status, "SQLPrepare", conn);
+
+    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG,
+                              SQL_INTEGER, 0, 0, &i, 0, nullptr);
+
+    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, data.c_type,
+                              data.sql_type, data_len, 0,
+                              (SQLPOINTER)&data.value, 0, &data_len);
+
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLBindParameter", conn);
+    }
+
+    status = SQLExecute(conn->hstmt);  // No ANSI version.
+    if (status != SQL_SUCCESS) {
+      CheckError(status, "SQLExecute", conn);
+    }
+  }
+}
+
+void ValidateIntervalArithmeticParametrizedData(
+    std::shared_ptr<ODBCHandles> conn, std::string const& query,
+    std::vector<InverseIntervalTestStruct> const& test_data) {
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQLBIGINT out_val = {};
+  SQLLEN out_len = 0;
+
+  for (auto const& test_case : test_data) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA || status == SQL_ERROR) {
+      continue;
+    }
+    status = SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &out_val, kBufferLength,
+                        &out_len);
+    CheckError(status, "SQLGetData", conn);
+    if (status == SQL_ERROR) {
+      continue;
+    }
+    switch (test_case.sql_type) {
+      case SQL_CHAR: {
+        EXPECT_EQ(std::to_string(out_val),
+                  std::to_string(test_case.value.intval.year_month.year));
+        break;
+      }
+      case SQL_TINYINT: {
+        EXPECT_EQ(out_val, test_case.value.intval.year_month.month);
+        break;
+      }
+      case SQL_SMALLINT: {
+        EXPECT_EQ(out_val, test_case.value.intval.day_second.day);
+        break;
+      }
+      case SQL_INTEGER: {
+        EXPECT_EQ(out_val, test_case.value.intval.day_second.hour);
+        break;
+      }
+      case SQL_BIGINT: {
+        EXPECT_EQ(out_val, test_case.value.intval.day_second.minute);
+        break;
+      }
+      case SQL_DECIMAL: {
+        EXPECT_EQ(out_val, test_case.value.intval.day_second.second);
+        break;
+      }
+      case SQL_NUMERIC: {
+        EXPECT_EQ(out_val, test_case.value.intval.day_second.hour);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
 // The existing driver doesn't support inverse data translation for interval
 // datatype.
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
@@ -4411,6 +4529,37 @@ TEST(DataTranslationTest, Parametrized_SQL_Day_Second_Interval_to_all) {
       "SELECT IntervalField FROM " + table_name + " ORDER BY Index";
   ValidateIntervalParametrizedData(
       conn, select_stmt, kConversionFromDaySecondIntervalInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, Parametrized_SQL_Interval_to_Arithmetic) {
+  auto const table_name =
+      kDatasetWithTablePrefix +
+      "ODBC_PARAMETRIZED_DATA_TRANSLATION_INTERVAL_ARITHMETIC";
+  Table table(table_name);
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(Index INTEGER, IntField INT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  InsertIntervalArithmeticParametrizedData(
+      conn, table_name, kConversionFromIntervalArithmeticInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt =
+      "SELECT IntField FROM " + table_name + " ORDER BY Index";
+  ValidateIntervalArithmeticParametrizedData(
+      conn, select_stmt, kConversionFromIntervalArithmeticInverseTestData);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

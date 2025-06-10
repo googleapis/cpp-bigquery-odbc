@@ -470,6 +470,16 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
       }
       return FormatIntervalToString(interval_struct);
     }
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT: {
+      SQLUINTEGER value = 0;
+      GetSinglePrecisionInterval(interval_struct, value);
+      return std::to_string(value);
+    }
     default:
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
