@@ -139,8 +139,22 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
 
   DSResults results;
-  results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
-  results.data_source_results = *pq_status;
+  if (pq_status->job_complete && pq_status->page_token.empty()) {
+    // we have gotten all the results
+    results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
+    results.data_source_results = *pq_status;
+  } else {
+    // Call GetAllQueryResults to get all the query results.
+    auto gq_status = bq_client->GetAllQueryResults(
+        pq_status->job_reference.project_id, pq_status->job_reference.job_id,
+        pq_status->job_reference.location,
+        post_query_request.query_request().timeout(), post_query_options);
+    if (!gq_status) {
+      return gq_status.GetStatusRecord();
+    }
+    results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
+    results.data_source_results = *gq_status;
+  }
 
   // Retrieve job information
   Options list_job_options;
