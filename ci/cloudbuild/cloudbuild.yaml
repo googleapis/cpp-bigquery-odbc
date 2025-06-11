@@ -26,7 +26,8 @@ options:
     'PR_NUMBER=${_PR_NUMBER}',
     'TRIGGER_TYPE=${_TRIGGER_TYPE}',
     'CONSOLE_LOG_URL=https://console.cloud.google.com/cloud-build/builds;region=us-east1/${BUILD_ID};tab=detail?project=${PROJECT_ID}',
-    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
+    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}/log-${BUILD_ID}.txt',
+    'ASAN_OPTIONS=detect_leaks=1:log_path=/workspace/asan_log'
   ]
   volumes:
     - name: 'home'
