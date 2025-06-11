@@ -26,6 +26,28 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+if (ENABLE_SANITIZER)
+    if (UNIX)
+        message(STATUS "Building with AddressSanitizer")
+
+        # Add sanitizer flags to compiler
+        set(CMAKE_C_FLAGS
+            "${CMAKE_C_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer -g"
+        )
+        set(CMAKE_CXX_FLAGS
+            "${CMAKE_CXX_FLAGS} -O1 -fsanitize=address -fno-omit-frame-pointer -g"
+        )
+
+        # Add sanitizer flags to linker
+        set(CMAKE_EXE_LINKER_FLAGS
+            "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_SHARED_LINKER_FLAGS
+            "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+    else ()
+        message(WARNING "AddressSanitizer is only supported on UNIX platforms")
+    endif ()
+endif ()
+
 # If BQ_DRIVER_INTEGRATION_TESTS is enabled then we need to build the
 # google_cloud_odbc_bq_driver as a shared library with
 # CMAKE_POSITION_INDEPENDENT_CODE ON as static linking is not supported for ODBC

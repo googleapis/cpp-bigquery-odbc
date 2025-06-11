@@ -914,7 +914,12 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       std::vector<SQLWCHAR> sql_w_str(utf16_info_val->begin(),
                                       utf16_info_val->end());
       sql_w_str.emplace_back(L'\0');
-      std::memcpy(infoValue, sql_w_str.data(), infoValueBufferLen);
+      std::size_t bytes_available =
+          static_cast<std::size_t>(infoValueBufferLen);
+      std::size_t bytes_to_copy =
+          std::min(sql_w_str.size() * sizeof(SQLWCHAR), bytes_available);
+
+      std::memcpy(infoValue, sql_w_str.data(), bytes_to_copy);
     } else {
       std::memcpy(infoValue, info_val_buffer, infoValueBufferLen);
     }
@@ -2228,8 +2233,9 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   // Call to Trace Unicode function entry in odbc_trace.h if tracing is enabled.
   if (is_tracing_enabled)
     TraceFunctionEntry_SQLNativeSqlW(
-        connectionHandle, inStatementText, inStatementTextLen, outStatementText,
-        outStatementTextBufferLen, outStatementTextLen, *(*kTraceOption));
+        connectionHandle, inStatementText, inStatementTextLen,
+        (SQLWCHAR*)out_statement_text, outStatementTextBufferLen,
+        outStatementTextLen, *(*kTraceOption));
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_in_stmt_txt;
@@ -2610,12 +2616,17 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
             updated_out_character_attr_status.GetStatusRecord().message);
         return updated_out_character_attr_status.GetCalculatedReturnCode();
       }
-      std::memcpy(
-          characterAttribute,
-          (SQLPOINTER)ToSqlWChar(updated_out_character_attr_status->data()),
-          characterAttributeBufferLen);
-      character_attribute_string_len =
-          updated_out_character_attr_status->length();
+      std::wstring const& wstr = *updated_out_character_attr_status;
+      size_t const bytes_to_copy =
+          std::min<size_t>(static_cast<size_t>(characterAttributeBufferLen),
+                           wstr.size() * sizeof(SQLWCHAR));
+
+      std::memcpy(characterAttribute, wstr.data(), bytes_to_copy);
+      if (characterAttributeBufferLen >= sizeof(SQLWCHAR)) {
+        SQLWCHAR* wchar_buf = static_cast<SQLWCHAR*>(characterAttribute);
+        wchar_buf[bytes_to_copy / sizeof(SQLWCHAR)] = 0;
+      }
+      character_attribute_string_len = static_cast<SQLSMALLINT>(wstr.size());
 
     } else {
       std::memcpy(characterAttribute, (SQLPOINTER)updated_character_attrib_val,

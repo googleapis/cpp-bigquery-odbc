@@ -33,6 +33,7 @@ using google::cloud::odbc_internal::SQLStates;
 StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
     std::vector<QueryParameter>& basic_query_params, bool is_data_buff_req) {
+  std::vector<SQLLEN> owned_octet_lengths;  // Owns any needed octet lengths
   for (int param_ind = 0; param_ind < basic_query_params.size(); param_ind++) {
     if (!apd.HasDescriptorRecord(param_ind + 1)) {
       return StatusRecord{
@@ -74,9 +75,10 @@ StatusRecord ConstructPositionalQueryParams(
             : apd_rec.data_ptr;
     DataBuffer data;
     if (is_data_buff_req && is_data_at_exec) {
-      SQLLEN octet_length = static_cast<SQLLEN>(apd_rec.data_buffer.size());
-      SQLLEN* octet_length_ptr = &octet_length;
-      data = {apd_rec.concise_type, buff, octet_length, octet_length_ptr};
+      owned_octet_lengths.push_back(
+          static_cast<SQLLEN>(apd_rec.data_buffer.size()));
+      SQLLEN* octet_length_ptr = &owned_octet_lengths.back();
+      data = {apd_rec.concise_type, buff, *octet_length_ptr, octet_length_ptr};
     } else {
       data = {apd_rec.concise_type, buff, apd_rec.octet_length,
               apd_rec.octet_length_ptr};
