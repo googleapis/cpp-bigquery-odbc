@@ -774,7 +774,7 @@ StatusRecordOr<DSResults> FetchBQData(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
-  std::cout<<"pq status "<<pq_status->DebugString("Response:: ")<<std::endl;
+  std::cout<<"post query status "<<pq_status->DebugString("Response:: ")<<std::endl;
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
