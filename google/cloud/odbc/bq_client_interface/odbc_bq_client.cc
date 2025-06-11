@@ -23,6 +23,7 @@
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
+#include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -65,6 +66,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
           *credentials);
 
+  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
+  if (!pem_file.empty()) {
+    options.set<google::cloud::CARootsFilePathOption>(pem_file);
+  }
+
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
@@ -77,6 +83,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // and resource manager client.
   CompletionQueue cq;
   options.set<GrpcCompletionQueueOption>(cq);
+
+  if (!pem_file.empty()) {
+    grpc::SslCredentialsOptions ssl_opts;
+    ssl_opts.pem_root_certs = pem_file;
+    auto ssl_creds = grpc::SslCredentials(ssl_opts);
+    options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
+  }
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(options));
 

@@ -99,6 +99,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
     dsn_.connection_properties = *parse_result;
   }
 
+  dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
   std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];

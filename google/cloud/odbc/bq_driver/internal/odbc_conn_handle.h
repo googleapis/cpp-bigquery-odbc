@@ -49,6 +49,7 @@ struct Dsn {
   std::string key_file_path;
   std::string o_auth_mechanism;
   std::string list_projects_parent;
+  std::string pem_file;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.

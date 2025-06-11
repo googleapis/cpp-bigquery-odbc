@@ -544,10 +544,8 @@ void DriverForm::InitControls() {
               (LPARAM) "Application Default Credentials");
   SendMessage(h_auth_combo_box, CB_SETCURSEL, 0, 0);
 
-  SendMessage(h_min_tls_combo_box, CB_ADDSTRING, 0, (LPARAM) "1.0");
-  SendMessage(h_min_tls_combo_box, CB_ADDSTRING, 0, (LPARAM) "1.1");
   SendMessage(h_min_tls_combo_box, CB_ADDSTRING, 0, (LPARAM) "1.2");
-  SendMessage(h_min_tls_combo_box, CB_SETCURSEL, 2, 0);
+  SendMessage(h_min_tls_combo_box, CB_SETCURSEL, 0, 0);
 
   SetWindowText(h_key_file_edit, key_file_path_.c_str());
   SetWindowText(h_catalog_box, catalog_.c_str());
@@ -842,8 +840,8 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         } break;
         case kIdcTrustedCertBrowseButton: {
           HWND h_edit = GetDlgItem(hwnd, kIdcTrustedCertEdit);
-          OpenFileDialog(hwnd, h_edit, nullptr,
-                         "PEM (*.pem)\0*.pem\0All Files (*.*)\0*.*\0", "pem");
+          OpenFileDialog(hwnd, h_edit, nullptr, "PEM Files (*.pem)\0*.pem\0\0",
+                         "pem");
         } break;
         case kIdcLoggingBtn: {
           SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -906,12 +904,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char min_tls_buffer[256];
           GetWindowText(h_min_tls_box, min_tls_buffer, sizeof(min_tls_buffer));
           min_tls_version_ = min_tls_buffer;
-          if (min_tls_version_ != "1.2") {
-            MessageBox(hwnd, "Invalid MIN TLS Version!", "Error",
-                       MB_OK | MB_ICONERROR);
-            min_tls_version_ = "";
-            return 0;
-          }
+
           HWND h_trusted_cert_box = GetDlgItem(hwnd, kIdcTrustedCertEdit);
           char trusted_cert_buffer[256];
           GetWindowText(h_trusted_cert_box, trusted_cert_buffer,

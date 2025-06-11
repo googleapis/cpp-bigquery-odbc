@@ -79,6 +79,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.byoid_pool_user_project = dsn.byoid_pool_user_project;
   auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
   auth.oauth.byoid_token_url = dsn.byoid_token_url;
+  auth.oauth.ssl_credentials.pem_root_certs = dsn.pem_file;
   return auth;
 }
 
@@ -145,7 +146,8 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
                          {"KEYFILEPATH", form.GetKeyFilePath()},
                          {"OAUTHMECHANISM", form.GetOAuthMechanism()},
                          {"CATALOG", form.GetCatalogName()},
-                         {"DATASET", form.GetDatasetName()}};
+                         {"DATASET", form.GetDatasetName()},
+                         {"TRUSTEDCERTS", form.GetTrustedCerts()}};
 
   handle_ref->SetUp(dsn_section, form.GetDSN());
   Authentication auth = CreateAuth(handle_ref->GetDsn());

@@ -44,6 +44,10 @@ enum class OauthMechanism {
   kExternalUser = 4,
 };
 
+struct SslCredentials {
+  std::string pem_root_certs;
+};
+
 struct Oauth {
   OauthMechanism auth_mechanism;
   std::string credentials_file_path;
@@ -64,6 +68,7 @@ struct Oauth {
   // The URI used to generate authentication tokens. Defaults to
   // https://sts.googleapis.com/v1/token.
   std::string byoid_token_url;
+  SslCredentials ssl_credentials;
 };
 
 // Returns true if all required BYOID properties are set.
