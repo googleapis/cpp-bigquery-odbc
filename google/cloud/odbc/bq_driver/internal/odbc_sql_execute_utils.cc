@@ -137,6 +137,7 @@ StatusRecordOr<DSResults> ExecuteScript(
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+  std::cout<<"post_query status "<<pq_status->DebugString("Response:: ")<<std::endl;
 
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
