@@ -1328,6 +1328,96 @@ TEST(ConnectionTest, DISABLED_SQLGetConnectAttr) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, Validate_DEFAULTSTRINGCOLUMNLENGTH) {
+  SQLRETURN status;
+
+  // Setup connection handle
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  status = SQLExecDirect(conn->hstmt,
+                         (SQLCHAR*)"SELECT 'Hello, BigQuery!' AS my_string;",
+                         SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  SQLCHAR column_name[256];
+  SQLSMALLINT name_length = 0;
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+
+  status = SQLDescribeCol(conn->hstmt,
+                          1,  // Column index 1
+                          column_name, sizeof(column_name), &name_length,
+                          &data_type, &column_size, &decimal_digits, &nullable);
+  CheckError(status, "SQLDescribeCol(ASSERT)", conn);
+
+  EXPECT_STREQ((char const*)column_name, "my_string");
+  EXPECT_TRUE(data_type == SQL_VARCHAR || data_type == SQL_CHAR);
+  EXPECT_EQ(column_size, 16384);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
+  SQLRETURN status;
+
+  // Setup connection handle
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connectionstring =
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
+
+  // 1️⃣ Connect
+  EXPECT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+
+  // 2️⃣ Execute SELECT with a literal
+  status = SQLExecDirect(conn->hstmt,
+                         (SQLCHAR*)"SELECT 'Hello, BigQuery!' AS my_string;",
+                         SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  // 3️⃣ Describe the column
+  SQLCHAR column_name[256];
+  SQLSMALLINT name_length = 0;
+  SQLSMALLINT data_type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+
+  status = SQLDescribeCol(conn->hstmt,
+                          1,  // Column index 1
+                          column_name, sizeof(column_name), &name_length,
+                          &data_type, &column_size, &decimal_digits, &nullable);
+  CheckError(status, "SQLDescribeCol(ASSERT)", conn);
+
+  EXPECT_STREQ((char const*)column_name, "my_string");
+  EXPECT_TRUE(data_type == SQL_VARCHAR || data_type == SQL_CHAR);
+  EXPECT_EQ(column_size, 4);
+
+  // 4️⃣ Prepare a buffer and bind it
+  std::vector<char> data_buffer(column_size + 1, 0);  // +1 for null terminator
+  SQLLEN data_indicator = 0;
+
+  status = SQLBindCol(conn->hstmt,
+                      1,  // Column index 1
+                      SQL_C_CHAR, data_buffer.data(), data_buffer.size(),
+                      &data_indicator);
+  CheckError(status, "SQLBindCol(ASSERT)", conn);
+
+  // 5️⃣ Fetch the row — data goes directly into the bound buffer
+  status = SQLFetch(conn->hstmt);
+  CheckError(status, "SQLFetch(ASSERT)", conn);
+
+  // 6️⃣ Validate the bound value
+  std::string actual_value(data_buffer.data());
+  EXPECT_EQ(actual_value, "Hell");
+
+  // 7️⃣ Clean up
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifndef _WIN32
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();
