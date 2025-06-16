@@ -80,6 +80,10 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
   auth.oauth.byoid_token_url = dsn.byoid_token_url;
   auth.oauth.ssl_credentials.pem_root_certs = dsn.pem_file;
+  auth.oauth.proxy_options.hostname = dsn.proxy_hostname;
+  auth.oauth.proxy_options.port = dsn.proxy_port;
+  auth.oauth.proxy_options.username = dsn.proxy_username;
+  auth.oauth.proxy_options.password = dsn.proxy_password;
   return auth;
 }
 
@@ -142,12 +146,18 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
   }
 
   // Retrieve user inputs and configure the connection.
-  Section dsn_section = {{"DSN", form.GetDSN()},
-                         {"KEYFILEPATH", form.GetKeyFilePath()},
-                         {"OAUTHMECHANISM", form.GetOAuthMechanism()},
-                         {"CATALOG", form.GetCatalogName()},
-                         {"DATASET", form.GetDatasetName()},
-                         {"TRUSTEDCERTS", form.GetTrustedCerts()}};
+  Section dsn_section = {
+      {"DSN", form.GetDSN()},
+      {"KEYFILEPATH", form.GetKeyFilePath()},
+      {"OAUTHMECHANISM", form.GetOAuthMechanism()},
+      {"CATALOG", form.GetCatalogName()},
+      {"DATASET", form.GetDatasetName()},
+      {"TRUSTEDCERTS", form.GetTrustedCerts()},
+      {"PROXYHOST", form.GetProxyOptions()->GetProxyHost()},
+      {"PROXYPORT", form.GetProxyOptions()->GetProxyPort()},
+      {"PROXYUID", form.GetProxyOptions()->GetProxyUsername()},
+      {"PROXYPWD_ENC", form.GetProxyOptions()->GetProxyPass()},
+  };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());
   Authentication auth = CreateAuth(handle_ref->GetDsn());

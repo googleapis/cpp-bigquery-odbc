@@ -48,6 +48,13 @@ struct SslCredentials {
   std::string pem_root_certs;
 };
 
+struct ProxyOptions {
+  std::string hostname;
+  std::string port;
+  std::string username;
+  std::string password;
+};
+
 struct Oauth {
   OauthMechanism auth_mechanism;
   std::string credentials_file_path;
@@ -69,6 +76,7 @@ struct Oauth {
   // https://sts.googleapis.com/v1/token.
   std::string byoid_token_url;
   SslCredentials ssl_credentials;
+  ProxyOptions proxy_options;
 };
 
 // Returns true if all required BYOID properties are set.

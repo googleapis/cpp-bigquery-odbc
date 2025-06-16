@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -27,6 +28,10 @@ using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeSaml2;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
+#ifdef _WIN32
+using google::cloud::odbc_bq_driver_internal::DecryptPassword;
+#endif
 
 namespace {
 bool IsAttributeValueValid(std::vector<SQLPOINTER>& possible_values,
@@ -120,6 +125,15 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
   dsn_.large_table_expiration_time =
       dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
+  dsn_.proxy_hostname = dsn_section["PROXYHOST"];
+  dsn_.proxy_port = dsn_section["PROXYPORT"];
+  dsn_.proxy_username = dsn_section["PROXYUID"];
+  dsn_.proxy_password = dsn_section["PROXYPWD"];
+#ifdef _WIN32
+  if (dsn_.proxy_password.empty()) {
+    dsn_.proxy_password = DecryptPassword(dsn_section["PROXYPWD_ENC"]);
+  }
+#endif
 
   // Populate BYOID properties from DSN section.
   dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];

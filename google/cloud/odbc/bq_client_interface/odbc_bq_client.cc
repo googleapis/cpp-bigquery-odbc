@@ -62,6 +62,23 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     return credentials.GetStatusRecord();
   }
 
+  std::string proxy_host = oauth.proxy_options.hostname;
+  std::string proxy_port = oauth.proxy_options.port;
+  if (!proxy_host.empty() && !proxy_port.empty()) {
+    std::string proxy_env = "http://" + proxy_host + ":" + proxy_port;
+    std::string proxy_username = oauth.proxy_options.username;
+    std::string proxy_pass = oauth.proxy_options.password;
+    if (!proxy_username.empty()) {
+      proxy_env = "http://" + proxy_username + ":" + proxy_pass + "@" +
+                  proxy_host + ":" + proxy_port;
+    }
+#ifdef _WIN32
+    _putenv_s("https_proxy", proxy_env.c_str());
+#else
+    setenv("https_proxy", proxy_env.c_str(), 1);
+#endif
+  }
+
   Options options =
       google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
           *credentials);

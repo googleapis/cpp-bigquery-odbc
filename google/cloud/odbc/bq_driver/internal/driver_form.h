@@ -93,6 +93,8 @@ class DriverForm {
     log_trace_dialog_.SetValues(attributes_map);
   }
 
+  ProxyOptions* GetProxyOptions() { return &proxy_options_; }
+
  private:
   static std::string dsn_name_;
   static std::string key_file_path_;
@@ -110,6 +112,7 @@ class DriverForm {
   HWND m_parent_hwnd;
   LogTraceDialog log_trace_dialog_;
   static char const CLASS_NAME[];
+  ProxyOptions proxy_options_;
 };
 
 void OpenFileDialog(

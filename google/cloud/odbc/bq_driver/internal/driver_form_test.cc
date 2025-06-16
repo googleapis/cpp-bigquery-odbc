@@ -102,22 +102,8 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
       << "First item text should be 'Service Authentication'.";
 }
 
-TEST_F(DriverFormTest, TestEmailField) {
-  HWND h_email_edit = GetDlgItem(form->GetHwnd(), kIdcEmailEdit);
-  ASSERT_NE(h_email_edit, nullptr) << "Email edit control should be created.";
-
-  char const* test_email = "test@example.com";
-  SendMessage(h_email_edit, WM_SETTEXT, 0, (LPARAM)test_email);
-
-  char buffer[256];
-  SendMessage(h_email_edit, WM_GETTEXT, sizeof(buffer), (LPARAM)buffer);
-  ASSERT_STREQ(buffer, test_email)
-      << "Email edit control should contain the correct text.";
-}
-
 TEST_F(DriverFormTest, SetValues_ValidInput) {
   Section attributes = {{"DSN", "test"},
-                        {"Email", "test@example.com"},
                         {"OAuthMechanism", "0"},
                         {"KeyFilePath", "/path/to/key"},
                         {"Catalog", "test_catalog"},
@@ -128,7 +114,6 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
   form->SetValues(attributes);
   form->SetLogTraceValues(trace_log_attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
@@ -139,7 +124,6 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
 
 TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
   Section attributes = {{"DSN", "test"},
-                        {"EMaiL", "test@example.com"},
                         {"OAuthMechanISM", "0"},
                         {"KeyFilePATH", "/path/to/key"},
                         {"CaTaLoG", "test_catalog"},
@@ -147,7 +131,6 @@ TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
 
   form->SetValues(attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
@@ -156,7 +139,6 @@ TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
 
 TEST_F(DriverFormTest, SetValues_MissingAttributes) {
   Section attributes = {
-      {"Email", "test@example.com"},
       {"OAuthMechanism", "0"},
   };
 
@@ -164,7 +146,6 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
   form->SetValues(attributes);
   form->SetLogTraceValues(trace_log_attributes);
 
-  EXPECT_EQ(form->GetEmail(), "test@example.com");
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
@@ -179,7 +160,6 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
   form->SetValues(attributes);
   form->SetLogTraceValues({});
 
-  EXPECT_EQ(form->GetEmail(), "");
   EXPECT_EQ(form->GetOAuthMechanism(), "");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");

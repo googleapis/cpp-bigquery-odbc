@@ -85,6 +85,12 @@ struct Dsn {
   // The URI used to generate authentication tokens. Defaults to
   // https://sts.googleapis.com/v1/token.
   std::string byoid_token_url;
+
+  // Proxy options fields
+  std::string proxy_hostname;
+  std::string proxy_port;
+  std::string proxy_username;
+  std::string proxy_password;
 };
 
 class EnvironmentHandle;

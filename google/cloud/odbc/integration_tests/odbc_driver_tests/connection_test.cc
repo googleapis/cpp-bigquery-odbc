@@ -1478,4 +1478,29 @@ TEST(SQLGetFunctionsInternal,
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
+TEST(ProxyOptionsTest, CheckingProxyConnection) {
+  auto const table_name = kDatasetWithTablePrefix + "ODBC_PROXY_TEST";
+  Table table(table_name);
+
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";ProxyHost=34.94.167.18;ProxyPort=3128;ProxyUid=fahmz;ProxyPwd=fahmz;";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, DateField DATE)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  std::vector<SQL_DATE_STRUCT> date_data = {{2024, 1, 20}};
+  table.InsertDateData(conn, date_data, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests
