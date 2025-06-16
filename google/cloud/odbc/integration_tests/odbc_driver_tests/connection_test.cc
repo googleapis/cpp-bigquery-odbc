@@ -1369,16 +1369,16 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
   std::string connectionstring =
       kDefaultConnectionString + "; DefaultStringColumnLength=4;";
 
-  // 1️⃣ Connect
+  // Connect
   EXPECT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
 
-  // 2️⃣ Execute SELECT with a literal
+  // Execute SELECT with a literal
   status = SQLExecDirect(conn->hstmt,
                          (SQLCHAR*)"SELECT 'Hello, BigQuery!' AS my_string;",
                          SQL_NTS);
   CheckError(status, "SQLExecDirect(ASSERT)", conn);
 
-  // 3️⃣ Describe the column
+  // Describe the column
   SQLCHAR column_name[256];
   SQLSMALLINT name_length = 0;
   SQLSMALLINT data_type = 0;
@@ -1396,7 +1396,7 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
   EXPECT_TRUE(data_type == SQL_VARCHAR || data_type == SQL_CHAR);
   EXPECT_EQ(column_size, 4);
 
-  // 4️⃣ Prepare a buffer and bind it
+  // Prepare a buffer and bind it
   std::vector<char> data_buffer(column_size + 1, 0);  // +1 for null terminator
   SQLLEN data_indicator = 0;
 
@@ -1406,15 +1406,15 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
                       &data_indicator);
   CheckError(status, "SQLBindCol(ASSERT)", conn);
 
-  // 5️⃣ Fetch the row — data goes directly into the bound buffer
+  // Fetch the row — data goes directly into the bound buffer
   status = SQLFetch(conn->hstmt);
   CheckError(status, "SQLFetch(ASSERT)", conn);
 
-  // 6️⃣ Validate the bound value
+  // Validate the bound value
   std::string actual_value(data_buffer.data());
   EXPECT_EQ(actual_value, "Hell");
 
-  // 7️⃣ Clean up
+  // Clean up
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
