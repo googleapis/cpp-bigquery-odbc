@@ -24,17 +24,24 @@ limitations under the License.
             <ComponentRef Id="ODBCRegistrySettings" />
             <ComponentRef Id="InstallerIconComponent"/>
         </ComponentGroup>
-    <CustomAction Id="RemoveAllDriverDSNs"
+     <CustomAction Id="RemoveAllDriverDSNs"
                   Directory="INSTALLFOLDER"
                   ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$dsns = Get-OdbcDsn -DriverName '!(loc.DriverName)' -DsnType 'System'; foreach($dsn in $dsns) { Remove-OdbcDsn -Name $dsn.Name -DsnType 'System' -Confirm:$false; }&quot;"
                   Return="ignore"
                   Execute="deferred"
                   Impersonate="no" />
 
-    <InstallExecuteSequence>
+  <CustomAction Id="RemoveAllDriverUserDSNs"
+              Directory="INSTALLFOLDER"
+              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$dsns = Get-OdbcDsn -DriverName '!(loc.DriverName)' -DsnType 'User'; foreach($dsn in $dsns) { Remove-OdbcDsn -Name $dsn.Name -DsnType 'User' -Confirm:$false; }&quot;"
+              Return="ignore"
+              Execute="deferred"
+              Impersonate="yes" />
 
-    <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
-  </InstallExecuteSequence>
+<InstallExecuteSequence>
+  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+  <Custom Action="RemoveAllDriverUserDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+</InstallExecuteSequence>
         <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
 
             <!-- Combined Driver Files Component -->
