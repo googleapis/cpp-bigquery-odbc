@@ -479,6 +479,14 @@ TEST(ParseStringToInteger, ParseStringToInteger_valid) {
   EXPECT_EQ(*status, 16384);
 }
 
+TEST(ParseStringToInteger, ParseStringToInteger_largeValue) {
+  std::string str = "4294967296";
+  auto status = ParseStringToInteger(str);
+  EXPECT_THAT(status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Input value value is too large")));
+}
+
 TEST(ParseStringToInteger, ParseStringToInteger_invalid) {
   std::string str = "abc";
   auto status = ParseStringToInteger(str);
