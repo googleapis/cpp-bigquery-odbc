@@ -312,6 +312,11 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     GetTypeInfoFromBQType(type_status_record.GetValue(), res.type,
                           res.mode == array_field, type_info);
 
+    if (type_status_record.GetValue() == SQL_VARCHAR ||
+        type_status_record.GetValue() == SQL_VARBINARY) {
+      type_info.col_size = conn_handle.GetDsn().default_string_column_length;
+    }
+
     descriptor_record.base_column_name = res.name;
     descriptor_record.base_table_name = table_fields.table_id;
     descriptor_record.catalog_name = table_fields.project_id;
@@ -372,9 +377,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     if (type_status_record.GetValue() == SQL_DOUBLE) {
       // hard-coding to 15 to have the same behaviour as existing driver
       descriptor_record.length = 15;
-    } else if (type_status_record.GetValue() == SQL_VARCHAR) {
-      descriptor_record.length =
-          conn_handle.GetDsn().default_string_column_length;
     } else {
       descriptor_record.length = type_info.col_size;
     }
