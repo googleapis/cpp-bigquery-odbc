@@ -30,7 +30,7 @@ inline std::string const GetDefaultDSN() {
 
 std::string const kDefaultDataSource = GetDefaultDSN();
 
-auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
+auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN() + ";DefaultStringColumnLength=6;";
 auto const kSessionEnabledConnectionString = "DSN=ODBCTransactionsTestsDSN";
 
 // used for DSNLess SQLConnect. If we change BQ service account credentials

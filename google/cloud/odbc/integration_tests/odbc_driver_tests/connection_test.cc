@@ -1367,7 +1367,7 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
   // Setup connection handle
   auto conn = std::make_shared<ODBCHandles>();
   std::string connectionstring =
-      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
+      kDefaultConnectionString + ";DefaultStringColumnLength=4;";
 
   // 1️⃣ Connect
   EXPECT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
@@ -1377,6 +1377,7 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
                          (SQLCHAR*)"SELECT 'Hello, BigQuery!' AS my_string;",
                          SQL_NTS);
   CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  
 
   // 3️⃣ Describe the column
   SQLCHAR column_name[256];
@@ -1397,7 +1398,7 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
   EXPECT_EQ(column_size, 4);
 
   // 4️⃣ Prepare a buffer and bind it
-  std::vector<char> data_buffer(column_size + 1, 0);  // +1 for null terminator
+  std::vector<char> data_buffer(10, 0);  // +1 for null terminator
   SQLLEN data_indicator = 0;
 
   status = SQLBindCol(conn->hstmt,
