@@ -54,29 +54,30 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
+namespace {
+
+google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
+                                             std::string port,
+                                             std::string username,
+                                             std::string password,
+                                             std::string scheme = "http") {
+  google::cloud::ProxyConfig proxy_config;
+  proxy_config.set_hostname(std::move(hostname))
+      .set_port(std::move(port))
+      .set_username(std::move(username))
+      .set_password(std::move(password))
+      .set_scheme(std::move(scheme));
+  return proxy_config;
+}
+
+}  // namespace
+
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth);
   if (!credentials) {
     return credentials.GetStatusRecord();
-  }
-
-  std::string proxy_host = oauth.proxy_options.hostname;
-  std::string proxy_port = oauth.proxy_options.port;
-  if (!proxy_host.empty() && !proxy_port.empty()) {
-    std::string proxy_env = "http://" + proxy_host + ":" + proxy_port;
-    std::string proxy_username = oauth.proxy_options.username;
-    std::string proxy_pass = oauth.proxy_options.password;
-    if (!proxy_username.empty()) {
-      proxy_env = "http://" + proxy_username + ":" + proxy_pass + "@" +
-                  proxy_host + ":" + proxy_port;
-    }
-#ifdef _WIN32
-    _putenv_s("https_proxy", proxy_env.c_str());
-#else
-    setenv("https_proxy", proxy_env.c_str(), 1);
-#endif
   }
 
   Options options =
@@ -87,6 +88,10 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   if (!pem_file.empty()) {
     options.set<google::cloud::CARootsFilePathOption>(pem_file);
   }
+
+  options.set<google::cloud::ProxyOption>(CreateProxyConfig(
+      oauth.proxy_options.hostname, oauth.proxy_options.port,
+      oauth.proxy_options.username, oauth.proxy_options.password, "http"));
 
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));

@@ -1969,12 +1969,15 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";ProxyHost=34.94.167.18;ProxyPort=3128;ProxyUid=fahmz;ProxyPwd=fahmz;";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(index INTEGER, DateField DATE)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   std::vector<SQL_DATE_STRUCT> date_data;
   for (auto const& test_case : kConversionFromDateTestData) {
     date_data.push_back(test_case.value);
@@ -1984,13 +1987,13 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
 
   // Execute a read query and check whether the results returned are as
   // expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   std::string query = "SELECT DateField FROM " + table_name + " Order by index";
   TestTranslationsFromDate(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
