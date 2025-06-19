@@ -34,7 +34,10 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
   switch (*ds_type_status) {
     case BQDataType::kString:
     case BQDataType::kBytes:
-    case BQDataType::kInterval: {
+    case BQDataType::kInterval:
+    case BQDataType::kStruct:
+    case BQDataType::kJson:
+    case BQDataType::kGeography: {
       fixed_column_metadata.precision = 16384;
       fixed_column_metadata.buf_len = 16384;
       fixed_column_metadata.char_octet_len = 16384;
@@ -94,6 +97,13 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.scale = 9;
       fixed_column_metadata.radix = 2;
       fixed_column_metadata.char_octet_len = 16384;
+      break;
+    }
+    case BQDataType::kRange: {
+      fixed_column_metadata.precision = 256;
+      fixed_column_metadata.buf_len = 256, fixed_column_metadata.radix = 0;
+      fixed_column_metadata.scale = 0;
+      fixed_column_metadata.char_octet_len = 256;
       break;
     }
     default: {

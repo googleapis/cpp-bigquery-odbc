@@ -916,7 +916,7 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       sql_w_str.emplace_back(L'\0');
       std::memcpy(infoValue, sql_w_str.data(), infoValueBufferLen);
     } else {
-      std::memcpy(infoValue, info_val_buffer, infoValueBufferLen);
+      std::memcpy(infoValue, info_val_buffer, info_val_buffer_len);
     }
   }
   if (infoValueStringLen)
