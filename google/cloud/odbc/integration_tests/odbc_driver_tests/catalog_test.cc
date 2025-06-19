@@ -25,12 +25,28 @@ using ::testing::StartsWith;
 namespace {
 
 std::string const kTable = kIsBqDriver ? "BASE TABLE" : "TABLE";
+std::string const kBaseTableType = "TABLE";
 std::string const kView = "VIEW";
 std::string const kExternal = "EXTERNAL";
 std::string const kMaterializedView =
     kIsBqDriver ? "MATERIALIZED VIEW" : "MATERIALIZED_VIEW";
 std::string const kSnapshot = "SNAPSHOT";
 std::string const kCatalog = "bigquery-devtools-drivers";
+std::string const kSampleDataset = "RangeIntervalTestTable";
+std::string const kNullString = "";
+static std::vector<std::string> const kTableMetaDataSchema{{"TABLE_CAT"},
+                                                           {"TABLE_SCHEM"},
+                                                           {"TABLE_NAME"},
+                                                           {"TABLE_TYPE"},
+                                                           {"REMARKS"}};
+
+static std::vector<std::string> const kColumnMetaDataSchema = {
+    {"TABLE_CAT"},         {"TABLE_SCHEM"},      {"TABLE_NAME"},
+    {"COLUMN_NAME"},       {"DATA_TYPE"},        {"TYPE_NAME"},
+    {"COLUMN_SIZE"},       {"BUFFER_LENGTH"},    {"DECIMAL_DIGITS"},
+    {"NUM_PREC_RADIX"},    {"NULLABLE"},         {"REMARKS"},
+    {"COLUMN_DEF"},        {"SQL_DATA_TYPE"},    {"SQL_DATETIME_SUB"},
+    {"CHAR_OCTET_LENGTH"}, {"ORDINAL_POSITION"}, {"IS_NULLABLE"}};
 
 RowWiseResults const kCatalogPrimaryKeysExpected{
     {{1, "bigquery-devtools-drivers"},
@@ -432,7 +448,7 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kTable, result.table_type.value());
+    EXPECT_EQ(kBaseTableType, result.table_type.value());
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
@@ -478,7 +494,7 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
       count_tables++;
     }
     view_found = view_found || (view_name == result.table_name.value());
-    EXPECT_TRUE(result.table_type.value() == kTable ||
+    EXPECT_TRUE(result.table_type.value() == kBaseTableType ||
                 result.table_type.value() == kView)
         << "Actual type is " << result.table_type.value();
     EXPECT_EQ(result.project_name.value(), result.description.value());
@@ -519,7 +535,7 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kTable, result.table_type.value());
+    EXPECT_EQ(kBaseTableType, result.table_type.value());
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
@@ -1690,6 +1706,80 @@ TEST(SQLProcedures, TableFunction) {
 
   CallSQLProcedures(conn, routine_pattern, expected_values);
   CleanupRoutine(conn, "DROP TABLE FUNCTION " + routine_name);
+}
+
+TEST(SQLColumns, Check_SQLColumnsDescriptors) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status =
+      SQLColumns(conn->hstmt, (SQLCHAR*)kCatalog.c_str(), SQL_NTS,
+                 (SQLCHAR*)"DATATYPERANGETEST", SQL_NTS,
+                 (SQLCHAR*)kSampleDataset.c_str(), SQL_NTS, nullptr, 0);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  SQLHDESC hird = nullptr;
+  EXPECT_EQ(
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &hird, 0, nullptr),
+      SQL_SUCCESS);
+
+  SQLSMALLINT col_count = 0;
+  ASSERT_EQ(SQLGetDescField(hird, 0, SQL_DESC_COUNT, &col_count, 0, nullptr),
+            SQL_SUCCESS);
+  // esixting driver has a extra metadata descriptor which is optional.
+  if (kIsBqDriver) {
+    EXPECT_EQ(col_count,
+              static_cast<SQLSMALLINT>(kColumnMetaDataSchema.size()));
+  } else {
+    EXPECT_EQ(col_count,
+              static_cast<SQLSMALLINT>(kColumnMetaDataSchema.size() + 1));
+  }
+
+  for (SQLSMALLINT i = 1; i <= col_count; ++i) {
+    SQLCHAR name[256] = {0};
+    EXPECT_EQ(
+        SQLGetDescField(hird, i, SQL_DESC_NAME, name, sizeof(name), nullptr),
+        SQL_SUCCESS);
+    std::string col_name = reinterpret_cast<char*>(name);
+    // esixting driver has a extra metadata descriptor which is optional.
+    if (!kIsBqDriver && col_name == "USER_DATA_TYPE") {
+      continue;
+    }
+    auto it = std::find(kColumnMetaDataSchema.begin(),
+                        kColumnMetaDataSchema.end(), col_name);
+    ASSERT_NE(it, kColumnMetaDataSchema.end());
+    EXPECT_EQ(col_name, *it);
+  }
+}
+
+TEST(SQLTables, Check_SQLTablesDescriptors) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status =
+      SQLTables(conn->hstmt, (SQLCHAR*)SQL_ALL_CATALOGS, SQL_NTS,
+                (SQLCHAR*)kNullString.c_str(), 0, (SQLCHAR*)kNullString.c_str(),
+                0, (SQLCHAR*)kNullString.c_str(), 0);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  SQLHDESC hird;
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &hird, 0, nullptr);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  SQLSMALLINT col_count = 0;
+  status = SQLGetDescField(hird, 0, SQL_DESC_COUNT, &col_count, 0, nullptr);
+  CheckError(status, "SQLGetDescField", conn);
+  EXPECT_EQ(col_count, 5);
+
+  for (SQLSMALLINT i = 1; i <= col_count; ++i) {
+    SQLCHAR name[256] = {0};
+    EXPECT_EQ(
+        SQLGetDescField(hird, i, SQL_DESC_NAME, name, sizeof(name), nullptr),
+        SQL_SUCCESS);
+    std::string col_name = reinterpret_cast<char*>(name);
+    auto it = std::find(kTableMetaDataSchema.begin(),
+                        kTableMetaDataSchema.end(), col_name);
+    EXPECT_EQ(col_name, *it);
+  }
 }
 
 }  // namespace google::cloud::odbc_tests
