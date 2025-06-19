@@ -33,11 +33,6 @@ std::string const kTableTypeParam = "table_type";
 std::string const kBasicQuery =
     "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES";
 
-std::vector<ColumnSchema> const kSchema = {{0, BQDataType::kString},
-                                           {1, BQDataType::kString},
-                                           {2, BQDataType::kString},
-                                           {3, BQDataType::kString},
-                                           {4, BQDataType::kString}};
 }  // namespace
 
 StatusRecord ValidateInputParameters(
@@ -126,6 +121,16 @@ std::string ConstructTableTypeWhereClause(std::string table_types_filter) {
   return "";
 }
 
+std::vector<ColumnSchema> ExtractColumnSchema(
+    std::vector<std::pair<std::string, ColumnSchema>> const& schema) {
+  std::vector<ColumnSchema> col_schema;
+  col_schema.reserve(schema.size());
+  for (auto const& pair : schema) {
+    col_schema.push_back(pair.second);
+  }
+  return col_schema;
+}
+
 StatusRecordOr<std::string> ConstructQuery(
     std::string tables_filter, std::string const& table_types_filter,
     SQLULEN metadata_id, std::vector<QueryParameter>& named_query_params) {
@@ -195,7 +200,10 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
 
   std::vector<FilteredTableResponse> table_response;
   for (auto const& row : *rows) {
-    table_response.push_back({row.columns[0].value, row.columns[1].value});
+    // Normalize table type: third-party tool accepts only type "TABLE"
+    std::string table_type =
+        (row.columns[1].value == "BASE TABLE") ? "TABLE" : row.columns[1].value;
+    table_response.push_back({row.columns[0].value, table_type});
   }
   return table_response;
 }
@@ -203,7 +211,7 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
 ResultSet CreateResultSetForProjects(
     std::vector<std::string> const& project_ids) {
   ResultSet result_set;
-  result_set.row_schema = kSchema;
+  result_set.row_schema = ExtractColumnSchema(kSchema);
   for (auto const& project_id : project_ids) {
     DSValue project_id_value;
     StringToDSValue(project_id, project_id_value);
@@ -216,7 +224,7 @@ ResultSet CreateResultSetForProjects(
 ResultSet CreateResultSetForDatasets(
     std::vector<std::string> const& dataset_ids) {
   ResultSet result_set;
-  result_set.row_schema = kSchema;
+  result_set.row_schema = ExtractColumnSchema(kSchema);
   for (auto const& dataset_id : dataset_ids) {
     DSValue dataset_id_value;
     StringToDSValue(dataset_id, dataset_id_value);
@@ -228,7 +236,7 @@ ResultSet CreateResultSetForDatasets(
 
 ResultSet CreateResultSetForTableTypes() {
   ResultSet result_set;
-  result_set.row_schema = kSchema;
+  result_set.row_schema = ExtractColumnSchema(kSchema);
   for (auto const& table_type : kAllTableTypes) {
     DSValue table_type_value;
     StringToDSValue(table_type, table_type_value);
@@ -241,7 +249,7 @@ ResultSet CreateResultSetForTableTypes() {
 ResultSet ProcessStringResults(
     std::vector<std::vector<std::string>> const& rows) {
   ResultSet result_set;
-  result_set.row_schema = kSchema;
+  result_set.row_schema = ExtractColumnSchema(kSchema);
   for (auto const& row : rows) {
     DSRow rs_row;
     for (auto const& col : row) {

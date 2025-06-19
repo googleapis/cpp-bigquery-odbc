@@ -26,6 +26,14 @@ std::vector<std::string> const kAllTableTypes = {
 
 std::string const kMatchAll = "%";
 
+std::vector<std::pair<std::string, ColumnSchema>> const kSchema = {
+    {"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+    {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
+    {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"TABLE_TYPE", ColumnSchema{3, BQDataType::kString}},
+    {"REMARKS", ColumnSchema{4, BQDataType::kString}},
+};
+
 struct FilteredTableResponse {
   std::string table_name;
   std::string table_type;

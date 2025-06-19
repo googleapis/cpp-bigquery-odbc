@@ -799,6 +799,34 @@ StatusRecordOr<DSResults> FetchBQData(
   return results;
 }
 
+odbc_internal::StatusRecordOr<TableSchema> ConvertResultToTableSchemas(
+    ResultSet result_set,
+    std::vector<std::pair<std::string, ColumnSchema>> metadata_schema) {
+  if (result_set.row_schema.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "row schema should not be less than 0"};
+  }
+  TableSchema schema;
+  for (int i = 0; i < result_set.row_schema.size(); ++i) {
+    auto const& row = result_set.row_schema[i];
+    auto const& [col_name, col_schema] = metadata_schema[i];
+
+    TableFieldSchema field;
+    if (row.col_index == col_schema.col_index) {
+      field.name = col_name;
+    }
+    auto result = GetDataTypeInStr(row.col_type);
+    if (!result) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          result.GetStatusRecord().message};
+    }
+    field.type = *result;
+    field.mode = row.is_mode_repeated ? "REPEATED" : "NULLABLE";
+    schema.fields.push_back(std::move(field));
+  }
+  return schema;
+}
+
 StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
@@ -1006,6 +1034,51 @@ ConstructNamedParametersPostQueryRequest(
   post_request.set_project_id(catalog);
   post_request.set_query_request(query_request);
   return post_request;
+}
+
+odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
+  switch (type) {
+    case BQDataType::kArray:
+      return std::string("ARRAY");
+    case BQDataType::kBigNumeric:
+      return std::string("BIGNUMERIC");
+    case BQDataType::kNumeric:
+      return std::string("NUMERIC");
+    case BQDataType::kBytes:
+      return std::string("BYTES");
+    case BQDataType::kInt64:
+      return std::string("INT64");
+    case BQDataType::kDate:
+      return std::string("DATE");
+    case BQDataType::kFloat64:
+      return std::string("FLOAT64");
+    case BQDataType::kInterval:
+      return std::string("INTERVAL");
+    case BQDataType::kGeography:
+      return std::string("GEOGRAPHY");
+    case BQDataType::kDatetime:
+      return std::string("DATETIME");
+    case BQDataType::kTime:
+      return std::string("TIME");
+    case BQDataType::kBool:
+      return std::string("BOOL");
+    case BQDataType::kString:
+      return std::string("STRING");
+    case BQDataType::kRange:
+      return std::string("RANGE");
+    case BQDataType::kStruct:
+      return std::string("STRUCT");
+    case BQDataType::kJson:
+      return std::string("JSON");
+    case BQDataType::kTimeStamp:
+      return std::string("TIMESTAMP");
+    case BQDataType::kNull:
+      return std::string("NULL");
+    default:
+      std::string err_msg = "Invalid BQ Data Type: ";
+      err_msg.append(std::to_string(type));
+      return StatusRecord{SQLStates::k_HY000(), err_msg};
+  }
 }
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(

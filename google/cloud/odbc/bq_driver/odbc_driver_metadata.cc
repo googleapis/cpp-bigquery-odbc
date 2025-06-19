@@ -29,6 +29,8 @@ namespace google::cloud::odbc_bq_driver {
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
+using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
 using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
@@ -40,6 +42,8 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
+using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
+using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -57,6 +61,7 @@ using google::cloud::odbc_bq_driver_internal::SQLGetInfoSqlUSmallInt;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
+using google::cloud::odbc_bq_driver_internal::TableReference;
 using google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
@@ -424,6 +429,19 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
 
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  auto table_schema = ConvertResultToTableSchemas(result_set, kSchema);
+  if (!table_schema) {
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    return LogAndReturnCode(handle, ird_status);
+  }
+
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
@@ -535,6 +553,20 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         break;
       }
     }
+  }
+
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  auto table_schema =
+      ConvertResultToTableSchemas(final_result_set, kODBCColumnsMap);
+  if (!table_schema) {
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    return LogAndReturnCode(handle, ird_status);
   }
 
   if (!final_result_set.rows.empty()) {
