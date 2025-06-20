@@ -430,6 +430,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
   auto table_schema = ConvertResultToTableSchemas(result_set, kSchema);
   if (!table_schema) {
     return LogAndReturnCode(handle, table_schema);
@@ -563,6 +564,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   TableReference table_fields;
+  ird.SetConnectionHandle(&conn_handle);
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
   if (!ird_status.ok()) {

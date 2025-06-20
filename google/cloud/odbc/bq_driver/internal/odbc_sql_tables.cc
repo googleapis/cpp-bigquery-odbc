@@ -33,6 +33,8 @@ std::string const kTableTypeParam = "table_type";
 std::string const kBasicQuery =
     "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES";
 
+std::string const kBaseTable = "BASE TABLE";
+std::string const kTable = "TABLE";
 }  // namespace
 
 StatusRecord ValidateInputParameters(
@@ -121,6 +123,16 @@ std::string ConstructTableTypeWhereClause(std::string table_types_filter) {
   return "";
 }
 
+std::string ProcessTableTypes(std::string const& table_types_filter) {
+  std::vector<std::string> types = SplitTableTypes(table_types_filter);
+  for (std::string& type : types) {
+    if (type == kTable) {
+      type = kBaseTable;
+    }
+  }
+  return Join(types, ", ");
+}
+
 std::vector<ColumnSchema> ExtractColumnSchema(
     std::vector<std::pair<std::string, ColumnSchema>> const& schema) {
   std::vector<ColumnSchema> col_schema;
@@ -174,8 +186,12 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
   std::vector<QueryParameter> named_query_params;
-  auto query_tables = ConstructQuery(tables_filter, table_types_filter,
-                                     metadata_id, named_query_params);
+  // Normalize table type: client-library accepts type "BASE TABLE"
+  std::string normalized_table_type_filter =
+      ProcessTableTypes(table_types_filter);
+  auto query_tables =
+      ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
+                     named_query_params);
   if (!query_tables) {
     return query_tables.GetStatusRecord();
   }
@@ -200,9 +216,9 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
 
   std::vector<FilteredTableResponse> table_response;
   for (auto const& row : *rows) {
-    // Normalize table type: third-party tool accepts only type "TABLE"
+    // Normalize table type: third-party tool accepts type "TABLE"
     std::string table_type =
-        (row.columns[1].value == "BASE TABLE") ? "TABLE" : row.columns[1].value;
+        (row.columns[1].value == kBaseTable) ? kTable : row.columns[1].value;
     table_response.push_back({row.columns[0].value, table_type});
   }
   return table_response;

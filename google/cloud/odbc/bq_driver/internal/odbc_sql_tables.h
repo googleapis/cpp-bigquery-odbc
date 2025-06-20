@@ -22,7 +22,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 std::vector<std::string> const kAllTableTypes = {
-    "BASE TABLE", "VIEW", "EXTERNAL", "MATERIALIZED VIEW", "SNAPSHOT"};
+    "TABLE", "VIEW", "EXTERNAL", "MATERIALIZED VIEW", "SNAPSHOT"};
 
 std::string const kMatchAll = "%";
 
