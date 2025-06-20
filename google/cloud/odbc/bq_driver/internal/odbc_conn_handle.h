@@ -87,10 +87,7 @@ struct Dsn {
   std::string byoid_token_url;
 
   // Proxy options fields
-  std::string proxy_hostname;
-  std::string proxy_port;
-  std::string proxy_username;
-  std::string proxy_password;
+  google::cloud::odbc_bigquery_client_interface::ProxyOptions proxy_options;
 };
 
 class EnvironmentHandle;

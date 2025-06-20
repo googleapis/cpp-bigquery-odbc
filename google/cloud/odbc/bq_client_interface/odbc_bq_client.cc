@@ -89,9 +89,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     options.set<google::cloud::CARootsFilePathOption>(pem_file);
   }
 
-  options.set<google::cloud::ProxyOption>(CreateProxyConfig(
-      oauth.proxy_options.hostname, oauth.proxy_options.port,
-      oauth.proxy_options.username, oauth.proxy_options.password, "http"));
+  options.set<google::cloud::ProxyOption>(
+      ProxyConfig()
+          .set_hostname(oauth.proxy_options.hostname)
+          .set_port(oauth.proxy_options.port)
+          .set_username(oauth.proxy_options.username)
+          .set_password(oauth.proxy_options.password)
+          .set_scheme("http"));
 
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));

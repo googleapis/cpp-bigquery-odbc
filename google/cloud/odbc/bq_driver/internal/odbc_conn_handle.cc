@@ -125,13 +125,13 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
   dsn_.large_table_expiration_time =
       dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
-  dsn_.proxy_hostname = dsn_section["PROXYHOST"];
-  dsn_.proxy_port = dsn_section["PROXYPORT"];
-  dsn_.proxy_username = dsn_section["PROXYUID"];
-  dsn_.proxy_password = dsn_section["PROXYPWD"];
+  dsn_.proxy_options.hostname = dsn_section["PROXYHOST"];
+  dsn_.proxy_options.port = dsn_section["PROXYPORT"];
+  dsn_.proxy_options.username = dsn_section["PROXYUID"];
+  dsn_.proxy_options.password = dsn_section["PROXYPWD"];
 #ifdef _WIN32
-  if (dsn_.proxy_password.empty()) {
-    dsn_.proxy_password = DecryptPassword(dsn_section["PROXYPWD_ENC"]);
+  if (dsn_.proxy_options.password.empty()) {
+    dsn_.proxy_options.password = DecryptPassword(dsn_section["PROXYPWD_ENC"]);
   }
 #endif
 
