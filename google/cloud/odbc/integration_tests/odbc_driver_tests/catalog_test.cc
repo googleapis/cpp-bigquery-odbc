@@ -24,8 +24,7 @@ namespace google::cloud::odbc_tests {
 using ::testing::StartsWith;
 namespace {
 
-std::string const kTable = kIsBqDriver ? "BASE TABLE" : "TABLE";
-std::string const kBaseTableType = "TABLE";
+std::string const kTable = "TABLE";
 std::string const kView = "VIEW";
 std::string const kExternal = "EXTERNAL";
 std::string const kMaterializedView =
@@ -404,6 +403,8 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
                                              kMaterializedView, kSnapshot};
   EXPECT_EQ(expected_types.size(), results.size());
   for (auto const& result : results) {
+    std::cout << "debug: check 1 = " << result.table_type.value() << std::endl;
+    std::cout << "debug: check 2 = " << *expected_types.data() << std::endl;
     EXPECT_FALSE(result.project_name.has_value());
     EXPECT_FALSE(result.dataset_name.has_value());
     EXPECT_FALSE(result.table_name.has_value());
@@ -448,7 +449,7 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kBaseTableType, result.table_type.value());
+    EXPECT_EQ(kTable, result.table_type.value());
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
@@ -494,7 +495,7 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
       count_tables++;
     }
     view_found = view_found || (view_name == result.table_name.value());
-    EXPECT_TRUE(result.table_type.value() == kBaseTableType ||
+    EXPECT_TRUE(result.table_type.value() == kTable ||
                 result.table_type.value() == kView)
         << "Actual type is " << result.table_type.value();
     EXPECT_EQ(result.project_name.value(), result.description.value());
@@ -535,7 +536,7 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
-    EXPECT_EQ(kBaseTableType, result.table_type.value());
+    EXPECT_EQ(kTable, result.table_type.value());
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";

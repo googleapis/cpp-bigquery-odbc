@@ -800,8 +800,8 @@ StatusRecordOr<DSResults> FetchBQData(
 }
 
 odbc_internal::StatusRecordOr<TableSchema> ConvertResultToTableSchemas(
-    ResultSet result_set,
-    std::vector<std::pair<std::string, ColumnSchema>> metadata_schema) {
+    ResultSet const& result_set,
+    std::vector<std::pair<std::string, ColumnSchema>> const& metadata_schema) {
   if (result_set.row_schema.empty()) {
     return StatusRecord{SQLStates::k_HY000(),
                         "row schema should not be less than 0"};

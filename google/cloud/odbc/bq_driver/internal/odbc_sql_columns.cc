@@ -29,7 +29,7 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-std::string const kBaseTableType = "BASE TABLE";
+std::string const kBaseTableType = "TABLE";
 
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
