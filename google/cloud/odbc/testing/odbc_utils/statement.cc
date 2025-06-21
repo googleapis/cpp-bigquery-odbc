@@ -158,24 +158,18 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
-// Unified insertion function with descriptor handling
-SQLRETURN InsertStatementWithDescriptor(
-    std::shared_ptr<ODBCHandles> conn,
-    const std::string& table_name,
-    bool use_ansi,
-    bool allocate_descriptor,
-    bool bind_parameters) {
-    
+SQLRETURN InsertStatementWithDescriptor(std::shared_ptr<ODBCHandles> conn,
+                                        std::string const& table_name,
+                                        bool use_ansi, bool allocate_descriptor,
+                                        bool bind_parameters) {
   SQLRETURN status;
   Table table(table_name);
 
-  // 1. Common table setup
   table.Create(conn, "(StringField STRING, IntegerField INTEGER)", use_ansi);
 
-  // 2. Common statement preparation
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
-  
+
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
   } else {
@@ -183,22 +177,21 @@ SQLRETURN InsertStatementWithDescriptor(
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
-  // 3. Descriptor handling
   if (allocate_descriptor) {
     status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
     CheckError(status, "SQLAllocHandle", conn);
   }
-  
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd, SQL_IS_POINTER);
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
+                          SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  // 4. Conditional parameter binding
   if (bind_parameters) {
     constexpr char const* str_field = "Test String 1";
     SQLLEN len_string_field = strlen(str_field);
     status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                              SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
-                              len_string_field, NULL);
+                              SQL_CHAR, len_string_field, 0,
+                              (SQLCHAR*)str_field, len_string_field, NULL);
     CheckError(status, "SQLBindParameter", conn);
 
     int int_field = 42;
@@ -207,7 +200,6 @@ SQLRETURN InsertStatementWithDescriptor(
     CheckError(status, "SQLBindParameter", conn);
   }
 
-  // 5. Execution and cleanup
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
   table.Drop(conn);
@@ -215,23 +207,21 @@ SQLRETURN InsertStatementWithDescriptor(
   return status;
 }
 
-// Revised functions (now wrappers)
-SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
+SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
+                                           bool use_ansi) {
   std::string table_name = kDatasetWithTablePrefix +
                            "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
                            (use_ansi ? "true" : "false");
-  return InsertStatementWithDescriptor(conn, table_name, use_ansi, 
-                                      /*allocate_descriptor=*/true, 
-                                      /*bind_parameters=*/true);
+  return InsertStatementWithDescriptor(conn, table_name, use_ansi, true, true);
 }
 
-SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
+SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
+                                              bool use_ansi) {
   std::string table_name = kDatasetWithTablePrefix +
                            "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
                            (use_ansi ? "true" : "false");
-  return InsertStatementWithDescriptor(conn, table_name, use_ansi, 
-                                      /*allocate_descriptor=*/false, 
-                                      /*bind_parameters=*/false);
+  return InsertStatementWithDescriptor(conn, table_name, use_ansi, false,
+                                       false);
 }
 
 RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,

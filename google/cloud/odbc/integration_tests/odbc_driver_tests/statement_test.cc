@@ -48,13 +48,11 @@ StdUnicodeRows const kUnicodeSampleData{
 StdRows const kRowCountSampleData{
     {"Row 1", 1, 1.1}, {"Row 2", 2, 2.2}, {"Row 3", 3, 3.3}};
 
-// Shared template for verifying column-wise results
 template <typename RowT>
 void VerifyColumnWiseResultsGeneric(
     std::vector<RowT> input_data, Results const& col_wise_data,
     std::vector<std::string> col_names,
     std::function<std::string(RowT const&, std::string const&)> extractor) {
-  
   std::vector<std::string> final_col_names = col_names;
   if (final_col_names.empty()) {
     for (auto const& pair : col_wise_data) {
@@ -444,47 +442,43 @@ TEST(StatementTest, SQLExecDirectW) {
 
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
-  
+
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  
-  std::string table_name1 = kDatasetWithTablePrefix + 
-                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI_false";
-  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name1, false,
-                                         true,
-                                         true),
+
+  std::string table_name1 =
+      kDatasetWithTablePrefix +
+      "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI_false";
+  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name1, false, true, true),
             SQL_SUCCESS);
 
   SQLCloseCursor(conn->hstmt);
   SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
   SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
 
-  std::string table_name2 = kDatasetWithTablePrefix + 
-                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI_false";
-  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name2, false,
-                                         false,
-                                         false),
-            SQL_SUCCESS);
+  std::string table_name2 =
+      kDatasetWithTablePrefix +
+      "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI_false";
+  EXPECT_EQ(
+      InsertStatementWithDescriptor(conn, table_name2, false, false, false),
+      SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  
-  table_name1 = kDatasetWithTablePrefix + 
-               "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI_true";
-  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name1, true,
-                                         true,
-                                         true),
+
+  table_name1 = kDatasetWithTablePrefix +
+                "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI_true";
+  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name1, true, true, true),
             SQL_SUCCESS);
 
   SQLCloseCursor(conn->hstmt);
   SQLFreeHandle(SQL_HANDLE_STMT, conn->hstmt);
   SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
 
-  table_name2 = kDatasetWithTablePrefix + 
-               "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI_true";
-  EXPECT_EQ(InsertStatementWithDescriptor(conn, table_name2, true,
-                                         false,
-                                         false),
-            SQL_SUCCESS);
+  table_name2 = kDatasetWithTablePrefix +
+                "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI_true";
+  EXPECT_EQ(
+      InsertStatementWithDescriptor(conn, table_name2, true, false, false),
+      SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -691,13 +685,16 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
                           true);
 }
 
-void WithSampleTable(std::function<void(std::shared_ptr<ODBCHandles>, std::string const&)> test_body) {
+void WithSampleTable(
+    std::function<void(std::shared_ptr<ODBCHandles>, std::string const&)>
+        test_body) {
   auto conn = std::make_shared<ODBCHandles>();
   auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_RESULTS_TEST";
   Table table(table_name);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.Create(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
   table.InsertData(conn, kSampleData);
   test_body(conn, table_name);
   table.Drop(conn);
@@ -705,7 +702,8 @@ void WithSampleTable(std::function<void(std::shared_ptr<ODBCHandles>, std::strin
 }
 
 TEST(StatementTest, SQLFetchScroll) {
-  WithSampleTable([](std::shared_ptr<ODBCHandles> conn, std::string const& table_name) {
+  WithSampleTable([](std::shared_ptr<ODBCHandles> conn,
+                     std::string const& table_name) {
     auto const query = "SELECT StringField FROM " + table_name;
     auto results = *ScrollResults(conn, query, 3);
     VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
@@ -716,45 +714,66 @@ TEST(StatementTest, SQLFetchScroll_All_Columns) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto const query =
-    "SELECT StringField, IntegerField, FloatField FROM UNNEST([STRUCT(\"Test String 1\" AS StringField, 1 AS IntegerField, 1.1 AS FloatField),STRUCT(NULL AS StringField, 237 AS IntegerField, 2.22 AS FloatField), STRUCT(\"Test String 3\" AS StringField, NULL AS IntegerField, 3.333 AS FloatField), STRUCT(\"Test String 4\" AS StringField, 49 AS IntegerField, NULL AS FloatField), STRUCT(\"Test String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField), STRUCT(\"Test String 6\" AS StringField, 698 AS IntegerField, 0.31 AS FloatField), STRUCT(\"Test String 7\" AS StringField, 12 AS IntegerField, 71.6 AS FloatField), STRUCT(\"Test String 8\" AS StringField, 83 AS IntegerField, 8.8 AS FloatField) ])";
+      "SELECT StringField, IntegerField, FloatField FROM UNNEST([STRUCT(\"Test "
+      "String 1\" AS StringField, 1 AS IntegerField, 1.1 AS "
+      "FloatField),STRUCT(NULL AS StringField, 237 AS IntegerField, 2.22 AS "
+      "FloatField), STRUCT(\"Test String 3\" AS StringField, NULL AS "
+      "IntegerField, 3.333 AS FloatField), STRUCT(\"Test String 4\" AS "
+      "StringField, 49 AS IntegerField, NULL AS FloatField), STRUCT(\"Test "
+      "String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField), "
+      "STRUCT(\"Test String 6\" AS StringField, 698 AS IntegerField, 0.31 AS "
+      "FloatField), STRUCT(\"Test String 7\" AS StringField, 12 AS "
+      "IntegerField, 71.6 AS FloatField), STRUCT(\"Test String 8\" AS "
+      "StringField, 83 AS IntegerField, 8.8 AS FloatField) ])";
   auto results = *FetchScrollResultsAllColumns(conn, query, SQL_FETCH_NEXT);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-void ExpectFetchTypeNotSupported(
-    std::shared_ptr<ODBCHandles> conn,
-    SQLSMALLINT fetch_orientation,
-    int fetch_offset,
-    SQLSMALLINT diag_field) 
-{
-    SQLRETURN status = SQLFetchScroll(conn->hstmt, fetch_orientation, fetch_offset);
-    EXPECT_EQ(status, SQL_ERROR);
-    SQLCHAR buf[kBufferLength];
-    SQLSMALLINT string_length_ptr;
-    status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, diag_field, &buf, kBufferLength, &string_length_ptr);
-    std::string actual_message = reinterpret_cast<char*>(buf);
-    EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+void ExpectFetchTypeNotSupported(std::shared_ptr<ODBCHandles> conn,
+                                 SQLSMALLINT fetch_orientation,
+                                 int fetch_offset, SQLSMALLINT diag_field) {
+  SQLRETURN status =
+      SQLFetchScroll(conn->hstmt, fetch_orientation, fetch_offset);
+  EXPECT_EQ(status, SQL_ERROR);
+  SQLCHAR buf[kBufferLength];
+  SQLSMALLINT string_length_ptr;
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, diag_field, &buf,
+                           kBufferLength, &string_length_ptr);
+  std::string actual_message = reinterpret_cast<char*>(buf);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Types) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto const query =
-    "SELECT StringField FROM UNNEST([STRUCT(\"Test String 1\" AS StringField, 1 AS IntegerField, 1.1 AS FloatField),STRUCT(NULL AS StringField, 237 AS IntegerField, 2.22 AS FloatField), STRUCT(\"Test String 3\" AS StringField, NULL AS IntegerField, 3.333 AS FloatField), STRUCT(\"Test String 4\" AS StringField, 49 AS IntegerField, NULL AS FloatField), STRUCT(\"Test String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField), STRUCT(\"Test String 6\" AS StringField, 698 AS IntegerField, 0.31 AS FloatField), STRUCT(\"Test String 7\" AS StringField, 12 AS IntegerField, 71.6 AS FloatField), STRUCT(\"Test String 8\" AS StringField, 83 AS IntegerField, 8.8 AS FloatField) ])";
+      "SELECT StringField FROM UNNEST([STRUCT(\"Test String 1\" AS "
+      "StringField, 1 AS IntegerField, 1.1 AS FloatField),STRUCT(NULL AS "
+      "StringField, 237 AS IntegerField, 2.22 AS FloatField), STRUCT(\"Test "
+      "String 3\" AS StringField, NULL AS IntegerField, 3.333 AS FloatField), "
+      "STRUCT(\"Test String 4\" AS StringField, 49 AS IntegerField, NULL AS "
+      "FloatField), STRUCT(\"Test String 5\" AS StringField, 53 AS "
+      "IntegerField, 5 AS FloatField), STRUCT(\"Test String 6\" AS "
+      "StringField, 698 AS IntegerField, 0.31 AS FloatField), STRUCT(\"Test "
+      "String 7\" AS StringField, 12 AS IntegerField, 71.6 AS FloatField), "
+      "STRUCT(\"Test String 8\" AS StringField, 83 AS IntegerField, 8.8 AS "
+      "FloatField) ])";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
-  SQLRETURN status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  SQLRETURN status =
+      SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
 
-  // Refactored error checks
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_ABSOLUTE, 0, SQL_DIAG_MESSAGE_TEXT);
+  ExpectFetchTypeNotSupported(conn, SQL_FETCH_ABSOLUTE, 0,
+                              SQL_DIAG_MESSAGE_TEXT);
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
   CheckError(status, "SQLFetchScroll - SQL_FETCH_NEXT", conn);
   EXPECT_EQ(status, SQL_SUCCESS);
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_RELATIVE, 2, SQL_DIAG_MESSAGE_TEXT);
+  ExpectFetchTypeNotSupported(conn, SQL_FETCH_RELATIVE, 2,
+                              SQL_DIAG_MESSAGE_TEXT);
   ExpectFetchTypeNotSupported(conn, SQL_FETCH_PRIOR, 3, SQL_DIAG_MESSAGE_TEXT);
   ExpectFetchTypeNotSupported(conn, SQL_FETCH_FIRST, 0, SQL_DIAG_MESSAGE_TEXT);
   ExpectFetchTypeNotSupported(conn, SQL_FETCH_LAST, 0, SQL_DIAG_MESSAGE_TEXT);
@@ -764,7 +783,9 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
   EXPECT_EQ(status, SQL_ERROR);
   SQLCHAR buf_sql_fetch_bookmark[kBufferLength];
   SQLSMALLINT string_length_ptr;
-  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE, &buf_sql_fetch_bookmark, kBufferLength, &string_length_ptr);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE,
+                           &buf_sql_fetch_bookmark, kBufferLength,
+                           &string_length_ptr);
   std::string actual_message = reinterpret_cast<char*>(buf_sql_fetch_bookmark);
   EXPECT_EQ(actual_message, "HY106");
 
@@ -983,7 +1004,8 @@ TEST(StatementTest, SQLSetCursorName_AllEncodings) {
   SQLCHAR cursor_name_ret_ansi[kBufferLength];
   status = SQLSetCursorNameA(conn->hstmt, cursor_name_ansi, kBufferLength);
   CheckError(status, "SQLSetCursorNameA", conn, true);
-  status = SQLGetCursorNameA(conn->hstmt, cursor_name_ret_ansi, kBufferLength, NULL);
+  status =
+      SQLGetCursorNameA(conn->hstmt, cursor_name_ret_ansi, kBufferLength, NULL);
   CheckError(status, "SQLGetCursorNameA", conn, true);
   EXPECT_STREQ((char*)cursor_name_ret_ansi, (char*)cursor_name_ansi);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -991,15 +1013,18 @@ TEST(StatementTest, SQLSetCursorName_AllEncodings) {
   // Wide (Unicode)
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   std::wstring cursor_name_wide = L"INSERT_CURSOR_WIDE";
-  std::vector<SQLWCHAR> sqlWStr(cursor_name_wide.begin(), cursor_name_wide.end());
+  std::vector<SQLWCHAR> sqlWStr(cursor_name_wide.begin(),
+                                cursor_name_wide.end());
   sqlWStr.emplace_back(L'\0');
   SQLCHAR cursor_name_ret_wide[kBufferLength];
   status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), sqlWStr.size());
   CheckError(status, "SQLSetCursorNameW", conn, true);
-  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret_wide, kBufferLength, NULL);
+  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret_wide,
+                             kBufferLength, NULL);
   CheckError(status, "SQLGetCursorNameW", conn, true);
   std::string expected = "INSERT_CURSOR_WIDE";
-  std::string actual = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(cursor_name_ret_wide), expected.size());
+  std::string actual = ConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(cursor_name_ret_wide), expected.size());
   EXPECT_STREQ(actual.data(), expected.data());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1704,8 +1729,10 @@ TEST(StatementTest, SQLNumResultCols_StaticTable) {
 
   std::vector<QueryCase> test_cases = {
       {"SELECT 1", 1, "Single literal"},
-      {"SELECT id,name FROM INTEGRATION_TESTS.Test_Table", 2, "Two columns from integration table"},
-      {"SELECT * FROM INTEGRATION_TESTS.Test_Table", 3, "All columns from integration table"},
+      {"SELECT id,name FROM INTEGRATION_TESTS.Test_Table", 2,
+       "Two columns from integration table"},
+      {"SELECT * FROM INTEGRATION_TESTS.Test_Table", 3,
+       "All columns from integration table"},
   };
 
   auto conn = std::make_shared<ODBCHandles>();
@@ -1714,13 +1741,15 @@ TEST(StatementTest, SQLNumResultCols_StaticTable) {
   for (auto const& test : test_cases) {
     char read_stmt[kBufferLength];
     StrToChar(read_stmt, test.query);
-    auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
     CheckError(status, "SQLPrepare", conn);
 
     SQLSMALLINT columnCount;
     status = SQLNumResultCols(conn->hstmt, &columnCount);
     CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(columnCount, test.expected_col_count) << test.description << " Query: " << test.query;
+    EXPECT_EQ(columnCount, test.expected_col_count)
+        << test.description << " Query: " << test.query;
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1730,9 +1759,12 @@ TEST(StatementTest, SQLNumResultCols_DynamicTable) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  auto const table_name = kDatasetWithTablePrefix + "ODBC_SQLNumResultCols_Dynamic";
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_SQLNumResultCols_Dynamic";
   Table table(table_name);
-  table.CreateWithPrepare(conn, "(Index INTEGER, StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  table.CreateWithPrepare(conn,
+                          "(Index INTEGER, StringField STRING, IntegerField "
+                          "INTEGER, FloatField FLOAT64)");
 
   struct QueryCase {
     std::string query;
@@ -1743,21 +1775,25 @@ TEST(StatementTest, SQLNumResultCols_DynamicTable) {
   std::vector<QueryCase> test_cases = {
       {"SELECT Index FROM " + table_name, 1, "Single column"},
       {"SELECT Index, StringField FROM " + table_name, 2, "Two columns"},
-      {"SELECT Index, FloatField FROM " + table_name, 2, "Two columns (Index, FloatField)"},
-      {"SELECT StringField, FloatField, IntegerField FROM " + table_name, 3, "Three columns"},
+      {"SELECT Index, FloatField FROM " + table_name, 2,
+       "Two columns (Index, FloatField)"},
+      {"SELECT StringField, FloatField, IntegerField FROM " + table_name, 3,
+       "Three columns"},
       {"SELECT * FROM " + table_name, 4, "All columns"},
   };
 
   for (auto const& test : test_cases) {
     char read_stmt[kBufferLength];
     StrToChar(read_stmt, test.query);
-    auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    auto status =
+        SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
     CheckError(status, "SQLPrepare", conn);
 
     SQLSMALLINT columnCount;
     status = SQLNumResultCols(conn->hstmt, &columnCount);
     CheckError(status, "SQLNumResultCols", conn);
-    EXPECT_EQ(columnCount, test.expected_col_count) << test.description << " Query: " << test.query;
+    EXPECT_EQ(columnCount, test.expected_col_count)
+        << test.description << " Query: " << test.query;
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
