@@ -95,6 +95,8 @@ class DriverForm {
 
   ProxyOptions* GetProxyOptions() { return &proxy_options_; }
 
+  AdvanceOptions* GetAdvanceOptions() { return &adv_options_; }
+
  private:
   static std::string dsn_name_;
   static std::string key_file_path_;
@@ -113,6 +115,7 @@ class DriverForm {
   LogTraceDialog log_trace_dialog_;
   static char const CLASS_NAME[];
   ProxyOptions proxy_options_;
+  AdvanceOptions adv_options_;
 };
 
 void OpenFileDialog(

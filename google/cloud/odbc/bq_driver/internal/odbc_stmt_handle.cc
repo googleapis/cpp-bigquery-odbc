@@ -170,6 +170,29 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
   return StatusRecord::Ok();
 }
 
+std::string GetLeadingKeyword(std::string const& q) {
+  std::string s = q;
+  s.erase(0, s.find_first_not_of(" \t\n\r"));  // trim leading whitespace
+
+  // Extract first word
+  auto end = s.find_first_of(" \t\n\r;");
+  std::string keyword = s.substr(0, end);
+
+  // Convert to lowercase
+  std::transform(keyword.begin(), keyword.end(), keyword.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
+  return keyword;
+}
+
+bool IsInsertQuery(std::string const& q) {
+  return GetLeadingKeyword(q) == "insert";
+}
+
+bool IsSelectQuery(std::string const& q) {
+  return GetLeadingKeyword(q) == "select";
+}
+
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
 // risk.
 StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
@@ -192,6 +215,18 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   if (!default_dataset.empty()) {
     req.configuration.query.default_dataset.project_id = catalog_name;
     req.configuration.query.default_dataset.dataset_id = default_dataset;
+  }
+
+  // We are setting it only for validation. We couldn't find any issues with the
+  // behaviour if we don't set it. 'OPTIONS ( kms_key_name = ... )' is supposed
+  // to be used during table creation. Subsequent operations on the table will
+  // automatically use the KMS key without the application sending it.
+  std::string kms_key_name = conn_handle.GetDsn().kms_key_name;
+  if (IsInsertQuery(query) || IsSelectQuery(query)) {
+    if (!kms_key_name.empty()) {
+      req.configuration.query.destination_encryption_configuration
+          .kms_key_name = kms_key_name;
+    }
   }
 
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {

@@ -77,6 +77,7 @@ struct Oauth {
   std::string byoid_token_url;
   SslCredentials ssl_credentials;
   ProxyOptions proxy_options;
+  std::string kms_key_name;
 };
 
 // Returns true if all required BYOID properties are set.

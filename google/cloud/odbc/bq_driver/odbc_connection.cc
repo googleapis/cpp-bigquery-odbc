@@ -84,6 +84,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.proxy_options.port = dsn.proxy_options.port;
   auth.oauth.proxy_options.username = dsn.proxy_options.username;
   auth.oauth.proxy_options.password = dsn.proxy_options.password;
+  auth.oauth.kms_key_name = dsn.kms_key_name;
   return auth;
 }
 
@@ -157,6 +158,7 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"PROXYPORT", form.GetProxyOptions()->GetProxyPort()},
       {"PROXYUID", form.GetProxyOptions()->GetProxyUsername()},
       {"PROXYPWD_ENC", form.GetProxyOptions()->GetProxyPass()},
+      {"KMSKEYNAME", form.GetAdvanceOptions()->GetEncryptionKey()},
   };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());

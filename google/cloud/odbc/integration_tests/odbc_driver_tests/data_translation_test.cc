@@ -2101,8 +2101,27 @@ TEST(DataTranslationTest, From_SQL_Time_to_all) {
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIME";
   Table table(table_name);
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, "(index INTEGER, TimeField TIME)");
+  std::string kms_key_name =
+      "projects/bigquery-devtools-drivers/locations/us/keyRings/"
+      "jdbc-kms-integ-test-us/cryptoKeys/JdbcTestKms";
+  std::string conn_string =
+      kDefaultConnectionString + ";KMSKeyName=" + kms_key_name + ";";
+  EXPECT_EQ(Connect(conn_string, conn), SQL_SUCCESS);
+
+  // CREATE TABLE statement with KMS key
+  std::string create_stmt = "CREATE TABLE `" + table_name + R"(` (
+    index INT64,
+    TimeField TIME
+  )
+  OPTIONS (
+    kms_key_name = ")" + kms_key_name +
+                            R"("
+  ))";
+
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)create_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+
   std::vector<SQL_TIME_STRUCT> time_data_to_insert;
   for (auto const& time_data : kConversionFromTimeTestData) {
     time_data_to_insert.push_back(time_data.value);
@@ -2111,7 +2130,7 @@ TEST(DataTranslationTest, From_SQL_Time_to_all) {
   std::string query = "SELECT TimeField FROM " + table_name + " ORDER BY index";
   TestTranslationsFromTime(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(conn_string, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
