@@ -158,7 +158,7 @@ int TracePrintInternalFile(TraceOptions& opts, std::string const& s) {
 
 std::string TracePrintInternal(TraceOptions& opts, std::string const& s) {
   if (!opts.logging_enabled || s.empty()) {
-    return "";
+    return ""; 
   }
 
   int ret = 0;
