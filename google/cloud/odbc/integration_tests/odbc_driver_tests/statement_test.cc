@@ -685,29 +685,35 @@ TEST(StatementTest, SQLFetch_with_SQLExecDirectAsync_Ansi) {
                           true);
 }
 
-void WithSampleTable(
-    std::function<void(std::shared_ptr<ODBCHandles>, std::string const&)>
-        test_body) {
-  auto conn = std::make_shared<ODBCHandles>();
+// No ANSI version.
+TEST(StatementTest, SQLFetchScroll) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_SCROLL_RESULTS_TEST";
   Table table(table_name);
 
+  // Create Table
+  auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Create(
       conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert data to read
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertData(conn, kSampleData);
-  test_body(conn, table_name);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Execute a read query and check whether the results returned are as expected
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto const query = "SELECT StringField FROM " + table_name;
+  auto results = *ScrollResults(conn, query, 3);
+  VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(StatementTest, SQLFetchScroll) {
-  WithSampleTable([](std::shared_ptr<ODBCHandles> conn,
-                     std::string const& table_name) {
-    auto const query = "SELECT StringField FROM " + table_name;
-    auto results = *ScrollResults(conn, query, 3);
-    VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
-  });
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Columns) {
@@ -717,31 +723,19 @@ TEST(StatementTest, SQLFetchScroll_All_Columns) {
       "SELECT StringField, IntegerField, FloatField FROM UNNEST([STRUCT(\"Test "
       "String 1\" AS StringField, 1 AS IntegerField, 1.1 AS "
       "FloatField),STRUCT(NULL AS StringField, 237 AS IntegerField, 2.22 AS "
-      "FloatField), STRUCT(\"Test String 3\" AS StringField, NULL AS "
-      "IntegerField, 3.333 AS FloatField), STRUCT(\"Test String 4\" AS "
-      "StringField, 49 AS IntegerField, NULL AS FloatField), STRUCT(\"Test "
-      "String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField), "
+      "FloatField),     STRUCT(\"Test String 3\" AS StringField, NULL AS "
+      "IntegerField, 3.333 AS FloatField),     STRUCT(\"Test String 4\" AS "
+      "StringField, 49 AS IntegerField, NULL AS FloatField),     STRUCT(\"Test "
+      "String 5\" AS StringField, 53 AS IntegerField, 5 AS FloatField),     "
       "STRUCT(\"Test String 6\" AS StringField, 698 AS IntegerField, 0.31 AS "
-      "FloatField), STRUCT(\"Test String 7\" AS StringField, 12 AS "
-      "IntegerField, 71.6 AS FloatField), STRUCT(\"Test String 8\" AS "
+      "FloatField),     STRUCT(\"Test String 7\" AS StringField, 12 AS "
+      "IntegerField, 71.6 AS FloatField),     STRUCT(\"Test String 8\" AS "
       "StringField, 83 AS IntegerField, 8.8 AS FloatField) ])";
+
   auto results = *FetchScrollResultsAllColumns(conn, query, SQL_FETCH_NEXT);
   VerifyColumnWiseResults(kSampleData, results, std::vector<std::string>());
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
 
-void ExpectFetchTypeNotSupported(std::shared_ptr<ODBCHandles> conn,
-                                 SQLSMALLINT fetch_orientation,
-                                 int fetch_offset, SQLSMALLINT diag_field) {
-  SQLRETURN status =
-      SQLFetchScroll(conn->hstmt, fetch_orientation, fetch_offset);
-  EXPECT_EQ(status, SQL_ERROR);
-  SQLCHAR buf[kBufferLength];
-  SQLSMALLINT string_length_ptr;
-  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, diag_field, &buf,
-                           kBufferLength, &string_length_ptr);
-  std::string actual_message = reinterpret_cast<char*>(buf);
-  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLFetchScroll_All_Types) {
@@ -750,43 +744,91 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
   auto const query =
       "SELECT StringField FROM UNNEST([STRUCT(\"Test String 1\" AS "
       "StringField, 1 AS IntegerField, 1.1 AS FloatField),STRUCT(NULL AS "
-      "StringField, 237 AS IntegerField, 2.22 AS FloatField), STRUCT(\"Test "
-      "String 3\" AS StringField, NULL AS IntegerField, 3.333 AS FloatField), "
-      "STRUCT(\"Test String 4\" AS StringField, 49 AS IntegerField, NULL AS "
-      "FloatField), STRUCT(\"Test String 5\" AS StringField, 53 AS "
-      "IntegerField, 5 AS FloatField), STRUCT(\"Test String 6\" AS "
-      "StringField, 698 AS IntegerField, 0.31 AS FloatField), STRUCT(\"Test "
-      "String 7\" AS StringField, 12 AS IntegerField, 71.6 AS FloatField), "
-      "STRUCT(\"Test String 8\" AS StringField, 83 AS IntegerField, 8.8 AS "
-      "FloatField) ])";
+      "StringField, 237 AS IntegerField, 2.22 AS FloatField),     "
+      "STRUCT(\"Test String 3\" AS StringField, NULL AS IntegerField, 3.333 AS "
+      "FloatField),     STRUCT(\"Test String 4\" AS StringField, 49 AS "
+      "IntegerField, NULL AS FloatField),     STRUCT(\"Test String 5\" AS "
+      "StringField, 53 AS IntegerField, 5 AS FloatField),     STRUCT(\"Test "
+      "String 6\" AS StringField, 698 AS IntegerField, 0.31 AS FloatField),    "
+      " STRUCT(\"Test String 7\" AS StringField, 12 AS IntegerField, 71.6 AS "
+      "FloatField),     STRUCT(\"Test String 8\" AS StringField, 83 AS "
+      "IntegerField, 8.8 AS FloatField) ])";
+
+  SQLRETURN status;
+  SQLCHAR buf_sql_fetch_absolute[kBufferLength];
+  SQLCHAR buf_sql_fetch_relative[kBufferLength];
+  SQLCHAR buf_sql_fetch_prior[kBufferLength];
+  SQLCHAR buf_sql_fetch_first[kBufferLength];
+  SQLCHAR buf_sql_fetch_last[kBufferLength];
+  SQLCHAR buf_sql_fetch_bookmark[kBufferLength];
+  SQLSMALLINT string_length_ptr;
+
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
-  SQLRETURN status =
-      SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
+
+  status = SQLExecute(conn->hstmt);  // No ANSI version
   CheckError(status, "SQLExecute", conn);
 
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_ABSOLUTE, 0,
-                              SQL_DIAG_MESSAGE_TEXT);
+  // Absolute position
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_ABSOLUTE, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
+                           SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_absolute,
+                           kBufferLength, &string_length_ptr);
+
+  std::string actual_message = reinterpret_cast<char*>(buf_sql_fetch_absolute);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+
+  // Fetch the next row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
   CheckError(status, "SQLFetchScroll - SQL_FETCH_NEXT", conn);
   EXPECT_EQ(status, SQL_SUCCESS);
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_RELATIVE, 2,
-                              SQL_DIAG_MESSAGE_TEXT);
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_PRIOR, 3, SQL_DIAG_MESSAGE_TEXT);
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_FIRST, 0, SQL_DIAG_MESSAGE_TEXT);
-  ExpectFetchTypeNotSupported(conn, SQL_FETCH_LAST, 0, SQL_DIAG_MESSAGE_TEXT);
 
-  // Bookmark fetch
+  // Fetch Relative
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_RELATIVE, 2);
+  EXPECT_EQ(status, SQL_ERROR);
+  status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1,
+                           SQL_DIAG_MESSAGE_TEXT, &buf_sql_fetch_relative,
+                           kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_relative);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+
+  // Fetch row backward
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_PRIOR, 3);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_prior, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_prior);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+
+  // Fetch First Row
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_FIRST, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_first, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_first);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+
+  // Fetch Last Row
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_LAST, 0);
+  EXPECT_EQ(status, SQL_ERROR);
+  status =
+      SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_MESSAGE_TEXT,
+                      &buf_sql_fetch_last, kBufferLength, &string_length_ptr);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_last);
+  EXPECT_THAT(actual_message, ::testing::HasSubstr("Fetch type not supported"));
+
+  // Fetch Bookmark row
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_BOOKMARK, 0);
   EXPECT_EQ(status, SQL_ERROR);
-  SQLCHAR buf_sql_fetch_bookmark[kBufferLength];
-  SQLSMALLINT string_length_ptr;
   status = SQLGetDiagField(SQL_HANDLE_STMT, conn->hstmt, 1, SQL_DIAG_SQLSTATE,
                            &buf_sql_fetch_bookmark, kBufferLength,
                            &string_length_ptr);
-  std::string actual_message = reinterpret_cast<char*>(buf_sql_fetch_bookmark);
+  actual_message = reinterpret_cast<char*>(buf_sql_fetch_bookmark);
   EXPECT_EQ(actual_message, "HY106");
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
