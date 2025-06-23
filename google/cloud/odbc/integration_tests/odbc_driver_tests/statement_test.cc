@@ -48,7 +48,7 @@ StdUnicodeRows const kUnicodeSampleData{
 StdRows const kRowCountSampleData{
     {"Row 1", 1, 1.1}, {"Row 2", 2, 2.2}, {"Row 3", 3, 3.3}};
 
-// Checks if the column description returned by DescribeCol matches the schemaa...
+// Checks if the column description returned by DescribeCol matches the schemaa
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                      Schema schema, bool use_ansi = false) {
   SQLRETURN status;
