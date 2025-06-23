@@ -130,11 +130,12 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
 void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
-                                    Results col_wise_data,
+                                    Results const& col_wise_data,
                                     std::vector<std::string> col_names) {
   VerifyColumnWiseResultsGeneric<StdUnicodeRow>(
       input_data, col_wise_data, col_names,
       [](StdUnicodeRow const& row, std::string const& col) -> std::string {
+        // Use exact string comparison for column names
         if (col == "Hindi") {
 #ifdef _WIN32
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
@@ -145,7 +146,8 @@ void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
 #else
           return Utf16ToUtf8(row.str_field2);
 #endif
-        } else if (col == "Chinese") {
+        }
+        if (col == "Chinese") {
 #ifdef _WIN32
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
           return Utf16ToUtf8(row.str_field1);
