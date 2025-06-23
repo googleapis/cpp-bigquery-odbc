@@ -48,49 +48,6 @@ StdUnicodeRows const kUnicodeSampleData{
 StdRows const kRowCountSampleData{
     {"Row 1", 1, 1.1}, {"Row 2", 2, 2.2}, {"Row 3", 3, 3.3}};
 
-template <typename RowT>
-void VerifyColumnWiseResultsGeneric(
-    std::vector<RowT> input_data, Results const& col_wise_data,
-    std::vector<std::string> col_names,
-    std::function<std::string(RowT const&, std::string const&)> extractor) {
-  std::vector<std::string> final_col_names = col_names;
-  if (final_col_names.empty()) {
-    for (auto const& pair : col_wise_data) {
-      final_col_names.push_back(pair.first);
-    }
-  }
-
-  for (auto const& col_name : final_col_names) {
-    auto returned = col_wise_data.at(col_name);
-    std::sort(returned.begin(), returned.end(), str_comparison);
-
-    std::vector<std::string> expected;
-    for (auto const& row : input_data) {
-      expected.push_back(extractor(row, col_name));
-    }
-    std::sort(expected.begin(), expected.end(), str_comparison);
-
-    ASSERT_EQ(returned.size(), expected.size()) << "Column: " << col_name;
-    for (size_t i = 0; i < returned.size(); ++i) {
-      if (col_name == "FloatField") {
-        if (expected[i].empty() || returned[i].empty()) {
-          // Handle NULL values as strings directly
-          EXPECT_EQ(returned[i], expected[i])
-              << "Column: " << col_name << " at index: " << i;
-        } else {
-          double returned_val = std::stod(returned[i]);
-          double expected_val = std::stod(expected[i]);
-          EXPECT_NEAR(returned_val, expected_val, 1e-6)
-              << "Column: " << col_name << " at index: " << i;
-        }
-      } else {
-        EXPECT_EQ(returned[i], expected[i])
-            << "Column: " << col_name << " at index: " << i;
-      }
-    }
-  }
-}
-
 // Checks if the column description returned by DescribeCol matches the schema
 void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
                      Schema schema, bool use_ansi = false) {
@@ -130,38 +87,67 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
 void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
-                                    Results const& col_wise_data,
+                                    Results col_wise_data,
                                     std::vector<std::string> col_names) {
-  VerifyColumnWiseResultsGeneric<StdUnicodeRow>(
-      input_data, col_wise_data, col_names,
-      [](StdUnicodeRow const& row, std::string const& col) -> std::string {
-        // Use exact string comparison for column names
-        if (col == "Hindi") {
-#ifdef _WIN32
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-          return Utf16ToUtf8(row.str_field2);
-#else
-          return Utf16ToUtf8(row.str_field2, CP_ACP);
-#endif
-#else
-          return Utf16ToUtf8(row.str_field2);
-#endif
-        }
-        if (col == "Chinese") {
-#ifdef _WIN32
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-          return Utf16ToUtf8(row.str_field1);
-#else
-          return Utf16ToUtf8(row.str_field1, CP_ACP);
-#endif
-#else
-          return Utf16ToUtf8(row.str_field1);
-#endif
-        }
-        return "";
-      });
-}
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
 
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+    std::vector<std::string> input_col_values;
+    if (col_name.compare("Hindi")) {
+      for (auto data : input_data) {
+        std::string data_str;
+        // For the existing driver in Unicode mode on Windows, data is
+        // received(by the application) encoded in CP_ACP but is transmitted as
+        // UTF-8. In contrast, our driver consistently uses UTF-8 for Unicode
+        // data, because we don't want to conform to the legacy CP_ACP encoding
+#ifdef _WIN32
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+
+        data_str = Utf16ToUtf8(data.str_field2);
+#else
+        data_str = Utf16ToUtf8(data.str_field2, CP_ACP);
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#else
+        data_str = Utf16ToUtf8(data.str_field2);
+#endif  //_WIN32
+        input_col_values.emplace_back(data_str);
+      }
+    } else if (col_name.compare("Chinese")) {
+      for (auto data : input_data) {
+        std::string data_str;
+#ifdef _WIN32
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+
+        data_str = Utf16ToUtf8(data.str_field1);
+#else
+        data_str = Utf16ToUtf8(data.str_field1, CP_ACP);
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+#else
+        data_str = Utf16ToUtf8(data.str_field1);
+#endif  //_WIN32
+
+        input_col_values.emplace_back(data_str);
+      }
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    for (int i = 0; i < ret_col_values.size(); i++) {
+      EXPECT_STREQ(ret_col_values[i].c_str(), input_col_values[i].c_str());
+    }
+  }
+}
 // Helper to store field information
 struct DataField {
   SQLPOINTER data_ptr;
@@ -335,16 +321,58 @@ TEST(StatementTest, SQLFetch_Unicode) {
 // col-wise Note: This doesn't verify the integrity of the fetched rows
 void VerifyColumnWiseResults(StdRows input_data, Results col_wise_data,
                              std::vector<std::string> col_names) {
-  VerifyColumnWiseResultsGeneric<StdRow>(
-      input_data, col_wise_data, col_names,
-      [](StdRow const& row, std::string const& col) -> std::string {
-        if (col == "StringField") return row.str_field;
-        if (col == "IntegerField")
-          return row.int_field != NULL ? std::to_string(row.int_field) : "";
-        if (col == "FloatField")
-          return row.float_field != NULL ? std::to_string(row.float_field) : "";
-        return "";
-      });
+  if (!col_names.size()) {
+    std::vector<std::string> all_col_names;
+    for (auto it = col_wise_data.begin(); it != col_wise_data.end(); it++) {
+      all_col_names.emplace_back(it->first);
+    }
+    col_names = all_col_names;
+  }
+  for (auto col_name : col_names) {
+    auto ret_col_values = col_wise_data[col_name];
+
+    // We have to sort inserted and returned values because we haven't specified
+    // the ordering
+    sort(ret_col_values.begin(), ret_col_values.end(), str_comparison);
+
+    std::vector<std::string> input_col_values;
+    if (!col_name.compare("StringField")) {
+      for (auto data : input_data) {
+        input_col_values.emplace_back(data.str_field);
+      }
+
+    } else if (!col_name.compare("IntegerField")) {
+      for (auto data : input_data) {
+        if (data.int_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.int_field));
+        else
+          input_col_values.emplace_back("");
+      }
+
+    } else if (!col_name.compare("FloatField")) {
+      for (auto data : input_data) {
+        if (data.float_field != NULL)
+          input_col_values.emplace_back(std::to_string(data.float_field));
+        else
+          input_col_values.emplace_back("");
+      }
+    }
+    sort(input_col_values.begin(), input_col_values.end(), str_comparison);
+
+    // Check if the sorted inserted and returned vectors have same values
+    EXPECT_EQ(ret_col_values.size(), input_col_values.size());
+    if ((!col_name.compare("FloatField"))) {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        if (ret_col_values[i].compare("") != 0)
+          EXPECT_EQ(stod(ret_col_values[i]), stod(input_col_values[i]))
+              << " at index: " << i;
+      }
+    } else {
+      for (int i = 0; i < ret_col_values.size(); i++) {
+        EXPECT_EQ(ret_col_values[i], input_col_values[i]) << " at index: " << i;
+      }
+    }
+  }
 }
 
 void ExecDirectWithFetchTest(std::string const in_table_name, bool is_async,
