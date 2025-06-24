@@ -533,7 +533,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   ResultSet final_result_set;
   for (auto const& bq_table : *filtered_tables_data_status) {
     StatusRecordOr<ResultSet> table_result_set_status =
-        ProcessTableResults(bq_table, s_column_name, metadata_id);
+        ProcessTableResults(conn_handle, bq_table, s_column_name, metadata_id);
 
     if (!table_result_set_status) {
       return LogAndReturnCode(handle, table_result_set_status);

@@ -271,6 +271,44 @@ bool FindTableInVector(std::string const& table_name,
                       }) != table_names.end();
 }
 
+TEST(SQLColumns, Check_DefaultStringColumnSize) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  // Create SQLColumns Table with default value for StringField.
+  std::string create_table_str =
+      "CREATE OR REPLACE TABLE " + kCatalogFnsDataset +
+      ".AllDataTypes (int_col INT64, float_col FLOAT64, string_col STRING, "
+      "bool_col BOOL, bytes_col BYTES, date_col DATE, datetime_col DATETIME, "
+      "time_col TIME, timestamp_col TIMESTAMP, numeric_col NUMERIC, bignum_col "
+      "BIGNUMERIC, interval_col INTERVAL, geography_col GEOGRAPHY,json_col "
+      "JSON);";
+  CreateTableDirect(conn, create_table_str);
+
+  auto status = SQLColumns(conn->hstmt, (SQLCHAR*)kCatalog.c_str(), SQL_NTS,
+                           (SQLCHAR*)kCatalogFnsDataset.c_str(), SQL_NTS,
+                           (SQLCHAR*)"AllDataTypes", SQL_NTS,
+                           (SQLCHAR*)"string_col", SQL_NTS);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  SQLSMALLINT col_count = 0;
+  EXPECT_EQ(SQLNumResultCols(conn->hstmt, &col_count), SQL_SUCCESS);
+  SQLRETURN ret;
+  int row_num = 1;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS) {
+    SQLCHAR buffer[1024] = {0};
+    SQLLEN indicator = 0;
+
+    SQLGetData(conn->hstmt, 7, SQL_C_CHAR, buffer, sizeof(buffer), &indicator);
+
+    EXPECT_STREQ((char*)buffer, "4");
+  }
+
+  EXPECT_TRUE(ret == SQL_NO_DATA || ret == SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(CatalogTest, SQLTables) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

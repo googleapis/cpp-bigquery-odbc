@@ -42,12 +42,14 @@ StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
+StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle& conn_handle,
+                                           std::string const& catalog,
                                            std::string const& dataset,
                                            std::string const& table,
                                            TableFieldSchema const& field_schema,
                                            SQLSMALLINT field_pos) {
   DSRow ds_row;
+  std::uint32_t column_size = conn_handle.GetDsn().default_string_column_length;
 
   // TABLE_CAT
   DSValue ds_table_cat = kNullValue;
@@ -104,7 +106,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // COLUMN_SIZE
   DSValue ds_col_size = kNullValue;
-  auto col_size_status = GetColSize(field_schema);
+  auto col_size_status = GetColSize(field_schema, column_size);
   if (!col_size_status) {
     return col_size_status.GetStatusRecord();
   }
@@ -117,7 +119,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // BUFFER_LENGTH
   DSValue ds_buf_len = kNullValue;
-  auto buf_len_status = GetBufferLen(field_schema);
+  auto buf_len_status = GetBufferLen(field_schema, column_size);
   if (!buf_len_status) {
     return buf_len_status.GetStatusRecord();
   }
@@ -130,7 +132,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // DECIMAL_DIGITS
   DSValue ds_dec_digits = kNullValue;
-  auto dec_digits_status = GetDecimalDigits(field_schema);
+  auto dec_digits_status = GetDecimalDigits(field_schema, column_size);
   if (!dec_digits_status) {
     return dec_digits_status.GetStatusRecord();
   }
@@ -143,7 +145,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // NUM_PREC_RADIX
   DSValue ds_radix = kNullValue;
-  auto radix_status = GetRadix(field_schema);
+  auto radix_status = GetRadix(field_schema, column_size);
   if (!radix_status) {
     return radix_status.GetStatusRecord();
   }
@@ -208,7 +210,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(std::string const& catalog,
 
   // CHAR_OCTET_LENGTH
   DSValue ds_char_octet_len = kNullValue;
-  auto char_octet_len_status = GetCharOctetLen(field_schema);
+  auto char_octet_len_status = GetCharOctetLen(field_schema, column_size);
   if (!char_octet_len_status) {
     return char_octet_len_status.GetStatusRecord();
   }
@@ -272,8 +274,8 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<ResultSet> ProcessTableResults(
-    Table const& bq_table, std::string const& bq_table_column,
-    SQLULEN metadata_id) {
+    ConnectionHandle& conn_handle, Table const& bq_table,
+    std::string const& bq_table_column, SQLULEN metadata_id) {
   ResultSet result_set;
   // Populate Row Schema for the ResultSet.
   auto row_schema_status = CreateResultSetRowSchema(result_set);
@@ -290,7 +292,7 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     int ord_pos = 1;
     for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
       auto ds_row_status = CreateResultSetDSRow(
-          bq_table.table_reference.project_id,
+          conn_handle, bq_table.table_reference.project_id,
           bq_table.table_reference.dataset_id,
           bq_table.table_reference.table_id, table_field_schema, ord_pos++);
       if (!ds_row_status) {
@@ -308,7 +310,7 @@ StatusRecordOr<ResultSet> ProcessTableResults(
       std::regex column_pattern = BuildRegex(bq_table_column, metadata_id);
       if (std::regex_match(table_field_schema.name, column_pattern)) {
         auto ds_row_status = CreateResultSetDSRow(
-            bq_table.table_reference.project_id,
+            conn_handle, bq_table.table_reference.project_id,
             bq_table.table_reference.dataset_id,
             bq_table.table_reference.table_id, table_field_schema, ord_pos);
         if (!ds_row_status) {

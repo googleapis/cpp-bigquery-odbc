@@ -25,7 +25,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
-    std::string const& type) {
+    std::string const& type, std::uint32_t column_size) {
   FixedColumnMetadata fixed_column_metadata;
   auto ds_type_status = ConvertDSType(type);
   if (!ds_type_status) {
@@ -38,9 +38,9 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     case BQDataType::kStruct:
     case BQDataType::kJson:
     case BQDataType::kGeography: {
-      fixed_column_metadata.precision = 16384;
-      fixed_column_metadata.buf_len = 16384;
-      fixed_column_metadata.char_octet_len = 16384;
+      fixed_column_metadata.precision = column_size;
+      fixed_column_metadata.buf_len = column_size;
+      fixed_column_metadata.char_octet_len = column_size;
       fixed_column_metadata.radix = 10;
       break;
     }
@@ -54,7 +54,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     case BQDataType::kBool: {
       fixed_column_metadata.precision = 1;
       fixed_column_metadata.buf_len = 1;
-      fixed_column_metadata.char_octet_len = 16384;
+      fixed_column_metadata.char_octet_len = column_size;
       break;
     }
     case BQDataType::kTime: {
@@ -74,7 +74,7 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 16;
       fixed_column_metadata.scale = 6;
       fixed_column_metadata.radix = 2;
-      fixed_column_metadata.char_octet_len = 16384;
+      fixed_column_metadata.char_octet_len = column_size;
       break;
     }
     case BQDataType::kNumeric: {
@@ -115,14 +115,15 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetColSize(
-    TableFieldSchema const& field_schema) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size) {
   optional<SQLINTEGER> result;
   if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision);
   } else if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
+    auto fixed_col_status =
+        GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -135,14 +136,15 @@ StatusRecordOr<optional<SQLINTEGER>> GetColSize(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
-    TableFieldSchema const& field_schema) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size) {
   optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision + 2);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
+    auto fixed_col_status =
+        GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -155,12 +157,13 @@ StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
-    TableFieldSchema const& field_schema) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size) {
   optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
+    auto fixed_col_status =
+        GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -174,12 +177,13 @@ StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
 }
 
 StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
-    TableFieldSchema const& field_schema) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size) {
   optional<SQLSMALLINT> result;
   if (field_schema.scale > 0) {
     result = static_cast<SQLSMALLINT>(field_schema.scale);
   } else {
-    auto fixed_col_status = GetFixedColumnMetadata(field_schema.type);
+    auto fixed_col_status =
+        GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
       return fixed_col_status.GetStatusRecord();
     }
@@ -192,8 +196,9 @@ StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
 }
 
 StatusRecordOr<optional<SQLSMALLINT>> GetRadix(
-    TableFieldSchema const& field_schema) {
-  auto fixed_metadata_status = GetFixedColumnMetadata(field_schema.type);
+    TableFieldSchema const& field_schema, std::uint32_t column_size) {
+  auto fixed_metadata_status =
+      GetFixedColumnMetadata(field_schema.type, column_size);
   if (!fixed_metadata_status) {
     return fixed_metadata_status.GetStatusRecord();
   }
