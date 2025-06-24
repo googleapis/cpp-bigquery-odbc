@@ -32,10 +32,6 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
 
 SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
                           bool use_ansi = false);
-SQLRETURN InsertStatementWithDescriptor(std::shared_ptr<ODBCHandles> conn,
-                                        std::string const& table_name,
-                                        bool use_ansi, bool allocate_descriptor,
-                                        bool bind_parameters);
 
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                                            bool use_ansi = false);

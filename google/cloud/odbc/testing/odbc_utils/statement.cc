@@ -158,18 +158,22 @@ SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
-SQLRETURN InsertStatementWithDescriptor(std::shared_ptr<ODBCHandles> conn,
-                                        std::string const& table_name,
-                                        bool use_ansi, bool allocate_descriptor,
-                                        bool bind_parameters) {
+// Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
+SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
+                                           bool use_ansi) {
   SQLRETURN status;
-  Table table(table_name);
-
-  table.Create(conn, "(StringField STRING, IntegerField INTEGER)", use_ansi);
-
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
+                          (use_ansi ? "true" : "false");
   char insert_stmt[kBufferLength];
   StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
 
+  Table table(table_name);
+
+  // Create Table
+  table.Create(conn, "(StringField STRING, IntegerField INTEGER)", use_ansi);
+
+  // Prepare statement with insert query string
   if (use_ansi) {
     status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
   } else {
@@ -177,51 +181,77 @@ SQLRETURN InsertStatementWithDescriptor(std::shared_ptr<ODBCHandles> conn,
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
-  if (allocate_descriptor) {
-    status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
-    CheckError(status, "SQLAllocHandle", conn);
-  }
+  // Allocate descriptor handle
+  status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->apd);
+  CheckError(status, "SQLAllocHandle", conn);
 
+  // Set Descriptor handle to the first statement handle
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
                           SQL_IS_POINTER);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  if (bind_parameters) {
-    constexpr char const* str_field = "Test String 1";
-    SQLLEN len_string_field = strlen(str_field);
-    status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                              SQL_CHAR, len_string_field, 0,
-                              (SQLCHAR*)str_field, len_string_field, NULL);
-    CheckError(status, "SQLBindParameter", conn);
+  // Add param 1(string) to insert query string
+  constexpr char const* str_field = "Test String 1";
 
-    int int_field = 42;
-    status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
-                              SQL_INTEGER, 0, 0, &int_field, 0, NULL);
-    CheckError(status, "SQLBindParameter", conn);
-  }
+  SQLLEN len_string_field = strlen(str_field);
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                            SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
+                            len_string_field, NULL);
+  CheckError(status, "SQLBindParameter", conn);
 
+  // Add param 2 to insert query string
+  int int_field = 42;
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
+                            SQL_INTEGER, 0, 0, &int_field, 0, NULL);
+  CheckError(status, "SQLBindParameter", conn);
+
+  // Execute insertion
   status = SQLExecute(conn->hstmt);
   CheckError(status, "SQLExecute", conn);
+
+  // Drop Table
   table.Drop(conn);
 
   return status;
 }
 
-SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
-                                           bool use_ansi) {
-  std::string table_name = kDatasetWithTablePrefix +
-                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
-                           (use_ansi ? "true" : "false");
-  return InsertStatementWithDescriptor(conn, table_name, use_ansi, true, true);
-}
-
+// Tests insertion with params using SQLPrepare, desc handle and SQLExecute
 SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
                                               bool use_ansi) {
-  std::string table_name = kDatasetWithTablePrefix +
-                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
-                           (use_ansi ? "true" : "false");
-  return InsertStatementWithDescriptor(conn, table_name, use_ansi, false,
-                                       false);
+  SQLRETURN status;
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
+                          (use_ansi ? "true" : "false");
+  char insert_stmt[kBufferLength];
+  StrToChar(insert_stmt, "INSERT INTO " + table_name + " VALUES (?, ?)");
+
+  Table table(table_name);
+
+  // Create Table
+  table.Create(conn, "(StringField STRING, IntegerField INTEGER)", use_ansi);
+
+  // Prepare statement with same insert query string
+  if (use_ansi) {
+    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  } else {
+    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+  }
+  CheckError(status, "SQLPrepare", conn, use_ansi);
+
+  // Set Descriptor handle to the second statement handle.
+  // It already has data from previous SQLBindParameter calls.
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd,
+                          SQL_IS_POINTER);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Execute insertion
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
+
+  // Drop Table
+  table.Drop(conn);
+
+  return status;
 }
 
 RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
