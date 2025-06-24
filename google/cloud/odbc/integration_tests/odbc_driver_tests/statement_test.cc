@@ -1808,7 +1808,6 @@ TEST(SQLNumResultCols, ValidateSimpleResultSets) {
   status = SQLNumResultCols(conn->hstmt, &columnCount);
   EXPECT_EQ(status, SQL_SUCCESS);
   EXPECT_EQ(columnCount, 2);
-
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
