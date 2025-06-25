@@ -645,15 +645,8 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
        kSqlColumnsTable, "BoolField", "BOOLEAN", "BOOL", "", "YES", SQL_BIT,
        SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1, 1, 1,
-// Our driver is consistent with the column metadata returned by SQLColumns and
-// SQLProcedureColumns. The existing driver isn't.
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-       16384
-#else
-       SQL_NULL_DATA
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-       ,
-       3});
+
+       SQL_NULL_DATA, 3});
   // BytesField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
@@ -687,16 +680,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        SQL_NULL_DATA
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
        ,
-       1, 26, 16,
-// Our driver is consistent with the column metadata returned by SQLColumns and
-// SQLProcedureColumns. The existing driver isn't.
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-       16384
-#else
-       SQL_NULL_DATA
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-       ,
-       6});
+       1, 26, 16, SQL_NULL_DATA, 6});
   // IntervalField.
   expected_results.push_back(
       {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
@@ -730,16 +714,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        SQL_NULL_DATA
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
        ,
-       1, 26, 16,
-// Our driver is consistent with the column metadata returned by SQLColumns and
-// SQLProcedureColumns. The existing driver isn't.
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-       16384
-#else
-       SQL_NULL_DATA
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
-       ,
-       9});
+       1, 26, 16, SQL_NULL_DATA, 9});
   // Decimalield.
   expected_results.push_back({"bigquery-devtools-drivers",
                               "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
