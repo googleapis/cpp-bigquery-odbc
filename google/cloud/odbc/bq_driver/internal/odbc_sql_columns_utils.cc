@@ -54,7 +54,6 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
     case BQDataType::kBool: {
       fixed_column_metadata.precision = 1;
       fixed_column_metadata.buf_len = 1;
-      fixed_column_metadata.char_octet_len = column_size;
       break;
     }
     case BQDataType::kTime: {
@@ -74,7 +73,6 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 16;
       fixed_column_metadata.scale = 6;
       fixed_column_metadata.radix = 2;
-      fixed_column_metadata.char_octet_len = column_size;
       break;
     }
     case BQDataType::kNumeric: {
@@ -96,14 +94,6 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.buf_len = 8;
       fixed_column_metadata.scale = 9;
       fixed_column_metadata.radix = 2;
-      fixed_column_metadata.char_octet_len = 16384;
-      break;
-    }
-    case BQDataType::kRange: {
-      fixed_column_metadata.precision = 256;
-      fixed_column_metadata.buf_len = 256, fixed_column_metadata.radix = 0;
-      fixed_column_metadata.scale = 0;
-      fixed_column_metadata.char_octet_len = 256;
       break;
     }
     default: {

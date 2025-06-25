@@ -269,7 +269,9 @@ void ProcessTableResultsHelper(std::string column,
   table.schema.fields.emplace_back(field_schema1);
   table.schema.fields.emplace_back(field_schema2);
 
-  auto result_set_status = ProcessTableResults(table, column, metadata_id);
+  ConnectionHandle handle;
+  auto result_set_status =
+      ProcessTableResults(handle, table, column, metadata_id);
   ASSERT_STATUS_RECORD_OK(result_set_status);
 
   ResultSet result_set = *result_set_status;
@@ -337,7 +339,8 @@ TEST(CreateResultSetDSRow, StringField) {
   field_schema.default_value_expression = "Test-String";
   field_schema.max_length = 5000;
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 1);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -366,7 +369,8 @@ TEST(CreateResultSetDSRow, IntField) {
   field_schema.description = "INT64";
   field_schema.default_value_expression = "1234";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 2);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -394,7 +398,8 @@ TEST(CreateResultSetDSRow, BoolField) {
   field_schema.description = "BOOL";
   field_schema.default_value_expression = "true";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 3);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -422,7 +427,8 @@ TEST(CreateResultSetDSRow, TimeField) {
   field_schema.description = "TIME";
   field_schema.default_value_expression = "0:0:0";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 4);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -450,7 +456,8 @@ TEST(CreateResultSetDSRow, DateField) {
   field_schema.description = "DATE";
   field_schema.default_value_expression = "12/10/2024";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 5);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -478,7 +485,8 @@ TEST(CreateResultSetDSRow, TimestampField) {
   field_schema.description = "TIMESTAMP";
   field_schema.default_value_expression = "1234567";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 6);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -506,7 +514,8 @@ TEST(CreateResultSetDSRow, DateTimeField) {
   field_schema.description = "DATETIME";
   field_schema.default_value_expression = "12/10/2024 00:12:34";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 7);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -536,7 +545,8 @@ TEST(CreateResultSetDSRow, NumericField) {
   field_schema.precision = 10;
   field_schema.scale = 3;
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 8);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -564,7 +574,8 @@ TEST(CreateResultSetDSRow, DecimalField) {
   field_schema.description = "DECIMAL";
   field_schema.default_value_expression = "1234.456";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 9);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 
@@ -592,7 +603,8 @@ TEST(CreateResultSetDSRow, BigNumericField) {
   field_schema.description = "BIGNUMERIC";
   field_schema.default_value_expression = "1234.456";
 
-  auto ds_row_status = CreateResultSetDSRow(kTestCatalog, kTestDataset,
+  ConnectionHandle handle;
+  auto ds_row_status = CreateResultSetDSRow(handle, kTestCatalog, kTestDataset,
                                             kTestTable, field_schema, 10);
   ASSERT_STATUS_RECORD_OK(ds_row_status);
 

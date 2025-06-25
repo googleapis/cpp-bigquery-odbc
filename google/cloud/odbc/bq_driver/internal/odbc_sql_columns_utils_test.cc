@@ -479,7 +479,7 @@ TEST(GetCharOctetLen, FixedCharOctetLenBool) {
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
   optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
-  EXPECT_EQ(16384, char_octet_len_opt);
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenTime) {
@@ -506,7 +506,7 @@ TEST(GetCharOctetLen, FixedCharOctetLenDateTime) {
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
   optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
-  EXPECT_EQ(16384, char_octet_len_opt);
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenTimeStamp) {
@@ -515,7 +515,7 @@ TEST(GetCharOctetLen, FixedCharOctetLenTimeStamp) {
   auto char_octet_len_status = GetCharOctetLen(schema);
   ASSERT_STATUS_RECORD_OK(char_octet_len_status);
   optional<SQLINTEGER> char_octet_len_opt = *char_octet_len_status;
-  EXPECT_EQ(16384, char_octet_len_opt);
+  EXPECT_FALSE(char_octet_len_opt.has_value());
 }
 
 TEST(GetCharOctetLen, FixedCharOctetLenNumeric) {

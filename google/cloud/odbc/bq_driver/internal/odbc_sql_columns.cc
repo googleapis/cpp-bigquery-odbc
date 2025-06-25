@@ -42,7 +42,7 @@ StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle& conn_handle,
+StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
                                            std::string const& catalog,
                                            std::string const& dataset,
                                            std::string const& table,
@@ -274,7 +274,7 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<ResultSet> ProcessTableResults(
-    ConnectionHandle& conn_handle, Table const& bq_table,
+    ConnectionHandle const& conn_handle, Table const& bq_table,
     std::string const& bq_table_column, SQLULEN metadata_id) {
   ResultSet result_set;
   // Populate Row Schema for the ResultSet.

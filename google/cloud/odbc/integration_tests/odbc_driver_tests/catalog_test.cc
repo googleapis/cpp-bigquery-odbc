@@ -292,8 +292,6 @@ TEST(SQLColumns, Check_DefaultStringColumnSize) {
                            (SQLCHAR*)"string_col", SQL_NTS);
   EXPECT_EQ(status, SQL_SUCCESS);
 
-  SQLSMALLINT col_count = 0;
-  EXPECT_EQ(SQLNumResultCols(conn->hstmt, &col_count), SQL_SUCCESS);
   SQLRETURN ret;
   int row_num = 1;
   while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS) {

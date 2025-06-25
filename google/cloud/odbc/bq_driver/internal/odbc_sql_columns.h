@@ -81,14 +81,14 @@ FetchBQTablesData(ConnectionHandle& conn_handle, std::string const& catalog,
 // 2) If bq_table_column is empty, then the
 // resultset would include metadata information for all columns in the table.
 odbc_internal::StatusRecordOr<ResultSet> ProcessTableResults(
-    ConnectionHandle& conn_handle,
+    ConnectionHandle const& conn_handle,
     ::google::cloud::bigquery_v2_minimal_internal::Table const& bq_table,
     std::string const& bq_table_column, SQLULEN metadata_id = SQL_FALSE);
 
 // Helper functions
 odbc_internal::StatusRecord CreateResultSetRowSchema(ResultSet& result_set);
 odbc_internal::StatusRecordOr<DSRow> CreateResultSetDSRow(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    ConnectionHandle const& conn_handle, std::string const& catalog,
     std::string const& dataset, std::string const& table,
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema,
