@@ -3049,6 +3049,36 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLRowCount, WrongUpdateValidation) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_WRONG_UPDATE_TEST_TABLE";
+
+  std::string update_stmt =
+      "UPDATE " + table_name +
+      " SET StringField = \"Updated Row\" WHERE IntegerField = 4;";
+
+  Table table(table_name);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  table.InsertData(conn, kRowCountSampleData);
+
+  auto status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
+  EXPECT_EQ(status, SQL_NO_DATA);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Update)", conn);
+  EXPECT_EQ(row_count, 0);
+
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLRowCount, NonExistentTable) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3065,6 +3095,35 @@ TEST(SQLRowCount, NonExistentTable) {
   status = SQLRowCount(conn->hstmt, &row_count);
   EXPECT_NE(status, SQL_SUCCESS);
 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLRowCount, SameValueUpdate) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string table_name =
+      kDatasetWithTablePrefix + "ROWCOUNT_SAME_UPDATE_TEST_TABLE";
+
+  std::string update_stmt =
+      "UPDATE " + table_name +
+      " SET StringField = \"Row 3\" WHERE IntegerField = 3;";
+
+  Table table(table_name);
+  table.CreateWithPrepare(
+      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
+
+  table.InsertData(conn, kRowCountSampleData, false, true);
+
+  auto status = ExecWithPrepare(conn, update_stmt);
+  CheckError(status, "ExecWithPrepare (Update)", conn);
+
+  SQLLEN row_count;
+  status = SQLRowCount(conn->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Update)", conn);
+  EXPECT_EQ(row_count, 1);
+
+  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -3145,25 +3204,7 @@ TEST_P(SQLRowCountTest, AllValidations) {
   ExecuteAndValidate(
       "UPDATE " + table_name_ +
           " SET StringField = \"Updated Row\" WHERE IntegerField <= 3;",
-      3, "Update multiple rows");
-
-  ExecuteAndValidate("UPDATE " + table_name_ +
-                         " SET StringField = \"Row 3\" WHERE IntegerField = 3;",
-                     1, "Update with same value");
-
-  std::string no_match_update_stmt =
-      "UPDATE " + table_name_ +
-      " SET StringField = \"No Match\" WHERE IntegerField = 99;";
-  if (GetParam()) {
-    status = SQLExecDirect(conn_->hstmt, (SQLCHAR*)no_match_update_stmt.c_str(),
-                           SQL_NTS);
-  } else {
-    status = ExecWithPrepare(conn_, no_match_update_stmt);
-  }
-  EXPECT_EQ(status, SQL_NO_DATA);
-  status = SQLRowCount(conn_->hstmt, &row_count);
-  CheckError(status, "SQLRowCount (Update with no match)", conn_);
-  EXPECT_EQ(row_count, 0);
+      3, "Update");
 
   ExecuteAndValidate("SELECT * FROM " + table_name_, -1, "Select");
 
