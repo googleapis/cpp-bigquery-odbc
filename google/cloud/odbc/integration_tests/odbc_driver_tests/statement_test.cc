@@ -1781,6 +1781,36 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLNumResultCols, ValidateSimpleResultSets) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query1 = "SELECT 1";
+  char read_stmt1[kBufferLength];
+  StrToChar(read_stmt1, query1);
+  auto status =
+      SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt1, strlen(read_stmt1));
+  CheckError(status, "SQLPrepare", conn);
+
+  SQLSMALLINT columnCount;
+  status = SQLNumResultCols(conn->hstmt, &columnCount);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(columnCount, 1);
+
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+
+  std::string query2 = "SELECT id, name from INTEGRATION_TESTS.Test_Table";
+  char read_stmt2[kBufferLength];
+  StrToChar(read_stmt2, query2);
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt2, strlen(read_stmt2));
+  CheckError(status, "SQLPrepare", conn);
+
+  status = SQLNumResultCols(conn->hstmt, &columnCount);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_EQ(columnCount, 2);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 void GetColumnCount(std::shared_ptr<ODBCHandles> conn, std::string query,
                     SQLSMALLINT* colCount) {
   SQLRETURN status;
