@@ -1008,90 +1008,57 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLSetCursorName) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLCHAR cursor_name[kBufferLength] = "INSERT_CURSOR",
-          cursor_name_ret[kBufferLength];
-
-  auto status = SQLSetCursorName(conn->hstmt, cursor_name, kBufferLength);
-  CheckError(status, "SQLSetCursorName", conn);
-
-  status = SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorName", conn);
-
-  EXPECT_STREQ((char*)cursor_name_ret, (char*)cursor_name);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  ////////////////
-  /// USE ANSI
-  ////////////////
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  SQLCHAR cursor_name_ansi[kBufferLength] = "INSERT_CURSOR_ANSI",
-          cursor_name_ret_ansi[kBufferLength];
-
-  status = SQLSetCursorNameA(conn->hstmt, cursor_name_ansi, kBufferLength);
-  CheckError(status, "SQLSetCursorName", conn, true);
-
-  status =
-      SQLGetCursorNameA(conn->hstmt, cursor_name_ret_ansi, kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorName", conn, true);
-
-  EXPECT_STREQ((char*)cursor_name_ret_ansi, (char*)cursor_name_ansi);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(StatementTest, SQLSetCursorNameW) {
+TEST(StatementTest, SQLSetAndGetCursorNameAllVersions) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  std::wstring cursor_name = L"INSERT_CURSOR_WIDE";
-  SQLCHAR cursor_name_ret[kBufferLength];
 
-  std::vector<SQLWCHAR> sqlWStr(cursor_name.begin(), cursor_name.end());
-  sqlWStr.emplace_back(L'\0');
+  // ANSI Version
+  {
+    SQLCHAR cursor_name_a[] = "INSERT_CURSOR_ANSI";
+    SQLCHAR cursor_name_ret_a[kBufferLength];
 
-  auto status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), sqlWStr.size());
-  CheckError(status, "SQLSetCursorNameW", conn, true);
+    auto status = SQLSetCursorNameA(conn->hstmt, cursor_name_a, SQL_NTS);
+    CheckError(status, "SQLSetCursorNameA", conn, true);
 
-  status = SQLGetCursorNameW(conn->hstmt, (SQLWCHAR*)cursor_name_ret,
-                             kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorNameW", conn, true);
+    status =
+        SQLGetCursorNameA(conn->hstmt, cursor_name_ret_a, kBufferLength, NULL);
+    CheckError(status, "SQLGetCursorNameA", conn, true);
 
-  std::string expected = "INSERT_CURSOR_WIDE";
-  std::string actual = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), expected.size());
-  EXPECT_STREQ(actual.data(), expected.data());
+    EXPECT_STREQ((char*)cursor_name_ret_a, (char*)cursor_name_a);
+  }
+  // Wide Version
+  {
+    std::wstring cursor_name_w_str = L"INSERT_CURSOR_WIDE";
+    SQLWCHAR cursor_name_w_ret[kBufferLength];
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
+    std::vector<SQLWCHAR> sqlWStr(cursor_name_w_str.begin(),
+                                  cursor_name_w_str.end());
+    sqlWStr.push_back(L'\0');
 
-TEST(StatementTest, SQLGetCursorNameAndW) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    auto status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), SQL_NTS);
+    CheckError(status, "SQLSetCursorNameW", conn, true);
 
-  std::string query = "SELECT 1;";
-  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-  CheckError(status, "SQLPrepare", conn);
-  status = SQLExecute(conn->hstmt);
-  CheckError(status, "SQLExecute", conn);
+    status =
+        SQLGetCursorNameW(conn->hstmt, cursor_name_w_ret, kBufferLength, NULL);
+    CheckError(status, "SQLGetCursorNameW", conn, true);
 
-  // Test the ANSI version
-  SQLCHAR cursor_name_ret_a[kBufferLength];
-  status =
-      SQLGetCursorName(conn->hstmt, cursor_name_ret_a, kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorName", conn);
-  std::string actual_a = reinterpret_cast<char*>(cursor_name_ret_a);
-  EXPECT_THAT(actual_a, StartsWith("SQL_CUR"));
+    std::wstring actual_w_str(cursor_name_w_ret);
+    EXPECT_EQ(actual_w_str, cursor_name_w_str);
+  }
+  // Default mapping version
+  {
+    SQLCHAR cursor_name[] = "INSERT_CURSOR_DEFAULT";
+    SQLCHAR cursor_name_ret[kBufferLength];
 
-  // Test the Wide version
-  SQLWCHAR cursor_name_ret_w[kBufferLength];
-  status =
-      SQLGetCursorNameW(conn->hstmt, cursor_name_ret_w, kBufferLength, NULL);
-  CheckError(status, "SQLGetCursorNameW", conn);
-  std::string actual_w = ConvertSQLWCHARToString(cursor_name_ret_w, NULL);
-  EXPECT_THAT(actual_w, StartsWith("SQL_CUR"));
+    auto status = SQLSetCursorName(conn->hstmt, cursor_name, SQL_NTS);
+    CheckError(status, "SQLSetCursorName", conn);
+
+    status =
+        SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
+    CheckError(status, "SQLGetCursorName", conn);
+
+    EXPECT_STREQ((char*)cursor_name_ret, (char*)cursor_name);
+  }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
