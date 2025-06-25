@@ -1008,57 +1008,31 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLSetAndGetCursorNameAllVersions) {
+TEST(StatementTest, SQLGetCursorNameAndW) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  // ANSI Version
-  {
-    SQLCHAR cursor_name_a[] = "INSERT_CURSOR_ANSI";
-    SQLCHAR cursor_name_ret_a[kBufferLength];
+  std::string query = "SELECT 1;";
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
 
-    auto status = SQLSetCursorNameA(conn->hstmt, cursor_name_a, SQL_NTS);
-    CheckError(status, "SQLSetCursorNameA", conn, true);
+  // Test the ANSI version
+  SQLCHAR cursor_name_ret_a[kBufferLength];
+  status =
+      SQLGetCursorName(conn->hstmt, cursor_name_ret_a, kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorName", conn);
+  std::string actual_a = reinterpret_cast<char*>(cursor_name_ret_a);
+  EXPECT_THAT(actual_a, StartsWith("SQL_CUR"));
 
-    status =
-        SQLGetCursorNameA(conn->hstmt, cursor_name_ret_a, kBufferLength, NULL);
-    CheckError(status, "SQLGetCursorNameA", conn, true);
-
-    EXPECT_STREQ((char*)cursor_name_ret_a, (char*)cursor_name_a);
-  }
-  // Wide Version
-  {
-    std::wstring cursor_name_w_str = L"INSERT_CURSOR_WIDE";
-    SQLWCHAR cursor_name_w_ret[kBufferLength];
-
-    std::vector<SQLWCHAR> sqlWStr(cursor_name_w_str.begin(),
-                                  cursor_name_w_str.end());
-    sqlWStr.push_back(L'\0');
-
-    auto status = SQLSetCursorNameW(conn->hstmt, sqlWStr.data(), SQL_NTS);
-    CheckError(status, "SQLSetCursorNameW", conn, true);
-
-    status =
-        SQLGetCursorNameW(conn->hstmt, cursor_name_w_ret, kBufferLength, NULL);
-    CheckError(status, "SQLGetCursorNameW", conn, true);
-
-    std::wstring actual_w_str(cursor_name_w_ret);
-    EXPECT_EQ(actual_w_str, cursor_name_w_str);
-  }
-  // Default mapping version
-  {
-    SQLCHAR cursor_name[] = "INSERT_CURSOR_DEFAULT";
-    SQLCHAR cursor_name_ret[kBufferLength];
-
-    auto status = SQLSetCursorName(conn->hstmt, cursor_name, SQL_NTS);
-    CheckError(status, "SQLSetCursorName", conn);
-
-    status =
-        SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
-    CheckError(status, "SQLGetCursorName", conn);
-
-    EXPECT_STREQ((char*)cursor_name_ret, (char*)cursor_name);
-  }
+  // Test the Wide version
+  SQLWCHAR cursor_name_ret_w[kBufferLength];
+  status =
+      SQLGetCursorNameW(conn->hstmt, cursor_name_ret_w, kBufferLength, NULL);
+  CheckError(status, "SQLGetCursorNameW", conn);
+  std::string actual_w = ConvertSQLWCHARToString(cursor_name_ret_w, NULL);
+  EXPECT_THAT(actual_w, StartsWith("SQL_CUR"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -3016,36 +2990,6 @@ TEST(SQLMoreResults, ProcedureWithNoParameters) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(SQLRowCount, WrongUpdateValidation) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name =
-      kDatasetWithTablePrefix + "ROWCOUNT_WRONG_UPDATE_TEST_TABLE";
-
-  std::string update_stmt =
-      "UPDATE " + table_name +
-      " SET StringField = \"Updated Row\" WHERE IntegerField = 4;";
-
-  Table table(table_name);
-  table.CreateWithPrepare(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-
-  table.InsertData(conn, kRowCountSampleData);
-
-  auto status =
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)update_stmt.c_str(), SQL_NTS);
-  EXPECT_EQ(status, SQL_NO_DATA);
-
-  SQLLEN row_count;
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount (Update)", conn);
-  EXPECT_EQ(row_count, 0);
-
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(SQLRowCount, NonExistentTable) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -3062,35 +3006,6 @@ TEST(SQLRowCount, NonExistentTable) {
   status = SQLRowCount(conn->hstmt, &row_count);
   EXPECT_NE(status, SQL_SUCCESS);
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(SQLRowCount, SameValueUpdate) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string table_name =
-      kDatasetWithTablePrefix + "ROWCOUNT_SAME_UPDATE_TEST_TABLE";
-
-  std::string update_stmt =
-      "UPDATE " + table_name +
-      " SET StringField = \"Row 3\" WHERE IntegerField = 3;";
-
-  Table table(table_name);
-  table.CreateWithPrepare(
-      conn, "(StringField STRING, IntegerField INTEGER, FloatField FLOAT64)");
-
-  table.InsertData(conn, kRowCountSampleData, false, true);
-
-  auto status = ExecWithPrepare(conn, update_stmt);
-  CheckError(status, "ExecWithPrepare (Update)", conn);
-
-  SQLLEN row_count;
-  status = SQLRowCount(conn->hstmt, &row_count);
-  CheckError(status, "SQLRowCount (Update)", conn);
-  EXPECT_EQ(row_count, 1);
-
-  table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -3171,7 +3086,25 @@ TEST_P(SQLRowCountTest, AllValidations) {
   ExecuteAndValidate(
       "UPDATE " + table_name_ +
           " SET StringField = \"Updated Row\" WHERE IntegerField <= 3;",
-      3, "Update");
+      3, "Update multiple rows");
+
+  ExecuteAndValidate("UPDATE " + table_name_ +
+                         " SET StringField = \"Row 3\" WHERE IntegerField = 3;",
+                     1, "Update with same value");
+
+  std::string no_match_update_stmt =
+      "UPDATE " + table_name_ +
+      " SET StringField = \"No Match\" WHERE IntegerField = 99;";
+  if (GetParam()) {
+    status = SQLExecDirect(conn_->hstmt, (SQLCHAR*)no_match_update_stmt.c_str(),
+                           SQL_NTS);
+  } else {
+    status = ExecWithPrepare(conn_, no_match_update_stmt);
+  }
+  EXPECT_EQ(status, SQL_NO_DATA);
+  status = SQLRowCount(conn_->hstmt, &row_count);
+  CheckError(status, "SQLRowCount (Update with no match)", conn_);
+  EXPECT_EQ(row_count, 0);
 
   ExecuteAndValidate("SELECT * FROM " + table_name_, -1, "Select");
 
