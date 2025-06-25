@@ -3157,7 +3157,7 @@ class SQLRowCountTest : public ::testing::TestWithParam<bool> {
 
 INSTANTIATE_TEST_SUITE_P(WithOrWithoutExecDirect, SQLRowCountTest,
                          testing::Values(false, true));
-    
+
 TEST_P(SQLRowCountTest, AllValidations) {
   SQLLEN row_count;
   auto status = SQLRowCount(conn_->hstmt, &row_count);
@@ -3185,7 +3185,7 @@ TEST_P(SQLRowCountTest, AllValidations) {
 
   ExecuteAndValidate("DELETE FROM " + table_name_ + " WHERE IntegerField < 3;",
                      2, "Delete");
-}                         
+}
 
 TEST(SQLRowCount, Async_Execute_stillExecuting) {
   auto conn = std::make_shared<ODBCHandles>();
