@@ -264,7 +264,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
   get_query_results_request.set_timeout(timeout_ms);
 
   GetQueryResults get_query_results;
-  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(500), 2);
+  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
   auto start_time = std::chrono::system_clock::now();
 
   while (true) {
@@ -275,7 +275,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
                             "ms has expired";
       return StatusRecord{SQLStates::k_HYT00(), message};
     }
-    std::this_thread::sleep_for(backoff.OnCompletion());
+    std::this_thread::sleep_for(chrono_ms(200));
     StatusOr<GetQueryResults> get_query_results_partial =
         job_client.QueryResults(get_query_results_request, options);
 
@@ -287,6 +287,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     // job completion
     if (!get_query_results_partial->job_complete &&
         get_query_results_partial->rows.empty()) {
+      std::this_thread::sleep_for(backoff.OnCompletion());
       continue;
     }
     if (get_query_results.rows.empty()) {
