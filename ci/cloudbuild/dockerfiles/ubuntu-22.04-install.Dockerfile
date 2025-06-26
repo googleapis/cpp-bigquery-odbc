@@ -251,6 +251,7 @@ ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
 COPY ./gha/builds/lib/odbcinst.ini /opt/odbc-driver/odbcinst.ini
+COPY ./gha/builds/lib/lsan.supp /opt/odbc-driver/lsan.supp
 
 # glibc 2.17 or later
 RUN echo 'Installing glibc...'

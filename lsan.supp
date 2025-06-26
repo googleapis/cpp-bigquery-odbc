@@ -1,4 +1,0 @@
-leak:conv_text_m2d
-
-# Suppress iODBC SQLAllocConnect_Internal leak
-leak:SQLAllocConnect_Internal

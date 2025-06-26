@@ -38,8 +38,6 @@ mapfile -t cmake_args < <(cmake::common_args)
 
 # This is the name of DSN set in odbc.ini from simba.zip
 export ODBC_TESTS_DSN="SampleDSN"
-#export ASAN_OPTIONS=detect_leaks=0
-export LSAN_OPTIONS="suppressions=$(git rev-parse --show-toplevel)/lsan.supp:print_suppressions=0"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}
 
 io::run cmake "${cmake_args[@]}" \
