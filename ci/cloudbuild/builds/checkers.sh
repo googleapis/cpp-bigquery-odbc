@@ -88,7 +88,7 @@ time {
   #  $ typos --dump-config -  # dumps effective config to stdout
 
   # Run typo check with config to skip allowed words
-  typos --config ci/cloudbuild/builds/.typos.toml
+  typos
 }
 
 printf "%-50s" "Running check-include-guards:" >&2
