@@ -275,7 +275,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
                             "ms has expired";
       return StatusRecord{SQLStates::k_HYT00(), message};
     }
-    std::this_thread::sleep_for(backoff.OnCompletion());
+    std::this_thread::sleep_for(chrono_ms(100));
     StatusOr<GetQueryResults> get_query_results_partial =
         job_client.QueryResults(get_query_results_request, options);
 
@@ -287,6 +287,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     // job completion
     if (!get_query_results_partial->job_complete &&
         get_query_results_partial->rows.empty()) {
+      std::this_thread::sleep_for(backoff.OnCompletion());
       continue;
     }
     if (get_query_results.rows.empty()) {
