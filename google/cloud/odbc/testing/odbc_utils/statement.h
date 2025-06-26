@@ -30,9 +30,6 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
 void VerifyRowWiseResults(RowWiseResults const& actual_results,
                           StdRows const& expected_results);
 
-SQLRETURN InsertStatement(std::shared_ptr<ODBCHandles> conn,
-                          bool use_ansi = false);
-
 SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
                                            bool use_ansi = false);
 SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
