@@ -337,7 +337,7 @@ std::string FormatSqlChar(const SQLCHAR* p) {
     snprintf(buf, sizeof(buf), "\t\t%-s *, 0x0\n", "SQLCHAR");
   else
    // snprintf(buf, sizeof(buf), "\t\t%-s *, %s\n", "SQLCHAR", p);
-   snprintf(buf, sizeof(buf), "\t\t%-s *, %.1000s\n", "SQLCHAR", reinterpret_cast<const char*>(p));
+   snprintf(buf, sizeof(buf), "\t\t%-s *, %.10s\n", "SQLCHAR", reinterpret_cast<const char*>(p));
   return buf;
 }
 

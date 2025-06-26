@@ -154,7 +154,8 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLBindParameter", conn);
 
   // Add param 2 to insert query string
-  int int_field = 42;
+  // int int_field = 42;
+  static SQLSMALLINT int_field = 42;
   status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
                             SQL_INTEGER, 0, 0, &int_field, 0, NULL);
   CheckError(status, "SQLBindParameter", conn);
