@@ -264,7 +264,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
   get_query_results_request.set_timeout(timeout_ms);
 
   GetQueryResults get_query_results;
-  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(300), 2);
+  ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(500), 2);
   auto start_time = std::chrono::system_clock::now();
 
   while (true) {
