@@ -134,7 +134,7 @@ std::string ProcessTableTypes(std::string const& table_types_filter) {
 }
 
 std::vector<ColumnSchema> ExtractColumnSchema(
-    std::vector<std::pair<std::string, ColumnSchema>> const& schema) {
+    std::map<std::string, ColumnSchema> const& schema) {
   std::vector<ColumnSchema> col_schema;
   col_schema.reserve(schema.size());
   for (auto const& pair : schema) {

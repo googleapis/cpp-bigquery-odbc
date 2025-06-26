@@ -28,7 +28,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 // Map of ODBC data source columns names and number as per the design:
 // https://docs.google.com/document/d/1THL56A-lfcsW0XlZcrk1aMzl8sb56Oa0gszN7V_koXE/edit?pli=1&tab=t.0#bookmark=id.hzhd12b54a5r
-static std::vector<std::pair<std::string, ColumnSchema>> const kODBCColumnsMap =
+static std::map<std::string, ColumnSchema> const kODBCColumnsMap =
     {{"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
      {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
      {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
@@ -50,10 +50,9 @@ static std::vector<std::pair<std::string, ColumnSchema>> const kODBCColumnsMap =
 
 inline odbc_internal::StatusRecordOr<ColumnSchema> GetColumnSchema(
     std::string const& col_name) {
-  for (auto const& [name, schema] : kODBCColumnsMap) {
-    if (name == col_name) {
-      return schema;
-    }
+    auto map_item = kODBCColumnsMap.find(col_name);
+    if (map_item != kODBCColumnsMap.end()) {
+        return map_item->second;
   }
   return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                      "Invalid column name: " + col_name};

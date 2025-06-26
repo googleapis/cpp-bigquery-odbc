@@ -403,8 +403,6 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
                                              kMaterializedView, kSnapshot};
   EXPECT_EQ(expected_types.size(), results.size());
   for (auto const& result : results) {
-    std::cout << "debug: check 1 = " << result.table_type.value() << std::endl;
-    std::cout << "debug: check 2 = " << *expected_types.data() << std::endl;
     EXPECT_FALSE(result.project_name.has_value());
     EXPECT_FALSE(result.dataset_name.has_value());
     EXPECT_FALSE(result.table_name.has_value());
@@ -1726,7 +1724,7 @@ TEST(SQLColumns, Check_SQLColumnsDescriptors) {
   SQLSMALLINT col_count = 0;
   ASSERT_EQ(SQLGetDescField(hird, 0, SQL_DESC_COUNT, &col_count, 0, nullptr),
             SQL_SUCCESS);
-  // esixting driver has a extra metadata descriptor which is optional.
+  // existing driver has a extra metadata descriptor which is optional.
   if (kIsBqDriver) {
     EXPECT_EQ(col_count,
               static_cast<SQLSMALLINT>(kColumnMetaDataSchema.size()));
@@ -1741,7 +1739,7 @@ TEST(SQLColumns, Check_SQLColumnsDescriptors) {
         SQLGetDescField(hird, i, SQL_DESC_NAME, name, sizeof(name), nullptr),
         SQL_SUCCESS);
     std::string col_name = reinterpret_cast<char*>(name);
-    // esixting driver has a extra metadata descriptor which is optional.
+    // existing driver has a extra metadata descriptor which is optional.
     if (!kIsBqDriver && col_name == "USER_DATA_TYPE") {
       continue;
     }
