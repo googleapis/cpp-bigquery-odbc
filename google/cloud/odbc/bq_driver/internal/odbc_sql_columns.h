@@ -28,32 +28,31 @@
 namespace google::cloud::odbc_bq_driver_internal {
 // Map of ODBC data source columns names and number as per the design:
 // https://docs.google.com/document/d/1THL56A-lfcsW0XlZcrk1aMzl8sb56Oa0gszN7V_koXE/edit?pli=1&tab=t.0#bookmark=id.hzhd12b54a5r
-static std::vector<std::pair<std::string, ColumnSchema>> const kODBCColumnsMap =
-    {{"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
-     {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
-     {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
-     {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
-     {"DATA_TYPE", ColumnSchema{4, BQDataType::kInt64}},
-     {"TYPE_NAME", ColumnSchema{5, BQDataType::kString}},
-     {"COLUMN_SIZE", ColumnSchema{6, BQDataType::kInt64}},
-     {"BUFFER_LENGTH", ColumnSchema{7, BQDataType::kInt64}},
-     {"DECIMAL_DIGITS", ColumnSchema{8, BQDataType::kInt64}},
-     {"NUM_PREC_RADIX", ColumnSchema{9, BQDataType::kInt64}},
-     {"NULLABLE", ColumnSchema{10, BQDataType::kInt64}},
-     {"REMARKS", ColumnSchema{11, BQDataType::kString}},
-     {"COLUMN_DEF", ColumnSchema{12, BQDataType::kString}},
-     {"SQL_DATA_TYPE", ColumnSchema{13, BQDataType::kInt64}},
-     {"SQL_DATETIME_SUB", ColumnSchema{14, BQDataType::kInt64}},
-     {"CHAR_OCTET_LENGTH", ColumnSchema{15, BQDataType::kInt64}},
-     {"ORDINAL_POSITION", ColumnSchema{16, BQDataType::kInt64}},
-     {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}}};
+static std::map<std::string, ColumnSchema> const kODBCColumnsMap = {
+    {"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+    {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
+    {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
+    {"DATA_TYPE", ColumnSchema{4, BQDataType::kInt64}},
+    {"TYPE_NAME", ColumnSchema{5, BQDataType::kString}},
+    {"COLUMN_SIZE", ColumnSchema{6, BQDataType::kInt64}},
+    {"BUFFER_LENGTH", ColumnSchema{7, BQDataType::kInt64}},
+    {"DECIMAL_DIGITS", ColumnSchema{8, BQDataType::kInt64}},
+    {"NUM_PREC_RADIX", ColumnSchema{9, BQDataType::kInt64}},
+    {"NULLABLE", ColumnSchema{10, BQDataType::kInt64}},
+    {"REMARKS", ColumnSchema{11, BQDataType::kString}},
+    {"COLUMN_DEF", ColumnSchema{12, BQDataType::kString}},
+    {"SQL_DATA_TYPE", ColumnSchema{13, BQDataType::kInt64}},
+    {"SQL_DATETIME_SUB", ColumnSchema{14, BQDataType::kInt64}},
+    {"CHAR_OCTET_LENGTH", ColumnSchema{15, BQDataType::kInt64}},
+    {"ORDINAL_POSITION", ColumnSchema{16, BQDataType::kInt64}},
+    {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}}};
 
 inline odbc_internal::StatusRecordOr<ColumnSchema> GetColumnSchema(
     std::string const& col_name) {
-  for (auto const& [name, schema] : kODBCColumnsMap) {
-    if (name == col_name) {
-      return schema;
-    }
+  auto map_item = kODBCColumnsMap.find(col_name);
+  if (map_item != kODBCColumnsMap.end()) {
+    return map_item->second;
   }
   return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                      "Invalid column name: " + col_name};

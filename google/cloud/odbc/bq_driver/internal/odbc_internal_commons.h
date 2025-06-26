@@ -490,9 +490,9 @@ odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::TableSchema>
-ConvertResultToTableSchemas(
-    ResultSet const& result_set,
-    std::vector<std::pair<std::string, ColumnSchema>> const& metadata_schema);
+BuildTableSchemaFromRowSchema(
+    RowSchema& row_schema,
+    std::map<std::string, ColumnSchema> const& metadata_schema);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H

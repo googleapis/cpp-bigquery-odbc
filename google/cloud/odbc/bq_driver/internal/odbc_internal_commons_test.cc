@@ -1390,4 +1390,99 @@ TEST(EncryptPassword, DecryptionFailsForModifiedData) {
 }
 #endif  //_WIN32
 
+TEST(BuildTableSchemaFromRowSchema, Success_InputSortedByIndex) {
+  std::map<std::string, ColumnSchema> metadata = {
+      {"col_c", ColumnSchema{2, BQDataType::kString, false}},
+      {"col_a", ColumnSchema{0, BQDataType::kString, false}},
+      {"col_d", ColumnSchema{3, BQDataType::kInt64, false}},
+      {"col_b", ColumnSchema{1, BQDataType::kInt64, false}},
+  };
+
+  RowSchema row_schema = {
+      ColumnSchema{0, BQDataType::kInt64, false},
+      ColumnSchema{1, BQDataType::kString, false},
+      ColumnSchema{2, BQDataType::kString, false},
+      ColumnSchema{3, BQDataType::kInt64, false},
+  };
+
+  auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
+  ASSERT_TRUE(result.Ok());
+  auto const& schema = *result;
+  EXPECT_EQ(schema.fields[0].name, "col_a");
+  EXPECT_EQ(schema.fields[1].name, "col_b");
+  EXPECT_EQ(schema.fields[2].name, "col_c");
+  EXPECT_EQ(schema.fields[3].name, "col_d");
+}
+
+TEST(BuildTableSchemaFromRowSchema, RowSchemaIsEmpty) {
+  std::map<std::string, ColumnSchema> metadata = {
+      {"col_a", ColumnSchema{0, BQDataType::kString, false}},
+  };
+  RowSchema row_schema = {};  // empty
+
+  auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
+
+  ASSERT_FALSE(result.Ok());
+  EXPECT_EQ(result.GetStatusRecord().message,
+            "row schema should not be less than 0");
+}
+
+TEST(BuildTableSchemaFromRowSchema, Fail_ColIndexNotFound) {
+  std::map<std::string, ColumnSchema> metadata = {
+      {"col_a", ColumnSchema{0, BQDataType::kString, false}},
+  };
+
+  RowSchema row_schema = {
+      ColumnSchema{1, BQDataType::kInt64, false}  // col_index 1 not in metadata
+  };
+  auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
+
+  ASSERT_FALSE(result.Ok());
+  EXPECT_TRUE(result.GetStatusRecord().message.find(
+                  "No matching col_index found: 1") != std::string::npos);
+}
+
+TEST(BuildTableSchemaFromRowSchema, Success_CheckModeRepeated) {
+  std::map<std::string, ColumnSchema> metadata = {
+      {"col_a", ColumnSchema{0, BQDataType::kString, true}},
+  };
+
+  RowSchema row_schema = {ColumnSchema{0, BQDataType::kString, true}};
+
+  auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
+
+  ASSERT_TRUE(result.Ok());
+  auto const& schema = *result;
+  ASSERT_EQ(schema.fields.size(), 1);
+  EXPECT_EQ(schema.fields[0].name, "col_a");
+  EXPECT_EQ(schema.fields[0].mode, "REPEATED");
+}
+
+TEST(GetDataTypeInStr, GetValidType) {
+  std::string const f1 = "ARRAY";
+  std::string const f2 = "INT64";
+  std::string const f3 = "INTERVAL";
+  std::string const f4 = "BOOL";
+  std::string const f5 = "JSON";
+
+  auto first_result = GetDataTypeInStr(BQDataType::kArray);
+  auto second_result = GetDataTypeInStr(BQDataType::kInt64);
+  auto third_result = GetDataTypeInStr(BQDataType::kInterval);
+  auto fourth_result = GetDataTypeInStr(BQDataType::kBool);
+  auto fifth_result = GetDataTypeInStr(BQDataType::kJson);
+
+  EXPECT_EQ(*first_result, f1);
+  EXPECT_EQ(*second_result, f2);
+  EXPECT_EQ(*third_result, f3);
+  EXPECT_EQ(*fourth_result, f4);
+  EXPECT_EQ(*fifth_result, f5);
+}
+
+TEST(GetDataTypeInStr, InvalidDataType) {
+  auto invalid_type = static_cast<BQDataType>(999);
+  auto result = GetDataTypeInStr(invalid_type);
+
+  auto error_str = "Invalid BQ Data Type: 999";
+  EXPECT_EQ(error_str, result.GetStatusRecord().message);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

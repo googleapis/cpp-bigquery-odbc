@@ -799,21 +799,36 @@ StatusRecordOr<DSResults> FetchBQData(
   return results;
 }
 
-odbc_internal::StatusRecordOr<TableSchema> ConvertResultToTableSchemas(
-    ResultSet const& result_set,
-    std::vector<std::pair<std::string, ColumnSchema>> const& metadata_schema) {
-  if (result_set.row_schema.empty()) {
+odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
+    RowSchema& row_schema,
+    std::map<std::string, ColumnSchema> const& metadata_schema) {
+  if (row_schema.empty()) {
     return StatusRecord{SQLStates::k_HY000(),
                         "row schema should not be less than 0"};
   }
-  TableSchema schema;
-  for (int i = 0; i < result_set.row_schema.size(); ++i) {
-    auto const& row = result_set.row_schema[i];
-    auto const& [col_name, col_schema] = metadata_schema[i];
+  // we need to sort row_schema by col_index in ascending order.
+  std::sort(row_schema.begin(), row_schema.end(),
+            [](ColumnSchema const& a, ColumnSchema const& b) {
+              return a.col_index < b.col_index;
+            });
 
+  TableSchema schema;
+  for (auto& row : row_schema) {
     TableFieldSchema field;
-    if (row.col_index == col_schema.col_index) {
-      field.name = col_name;
+    // Find the matching column name in metadata_schema
+    bool is_col_found = false;
+    for (auto const& [col_name, col_schema] : metadata_schema) {
+      if (col_schema.col_index == row.col_index) {
+        field.name = col_name;
+        is_col_found = true;
+        break;
+      }
+    }
+
+    if (!is_col_found) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "No matching col_index found: " + std::to_string(row.col_index)};
     }
     auto result = GetDataTypeInStr(row.col_type);
     if (!result) {

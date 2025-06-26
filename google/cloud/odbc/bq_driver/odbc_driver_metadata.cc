@@ -431,7 +431,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
-  auto table_schema = ConvertResultToTableSchemas(result_set, kSchema);
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kSchema);
   if (!table_schema) {
     return LogAndReturnCode(handle, table_schema);
   }
@@ -557,8 +558,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  auto table_schema =
-      ConvertResultToTableSchemas(final_result_set, kODBCColumnsMap);
+  auto table_schema = BuildTableSchemaFromRowSchema(final_result_set.row_schema,
+                                                    kODBCColumnsMap);
   if (!table_schema) {
     return LogAndReturnCode(handle, table_schema);
   }
