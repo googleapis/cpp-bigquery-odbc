@@ -71,5 +71,8 @@ io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
 #io::run env -C cmake-out ctest "${ctest_args[@]}"
-io::run env -C cmake-out LSAN_OPTIONS="$LSAN_OPTIONS" ctest "${ctest_args[@]}"
+io::run env -C cmake-out \
+LSAN_OPTIONS="suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=1" \
+  ASAN_OPTIONS="verbosity=1" \
+   ctest "${ctest_args[@]}"
 
