@@ -70,4 +70,6 @@ io::run cmake -B "$BUILD_DIR" \
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
-io::run env -C cmake-out ctest "${ctest_args[@]}"
+#io::run env -C cmake-out ctest "${ctest_args[@]}"
+io::run env -C cmake-out LSAN_OPTIONS="$LSAN_OPTIONS" ctest "${ctest_args[@]}"
+
