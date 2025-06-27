@@ -243,8 +243,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       std::string dsn_name = dsn_value;
       if (hwnd_parent != NULL) {
         dsn_name = ShowFormAndReturnValues();
+        if (dsn_name.empty()) {
+          return FALSE;
+        }
       }
-
       Section section = CreateSectionFromForm();
 
       if (!SQLWriteDSNToIni(dsn_name.c_str(), lpsz_driver)) {

@@ -23,18 +23,19 @@ limitations under the License.
             <ComponentRef Id="DriverFilesComponent" />
             <ComponentRef Id="ODBCRegistrySettings" />
             <ComponentRef Id="InstallerIconComponent"/>
+            <ComponentRef Id="DeleteDSNScriptComponent" />
         </ComponentGroup>
-    <CustomAction Id="RemoveAllDriverDSNs"
-                  Directory="INSTALLFOLDER"
-                  ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$dsns = Get-OdbcDsn -DriverName '!(loc.DriverName)' -DsnType 'System'; foreach($dsn in $dsns) { Remove-OdbcDsn -Name $dsn.Name -DsnType 'System' -Confirm:$false; }&quot;"
-                  Return="ignore"
-                  Execute="deferred"
-                  Impersonate="no" />
 
-    <InstallExecuteSequence>
+<CustomAction Id="RemoveAllDriverDSNs"
+              Directory="AssetsFolder"
+              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1"
+              Execute="deferred"
+              Impersonate="no"
+              Return="ignore"/>
 
-    <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
-  </InstallExecuteSequence>
+<InstallExecuteSequence>
+  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+</InstallExecuteSequence>
         <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
 
             <!-- Combined Driver Files Component -->
@@ -56,6 +57,13 @@ limitations under the License.
                               Name="bq.ico"
                               Source="$(var.ProjectDir)\Assets\bq.ico"
                               KeyPath="yes" />
+                    </Component>
+
+                    <Component Id="DeleteDSNScriptComponent" Guid="*">
+                        <File Id="DeleteDSNScript"
+                            Name="delete_dsns_all_users.ps1"
+                            Source="$(var.ProjectDir)\Assets\delete_dsns_all_users.ps1"
+                            KeyPath="yes" />
                     </Component>
                 </Directory>
 
