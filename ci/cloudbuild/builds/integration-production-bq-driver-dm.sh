@@ -39,7 +39,7 @@ BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 #export ASAN_OPTIONS=detect_leaks=0
-export LSAN_OPTIONS="suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=0"
+
 ls -l /opt/odbc-driver/lsan.supp
 cat /opt/odbc-driver/lsan.supp
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
@@ -70,9 +70,4 @@ io::run cmake -B "$BUILD_DIR" \
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
-#io::run env -C cmake-out ctest "${ctest_args[@]}"
-io::run env -C cmake-out \
-LSAN_OPTIONS="suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=1" \
-  ASAN_OPTIONS="verbosity=1" \
-   ctest "${ctest_args[@]}"
-
+io::run env -C cmake-out ctest "${ctest_args[@]}"
