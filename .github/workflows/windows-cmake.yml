@@ -130,7 +130,6 @@ jobs:
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
         export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
-        export LSAN_OPTIONS="suppressions=ci/gha/builds/lib/lsan.supp:print_suppressions=0"
         if [ "${{ matrix.msvc }}" == "msvc-2022" ]; then
           ci/gha/builds/windows-cmake-integration.sh
         else

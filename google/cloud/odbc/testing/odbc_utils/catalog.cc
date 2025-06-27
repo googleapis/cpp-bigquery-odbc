@@ -556,7 +556,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   }
   for (int i = 0; i < res_cols; ++i) {
     if (i != 8 && catalog_result[i].target_value) {
-     // free(catalog_result[i].target_value);
+      // free(catalog_result[i].target_value);
       catalog_result[i].target_value = nullptr;
     }
   }
