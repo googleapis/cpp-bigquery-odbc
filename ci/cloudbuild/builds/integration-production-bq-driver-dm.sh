@@ -40,6 +40,8 @@ BUILD_DIR="/opt/odbc-driver"
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 #export ASAN_OPTIONS=detect_leaks=0
 export LSAN_OPTIONS="suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=0"
+ls -l /opt/odbc-driver/lsan.supp
+cat /opt/odbc-driver/lsan.supp
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
 # Check if unixODBC is installed
