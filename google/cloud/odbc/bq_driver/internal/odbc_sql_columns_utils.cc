@@ -96,6 +96,13 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.radix = 2;
       break;
     }
+    case BQDataType::kRange: {
+      fixed_column_metadata.precision = 256;
+      fixed_column_metadata.buf_len = 256, fixed_column_metadata.radix = 0;
+      fixed_column_metadata.scale = 0;
+      fixed_column_metadata.char_octet_len = 256;
+      break;
+    }
     default: {
       return StatusRecord{SQLStates::k_HY000(),
                           "Unsupported BQ Data Type: " + *ds_type_status};
