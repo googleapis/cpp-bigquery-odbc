@@ -39,7 +39,7 @@ BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 #export ASAN_OPTIONS=detect_leaks=0
-export LSAN_OPTIONS=se_tls=0
+export LSAN_OPTIONS=use_tls=0
 ls -l /opt/odbc-driver/lsan.supp
 cat /opt/odbc-driver/lsan.supp
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
