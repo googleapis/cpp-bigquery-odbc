@@ -1,4 +1,4 @@
 leak:conv_text_m2d
-SQLAllocStmt_Internalleak:grpc_core::RegisteredCall
+leak:grpc_core::RegisteredCall
 leak:ExponentialBackoffPolicy::clone
 leak:__interceptor_malloc
