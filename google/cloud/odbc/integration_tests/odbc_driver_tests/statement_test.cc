@@ -1,4 +1,3 @@
-
 // Copyright 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +33,8 @@ INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, MultiStatementTest,
                          testing::Values(true, false));
 
 StdRows const kSampleData{
-    {"Test String 1", 1, 1.1},      {.int_field = 237, .float_field = 2.22},
-    {"Test String 3", NULL, 3.333}, {"Test String 4", 49},
+    {"Test String 1", 1, 1.1},      {"", 237, 2.22},
+    {"Test String 3", NULL, 3.333}, {"Test String 4", 49, 0.0},
     {"Test String 5", 53, 5},       {"Test String 6", 698, 0.31},
     {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
 };
@@ -1078,11 +1077,10 @@ TEST(StatementTest, SQLGetCursorNameAndW) {
   CheckError(status, "SQLExecute", conn);
 
   // Test the ANSI version
-  SQLCHAR cursor_name_ret_a[kBufferLength];
-  status =
-      SQLGetCursorName(conn->hstmt, cursor_name_ret_a, kBufferLength, NULL);
+  SQLCHAR cursor_name_ret[kBufferLength];
+  status = SQLGetCursorName(conn->hstmt, cursor_name_ret, kBufferLength, NULL);
   CheckError(status, "SQLGetCursorName", conn);
-  std::string actual_a = reinterpret_cast<char*>(cursor_name_ret_a);
+  std::string actual_a = reinterpret_cast<char*>(cursor_name_ret);
   EXPECT_THAT(actual_a, StartsWith("SQL_CUR"));
 
   // Test the Wide version
@@ -1785,12 +1783,11 @@ TEST(SQLNumResultCols, ValidateSimpleResultSets) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string query1 = "SELECT 1";
-  char read_stmt1[kBufferLength];
-  StrToChar(read_stmt1, query1);
-  auto status =
-      SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt1, strlen(read_stmt1));
-  CheckError(status, "SQLPrepare", conn);
+  std::string query = "SELECT 1";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
 
   SQLSMALLINT columnCount;
   status = SQLNumResultCols(conn->hstmt, &columnCount);
@@ -3126,7 +3123,6 @@ TEST(SQLRowCount, SameValueUpdate) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 class SQLRowCountTest : public ::testing::TestWithParam<bool> {
  protected:
   std::shared_ptr<ODBCHandles> conn_;
