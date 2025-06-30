@@ -122,7 +122,12 @@ std::vector<StrBasicTestStruct> const kConversionFromStrTestData{
     {SQL_C_INTERVAL_SECOND, "30", SQL_SUCCESS},
     {SQL_C_INTERVAL_MONTH, "7", SQL_SUCCESS},
     {SQL_C_INTERVAL_YEAR, "2", SQL_SUCCESS},
-    {SQL_C_INTERVAL_YEAR_TO_MONTH, "3-5", SQL_SUCCESS}};
+    {SQL_C_INTERVAL_YEAR_TO_MONTH, "3-5", SQL_SUCCESS},
+    {SQL_C_TINYINT, "120", SQL_SUCCESS},
+    {SQL_C_NUMERIC, "-123456789", SQL_SUCCESS},
+    {SQL_C_NUMERIC, "123456789", SQL_SUCCESS},
+    {SQL_C_LONG, "-2147483647", SQL_SUCCESS},
+    {SQL_C_SHORT, "32767", SQL_SUCCESS}};
 
 std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_NUMERIC, "1234567891234567891", SQL_SUCCESS,
@@ -145,6 +150,9 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
      SQL_SUCCESS},  // Existing Driver returns "123.000000000" here
     {SQL_C_WCHAR, "1234567891234567891",
      SQL_SUCCESS},  // existing driver returns "1234567891234567891.000000000"
+    {SQL_C_BINARY, "-2147483648", SQL_SUCCESS},
+    {SQL_C_BINARY, "2147483647",
+     SQL_SUCCESS},  // existing driver always returns -9
 #endif              // BQ_DRIVER_INTEGRATION_TESTS
 
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
@@ -198,7 +206,20 @@ std::vector<NumericBasicTestStruct> const kConversionFromNumericTestData{
     {SQL_C_SHORT, "-32768", SQL_SUCCESS},
     {SQL_C_LONG, "2147483647", SQL_SUCCESS},
     {SQL_C_LONG, "-2147483648", SQL_SUCCESS},
-};
+    {SQL_C_BINARY, "-9", SQL_SUCCESS},
+    {SQL_C_INTERVAL_MONTH, "12", SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR, "2", SQL_SUCCESS},
+    {SQL_C_INTERVAL_DAY, "30", SQL_SUCCESS},
+    {SQL_C_INTERVAL_HOUR, "12", SQL_SUCCESS},
+    {SQL_C_INTERVAL_MINUTE, "59", SQL_SUCCESS},
+    {SQL_C_INTERVAL_SECOND, "59", SQL_SUCCESS},
+    {SQL_C_INTERVAL_YEAR_TO_MONTH, "14", SQL_ERROR},
+    {SQL_C_INTERVAL_DAY_TO_HOUR, "49", SQL_ERROR},
+    {SQL_C_INTERVAL_DAY_TO_MINUTE, "3001", SQL_ERROR},
+    {SQL_C_INTERVAL_DAY_TO_SECOND, "90061", SQL_ERROR},
+    {SQL_C_INTERVAL_HOUR_TO_MINUTE, "131", SQL_ERROR},
+    {SQL_C_INTERVAL_HOUR_TO_SECOND, "3671", SQL_ERROR},
+    {SQL_C_INTERVAL_MINUTE_TO_SECOND, "121", SQL_ERROR}};
 
 std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
@@ -511,7 +532,6 @@ void TestTranslationsFromNumeric(
                                      expected.value.end());
           expected_valw.erase(expected_valw.find_last_not_of(L'\0') + 1);
           EXPECT_EQ(returned_valW, expected_valw);
-          // EXPECT_EQ(returned_val, expected.value);
           break;
         }
         case SQL_C_CHAR: {
@@ -593,6 +613,61 @@ void TestTranslationsFromNumeric(
         case SQL_C_LONG: {
           SQLINTEGER* returned_val = (SQLINTEGER*)data;
           EXPECT_EQ(*returned_val, std::stol(expected.value));
+          break;
+        }
+        case SQL_C_BINARY: {
+          auto const* bytes = reinterpret_cast<uint8_t const*>(data);
+          int32_t decoded_val = 0;
+          size_t read_len = std::min<SQLLEN>(4, strlen_or_ind);
+          for (size_t i = 0; i < read_len; ++i) {
+            decoded_val |= static_cast<int32_t>(bytes[i]) << (8 * i);
+          }
+          if (read_len < 4 && (bytes[read_len - 1] & 0x80)) {
+            decoded_val |= -1 << (8 * read_len);
+          }
+          std::string returned_str = std::to_string(decoded_val);
+          EXPECT_EQ(returned_str, expected.value);
+          break;
+        }
+        case SQL_C_INTERVAL_MONTH: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.year_month.month,
+                    std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_INTERVAL_YEAR: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.year_month.year,
+                    std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_INTERVAL_DAY: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.day_second.day, std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_INTERVAL_HOUR: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.day_second.hour,
+                    std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_INTERVAL_MINUTE: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.day_second.minute,
+                    std::stoi(expected.value));
+          break;
+        }
+        case SQL_C_INTERVAL_SECOND: {
+          SQL_INTERVAL_STRUCT* interval =
+              reinterpret_cast<SQL_INTERVAL_STRUCT*>(data);
+          EXPECT_EQ(interval->intval.day_second.second,
+                    std::stoi(expected.value));
           break;
         }
         default: {
@@ -804,6 +879,18 @@ void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
               sscanf(expected.value.c_str(), "%d:%d", &m, &s);
               EXPECT_EQ(returned_val->intval.day_second.minute, m);
               EXPECT_EQ(returned_val->intval.day_second.second, s);
+            } else if (expected.target_c_type == SQL_C_NUMERIC) {
+              SQL_NUMERIC_STRUCT returned_val = *(SQL_NUMERIC_STRUCT*)data;
+              EXPECT_EQ(SQLNumericToString(returned_val), expected.value);
+            } else if (expected.target_c_type == SQL_C_LONG) {
+              SQLINTEGER returned_val = *reinterpret_cast<SQLINTEGER*>(data);
+              EXPECT_EQ(std::to_string(returned_val), expected.value);
+            } else if (expected.target_c_type == SQL_C_SHORT) {
+              SQLSMALLINT returned_val = *reinterpret_cast<SQLSMALLINT*>(data);
+              EXPECT_EQ(std::to_string(returned_val), expected.value);
+            } else if (expected.target_c_type == SQL_C_TINYINT) {
+              SQLCHAR returned_val = *reinterpret_cast<SQLCHAR*>(data);
+              EXPECT_EQ(std::to_string(returned_val), expected.value);
             }
             row_count++;
           }

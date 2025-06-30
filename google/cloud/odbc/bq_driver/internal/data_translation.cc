@@ -144,8 +144,101 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                             "Invalid character value for cast"};
       }
     }
-  }
+    case SQL_C_BINARY: {
+      auto val = static_cast<int32_t>(numeric_no);
 
+      // Determine the minimum number of bytes required to represent `val` in
+      // binary. This is based on signed integer value ranges:
+      size_t byte_count = 1;
+      if (val >= -128 && val <= 127) {
+        byte_count = 1;  // Fits in 1 byte (int8_t)
+      } else if (val >= -32768 && val <= 32767) {
+        byte_count = 2;  // Fits in 2 bytes (int16_t)
+      } else if (val >= -8388608 && val <= 8388607) {
+        byte_count = 3;  // Fits in 3 bytes (24-bit signed)
+      } else {
+        byte_count = 4;  // Fits in 4 bytes (int32_t)
+      }
+
+      // Check if the destination buffer is large enough to hold the binary
+      // data.
+      if (dest_data.buflen < static_cast<SQLLEN>(byte_count)) {
+        return StatusRecord{SQLStates::k_22003(),
+                            "Buffer too small for binary data"};
+      }
+
+      // Write the value to the buffer in little-endian order (least significant
+      // byte first).
+      auto* out = reinterpret_cast<uint8_t*>(dest_data.buf);
+      for (size_t i = 0; i < byte_count; ++i) {
+        out[i] = static_cast<uint8_t>((val >> (8 * i)) & 0xFF);
+      }
+
+      // Set the number of bytes written if result_len pointer is provided.
+      if (dest_data.result_len) {
+        *dest_data.result_len = static_cast<SQLLEN>(byte_count);
+      }
+
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_YEAR: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.year_month.year = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_MONTH: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.year_month.month = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_DAY: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.day_second.day = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_HOUR: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.day_second.hour = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_MINUTE: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.day_second.minute = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+
+    case SQL_C_INTERVAL_SECOND: {
+      auto* interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_data.buf);
+      interval->intval.day_second.second = static_cast<SQLUINTEGER>(numeric_no);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_INTERVAL_STRUCT);
+      }
+      return StatusRecord::Ok();
+    }
+    default: {
+      return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+    }
+  }
   return status_record;
 }
 
@@ -366,21 +459,21 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     return StatusRecord{SQLStates::k_22003(), "Invalid timestamp format"};
   }
 
-  if (dest_type == SQL_C_STINYINT) {
-    auto* dest_val = reinterpret_cast<int8_t*>(dest_buf);
-    *dest_val = static_cast<int8_t>(std::stoi(src_str));
+  if (dest_type == SQL_C_STINYINT || dest_type == SQL_C_TINYINT) {
+    auto* dest_val = reinterpret_cast<SQLSCHAR*>(dest_buf);
+    *dest_val = static_cast<SQLSCHAR>(std::stoi(src_str));
     if (res_len) {
-      *res_len = sizeof(int8_t);
+      *res_len = sizeof(SQLSCHAR);
       return StatusRecord::Ok();
     }
     return StatusRecord{SQLStates::k_22003(), "Invalid tinyint value"};
   }
 
   if (dest_type == SQL_C_UTINYINT) {
-    auto* dest_val = reinterpret_cast<uint8_t*>(dest_buf);
-    *dest_val = static_cast<uint8_t>(std::stoul(src_str));
+    auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
+    *dest_val = static_cast<SQLCHAR>(std::stoul(src_str));
     if (res_len) {
-      *res_len = sizeof(uint8_t);
+      *res_len = sizeof(SQLCHAR);
       return StatusRecord::Ok();
     }
     return StatusRecord{SQLStates::k_22003(), "Invalid unsigned tinyint value"};
@@ -445,6 +538,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_22003(),
                           "Invalid unsigned bigint value"};
     }
+    case SQL_C_SHORT:
     case SQL_C_SSHORT: {
       auto* dest_val = reinterpret_cast<SQLSMALLINT*>(dest_buf);
       StatusRecord status_record =
@@ -473,6 +567,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       }
       return status_record;
     }
+    case SQL_C_LONG:
     case SQL_C_SLONG: {
       auto* dest_val = reinterpret_cast<SQLINTEGER*>(dest_buf);
       StatusRecord status_record =
@@ -517,6 +612,19 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         *res_len = static_cast<SQLLEN>(src_str.size());
       }
       return StatusRecord::Ok();
+    }
+    case SQL_C_NUMERIC: {
+      SQL_NUMERIC_STRUCT numst;
+      auto status_record = GetNumericDetailsFromStr(src_str, numst);
+      if (status_record.sql_state == SQLStates::k_22003()) {
+        return status_record;
+      }
+      auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_data.buf);
+      *dest_val = numst;
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_NUMERIC_STRUCT);
+      }
+      return status_record;
     }
     default: {
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
