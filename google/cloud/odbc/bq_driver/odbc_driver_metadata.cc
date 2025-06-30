@@ -621,13 +621,15 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                              "Connection to the data source is broken"});
   }
 
+  std::string catalog_str;
   if (catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
                              sizeof(current_catalog), &catalog_len);
-    catalog_name = current_catalog;
-    catalog_name_len = catalog_len;
+    catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+    catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
+    catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
   }
 
   // Validate input parameters
@@ -718,13 +720,15 @@ SQLRETURN SQLProcedureColumnsInternal(
                              "Connection to the data source is broken"});
   }
 
+  std::string catalog_str;
   if (catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
                              sizeof(current_catalog), &catalog_len);
-    catalog_name = current_catalog;
-    catalog_name_len = catalog_len;
+    catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+    catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
+    catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
   }
 
   auto input_param_status = ValidateProcedureColumnParameters(
