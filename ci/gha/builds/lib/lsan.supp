@@ -1,8 +1,3 @@
 leak:conv_text_m2d
 leak:__interceptor_malloc
-leak:operator new(unsigned long)
-fun:_Znwm
-fun:_MakeUniq<google::cloud::v2_34::internal::ExponentialBackoffPolicy>
-fun:google::cloud::v2_34::internal::ExponentialBackoffPolicy::clone
-fun:google::cloud::bigquery_storage_v1_internal::v2_34::BigQueryReadDefaultOptions
-
+leak:__interceptor_calloc
