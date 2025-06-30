@@ -1,2 +1,3 @@
 leak:conv_text_m2d
 leak:SQLAllocConnect_Internal
+leak:__interceptor_malloc
