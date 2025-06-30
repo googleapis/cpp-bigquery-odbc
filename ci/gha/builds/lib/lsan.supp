@@ -1,4 +1,2 @@
 leak:conv_text_m2d
-leak:grpc_core::RegisteredCall
-leak:ExponentialBackoffPolicy::clone
-leak:__interceptor_malloc
+leak:google::cloud::serviceusage_v1::v2_34::MakeServiceUsageConnection
