@@ -1,3 +1,10 @@
 leak:conv_text_m2d
-leak:google::cloud::serviceusage_v1::v2_34::MakeServiceUsageConnection
 leak:__interceptor_malloc
+# Suppress GRPC internal RegisteredCall leak
+leak:grpc_core::RegisteredCall
+
+# Suppress ExponentialBackoffPolicy leak
+leak:google::cloud::v2_34::internal::ExponentialBackoffPolicy::clone
+
+# Suppress ODBCBQClient creation leak
+leak:google::cloud::odbc_bigquery_client_interface::ODBCBQClient::CreateBQClient
