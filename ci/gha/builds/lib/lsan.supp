@@ -1,2 +1,3 @@
 leak:conv_text_m2d
 leak:google::cloud::serviceusage_v1::v2_34::MakeServiceUsageConnection
+leak:__interceptor_malloc
