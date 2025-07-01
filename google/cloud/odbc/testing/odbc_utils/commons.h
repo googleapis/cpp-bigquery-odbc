@@ -165,11 +165,22 @@ struct StructBasicTestStruct {
   SQLBIGINT int_value;
   SQLDOUBLE double_value;
   std::string string_value;
+  std::wstring wstring_value;
   std::optional<std::vector<int>> int_array;
-  SQL_TIMESTAMP_STRUCT timestamp_value;            // TIMESTAMP
-  SQL_DATE_STRUCT date_value;                      // DATE
-  SQL_TIME_STRUCT time_value;                      
-  SQLCHAR bit_value; 
+  std::optional<std::vector<SQLDOUBLE>> double_array;
+  std::optional<std::vector<std::string>> string_array;
+  std::optional<std::vector<SQLREAL>> float_array;
+  std::optional<std::vector<SQL_TIMESTAMP_STRUCT>> timestamp_array;
+  std::optional<std::vector<SQL_DATE_STRUCT>> date_array;
+  SQL_TIMESTAMP_STRUCT timestamp;
+  SQL_INTERVAL_STRUCT interval_year_month;
+  SQL_DATE_STRUCT date;
+  SQL_TIME_STRUCT time;
+  SQLCHAR bit_value;
+  std::optional<std::vector<StructBasicTestStruct>> array_of_struct;
+  std::optional<StructBasicTestStruct> nested_struct;
+  std::vector<SQLCHAR> binary_data;
+  nlohmann::json json_field;
 };
 
 struct ArrayBasicTestStruct {
