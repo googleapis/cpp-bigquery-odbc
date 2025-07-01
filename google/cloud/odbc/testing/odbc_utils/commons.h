@@ -166,7 +166,7 @@ struct StructBasicTestStruct {
   SQLDOUBLE double_value;
   std::string string_value;
   std::wstring wstring_value;
-  std::optional<std::vector<int>> int_array;
+  std::optional<std::vector<SQLINTEGER>> int_array;
   std::optional<std::vector<SQLDOUBLE>> double_array;
   std::optional<std::vector<std::string>> string_array;
   std::optional<std::vector<SQLREAL>> float_array;
@@ -176,7 +176,6 @@ struct StructBasicTestStruct {
   SQL_INTERVAL_STRUCT interval_year_month;
   SQL_DATE_STRUCT date;
   SQL_TIME_STRUCT time;
-  SQLCHAR bit_value;
   std::vector<SQLCHAR> binary_data;
   nlohmann::json json_field;
 };
