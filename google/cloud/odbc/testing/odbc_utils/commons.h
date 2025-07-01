@@ -166,6 +166,10 @@ struct StructBasicTestStruct {
   SQLDOUBLE double_value;
   std::string string_value;
   std::optional<std::vector<int>> int_array;
+  SQL_TIMESTAMP_STRUCT timestamp_value;            // TIMESTAMP
+  SQL_DATE_STRUCT date_value;                      // DATE
+  SQL_TIME_STRUCT time_value;                      
+  SQLCHAR bit_value; 
 };
 
 struct ArrayBasicTestStruct {
