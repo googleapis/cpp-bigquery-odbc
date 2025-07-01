@@ -51,6 +51,7 @@ TEST(DiagnosticsTest, SQLGetDiagRec) {
         ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DiagnosticsTest, SQLGetDiagRec_ANSI) {
@@ -88,6 +89,7 @@ TEST(DiagnosticsTest, SQLGetDiagRec_ANSI) {
         ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DiagnosticsTest, SQLGetDiagField) {
@@ -130,6 +132,7 @@ TEST(DiagnosticsTest, SQLGetDiagField) {
         ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DiagnosticsTest, SQLGetDiagFieldA) {
@@ -173,6 +176,7 @@ TEST(DiagnosticsTest, SQLGetDiagFieldA) {
         ::testing::ContainsRegex("\\[\\w+\\]\\[ODBC\\] \\(\\w+\\) SQLGetInfo"));
   }
   EXPECT_EQ(actual_message.size(), string_length_ptr);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
