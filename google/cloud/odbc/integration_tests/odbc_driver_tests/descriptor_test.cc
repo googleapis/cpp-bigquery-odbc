@@ -379,6 +379,7 @@ TEST(SQLGetDescField, Fail_StatementIsNotPrepared) {
                            &case_sensitive, 0, NULL);
 
   EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetDescFieldANSI, Field_SQL_DESC_ALLOC_TYPE) {

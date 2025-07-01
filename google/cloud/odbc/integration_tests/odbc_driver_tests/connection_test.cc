@@ -975,7 +975,6 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
     EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
     EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
