@@ -177,8 +177,6 @@ struct StructBasicTestStruct {
   SQL_DATE_STRUCT date;
   SQL_TIME_STRUCT time;
   SQLCHAR bit_value;
-  std::optional<std::vector<StructBasicTestStruct>> array_of_struct;
-  std::optional<StructBasicTestStruct> nested_struct;
   std::vector<SQLCHAR> binary_data;
   nlohmann::json json_field;
 };
