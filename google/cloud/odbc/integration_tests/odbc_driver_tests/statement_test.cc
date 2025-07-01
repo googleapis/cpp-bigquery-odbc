@@ -3248,6 +3248,7 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
     } else {
       ASSERT_EQ(SQL_SUCCESS,
                 GetCancelErrorDetails("SQLExecute", conn->hstmt, error));
+                EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
       return;
     }
   }

@@ -1790,6 +1790,7 @@ TEST(SQLTables, Check_SQLTablesDescriptors) {
                         kTableMetaDataSchema.end(), col_name);
     EXPECT_EQ(col_name, *it);
   }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
