@@ -39,7 +39,7 @@ BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 #export ASAN_OPTIONS=detect_leaks=0
-export LSAN_OPTIONS="suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=1"
+export LSAN_OPTIONS="use_tls=0;suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=1"
 
 ls -l /opt/odbc-driver/lsan.supp
 cat /opt/odbc-driver/lsan.supp
