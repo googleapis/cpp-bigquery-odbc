@@ -1853,10 +1853,26 @@ TEST(DataTranslationTest, From_SQL_Struct_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  table.CreateWithPrepare(
+table.CreateWithPrepare(
       conn,
-      "(index INTEGER, StructField STRUCT<int_value BIGINT, double_value "
-      "FLOAT64, string_value STRING, array_value ARRAY<INT64>>)");
+      "(index INTEGER, StructField STRUCT<"
+      "int_value BIGINT, "
+      "double_value FLOAT64, "
+      "string_value STRING, "
+      "wstring_value STRING, " // Corresponds to std::wstring
+      "int_array ARRAY<INT64>, "
+      "double_array ARRAY<FLOAT64>, "
+      "string_array ARRAY<STRING>, "
+      "float_array ARRAY<FLOAT64>, " // Corresponds to SQLREAL (use FLOAT64 in BQ)
+      "timestamp_array ARRAY<TIMESTAMP>, "
+      "date_array ARRAY<DATE>, "
+      "timestamp TIMESTAMP, "
+      "interval_year_month INTERVAL, "
+      "date DATE, "
+      "time TIME, "
+      "binary_data BYTES, "
+      "json_field JSON"
+      ">)");
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
