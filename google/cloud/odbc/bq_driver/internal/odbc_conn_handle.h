@@ -51,6 +51,7 @@ struct Dsn {
   std::string list_projects_parent;
   std::string kms_key_name;
   std::string pem_file;
+  std::string use_system_trusted_store;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.

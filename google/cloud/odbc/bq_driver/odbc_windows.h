@@ -58,6 +58,7 @@ std::string const proxy_port_key = "ProxyPort";
 std::string const proxy_username_key = "ProxyUid";
 std::string const proxy_pwd_key = "ProxyPwd";
 std::string const proxy_pwd_enc_key = "ProxyPwd_Enc";
+std::string const system_trust_store_key = "UseSystemTrustStore";
 
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H

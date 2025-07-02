@@ -146,6 +146,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
   std::string encryption_type_value =
       GetValueOrDefault(section, encryption_type);
+  std::string use_system_trust_store =
+      GetValueOrDefault(section, system_trust_store_key);
 
   DriverForm form;
   AdvanceOptions advance_form;
@@ -185,6 +187,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {proxy_username_key, proxy_username},
         {proxy_pwd_key, proxy_pwd},
         {proxy_pwd_enc_key, proxy_pwd_enc},
+        {system_trust_store_key, use_system_trust_store},
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
@@ -235,6 +238,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     proxy_port = proxy_form.GetProxyPort();
     proxy_username = proxy_form.GetProxyUsername();
     proxy_pwd_enc = EncryptPassword(proxy_form.GetProxyPass());
+    use_system_trust_store = form.GetTrustedCertsCheck();
     return dsn_name;
   };
 

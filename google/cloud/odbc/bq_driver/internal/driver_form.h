@@ -76,6 +76,9 @@ class DriverForm {
   inline std::string const& GetTrustedCerts() const { return trusted_cert_; }
   inline std::string const& GetMinTls() const { return min_tls_version_; }
   inline std::string const& GetDescription() const { return description_; }
+  inline std::string const& GetTrustedCertsCheck() const {
+    return trusted_store_check_;
+  }
   inline std::string const& GetLogLevel() const {
     return LogTraceDialog::log_level_;
   }
@@ -108,6 +111,7 @@ class DriverForm {
   static std::string trusted_cert_;
   static std::string description_;
   static Section last_saved_values_;
+  static std::string trusted_store_check_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                      LPARAM l_param);
   HWND m_hwnd;

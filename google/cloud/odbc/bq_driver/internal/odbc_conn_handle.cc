@@ -118,9 +118,17 @@ void ConnectionHandle::SetUp(Section& dsn_section,
     dsn_.connection_properties = *parse_result;
   }
 
+#ifdef _WIN32
+  dsn_.use_system_trusted_store = dsn_section["USESYSTEMTRUSTSTORE"];
+  if (dsn_.use_system_trusted_store != "1") {
+    dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
+  } else {
+    dsn_.pem_file = "";
+  }
+#else
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
+#endif
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
-
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
   std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];

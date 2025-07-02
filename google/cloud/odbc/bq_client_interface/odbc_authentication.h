@@ -45,6 +45,7 @@ enum class OauthMechanism {
 };
 
 struct SslCredentials {
+  std::string use_system_certs;
   std::string pem_root_certs;
 };
 

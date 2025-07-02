@@ -85,6 +85,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.proxy_options.username = dsn.proxy_options.username;
   auth.oauth.proxy_options.password = dsn.proxy_options.password;
   auth.oauth.kms_key_name = dsn.kms_key_name;
+  auth.oauth.ssl_credentials.use_system_certs = dsn.use_system_trusted_store;
   return auth;
 }
 

@@ -59,6 +59,9 @@ std::string const kDescription = "Description";
 std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 std::string const kRefreshToken = "RefreshToken";
+std::string const kSystemTrustStore = "UseSystemTrustStore";
+
+std::string DriverForm::trusted_store_check_;
 
 // Control dimensions and positions
 int const kBtnWidth = 68;
@@ -296,6 +299,7 @@ void DriverForm::SetValues(Section const& attributes_map) {
   description_ = GetValueOrDefault(attributes_map, kDescription);
   min_tls_version_ = GetValueOrDefault(attributes_map, kMinTlsVersion);
   trusted_cert_ = GetValueOrDefault(attributes_map, kTrustedCerts);
+  trusted_store_check_ = GetValueOrDefault(attributes_map, kSystemTrustStore);
 
   std::string oauth_value = GetValueOrDefault(attributes_map, kOAuthMechanism);
   if (oauth_value == std::to_string(static_cast<int>(
@@ -452,6 +456,13 @@ void DriverForm::InitControls() {
       CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 350,
                    kBtnWidth + 8, kBtnHeight, kIdcTrustedCertBrowseButton);
   SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  if (trusted_store_check_ == "1") {
+    CheckDlgButton(m_hwnd, kIdcSystemTrustStoreCheckbox, true);
+    EnableWindow(h_trusted_cert_edit, false);
+    EnableWindow(h_trusted_cert_browse_button, false);
+  }
+
   HWND h_catalog_header =
       CreateLabel(m_hwnd, "Project:", kAxisX, kAxisY + 385, kLabelWidth,
                   kLabelHeight, WS_VISIBLE | SS_LEFT);
@@ -917,6 +928,11 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                         sizeof(description_buffer));
           description_ = description_buffer;
 
+          trusted_store_check_ =
+              (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+               BST_CHECKED)
+                  ? "1"
+                  : "0";
           DestroyWindow(hwnd);  // Close the window
           break;
         }
@@ -1073,6 +1089,17 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           adv_form.SetValues(last_saved_values_);
           proxy_form.SetValues(last_saved_values_);
           DestroyWindow(hwnd);
+        }
+        case kIdcSystemTrustStoreCheckbox: {
+          int wm_event = HIWORD(w_param);
+          if (wm_event == BN_CLICKED) {
+            BOOL is_checked =
+                (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+                 BST_CHECKED);
+            EnableWindow(GetDlgItem(hwnd, kIdcTrustedCertEdit), !is_checked);
+            EnableWindow(GetDlgItem(hwnd, kIdcTrustedCertBrowseButton),
+                         !is_checked);
+          }
         }
       }
       break;

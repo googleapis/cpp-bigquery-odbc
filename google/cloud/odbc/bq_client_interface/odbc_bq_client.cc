@@ -110,12 +110,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   CompletionQueue cq;
   options.set<GrpcCompletionQueueOption>(cq);
 
+  grpc::SslCredentialsOptions ssl_opts;
   if (!pem_file.empty()) {
-    grpc::SslCredentialsOptions ssl_opts;
     ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
+  auto ssl_creds = grpc::SslCredentials(ssl_opts);
+  options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(options));
 
