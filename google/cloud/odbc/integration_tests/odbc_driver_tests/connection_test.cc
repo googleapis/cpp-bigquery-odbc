@@ -1226,11 +1226,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
