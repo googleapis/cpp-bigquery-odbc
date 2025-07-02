@@ -1092,13 +1092,16 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
+EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
+EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
+conn->hdbc = nullptr;
+conn->henv = nullptr;
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
