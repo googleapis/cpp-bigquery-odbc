@@ -1092,11 +1092,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
@@ -1169,11 +1165,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
@@ -1285,11 +1277,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
@@ -1335,11 +1323,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
         conn->hdbc, "HY000", 11590,
         "Connection Error: Connection Attribute Catalog already found!");
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DriverInfoTest, SQLGetInfo) {
