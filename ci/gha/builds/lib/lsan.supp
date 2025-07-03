@@ -1,2 +1,3 @@
 leak:conv_text_m2d
 leak:__interceptor_malloc
+leak:__interceptor_calloc
