@@ -1097,15 +1097,6 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
-if (conn->hdbc != nullptr) {
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-}
-
-if (conn->henv != nullptr) {
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->henv = nullptr;
-}
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
@@ -1171,17 +1162,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
     EXPECT_THAT(res_out_conn_str,
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
-  }
-  if (conn->hdbc != nullptr) {
-    EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-    conn->hdbc = nullptr;
-  }
-  
-  if (conn->henv != nullptr) {
-    EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-    conn->henv = nullptr;
-  }
-  
+  } 
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
