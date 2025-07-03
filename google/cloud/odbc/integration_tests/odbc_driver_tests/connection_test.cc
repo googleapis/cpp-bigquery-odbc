@@ -1274,7 +1274,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
