@@ -70,6 +70,12 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
         return handle_result.GetCalculatedReturnCode();
       }
       StatementHandle* stmt_handle = *handle_result;
+       // Dissociate from descriptors
+for (DescriptorType type : {DescriptorType::kAPD, DescriptorType::kARD,
+  DescriptorType::kIPD, DescriptorType::kIRD}) {
+    stmt_handle->GetDescriptorHandle(type).GetAssociatedStatementHandles().erase({stmt_handle, type});
+}
+
       // Dissociate itself from a connection handle
       if (stmt_handle->GetConnectionHandle()) {
         stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
