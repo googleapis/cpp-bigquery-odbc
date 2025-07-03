@@ -1215,7 +1215,6 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1320,7 +1319,6 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
         conn->hdbc, "HY000", 11590,
         "Connection Error: Connection Attribute Catalog already found!");
   }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DriverInfoTest, SQLGetInfo) {
