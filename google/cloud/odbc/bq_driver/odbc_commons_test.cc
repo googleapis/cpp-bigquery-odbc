@@ -91,6 +91,9 @@ TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
 
   EXPECT_EQ(status, SQL_SUCCESS);
   EXPECT_TRUE(conn_handle.GetStatementHandles().empty());
+  status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
+
+  EXPECT_EQ(status, SQL_SUCCESS);
 }
 
 TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
