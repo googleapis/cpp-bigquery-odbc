@@ -1096,6 +1096,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
@@ -1162,6 +1163,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
@@ -1214,6 +1216,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1272,7 +1275,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
