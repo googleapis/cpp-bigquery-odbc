@@ -1018,11 +1018,7 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
     EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
     EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
   }
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
@@ -1058,11 +1054,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   EXPECT_EQ(res_out_conn_str, expected_out_conn_str);
   EXPECT_EQ(sizeof(res_out_conn_str), sizeof(expected_out_conn_str));
   EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
-  EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc), SQL_SUCCESS);
-  EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_ENV, conn->henv), SQL_SUCCESS);
-  conn->hdbc = nullptr;
-  conn->henv = nullptr;
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
