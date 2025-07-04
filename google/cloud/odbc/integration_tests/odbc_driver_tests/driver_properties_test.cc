@@ -74,9 +74,9 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
 
   // No ANSI version for SQLBindCol.
 
-  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR,
-                      reinterpret_cast<char*>(type_name),
-                      (SQLLEN)sizeof(type_name), &type_name_len);
+  status =
+      SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, reinterpret_cast<char*>(type_name),
+                 (SQLLEN)sizeof(type_name), &type_name_len);
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 2, SQL_C_SSHORT,
