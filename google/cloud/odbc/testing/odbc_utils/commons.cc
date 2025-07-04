@@ -1775,4 +1775,36 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
   return ret;
 }
 
+void CleanupODBCHandles(ODBCHandles& conn) {
+  if (conn.hstmt) {
+    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
+    conn.hstmt = nullptr;
+  }
+  if (conn.hdbc) {
+    SQLDisconnect(conn.hdbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
+    conn.hdbc = nullptr;
+  }
+  if (conn.henv) {
+    SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
+    conn.henv = nullptr;
+  }
+  if (conn.ard) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ard);
+    conn.ard = nullptr;
+  }
+  if (conn.ird) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ird);
+    conn.ird = nullptr;
+  }
+  if (conn.apd) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.apd);
+    conn.apd = nullptr;
+  }
+  if (conn.ipd) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ipd);
+    conn.ipd = nullptr;
+  }
+}
+
 }  // namespace google::cloud::odbc_tests

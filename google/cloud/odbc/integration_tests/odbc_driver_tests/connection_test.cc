@@ -1318,6 +1318,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
         conn->hdbc, "HY000", 11590,
         "Connection Error: Connection Attribute Catalog already found!");
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(DriverInfoTest, SQLGetInfo) {
