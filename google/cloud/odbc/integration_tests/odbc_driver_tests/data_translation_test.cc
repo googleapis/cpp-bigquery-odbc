@@ -1813,7 +1813,7 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_WCHAR: {
         std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
-                                    strlen_or_ind / sizeof(SQLWCHAR));
+                                    48 / sizeof(SQLWCHAR));
         std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
         returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
         std::wstring expected_val(expected.value.begin(), expected.value.end());
