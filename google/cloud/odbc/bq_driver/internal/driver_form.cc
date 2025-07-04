@@ -626,9 +626,13 @@ void EvaluateFields(HWND hwnd) {
                 sizeof(auth_buffer));
   GetWindowText(GetDlgItem(hwnd, kIdcCatlogBOX), catalog_buffer,
                 sizeof(catalog_buffer));
-  BOOL enable = dsn_buffer[0] != '\0' && key_buffer[0] != '\0' &&
-                auth_buffer[0] != '\0' && catalog_buffer[0] != '\0';
 
+  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
+  BOOL enable = dsn_buffer[0] != '\0' && auth_buffer[0] != '\0' && catalog_buffer[0] != '\0';
+
+  if (strcmp(auth_buffer, "Service Authentication") == 0) {
+    enable = enable && (key_buffer[0] != '\0');
+  }
   EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
   EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
 }
@@ -669,20 +673,12 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
                             char const* key_buffer, char const* auth_buffer,
                             char const* catalog_buffer = "") {
   HWND h_control = GetDlgItem(hwnd, control_id);
-  if (key_buffer[0] && auth_buffer[0] &&
-      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
-    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
-                     catalog_buffer);
-    return StatusRecord::Ok();
-  }
 
-  if (!key_buffer[0] &&
-      strcmp(auth_buffer, "Application Default Credentials") == 0) {
-    // TODO(b/414877049): Remove the error code once Application Default
-    // Credentials OAuth Mechanism is done.
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism 'Application Default Credentials' not "
-                        "supported at the moment"};
+  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
+
+  if (is_adc) {
+    PopulateDropdown(h_control, field_type, "", auth_buffer, catalog_buffer);
+    return StatusRecord::Ok();
   }
 
   if (!auth_buffer[0]) {
@@ -692,8 +688,16 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
   if (!key_buffer[0]) {
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
-}
 
+  if (key_buffer[0] && auth_buffer[0] &&
+      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
+    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
+                     catalog_buffer);
+    return StatusRecord::Ok();
+  }
+  
+  return StatusRecord{SQLStates::k_HY000(), "Unknown error during dropdown handling."};
+}
 void CheckAuthentication(HWND hwnd) {
   HWND h_language_box = GetDlgItem(hwnd, kIdcAuthBox);
   char language_buffer[256] = {0};
