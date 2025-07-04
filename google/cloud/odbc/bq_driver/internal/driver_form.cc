@@ -114,6 +114,12 @@ StatusRecord DriverForm::TestODBCConnection(
     return StatusRecord{SQLStates::k_HY000(), "The provided section is null."};
   }
 
+  if (section->find(kOAuthMechanism) == section->end() ||
+      (*section)[kOAuthMechanism].empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuthMechanism is missing or empty."};
+  }
+
   std::string oauth_mechanism = (*section)[kOAuthMechanism];
   std::string oauth_value;
 
@@ -128,17 +134,11 @@ StatusRecord DriverForm::TestODBCConnection(
   } else if (oauth_mechanism == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    (*section)[kKeyFilePath] = ""; 
+    (*section)[kKeyFilePath] = "";
   } else {
     return StatusRecord{SQLStates::k_HY000(),
                         "OAuthMechanism must be 'Service Authentication' or "
                         "'Application Default Credentials'."};
-  }
-
-  if (section->find(kOAuthMechanism) == section->end() ||
-      (*section)[kOAuthMechanism].empty()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism is missing or empty."};
   }
 
   (*section)[kOAuthMechanism] = oauth_value;
@@ -628,7 +628,8 @@ void EvaluateFields(HWND hwnd) {
                 sizeof(catalog_buffer));
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
-  BOOL enable = dsn_buffer[0] != '\0' && auth_buffer[0] != '\0' && catalog_buffer[0] != '\0';
+  BOOL enable = dsn_buffer[0] != '\0' && auth_buffer[0] != '\0' &&
+                catalog_buffer[0] != '\0';
 
   if (strcmp(auth_buffer, "Service Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
@@ -695,8 +696,9 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
                      catalog_buffer);
     return StatusRecord::Ok();
   }
-  
-  return StatusRecord{SQLStates::k_HY000(), "Unknown error during dropdown handling."};
+
+  return StatusRecord{SQLStates::k_HY000(),
+                      "Unknown error during dropdown handling."};
 }
 void CheckAuthentication(HWND hwnd) {
   HWND h_language_box = GetDlgItem(hwnd, kIdcAuthBox);
