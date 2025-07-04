@@ -128,7 +128,7 @@ StatusRecord DriverForm::TestODBCConnection(
   } else if (oauth_mechanism == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    (*section)[kKeyFilePath] = "";
+    (*section)[kKeyFilePath] = ""; 
   } else {
     return StatusRecord{SQLStates::k_HY000(),
                         "OAuthMechanism must be 'Service Authentication' or "
