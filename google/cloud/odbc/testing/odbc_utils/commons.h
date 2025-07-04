@@ -101,6 +101,39 @@ struct ODBCHandles {
   bool connected;
   SQLCHAR outdsn[4096];
   Metadata metadata;
+
+  ~ODBCHandles() {
+    if (hstmt) {
+      SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+      hstmt = nullptr;
+    }
+    if (hdbc) {
+      SQLDisconnect(hdbc);
+      SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
+      hdbc = nullptr;
+    }
+    if (henv) {
+      SQLFreeHandle(SQL_HANDLE_ENV, henv);
+      henv = nullptr;
+    }
+    // Descriptors are optional, handle if allocated
+    if (ard) {
+      SQLFreeHandle(SQL_HANDLE_DESC, ard);
+      ard = nullptr;
+    }
+    if (ird) {
+      SQLFreeHandle(SQL_HANDLE_DESC, ird);
+      ird = nullptr;
+    }
+    if (apd) {
+      SQLFreeHandle(SQL_HANDLE_DESC, apd);
+      apd = nullptr;
+    }
+    if (ipd) {
+      SQLFreeHandle(SQL_HANDLE_DESC, ipd);
+      ipd = nullptr;
+    }
+  }
 };
 
 // The fields correspond to the ones set/retrieved by SQLBind/SQLDescribeCol.
