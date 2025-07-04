@@ -1589,7 +1589,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   if (utf_16_str.empty()) {
     return std::string();
   }
-  std::cout<<"sizeof(wchar_t) "<<sizeof(wchar_t)<<std::endl;
+  std::cout<<"sizeof(wchar_t) "<<sizeof(SQLWCHAR)<<std::endl;
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
   int utf8Length = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
