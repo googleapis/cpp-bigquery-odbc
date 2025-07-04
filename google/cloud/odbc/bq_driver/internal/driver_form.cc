@@ -114,35 +114,31 @@ StatusRecord DriverForm::TestODBCConnection(
     return StatusRecord{SQLStates::k_HY000(), "The provided section is null."};
   }
 
-  if (section->find(kKeyFilePath) == section->end() ||
-      (*section)[kKeyFilePath].empty()) {
+  std::string oauth_mechanism = (*section)[kOAuthMechanism];
+  std::string oauth_value;
+
+  if (oauth_mechanism == "Service Authentication") {
+    if (section->find(kKeyFilePath) == section->end() ||
+        (*section)[kKeyFilePath].empty()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "KeyFilePath is missing or empty."};
+    }
+    oauth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+  } else if (oauth_mechanism == "Application Default Credentials") {
+    oauth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
+    (*section)[kKeyFilePath] = ""; 
+  } else {
     return StatusRecord{SQLStates::k_HY000(),
-                        "KeyFilePath is missing or empty."};
+                        "OAuthMechanism must be 'Service Authentication' or "
+                        "'Application Default Credentials'."};
   }
 
   if (section->find(kOAuthMechanism) == section->end() ||
       (*section)[kOAuthMechanism].empty()) {
     return StatusRecord{SQLStates::k_HY000(),
                         "OAuthMechanism is missing or empty."};
-  }
-
-  std::string oauth_mechanism = (*section)[kOAuthMechanism];
-  std::string oauth_value;
-  if (oauth_mechanism == "Service Authentication") {
-    oauth_value = std::to_string(
-        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
-  } else if (oauth_mechanism == "Application Default Credentials") {
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    // TODO(b/414877049): Remove the error code once Application Default
-    // Credentials OAuth Mechanism is implemented.
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism 'Application Default Credentials' not "
-                        "supported at the moment."};
-  } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism must be 'Service Authentication' or "
-                        "'Application Default Credentials'."};
   }
 
   (*section)[kOAuthMechanism] = oauth_value;
@@ -177,27 +173,24 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
   google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
+  Oauth oauth_struct;
 
-  // TODO(b/383592420): Add call to user auth once its tested
   if (oauth_token == "Service Authentication") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kServiceAndUserAccount;
+    oauth_struct.credentials_file_path = key_file_path;
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kApplicationDefault;
-    // TODO(b/414877049): Remove the error code once Application Default
-    // Credentials OAuth Mechanism is done.
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism 'Application Default Credentials' not "
-                        "supported at the moment."};
   } else {
     oauth_value = google::cloud::odbc_bigquery_client_interface::
         OauthMechanism::kExternalUser;
+    oauth_struct.credentials_file_path = key_file_path;
   }
+  oauth_struct.auth_mechanism = oauth_value;
 
   SQLULEN metadata_id = 0;
-  auto bq_client_ptr =
-      ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
+  auto bq_client_ptr = ODBCBQClient::CreateBQClient(oauth_struct);
   if (!bq_client_ptr) {
     return bq_client_ptr.GetStatusRecord();
   }
