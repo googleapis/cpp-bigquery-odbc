@@ -172,21 +172,28 @@ bool containsAlphanumeric(std::string const& str) {
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
-  google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
+  using namespace google::cloud::odbc_bigquery_client_interface;
+
+  OauthMechanism oauth_value;
   Oauth oauth_struct;
 
   if (oauth_token == "Service Authentication") {
-    oauth_value = google::cloud::odbc_bigquery_client_interface::
-        OauthMechanism::kServiceAndUserAccount;
+    oauth_value = OauthMechanism::kServiceAndUserAccount;
     oauth_struct.credentials_file_path = key_file_path;
   } else if (oauth_token == "Application Default Credentials") {
-    oauth_value = google::cloud::odbc_bigquery_client_interface::
-        OauthMechanism::kApplicationDefault;
+    oauth_value = OauthMechanism::kApplicationDefault;
+
+    if (std::getenv("GOOGLE_APPLICATION_CREDENTIALS") == nullptr) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Environment variable GOOGLE_APPLICATION_CREDENTIALS is not set. "
+          "Please set it before using Application Default Credentials."};
+    }
   } else {
-    oauth_value = google::cloud::odbc_bigquery_client_interface::
-        OauthMechanism::kExternalUser;
+    oauth_value = OauthMechanism::kExternalUser;
     oauth_struct.credentials_file_path = key_file_path;
   }
+
   oauth_struct.auth_mechanism = oauth_value;
 
   SQLULEN metadata_id = 0;
