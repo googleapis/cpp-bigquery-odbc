@@ -1470,7 +1470,7 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
 
   // Set output length
   if (dest_data.result_len) {
-    std::cout<<"utf16_str.GetValue() "<<utf16_str.GetValue()<<std::endl;
+    std::wcout<<"utf16_str.GetValue() "<<utf16_str.GetValue()<<std::endl;
     std::cout<<"utf16_str.GetValue().size() "<<utf16_str.GetValue().size()<<std::endl;
     *dest_data.result_len = utf16_str.GetValue().size() * sizeof(SQLWCHAR);
   }
