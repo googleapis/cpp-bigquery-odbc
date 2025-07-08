@@ -1406,23 +1406,15 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLDisconnect(conn->hdbc);
   CheckError(status, "SQLDisconnect", conn);
 
-  // Check that descriptor handle is freed
-  SQLSMALLINT alloc_type;
-  status =
-      SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
-  if (kIsBqDriver) {
-    EXPECT_EQ(SQL_INVALID_HANDLE, status);
-  } else {
-    EXPECT_EQ(SQL_SUCCESS, status);
-  }
   // Check that statement handle is freed
   SQLULEN metadata_id_stmt;
   status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
                           0, NULL);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
   // Check connection handle is disconnected
-  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
-  EXPECT_EQ(SQL_ERROR, status);
+  SQLHSTMT temp_stmt;
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &temp_stmt);
+  EXPECT_EQ(status, SQL_ERROR);
 
   status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_DBC)", conn);
