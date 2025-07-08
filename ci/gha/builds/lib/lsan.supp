@@ -2,3 +2,4 @@ leak:conv_text_m2d
 leak:__interceptor_malloc
 leak:__interceptor_calloc
 leak:_iodbcdm_driverload
+leak:_iodbcdm_finish_disconnect
