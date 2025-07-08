@@ -3,3 +3,6 @@ leak:__interceptor_malloc
 leak:__interceptor_calloc
 leak:_iodbcdm_driverload
 leak:calloc
+leak:Diagnostics::AddStatusRecord
+leak:StatusRecord
+leak:std::__cxx11::basic_string
