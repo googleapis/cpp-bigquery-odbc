@@ -16,6 +16,7 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 
 #include "google/cloud/odbc/testing/odbc_utils/types.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/internal/backoff_policy.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>

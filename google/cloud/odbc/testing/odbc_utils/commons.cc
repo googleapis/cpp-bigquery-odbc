@@ -1777,6 +1777,11 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
 }
 
 void CleanupODBCHandles(ODBCHandles& conn) {
+  if (kIsBqDriver && conn.hdbc != nullptr) {
+    auto* driver_conn = reinterpret_cast<google::cloud::odbc_bq_driver_internal::ConnectionHandle*>(conn.hdbc);
+    driver_conn->GetDiagnostics().ClearDiagnostics();
+  }
+
   if (conn.hstmt) {
     SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
     conn.hstmt = nullptr;
