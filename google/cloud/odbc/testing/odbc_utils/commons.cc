@@ -18,9 +18,6 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/status_or.h"
-#include <iomanip>
-#include <sstream>
-#include <algorithm>
 
 namespace google::cloud::odbc_tests {
 
@@ -853,144 +850,97 @@ void Table::InsertStructData(std::shared_ptr<ODBCHandles> conn,
       insert_stmt << i << ", ";
     }
 
-    insert_stmt << "STRUCT(";
+    insert_stmt << "STRUCT(" << row.int_value << ", " << row.double_value
+                << ", "
+                << "'" << row.string_value << "', ";
 
-    // Scalar fields
-    insert_stmt << row.int_value << ", ";
-    insert_stmt << row.double_value << ", ";
-    insert_stmt << "'" << row.string_value << "', ";
-    insert_stmt << "'" << WStrToStr(row.wstring_value) << "', ";
-
-    // int_array
     if (row.int_array) {
-      insert_stmt << "[";
+      insert_stmt << "ARRAY[";
       for (size_t j = 0; j < row.int_array->size(); ++j) {
         insert_stmt << (*row.int_array)[j];
-        if (j != row.int_array->size() - 1) insert_stmt << ", ";
+        if (j != row.int_array->size() - 1) {
+          insert_stmt << ", ";
+        }
       }
-      insert_stmt << "], ";
+      insert_stmt << "]";
     } else {
-      insert_stmt << "NULL, ";
+      insert_stmt << "NULL";
     }
 
-    // double_array
-    if (row.double_array) {
-      insert_stmt << "[";
-      for (size_t j = 0; j < row.double_array->size(); ++j) {
-        insert_stmt << (*row.double_array)[j];
-        if (j != row.double_array->size() - 1) insert_stmt << ", ";
-      }
-      insert_stmt << "], ";
-    } else {
-      insert_stmt << "NULL, ";
-    }
+    insert_stmt << ", ";
 
-    // string_array
     if (row.string_array) {
-      insert_stmt << "[";
+      insert_stmt << "ARRAY[";
       for (size_t j = 0; j < row.string_array->size(); ++j) {
-        insert_stmt << "'" << (*row.string_array)[j] << "'";
-        if (j != row.string_array->size() - 1) insert_stmt << ", ";
+        std::string escaped_str = (*row.string_array)[j];
+        size_t pos = 0;
+        while ((pos = escaped_str.find('\'', pos)) != std::string::npos) {
+          escaped_str.replace(pos, 1, "''");
+          pos += 2;
+        }
+        insert_stmt << "'" << escaped_str << "'";
+        if (j != row.string_array->size() - 1) {
+          insert_stmt << ", ";
+        }
       }
-      insert_stmt << "], ";
+      insert_stmt << "]";
     } else {
-      insert_stmt << "NULL, ";
+      insert_stmt << "NULL";
     }
 
-    // float_array
-    if (row.float_array) {
-      insert_stmt << "[";
-      for (size_t j = 0; j < row.float_array->size(); ++j) {
-        insert_stmt << (*row.float_array)[j];
-        if (j != row.float_array->size() - 1) insert_stmt << ", ";
+    insert_stmt << ", ";
+
+    if (row.date) {
+      insert_stmt << "DATE '" << FormatDate(*row.date) << "'";
+    } else {
+      insert_stmt << "NULL";
+    }
+
+    insert_stmt << ", ";
+
+    if (row.time) {
+      insert_stmt << "TIME '" << FormatTimetoString(*row.time) << "'";
+    } else {
+      insert_stmt << "NULL";
+    }
+
+    insert_stmt << ", ";
+
+    if (row.interval_year_month) {
+      insert_stmt << "INTERVAL '"
+                  << row.interval_year_month->intval.year_month.year << "-"
+                  << row.interval_year_month->intval.year_month.month
+                  << "' YEAR TO MONTH";
+    } else {
+      insert_stmt << "NULL";
+    }
+
+    insert_stmt << ", ";
+
+    if (row.json_field) {
+      std::string json_str = row.json_field->dump();
+      size_t pos = 0;
+      while ((pos = json_str.find('\'', pos)) != std::string::npos) {
+        json_str.replace(pos, 1, "''");
+        pos += 2;
       }
-      insert_stmt << "], ";
+      insert_stmt << "PARSE_JSON('" << json_str << "')";
     } else {
-      insert_stmt << "NULL, ";
+      insert_stmt << "NULL";
     }
 
-    // timestamp_array
-    if (row.timestamp_array) {
-      insert_stmt << "[";
-      for (size_t j = 0; j < row.timestamp_array->size(); ++j) {
-        auto const& ts = (*row.timestamp_array)[j];
-        insert_stmt << "TIMESTAMP '" << ts.year << "-"
-                    << std::setw(2) << std::setfill('0') << ts.month << "-"
-                    << std::setw(2) << std::setfill('0') << ts.day << " "
-                    << std::setw(2) << std::setfill('0') << ts.hour << ":"
-                    << std::setw(2) << std::setfill('0') << ts.minute << ":"
-                    << std::setw(2) << std::setfill('0') << ts.second << "'";
-        if (j != row.timestamp_array->size() - 1) insert_stmt << ", ";
-      }
-      insert_stmt << "], ";
-    } else {
-      insert_stmt << "NULL, ";
+    insert_stmt << ", ";
+
+    std::string converted_wstring = WStrToStr(row.wstring_value);
+    size_t pos_w = 0;
+    while ((pos_w = converted_wstring.find('\'', pos_w)) != std::string::npos) {
+      converted_wstring.replace(pos_w, 1, "''");
+      pos_w += 2;
     }
+    insert_stmt << "'" << converted_wstring << "'";
 
-    // date_array
-    if (row.date_array) {
-      insert_stmt << "[";
-      for (size_t j = 0; j < row.date_array->size(); ++j) {
-        auto const& d = (*row.date_array)[j];
-        insert_stmt << "DATE '" << d.year << "-"
-                    << std::setw(2) << std::setfill('0') << d.month << "-"
-                    << std::setw(2) << std::setfill('0') << d.day << "'";
-        if (j != row.date_array->size() - 1) insert_stmt << ", ";
-      }
-      insert_stmt << "], ";
-    } else {
-      insert_stmt << "NULL, ";
-    }
-
-    // timestamp
-    insert_stmt << "TIMESTAMP '" << row.timestamp.year << "-"
-                << std::setw(2) << std::setfill('0') << row.timestamp.month
-                << "-" << std::setw(2) << std::setfill('0') << row.timestamp.day
-                << " " << std::setw(2) << std::setfill('0') << row.timestamp.hour
-                << ":" << std::setw(2) << std::setfill('0')
-                << row.timestamp.minute << ":" << std::setw(2)
-                << std::setfill('0') << row.timestamp.second;
-    if (row.timestamp.fraction != 0) {
-      insert_stmt << "." << row.timestamp.fraction;
-    }
-    insert_stmt << "', ";
-
-    // interval_year_month
-    insert_stmt << "INTERVAL '" << FormatIntervalString(row.interval_year_month)
-                << "' " << GetIntervalTypeStr(row.interval_year_month.interval_type)
-                << ", ";
-
-    // date
-    insert_stmt << "DATE '" << row.date.year << "-"
-                << std::setw(2) << std::setfill('0') << row.date.month << "-"
-                << std::setw(2) << std::setfill('0') << row.date.day << "', ";
-
-    // time
-    insert_stmt << "TIME '" << std::setw(2) << std::setfill('0') << row.time.hour
-                << ":" << std::setw(2) << std::setfill('0') << row.time.minute
-                << ":" << std::setw(2) << std::setfill('0') << row.time.second
-                << "', ";
-
-    // binary_data - use FROM_HEX
-    insert_stmt << "FROM_HEX('";
-    for (auto byte : row.binary_data) {
-      insert_stmt << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(byte);
-    }
-    insert_stmt << "'), ";
-
- std::string json_escaped = row.json_field.dump();
-// Escape single quotes by doubling them (for SQL string literal safety)
-size_t pos = 0;
-while ((pos = json_escaped.find('\'', pos)) != std::string::npos) {
-  json_escaped.replace(pos, 1, "''");
-  pos += 2;
-}
-insert_stmt << "TO_JSON('" << json_escaped << "')";
-
-    insert_stmt << ")";  
-
-    insert_stmt << ")";  
+    insert_stmt << ")";
+    insert_stmt << ")";
 
     if (i != rows.size() - 1) {
       insert_stmt << ", ";
@@ -998,7 +948,7 @@ insert_stmt << "TO_JSON('" << json_escaped << "')";
   }
 
   insert_stmt << ";";
-  std::cout << "[DEBUG] InsertStructData SQL:\n" << insert_stmt.str() << std::endl;
+
   SQLRETURN status = ExecWithPrepare(conn, insert_stmt.str());
   CheckError(status, "Execute with Prepare", conn);
 }

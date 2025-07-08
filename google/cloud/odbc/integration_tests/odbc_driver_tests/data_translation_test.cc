@@ -1608,7 +1608,6 @@ TEST(DataTranslationTest, From_SQL_Array_Struct) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/394015883): Add more cases of Struct into StructBasicTestStruct
 struct StructTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -1620,152 +1619,52 @@ struct StructTestStruct {
 
 std::vector<StructTestStruct> const kConversionFromStructTestData{
     {SQL_C_CHAR,
-     {12345,
-      3.14,
-      "Test String 1",
-      L"Wide Test String 1",
-      std::optional<std::vector<SQLINTEGER>>{std::vector<SQLINTEGER>{1, 2, 3}},
-      std::optional<std::vector<SQLDOUBLE>>{std::vector<SQLDOUBLE>{1.1, 2.2}},
-      std::optional<std::vector<std::string>>{
-          std::vector<std::string>{"str1", "str2"}},
-      std::optional<std::vector<SQLREAL>>{std::vector<SQLREAL>{1.0f, 2.0f}},
-      std::optional<std::vector<SQL_TIMESTAMP_STRUCT>>{
-          std::vector<SQL_TIMESTAMP_STRUCT>{{2024, 7, 1, 10, 0, 0, 0},
-                                            {2024, 7, 2, 11, 0, 0, 0}}},
-      std::optional<std::vector<SQL_DATE_STRUCT>>{
-          std::vector<SQL_DATE_STRUCT>{{2024, 7, 1}, {2024, 7, 2}}},
-      {2024, 7, 1, 12, 30, 45, 123456789},
+     {12345, 3.14, "Test String 1", std::vector<int>{1, 2, 3},
+      std::vector<std::string>{"str1", "str2", "str3"},
+      SQL_DATE_STRUCT{2024, 7, 8}, SQL_TIME_STRUCT{9, 30, 0},
       MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 1, 2),
-      {2024, 7, 1},
-      {12, 30, 45},
-      {0x01, 0x02, 0x03, 0x04},
-      nlohmann::json::parse("{\"name\": \"Alice\", \"age\": 30}")},
+      nlohmann::json::parse("{\"key\":\"value1\"}"), L"Wide Test String 1"},
      SQL_SUCCESS},
     {SQL_C_WCHAR,
-     {-99999,
-      42.42,
-      "Negative Test",
-      L"Wide Negative Test",
-      std::optional<std::vector<SQLINTEGER>>{std::vector<SQLINTEGER>{5, 2, 8}},
-      std::nullopt,
-      std::optional<std::vector<std::string>>{std::vector<std::string>{}},
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2023, 1, 1, 0, 0, 0, 0},
+     {-99999, 42.42, "Negative Test", std::vector<int>{5, 2, 8}, std::nullopt,
+      std::nullopt, SQL_TIME_STRUCT{14, 0, 0},
       MakeYearMonthInterval(SQL_IS_MONTH, 0, 6),
-      {2023, 1, 1},
-      {0, 0, 0},
-      {},
-      nlohmann::json::parse("{\"error\": true}")},
+      nlohmann::json::parse("{\"num\":123, \"bool\":true}"),
+      L"Wide Negative Test"},
      SQL_SUCCESS},
     {SQL_C_BINARY,
-     {0,
-      0.0,
-      "Empty String",
-      L"",
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {1970, 1, 1, 0, 0, 0, 0},
-      MakeYearMonthInterval(SQL_IS_YEAR, 0, 0),
-      {1970, 1, 1},
-      {0, 0, 0},
-      {0x0A, 0x0B, 0x0C, 0x0D},
-      nlohmann::json::parse("null")},
+     {0, 0.0, "Empty String", std::nullopt, std::vector<std::string>{},
+      SQL_DATE_STRUCT{1999, 12, 31}, std::nullopt,
+      MakeYearMonthInterval(SQL_IS_YEAR, 0, 0), nlohmann::json::parse("null"),
+      L""},
      SQL_SUCCESS},
     {SQL_C_DOUBLE,
-     {99999,
-      100.1,
-      "Positive Test",
-      L"Wide Positive Test",
-      std::nullopt,
-      std::optional<std::vector<SQLDOUBLE>>{std::vector<SQLDOUBLE>{10.0}},
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2025, 1, 1, 1, 1, 1, 1},
-      MakeYearMonthInterval(SQL_IS_MONTH, 0, 1),
-      {2025, 1, 1},
-      {1, 1, 1},
-      {0x10},
-      nlohmann::json::parse("{\"status\": \"ok\"}")},
+     {99999, 100.1, "Positive Test", std::nullopt,
+      std::vector<std::string>{"pos_str"}, SQL_DATE_STRUCT{2000, 1, 1},
+      SQL_TIME_STRUCT{0, 0, 0}, std::nullopt, nlohmann::json::parse("[]"),
+      L"Wide Positive Test"},
      SQL_ERROR},
     {SQL_C_SHORT,
-     {29,
-      29.29,
-      "Test String 2",
-      L"Wide Test String 2",
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2024, 7, 10, 1, 2, 3, 4},
-      MakeDaySecondInterval(SQL_IS_SECOND, 0, 0, 0, 10, 0),
-      {2024, 7, 10},
-      {1, 2, 3},
-      {0x20, 0x21},
-      nlohmann::json::parse("{\"complex\": {\"nested\": 1}}")},
+     {29, 29.29, "Test String 2", std::nullopt, std::nullopt, std::nullopt,
+      std::nullopt, std::nullopt, std::nullopt, L"Wide Test String 2"},
      SQL_ERROR},
     {SQL_C_LONG,
-     {6290,
-      2.71,
-      "Another String 2",
-      L"Wide Another String 2",
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2024, 8, 1, 5, 4, 3, 2},
-      MakeDaySecondInterval(SQL_IS_MINUTE, 0, 0, 20, 0, 0),
-      {2024, 8, 1},
-      {5, 4, 3},
-      {},
-      nlohmann::json::parse("{\"null_val\": null}")},
+     {6290, 2.71, "Another String 2", std::vector<int>{100},
+      std::vector<std::string>{"another_str"}, SQL_DATE_STRUCT{2023, 11, 15},
+      SQL_TIME_STRUCT{23, 59, 59},
+      MakeYearMonthInterval(SQL_IS_YEAR_TO_MONTH, 0, 1),
+      nlohmann::json::parse("{\"nested\":{\"obj\":1}}"),
+      L"Wide Another String 2"},
      SQL_ERROR},
     {SQL_C_TYPE_DATE,
-     {78,
-      89.9,
-      "Error",
-      L"Wide Error",
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2024, 9, 1, 0, 0, 0, 0},
-      MakeYearMonthInterval(SQL_IS_YEAR, 0, 0),
-      {2024, 9, 1},
-      {0, 0, 0},
-      {},
-      nlohmann::json::parse("{\"bad\": \"json\"}")},
+     {78, 89.9, "Error", std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+      std::nullopt, nlohmann::json::parse("{\"error\":true}"), L"Wide Error"},
      SQL_ERROR},
     {SQL_C_BIT,
-     {67890,
-      -2.71,
-      "Another String",
-      L"Wide Another String",
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      std::nullopt,
-      {2024, 10, 1, 23, 59, 59, 999999999},
-      MakeDaySecondInterval(SQL_IS_SECOND, 0, 0, 0, 1, 0),
-      {2024, 10, 1},
-      {23, 59, 59},
-      {0xFF},
-      nlohmann::json::parse("{\"bool_json\": true}")},
+     {67890, -2.71, "Another String", std::nullopt,
+      std::vector<std::string>{"last_str"}, SQL_DATE_STRUCT{2021, 5, 1},
+      SQL_TIME_STRUCT{1, 1, 1}, MakeYearMonthInterval(SQL_IS_MONTH, 0, 1),
+      nlohmann::json::parse("true"), L"Wide Another String"},
      SQL_ERROR},
 };
 
@@ -1806,13 +1705,13 @@ void TestTranslationsFromStruct(std::shared_ptr<ODBCHandles> conn,
         for (auto const& element : json_object["v"]) {
           int index = 0;
           for (auto const& field : element["v"]["f"]) {
-            std::string ret_val = field["v"];
+            std::string ret_val_str = field["v"];
             if (index == 0)
-              EXPECT_EQ(std::stoi(ret_val), expected.values.int_value);
+              EXPECT_EQ(std::stoll(ret_val_str), expected.values.int_value);
             else if (index == 1)
-              EXPECT_EQ(std::stod(ret_val), expected.values.double_value);
+              EXPECT_EQ(std::stod(ret_val_str), expected.values.double_value);
             else if (index == 2)
-              EXPECT_EQ(ret_val, expected.values.string_value);
+              EXPECT_EQ(ret_val_str, expected.values.string_value);
             else if (index == 3) {
               if (expected.values.int_array) {
                 EXPECT_TRUE(field["v"].is_array());
@@ -1831,6 +1730,83 @@ void TestTranslationsFromStruct(std::shared_ptr<ODBCHandles> conn,
               } else {
                 EXPECT_TRUE(field["v"].is_null());
               }
+            } else if (index == 4) {
+              if (expected.values.string_array) {
+                EXPECT_TRUE(field["v"].is_array());
+
+                std::vector<std::string> actual_string_array;
+                for (auto const& array_elem : field["v"]) {
+                  actual_string_array.push_back(array_elem.get<std::string>());
+                }
+
+                EXPECT_EQ(actual_string_array.size(),
+                          expected.values.string_array->size());
+                for (size_t i = 0; i < actual_string_array.size(); ++i) {
+                  EXPECT_EQ(actual_string_array[i],
+                            (*expected.values.string_array)[i]);
+                }
+              } else {
+                EXPECT_TRUE(field["v"].is_null());
+              }
+            } else if (index == 5) {
+              if (expected.values.date) {
+                EXPECT_TRUE(field["v"].is_string());
+                std::string date_str = field["v"].get<std::string>();
+                std::tm tm = {};
+                std::istringstream ss(date_str);
+                ss >> std::get_time(&tm, "%Y-%m-%d");
+                EXPECT_EQ(expected.values.date->year, tm.tm_year + 1900);
+                EXPECT_EQ(expected.values.date->month, tm.tm_mon + 1);
+                EXPECT_EQ(expected.values.date->day, tm.tm_mday);
+              } else {
+                EXPECT_TRUE(field["v"].is_null());
+              }
+            } else if (index == 6) {
+              if (expected.values.time) {
+                EXPECT_TRUE(field["v"].is_string());
+                std::string time_str = field["v"].get<std::string>();
+                std::tm tm = {};
+                std::istringstream ss(time_str);
+                ss >> std::get_time(&tm, "%H:%M:%S");
+                EXPECT_EQ(expected.values.time->hour, tm.tm_hour);
+                EXPECT_EQ(expected.values.time->minute, tm.tm_min);
+                EXPECT_EQ(expected.values.time->second, tm.tm_sec);
+              } else {
+                EXPECT_TRUE(field["v"].is_null());
+              }
+            } else if (index == 7) {
+              if (expected.values.interval_year_month) {
+                EXPECT_TRUE(field["v"].is_string());
+                std::string interval_str = field["v"].get<std::string>();
+                std::string expected_interval_formatted =
+                    FormatIntervalString(*expected.values.interval_year_month);
+                EXPECT_EQ(interval_str, expected_interval_formatted);
+              } else {
+                EXPECT_TRUE(field["v"].is_null());
+              }
+            } else if (index == 8) {
+              if (expected.values.json_field) {
+                EXPECT_TRUE(field["v"].is_string() || field["v"].is_null());
+                if (field["v"].is_string()) {
+                  nlohmann::json actual_json =
+                      nlohmann::json::parse(field["v"].get<std::string>());
+                  EXPECT_EQ(actual_json, *expected.values.json_field);
+                } else if (field["v"].is_null() &&
+                           expected.values.json_field->is_null()) {
+                  SUCCEED();
+                } else {
+                  FAIL() << "Unexpected JSON field value or type: "
+                         << field["v"].dump();
+                }
+              } else {
+                EXPECT_TRUE(field["v"].is_null());
+              }
+            } else if (index == 9) {
+              EXPECT_TRUE(field["v"].is_string());
+              std::string actual_wstring_str = field["v"].get<std::string>();
+              std::string expected_wstring_str =
+                  WStrToStr(expected.values.wstring_value);
+              EXPECT_EQ(actual_wstring_str, expected_wstring_str);
             }
             index++;
           }
@@ -1853,26 +1829,19 @@ TEST(DataTranslationTest, From_SQL_Struct_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-table.CreateWithPrepare(
-      conn,
-      "(index INTEGER, StructField STRUCT<"
-      "int_value BIGINT, "
-      "double_value FLOAT64, "
-      "string_value STRING, "
-      "wstring_value STRING, " // Corresponds to std::wstring
-      "int_array ARRAY<INT64>, "
-      "double_array ARRAY<FLOAT64>, "
-      "string_array ARRAY<STRING>, "
-      "float_array ARRAY<FLOAT64>, " // Corresponds to SQLREAL (use FLOAT64 in BQ)
-      "timestamp_array ARRAY<TIMESTAMP>, "
-      "date_array ARRAY<DATE>, "
-      "timestamp TIMESTAMP, "
-      "interval_year_month INTERVAL, "
-      "date DATE, "
-      "time TIME, "
-      "binary_data BYTES, "
-      "json_field JSON"
-      ">)");
+  table.CreateWithPrepare(conn,
+                          "(index INTEGER, StructField STRUCT<"
+                          "int_value BIGINT, "
+                          "double_value FLOAT64, "
+                          "string_value STRING, "
+                          "int_array ARRAY<INT64>, "
+                          "string_array ARRAY<STRING>, "
+                          "date_field DATE, "
+                          "time_field TIME, "
+                          "interval_year_month_field INTERVAL, "
+                          "json_field JSON, "
+                          "wstring_field STRING"
+                          ">)");
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
