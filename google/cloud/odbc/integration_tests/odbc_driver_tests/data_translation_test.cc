@@ -1705,13 +1705,13 @@ void TestTranslationsFromStruct(std::shared_ptr<ODBCHandles> conn,
         for (auto const& element : json_object["v"]) {
           int index = 0;
           for (auto const& field : element["v"]["f"]) {
-            std::string ret_val_str = field["v"];
+            std::string ret_val = field["v"];
             if (index == 0)
-              EXPECT_EQ(std::stoll(ret_val_str), expected.values.int_value);
+              EXPECT_EQ(std::stoi(ret_val), expected.values.int_value);
             else if (index == 1)
-              EXPECT_EQ(std::stod(ret_val_str), expected.values.double_value);
+              EXPECT_EQ(std::stod(ret_val), expected.values.double_value);
             else if (index == 2)
-              EXPECT_EQ(ret_val_str, expected.values.string_value);
+              EXPECT_EQ(ret_val, expected.values.string_value);
             else if (index == 3) {
               if (expected.values.int_array) {
                 EXPECT_TRUE(field["v"].is_array());
