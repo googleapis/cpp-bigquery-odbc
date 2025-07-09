@@ -676,25 +676,25 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
                             char const* key_buffer, char const* auth_buffer,
                             char const* catalog_buffer = "") {
   HWND h_control = GetDlgItem(hwnd, control_id);
-  if (key_buffer[0] && auth_buffer[0] &&
-      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
-    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
+
+  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
+  bool has_auth = auth_buffer[0] != '\0';
+  bool has_key = key_buffer[0] != '\0';
+  bool has_catalog =
+      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0] != '\0');
+
+  if (has_auth && (is_adc || (has_key && has_catalog))) {
+    char const* key_to_use = is_adc ? "" : key_buffer;
+    PopulateDropdown(h_control, field_type, key_to_use, auth_buffer,
                      catalog_buffer);
     return StatusRecord::Ok();
   }
 
-  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
-
-  if (is_adc) {
-    PopulateDropdown(h_control, field_type, "", auth_buffer, catalog_buffer);
-    return StatusRecord::Ok();
-  }
-
-  if (!auth_buffer[0]) {
+  if (!has_auth) {
     return StatusRecord{SQLStates::k_HY000(), "OAuthMechanism not selected"};
   }
 
-  if (!key_buffer[0]) {
+  if (!has_key) {
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 
