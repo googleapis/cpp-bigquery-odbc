@@ -192,7 +192,6 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   }
 
   oauth_struct.auth_mechanism = oauth_value;
-
   SQLULEN metadata_id = 0;
   auto bq_client_ptr = ODBCBQClient::CreateBQClient(oauth_struct);
   if (!bq_client_ptr) {
