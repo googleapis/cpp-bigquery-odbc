@@ -22,8 +22,8 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
                     bool is_supported = true, bool use_ansi = false,
                     SQLLEN bind_offset = 0) {
   SQLRETURN status;
-  // status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_OFFSET_PTR,
-  //                         &bind_offset, 0);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_OFFSET_PTR,
+                          &bind_offset, 0);
   if (use_ansi) {
     status = SQLGetTypeInfoA(conn->hstmt, in_data_type);
   } else {
@@ -74,101 +74,101 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
 
   // No ANSI version for SQLBindCol.
 
-  status =
-      SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, reinterpret_cast<char*>(type_name),
-                 (SQLLEN)sizeof(type_name), &type_name_len);
+  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR,
+                      reinterpret_cast<char*>(type_name) - bind_offset,
+                      (SQLLEN)sizeof(type_name), &type_name_len);
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 2, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&data_type),
+                      reinterpret_cast<char*>(&data_type) - bind_offset,
                       (SQLLEN)sizeof(data_type), &data_type_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 3, SQL_C_SLONG,
-                      reinterpret_cast<char*>(&col_size),
+                      reinterpret_cast<char*>(&col_size) - bind_offset,
                       (SQLLEN)sizeof(col_size), &col_size_len);
   CheckError(status, "SQLBindCol(SQL_C_SLONG)", conn);
 
   status = SQLBindCol(conn->hstmt, 4, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&literal_prefix),
+                      reinterpret_cast<char*>(&literal_prefix) - bind_offset,
                       (SQLLEN)sizeof(literal_prefix), &literal_prefix_len);
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 5, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&literal_suffix),
+                      reinterpret_cast<char*>(&literal_suffix) - bind_offset,
                       (SQLLEN)sizeof(literal_suffix), &literal_suffix_len);
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 6, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&create_params),
+                      reinterpret_cast<char*>(&create_params) - bind_offset,
                       (SQLLEN)sizeof(create_params), &create_params_len);
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 7, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&nullable),
+                      reinterpret_cast<char*>(&nullable) - bind_offset,
                       (SQLLEN)sizeof(nullable), &nullable_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 8, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&case_sensitive),
+                      reinterpret_cast<char*>(&case_sensitive) - bind_offset,
                       (SQLLEN)sizeof(case_sensitive), &case_sensitive_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 9, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&searchable),
+                      reinterpret_cast<char*>(&searchable) - bind_offset,
                       (SQLLEN)sizeof(searchable), &searchable_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status =
       SQLBindCol(conn->hstmt, 10, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&unsigned_attribute),
+                 reinterpret_cast<char*>(&unsigned_attribute) - bind_offset,
                  (SQLLEN)sizeof(unsigned_attribute), &unsigned_attribute_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 11, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&fixed_prec_scale),
+                      reinterpret_cast<char*>(&fixed_prec_scale) - bind_offset,
                       (SQLLEN)sizeof(fixed_prec_scale), &fixed_prec_scale_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status =
       SQLBindCol(conn->hstmt, 12, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&auto_unique_value),
+                 reinterpret_cast<char*>(&auto_unique_value) - bind_offset,
                  (SQLLEN)sizeof(auto_unique_value), &auto_unique_value_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 13, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&local_type_name),
+                      reinterpret_cast<char*>(&local_type_name) - bind_offset,
                       (SQLLEN)sizeof(local_type_name), &local_type_name_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 14, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&minimum_scale),
+                      reinterpret_cast<char*>(&minimum_scale) - bind_offset,
                       (SQLLEN)sizeof(minimum_scale), &minimum_scale_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 15, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&maximum_scale),
+                      reinterpret_cast<char*>(&maximum_scale) - bind_offset,
                       (SQLLEN)sizeof(maximum_scale), &maximum_scale_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 16, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&sql_data_type),
+                      reinterpret_cast<char*>(&sql_data_type) - bind_offset,
                       (SQLLEN)sizeof(sql_data_type), &sql_data_type_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 17, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&sql_datetime_sub),
+                      reinterpret_cast<char*>(&sql_datetime_sub) - bind_offset,
                       (SQLLEN)sizeof(sql_datetime_sub), &sql_datetime_sub_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
   status = SQLBindCol(conn->hstmt, 18, SQL_C_SLONG,
-                      reinterpret_cast<char*>(&num_prec_radix),
+                      reinterpret_cast<char*>(&num_prec_radix) - bind_offset,
                       (SQLLEN)sizeof(num_prec_radix), &num_prec_radix_len);
   CheckError(status, "SQLBindCol(SQL_C_SLONG)", conn);
 
   status =
       SQLBindCol(conn->hstmt, 19, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&interval_precision),
+                 reinterpret_cast<char*>(&interval_precision) - bind_offset,
                  (SQLLEN)sizeof(interval_precision), &interval_precision_len);
   CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
 
@@ -270,7 +270,7 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
 TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  CheckDataTypes(conn, SQL_ALL_TYPES, true, false, 9);
+  CheckDataTypes(conn, SQL_ALL_TYPES, true, false, 7);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
