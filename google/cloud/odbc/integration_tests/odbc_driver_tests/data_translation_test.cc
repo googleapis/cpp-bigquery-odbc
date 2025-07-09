@@ -1792,8 +1792,6 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       continue;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::cout << "data " << (char*)data << std::endl;
-    std::cout << "strlen_or_ind " << strlen_or_ind << std::endl;
     switch (expected.target_c_type) {
       case SQL_C_BINARY: {
         std::vector<SQLCHAR> returned_val(data, data + strlen_or_ind);

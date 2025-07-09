@@ -38,7 +38,6 @@ mapfile -t cmake_args < <(cmake::common_args)
 BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
-#export ASAN_OPTIONS=detect_leaks=0
 export LSAN_OPTIONS="use_tls=0:suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=0"
 
 ls -l /opt/odbc-driver/lsan.supp

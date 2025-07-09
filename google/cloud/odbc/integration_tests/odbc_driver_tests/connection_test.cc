@@ -1412,9 +1412,8 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
                           0, NULL);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
   // Check connection handle is disconnected
-  SQLHSTMT temp_stmt;
-  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &temp_stmt);
-  EXPECT_EQ(status, SQL_ERROR);
+  status = SQLAllocHandle(SQL_HANDLE_STMT, conn->hdbc, &conn->hstmt);
+  EXPECT_EQ(SQL_ERROR, status);
 
   status = SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_DBC)", conn);
