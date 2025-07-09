@@ -1466,7 +1466,14 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   }
   for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
     buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
+    // std::wcout<<"buffer data "<< i <<" "<<buffer[i]<<std::endl;
   }
+  buffer[utf16_str.GetValue().size()]=L'\0';
+  // auto* buffer2 = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
+  // for (size_t i = 0; i < 80; ++i) {
+  //   buffer2[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
+  //   std::wcout<<"buffer data2 "<< i <<" "<<buffer2[i]<<std::endl;
+  // }
 
   // Set output length
   if (dest_data.result_len) {
