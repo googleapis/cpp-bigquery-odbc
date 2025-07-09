@@ -172,8 +172,6 @@ bool containsAlphanumeric(std::string const& str) {
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
-  using namespace google::cloud::odbc_bigquery_client_interface;
-
   OauthMechanism oauth_value;
   Oauth oauth_struct;
 
@@ -182,7 +180,6 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     oauth_struct.credentials_file_path = key_file_path;
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = OauthMechanism::kApplicationDefault;
-
     if (std::getenv("GOOGLE_APPLICATION_CREDENTIALS") == nullptr) {
       return StatusRecord{
           SQLStates::k_HY000(),
@@ -633,11 +630,10 @@ void EvaluateFields(HWND hwnd) {
                 sizeof(auth_buffer));
   GetWindowText(GetDlgItem(hwnd, kIdcCatlogBOX), catalog_buffer,
                 sizeof(catalog_buffer));
-
-  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
   BOOL enable = dsn_buffer[0] != '\0' && auth_buffer[0] != '\0' &&
                 catalog_buffer[0] != '\0';
 
+  bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
   if (strcmp(auth_buffer, "Service Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
   }
@@ -681,6 +677,12 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
                             char const* key_buffer, char const* auth_buffer,
                             char const* catalog_buffer = "") {
   HWND h_control = GetDlgItem(hwnd, control_id);
+  if (key_buffer[0] && auth_buffer[0] &&
+      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
+    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
+                     catalog_buffer);
+    return StatusRecord::Ok();
+  }
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
 
@@ -697,16 +699,10 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 
-  if (key_buffer[0] && auth_buffer[0] &&
-      (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0])) {
-    PopulateDropdown(h_control, field_type, key_buffer, auth_buffer,
-                     catalog_buffer);
-    return StatusRecord::Ok();
-  }
-
   return StatusRecord{SQLStates::k_HY000(),
                       "Unknown error during dropdown handling."};
 }
+
 void CheckAuthentication(HWND hwnd) {
   HWND h_language_box = GetDlgItem(hwnd, kIdcAuthBox);
   char language_buffer[256] = {0};
