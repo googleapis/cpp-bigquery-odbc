@@ -52,8 +52,8 @@ REGEDIT4
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Simba\Simba ODBC Driver for Google BigQuery\Driver]
 "LogLevel"="1"
-"LogFile"="C:\\b\\trace.log"
+"LogPath"="C:\\b"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver]
 "LogLevel"="1"
-"LogFile"="C:\\b\\trace.log"
+"LogPath"="C:\\b"

@@ -21,7 +21,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 static int const kIdcLogBrowseBtn = 100;
 static int const kIdcLogBtnOk = 101;
 static int const kIdcLogBtnCancel = 102;
-static int const kIdcLogFileEdit = 103;
+static int const kIdcLogPathEdit = 103;
 static int const kIdclogTraceBox = 104;
 static int const kIdcMaxFilesEdit = 105;  // Max Number Files Edit Box
 static int const kIdcMaxSizeEdit = 106;   // Max File Size (MB) Edit Box
@@ -37,21 +37,23 @@ class LogTraceDialog {
   void Show();
   void SetValues(Section const& attributes_map);
   inline std::string const& GetLogLevel() const { return log_level_; }
-  inline std::string const& GetLogFilePath() const { return log_file_path_; }
+  inline std::string const& GetLogPath() const { return log_path_; }
 
   friend class DriverForm;
 
  private:
   HWND parent_hwnd;
   static std::string log_level_;
-  static std::string log_file_path_;
+  static std::string log_path_;
   static std::string original_log_level;
-  static std::string original_log_file_path;
+  static std::string original_log_path;
 
   static LRESULT CALLBACK LogTraceProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM l_param);
   static char const CLASS_NAME[];
 };
+
+int GetLogLevelIndex(std::string& log_level);
 
 void OpenFolderDialog(HWND hwnd, HWND h_edit, char const* mock_folder_path);
 }  // namespace google::cloud::odbc_bq_driver_internal

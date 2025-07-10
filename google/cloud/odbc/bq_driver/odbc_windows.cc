@@ -28,9 +28,9 @@ using google::cloud::odbc_bq_driver_internal::AdvanceOptions;
 using google::cloud::odbc_bq_driver_internal::ConvertLPCSTRToString;
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 using google::cloud::odbc_bq_driver_internal::EncryptPassword;
+using google::cloud::odbc_bq_driver_internal::GetOdbcTraceConfigPath;
 using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
-using google::cloud::odbc_bq_driver_internal::GetTraceLogRegistryPath;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::GetValueOrDefault;
 using ::google::cloud::odbc_bq_driver_internal::LanguageDialect;
@@ -72,11 +72,14 @@ std::string ConvertLanguageDialect(std::string language_dialect) {
 // Parameters
 std::string ConvertLogLevel(std::string log_level) {
   std::string log_level_val;
-
-  if (log_level == "LOG_TRACE") {
-    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogTrace));
+  if (log_level == "LOG_INFO") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogInfo));
   } else if (log_level == "LOG_OFF") {
     log_level_val = std::to_string(static_cast<int>(LogLevel::kLogOff));
+  } else if (log_level == "LOG_ERROR") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogError));
+  } else if (log_level == "LOG_WARNING") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogWarning));
   } else {
     log_level_val = "";
   }
@@ -111,7 +114,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       ConvertLogLevel(GetValueOrDefault(section, log_level_key).empty()
                           ? "0"
                           : GetValueOrDefault(section, log_level_key));
-  std::string log_file = GetValueOrDefault(section, log_file_key);
+  std::string log_file = GetValueOrDefault(section, log_path_key);
   std::string language_dialect =
       ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
@@ -188,7 +191,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
-    return {{log_level_key, log_level}, {log_file_key, log_file}};
+    return {{log_level_key, log_level}, {log_path_key, log_file}};
   };
 
   auto ShowFormAndReturnValues = [&]() -> std::string {
@@ -210,7 +213,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     min_tls_version = form.GetMinTls();
     description = form.GetDescription();
     log_level = ConvertLogLevel(form.GetLogLevel());
-    log_file = form.GetLogFilePath();
+    log_file = form.GetLogPath();
     language_dialect =
         ConvertLanguageDialect(advance_form.GetLanguageDialect());
     large_dataset_name = advance_form.GetDatasetName();
@@ -277,8 +280,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
           section[kv.first.c_str()] = buffer;
         }
         section[dsn_key] = dsn_value;
-        std::string driver_registry_key =
-            GetTraceLogRegistryPath() + "\\Driver";
+        std::string driver_registry_key = GetOdbcTraceConfigPath() + "\\Driver";
         auto trace_result = GetSectionWin(driver_registry_key);
         auto trace_section = trace_result.GetValue();
 
