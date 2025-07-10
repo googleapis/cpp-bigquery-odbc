@@ -21,7 +21,8 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
+TEST(StringValueToOutputBufferResponse,
+     SuccessWhenDestBufferLenGreaterThanSrcLen) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
@@ -37,7 +38,7 @@ TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
 }
 
 TEST(StringValueToOutputBufferResponse,
-     Success_DestBufferLen_GT_SrcLen_Output_SQLINTEGER_Explicit) {
+     SuccessWhenDestBufferLenGreaterThanSrcLenWithSqlIntegerOutputExplicit) {
   std::string expected = "sample-test";
   SQLINTEGER str_len;
   SQLINTEGER buffer_len = 15;
@@ -53,7 +54,7 @@ TEST(StringValueToOutputBufferResponse,
 }
 
 TEST(StringValueToOutputBufferResponse,
-     Success_DestBufferLen_GT_SrcLen_Output_SQLINTEGER_Implicit) {
+     SuccessWhenDestBufferLenGreaterThanSrcLenWithSqlIntegerOutputImplicit) {
   std::string expected = "sample-test";
   SQLINTEGER str_len;
   SQLINTEGER buffer_len = 15;
@@ -69,7 +70,7 @@ TEST(StringValueToOutputBufferResponse,
 }
 
 TEST(StringValueToOutputBufferResponse,
-     SuccessWithInfo_DestBufferLen_LT_SrcLen) {
+     SuccessWithInfoWhenDestBufferLenLessThanSrcLen) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
@@ -87,7 +88,7 @@ TEST(StringValueToOutputBufferResponse,
 }
 
 TEST(StringValueToOutputBufferResponse,
-     SuccessWithInfo_DestBufferLen_EQ_SrcLen) {
+     SuccessWithInfoWhenDestBufferLenEqualsSrcLen) {
   std::string expected = "sampl";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 5;
@@ -104,7 +105,7 @@ TEST(StringValueToOutputBufferResponse,
   EXPECT_EQ(4, str_len);
 }
 
-TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_Zero) {
+TEST(StringValueToOutputBufferResponse, SuccessWhenDestBufferLenIsZero) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 0;
@@ -119,8 +120,8 @@ TEST(StringValueToOutputBufferResponse, Success_DestBufferLen_Zero) {
   EXPECT_EQ(0, str_len);
 }
 
-TEST(StringValueToOutputBufferResponse, Success_StcLenLen_Zero) {
-  std::string expected = "";
+TEST(StringValueToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
+  std::string expected;
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = 15;
   SQLCHAR dest[15];
@@ -134,7 +135,7 @@ TEST(StringValueToOutputBufferResponse, Success_StcLenLen_Zero) {
   EXPECT_EQ(0, str_len);
 }
 
-TEST(StringValueToOutputBufferResponse, Failure_BufferLen_Negative) {
+TEST(StringValueToOutputBufferResponse, FailureWhenBufferLenIsNegative) {
   std::string expected = "sample-test";
   SQLSMALLINT str_len;
   SQLSMALLINT buffer_len = -15;
@@ -149,7 +150,7 @@ TEST(StringValueToOutputBufferResponse, Failure_BufferLen_Negative) {
   EXPECT_EQ(11, str_len);
 }
 
-TEST(IntValueToOutputBufferResponse, Success_SQLINTEGER) {
+TEST(IntValueToOutputBufferResponse, SuccessWithSqlInteger) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLINTEGER dest[15];
@@ -162,7 +163,7 @@ TEST(IntValueToOutputBufferResponse, Success_SQLINTEGER) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(IntValueToOutputBufferResponse, Success_Dest_Null) {
+TEST(IntValueToOutputBufferResponse, SuccessWhenDestIsNull) {
   int expected = 42;
   SQLSMALLINT str_len;
 
@@ -173,7 +174,7 @@ TEST(IntValueToOutputBufferResponse, Success_Dest_Null) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(IntValueToOutputBufferResponse, Success_SQLLEN) {
+TEST(IntValueToOutputBufferResponse, SuccessWithSqlLen) {
   int expected = 42;
   SQLSMALLINT str_len;
   SQLLEN dest[15];
@@ -186,7 +187,7 @@ TEST(IntValueToOutputBufferResponse, Success_SQLLEN) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
-TEST(IntValueToOutputBufferResponse, Success_SQLLEN_Output_SQLINTEGER) {
+TEST(IntValueToOutputBufferResponse, SuccessWithSqlLenOutputSqlInteger) {
   int expected = 42;
   SQLINTEGER str_len;
   SQLLEN dest[15];
@@ -199,7 +200,7 @@ TEST(IntValueToOutputBufferResponse, Success_SQLLEN_Output_SQLINTEGER) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
-TEST(IntValueToOutputBufferResponse, Success_Implicit_SQLLEN) {
+TEST(IntValueToOutputBufferResponse, SuccessWithImplicitSqlLen) {
   SQLLEN expected = 42;
   SQLSMALLINT str_len;
   SQLLEN dest[15];
@@ -213,7 +214,7 @@ TEST(IntValueToOutputBufferResponse, Success_Implicit_SQLLEN) {
 }
 
 TEST(IntValueToOutputBufferResponse,
-     Success_Implicit_SQLLEN_Output_SQLINTEGER) {
+     SuccessWithImplicitSqlLenOutputSqlInteger) {
   SQLLEN expected = 42;
   SQLINTEGER str_len;
   SQLLEN dest[15];
@@ -241,7 +242,7 @@ TEST(AddressToPointer, SetPointer) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(AddressToPointer, SetPointer_Null) {
+TEST(AddressToPointer, SetPointerToNull) {
   SQLSMALLINT* out_buf = nullptr;
   SQLINTEGER str_len = 0;
 
@@ -252,7 +253,7 @@ TEST(AddressToPointer, SetPointer_Null) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(AddressToPointer, SetPointer_Null_WasNotNull) {
+TEST(AddressToPointer, SetPointerToNullWhenWasNotNull) {
   SQLSMALLINT value = 5;
   SQLSMALLINT* out_buf = &value;
   SQLINTEGER str_len = 0;
@@ -274,7 +275,7 @@ TEST(AddressToPointer, DoNotSetPointerToNull) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(AddressToPointer, SetPointer_NullStrLen) {
+TEST(AddressToPointer, SetPointerNullStrLen) {
   SQLSMALLINT ptr[] = {1, 2, 3};
   SQLSMALLINT* out_buf = nullptr;
 
@@ -288,14 +289,14 @@ TEST(AddressToPointer, SetPointer_NullStrLen) {
   EXPECT_EQ(3, out_buf[2]);
 }
 
-TEST(WStrToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
+TEST(WStrToOutputBufferResponse, SuccessWhenDestBufferLenGreaterThanSrcLen) {
   std::wstring expected = L"sample-test";
   SQLSMALLINT buffer_len = 15;
   SQLWCHAR dest[15];
   SQLLEN res_len = 0;
 
   StatusRecord status_record = WStrToOutputBufferResponse(
-      expected.c_str(), dest, buffer_len, expected.size(), 0, &res_len);
+      expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_TRUE(status_record.ok());
   std::wstring actual(dest);
@@ -303,14 +304,15 @@ TEST(WStrToOutputBufferResponse, Success_DestBufferLen_GT_SrcLen) {
   EXPECT_EQ(res_len, expected.size() * sizeof(SQLWCHAR));
 }
 
-TEST(WStrToOutputBufferResponse, SuccessWithInfo_DestBufferLen_LT_SrcLen) {
+TEST(WStrToOutputBufferResponse,
+     SuccessWithInfoWhenDestBufferLenLessThanSrcLen) {
   std::wstring expected = L"sample-test";
   SQLSMALLINT buffer_len = 5;
   SQLWCHAR dest[5];
   SQLLEN res_len = 0;
 
   StatusRecord status_record = WStrToOutputBufferResponse(
-      expected.c_str(), dest, buffer_len, expected.size(), 0, &res_len);
+      expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
@@ -320,14 +322,14 @@ TEST(WStrToOutputBufferResponse, SuccessWithInfo_DestBufferLen_LT_SrcLen) {
   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
 }
 
-TEST(WStrToOutputBufferResponse, SuccessWithInfo_DestBufferLen_EQ_SrcLen) {
+TEST(WStrToOutputBufferResponse, SuccessWithInfoWhenDestBufferLenEqualsSrcLen) {
   std::wstring expected = L"sampl";
   SQLSMALLINT buffer_len = 5;
   SQLWCHAR dest[5];
   SQLLEN res_len = 0;
 
   StatusRecord status_record = WStrToOutputBufferResponse(
-      expected.c_str(), dest, buffer_len, expected.size(), 0, &res_len);
+      expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
@@ -337,14 +339,14 @@ TEST(WStrToOutputBufferResponse, SuccessWithInfo_DestBufferLen_EQ_SrcLen) {
   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
 }
 
-TEST(WStrToOutputBufferResponse, Success_StcLenLen_Zero) {
-  std::wstring expected = L"";
+TEST(WStrToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
+  std::wstring expected;
   SQLSMALLINT buffer_len = 15;
   SQLWCHAR dest[15];
   SQLLEN res_len = 0;
 
   StatusRecord status_record = WStrToOutputBufferResponse(
-      expected.c_str(), dest, buffer_len, expected.size(), 0, &res_len);
+      expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_TRUE(status_record.ok());
   std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
@@ -352,14 +354,14 @@ TEST(WStrToOutputBufferResponse, Success_StcLenLen_Zero) {
   EXPECT_EQ(0, res_len);
 }
 
-TEST(WStrToOutputBufferResponse, Failure_BufferLen_Negative) {
+TEST(WStrToOutputBufferResponse, FailureWhenBufferLenIsNegative) {
   std::wstring expected = L"sample-test";
   SQLSMALLINT buffer_len = -15;
   SQLWCHAR dest[15];
   SQLLEN res_len = 0;
 
   StatusRecord status_record = WStrToOutputBufferResponse(
-      expected.c_str(), dest, buffer_len, expected.size(), 0, &res_len);
+      expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);

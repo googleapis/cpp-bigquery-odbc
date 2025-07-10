@@ -20,7 +20,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
 
 TEST(PopulateSupportedODBC3Functions, AllODBC3SupportedFunctions) {
   SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
