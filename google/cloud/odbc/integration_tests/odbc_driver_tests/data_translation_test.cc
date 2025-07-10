@@ -1879,7 +1879,6 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       continue;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-
     switch (expected.target_c_type) {
       case SQL_C_BINARY: {
         std::vector<SQLCHAR> returned_val(data, data + strlen_or_ind);
@@ -3640,7 +3639,7 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
             SQL_SUCCESS);
 
   EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
-
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // validate data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string select_stmt = "SELECT EmptyString, EmptyBytes FROM " + table_name;

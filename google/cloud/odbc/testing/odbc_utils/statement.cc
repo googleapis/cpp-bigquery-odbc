@@ -154,7 +154,7 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLBindParameter", conn);
 
   // Add param 2 to insert query string
-  int int_field = 42;
+  static SQLSMALLINT int_field = 42;
   status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
                             SQL_INTEGER, 0, 0, &int_field, 0, NULL);
   CheckError(status, "SQLBindParameter", conn);
@@ -305,7 +305,11 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
     SqlToCdataTypes(col_ptr);
     // Allocating space for column data using dynamic memory
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    col_ptr->result_set_owner =
+        std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->result_set = col_ptr->result_set_owner.get();
+    col_ptr->data = col_ptr->result_set;  // if you're using data pointer too
+
     BindCol(conn, col_ptr, i + 1);  // No ANSI version
   }
 
@@ -337,11 +341,6 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
       std::string val = (char*)data;
       results[col_name].push_back(val);
     }
-  }
-
-  // Clean up allocated memory
-  for (int i = 0; i < num_cols; i++) {
-    delete[] cols[i]->data;
   }
 
   return std::make_shared<Results>(results);
@@ -470,7 +469,10 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     SqlToCdataTypes(col_ptr);
     // Allocate memory for column data using dynamic memory.
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    col_ptr->result_set_owner =
+        std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->result_set = col_ptr->result_set_owner.get();
+    col_ptr->data = col_ptr->result_set;  // if you're using data pointer too
 
     if (use_bind_col) {
       BindCol(conn, col_ptr, i + 1);  // No ansi version.
@@ -535,10 +537,6 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
       }
       results[col_name].push_back(val);
     }
-  }
-  // Clean up allocated memory
-  for (int i = 0; i < num_cols; i++) {
-    delete[] cols[i]->data;
   }
   return std::make_shared<Results>(results);
 }
@@ -661,7 +659,10 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
 
     SqlToCdataTypes(col_ptr);
     // Allocate memory for column data using dynamic memory.
-    col_ptr->data = new SQLCHAR[col_ptr->data_size + 1];
+    col_ptr->result_set_owner =
+        std::make_unique<SQLCHAR[]>(col_ptr->data_size + 1);
+    col_ptr->result_set = col_ptr->result_set_owner.get();
+    col_ptr->data = col_ptr->result_set;  // if you're using data pointer too
     BindCol(conn, col_ptr, i + 1);
   }
 
@@ -707,10 +708,6 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
       }
       results[col_name].push_back(val);
     }
-  }
-  // Clean up allocated memory
-  for (int i = 0; i < num_cols; i++) {
-    delete[] cols[i]->data;
   }
   return std::make_shared<Results>(results);
 }

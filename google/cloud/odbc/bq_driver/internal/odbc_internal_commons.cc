@@ -138,7 +138,8 @@ odbc_internal::StatusRecord GetNumericDetailsFromStr(
   numst.precision = precision;
   numst.sign = sign;
   uint64_t dd = std::stoull(num_str);
-  memcpy(reinterpret_cast<char*>(numst.val), &dd, SQL_MAX_NUMERIC_LEN);
+  memset(numst.val, 0, SQL_MAX_NUMERIC_LEN);
+  memcpy(numst.val, &dd, sizeof(dd));
   return status_record;
 }
 

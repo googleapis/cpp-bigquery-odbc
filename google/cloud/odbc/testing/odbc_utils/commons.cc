@@ -209,9 +209,10 @@ std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval) {
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric) {
   unsigned long long value = 0;
+  int byte_count = std::min<int>(numeric.precision, sizeof(numeric.val));
 
-  for (int i = numeric.precision - 1; i >= 0; --i) {
-    value = (value << 8) + numeric.val[i];
+  for (int i = byte_count - 1; i >= 0; --i) {
+    value = (value << 8) + static_cast<unsigned char>(numeric.val[i]);
   }
   std::string result = std::to_string(value);
   if (numeric.scale > 0) {
@@ -1772,6 +1773,38 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
   }
   ret = SQLExecute(conn->hstmt);
   return ret;
+}
+
+void CleanupODBCHandles(ODBCHandles& conn) {
+  if (conn.hstmt) {
+    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
+    conn.hstmt = nullptr;
+  }
+  if (conn.hdbc) {
+    SQLDisconnect(conn.hdbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
+    conn.hdbc = nullptr;
+  }
+  if (conn.henv) {
+    SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
+    conn.henv = nullptr;
+  }
+  if (conn.ard) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ard);
+    conn.ard = nullptr;
+  }
+  if (conn.ird) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ird);
+    conn.ird = nullptr;
+  }
+  if (conn.apd) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.apd);
+    conn.apd = nullptr;
+  }
+  if (conn.ipd) {
+    SQLFreeHandle(SQL_HANDLE_DESC, conn.ipd);
+    conn.ipd = nullptr;
+  }
 }
 
 }  // namespace google::cloud::odbc_tests

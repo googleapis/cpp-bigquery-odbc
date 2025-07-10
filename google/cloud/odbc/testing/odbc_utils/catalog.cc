@@ -369,6 +369,14 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
     if (!pk_name.empty()) catalog_results.insert({6, pk_name});
     results.emplace_back(catalog_results);
   }
+  // Cleanup: free allocated buffers
+  for (int i = 0; i < res_cols; ++i) {
+    if (i == 4) continue;  // index 4 uses stack-allocated `val`
+    if (catalog_result[i].target_value != nullptr) {
+      free(catalog_result[i].target_value);
+      catalog_result[i].target_value = nullptr;
+    }
+  }
   return results;
 }
 
@@ -546,7 +554,12 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
                  SQL_NOT_DEFERRABLE)});  // DEFERRABILITY (Not supported by BQ)
     results.emplace_back(catalog_results);
   }
-
+  for (int i = 0; i < res_cols; ++i) {
+    if (i != 8 && catalog_result[i].target_value) {
+      // free(catalog_result[i].target_value);
+      catalog_result[i].target_value = nullptr;
+    }
+  }
   return results;
 }
 
