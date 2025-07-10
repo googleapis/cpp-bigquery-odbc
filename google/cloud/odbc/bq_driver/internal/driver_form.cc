@@ -683,7 +683,7 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
   bool has_catalog =
       (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0] != '\0');
 
-  if (has_auth && (is_adc || (has_key && has_catalog))) {
+  if (has_auth && has_catalog && (is_adc || has_key)) {
     char const* key_to_use = is_adc ? "" : key_buffer;
     PopulateDropdown(h_control, field_type, key_to_use, auth_buffer,
                      catalog_buffer);
