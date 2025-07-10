@@ -694,7 +694,7 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
     return StatusRecord{SQLStates::k_HY000(), "OAuthMechanism not selected"};
   }
 
-  if (!has_key) {
+  if (!has_key && !is_adc) {
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 
