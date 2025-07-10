@@ -54,7 +54,7 @@ bool const kIsUnixODBC =
     google::cloud::internal::GetEnv("UNIXODBC_INSTALLED").value_or("false") ==
     "true";
 
-constexpr SQLSMALLINT kBufferLength = 1024;
+constexpr SQLLEN kBufferLength = 1024;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
 
@@ -663,6 +663,8 @@ void BindColManually(std::shared_ptr<ODBCHandles> conn,
 // Binds buffers TestingDataBuffer for StdRow type of data
 void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
                     TestingDataBuffer* columns);
+
+void CleanupODBCHandles(ODBCHandles& conn);
 
 std::string Utf16ToUtf8(std::wstring const& utf_16_str,
                         unsigned int code_page = 65001 /* UTF-8 */);

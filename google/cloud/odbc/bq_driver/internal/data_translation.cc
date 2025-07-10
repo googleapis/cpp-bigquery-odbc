@@ -1575,6 +1575,7 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
     buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
   }
+  buffer[utf16_str.GetValue().size()] = L'\0';
 
   // Set output length
   if (dest_data.result_len) {

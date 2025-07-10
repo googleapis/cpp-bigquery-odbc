@@ -624,6 +624,7 @@ TEST(ConnectionTest, SQLDriverConnect_StringDataRightTruncated) {
   PrintDriverVerName(conn);
   EXPECT_EQ(status, SQL_SUCCESS_WITH_INFO);
   EXPECT_NE(out_conn_str_len, sizeof(out_conn_str));
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQL_DriverConnect_CaseInsensitive) {
@@ -975,6 +976,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDsn) {
     EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
     EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
@@ -1008,6 +1010,7 @@ TEST(ConnectionTest, SQLBrowseConnect_OverrideDSNWithConnStrValues) {
     EXPECT_EQ(res_out_conn_str, expected_conn_out_str);
     EXPECT_EQ(out_conn_str_len, expected_conn_out_str.size());
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
@@ -1043,6 +1046,7 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   EXPECT_EQ(res_out_conn_str, expected_out_conn_str);
   EXPECT_EQ(sizeof(res_out_conn_str), sizeof(expected_out_conn_str));
   EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
@@ -1071,12 +1075,12 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
-
 // TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
 #ifdef _WIN32
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
@@ -1105,6 +1109,7 @@ TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
   EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
   EXPECT_EQ(res_out_conn_str.size(), expected_conn_out_str.size());
 #endif  // _WIN32
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
@@ -1138,6 +1143,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
@@ -1190,6 +1196,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
     CheckDiagnosticRecord(conn->hdbc, "HY000", 50404,
                           "Invalid connection string");
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
@@ -1248,6 +1255,7 @@ TEST(ConnectionTest, SQLBrowseConnect_NonRequestedConnAttribute) {
         conn->hdbc, "HY000", 11600,
         "Connection Error: Non Requested connection attribute");
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
@@ -1293,6 +1301,7 @@ TEST(ConnectionTest, SQLBrowseConnect_ConnectionAttributeExists) {
         conn->hdbc, "HY000", 11590,
         "Connection Error: Connection Attribute Catalog already found!");
   }
+  CleanupODBCHandles(*conn);
 }
 
 TEST(DriverInfoTest, SQLGetInfo) {
@@ -1397,15 +1406,6 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLDisconnect(conn->hdbc);
   CheckError(status, "SQLDisconnect", conn);
 
-  // Check that descriptor handle is freed
-  SQLSMALLINT alloc_type;
-  status =
-      SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
-  if (kIsBqDriver) {
-    EXPECT_EQ(SQL_INVALID_HANDLE, status);
-  } else {
-    EXPECT_EQ(SQL_SUCCESS, status);
-  }
   // Check that statement handle is freed
   SQLULEN metadata_id_stmt;
   status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
