@@ -1759,6 +1759,7 @@ TEST(SQLColumns, Check_SQLColumnsDescriptors) {
     ASSERT_NE(it, kColumnMetaDataSchema.end());
     EXPECT_EQ(col_name, *it);
   }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLTables, Check_SQLTablesDescriptors) {
@@ -1790,6 +1791,7 @@ TEST(SQLTables, Check_SQLTablesDescriptors) {
                         kTableMetaDataSchema.end(), col_name);
     EXPECT_EQ(col_name, *it);
   }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 }  // namespace google::cloud::odbc_tests
