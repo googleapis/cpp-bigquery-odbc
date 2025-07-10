@@ -101,6 +101,10 @@ limitations under the License.
                     <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
                     <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
                 </RegistryKey>
+
+  <RemoveRegistryKey Root="HKLM"
+                     Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)"
+                     Action="removeOnUninstall" />
             </Component>
         </DirectoryRef>
     </Fragment>
