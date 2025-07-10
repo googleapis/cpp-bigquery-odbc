@@ -94,7 +94,7 @@ RUN cmake --install build
 # use `absl::any`, `absl::string_view`, and `absl::variant`. See
 # [abseil/abseil-cpp#696] for more information.
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230125.3.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \

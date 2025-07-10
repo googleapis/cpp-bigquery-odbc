@@ -79,8 +79,8 @@ class DriverForm {
   inline std::string const& GetLogLevel() const {
     return LogTraceDialog::log_level_;
   }
-  inline std::string const& GetLogFilePath() const {
-    return LogTraceDialog::log_file_path_;
+  inline std::string const& GetLogPath() const {
+    return LogTraceDialog::log_path_;
   }
   static odbc_internal::StatusRecord TestODBCConnection(
       std::shared_ptr<odbc_bq_driver_internal::Section> const& section);

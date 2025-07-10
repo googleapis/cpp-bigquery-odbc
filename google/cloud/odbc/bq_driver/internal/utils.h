@@ -49,6 +49,16 @@ using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
 using google::cloud::bigquery_v2_minimal_internal::ConnectionProperty;
 
+#ifdef _WIN64
+// 64-bit
+inline std::string k_trace_reg_path =
+    R"(SOFTWARE\\Google\\ODBC Driver for Google BigQuery)";
+#else
+// 32-bit
+inline std::string k_trace_reg_path =
+    R"(SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google BigQuery)";
+#endif  // _WIN64
+
 static std::string const kBase64Chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
@@ -93,6 +103,7 @@ inline void GetUpperStr(std::string& s) {
  * @example Split("SOFTWARE\\ODBC\\ODBC.INI", "\\", 2) will return ["SOFTWARE",
  * "ODBC"]
  */
+
 std::vector<std::string> Split(std::string const& s,
                                std::string const& delimiter = " ",
                                int limit = 0);
@@ -219,7 +230,7 @@ odbc_internal::StatusRecord ValidateTableParameters(
 
 std::string GetPathToOdbcIni();
 
-std::string GetTraceLogRegistryPath();
+std::string GetOdbcTraceConfigPath();
 
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   auto percent_filter_out =

@@ -23,7 +23,7 @@ class LogTraceDialogTest : public ::testing::Test {
   HWND mock_edit_;
   void SetUp() override {
     attributes_map_["log_level"] = "LOG_TRACE";
-    attributes_map_["log_file_path"] = "C:\\temp\\log.txt";
+    attributes_map_["log_path"] = "C:\\temp";
   }
   LogTraceDialog log_trace_dialog_;
   Section attributes_map_;
@@ -32,15 +32,15 @@ class LogTraceDialogTest : public ::testing::Test {
 TEST(LogTraceDialogTest, SetValues_ValidAttributes) {
   LogTraceDialog log_trace_dialog;
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_OFF");
-  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogPath(), "");
 
   Section attributes_map;
   attributes_map["LogLevel"] = "6";
-  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+  attributes_map["LogPath"] = "C:\\temp";
 
   log_trace_dialog.SetValues(attributes_map);
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_TRACE");
-  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "C:\\temp\\log.txt");
+  ASSERT_EQ(log_trace_dialog.GetLogPath(), "C:\\temp");
 }
 
 TEST(LogTraceDialogTest, SetValues_InvalidLogLevel) {
@@ -48,11 +48,11 @@ TEST(LogTraceDialogTest, SetValues_InvalidLogLevel) {
   Section attributes_map;
 
   attributes_map["LogLevel"] = "999";  // Invalid level
-  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+  attributes_map["Logpath"] = "C:\\temp";
   log_trace_dialog.SetValues(attributes_map);
 
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_OFF");
-  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "C:\\temp\\log.txt");
+  ASSERT_EQ(log_trace_dialog.GetLogPath(), "C:\\temp");
 }
 
 TEST(LogTraceDialogTest, SetValues_EmptyAttributes) {
@@ -61,7 +61,7 @@ TEST(LogTraceDialogTest, SetValues_EmptyAttributes) {
   log_trace_dialog.SetValues(attributes_map);
 
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
-  ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogPath(), "");
 }
 
 TEST(LogTraceDialogTest, MockFolderPathProvided) {
