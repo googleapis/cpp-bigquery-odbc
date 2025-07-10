@@ -26,6 +26,11 @@ if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
     add_subdirectory(odbc_utils)
 endif ()
 
+if (BQ_DRIVER_NEEDED)
+    add_subdirectory(bq_driver_utils)
+    add_subdirectory(odbc_utils)
+endif ()
+
 add_subdirectory(client_library_utils)
 
 add_subdirectory(utils)

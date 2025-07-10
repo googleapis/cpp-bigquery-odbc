@@ -19,6 +19,16 @@ project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
 
+# The default behavior should be to build the driver.
+if (NOT ODBC_UNIT_TESTING
+    AND NOT ODBC_INTEGRATION_TESTING
+    AND NOT BQ_DRIVER_INTEGRATION_TESTS
+    AND BQ_DRIVER_NEEDED STREQUAL "OFF")
+    set(BQ_DRIVER_NEEDED OFF)
+else ()
+    set(BQ_DRIVER_NEEDED ON)
+endif ()
+
 # Store the original BUILD_SHARED_LIBS value
 set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
@@ -73,6 +83,10 @@ set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 
-include(bq_driver.cmake)
+if (BQ_DRIVER_NEEDED)
+    include(bq_driver.cmake)
+    add_library(odbc_bq_driver dummy.cc)
+    target_link_libraries(odbc_bq_driver PRIVATE google_cloud_odbc_bq_driver)
+endif ()
 
 add_subdirectory(integration_tests)
