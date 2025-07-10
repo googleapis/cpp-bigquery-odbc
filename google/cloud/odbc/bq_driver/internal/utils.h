@@ -93,6 +93,7 @@ inline void GetUpperStr(std::string& s) {
  * @example Split("SOFTWARE\\ODBC\\ODBC.INI", "\\", 2) will return ["SOFTWARE",
  * "ODBC"]
  */
+
 std::vector<std::string> Split(std::string const& s,
                                std::string const& delimiter = " ",
                                int limit = 0);

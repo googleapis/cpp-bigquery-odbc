@@ -475,6 +475,9 @@ std::string GetPathToOdbcIni() {
 
 std::string GetTraceLogRegistryPath() {
   std::string path;
+#ifndef WIN32
+  return GetPathToOdbcIni();
+#else
 #ifdef _WIN64
   // 64-bit
   path = R"(SOFTWARE\\Google\\ODBC Driver for Google BigQuery)";
@@ -483,6 +486,7 @@ std::string GetTraceLogRegistryPath() {
   path = R"(SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google BigQuery)";
 #endif  // _WIN64
   return path;
+#endif  // WIN32
 }
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types) {

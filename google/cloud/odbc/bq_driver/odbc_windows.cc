@@ -73,8 +73,8 @@ std::string ConvertLanguageDialect(std::string language_dialect) {
 std::string ConvertLogLevel(std::string log_level) {
   std::string log_level_val;
 
-  if (log_level == "LOG_TRACE") {
-    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogTrace));
+  if (log_level == "LOG_INFO") {
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogInfo));
   } else if (log_level == "LOG_OFF") {
     log_level_val = std::to_string(static_cast<int>(LogLevel::kLogOff));
   } else {
