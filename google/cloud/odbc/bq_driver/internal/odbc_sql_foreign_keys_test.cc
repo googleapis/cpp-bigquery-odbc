@@ -34,7 +34,7 @@ int const kDatasetLen = kDataset.length();
 int const kPKTableLen = kPKTable.length();
 int const kFKTableLen = kFKTable.length();
 
-TEST(FetchForeignKeys, failure_empty_catalog_name) {
+TEST(FetchForeignKeys, failureEmptyCatalogName) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, "", kCatalogLen, kDataset, kDatasetLen, kPKTable, kPKTableLen, "",
@@ -46,7 +46,7 @@ TEST(FetchForeignKeys, failure_empty_catalog_name) {
                      HasSubstr("Catalog name for both primary and foreign keys "
                                "cannot be empty")));
 }
-TEST(FetchForeignKeys, failure_empty_catalog_name_len) {
+TEST(FetchForeignKeys, failureEmptyCatalogNameLen) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, 0, kDataset, kDatasetLen, kPKTable, kPKTableLen,
@@ -59,7 +59,7 @@ TEST(FetchForeignKeys, failure_empty_catalog_name_len) {
                                "cannot be empty")));
 }
 
-TEST(FetchForeignKeys, failure_empty_schema_name) {
+TEST(FetchForeignKeys, failureEmptySchemaName) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, "", kDatasetLen, kPKTable, kPKTableLen,
@@ -71,7 +71,7 @@ TEST(FetchForeignKeys, failure_empty_schema_name) {
                      HasSubstr("Schema name for both primary and foreign keys "
                                "cannot be empty")));
 }
-TEST(FetchForeignKeys, failure_empty_schema_name_len) {
+TEST(FetchForeignKeys, failureEmptySchemaNameLen) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, 0, kPKTable, kPKTableLen,
@@ -84,7 +84,7 @@ TEST(FetchForeignKeys, failure_empty_schema_name_len) {
                                "cannot be empty")));
 }
 
-TEST(FetchForeignKeys, failure_different_primary_foreign_catalog) {
+TEST(FetchForeignKeys, failureDifferentPrimaryForeignCatalog) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,
@@ -99,7 +99,7 @@ TEST(FetchForeignKeys, failure_different_primary_foreign_catalog) {
                     "and FK catalog needs to be the same")));
 }
 
-TEST(FetchForeignKeys, failure_different_primary_foreign_schema) {
+TEST(FetchForeignKeys, failureDifferentPrimaryForeignSchema) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,
@@ -114,7 +114,7 @@ TEST(FetchForeignKeys, failure_different_primary_foreign_schema) {
                     "and FK schema needs to be the same")));
 }
 
-TEST(FetchForeignKeys, failure_empty_table_name) {
+TEST(FetchForeignKeys, failureEmptyTableName) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, "", 0, kCatalog,
@@ -127,7 +127,7 @@ TEST(FetchForeignKeys, failure_empty_table_name) {
           HasSubstr(
               "Both Primary and Foreign key table names cannot be empty")));
 }
-TEST(FetchForeignKeys, failure_empty_table_name_len) {
+TEST(FetchForeignKeys, failureEmptyTableNameLen) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable, 0,
@@ -141,7 +141,7 @@ TEST(FetchForeignKeys, failure_empty_table_name_len) {
               "Both Primary and Foreign key table names cannot be empty")));
 }
 
-TEST(FetchForeignKeys, Failure_Null_ConnectionHandle) {
+TEST(FetchForeignKeys, FailureNullConnectionhandle) {
   StatementHandle handle;
   auto status_record_or = FetchForeignKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,

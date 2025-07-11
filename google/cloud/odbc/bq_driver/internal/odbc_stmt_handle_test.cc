@@ -78,7 +78,7 @@ PostQueryResults CreatePostQueryResults() {
   return results;
 }
 
-TEST(GetDescriptorHandle, GetARD_impl) {
+TEST(GetDescriptorHandle, GetARDImpl) {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle apd;
   DescriptorHandle ird;
@@ -90,7 +90,7 @@ TEST(GetDescriptorHandle, GetARD_impl) {
   EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetAPD_impl) {
+TEST(GetDescriptorHandle, GetAPDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird;
@@ -103,7 +103,7 @@ TEST(GetDescriptorHandle, GetAPD_impl) {
   EXPECT_EQ(DescriptorType::kAPD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetIRD_impl) {
+TEST(GetDescriptorHandle, GetIRDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd;
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
@@ -117,7 +117,7 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   EXPECT_EQ(DescriptorType::kIRD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetIPD_impl) {
+TEST(GetDescriptorHandle, GetIPDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd;
   DescriptorHandle ird;
@@ -163,7 +163,7 @@ TEST(SetDescriptorHandle, SetAndGetAPD) {
   EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
-TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
+TEST(SetDescriptorHandle, FailsInvalidtypeIrd) {
   StatementHandle handle;
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -173,7 +173,7 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
 }
 
-TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
+TEST(SetDescriptorHandle, FailsInvalidtypeIpd) {
   StatementHandle handle;
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -216,7 +216,7 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
             get_desc_handle_new.GetHeaderRecord().GetAllocType());
 }
 
-TEST(SetAttribute, Fails_InvalidAttribute) {
+TEST(SetAttribute, FailsInvalidattribute) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(1111, 1111);
@@ -224,7 +224,7 @@ TEST(SetAttribute, Fails_InvalidAttribute) {
   EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
 }
 
-TEST(SetAttribute, Fails_InvalidAttributeValue) {
+TEST(SetAttribute, FailsInvalidattributevalue) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, 1111);
@@ -232,7 +232,7 @@ TEST(SetAttribute, Fails_InvalidAttributeValue) {
   EXPECT_EQ(SQLStates::k_HY024(), status_record.sql_state);
 }
 
-TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
+TEST(SetAttribute, SetAttributeSqlAttrAsyncEnable) {
   StatementHandle handle;
 
   StatusRecord status_record =
@@ -245,7 +245,7 @@ TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, *val);
 }
 
-TEST(SetAttribute, SetAttribute_SQL_ATTR_ROW_NUMBER) {
+TEST(SetAttribute, SetAttributeSqlAttrRowNumber) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ROW_NUMBER, 1111);
@@ -261,7 +261,7 @@ TEST(GetAttribute, GetDefaultAttribute) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
 }
 
-TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
+TEST(Populat_IRD_Descriptor, InvalidDescriptorHandle) {
   StatementHandle handle = CreateStatementHandle();
 
   DescriptorHandle& desc_handle =
@@ -357,7 +357,7 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   }
 }
 
-TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
+TEST(CloseCursor, DoNothingCursorisnotopen) {
   StatementHandle handle = CreateStatementHandle();
 
   handle.CloseCursor();
@@ -366,7 +366,7 @@ TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
+TEST(CloseCursor, CloseCursorAftersqlexecute) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.SetStatementPrepared();
@@ -377,7 +377,7 @@ TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(CloseCursor, CloseCursor_AfterSQLExecDirect) {
+TEST(CloseCursor, CloseCursorAftersqlexecdirect) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 

@@ -32,7 +32,7 @@ int const kCatalogLen = kCatalog.length();
 int const kDatasetLen = kDataset.length();
 int const kTableLen = kTable.length();
 
-TEST(FetchPrimaryKeys, failure_empty_catalog_name) {
+TEST(FetchPrimaryKeys, failureEmptyCatalogName) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, "", kCatalogLen, kDataset, kDatasetLen, kTable, kTableLen);
@@ -42,7 +42,7 @@ TEST(FetchPrimaryKeys, failure_empty_catalog_name) {
       StatusRecordIs(SQLStates::k_HY090(),
                      HasSubstr("Parameter catalog_name cannot be empty")));
 }
-TEST(FetchPrimaryKeys, failure_empty_catalog_len) {
+TEST(FetchPrimaryKeys, failureEmptyCatalogLen) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, 0, kDataset, kDatasetLen, kTable, kTableLen);
@@ -53,7 +53,7 @@ TEST(FetchPrimaryKeys, failure_empty_catalog_len) {
                      HasSubstr("Parameter catalog_name cannot be empty")));
 }
 
-TEST(FetchPrimaryKeys, failure_empty_schema_name) {
+TEST(FetchPrimaryKeys, failureEmptySchemaName) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, kCatalogLen, "", kDatasetLen, kTable, kTableLen);
@@ -63,7 +63,7 @@ TEST(FetchPrimaryKeys, failure_empty_schema_name) {
       StatusRecordIs(SQLStates::k_HY090(),
                      HasSubstr("Parameter schema_name cannot be empty")));
 }
-TEST(FetchPrimaryKeys, failure_empty_schema_len) {
+TEST(FetchPrimaryKeys, failureEmptySchemaLen) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, 0, kTable, kTableLen);
@@ -74,7 +74,7 @@ TEST(FetchPrimaryKeys, failure_empty_schema_len) {
                      HasSubstr("Parameter schema_name cannot be empty")));
 }
 
-TEST(FetchPrimaryKeys, failure_empty_table_name) {
+TEST(FetchPrimaryKeys, failureEmptyTableName) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, "", kTableLen);
@@ -84,7 +84,7 @@ TEST(FetchPrimaryKeys, failure_empty_table_name) {
       StatusRecordIs(SQLStates::k_HY090(),
                      HasSubstr("Parameter table_name cannot be empty")));
 }
-TEST(FetchPrimaryKeys, failure_empty_table_len) {
+TEST(FetchPrimaryKeys, failureEmptyTableLen) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kTable, 0);
@@ -95,7 +95,7 @@ TEST(FetchPrimaryKeys, failure_empty_table_len) {
                      HasSubstr("Parameter table_name cannot be empty")));
 }
 
-TEST(FetchPrimaryKeys, Failure_Null_ConnectionHandle) {
+TEST(FetchPrimaryKeys, FailureNullConnectionhandle) {
   StatementHandle handle;
   auto status_record_or = FetchPrimaryKeysFromDataSource(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kTable, kTableLen);

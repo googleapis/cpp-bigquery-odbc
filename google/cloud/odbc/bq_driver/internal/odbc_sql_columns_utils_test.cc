@@ -113,7 +113,7 @@ TEST(GetRadix, Binary) {
   EXPECT_EQ(2, *radix_opt);
 }
 
-TEST(GetRadix, Null_Numeric) {
+TEST(GetRadix, NullNumeric) {
   TableFieldSchema schema;
   schema.type = "NUMERIC";
   auto radix_status = GetRadix(schema);
@@ -122,7 +122,7 @@ TEST(GetRadix, Null_Numeric) {
   EXPECT_EQ(10, *radix_opt);
 }
 
-TEST(GetRadix, Null_String) {
+TEST(GetRadix, NullString) {
   TableFieldSchema schema;
   schema.type = "STRING";
   auto radix_status = GetRadix(schema);
@@ -338,7 +338,7 @@ TEST(GetColSize, InvalidType) {
                              StrEq("Invalid Data Type: Invalid")));
 }
 
-TEST(GetBufferLen, BufferLenFromDS_WithMaxLen) {
+TEST(GetBufferLen, BufferLenFromDSWithmaxlen) {
   TableFieldSchema schema;
   schema.max_length = 5000;
   auto buf_len_status = GetBufferLen(schema);
@@ -347,7 +347,7 @@ TEST(GetBufferLen, BufferLenFromDS_WithMaxLen) {
   EXPECT_EQ(5000, *buf_len_opt);
 }
 
-TEST(GetBufferLen, BufferLenFromDS_WithPrecision) {
+TEST(GetBufferLen, BufferLenFromDSWithprecision) {
   TableFieldSchema schema;
   schema.precision = 20;
   auto buf_len_status = GetBufferLen(schema);
@@ -545,7 +545,7 @@ TEST(GetCharOctetLen, InvalidType) {
                              StrEq("Invalid Data Type: Invalid")));
 }
 
-TEST(ValidateColumnParameters, Success_MetadataId_TRUE) {
+TEST(ValidateColumnParameters, SuccessMetadataidTrue) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_TRUE);
@@ -553,7 +553,7 @@ TEST(ValidateColumnParameters, Success_MetadataId_TRUE) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ValidateColumnParameters, Success_MetadataId_FALSE) {
+TEST(ValidateColumnParameters, SuccessMetadataidFalse) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_FALSE);
@@ -561,7 +561,7 @@ TEST(ValidateColumnParameters, Success_MetadataId_FALSE) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ValidateColumnParameters, Success_EmptyColumn) {
+TEST(ValidateColumnParameters, SuccessEmptycolumn) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR(""), 0, SQL_FALSE);
@@ -569,7 +569,7 @@ TEST(ValidateColumnParameters, Success_EmptyColumn) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ValidateColumnParameters, Failure_ColumnNameLengthNegative) {
+TEST(ValidateColumnParameters, FailureColumnnamelengthnegative) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), -6, SQL_TRUE);
@@ -578,8 +578,7 @@ TEST(ValidateColumnParameters, Failure_ColumnNameLengthNegative) {
   EXPECT_THAT(status.message, HasSubstr("column name length is invalid"));
 }
 
-TEST(ValidateColumnParameters,
-     Failure_CatalogNameIsSearchPattern_MetadataId_TRUE) {
+TEST(ValidateColumnParameters, FailureCatalognameissearchpatternMetadataidTrue) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_TRUE);
@@ -589,8 +588,7 @@ TEST(ValidateColumnParameters,
               HasSubstr("Catalog name cannot be a search pattern"));
 }
 
-TEST(ValidateColumnParameters,
-     Failure_CatalogNameIsSearchPattern_MetadataId_FALSE) {
+TEST(ValidateColumnParameters, FailureCatalognameissearchpatternMetadataidFalse) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_FALSE);
@@ -600,19 +598,19 @@ TEST(ValidateColumnParameters,
               HasSubstr("Catalog name cannot be a search pattern"));
 }
 
-TEST(GetTypeDescription, TypeDescriptionDiffThanType_Integer) {
+TEST(GetTypeDescription, TypeDescriptionDiffThanTypeInteger) {
   auto type_status = GetTypeDescription("INTEGER");
   ASSERT_STATUS_RECORD_OK(type_status);
   ASSERT_EQ("INT64", *type_status);
 }
 
-TEST(GetTypeDescription, TypeDescriptionDiffThanType_Bool) {
+TEST(GetTypeDescription, TypeDescriptionDiffThanTypeBool) {
   auto type_status = GetTypeDescription("BOOLEAN");
   ASSERT_STATUS_RECORD_OK(type_status);
   ASSERT_EQ("BOOL", *type_status);
 }
 
-TEST(GetTypeDescription, TypeDescriptionSameAsType_Time) {
+TEST(GetTypeDescription, TypeDescriptionSameAsTypeTime) {
   auto type_status = GetTypeDescription("TIME");
   ASSERT_STATUS_RECORD_OK(type_status);
   ASSERT_EQ("TIME", *type_status);

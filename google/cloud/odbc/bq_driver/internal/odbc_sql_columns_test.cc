@@ -625,7 +625,7 @@ TEST(CreateResultSetDSRow, BigNumericField) {
   VerifyDSRow(*ds_row_status, expected_sql_columns);
 }
 
-TEST(FetchBQTableData, failure_empty_catalog_name) {
+TEST(FetchBQTableData, failureEmptyCatalogName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, "", kTestDataset, kTestTable);
@@ -636,7 +636,7 @@ TEST(FetchBQTableData, failure_empty_catalog_name) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_empty_dataset_name) {
+TEST(FetchBQTableData, failureEmptyDatasetName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, "", kTestTable);
@@ -647,7 +647,7 @@ TEST(FetchBQTableData, failure_empty_dataset_name) {
                      HasSubstr("Dataset cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_empty_table_name) {
+TEST(FetchBQTableData, failureEmptyTableName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, kTestDataset, "");
@@ -658,7 +658,7 @@ TEST(FetchBQTableData, failure_empty_table_name) {
                      HasSubstr("Table cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_invalid_connection_handle) {
+TEST(FetchBQTableData, failureInvalidConnectionHandle) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, kTestDataset, kTestTable);
@@ -669,7 +669,7 @@ TEST(FetchBQTableData, failure_invalid_connection_handle) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_FALSE);
@@ -680,7 +680,7 @@ TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_false) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_TRUE);
@@ -691,7 +691,7 @@ TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_true) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_FALSE);
@@ -703,7 +703,7 @@ TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_false) {
           HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_TRUE);
@@ -715,7 +715,7 @@ TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_true) {
           HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_FALSE);
@@ -727,7 +727,7 @@ TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_false) {
           HasSubstr("Table pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_TRUE);
@@ -739,8 +739,7 @@ TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_true) {
           HasSubstr("Table pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData,
-     failure_invalid_connection_handle_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_FALSE);
@@ -751,8 +750,7 @@ TEST(FetchBQTablesData,
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData,
-     failure_invalid_connection_handle_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_TRUE);
@@ -763,7 +761,7 @@ TEST(FetchBQTablesData,
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdFalse) {
   auto conn_handle = CreateConnectionHandle();
 
   auto status_record_or = FetchBQTablesData(
@@ -776,7 +774,7 @@ TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_false) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdTrue) {
   auto conn_handle = CreateConnectionHandle();
 
   auto status_record_or = FetchBQTablesData(conn_handle, kTestCatalog,
@@ -789,83 +787,83 @@ TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_true) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName) {
+TEST(ProcessTableResults, AllColumnsUsingemptycolumnname) {
   ProcessTableResultsHelper("");
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName_TRUE) {
+TEST(ProcessTableResults, AllColumnsUsingemptycolumnnameTrue) {
   ProcessTableResultsHelper("", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, AllColumns_UsingSearchPattern_FALSE) {
+TEST(ProcessTableResults, AllColumnsUsingsearchpatternFalse) {
   ProcessTableResultsHelper("%");
 }
 
-TEST(ProcessTableResults, AllColumns_UsingSearchPattern_TRUE) {
+TEST(ProcessTableResults, AllColumnsUsingsearchpatternTrue) {
   ProcessTableResultsHelper("%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_FALSE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnFalse) {
   ProcessTableResultsHelper("StringField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnTrue) {
   ProcessTableResultsHelper("StringField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumn) {
   ProcessTableResultsHelper("IntField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnTrue) {
   ProcessTableResultsHelper("IntField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp1) {
   ProcessTableResultsHelper("%StringField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp1True) {
   ProcessTableResultsHelper("%StringField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp1) {
   ProcessTableResultsHelper("%IntField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp1True) {
   ProcessTableResultsHelper("%IntField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp2) {
   ProcessTableResultsHelper("StringField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp2True) {
   ProcessTableResultsHelper("StringField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp2) {
   ProcessTableResultsHelper("IntField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp2True) {
   ProcessTableResultsHelper("IntField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp3) {
   ProcessTableResultsHelper("%StringField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp3True) {
   ProcessTableResultsHelper("%StringField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp3) {
   ProcessTableResultsHelper("%IntField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp3True) {
   ProcessTableResultsHelper("%IntField%", SQL_TRUE);
 }
 

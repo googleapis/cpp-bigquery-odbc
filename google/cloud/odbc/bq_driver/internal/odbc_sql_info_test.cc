@@ -378,7 +378,7 @@ TEST(SQLGetInfo_Supported, SqlBitmaskInvalid) {
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_GT_SrcLen) {
+TEST(InfoValToResponse, SQLGetInfoCharDestbufferlenGtSrclen) {
   SQLGetInfoSqlChar info_val_char;
   info_val_char.info_val =
       reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
@@ -397,7 +397,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_GT_SrcLen) {
   EXPECT_EQ(str_len, 11);
 }
 
-TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
+TEST(InfoValToResponse, SQLGetInfoCharDestbufferlenLtSrclen) {
   SQLGetInfoSqlChar info_val_char;
   info_val_char.info_val =
       reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
@@ -416,7 +416,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_LT_SrcLen) {
   EXPECT_EQ(str_len, 4);
 }
 
-TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
+TEST(InfoValToResponse, SQLGetInfoCharDestbufferlenEqSrclen) {
   SQLGetInfoSqlChar info_val_char;
   info_val_char.info_val =
       reinterpret_cast<SQLCHAR*>(const_cast<char*>("sampl"));
@@ -435,7 +435,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLen_EQ_SrcLen) {
   EXPECT_EQ(str_len, 4);
 }
 
-TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
+TEST(InfoValToResponse, SQLGetInfoCharDestbufferlenzero) {
   SQLGetInfoSqlChar info_val_char;
   info_val_char.info_val =
       reinterpret_cast<SQLCHAR*>(const_cast<char*>("sample-test"));
@@ -454,7 +454,7 @@ TEST(InfoValToResponse, SQLGetInfoChar_DestBufferLenZero) {
   EXPECT_EQ(str_len, 0);
 }
 
-TEST(InfoValToResponse, SQLGetInfoChar_SrcLenZero) {
+TEST(InfoValToResponse, SQLGetInfoCharSrclenzero) {
   SQLGetInfoSqlChar info_val_char;
   info_val_char.info_val = reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
   SQLSMALLINT str_len;

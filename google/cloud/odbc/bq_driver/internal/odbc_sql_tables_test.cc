@@ -35,7 +35,7 @@ TEST(ValidateInputParameters, Success) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ValidateInputParameters, Failure_CatalogNameLengthNegative) {
+TEST(ValidateInputParameters, FailureCatalognamelengthnegative) {
   StatusRecord status = ValidateInputParameters(
       CastToSQLCHAR("project"), -7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
@@ -44,7 +44,7 @@ TEST(ValidateInputParameters, Failure_CatalogNameLengthNegative) {
   EXPECT_THAT(status.message, HasSubstr("catalog length is invalid"));
 }
 
-TEST(ValidateInputParameters, Failure_SchemaNameLengthNegative) {
+TEST(ValidateInputParameters, FailureSchemanamelengthnegative) {
   StatusRecord status = ValidateInputParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), -7,
       CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
@@ -53,7 +53,7 @@ TEST(ValidateInputParameters, Failure_SchemaNameLengthNegative) {
   EXPECT_THAT(status.message, HasSubstr("schema length is invalid"));
 }
 
-TEST(ValidateInputParameters, Failure_TableNameLengthNegative) {
+TEST(ValidateInputParameters, FailureTablenamelengthnegative) {
   StatusRecord status = ValidateInputParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), -5, 5, SQL_TRUE);
@@ -62,7 +62,7 @@ TEST(ValidateInputParameters, Failure_TableNameLengthNegative) {
   EXPECT_THAT(status.message, HasSubstr("table name length is invalid"));
 }
 
-TEST(ValidateInputParameters, Failure_TableTypeLengthNegative) {
+TEST(ValidateInputParameters, FailureTabletypelengthnegative) {
   StatusRecord status = ValidateInputParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, -5, SQL_TRUE);
@@ -71,7 +71,7 @@ TEST(ValidateInputParameters, Failure_TableTypeLengthNegative) {
   EXPECT_THAT(status.message, HasSubstr("table type length is invalid"));
 }
 
-TEST(ValidateInputParameters, Failure_NullCatalog) {
+TEST(ValidateInputParameters, FailureNullcatalog) {
   StatusRecord status =
       ValidateInputParameters(nullptr, 7, CastToSQLCHAR("dataset"), 7,
                               CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
@@ -81,7 +81,7 @@ TEST(ValidateInputParameters, Failure_NullCatalog) {
               HasSubstr("Invalid use of NULL pointer for catalog name"));
 }
 
-TEST(ValidateInputParameters, Failure_NullSchema) {
+TEST(ValidateInputParameters, FailureNullschema) {
   StatusRecord status =
       ValidateInputParameters(CastToSQLCHAR("project"), 7, nullptr, 7,
                               CastToSQLCHAR("table"), 5, 5, SQL_TRUE);
@@ -91,7 +91,7 @@ TEST(ValidateInputParameters, Failure_NullSchema) {
               HasSubstr("Invalid use of NULL pointer for schema name"));
 }
 
-TEST(ValidateInputParameters, Failure_NullTableName) {
+TEST(ValidateInputParameters, FailureNulltablename) {
   StatusRecord status = ValidateInputParameters(CastToSQLCHAR("project"), 7,
                                                 CastToSQLCHAR("dataset"), 7,
                                                 nullptr, 5, 5, SQL_TRUE);
@@ -101,14 +101,14 @@ TEST(ValidateInputParameters, Failure_NullTableName) {
               HasSubstr("Invalid use of NULL pointer for table name"));
 }
 
-TEST(ValidateInputParameters, Success_AllNulls_MetadataFalse) {
+TEST(ValidateInputParameters, SuccessAllnullsMetadatafalse) {
   StatusRecord status =
       ValidateInputParameters(nullptr, 0, nullptr, 0, nullptr, 0, 0, SQL_FALSE);
 
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ConstructQuery, ConstructWithTwoClauses_MetadataFalse) {
+TEST(ConstructQuery, ConstructWithTwoClausesMetadatafalse) {
   std::vector<QueryParameter> named_query_params;
 
   auto query =
@@ -122,7 +122,7 @@ TEST(ConstructQuery, ConstructWithTwoClauses_MetadataFalse) {
   EXPECT_EQ(2, named_query_params.size());
 }
 
-TEST(ConstructQuery, ConstructWithTwoClauses_MetadataTrue) {
+TEST(ConstructQuery, ConstructWithTwoClausesMetadatatrue) {
   std::vector<QueryParameter> named_query_params;
 
   auto query =
@@ -136,7 +136,7 @@ TEST(ConstructQuery, ConstructWithTwoClauses_MetadataTrue) {
   EXPECT_EQ(2, named_query_params.size());
 }
 
-TEST(ConstructQuery, ConstructWithTableNameClause_MetadataFalse) {
+TEST(ConstructQuery, ConstructWithTableNameClauseMetadatafalse) {
   std::vector<QueryParameter> named_query_params;
 
   auto query = ConstructQuery("table-1", " % ", SQL_FALSE, named_query_params);
@@ -148,7 +148,7 @@ TEST(ConstructQuery, ConstructWithTableNameClause_MetadataFalse) {
   EXPECT_EQ(1, named_query_params.size());
 }
 
-TEST(ConstructQuery, ConstructWithTableNameClause_MetadataTrue) {
+TEST(ConstructQuery, ConstructWithTableNameClauseMetadatatrue) {
   std::vector<QueryParameter> named_query_params;
 
   auto query = ConstructQuery("table-1", " % ", SQL_TRUE, named_query_params);
@@ -178,7 +178,7 @@ TEST(ConstructQuery, ConstructWithTableTypeClause) {
             named_query_params[0].parameter_value.array_values[1].value);
 }
 
-TEST(ConstructQuery, ConstructWithTwoClauses_EmptyStrings) {
+TEST(ConstructQuery, ConstructWithTwoClausesEmptystrings) {
   std::vector<QueryParameter> named_query_params;
 
   auto query = ConstructQuery("", "", SQL_FALSE, named_query_params);
