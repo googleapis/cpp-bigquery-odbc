@@ -20,11 +20,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::kDefaultTokenUrl;
 using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeDefault;
 using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeIdToken;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
@@ -109,7 +109,7 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.byoid_token_url, kDefaultTokenUrl);
 }
 
-TEST(ConnectionHandle, DsnSetup_HTAPI_DefaultValues) {
+TEST(ConnectionHandle, DsnSetupHtapiDefaultValues) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   conn_handle.SetUp(dsn_section, kDsnName);
@@ -118,7 +118,7 @@ TEST(ConnectionHandle, DsnSetup_HTAPI_DefaultValues) {
   EXPECT_FALSE(actual.allow_htapi);
 }
 
-TEST(ConnectionHandle, DsnSetup_HTAPI_Basic) {
+TEST(ConnectionHandle, DsnSetupHtapiBasic) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["USEDEFAULTLARGERESULTSDATASET"] = "0";
@@ -137,7 +137,7 @@ TEST(ConnectionHandle, DsnSetup_HTAPI_Basic) {
   EXPECT_EQ(actual.large_table_expiration_time, "36000");
 }
 
-TEST(ConnectionHandle, DsnSetup_BYOID) {
+TEST(ConnectionHandle, DsnSetupByoid) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -162,7 +162,7 @@ TEST(ConnectionHandle, DsnSetup_BYOID) {
   EXPECT_EQ(actual.byoid_token_url, kTokenUrl);
 }
 
-TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_AllPropertiesSet) {
+TEST(ConnectionHandle, IsByoidPropertiesSetTrueAllPropertiesSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -175,7 +175,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_AllPropertiesSet) {
   EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
 }
 
-TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_NoPropertiesSet) {
+TEST(ConnectionHandle, IsByoidPropertiesSetTrueNoPropertiesSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
 
@@ -185,7 +185,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_NoPropertiesSet) {
           .IsDsnBYOIDPropertiesSet());  // default value for subject token type.
 }
 
-TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
+TEST(ConnectionHandle, IsByoidPropertiesSetTruePartialPropertiesSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -198,7 +198,7 @@ TEST(ConnectionHandle, IsBYOIDPropertiesSet_True_PartialPropertiesSet) {
   EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
 }
 
-TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
+TEST(ConnectionHandle, ValidateBYOIDPropertiesSuccess) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -212,7 +212,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success) {
   EXPECT_TRUE(conn_handle.ValidateDsnBYOIDProperties().ok());
 }
 
-TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
+TEST(ConnectionHandle, ValidateBYOIDPropertiesFailAudienceNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -227,7 +227,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_AudienceNotSet) {
   EXPECT_EQ(result.message, "Required BYOID properties not set");
 }
 
-TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_CredSrcNotSet) {
+TEST(ConnectionHandle, ValidateBYOIDPropertiesFailCredSrcNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -242,7 +242,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_CredSrcNotSet) {
   EXPECT_EQ(result.message, "Required BYOID properties not set");
 }
 
-TEST(ConnectionHandle, ValidateBYOIDProperties_Success_SubTokenTypeNotSet) {
+TEST(ConnectionHandle, ValidateBYOIDPropertiesSuccessSubTokenTypeNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -256,7 +256,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Success_SubTokenTypeNotSet) {
   EXPECT_TRUE(result.ok());
 }
 
-TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_InvalidSubTokenType) {
+TEST(ConnectionHandle, ValidateBYOIDPropertiesFailInvalidSubTokenType) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   // BYOID Properties
@@ -271,7 +271,7 @@ TEST(ConnectionHandle, ValidateBYOIDProperties_Fail_InvalidSubTokenType) {
   EXPECT_EQ(result.message, "Invalid subject token type");
 }
 
-TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {
+TEST(ConnectionHandle, DsnSetupJobCreationRequired) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["JOBCREATIONMODE"] = "1";
@@ -282,7 +282,7 @@ TEST(ConnectionHandle, DsnSetup_JobCreationRequired) {
   EXPECT_TRUE(actual.is_job_creation_required);
 }
 
-TEST(ConnectionHandle, DsnSetup_JobCreationDefault) {
+TEST(ConnectionHandle, DsnSetupJobCreationDefault) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["JOBCREATIONMODE"] = "9";
@@ -293,7 +293,7 @@ TEST(ConnectionHandle, DsnSetup_JobCreationDefault) {
   EXPECT_FALSE(actual.is_job_creation_required);
 }
 
-TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {
+TEST(ConnectionHandle, DsnSetupSessionsEnabledAnyString) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["ENABLESESSION"] = "aaaaaa";
@@ -304,7 +304,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_AnyString) {
   EXPECT_TRUE(actual.sessions_enabled);
 }
 
-TEST(ConnectionHandle, DsnSetup_SessionsEnabled_True) {
+TEST(ConnectionHandle, DsnSetupSessionsEnabledTrue) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["ENABLESESSION"] = "1";
@@ -315,7 +315,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_True) {
   EXPECT_TRUE(actual.sessions_enabled);
 }
 
-TEST(ConnectionHandle, DsnSetup_SessionsEnabled_False) {
+TEST(ConnectionHandle, DsnSetupSessionsEnabledFalse) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["ENABLESESSION"] = "0";
@@ -326,7 +326,7 @@ TEST(ConnectionHandle, DsnSetup_SessionsEnabled_False) {
   EXPECT_FALSE(actual.sessions_enabled);
 }
 
-TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {
+TEST(ConnectionHandle, DsnSetupSetCurrentCatalog) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["CATALOG"] = kDsnCatalog;
@@ -340,14 +340,14 @@ TEST(ConnectionHandle, DsnSetup_SetCurrentCatalog) {
   EXPECT_EQ(actual_val, kDsnCatalog);
 }
 
-TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
+TEST(ConnectionHandle, DsnSetupNotSetCurrentCatalogSetBefore) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["CATALOG"] = kDsnCatalog;
 
   SQLCHAR buf[256] = "test";
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf), 4);
   ASSERT_TRUE(status_record.ok());
 
   conn_handle.SetUp(dsn_section, kDsnName);
@@ -359,7 +359,7 @@ TEST(ConnectionHandle, DsnSetup_NotSetCurrentCatalog_SetBefore) {
   EXPECT_EQ(actual_val, "test");
 }
 
-TEST(ConnectionHandle, DsnSetup_SQLDialect_NotSet) {
+TEST(ConnectionHandle, DsnSetupSQLDialectNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
 
@@ -369,7 +369,7 @@ TEST(ConnectionHandle, DsnSetup_SQLDialect_NotSet) {
   EXPECT_FALSE(actual.is_bq_legacy_sql);
 }
 
-TEST(ConnectionHandle, DsnSetup_ListProjectsParent_NotSet) {
+TEST(ConnectionHandle, DsnSetupListProjectsParentNotSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
 
@@ -379,7 +379,7 @@ TEST(ConnectionHandle, DsnSetup_ListProjectsParent_NotSet) {
   EXPECT_TRUE(actual.list_projects_parent.empty());
 }
 
-TEST(ConnectionHandle, DsnSetup_ListProjectsParent_Set) {
+TEST(ConnectionHandle, DsnSetupListProjectsParentSet) {
   ConnectionHandle conn_handle;
   Section dsn_section;
 
@@ -390,94 +390,96 @@ TEST(ConnectionHandle, DsnSetup_ListProjectsParent_Set) {
   EXPECT_EQ(actual.list_projects_parent, kDsnListProjectsParent);
 }
 
-TEST(ConnectionHandle, SetAttribute_Success_SQLUInt) {
+TEST(ConnectionHandle, SetAttributeSuccessSQLUInt) {
   ConnectionHandle conn_handle;
 
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+      SQL_ATTR_ACCESS_MODE, reinterpret_cast<SQLPOINTER>(SQL_MODE_READ_ONLY),
+      0);
   EXPECT_TRUE(status_record.ok());
 }
-
-TEST(ConnectionHandle, SetAttribute_Success_SQLChar) {
+TEST(ConnectionHandle, SetAttributeSuccessSQLChar) {
   ConnectionHandle conn_handle;
 
   SQLCHAR buf[256] = "test";
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf, 4);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf), 4);
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ConnectionHandle, SetAttribute_Success_SQLULen) {
+TEST(ConnectionHandle, SetAttributeSuccessSQLULen) {
   ConnectionHandle conn_handle;
 
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+      SQL_ATTR_ASYNC_ENABLE, reinterpret_cast<SQLPOINTER>(SQL_ASYNC_ENABLE_OFF),
+      0);
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ConnectionHandle, SetAttribute_Success_SQLIntBitmask) {
+TEST(ConnectionHandle, SetAttributeSuccessSQLIntBitmask) {
   ConnectionHandle conn_handle;
 
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_SERIALIZABLE, 0);
+      SQL_ATTR_TXN_ISOLATION,
+      reinterpret_cast<SQLPOINTER>(SQL_TRANSACTION_SERIALIZABLE), 0);
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_UnsupportedSetAttribute) {
+TEST(ConnectionHandle, SetAttributeFailUnsupportedSetAttribute) {
   ConnectionHandle conn_handle;
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_TRANSLATE_OPTION, (SQLPOINTER)1, 0);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_TRANSLATE_OPTION, reinterpret_cast<SQLPOINTER>(1), 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_UnSupportedAttribute) {
+TEST(ConnectionHandle, SetAttributeFailUnSupportedAttribute) {
   ConnectionHandle conn_handle;
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_ODBC_CURSORS, (SQLPOINTER)1, 0);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_ODBC_CURSORS, reinterpret_cast<SQLPOINTER>(1), 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_InvalidAttributeValue) {
+TEST(ConnectionHandle, SetAttributeFailInvalidAttributeValue) {
   ConnectionHandle conn_handle;
 
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_ACCESS_MODE, (SQLPOINTER)2, 0);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_ACCESS_MODE, reinterpret_cast<SQLPOINTER>(2), 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY024());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_NegativeStringLen) {
+TEST(ConnectionHandle, SetAttributeFailNegativeStringLen) {
   ConnectionHandle conn_handle;
 
   SQLCHAR catalog[256] = "test";
-  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                (SQLPOINTER)catalog, -1);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(catalog), -1);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringLen) {
+TEST(ConnectionHandle, SetAttributeFailInvalidStringLen) {
   ConnectionHandle conn_handle;
 
   SQLCHAR catalog[256] = "test";
-  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                (SQLPOINTER)catalog, 2);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(catalog), 2);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY090());
 }
 
-TEST(ConnectionHandle, SetAttribute_Fail_InvalidStringValue) {
+TEST(ConnectionHandle, SetAttributeFailInvalidStringValue) {
   ConnectionHandle conn_handle;
 
-  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                (SQLPOINTER) nullptr, 0);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, static_cast<SQLPOINTER>(nullptr), 0);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY009());
 }
 
-TEST(ConnectionHandle, GetAttribute_Fail_UnsupportedGetAttribute) {
+TEST(ConnectionHandle, GetAttributeFailUnsupportedGetAttribute) {
   ConnectionHandle conn_handle;
   SQLULEN val;
   SQLINTEGER str_len;
@@ -487,7 +489,7 @@ TEST(ConnectionHandle, GetAttribute_Fail_UnsupportedGetAttribute) {
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY092());
 }
 
-TEST(ConnectionHandle, GetAttribute_Fail_InvalidConnectionBehavior) {
+TEST(ConnectionHandle, GetAttributeFailInvalidConnectionBehavior) {
   ConnectionHandle conn_handle;
   SQLUINTEGER val;
   SQLINTEGER str_len;
@@ -497,13 +499,14 @@ TEST(ConnectionHandle, GetAttribute_Fail_InvalidConnectionBehavior) {
   EXPECT_EQ(status_record.sql_state, SQLStates::k_08003());
 }
 
-TEST(ConnectionHandle, GetAttribute_Success_SQLUInteger) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLUInteger) {
   ConnectionHandle conn_handle;
   SQLUINTEGER val;
   SQLINTEGER str_len;
   auto expected_len = sizeof(SQLUINTEGER);
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_ACCESS_MODE, (SQLPOINTER)SQL_MODE_READ_ONLY, 0);
+      SQL_ATTR_ACCESS_MODE, reinterpret_cast<SQLPOINTER>(SQL_MODE_READ_ONLY),
+      0);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_ACCESS_MODE, &val, 0, &str_len);
@@ -511,14 +514,14 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLUInteger) {
   EXPECT_EQ(val, (SQLUINTEGER)SQL_MODE_READ_ONLY);
   EXPECT_EQ(str_len, expected_len);
 }
-
-TEST(ConnectionHandle, GetAttribute_Success_SQLULEN) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLULEN) {
   ConnectionHandle conn_handle;
   SQLULEN val;
   SQLINTEGER str_len;
   auto expected_len = sizeof(SQLULEN);
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_OFF, 0);
+      SQL_ATTR_ASYNC_ENABLE, reinterpret_cast<SQLPOINTER>(SQL_ASYNC_ENABLE_OFF),
+      0);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE, &val, 0, &str_len);
@@ -527,13 +530,14 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLULEN) {
   EXPECT_EQ(str_len, expected_len);
 }
 
-TEST(ConnectionHandle, GetAttribute_Success_SQLIntBitmask) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLIntBitmask) {
   ConnectionHandle conn_handle;
   SQLINTEGER val;
   SQLINTEGER str_len;
   auto expected_len = sizeof(SQLINTEGER);
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_SERIALIZABLE, 0);
+      SQL_ATTR_TXN_ISOLATION,
+      reinterpret_cast<SQLPOINTER>(SQL_TRANSACTION_SERIALIZABLE), 0);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_TXN_ISOLATION, &val, 0, &str_len);
@@ -542,13 +546,14 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLIntBitmask) {
   EXPECT_EQ(str_len, expected_len);
 }
 
-TEST(ConnectionHandle, GetAttribute_IsolationLevel_GetOnlySupportedOne) {
+TEST(ConnectionHandle, GetAttributeIsolationLevelGetOnlySupportedOne) {
   ConnectionHandle conn_handle;
   SQLINTEGER val;
   SQLINTEGER str_len;
   auto expected_len = sizeof(SQLINTEGER);
   auto status_record = conn_handle.SetAttribute(
-      SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)SQL_TRANSACTION_READ_COMMITTED, 0);
+      SQL_ATTR_TXN_ISOLATION,
+      reinterpret_cast<SQLPOINTER>(SQL_TRANSACTION_READ_COMMITTED), 0);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_TXN_ISOLATION, &val, 0, &str_len);
@@ -557,13 +562,13 @@ TEST(ConnectionHandle, GetAttribute_IsolationLevel_GetOnlySupportedOne) {
   EXPECT_EQ(str_len, expected_len);
 }
 
-TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLCharDestBufferGT) {
   ConnectionHandle conn_handle;
   SQLCHAR buf_in[256] = "test";
   SQLCHAR buf_out[256];
   SQLINTEGER str_len;
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf_in), 4);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
@@ -584,8 +589,8 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   EXPECT_EQ(str_len, 4);
 
   buf_in[0] = 'a';
-  status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf_in), 4);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 5, &str_len);
@@ -595,13 +600,13 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferGT) {
   EXPECT_EQ(str_len, 4);
 }
 
-TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferSmaller) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLCharDestBufferSmaller) {
   ConnectionHandle conn_handle;
   SQLCHAR buf_in[256] = "test";
   SQLCHAR buf_out[256];
   SQLINTEGER str_len;
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf_in), 4);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 3, &str_len);
@@ -611,13 +616,13 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferSmaller) {
   EXPECT_EQ(actual_val, "te");
 }
 
-TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
+TEST(ConnectionHandle, GetAttributeSuccessSQLCharDestBufferEQ) {
   ConnectionHandle conn_handle;
   SQLCHAR buf_in[256] = "test";
   SQLCHAR buf_out[256];
   SQLINTEGER str_len;
-  auto status_record =
-      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG, (SQLPOINTER)buf_in, 4);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf_in), 4);
   EXPECT_TRUE(status_record.ok());
   status_record =
       conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, buf_out, 4, &str_len);
@@ -627,12 +632,12 @@ TEST(ConnectionHandle, GetAttribute_Success_SQLChar_DestBufferEQ) {
   EXPECT_EQ(actual_val, "tes");
 }
 
-TEST(ConnectionHandle, SetAttribute_SetTwice) {
+TEST(ConnectionHandle, SetAttributeSetTwice) {
   ConnectionHandle conn_handle;
 
   SQLCHAR buf_in[256] = "test";
-  auto status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                                (SQLPOINTER)buf_in, SQL_NTS);
+  auto status_record = conn_handle.SetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, reinterpret_cast<SQLPOINTER>(buf_in), SQL_NTS);
   EXPECT_TRUE(status_record.ok());
 
   SQLCHAR buf_out[256];
@@ -643,8 +648,9 @@ TEST(ConnectionHandle, SetAttribute_SetTwice) {
   EXPECT_EQ(actual_val, "test");
 
   SQLCHAR buf_in_2[256] = "test_2";
-  status_record = conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
-                                           (SQLPOINTER)buf_in_2, SQL_NTS);
+  status_record =
+      conn_handle.SetAttribute(SQL_ATTR_CURRENT_CATALOG,
+                               reinterpret_cast<SQLPOINTER>(buf_in_2), SQL_NTS);
   EXPECT_TRUE(status_record.ok());
 
   SQLCHAR buf_out_2[256];
@@ -655,8 +661,7 @@ TEST(ConnectionHandle, SetAttribute_SetTwice) {
   EXPECT_EQ(actual_val_2, "test_2");
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithPoolUser) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithPoolUser) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
   auth.oauth.byoid_aud_url = "test-aud";
@@ -665,12 +670,11 @@ TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithPoolUser) {
   auth.oauth.byoid_pool_user_project = "test-pool-user-project";
   auth.oauth.byoid_token_url = kDefaultTokenUrl;
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithoutPoolUser) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithoutPoolUser) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
   auth.oauth.byoid_aud_url = "test-aud";
@@ -678,31 +682,28 @@ TEST(ConnectionHandle, ValidateExternalUser_Success_BYOID_WithoutPoolUser) {
   auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
   auth.oauth.byoid_token_url = kDefaultTokenUrl;
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Success_JSON) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserSuccessJson) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
   auth.oauth.credentials_file_path = "path-to-file";
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Success_NotExternalUser) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserSuccessNotExternalUser) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Fail_BYOID) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserFailByoid) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
   auth.oauth.byoid_aud_url = "test-aud";
@@ -710,23 +711,22 @@ TEST(ConnectionHandle, ValidateExternalUser_Fail_BYOID) {
   auth.oauth.byoid_subj_token_type = "invalid";
   auth.oauth.byoid_token_url = kDefaultTokenUrl;
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
   EXPECT_EQ(status.message, "Invalid subject token type");
 }
 
-TEST(ConnectionHandle, ValidateExternalUser_Fail_JSON) {
-  ConnectionHandle handle;
+TEST(ConnectionHandle, ValidateExternalUserFailJson) {
   Authentication auth;
   auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
 
-  StatusRecord status = handle.ValidateExternalUser(auth);
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
   EXPECT_EQ(status.message,
             "JSON Credentials File path is empty for external user");
 }
 
-TEST(ConnectionHandle, DsnSetup_QueryProperties_ParsedCorrectly) {
+TEST(ConnectionHandle, DsnSetupQueryPropertiesParsedCorrectly) {
   Section dsn_section;
   dsn_section["QUERYPROPERTIES"] = "key1=value1, key2=value2";
 
@@ -746,7 +746,7 @@ TEST(ConnectionHandle, DsnSetup_QueryProperties_ParsedCorrectly) {
   EXPECT_EQ(prop1.value, "value2");
 }
 
-TEST(ConnectionHandle, DsnSetup_QueryProperties_EmptyString) {
+TEST(ConnectionHandle, DsnSetupQueryPropertiesEmptyString) {
   Section dsn_section;
   dsn_section["QUERYPROPERTIES"] = "";
 

@@ -274,7 +274,7 @@ TEST(TraceLoggingConsole, Pointers) {
   SQLUSMALLINT i2 = 2;
   SQLINTEGER i3 = 3;
   SQLUINTEGER i4 = 4;
-  auto str =
+  auto* str =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>("Hello World"));
   std::string fmt1 = FormatSqlPointer(p);
   std::string fmt2 = FormatSqlSmallInt(&i1);
@@ -321,11 +321,11 @@ TEST(TraceLoggingConsole, ReturnCodes) {
 }
 
 TEST(TraceLoggingConsole, AdditionalSqlTypes) {
-  auto d = reinterpret_cast<SQLDATE*>(const_cast<char*>("1901-01-01"));
-  auto t = reinterpret_cast<SQLTIME*>(const_cast<char*>("10:30:00"));
-  auto tp =
+  auto* d = reinterpret_cast<SQLDATE*>(const_cast<char*>("1901-01-01"));
+  auto* t = reinterpret_cast<SQLTIME*>(const_cast<char*>("10:30:00"));
+  auto* tp =
       reinterpret_cast<SQLTIMESTAMP*>(const_cast<char*>("1901-01-01 10:30:00"));
-  auto str = reinterpret_cast<SQLVARCHAR*>(const_cast<char*>("Hello"));
+  auto* str = reinterpret_cast<SQLVARCHAR*>(const_cast<char*>("Hello"));
 
   SQLDECIMAL dec = 10;
   SQLNUMERIC n = 11;
