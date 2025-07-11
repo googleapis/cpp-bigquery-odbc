@@ -19,10 +19,8 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
-using ::testing::HasSubstr;
 
 // Common Test Values.
 Section const kDriverSection1{{"LogLevel", "1"}, {"LogFile", "/tmp/odbc.log"}};
@@ -276,8 +274,8 @@ TEST(TraceLoggingConsole, Pointers) {
   SQLUSMALLINT i2 = 2;
   SQLINTEGER i3 = 3;
   SQLUINTEGER i4 = 4;
-  SQLCHAR* str = (SQLCHAR*)"Hello World";
-
+  auto str =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>("Hello World"));
   std::string fmt1 = FormatSqlPointer(p);
   std::string fmt2 = FormatSqlSmallInt(&i1);
   std::string fmt3 = FormatSqlUSmallInt(&i2);
@@ -323,16 +321,17 @@ TEST(TraceLoggingConsole, ReturnCodes) {
 }
 
 TEST(TraceLoggingConsole, AdditionalSqlTypes) {
-  SQLDATE* d = (SQLDATE*)"1901-01-01";
-  SQLTIME* t = (SQLTIME*)"10:30:00";
-  SQLTIMESTAMP* tp = (SQLTIMESTAMP*)"1901-01-01 10:30:00";
-  SQLVARCHAR* str = (SQLVARCHAR*)"Hello";
+  auto d = reinterpret_cast<SQLDATE*>(const_cast<char*>("1901-01-01"));
+  auto t = reinterpret_cast<SQLTIME*>(const_cast<char*>("10:30:00"));
+  auto tp =
+      reinterpret_cast<SQLTIMESTAMP*>(const_cast<char*>("1901-01-01 10:30:00"));
+  auto str = reinterpret_cast<SQLVARCHAR*>(const_cast<char*>("Hello"));
 
   SQLDECIMAL dec = 10;
   SQLNUMERIC n = 11;
   SQLDOUBLE dbl = 1.1;
   SQLFLOAT fl = 2.2;
-  SQLREAL r = 3.3f;
+  SQLREAL r = 3.3F;
 
   std::string fmt1 = FormatSqlDate(d);
   std::string fmt2 = FormatSqlDecimal(dec);
@@ -405,8 +404,8 @@ TEST(TraceLoggingConsole, BasicTypesInt) {
 }
 
 TEST(TraceLoggingConsole, BasicTypesLong) {
-  long l1 = 1L;
-  unsigned long l2 = 2L;
+  int64_t l1 = 1L;
+  uint64_t l2 = 2L;
 
   EXPECT_EQ(
       "TestBasicTypesLong\t\t1\n\t\t2\n",
@@ -415,8 +414,8 @@ TEST(TraceLoggingConsole, BasicTypesLong) {
 }
 
 TEST(TraceLoggingConsole, BasicTypesShort) {
-  short s1 = 1;
-  unsigned short s2 = 2;
+  int16_t s1 = 1;
+  uint16_t s2 = 2;
 
   EXPECT_EQ(
       "TestBasicTypesShort\t\t1\n\t\t2\n",
