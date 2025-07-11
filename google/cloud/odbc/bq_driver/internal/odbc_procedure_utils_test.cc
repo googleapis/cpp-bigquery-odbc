@@ -57,7 +57,8 @@ TEST(ValidateProcedureColumnParameters, FailureEmptycatalog) {
               HasSubstr("Catalog cannot be empty"));
 }
 
-TEST(ValidateProcedureColumnParameters, FailureCatalognameissearchpatternMetadataidTrue) {
+TEST(ValidateProcedureColumnParameters,
+     FailureCatalognameissearchpatternMetadataidTrue) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_TRUE);
@@ -66,7 +67,8 @@ TEST(ValidateProcedureColumnParameters, FailureCatalognameissearchpatternMetadat
               HasSubstr("Catalog name cannot be a search pattern"));
 }
 
-TEST(ValidateProcedureColumnParameters, FailureCatalognameissearchpatternMetadataidFalse) {
+TEST(ValidateProcedureColumnParameters,
+     FailureCatalognameissearchpatternMetadataidFalse) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_FALSE);

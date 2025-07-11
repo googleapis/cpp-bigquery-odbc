@@ -31,7 +31,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusIs;
 using ::testing::HasSubstr;
 
-TEST(OdbcHandleLock, Success_Acquire_Release_Lock) {
+TEST(OdbcHandleLock, SuccessAcquireReleaseLock) {
   EnvironmentHandle env_handle;
   SQLRETURN status;
   status = AcquireHandleMutex(&env_handle, SQL_HANDLE_ENV);
@@ -40,27 +40,27 @@ TEST(OdbcHandleLock, Success_Acquire_Release_Lock) {
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
-TEST(OdbcHandleLock, Invalid_Handle_Acquire_Lock) {
+TEST(OdbcHandleLock, InvalidHandleAcquireLock) {
   EnvironmentHandle env_handle;
   SQLRETURN status;
   status = AcquireHandleMutex(&env_handle, SQL_HANDLE_DBC);
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
-TEST(OdbcHandleLock, NULL_SQLHandle_Acquire_Lock) {
+TEST(OdbcHandleLock, NULLSqlhandleAcquireLock) {
   SQLHDBC conn_handle = nullptr;
   SQLRETURN status = AcquireHandleMutex(conn_handle, SQL_HANDLE_DBC);
   EXPECT_EQ(status, SQL_NULL_HANDLE);
 }
 
-TEST(OdbcHandleLock, NULL_SQLHandle_Release_Lock) {
+TEST(OdbcHandleLock, NULLSqlhandleReleaseLock) {
   SQLHDBC conn_handle = nullptr;
   SQLRETURN status = ReleaseHandleMutex(conn_handle, SQL_HANDLE_DBC);
   EXPECT_EQ(status, SQL_NULL_HANDLE);
 }
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-TEST(OdbcHandleLock, HandleLock_RAII) {
+TEST(OdbcHandleLock, HandleLockRaii) {
   SQLHENV env_handle = SQL_NULL_HANDLE;
   SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env_handle);
   {
@@ -76,7 +76,7 @@ TEST(OdbcHandleLock, HandleLock_RAII) {
   SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-TEST(OdbcHandleLock, HandleLock_RAII_WithParentLock) {
+TEST(OdbcHandleLock, HandleLockRaiiWithparentlock) {
   SQLHENV env_handle = SQL_NULL_HANDLE;
   SQLHDBC dbc_handle = SQL_NULL_HANDLE;
   SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env_handle);
@@ -95,7 +95,7 @@ TEST(OdbcHandleLock, HandleLock_RAII_WithParentLock) {
   SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-TEST(OdbcHandleLock, GetParentHandles_Connection) {
+TEST(OdbcHandleLock, GetParentHandlesConnection) {
   SQLHENV env_handle = SQL_NULL_HANDLE;
   SQLHDBC dbc_handle = SQL_NULL_HANDLE;
   SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env_handle);
@@ -115,7 +115,7 @@ TEST(OdbcHandleLock, GetParentHandles_Connection) {
   SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-TEST(OdbcHandleLock, GetParentHandles_Statement) {
+TEST(OdbcHandleLock, GetParentHandlesStatement) {
   SQLHENV env_handle = SQL_NULL_HANDLE;
   SQLHDBC dbc_handle = SQL_NULL_HANDLE;
   SQLHSTMT stmt_handle = SQL_NULL_HANDLE;
@@ -138,7 +138,7 @@ TEST(OdbcHandleLock, GetParentHandles_Statement) {
   SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-TEST(OdbcHandleLock, GetParentHandles_Descriptor) {
+TEST(OdbcHandleLock, GetParentHandlesDescriptor) {
   SQLHENV env_handle = SQL_NULL_HANDLE;
   SQLHDBC dbc_handle = SQL_NULL_HANDLE;
   SQLHDESC desc_handle = SQL_NULL_HANDLE;
@@ -161,7 +161,7 @@ TEST(OdbcHandleLock, GetParentHandles_Descriptor) {
   SQLFreeHandle(SQL_HANDLE_ENV, env_handle);
 }
 
-TEST(OdbcHandleLock, GetParentHandles_InvalidHandle) {
+TEST(OdbcHandleLock, GetParentHandlesInvalidhandle) {
   SQLHANDLE handle = reinterpret_cast<SQLHANDLE>(0xDEADBEEF);
   SQLSMALLINT handle_type = SQL_HANDLE_DBC;
   bool is_global = false;

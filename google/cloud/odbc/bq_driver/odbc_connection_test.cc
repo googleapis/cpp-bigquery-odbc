@@ -159,13 +159,13 @@ TEST(SQLDisconnectInternal, Disconnect) {
   EXPECT_TRUE(conn_handle.GetDescriptorHandles().empty());
 }
 
-TEST(SQLDisconnectInternal, Fail_InvalidHandle) {
+TEST(SQLDisconnectInternal, FailInvalidhandle) {
   auto status = SQLDisconnectInternal(nullptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLDisconnectInternal, Fail_NotConnectedHandle) {
+TEST(SQLDisconnectInternal, FailNotconnectedhandle) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status = SQLDisconnectInternal(&conn_handle);
@@ -175,7 +175,7 @@ TEST(SQLDisconnectInternal, Fail_NotConnectedHandle) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDisconnectInternal, Fail_ActiveTransaction) {
+TEST(SQLDisconnectInternal, FailActivetransaction) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   conn_handle.SetTransactionActive(true);
 
@@ -186,13 +186,13 @@ TEST(SQLDisconnectInternal, Fail_ActiveTransaction) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLConnectInternal, Fail_InvalidConnectionHandle) {
+TEST(SQLConnectInternal, FailInvalidconnectionhandle) {
   auto status = SQLConnectInternal(NULL, NULL, 0, NULL, 0, NULL, 0);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLConnectInternal, Fail_InvalidServerNameLen) {
+TEST(SQLConnectInternal, FailInvalidservernamelen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status =
@@ -205,7 +205,7 @@ TEST(SQLConnectInternal, Fail_InvalidServerNameLen) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLConnectInternal, Fail_InvalidUserNameLen) {
+TEST(SQLConnectInternal, FailInvalidusernamelen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status =
@@ -218,7 +218,7 @@ TEST(SQLConnectInternal, Fail_InvalidUserNameLen) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLConnectInternal, Fail_InvalidAuthLen) {
+TEST(SQLConnectInternal, FailInvalidauthlen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status =
@@ -231,7 +231,7 @@ TEST(SQLConnectInternal, Fail_InvalidAuthLen) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLConnectInternal, Fail_DSNLess_EmptyUser) {
+TEST(SQLConnectInternal, FailDsnlessEmptyuser) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar(""),
@@ -244,7 +244,7 @@ TEST(SQLConnectInternal, Fail_DSNLess_EmptyUser) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLConnectInternal, Fail_DSNLess_EmptyAuthString) {
+TEST(SQLConnectInternal, FailDsnlessEmptyauthstring) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
@@ -257,7 +257,7 @@ TEST(SQLConnectInternal, Fail_DSNLess_EmptyAuthString) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
+TEST(SQLConnectInternal, FailDsnlessInvaliduser) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
@@ -270,7 +270,7 @@ TEST(SQLConnectInternal, Fail_DSNLess_InvalidUser) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLDriverConnectInternal, Fail_InvalidConnectionHandle) {
+TEST(SQLDriverConnectInternal, FailInvalidconnectionhandle) {
   SQLCHAR* in_conn_str = ToSqlChar("DSN=SampleDSN");
   SQLCHAR out_conn_str[10] = {0};
   SQLSMALLINT out_conn_str_len;
@@ -281,7 +281,7 @@ TEST(SQLDriverConnectInternal, Fail_InvalidConnectionHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLDriverConnectInternal, Fail_EmptyConnectionString) {
+TEST(SQLDriverConnectInternal, FailEmptyconnectionstring) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   SQLCHAR* in_conn_str = ToSqlChar("");
@@ -294,7 +294,7 @@ TEST(SQLDriverConnectInternal, Fail_EmptyConnectionString) {
   EXPECT_EQ(status, SQL_ERROR);
 }
 
-TEST(SQLDriverConnectInternal, Fail_DSNNotFound) {
+TEST(SQLDriverConnectInternal, FailDsnnotfound) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   std::string conn_str = "DSN=NON_EXISTENT_DSN";
@@ -308,7 +308,7 @@ TEST(SQLDriverConnectInternal, Fail_DSNNotFound) {
   EXPECT_EQ(status, SQL_ERROR);
 }
 
-TEST(SQLDriverConnectInternal, Fail_DSNAndDriverNotFound) {
+TEST(SQLDriverConnectInternal, FailDsnanddrivernotfound) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   SQLCHAR* in_conn_str = ToSqlChar("");
@@ -322,7 +322,7 @@ TEST(SQLDriverConnectInternal, Fail_DSNAndDriverNotFound) {
   EXPECT_EQ(status, SQL_ERROR);
 }
 
-TEST(SQLDriverConnectInternal, Dialog_Failed) {
+TEST(SQLDriverConnectInternal, DialogFailed) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
   SQLCHAR* in_conn_str = ToSqlChar("");
@@ -339,12 +339,12 @@ TEST(SQLDriverConnectInternal, Dialog_Failed) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionHandle) {
+TEST(SQLBrowseConnectInternal, FailInvalidconnectionhandle) {
   auto status = SQLBrowseConnectInternal(NULL, NULL, NULL, NULL, 0, 0);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionString) {
+TEST(SQLBrowseConnectInternal, FailInvalidconnectionstring) {
   std::string const conn_str = "InvalidString";
 
   SQLCHAR* in_conn_str = ToSqlChar(conn_str.c_str());
@@ -359,7 +359,7 @@ TEST(SQLBrowseConnectInternal, Fail_InvalidConnectionString) {
   EXPECT_EQ(result, SQL_ERROR);
 }
 
-TEST(SQLBrowseConnectInternal, Fail_MissingRequiredAttribute) {
+TEST(SQLBrowseConnectInternal, FailMissingrequiredattribute) {
   std::string const conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
       "Catalog=bigquery-devtools-drivers;";
@@ -380,7 +380,7 @@ TEST(SQLBrowseConnectInternal, Fail_MissingRequiredAttribute) {
   EXPECT_EQ(res_out_conn_str, "OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(SQLBrowseConnectInternal, Fail_NonRequestedAttributeInConnStr) {
+TEST(SQLBrowseConnectInternal, FailNonrequestedattributeinconnstr) {
   std::string conn_str =
       "DRIVER=Simba ODBC Driver for Google BigQuery;"
       "Catalog=bigquery-devtools-drivers;";
@@ -423,7 +423,7 @@ TEST(SQLBrowseConnectInternal, Fail_NonRequestedAttributeInConnStr) {
       conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLBrowseConnectInternal, Fail_ConnectionAttributeAlreadyPresent) {
+TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
   auto conn_str =
       "driver=Simba ODBC Driver for Google BigQuery;"
       "OAuthMechanism=0;";

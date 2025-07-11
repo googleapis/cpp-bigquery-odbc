@@ -149,7 +149,8 @@ void FromIntervalToExpectedTest(SQLINTERVAL interval_type, CType interval_value,
 }
 
 template <typename SrcType>
-void FromArithmeticToStringTest(SrcType src_val, std::string const& expected_val,
+void FromArithmeticToStringTest(SrcType src_val,
+                                std::string const& expected_val,
                                 SQLSMALLINT dest_type,
                                 std::string const& expected_state = "",
                                 std::string const& expected_message = "") {
@@ -161,7 +162,8 @@ void FromArithmeticToStringTest(SrcType src_val, std::string const& expected_val
   StatusRecord status_record =
       ConvertFromArithmeticDSValue<SrcType>(ds_value, data);
   if (expected_state.empty() || expected_state == SQLStates::k_01S07()) {
-    std::string returned_val = reinterpret_cast<char*>(static_cast<SQLCHAR*>(data.buf));
+    std::string returned_val =
+        reinterpret_cast<char*>(static_cast<SQLCHAR*>(data.buf));
     if constexpr (std::is_same_v<SrcType, SQLCHAR*>) {
       EXPECT_EQ(returned_val, expected_val);
     } else if constexpr (std::is_same_v<SrcType, float>) {

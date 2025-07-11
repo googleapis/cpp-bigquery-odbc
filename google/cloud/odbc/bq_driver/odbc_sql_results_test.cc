@@ -96,7 +96,7 @@ TEST(SQLBindColInternal, Basic) {
   EXPECT_EQ(&target_str_len, out_octet_length_ptr);
 }
 
-TEST(SQLBindColInternal, Type_SQL_C_TYPE_DATE) {
+TEST(SQLBindColInternal, TypeSqlCTypeDate) {
   StatementHandle handle = CreateStatementHandle();
   SQLCHAR buf[20];
   SQLLEN target_str_len;
@@ -153,7 +153,7 @@ TEST(SQLBindColInternal, Type_SQL_C_TYPE_DATE) {
   EXPECT_EQ(&target_str_len, out_octet_length_ptr);
 }
 
-TEST(SQLBindColInternal, Type_SQL_C_INTERVAL_MONTH) {
+TEST(SQLBindColInternal, TypeSqlCIntervalMonth) {
   StatementHandle handle = CreateStatementHandle();
   SQLCHAR buf[20];
   SQLLEN target_str_len;
@@ -210,7 +210,7 @@ TEST(SQLBindColInternal, Type_SQL_C_INTERVAL_MONTH) {
   EXPECT_EQ(&target_str_len, out_octet_length_ptr);
 }
 
-TEST(SQLBindColInternal, UnBindinding_Basic) {
+TEST(SQLBindColInternal, UnBindindingBasic) {
   StatementHandle handle = CreateStatementHandle();
   SQLCHAR buf[20];
   SQLLEN target_str_len;
@@ -236,7 +236,7 @@ TEST(SQLBindColInternal, UnBindinding_Basic) {
 
 // This test binds multiple columns, unbinds the highest col number,
 // and verifies if SQL_DESC_COUNT is correct
-TEST(SQLBindColInternal, UnBindinding_Complex) {
+TEST(SQLBindColInternal, UnBindindingComplex) {
   StatementHandle handle = CreateStatementHandle();
   SQLCHAR buf[20];
   SQLLEN target_str_len;
@@ -372,7 +372,7 @@ void AssertDescribeColumnResults(
   EXPECT_EQ(record.name.size(), column_name_Le);
 }
 
-TEST(SQLDescribeColumn, Fail_InvalidHandle) {
+TEST(SQLDescribeColumn, FailInvalidhandle) {
   SQLSMALLINT data_type = 0;
   SQLULEN column_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -387,7 +387,7 @@ TEST(SQLDescribeColumn, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLDescribeColumn, Fail_ColumnNumberIsZero) {
+TEST(SQLDescribeColumn, FailColumnnumberiszero) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
@@ -406,7 +406,7 @@ TEST(SQLDescribeColumn, Fail_ColumnNumberIsZero) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeColumn, Fail_InvalidColumnNumber) {
+TEST(SQLDescribeColumn, FailInvalidcolumnnumber) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
@@ -425,7 +425,7 @@ TEST(SQLDescribeColumn, Fail_InvalidColumnNumber) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeColumn, Fail_StatementIsNotPrepared) {
+TEST(SQLDescribeColumn, FailStatementisnotprepared) {
   StatementHandle stmt_handle = CreateStatementHandle();
   DescriptorRecord record;
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
@@ -447,7 +447,7 @@ TEST(SQLDescribeColumn, Fail_StatementIsNotPrepared) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeColumn, Describe_SQL_NUMERIC) {
+TEST(SQLDescribeColumn, DescribeSqlNumeric) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
@@ -469,7 +469,7 @@ TEST(SQLDescribeColumn, Describe_SQL_NUMERIC) {
                               data_type, column_size, decimal_digits, nullable);
 }
 
-TEST(SQLDescribeColumn, Describe_SQL_CHAR) {
+TEST(SQLDescribeColumn, DescribeSqlChar) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
@@ -491,7 +491,7 @@ TEST(SQLDescribeColumn, Describe_SQL_CHAR) {
                               data_type, column_size, decimal_digits, nullable);
 }
 
-TEST(SQLDescribeColumn, Describe_SQL_DATE) {
+TEST(SQLDescribeColumn, DescribeSqlDate) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
@@ -513,7 +513,7 @@ TEST(SQLDescribeColumn, Describe_SQL_DATE) {
                               data_type, column_size, decimal_digits, nullable);
 }
 
-TEST(SQLColAttributeInternal, Fail_InvalidHandle) {
+TEST(SQLColAttributeInternal, FailInvalidhandle) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
 
   SQLRETURN status =
@@ -522,7 +522,7 @@ TEST(SQLColAttributeInternal, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLColAttributeInternal, Fail_InvalidFieldIdentifier) {
+TEST(SQLColAttributeInternal, FailInvalidfieldidentifier) {
   StatementHandle stmt_handle = CreateStatementHandle();
 
   SQLRETURN status = SQLColAttributeInternal(&stmt_handle, 1, 111, nullptr, 0,
@@ -534,13 +534,13 @@ TEST(SQLColAttributeInternal, Fail_InvalidFieldIdentifier) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLCloseCursorInternal, Fail_InvalidHandle) {
+TEST(SQLCloseCursorInternal, FailInvalidhandle) {
   SQLRETURN status = SQLCloseCursorInternal(nullptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
+TEST(SQLCloseCursorInternal, FailCursorisnotopen) {
   StatementHandle stmt_handle = CreateStatementHandle();
 
   SQLRETURN status = SQLCloseCursorInternal(&stmt_handle);
@@ -551,7 +551,7 @@ TEST(SQLCloseCursorInternal, Fail_CursorIsNotOpen) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
+TEST(SQLCloseCursorInternal, CloseCursorAftersqlexecute) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   stmt_handle.SetStatementPrepared();
@@ -563,7 +563,7 @@ TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(stmt_handle.IsCursorOpen());
 }
 
-TEST(SQLCloseCursorInternal, CloseCursor_AfterSQLExecDirect) {
+TEST(SQLCloseCursorInternal, CloseCursorAftersqlexecdirect) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
@@ -601,7 +601,7 @@ TEST(SQLRowCountInternal, WrongState) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetData, InvalidColumn_Bookmark) {
+TEST(SQLGetData, InvalidColumnBookmark) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementPrepared);
   SQLCHAR buf[20];
@@ -615,7 +615,7 @@ TEST(SQLGetData, InvalidColumn_Bookmark) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetData, Fail_Null_TargetValue) {
+TEST(SQLGetData, FailNullTargetvalue) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementPrepared);
   SQLLEN target_str_len;

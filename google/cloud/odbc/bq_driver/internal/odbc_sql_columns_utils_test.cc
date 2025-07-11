@@ -578,7 +578,8 @@ TEST(ValidateColumnParameters, FailureColumnnamelengthnegative) {
   EXPECT_THAT(status.message, HasSubstr("column name length is invalid"));
 }
 
-TEST(ValidateColumnParameters, FailureCatalognameissearchpatternMetadataidTrue) {
+TEST(ValidateColumnParameters,
+     FailureCatalognameissearchpatternMetadataidTrue) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_TRUE);
@@ -588,7 +589,8 @@ TEST(ValidateColumnParameters, FailureCatalognameissearchpatternMetadataidTrue) 
               HasSubstr("Catalog name cannot be a search pattern"));
 }
 
-TEST(ValidateColumnParameters, FailureCatalognameissearchpatternMetadataidFalse) {
+TEST(ValidateColumnParameters,
+     FailureCatalognameissearchpatternMetadataidFalse) {
   StatusRecord status = ValidateColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("table"), 5, CastToSQLCHAR("column"), 6, SQL_FALSE);

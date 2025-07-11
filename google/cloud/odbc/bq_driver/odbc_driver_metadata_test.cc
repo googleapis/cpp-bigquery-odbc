@@ -303,7 +303,7 @@ TEST(SQLGetFunctionsInternal, ConnectionHandleNotConnectedFailure) {
   FreeHandles();
 }
 
-TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
+TEST(SQLGetInfoInternal, HandleConnectionInfoTypesDsnName) {
   SQLCHAR dest[256];
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
@@ -319,7 +319,7 @@ TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_DSN_Name) {
   FreeHandles();
 }
 
-TEST(SQLGetInfoInternal, HandleConnectionInfoTypes_Database_Name) {
+TEST(SQLGetInfoInternal, HandleConnectionInfoTypesDatabaseName) {
   SQLCHAR dest[256];
   SQLSMALLINT in_buffer_len = 256;
   SQLSMALLINT str_len_ptr;
@@ -492,14 +492,14 @@ TEST(SQLGetInfoInternal, InvalidInputBufferLength) {
   FreeHandles();
 }
 
-TEST(SQLPrimaryKeys, Failure_InvalidStatementHandle) {
+TEST(SQLPrimaryKeys, FailureInvalidstatementhandle) {
   ASSERT_EQ(
       SQL_INVALID_HANDLE,
       SQLPrimaryKeysInternal(nullptr, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
                              kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen));
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
+TEST(SQLPrimaryKeys, FailureEmptycatalogname) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
                            &handle, kSqlEmpty, kSqlCatalogLen, kSqlDataset,
@@ -512,7 +512,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogName) {
   EXPECT_EQ(status_record.message, "Parameter catalog_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
+TEST(SQLPrimaryKeys, FailureEmptycataloglen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(&handle, kSqlCatalog, 0,
                                               kSqlDataset, kSqlDatasetLen,
@@ -525,7 +525,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyCatalogLen) {
   EXPECT_EQ(status_record.message, "Parameter catalog_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
+TEST(SQLPrimaryKeys, FailureEmptyschemaname) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlEmpty,
@@ -538,7 +538,7 @@ TEST(SQLPrimaryKeys, Failure_EmptySchemaName) {
   EXPECT_EQ(status_record.message, "Parameter schema_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptySchemaLen) {
+TEST(SQLPrimaryKeys, FailureEmptyschemalen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(&handle, kSqlCatalog,
                                               kSqlCatalogLen, kSqlDataset, 0,
@@ -551,7 +551,7 @@ TEST(SQLPrimaryKeys, Failure_EmptySchemaLen) {
   EXPECT_EQ(status_record.message, "Parameter schema_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptyTableName) {
+TEST(SQLPrimaryKeys, FailureEmptytablename) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -564,7 +564,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyTableName) {
   EXPECT_EQ(status_record.message, "Parameter table_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_EmptyTableLen) {
+TEST(SQLPrimaryKeys, FailureEmptytablelen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(&handle, kSqlCatalog,
                                               kSqlCatalogLen, kSqlDataset,
@@ -577,7 +577,7 @@ TEST(SQLPrimaryKeys, Failure_EmptyTableLen) {
   EXPECT_EQ(status_record.message, "Parameter table_name cannot be empty");
 }
 
-TEST(SQLPrimaryKeys, Failure_NullConnectionHandle) {
+TEST(SQLPrimaryKeys, FailureNullconnectionhandle) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -589,7 +589,7 @@ TEST(SQLPrimaryKeys, Failure_NullConnectionHandle) {
   EXPECT_EQ(status_record.message, "Internal connection handle is null");
 }
 
-TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLPrimaryKeys, FailureInvalidconnectionhandleNotconnected) {
   CreateDisconnectedHandle();
   StatementHandle handle(connection_handle);
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
@@ -603,7 +603,7 @@ TEST(SQLPrimaryKeys, Failure_InvalidConnectionHandle_NotConnected) {
   FreeHandles();
 }
 
-TEST(SQLPrimaryKeys, Failure_InvalidBQClient) {
+TEST(SQLPrimaryKeys, FailureInvalidbqclient) {
   CreateConnectedHandle();
   StatementHandle handle(connection_handle);
   ASSERT_EQ(SQL_ERROR, SQLPrimaryKeysInternal(
@@ -618,7 +618,7 @@ TEST(SQLPrimaryKeys, Failure_InvalidBQClient) {
   FreeHandles();
 }
 
-TEST(SQLForeignKeys, Failure_EmptyCatalogName) {
+TEST(SQLForeignKeys, FailureEmptycatalogname) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
             SQLForeignKeysInternal(
@@ -635,7 +635,7 @@ TEST(SQLForeignKeys, Failure_EmptyCatalogName) {
             "cannot be empty. One of them needs to be provided");
 }
 
-TEST(SQLForeignKeys, Failure_EmptyCatalogLen) {
+TEST(SQLForeignKeys, FailureEmptycataloglen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
             SQLForeignKeysInternal(&handle, kSqlCatalog, 0, kSqlDataset,
@@ -652,7 +652,7 @@ TEST(SQLForeignKeys, Failure_EmptyCatalogLen) {
             "cannot be empty. One of them needs to be provided");
 }
 
-TEST(SQLForeignKeys, Failure_EmptySchemaName) {
+TEST(SQLForeignKeys, FailureEmptyschemaname) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
             SQLForeignKeysInternal(
@@ -669,7 +669,7 @@ TEST(SQLForeignKeys, Failure_EmptySchemaName) {
             "cannot be empty. One of them needs to be provided");
 }
 
-TEST(SQLForeignKeys, Failure_EmptySchemaLen) {
+TEST(SQLForeignKeys, FailureEmptyschemalen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
             SQLForeignKeysInternal(&handle, kSqlCatalog, kSqlCatalogLen,
@@ -686,7 +686,7 @@ TEST(SQLForeignKeys, Failure_EmptySchemaLen) {
             "cannot be empty. One of them needs to be provided");
 }
 
-TEST(SQLForeignKeys, Failure_EmptyTableName) {
+TEST(SQLForeignKeys, FailureEmptytablename) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -702,7 +702,7 @@ TEST(SQLForeignKeys, Failure_EmptyTableName) {
             "Both Primary and Foreign key table names cannot be empty");
 }
 
-TEST(SQLForeignKeys, Failure_EmptyTableLen) {
+TEST(SQLForeignKeys, FailureEmptytablelen) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
             SQLForeignKeysInternal(&handle, kSqlCatalog, kSqlCatalogLen,
@@ -718,7 +718,7 @@ TEST(SQLForeignKeys, Failure_EmptyTableLen) {
             "Both Primary and Foreign key table names cannot be empty");
 }
 
-TEST(SQLForeignKeys, Failure_Different_PK_FK_Catalog) {
+TEST(SQLForeignKeys, FailureDifferentPkFkCatalog) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -735,7 +735,7 @@ TEST(SQLForeignKeys, Failure_Different_PK_FK_Catalog) {
             "and FK catalog needs to be the same");
 }
 
-TEST(SQLForeignKeys, Failure_Different_PK_FK_Schema) {
+TEST(SQLForeignKeys, FailureDifferentPkFkSchema) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -752,7 +752,7 @@ TEST(SQLForeignKeys, Failure_Different_PK_FK_Schema) {
             "and FK schema needs to be the same");
 }
 
-TEST(SQLForeignKeys, Failure_NullConnectionHandle) {
+TEST(SQLForeignKeys, FailureNullconnectionhandle) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
                            &handle, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
@@ -767,7 +767,7 @@ TEST(SQLForeignKeys, Failure_NullConnectionHandle) {
   EXPECT_EQ(status_record.message, "Internal connection handle is null");
 }
 
-TEST(SQLForeignKeys, Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLForeignKeys, FailureInvalidconnectionhandleNotconnected) {
   CreateDisconnectedHandle();
   StatementHandle handle(connection_handle);
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
@@ -783,7 +783,7 @@ TEST(SQLForeignKeys, Failure_InvalidConnectionHandle_NotConnected) {
   FreeHandles();
 }
 
-TEST(SQLForeignKeys, Failure_InvalidBQClient) {
+TEST(SQLForeignKeys, FailureInvalidbqclient) {
   CreateConnectedHandle();
   StatementHandle handle(connection_handle);
   ASSERT_EQ(SQL_ERROR, SQLForeignKeysInternal(
@@ -800,7 +800,7 @@ TEST(SQLForeignKeys, Failure_InvalidBQClient) {
   FreeHandles();
 }
 
-TEST(SQLTablesInternal, Failure_CatalogNameLenNegative) {
+TEST(SQLTablesInternal, FailureCatalognamelennegative) {
   StatementHandle handle;
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, -7, kSqlDataset, 7,
@@ -813,7 +813,7 @@ TEST(SQLTablesInternal, Failure_CatalogNameLenNegative) {
             "Invalid buffer length - catalog length is invalid");
 }
 
-TEST(SQLTablesInternal, Failure_SchemaNameLenNegative) {
+TEST(SQLTablesInternal, FailureSchemanamelennegative) {
   StatementHandle handle;
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, -7,
@@ -826,7 +826,7 @@ TEST(SQLTablesInternal, Failure_SchemaNameLenNegative) {
             "Invalid buffer length - schema length is invalid");
 }
 
-TEST(SQLTablesInternal, Failure_TableNameLenNegative) {
+TEST(SQLTablesInternal, FailureTablenamelennegative) {
   StatementHandle handle;
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
@@ -839,7 +839,7 @@ TEST(SQLTablesInternal, Failure_TableNameLenNegative) {
             "Invalid buffer length - table name length is invalid");
 }
 
-TEST(SQLTablesInternal, Failure_TableTypeLenNegative) {
+TEST(SQLTablesInternal, FailureTabletypelennegative) {
   StatementHandle handle;
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
@@ -852,7 +852,7 @@ TEST(SQLTablesInternal, Failure_TableTypeLenNegative) {
             "Invalid buffer length - table type length is invalid");
 }
 
-TEST(SQLTablesInternal, Failure_NullConnectionHandle) {
+TEST(SQLTablesInternal, FailureNullconnectionhandle) {
   StatementHandle handle;
 
   SQLRETURN status = SQLTablesInternal(&handle, kSqlCatalog, 7, kSqlDataset, 7,
@@ -864,7 +864,7 @@ TEST(SQLTablesInternal, Failure_NullConnectionHandle) {
   EXPECT_EQ(status_record.message, "Internal connection handle is null");
 }
 
-TEST(SQLTablesInternal, Failure_InvalidBQClient) {
+TEST(SQLTablesInternal, FailureInvalidbqclient) {
   auto conn_handle = CreateConnectionHandle();
   StatementHandle handle(&conn_handle);
 
@@ -877,7 +877,7 @@ TEST(SQLTablesInternal, Failure_InvalidBQClient) {
   EXPECT_EQ(status_record.message, "Error establishing Datasource connection");
 }
 
-TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLTablesInternal, FailureInvalidconnectionhandleNotconnected) {
   auto conn_handle = CreateConnectionHandle(false);
   StatementHandle handle(&conn_handle);
 
@@ -890,7 +890,7 @@ TEST(SQLTablesInternal, Failure_InvalidConnectionHandle_NotConnected) {
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
-TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
+TEST(SQLColumnsInternal, FailureCatalognamelennegative) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
@@ -905,7 +905,7 @@ TEST(SQLColumnsInternal, Failure_CatalogNameLenNegative) {
             "Invalid buffer length - catalog length is invalid");
 }
 
-TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
+TEST(SQLColumnsInternal, FailureSchemanamelennegative) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
@@ -920,7 +920,7 @@ TEST(SQLColumnsInternal, Failure_SchemaNameLenNegative) {
             "Invalid buffer length - schema length is invalid");
 }
 
-TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
+TEST(SQLColumnsInternal, FailureTablenamelennegative) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
@@ -935,7 +935,7 @@ TEST(SQLColumnsInternal, Failure_TableNameLenNegative) {
             "Invalid buffer length - table name length is invalid");
 }
 
-TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
+TEST(SQLColumnsInternal, FailureColumnnamelennegative) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
@@ -950,7 +950,7 @@ TEST(SQLColumnsInternal, Failure_ColumnNameLenNegative) {
             "Invalid buffer length - column name length is invalid");
 }
 
-TEST(SQLColumnsInternal, Failure_CatalogNameIsSearchPattern) {
+TEST(SQLColumnsInternal, FailureCatalognameissearchpattern) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
@@ -964,7 +964,7 @@ TEST(SQLColumnsInternal, Failure_CatalogNameIsSearchPattern) {
   EXPECT_EQ(status_record.message, "Catalog name cannot be a search pattern");
 }
 
-TEST(SQLColumnsInternal, Failure_NullConnectionHandle) {
+TEST(SQLColumnsInternal, FailureNullconnectionhandle) {
   StatementHandle handle;
 
   SQLRETURN status = SQLColumnsInternal(
@@ -977,7 +977,7 @@ TEST(SQLColumnsInternal, Failure_NullConnectionHandle) {
   EXPECT_EQ(status_record.message, "Internal connection handle is null");
 }
 
-TEST(SQLColumnsInternal, Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLColumnsInternal, FailureInvalidconnectionhandleNotconnected) {
   auto conn_handle = CreateConnectionHandle(false);
   StatementHandle handle(&conn_handle);
 
@@ -991,7 +991,7 @@ TEST(SQLColumnsInternal, Failure_InvalidConnectionHandle_NotConnected) {
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
-TEST(SQLGetInfoInternal, NotConnectedSQL_ODBC_VER) {
+TEST(SQLGetInfoInternal, NotConnectedSQLOdbcVer) {
   SQLCHAR dest[10];
   SQLSMALLINT in_buffer_len = 10;
   SQLSMALLINT str_len_ptr;
@@ -1022,7 +1022,7 @@ TEST(SQLProcedureInternal, NullConnectionHandle) {
   EXPECT_EQ(ret, SQL_ERROR);
 }
 
-TEST(SQLProcedureInternal, Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLProcedureInternal, FailureInvalidconnectionhandleNotconnected) {
   auto conn_handle = CreateConnectionHandle(false);
   StatementHandle handle(&conn_handle);
 
@@ -1050,8 +1050,7 @@ TEST(SQLProcedureColumnsInternal, NullConnectionHandle) {
   EXPECT_EQ(ret, SQL_ERROR);
 }
 
-TEST(SQLProcedureColumnsInternal,
-     Failure_InvalidConnectionHandle_NotConnected) {
+TEST(SQLProcedureColumnsInternal, FailureInvalidconnectionhandleNotconnected) {
   auto conn_handle = CreateConnectionHandle(false);
   StatementHandle handle(&conn_handle);
 
@@ -1065,7 +1064,7 @@ TEST(SQLProcedureColumnsInternal,
   EXPECT_EQ(status_record.message, "Connection to the data source is broken");
 }
 
-TEST(SQLProcedureColumnsInternal, Failure_CatalogNameIsSearchPattern) {
+TEST(SQLProcedureColumnsInternal, FailureCatalognameissearchpattern) {
   auto conn_handle = CreateConnectionHandle(true);
   StatementHandle handle(&conn_handle);
 
