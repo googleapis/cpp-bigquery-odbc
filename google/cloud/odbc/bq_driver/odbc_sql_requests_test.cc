@@ -23,7 +23,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
@@ -113,9 +112,11 @@ TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
   SQLLEN buff_len = col_size;
   SQLLEN str_len = SQL_LEN_DATA_AT_EXEC(buff_len);
 
-  SQLBindParameterInternal(&stmt_handle, param_number, in_out_type, value_type,
-                           param_type, col_size, decimal_digits,
-                           (SQLPOINTER)SQL_DATA_AT_EXEC, buff_len, &str_len);
+  SQLBindParameterInternal(
+      &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
+      decimal_digits,
+      reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(SQL_DATA_AT_EXEC)),
+      buff_len, &str_len);
 
   EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
@@ -373,9 +374,11 @@ TEST(SQLNumParamsInternal, ReturnsParamCount) {
 
 TEST(SQLPrepareInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(stmt_handle, query, len);
 
@@ -385,8 +388,10 @@ TEST(SQLPrepareInternal, FailInvalidhandle) {
 TEST(SQLPrepareInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str = "select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
   SQLINTEGER len = 0;
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
@@ -418,8 +423,9 @@ TEST(SQLPrepareInternal, NullQueryText) {
 TEST(SQLPrepareInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str;
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, SQL_NTS);
 
@@ -436,9 +442,11 @@ TEST(SQLPrepareInternal, DisableCancellationPreviouslycompletedoperation) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -451,9 +459,11 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationCanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -471,9 +481,11 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationNotcanceled) {
       CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
   handle.DisableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -567,9 +579,10 @@ TEST(SQLExecuteInternal, CancellationOfOngoingExecuteOperation) {
 
 TEST(SQLExecDirectInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(stmt_handle, query, len);
 
@@ -579,8 +592,9 @@ TEST(SQLExecDirectInternal, FailInvalidhandle) {
 TEST(SQLExecDirectInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str = "select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = 0;
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
@@ -612,9 +626,9 @@ TEST(SQLExecDirectInternal, NullQueryText) {
 TEST(SQLExecDirectInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-
+  std::string query_str;
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLRETURN status = SQLExecDirectInternal(&handle, query, SQL_NTS);
 
   ASSERT_FALSE(handle.IsOperationCanceled());
@@ -630,9 +644,10 @@ TEST(SQLExecDirectInternal, CancellationBetweenExecutions) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
   ASSERT_EQ(SQL_ERROR, status);
@@ -647,9 +662,10 @@ TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperationCanceled) {
   handle.SetFutureExecDirectQuery(std::move(fut_query));
 
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
 
@@ -855,8 +871,9 @@ TEST(SQLPutDataInternal, InvalidStatementState) {
   char const* test_data = "test_data";
   SQLLEN data_length = strlen(test_data);
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
@@ -876,8 +893,9 @@ TEST(SQLPutDataInternal, NoParameterExpectingData) {
   // Simulate a case where no parameter is expecting data
   stmt_handle.SetCurrentParamIndex(1);
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
@@ -900,8 +918,9 @@ TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
   stmt_handle.SetCurrentParamIndex(1);
   stmt_handle.SetQueryParameters({query_parameters});
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
