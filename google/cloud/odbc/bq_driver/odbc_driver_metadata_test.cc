@@ -28,19 +28,14 @@ namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using ::google::cloud::odbc_bq_driver_internal::HandleType;
 using ::google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using ::google::cloud::odbc_bq_driver_internal::Section;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::StmtStates;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
-
-using google::cloud::odbc_testing_utils::StatusIs;
-using ::testing::HasSubstr;
 
 std::string const kDsnDescription = "test-dsn";
 std::string const kDsnCatalog = "bigquery-test";

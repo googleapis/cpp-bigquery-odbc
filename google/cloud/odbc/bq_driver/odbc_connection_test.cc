@@ -31,8 +31,6 @@ using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
-using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
-using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 
 TEST(SQLAllocConnHandle, SQLAllocConnHandle) {
   EnvironmentHandle env_handle;
@@ -187,7 +185,7 @@ TEST(SQLDisconnectInternal, FailActivetransaction) {
 }
 
 TEST(SQLConnectInternal, FailInvalidconnectionhandle) {
-  auto status = SQLConnectInternal(NULL, NULL, 0, NULL, 0, NULL, 0);
+  auto status = SQLConnectInternal(nullptr, nullptr, 0, nullptr, 0, nullptr, 0);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
@@ -195,8 +193,8 @@ TEST(SQLConnectInternal, FailInvalidconnectionhandle) {
 TEST(SQLConnectInternal, FailInvalidservernamelen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status =
-      SQLConnectInternal(&conn_handle, ToSqlChar("Test"), -1, NULL, 0, NULL, 0);
+  auto status = SQLConnectInternal(&conn_handle, ToSqlChar("Test"), -1, nullptr,
+                                   0, nullptr, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
@@ -208,8 +206,8 @@ TEST(SQLConnectInternal, FailInvalidservernamelen) {
 TEST(SQLConnectInternal, FailInvalidusernamelen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status =
-      SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("Test"), -1, NULL, 0);
+  auto status = SQLConnectInternal(&conn_handle, nullptr, 0, ToSqlChar("Test"),
+                                   -1, nullptr, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
@@ -221,8 +219,8 @@ TEST(SQLConnectInternal, FailInvalidusernamelen) {
 TEST(SQLConnectInternal, FailInvalidauthlen) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status =
-      SQLConnectInternal(&conn_handle, NULL, 0, NULL, 0, ToSqlChar("Test"), -1);
+  auto status = SQLConnectInternal(&conn_handle, nullptr, 0, nullptr, 0,
+                                   ToSqlChar("Test"), -1);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
@@ -234,8 +232,8 @@ TEST(SQLConnectInternal, FailInvalidauthlen) {
 TEST(SQLConnectInternal, FailDsnlessEmptyuser) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar(""),
-                                   SQL_NTS, NULL, 0);
+  auto status = SQLConnectInternal(&conn_handle, nullptr, 0, ToSqlChar(""),
+                                   SQL_NTS, nullptr, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
@@ -247,7 +245,7 @@ TEST(SQLConnectInternal, FailDsnlessEmptyuser) {
 TEST(SQLConnectInternal, FailDsnlessEmptyauthstring) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
+  auto status = SQLConnectInternal(&conn_handle, nullptr, 0, ToSqlChar("TEST"),
                                    SQL_NTS, ToSqlChar(""), SQL_NTS);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -260,7 +258,7 @@ TEST(SQLConnectInternal, FailDsnlessEmptyauthstring) {
 TEST(SQLConnectInternal, FailDsnlessInvaliduser) {
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
 
-  auto status = SQLConnectInternal(&conn_handle, NULL, 0, ToSqlChar("TEST"),
+  auto status = SQLConnectInternal(&conn_handle, nullptr, 0, ToSqlChar("TEST"),
                                    SQL_NTS, ToSqlChar("TEST"), SQL_NTS);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -276,8 +274,9 @@ TEST(SQLDriverConnectInternal, FailInvalidconnectionhandle) {
   SQLSMALLINT out_conn_str_len;
 
   auto status = SQLDriverConnectInternal(
-      nullptr, nullptr, in_conn_str, SQL_NTS, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_PROMPT);
+      nullptr, nullptr, in_conn_str, SQL_NTS,
+      reinterpret_cast<SQLCHAR*>(out_conn_str), sizeof(out_conn_str),
+      &out_conn_str_len, SQL_DRIVER_PROMPT);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
@@ -340,7 +339,8 @@ TEST(SQLDriverConnectInternal, DialogFailed) {
 }
 
 TEST(SQLBrowseConnectInternal, FailInvalidconnectionhandle) {
-  auto status = SQLBrowseConnectInternal(NULL, NULL, NULL, NULL, 0, 0);
+  auto status =
+      SQLBrowseConnectInternal(nullptr, nullptr, nullptr, nullptr, 0, 0);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
@@ -370,9 +370,10 @@ TEST(SQLBrowseConnectInternal, FailMissingrequiredattribute) {
   SQLSMALLINT out_conn_str_len;
 
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+  auto status =
+      SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
+                               reinterpret_cast<SQLCHAR*>(out_conn_str),
+                               sizeof(out_conn_str), &out_conn_str_len);
 
   EXPECT_EQ(SQL_NEED_DATA, status);
 
@@ -391,9 +392,10 @@ TEST(SQLBrowseConnectInternal, FailNonrequestedattributeinconnstr) {
   SQLSMALLINT out_conn_str_len;
 
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+  auto status =
+      SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
+                               reinterpret_cast<SQLCHAR*>(out_conn_str),
+                               sizeof(out_conn_str), &out_conn_str_len);
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
   EXPECT_EQ(SQL_NEED_DATA, status);
@@ -409,7 +411,7 @@ TEST(SQLBrowseConnectInternal, FailNonrequestedattributeinconnstr) {
   conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
 
   status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
-                                    (SQLCHAR*)out_conn_str,
+                                    reinterpret_cast<SQLCHAR*>(out_conn_str),
                                     sizeof(out_conn_str), &out_conn_str_len);
 
   EXPECT_EQ(status, SQL_ERROR);
@@ -424,7 +426,7 @@ TEST(SQLBrowseConnectInternal, FailNonrequestedattributeinconnstr) {
 }
 
 TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
-  auto conn_str =
+  auto const* conn_str =
       "driver=Simba ODBC Driver for Google BigQuery;"
       "OAuthMechanism=0;";
 
@@ -434,9 +436,10 @@ TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
   SQLSMALLINT out_conn_str_len;
 
   ConnectionHandle conn_handle = CreateConnectionHandle(false);
-  auto status = SQLBrowseConnectInternal(
-      &conn_handle, in_conn_str, conn_str_len, (SQLCHAR*)out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len);
+  auto status =
+      SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
+                               reinterpret_cast<SQLCHAR*>(out_conn_str),
+                               sizeof(out_conn_str), &out_conn_str_len);
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
   EXPECT_EQ(SQL_NEED_DATA, status);
@@ -453,7 +456,7 @@ TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
   conn_str_len = strlen(reinterpret_cast<char*>(in_conn_str));
 
   status = SQLBrowseConnectInternal(&conn_handle, in_conn_str, conn_str_len,
-                                    (SQLCHAR*)out_conn_str,
+                                    reinterpret_cast<SQLCHAR*>(out_conn_str),
                                     sizeof(out_conn_str), &out_conn_str_len);
 
   EXPECT_EQ(status, SQL_ERROR);
