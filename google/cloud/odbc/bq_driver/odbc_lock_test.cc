@@ -20,16 +20,7 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
-using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_internal::SQLStates;
-using google::cloud::odbc_internal::StatusRecord;
-using google::cloud::odbc_internal::StatusRecordOr;
-
-using google::cloud::odbc_testing_utils::StatusIs;
-using ::testing::HasSubstr;
 
 TEST(OdbcHandleLock, SuccessAcquireReleaseLock) {
   EnvironmentHandle env_handle;

@@ -378,10 +378,10 @@ TEST(SQLDescribeColumn, FailInvalidhandle) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
 
   SQLRETURN status = SQLDescribeColInternal(
-      nullptr, 1, column_name, 20, &column_name_Le, &data_type, &column_size,
+      nullptr, 1, column_name, 20, &column_name_le, &data_type, &column_size,
       &decimal_digits, &nullable);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
@@ -395,10 +395,10 @@ TEST(SQLDescribeColumn, FailColumnnumberiszero) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
 
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, 0, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, 0, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -414,10 +414,10 @@ TEST(SQLDescribeColumn, FailInvalidcolumnnumber) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
 
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, 10, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, 10, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -437,9 +437,9 @@ TEST(SQLDescribeColumn, FailStatementisnotprepared) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, column_number, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, column_number, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
   EXPECT_EQ(SQL_ERROR, status);
@@ -460,12 +460,12 @@ TEST(SQLDescribeColumn, DescribeSqlNumeric) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, column_number, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, column_number, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
-  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+  AssertDescribeColumnResults(status, record, column_name, column_name_le,
                               data_type, column_size, decimal_digits, nullable);
 }
 
@@ -482,12 +482,12 @@ TEST(SQLDescribeColumn, DescribeSqlChar) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, column_number, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, column_number, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
-  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+  AssertDescribeColumnResults(status, record, column_name, column_name_le,
                               data_type, column_size, decimal_digits, nullable);
 }
 
@@ -504,12 +504,12 @@ TEST(SQLDescribeColumn, DescribeSqlDate) {
   SQLSMALLINT decimal_digits = 0;
   SQLSMALLINT nullable = 0;
   SQLCHAR column_name[15];
-  SQLSMALLINT column_name_Le = 0;
+  SQLSMALLINT column_name_le = 0;
   SQLRETURN status = SQLDescribeColInternal(
-      &stmt_handle, column_number, column_name, 20, &column_name_Le, &data_type,
+      &stmt_handle, column_number, column_name, 20, &column_name_le, &data_type,
       &column_size, &decimal_digits, &nullable);
 
-  AssertDescribeColumnResults(status, record, column_name, column_name_Le,
+  AssertDescribeColumnResults(status, record, column_name, column_name_le,
                               data_type, column_size, decimal_digits, nullable);
 }
 
@@ -593,7 +593,7 @@ TEST(SQLRowCountInternal, NullRowCountPointer) {
 TEST(SQLRowCountInternal, WrongState) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementNotPrepared);
-  SQLLEN* row_count = 0;
+  SQLLEN* row_count = nullptr;
   SQLRETURN ret = SQLRowCountInternal(&handle, row_count);
 
   ASSERT_EQ(ret, SQL_ERROR);
@@ -620,7 +620,7 @@ TEST(SQLGetData, FailNullTargetvalue) {
   handle.SetStmtState(StmtStates::kStatementPrepared);
   SQLLEN target_str_len;
   SQLRETURN status =
-      SQLGetDataInternal(&handle, 1, SQL_CHAR, NULL, 1024, &target_str_len);
+      SQLGetDataInternal(&handle, 1, SQL_CHAR, nullptr, 1024, &target_str_len);
   ASSERT_EQ(SQL_ERROR, status);
   EXPECT_THAT(handle.GetDiagnostics().GetStatusRecords()[0].message,
               HasSubstr("Invalid use of null pointer"));
