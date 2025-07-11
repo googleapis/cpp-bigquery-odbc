@@ -25,8 +25,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
@@ -107,7 +105,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(exp_sql_columns_data.data_type, actual_data_type);
   }
   // TYPE_NAME
@@ -124,7 +122,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_col_size, exp_sql_columns_data.col_size);
   }
   // BUFFER_LENGTH
@@ -132,7 +130,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_buf_len, exp_sql_columns_data.buf_len);
   }
   // DECIMAL_DIGITS
@@ -140,7 +138,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_dec_digits, exp_sql_columns_data.dec_digits);
   }
   // NUM_PREC_RADIX
@@ -148,7 +146,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_radix, exp_sql_columns_data.radix);
   }
   // NULLABLE
@@ -156,7 +154,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_nullable, exp_sql_columns_data.nullable);
   }
   // REMARKS
@@ -183,7 +181,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_sql_data_type, exp_sql_columns_data.sql_data_type);
   }
   // SQL_DATETIME_SUB
@@ -191,8 +189,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_sql_date_time_sub =
-        DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_sql_date_time_sub = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_sql_date_time_sub, exp_sql_columns_data.sql_datetime_sub);
   }
   // CHAR_OCTET_LENGTH
@@ -200,7 +197,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_octet_len, exp_sql_columns_data.octet_len);
   }
   // ORDINAL_POSITION
@@ -208,7 +205,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_pos, exp_sql_columns_data.ord_pos);
   }
   // IS_NULLABLE
@@ -245,7 +242,7 @@ std::vector<ColumnSchema> CreateExpectedRowSchema() {
   return expected;
 }
 
-void ProcessTableResultsHelper(std::string column,
+void ProcessTableResultsHelper(std::string const& column,
                                SQLULEN metadata_id = SQL_FALSE) {
   TableFieldSchema field_schema1;
   field_schema1.name = "StringField";
@@ -304,7 +301,7 @@ void ProcessTableResultsHelper(std::string column,
 
   std::regex column_pattern = BuildRegex(column, metadata_id);
 
-  if (!metadata_id && (column == "" || column == "%")) {
+  if (!metadata_id && (column.empty() || column == "%")) {
     ASSERT_EQ(result_set.rows.size(), 2);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
     VerifyDSRow(result_set.rows[1], expected_sql_int_row);

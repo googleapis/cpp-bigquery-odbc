@@ -19,14 +19,13 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
-constexpr SQLUSMALLINT SUPPORTED_INFO_TYPE =
+constexpr SQLUSMALLINT kSupportedInfoType =
     static_cast<SQLUSMALLINT>(SQL_DATABASE_NAME);
-constexpr SQLUSMALLINT UNSUPPORTED_INFO_TYPE =
+constexpr SQLUSMALLINT kUnsupportedInfoType =
     static_cast<SQLUSMALLINT>(SQL_KEYWORDS);
 
 static std::map<SQLUSMALLINT, std::string> const kUnsupportedEmptyCharMap = {
@@ -208,11 +207,11 @@ static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedBitmaskMap = {
     {SQL_STRING_FUNCTIONS, 15756697},
     {SQL_CONVERT_BIGINT, 20864}};
 
-TEST(SQLGetInfo_Unsupported, SqlCharEmpty) {
+TEST(SQLGetInfoUnsupported, SqlCharEmpty) {
   for (auto const& elem : kUnsupportedEmptyCharMap) {
     SQLUSMALLINT info_type = elem.first;
     std::string info_val = elem.second;
-    SQLCHAR* expected_info_val =
+    auto* expected_info_val =
         reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
     StatusRecordOr<SQLGetInfoSqlChar> actual_info =
         UnSupportedInfoType<SQLGetInfoSqlChar>(info_type);
@@ -221,11 +220,11 @@ TEST(SQLGetInfo_Unsupported, SqlCharEmpty) {
   }
 }
 
-TEST(SQLGetInfo_Unsupported, SqlCharN) {
+TEST(SQLGetInfoUnsupported, SqlCharN) {
   for (auto const& elem : kUnsupportedNCharMap) {
     SQLUSMALLINT info_type = elem.first;
     std::string info_val = elem.second;
-    SQLCHAR* expected_info_val =
+    auto* expected_info_val =
         reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
     StatusRecordOr<SQLGetInfoSqlChar> actual_info =
         UnSupportedInfoType<SQLGetInfoSqlChar>(info_type);
@@ -235,15 +234,15 @@ TEST(SQLGetInfo_Unsupported, SqlCharN) {
   }
 }
 
-TEST(SQLGetInfo_Unsupported, SqlCharInvalid) {
+TEST(SQLGetInfoUnsupported, SqlCharInvalid) {
   StatusRecordOr<SQLGetInfoSqlChar> actual_info =
-      UnSupportedInfoType<SQLGetInfoSqlChar>(SUPPORTED_INFO_TYPE);
+      UnSupportedInfoType<SQLGetInfoSqlChar>(kSupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Unsupported, SQLUSmallIntValue) {
+TEST(SQLGetInfoUnsupported, SQLUSmallIntValue) {
   for (auto const& elem : kUnsupportedUSmallIntMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUSMALLINT expected_info_val = elem.second;
@@ -254,15 +253,15 @@ TEST(SQLGetInfo_Unsupported, SQLUSmallIntValue) {
   }
 }
 
-TEST(SQLGetInfo_Unsupported, SQLUSmallIntInvalid) {
+TEST(SQLGetInfoUnsupported, SQLUSmallIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUSmallInt> actual_info =
-      UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(SUPPORTED_INFO_TYPE);
+      UnSupportedInfoType<SQLGetInfoSqlUSmallInt>(kSupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Unsupported, SQLUIntValue) {
+TEST(SQLGetInfoUnsupported, SQLUIntValue) {
   for (auto const& elem : kUnsupportedUIntMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUINTEGER expected_info_val = elem.second;
@@ -273,15 +272,15 @@ TEST(SQLGetInfo_Unsupported, SQLUIntValue) {
   }
 }
 
-TEST(SQLGetInfo_Unsupported, SQLUIntInvalid) {
+TEST(SQLGetInfoUnsupported, SQLUIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUInt> actual_info =
-      UnSupportedInfoType<SQLGetInfoSqlUInt>(SUPPORTED_INFO_TYPE);
+      UnSupportedInfoType<SQLGetInfoSqlUInt>(kSupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Unsupported, BitmaskValue) {
+TEST(SQLGetInfoUnsupported, BitmaskValue) {
   for (auto const& elem : kUnsupportedBitmaskMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUINTEGER expected_info_val = elem.second;
@@ -292,19 +291,19 @@ TEST(SQLGetInfo_Unsupported, BitmaskValue) {
   }
 }
 
-TEST(SQLGetInfo_Unsupported, BitmaskInvalid) {
+TEST(SQLGetInfoUnsupported, BitmaskInvalid) {
   StatusRecordOr<SQLGetInfoBitmask> actual_info =
-      UnSupportedInfoType<SQLGetInfoBitmask>(SUPPORTED_INFO_TYPE);
+      UnSupportedInfoType<SQLGetInfoBitmask>(kSupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Supported, SqlChar) {
+TEST(SQLGetInfoSupported, SqlChar) {
   for (auto const& elem : kSupportedCharMap) {
     SQLUSMALLINT info_type = elem.first;
     std::string info_val = elem.second;
-    SQLCHAR* expected_info_val =
+    auto* expected_info_val =
         reinterpret_cast<SQLCHAR*>(const_cast<char*>(info_val.c_str()));
     StatusRecordOr<SQLGetInfoSqlChar> actual_info =
         SupportedInfoType<SQLGetInfoSqlChar>(info_type);
@@ -313,15 +312,15 @@ TEST(SQLGetInfo_Supported, SqlChar) {
   }
 }
 
-TEST(SQLGetInfo_Supported, SqlCharInvalid) {
+TEST(SQLGetInfoSupported, SqlCharInvalid) {
   StatusRecordOr<SQLGetInfoSqlChar> actual_info =
-      SupportedInfoType<SQLGetInfoSqlChar>(UNSUPPORTED_INFO_TYPE);
+      SupportedInfoType<SQLGetInfoSqlChar>(kUnsupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Supported, SqlUSmallInt) {
+TEST(SQLGetInfoSupported, SqlUSmallInt) {
   for (auto const& elem : kSupportedUSmallIntMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUSMALLINT expected_info_val = elem.second;
@@ -332,15 +331,15 @@ TEST(SQLGetInfo_Supported, SqlUSmallInt) {
   }
 }
 
-TEST(SQLGetInfo_Supported, SqlUSmallIntInvalid) {
+TEST(SQLGetInfoSupported, SqlUSmallIntInvalid) {
   StatusRecordOr<SQLGetInfoSqlUSmallInt> actual_info =
-      SupportedInfoType<SQLGetInfoSqlUSmallInt>(UNSUPPORTED_INFO_TYPE);
+      SupportedInfoType<SQLGetInfoSqlUSmallInt>(kUnsupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Supported, SqlUInteger) {
+TEST(SQLGetInfoSupported, SqlUInteger) {
   for (auto const& elem : kSupportedUIntMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUINTEGER expected_info_val = elem.second;
@@ -351,15 +350,15 @@ TEST(SQLGetInfo_Supported, SqlUInteger) {
   }
 }
 
-TEST(SQLGetInfo_Supported, SqlUIntegerInvalid) {
+TEST(SQLGetInfoSupported, SqlUIntegerInvalid) {
   StatusRecordOr<SQLGetInfoSqlUInt> actual_info =
-      SupportedInfoType<SQLGetInfoSqlUInt>(UNSUPPORTED_INFO_TYPE);
+      SupportedInfoType<SQLGetInfoSqlUInt>(kUnsupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
 }
 
-TEST(SQLGetInfo_Supported, SqlBitmask) {
+TEST(SQLGetInfoSupported, SqlBitmask) {
   for (auto const& elem : kSupportedBitmaskMap) {
     SQLUSMALLINT info_type = elem.first;
     SQLUINTEGER expected_info_val = elem.second;
@@ -370,9 +369,9 @@ TEST(SQLGetInfo_Supported, SqlBitmask) {
   }
 }
 
-TEST(SQLGetInfo_Supported, SqlBitmaskInvalid) {
+TEST(SQLGetInfoSupported, SqlBitmaskInvalid) {
   StatusRecordOr<SQLGetInfoBitmask> actual_info =
-      SupportedInfoType<SQLGetInfoBitmask>(UNSUPPORTED_INFO_TYPE);
+      SupportedInfoType<SQLGetInfoBitmask>(kUnsupportedInfoType);
 
   EXPECT_THAT(actual_info, StatusRecordIs(SQLStates::k_HY096(),
                                           HasSubstr("Invalid infoType")));
