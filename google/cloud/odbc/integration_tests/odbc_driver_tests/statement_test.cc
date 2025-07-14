@@ -1111,7 +1111,7 @@ TEST(StatementTest, FetchRowWise) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Execute a read query and check whether the results returned are as expected
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn, false), SQL_SUCCESS);
+  EXPECT_EQ(Connect("DRIVER=Google BigQuery Driver;OAuthMechanism=3;Catalog=bigquery-devtools-drivers;EncryptData=For Current User Only;Min_TLS=1.2;", conn, false), SQL_SUCCESS);
   // TODO(#14): Add integer and floating point fields too
   auto const query = "SELECT StringField, IntegerField FROM " + table_name;
   auto results = *FetchRowWise(conn, query, 1);
@@ -1123,6 +1123,7 @@ TEST(StatementTest, FetchRowWise) {
   table.Drop(conn, false);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 
 TEST(StatementTest, RollBackTransaction) {
   std::string const table_name =
