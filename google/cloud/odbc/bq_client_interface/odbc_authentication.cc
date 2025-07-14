@@ -21,7 +21,7 @@
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
 #include <fstream>
-
+#include <iterator>
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
@@ -45,8 +45,26 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
   // credentials. It works for both: user authentication and service
   // authentication.
   // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/credentials.h#L113
-  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
-  return ::google::cloud::MakeGoogleDefaultCredentials();
+  // Read the contents of the key file directly instead of setting an
+  // environment variable.
+  std::ifstream is(credentials_file_path);
+  if (!is) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Could not open Service Account key file: " + credentials_file_path};
+  }
+
+  std::string contents((std::istreambuf_iterator<char>(is)),
+                       std::istreambuf_iterator<char>());
+
+  if (contents.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Service Account key file is empty or could not be read: " +
+            credentials_file_path};
+  }
+
+  return ::google::cloud::MakeServiceAccountCredentials(contents);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
@@ -54,7 +72,21 @@ CreateApplicationDefaultCredentials() {
   // C++ client library in google-cloud-cpp first checks
   // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
   // looks for a 'default' location of the file with credentials.
-  return ::google::cloud::MakeGoogleDefaultCredentials();
+  auto gac_env = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
+
+  if (gac_env.has_value() && !gac_env->empty()) {
+    return ::google::cloud::MakeGoogleDefaultCredentials();
+  }
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", "");
+  auto credentials = ::google::cloud::MakeGoogleDefaultCredentials();
+
+  if (!credentials) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Failed to create application default credentials. Make sure gcloud is "
+        "configured or the ADC file exists."};
+  }
+  return credentials;
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
