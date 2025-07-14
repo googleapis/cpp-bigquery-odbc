@@ -41,7 +41,7 @@ constexpr char kPathSeparator = '/';
 std::string TraceOptions::default_log_dir_ = GetEnv("HOME").value_or("/tmp");
 #endif  // WIN32
 
-std::unique_ptr<FileLogSink> Logger::file_sink_;
+std::unique_ptr<FileLogSink> file_sink_;
 
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     : opts_(std::move(opts)) {
@@ -87,56 +87,11 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
   }
 }
 
-Logger::Logger(LogLevel log_level, char const* file, int line, char const* func)
-    : level_(log_level), file_(file), line_(line), func_(func) {
-  if (level_ == LogLevel::kLogOff) return;
-  buffer_ = std::make_unique<std::ostringstream>();
-}
-
-std::ostream& Logger::Stream() {
-  if (!buffer_) {
-    static std::ostringstream dummy;  // return dummy stream if kLogOff
-    dummy.clear();                    // Clear any error state
-    return dummy;
-  }
-  return *buffer_;
-}
-
-void Logger::InitSink() {
-  if (file_sink_ || !kTraceOptsFile.Ok()) return;
-
-  auto const& trace_opts = *kTraceOptsFile;
-  if (trace_opts->log_level == static_cast<int>(LogLevel::kLogOff)) return;
+void FileLogSink::InitializeFileLog(std::shared_ptr<TraceOptions> trace_opts) {
+  if (file_sink_ || !trace_opts) return;
 
   file_sink_ = std::make_unique<FileLogSink>(trace_opts);
   absl::log_internal::AddLogSink(file_sink_.get());
-}
-
-Logger::~Logger() {
-  if (!file_sink_ || level_ == LogLevel::kLogOff) return;
-  int config_level = file_sink_->GetLogLevel();
-  int msg_level = static_cast<int>(level_);
-
-  if (msg_level > config_level) return;
-  absl::LogSeverity severity;
-  switch (level_) {
-    case LogLevel::kLogError: {
-      severity = absl::LogSeverity::kError;
-      break;
-    }
-    case LogLevel::kLogInfo: {
-      severity = absl::LogSeverity::kInfo;
-      break;
-    }
-    case LogLevel::kLogWarning: {
-      severity = absl::LogSeverity::kWarning;
-      break;
-    }
-    default:
-      break;
-  }
-  LOG(LEVEL(severity)).AtLocation(file_, line_)
-      << func_ << ": " << buffer_->str();
 }
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>

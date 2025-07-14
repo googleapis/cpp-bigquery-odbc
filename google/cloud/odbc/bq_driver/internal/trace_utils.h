@@ -34,25 +34,8 @@
 #include <string>
 #include <utility>
 
-#define LOG_ERROR                                                            \
-  google::cloud::odbc_bq_driver_internal::Logger(                            \
-      google::cloud::odbc_bq_driver_internal::LogLevel::kLogError, __FILE__, \
-      __LINE__, __func__)                                                    \
-      .Stream()
-
-#define LOG_INFO                                                            \
-  google::cloud::odbc_bq_driver_internal::Logger(                           \
-      google::cloud::odbc_bq_driver_internal::LogLevel::kLogInfo, __FILE__, \
-      __LINE__, __func__)                                                   \
-      .Stream()
-
-#define LOG_WARNING                                                            \
-  google::cloud::odbc_bq_driver_internal::Logger(                              \
-      google::cloud::odbc_bq_driver_internal::LogLevel::kLogWarning, __FILE__, \
-      __LINE__, __func__)                                                      \
-      .Stream()
-
 static std::once_flag absl_log_init_once;
+inline std::mutex log_init_mutex;
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -160,28 +143,28 @@ class FileLogSink : public absl::LogSink {
   void Send(absl::LogEntry const& entry) override;
   [[nodiscard]] int GetLogLevel() const { return opts_->log_level; }
 
+  static void InitializeFileLog(std::shared_ptr<TraceOptions> trace_opts);
+
  private:
   std::shared_ptr<TraceOptions> opts_;
   std::string current_file_;
   std::mutex log_mutex_;
 };
 
-class Logger {
- public:
-  Logger(LogLevel, char const* file, int line, char const* func);
-  ~Logger();
+inline absl::LogSeverity GetAbslSeverity(LogLevel level) {
+  switch (level) {
+    case LogLevel::kLogInfo:
+      return absl::LogSeverity::kInfo;
+    case LogLevel::kLogWarning:
+      return absl::LogSeverity::kWarning;
+    case LogLevel::kLogError:
+      return absl::LogSeverity::kError;
+    default:
+      // This won't actually log anything if used properly
+      return static_cast<absl::LogSeverity>(100);  // disables all logging
+  }
+}
 
-  std::ostream& Stream();
-  static void InitSink();
-
- private:
-  LogLevel level_;
-  char const* file_;
-  int line_;
-  char const* func_;
-  std::unique_ptr<std::ostringstream> buffer_;
-  static std::unique_ptr<FileLogSink> file_sink_;
-};
 ///////////////////////////////////////////////////////////////
 // Emit methods for actually printing the trace
 // lines to stdout or a trace file.
@@ -343,19 +326,27 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOption = TraceOptions::GetTraceOption();
 
 inline bool InitializeLogging() {
+  if (!kTraceOptsFile.Ok()) return false;
   auto const& trace_opts = *kTraceOptsFile;
+
   if (!trace_opts->logging_enabled) {
+    // To prevent stderr logging and default logging by abseil.
+    absl::SetMinLogLevel(absl::LogSeverityAtLeast(100));
+    absl::SetStderrThreshold(absl::LogSeverity::kFatal);
     return false;
   }
-
-  std::call_once(absl_log_init_once, []() {
-    absl::InitializeLog();  // ✅ Only once, safe
+  std::call_once(absl_log_init_once, [&trace_opts]() {
+    absl::InitializeLog();  // run only once
+    auto log_severity =
+        GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
+    absl::SetMinLogLevel(absl::LogSeverityAtLeast(log_severity));
   });
-  Logger::InitSink();
+
+  FileLogSink::InitializeFileLog(trace_opts);
   return true;
 }
 
-static bool const kInitLogging = InitializeLogging();
+inline bool kInitLogging = InitializeLogging();
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_TRACE_UTILS_H

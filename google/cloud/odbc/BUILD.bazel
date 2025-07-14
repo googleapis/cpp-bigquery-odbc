@@ -49,6 +49,14 @@ cc_library(
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "//google/cloud/odbc/internal:odbc_internal",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:log_severity",
+        "@com_google_absl//absl/log:log_sink",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/time:time_zone",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",  # We need this dependency to use 'options' from client libraries
     ],
 )
