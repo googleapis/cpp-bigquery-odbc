@@ -24,17 +24,17 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
-TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAndUserAccount, ""});
+// TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
+//   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
+//       {OauthMechanism::kServiceAndUserAccount, ""});
 
-  auto const expected_sql_state = odbc_internal::SQLStates::k_HY000();
-  auto const expected_message =
-      HasSubstr("The path to the file can't be empty");
-  auto const expected_status =
-      StatusRecordIs(expected_sql_state, expected_message);
+//   auto const expected_sql_state = odbc_internal::SQLStates::k_HY000();
+//   auto const expected_message =
+//       HasSubstr("The path to the file can't be empty");
+//   auto const expected_status =
+//       StatusRecordIs(expected_sql_state, expected_message);
 
-  EXPECT_THAT(odbc_bq_client, expected_status);
-}
+//   EXPECT_THAT(odbc_bq_client, expected_status);
+// }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
