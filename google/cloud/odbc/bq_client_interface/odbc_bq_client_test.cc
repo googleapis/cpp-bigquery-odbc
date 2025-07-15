@@ -21,12 +21,18 @@ namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::HasSubstr;
 
-TEST(ODBCBQClient, CreateBQClient) {
+TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
+      {OauthMechanism::kServiceAndUserAccount, ""});
 
-  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
+  auto const sql_state = odbc_internal::SQLStates::k_HY000();
+  auto const message_matcher = HasSubstr("The path to the file can't be empty");
+  auto const status_matcher = StatusRecordIs(sql_state, message_matcher);
+
+  EXPECT_THAT(odbc_bq_client, status_matcher);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
