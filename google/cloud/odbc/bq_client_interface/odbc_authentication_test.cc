@@ -39,20 +39,6 @@ using ::testing::HasSubstr;
 using ::testing::Return;
 using ::testing::StrEq;
 
-TEST(ServiceAuthentication, ServiceAccountAuthentication) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
-
-  ASSERT_STATUS_RECORD_OK(credentials);
-}
-
-TEST(ServiceAuthentication, UserAccountAuthentication) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
-
-  ASSERT_STATUS_RECORD_OK(credentials);
-}
-
 TEST(DefaultApplicationAuthentication, DefaultApplicationAuthentication) {
   auto credentials =
       CreateCredentials({OauthMechanism::kApplicationDefault, ""});

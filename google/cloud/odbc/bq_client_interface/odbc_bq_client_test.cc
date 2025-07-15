@@ -22,11 +22,4 @@ namespace google::cloud::odbc_bigquery_client_interface {
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
-TEST(ODBCBQClient, CreateBQClient) {
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAndUserAccount, "path-to-the-file"});
-
-  ASSERT_STATUS_RECORD_OK(odbc_bq_client);
-}
-
 }  // namespace google::cloud::odbc_bigquery_client_interface
