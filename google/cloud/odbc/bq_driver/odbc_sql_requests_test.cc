@@ -375,7 +375,7 @@ TEST(SQLNumParamsInternal, ReturnsParamCount) {
 TEST(SQLPrepareInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLINTEGER len = query_str.length();
@@ -389,7 +389,7 @@ TEST(SQLPrepareInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
   std::string query_str = "select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLINTEGER len = 0;
@@ -424,7 +424,7 @@ TEST(SQLPrepareInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
   std::string query_str;
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, SQL_NTS);
@@ -443,7 +443,7 @@ TEST(SQLPrepareInternal, DisableCancellationPreviouslycompletedoperation) {
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   handle.EnableCancellation();
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLINTEGER len = query_str.length();
@@ -460,7 +460,7 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationCanceled) {
       CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.EnableCancellation();
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLINTEGER len = query_str.length();
@@ -482,7 +482,7 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationNotcanceled) {
   handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
   handle.DisableCancellation();
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLINTEGER len = query_str.length();
@@ -580,7 +580,7 @@ TEST(SQLExecuteInternal, CancellationOfOngoingExecuteOperation) {
 TEST(SQLExecDirectInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = query_str.length();
 
@@ -593,7 +593,7 @@ TEST(SQLExecDirectInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
   std::string query_str = "select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = 0;
 
@@ -627,7 +627,7 @@ TEST(SQLExecDirectInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
   std::string query_str;
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLRETURN status = SQLExecDirectInternal(&handle, query, SQL_NTS);
 
@@ -645,7 +645,7 @@ TEST(SQLExecDirectInternal, CancellationBetweenExecutions) {
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.EnableCancellation();
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = query_str.length();
 
@@ -663,7 +663,7 @@ TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperationCanceled) {
 
   handle.EnableCancellation();
   std::string query_str = "Select 1";
-  SQLCHAR* query =
+  auto* query =
       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = query_str.length();
 

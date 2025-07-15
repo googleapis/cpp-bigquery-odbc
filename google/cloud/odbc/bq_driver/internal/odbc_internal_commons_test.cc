@@ -25,7 +25,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::JobCreationMode;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -46,17 +45,24 @@ std::string const kDefaultDataset = "default-dataset";
 struct NativeDataTypesStruct {
   bool flag;
   char character;
-  short short_var;
+  int16_t short_var;
   int int_var;
-  long long_var;
-  long long long_long_var;
+  int64_t long_var;
+  int64_t long_long_var;
   float float_var;
   double double_var;
 };
 
 TableSchema CreateTableSchema() {
   TableSchema schema;
-  TableFieldSchema f1, f2, f3, f4, f5, f6, f7;
+  TableFieldSchema f1;
+  TableFieldSchema f2;
+  TableFieldSchema f3;
+  TableFieldSchema f4;
+  TableFieldSchema f5;
+  TableFieldSchema f6;
+  TableFieldSchema f7;
+
   f1.type = "STRING";
   f2.type = "STRING";
   f3.type = "STRING";
@@ -77,7 +83,8 @@ TableSchema CreateTableSchema() {
 
 std::vector<RowData> CreateTableRows() {
   std::vector<RowData> rows;
-  RowData row1, row2;
+  RowData row1;
+  RowData row2;
 
   row1.columns.push_back(ColumnData{"table-catalog-1"});
   row1.columns.push_back(ColumnData{"table-schema-1"});
@@ -188,11 +195,10 @@ TEST(DSValue, BasicComplexstruct) {
   DSValue bq_value(sizeof(NativeDataTypesStruct));
 
   NativeDataTypesStruct custom_data = {
-      true, 'A', 100, 12345, 1234567890L, 98765432101234LL, 3.14f, 2.71828};
+      true, 'A', 100, 12345, 1234567890L, 98765432101234LL, 3.14F, 2.71828};
   memcpy(bq_value.data(), &custom_data, sizeof(NativeDataTypesStruct));
 
-  NativeDataTypesStruct* expected =
-      reinterpret_cast<NativeDataTypesStruct*>(bq_value.data());
+  auto* expected = reinterpret_cast<NativeDataTypesStruct*>(bq_value.data());
   EXPECT_EQ(custom_data.flag, expected->flag);
   EXPECT_EQ(custom_data.character, expected->character);
   EXPECT_EQ(custom_data.short_var, expected->short_var);
@@ -215,56 +221,56 @@ TEST(DSValue, BasicInt) {
 }
 
 TEST(DSValue, Timestamp) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 01;
-  Timestamp.minute = 59;
-  Timestamp.second = 43;
-  Timestamp.fraction = 123456;
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 01;
+  timestamp.minute = 59;
+  timestamp.second = 43;
+  timestamp.fraction = 123456;
   DSValue src_dsval;
-  TimestampToDSValue(Timestamp, src_dsval);
+  TimestampToDSValue(timestamp, src_dsval);
   SQL_TIMESTAMP_STRUCT actual;
   DSValueToTimestamp(src_dsval, actual);
-  EXPECT_EQ(actual.year, Timestamp.year);
-  EXPECT_EQ(actual.month, Timestamp.month);
-  EXPECT_EQ(actual.day, Timestamp.day);
-  EXPECT_EQ(actual.hour, Timestamp.hour);
-  EXPECT_EQ(actual.minute, Timestamp.minute);
-  EXPECT_EQ(actual.second, Timestamp.second);
+  EXPECT_EQ(actual.year, timestamp.year);
+  EXPECT_EQ(actual.month, timestamp.month);
+  EXPECT_EQ(actual.day, timestamp.day);
+  EXPECT_EQ(actual.hour, timestamp.hour);
+  EXPECT_EQ(actual.minute, timestamp.minute);
+  EXPECT_EQ(actual.second, timestamp.second);
 }
 
 TEST(FormatTimestampToString, TimestampString) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 01;
-  Timestamp.minute = 59;
-  Timestamp.second = 43;
-  Timestamp.fraction = 123456;
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 01;
+  timestamp.minute = 59;
+  timestamp.second = 43;
+  timestamp.fraction = 123456;
 
-  std::string timestampString = FormatTimestampToString(Timestamp);
+  std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expectedString = "2020-01-10 01:59:43.123456";
-  EXPECT_EQ(timestampString, expectedString);
+  std::string expected_string = "2020-01-10 01:59:43.123456";
+  EXPECT_EQ(timestamp_string, expected_string);
 }
 
 TEST(FormatTimestampToString, TimestampStringWithZeros) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 0;
-  Timestamp.minute = 5;
-  Timestamp.second = 3;
-  Timestamp.fraction = 0;
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 0;
+  timestamp.minute = 5;
+  timestamp.second = 3;
+  timestamp.fraction = 0;
 
-  std::string timestampString = FormatTimestampToString(Timestamp);
+  std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expectedString = "2020-01-10 00:05:03.000000";
-  EXPECT_EQ(timestampString, expectedString);
+  std::string expected_string = "2020-01-10 00:05:03.000000";
+  EXPECT_EQ(timestamp_string, expected_string);
 }
 
 TEST(StringToDSValue, SQLCHARString) {
@@ -796,7 +802,7 @@ TEST(ConstructQueryParamsTest, FailureEmptySchemaName) {
 }
 
 TEST(ConstructQueryParamsTest, FailureEmptyQuery) {
-  std::string named_query = "";
+  std::string named_query;
   std::vector<QueryParameter> named_query_params;
   named_query_params.emplace_back(
       QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
@@ -1024,7 +1030,7 @@ TEST(ConvertStringToIntervalStruct, InvalidIntervalStr) {
 
 TEST(ConvertStringToIntervalStruct, EmptyStr) {
   SQL_INTERVAL_STRUCT interval_struct;
-  std::string empty_str = "";
+  std::string empty_str;
   auto result = ConvertStringToIntervalStruct(empty_str, interval_struct);
   EXPECT_FALSE(result.ok());
   EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
@@ -1072,7 +1078,7 @@ TEST(ConvertStringToTimestampStruct, ValidDateNoFraction) {
 }
 
 TEST(ConvertStringToTimestampStruct, EmptyDateString) {
-  std::string date_str = "";
+  std::string date_str;
   auto result = ConvertStringToTimestampStruct(date_str);
   EXPECT_FALSE(result.Ok());
 }
@@ -1217,7 +1223,7 @@ TEST(ArrayJsonToDSValue, StringArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"apple"},{"v":"banana"},{"v":"peach"}])";
   std::string expected_val =
-      "{\"v\":[{\"v\":\"apple\"},{\"v\":\"banana\"},{\"v\":\"peach\"}]}";
+      R"({"v":[{"v":"apple"},{"v":"banana"},{"v":"peach"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kString);
 
@@ -1231,8 +1237,7 @@ TEST(ArrayJsonToDSValue, StringArraytype) {
 TEST(ArrayJsonToDSValue, IntArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"121"},{"v":"123"},{"v":"1212"}])";
-  std::string expected_val =
-      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kInt64);
 
@@ -1247,7 +1252,7 @@ TEST(ArrayJsonToDSValue, BytesArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"YQ=="},{"v":"Yg=="},{"v":"Yw=="}])";
   std::string expected_val =
-      "{\"v\":[{\"v\":\"0x61\"},{\"v\":\"0x62\"},{\"v\":\"0x63\"}]}";
+      R"({"v":[{"v":"0x61"},{"v":"0x62"},{"v":"0x63"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kBytes);
 
@@ -1438,8 +1443,8 @@ TEST(BuildTableSchemaFromRowSchema, FailColindexnotfound) {
   auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
 
   ASSERT_FALSE(result.Ok());
-  EXPECT_TRUE(result.GetStatusRecord().message.find(
-                  "No matching col_index found: 1") != std::string::npos);
+  EXPECT_TRUE(absl::StrContains(result.GetStatusRecord().message,
+                                "No matching col_index found: 1"));
 }
 
 TEST(BuildTableSchemaFromRowSchema, SuccessCheckmoderepeated) {
@@ -1482,7 +1487,7 @@ TEST(GetDataTypeInStr, InvalidDataType) {
   auto invalid_type = static_cast<BQDataType>(999);
   auto result = GetDataTypeInStr(invalid_type);
 
-  auto error_str = "Invalid BQ Data Type: 999";
+  auto const* error_str = "Invalid BQ Data Type: 999";
   EXPECT_EQ(error_str, result.GetStatusRecord().message);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

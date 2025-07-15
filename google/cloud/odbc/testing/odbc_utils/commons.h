@@ -29,8 +29,8 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <thread>
 
@@ -58,7 +58,7 @@ constexpr SQLSMALLINT kBufferLength = 1024;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
 
-inline std::string const GetDefaultTablePrefix() {
+inline std::string GetDefaultTablePrefix() {
   return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
       .value_or("");
 }
@@ -308,7 +308,7 @@ struct RangeTimeStampStruct {
   SQLRETURN status;
 };
 
-inline bool str_comparison(std::string a, std::string b) { return a < b; }
+inline bool str_comparison(const std::string& a, const std::string& b) { return a < b; }
 
 inline bool isNumeric(std::string const& str) {
   try {
@@ -319,12 +319,12 @@ inline bool isNumeric(std::string const& str) {
   }
 }
 
-inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
-  return (sizeof(x) / sizeof(SQLCHAR));
+inline SQLSMALLINT NumSqlChar(const SQLCHAR* x) {
+  return static_cast<SQLSMALLINT>(std::strlen(reinterpret_cast<const char*>(x)));
 }
 
 // Copies a source <string> to a destination <char *>
-inline void StrToChar(char* dest, std::string src) {
+inline void StrToChar(char* dest, const std::string& src) {
   strcpy(dest, src.c_str());
 }
 
@@ -365,7 +365,7 @@ inline SQL_INTERVAL_STRUCT MakeDaySecondInterval(
 
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
-inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
+inline void SqlToCdataTypes(const std::shared_ptr<Column>& col_ptr) {
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
       col_ptr->data_type = SQL_C_SBIGINT;
@@ -445,12 +445,11 @@ std::string GetAllTypeInsertionString(std::string const& table_name,
 class Table {
  public:
   Table() = default;
-  Table(std::string table_name) {
-    table_name_ = table_name;
+  explicit Table(const std::string& table_name) {
+    table_name_ = std::move(table_name);
     wtable_name_ = ToWStr(table_name_);
   };
-
-  Table(std::wstring wtable_name) {
+  explicit Table(const std::wstring& wtable_name) {
     table_name_ = WStrToStr(wtable_name);
     wtable_name_ = wtable_name;
   };
@@ -558,12 +557,12 @@ class Table {
 class Procedure {
  public:
   Procedure() = default;
-  Procedure(std::string procedure_name) {
-    procedure_name_ = procedure_name;
+  explicit Procedure(const std::string& procedure_name) {
+    procedure_name_ =  std::move(procedure_name);
     wprocedure_name_ = ToWStr(procedure_name_);
   };
 
-  Procedure(std::wstring wprocedure_name) {
+ explicit Procedure(const std::wstring& wprocedure_name) {
     procedure_name_ = WStrToStr(wprocedure_name);
     wprocedure_name_ = wprocedure_name;
   };
@@ -592,9 +591,9 @@ std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 
 std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
-std::string GetIntervalTypeStr(const SQLINTERVAL type);
+std::string GetIntervalTypeStr(SQLINTERVAL type);
 
-std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval);
+std::string FormatIntervalString(SQL_INTERVAL_STRUCT interval);
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric);
 
@@ -618,7 +617,7 @@ template <typename Func, typename... Args>
 SQLRETURN PollODBC(Func odbc_api, ExponentialBackoffPolicy& backoff,
                    Args&&... args) {
   SQLRETURN status;
-  while (1) {
+  while (true) {
     status = odbc_api(std::forward<Args>(args)...);
     if (status == SQL_STILL_EXECUTING) {
       std::this_thread::sleep_for(backoff.OnCompletion());
@@ -630,7 +629,7 @@ SQLRETURN PollODBC(Func odbc_api, ExponentialBackoffPolicy& backoff,
 
 // If there was an error, gets description from SQLGetDiagRec and throws an
 // error
-inline void CheckError(SQLRETURN status, std::string const api,
+inline void CheckError(SQLRETURN status, std::string api,
                        std::shared_ptr<ODBCHandles> conn,
                        bool use_ansi = false);
 

@@ -317,7 +317,8 @@ TEST(PopulateIpd, InvalidDescHandle) {
 }
 
 TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
-  StatementHandle handle = CreateStatementHandle();
+  google::cloud::odbc_bq_driver_internal::StatementHandle handle =
+      CreateStatementHandle();
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
