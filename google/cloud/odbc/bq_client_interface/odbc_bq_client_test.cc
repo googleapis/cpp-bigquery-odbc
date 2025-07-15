@@ -21,8 +21,8 @@ namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
-using google::cloud::odbc_testing_utils::StatusRecordIs;
-using ::testing::HasSubstr;
+// using google::cloud::odbc_testing_utils::StatusRecordIs;
+// using ::testing::HasSubstr;
 
 // TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
 //   auto odbc_bq_client = ODBCBQClient::CreateBQClient(
