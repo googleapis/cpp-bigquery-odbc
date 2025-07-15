@@ -193,8 +193,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrParamBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_TYPE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_TYPE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -281,8 +281,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMSET_SIZE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMSET_SIZE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -294,8 +294,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRowArraySize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_ARRAY_SIZE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_ARRAY_SIZE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -332,8 +332,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRowBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_TYPE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_TYPE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -420,8 +420,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_ASYNC_ENABLE_ON;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE));
@@ -431,8 +431,8 @@ TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY024(),
@@ -443,8 +443,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CONCURRENCY));
@@ -454,8 +454,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NONSCROLLABLE;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SCROLLABLE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SCROLLABLE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SCROLLABLE));
@@ -466,7 +466,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
   SQLULEN expected = SQL_INSENSITIVE;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SENSITIVITY,
-                                       &expected, 0);
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SENSITIVITY));
@@ -476,8 +476,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CURSOR_FORWARD_ONLY;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_TYPE, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_TYPE,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_TYPE));
@@ -487,8 +487,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ENABLE_AUTO_IPD, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ENABLE_AUTO_IPD,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ENABLE_AUTO_IPD));
@@ -498,8 +498,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_LENGTH, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_LENGTH,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_LENGTH));
@@ -509,8 +509,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_ROWS, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_ROWS,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_ROWS));
@@ -520,8 +520,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_METADATA_ID, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_METADATA_ID,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_METADATA_ID));
@@ -531,7 +531,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NOSCAN_ON;
 
-  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN, &expected, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN, (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_NOSCAN));
@@ -541,8 +542,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_QUERY_TIMEOUT, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_QUERY_TIMEOUT,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT));
@@ -552,8 +553,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_RD_OFF;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_RETRIEVE_DATA, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_RETRIEVE_DATA,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_RETRIEVE_DATA));
@@ -563,8 +564,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrUseBookmarks) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_UB_OFF;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS));
@@ -574,8 +575,8 @@ TEST(SQLSetStmtAttrInternal, FailsSqlAttrRowNumber) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
@@ -586,7 +587,7 @@ TEST(SQLSetStmtAttrInternal, FailsInvalidattribute) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&handle, 1111, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, 1111, (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
@@ -599,8 +600,8 @@ TEST(SQLSetStmtAttrInternal, FailsOpencursor) {
 
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY, &expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
+                                       (SQLPOINTER)expected, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_24000(),
