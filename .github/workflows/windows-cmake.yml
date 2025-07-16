@@ -33,11 +33,10 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      # TODO(sachinpro): Temporarily not using sccache
-      # SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-      # SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
-      # SCCACHE_GCS_RW_MODE: READ_WRITE
-      # SCCACHE_IGNORE_SERVER_IO_ERROR: 1
+      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
+      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
+      SCCACHE_GCS_RW_MODE: READ_WRITE
+      SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
