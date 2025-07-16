@@ -39,6 +39,12 @@ inline std::mutex log_init_mutex;
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// Add these at the namespace level
+namespace {
+static std::once_flag g_init_flag;
+static std::atomic<bool> g_is_initialized{false};
+}  // namespace
+
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
@@ -335,12 +341,19 @@ inline bool InitializeLogging() {
     absl::SetStderrThreshold(absl::LogSeverity::kFatal);
     return false;
   }
-  std::call_once(absl_log_init_once, [&trace_opts]() {
-    absl::InitializeLog();  // run only once
-    auto log_severity =
-        GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
-    absl::SetMinLogLevel(absl::LogSeverityAtLeast(log_severity));
-  });
+
+
+  if (!g_is_initialized.load()) {
+    std::call_once(g_init_flag, [&trace_opts]() {
+      if (!g_is_initialized.load()) {
+        absl::InitializeLog();
+        auto log_severity =
+            GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
+        absl::SetMinLogLevel(absl::LogSeverityAtLeast(log_severity));
+        g_is_initialized.store(true);
+      }
+    });
+  }
 
   FileLogSink::InitializeFileLog(trace_opts);
   return true;

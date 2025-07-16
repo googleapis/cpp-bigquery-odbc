@@ -222,6 +222,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
+                                    LOG(ERROR) << "error msg here ";
+                                    LOG(INFO) << "info msg here ";
+                                    LOG(WARNING) << "warning msg here ";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {

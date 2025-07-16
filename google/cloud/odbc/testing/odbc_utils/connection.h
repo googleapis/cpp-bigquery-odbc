@@ -30,9 +30,8 @@ inline std::string const GetDefaultDSN() {
 
 std::string const kDefaultDataSource = GetDefaultDSN();
 
-auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
+auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN()  + ";LogLevel=1;LogPath=/Users/shivamdabas/cpp-bigquery-odbc/build/google/cloud/odbc/logs;";
 auto const kSessionEnabledConnectionString = "DSN=ODBCTransactionsTestsDSN";
-
 // used for DSNLess SQLConnect. If we change BQ service account credentials
 // email it will need to be changed here as well other DSNLess connect tests
 // would fail.
