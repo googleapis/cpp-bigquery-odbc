@@ -10,7 +10,6 @@ on:
   # without impacting the rest of the team.
   push:
     branches: [ 'main**', 'ci-gha**' ]
-    branches-ignore: 'highthroughput_api_clean**'
   # Start the build in the context of the target branch. This is considered
   # "safe", as the workflow files are already committed. These types of builds
   # have access to the secrets in the build, which we need to use the remote

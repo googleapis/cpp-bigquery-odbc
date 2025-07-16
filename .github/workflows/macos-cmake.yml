@@ -62,6 +62,8 @@ jobs:
           tar -zxf - --strip-components=1 && \
         chmod +x sccache && \
         mv sccache /Users/runner/.cargo/bin/sccache
+    - name: Install bison flex for 'arrow'
+      run: brew install bison flex
     - name: Download and Install vcpkg
       working-directory: "${{runner.temp}}"
       run: |

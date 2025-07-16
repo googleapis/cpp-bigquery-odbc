@@ -63,6 +63,7 @@ function cmake::vcpkg_args() {
   local args
   args=(
     -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    -DVCPKG_INSTALL_OPTIONS="--allow-unsupported"
   )
   printf "%s\n" "${args[@]}"
 }
