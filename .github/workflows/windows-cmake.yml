@@ -90,16 +90,15 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-    # TODO(sachinpro): Temporarily not using sccache
-    # - name: Download and Install sccache
-    #   working-directory: "${{runner.temp}}"
-    #   shell: bash
-    #   run: |
-    #     mkdir -p /c/Users/runneradmin/.cargo/bin
-    #     curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
-    #       tar -zxf - --strip-components=1
-    #     chmod +x sccache.exe
-    #     mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Download and Install sccache
+      working-directory: "${{runner.temp}}"
+      shell: bash
+      run: |
+        mkdir -p /c/Users/runneradmin/.cargo/bin
+        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
+          tar -zxf - --strip-components=1
+        chmod +x sccache.exe
+        mv sccache.exe /c/Users/runneradmin/.cargo/bin
     - name: Download and Install vcpkg
       shell: bash
       run: |
