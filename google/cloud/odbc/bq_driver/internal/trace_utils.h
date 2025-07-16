@@ -36,6 +36,12 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+// Add these at the namespace level
+namespace {
+static std::once_flag g_init_flag;
+static std::atomic<bool> g_is_initialized{false};
+}  // namespace
+
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
