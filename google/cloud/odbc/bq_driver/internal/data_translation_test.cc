@@ -438,7 +438,7 @@ TEST(ConvertFromStringDSValue, ToSqlCCharTruncation) {
   StringToDSValue(src_val, ds_value);
   StatusRecord status_record = ConvertFromStringDSValue(ds_value, data);
   ASSERT_FALSE(status_record.ok());
-std::string returned_val = reinterpret_cast<char*>(data.buf);
+  std::string returned_val = reinterpret_cast<char*>(data.buf);
   EXPECT_EQ(returned_val, src_val.substr(0, buflen - 1));
   EXPECT_EQ(result_len, buflen - 1);
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
@@ -448,10 +448,10 @@ std::string returned_val = reinterpret_cast<char*>(data.buf);
 }
 
 template <typename DestType>
-void FromStringToArithmeticTest(const std::string& src_val, DestType expected_val,
-                                SQLSMALLINT dest_type,
-                                const std::string& expected_state = "",
-                               const std::string& expected_message = "") {
+void FromStringToArithmeticTest(std::string const& src_val,
+                                DestType expected_val, SQLSMALLINT dest_type,
+                                std::string const& expected_state = "",
+                                std::string const& expected_message = "") {
   SQLPOINTER buf = malloc(50);
   SQLLEN result_len = 0;
   DataBuffer data = {dest_type, buf, 50, &result_len};
@@ -550,8 +550,7 @@ TEST(ConvertFromDateDSValue, convertToTimestamp) {
                           &result_len};
   auto status = ConvertFromDateDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
- auto* data =
-      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
+  auto* data = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
   EXPECT_EQ(data->year, date.year);
   EXPECT_EQ(data->month, date.month);
   EXPECT_EQ(data->day, date.day);
@@ -683,7 +682,7 @@ TEST(ConvertFromTimeDSValue, ToTime) {
   DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf),
                           &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
-  auto* data  = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+  auto* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
 
   EXPECT_EQ(data->hour, time.hour);
   EXPECT_EQ(data->minute, time.minute);
@@ -719,8 +718,7 @@ TEST(ConvertFromTimeDSValue, ToTimestamp) {
                           nullptr};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
- auto* data =
-      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
+  auto* data = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
   EXPECT_EQ(data->hour, time.hour);
   EXPECT_EQ(data->minute, time.minute);
   EXPECT_EQ(data->second, time.second);
@@ -741,7 +739,7 @@ TEST(ConvertFromTimeDSValue, ToBinary) {
                           &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
-  auto* data  = reinterpret_cast<SQL_TIME_STRUCT*>(dest_buf);
+  auto* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_buf);
 
   EXPECT_EQ(data->hour, time.hour);
   EXPECT_EQ(data->minute, time.minute);
@@ -826,7 +824,7 @@ TEST(ConvertFromJsonDSValue, ToSqlCCharSuccess) {
   std::string str = src_val.dump();
   StringToDSValue(str, ds_value);
   StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
-  std::string returned_val =  static_cast<char*>(data.buf);
+  std::string returned_val = static_cast<char*>(data.buf);
   EXPECT_EQ(returned_val, expected_val);
   free(buf);
 }
@@ -882,7 +880,7 @@ TEST(ConvertFromJsonDSValue, ToSqlCBinarySuccess) {
 
   DSValue ds_value;
   json src_val = nlohmann::json({{"age", 30}, {"name", "Ravi"}});
-  std::string expected_val =  R"({"age":30,"name":"Ravi"})";
+  std::string expected_val = R"({"age":30,"name":"Ravi"})";
 
   std::string str = src_val.dump();
   StringToDSValue(str, ds_value);
@@ -987,7 +985,7 @@ TEST(ConvertFromTimestampDSValue, convertToTimeInsufficientbuffer) {
   DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf),
                           &result_len};
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
-  auto* data  = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+  auto* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
 
   EXPECT_EQ(data->hour, timestamp.hour);
   EXPECT_EQ(data->minute, timestamp.minute);
@@ -1015,7 +1013,7 @@ TEST(ConvertFromTimestampDSValue, convertToTimeSuccess) {
   DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf),
                           &result_len};
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
-  auto* data  = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+  auto* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
 
   EXPECT_EQ(data->hour, timestamp.hour);
   EXPECT_EQ(data->minute, timestamp.minute);
@@ -1042,8 +1040,7 @@ TEST(ConvertFromTimestampDSValue, convertToTimestampSuccess) {
   DataBuffer dest_data = {SQL_C_TYPE_TIMESTAMP, dest_buf, sizeof(dest_buf),
                           &result_len};
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
- auto* data =
-      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_data.buf);
+  auto* data = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_data.buf);
 
   EXPECT_EQ(data->year, timestamp.year);
   EXPECT_EQ(data->month, timestamp.month);
@@ -1100,8 +1097,7 @@ TEST(ConvertFromTimestampDSValue, convertToBinarySuccess) {
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
 
- auto* data =
-      reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
+  auto* data = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
 
   EXPECT_EQ(data->year, expected_timestamp.year);
   EXPECT_EQ(data->month, expected_timestamp.month);
@@ -1341,8 +1337,7 @@ TEST(ConvertFromIntervalDSValue, ToSqlCNumeric) {
   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
 
-  auto* returned_val =
-      reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_data.buf);
+  auto* returned_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(dest_data.buf);
 
   EXPECT_EQ(returned_val->sign, 1);
   EXPECT_EQ(returned_val->precision, 10);
@@ -1754,11 +1749,10 @@ TEST(ConvertFromArrayDSValue, ToSqlCCharSuccess) {
   DataBuffer data = {SQL_C_CHAR, buf, 100, &data_len};
   DSValue ds_value;
   std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
-  std::string expected_val =
-      R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
   StringToDSValue(src_val, ds_value);
   StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
-  std::string returned_val =  static_cast<char*>(data.buf);
+  std::string returned_val = static_cast<char*>(data.buf);
   EXPECT_EQ(returned_val, expected_val);
   EXPECT_EQ(data_len, expected_val.length());
 }
@@ -1784,8 +1778,7 @@ TEST(ConvertFromArrayDSValue, ToSqlCWcharSuccess) {
   DataBuffer data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &data_len};
   DSValue ds_value;
   std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
-  std::string expected_val =
-      R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
   StringToDSValue(src_val, ds_value);
   StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
   SQLINTEGER length = data_len / sizeof(SQLWCHAR);
@@ -1812,8 +1805,7 @@ TEST(ConvertFromArrayDSValue, ToSqlCBinarySuccess) {
   DataBuffer data = {SQL_C_BINARY, buf, 100, &data_len};
   DSValue ds_value;
   std::string src_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
-  std::string expected_val =
-      R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
   StringToDSValue(src_val, ds_value);
   StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
   std::string returned_val = static_cast<char*>(data.buf);

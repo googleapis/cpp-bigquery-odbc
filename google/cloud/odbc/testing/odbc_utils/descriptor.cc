@@ -17,39 +17,49 @@
 
 namespace google::cloud::odbc_tests {
 
+// Helper function to convert integer constants to SQLPOINTER
+inline SQLPOINTER IntAsSQLPointer(std::int64_t val) {
+  return reinterpret_cast<SQLPOINTER>(static_cast<std::uintptr_t>(val));
+}
+
 void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   SQLRETURN status;
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_PRECISION,
-                           (SQLPOINTER)kPrecisionUnchanged, NULL);
+                           IntAsSQLPointer(kPrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_SCALE,
-                           (SQLPOINTER)kScaleUnchanged, NULL);
+                           IntAsSQLPointer(kScaleUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
-  status =
-      SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                      (SQLPOINTER)kDatetimePrecisionUnchanged, NULL);
+
+  status = SQLSetDescField(
+      desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+      IntAsSQLPointer(kDatetimePrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_LENGTH,
-                           (SQLPOINTER)kLengthUnchanged, NULL);
+                           IntAsSQLPointer(kLengthUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                           (SQLPOINTER)kDatetimeCodeUnchanged, NULL);
+                           IntAsSQLPointer(kDatetimeCodeUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +

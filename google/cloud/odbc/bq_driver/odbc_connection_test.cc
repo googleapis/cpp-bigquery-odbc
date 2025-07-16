@@ -340,7 +340,7 @@ TEST(SQLDriverConnectInternal, DialogFailed) {
 
 TEST(SQLBrowseConnectInternal, FailInvalidconnectionhandle) {
   auto status =
-      SQLBrowseConnectInternal(nullptr, nullptr, NULL, nullptr, 0, nullptr);
+      SQLBrowseConnectInternal(nullptr, nullptr, 0, nullptr, 0, nullptr);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 

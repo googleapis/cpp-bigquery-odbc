@@ -52,35 +52,40 @@ TEST(EnvAttrConnectionPool, ConnectionPoolOneperhenv) {
 
 TEST(EnvAttrConnectionPool, ParseValDefault) {
   SQLUINTEGER val = SQL_CP_DEFAULT;
-  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPool::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseValCpoff) {
   SQLUINTEGER val = SQL_CP_OFF;
-  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPool::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
 TEST(EnvAttrConnectionPool, ParseValOneperdriver) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPool::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerDriver);
 }
 
 TEST(EnvAttrConnectionPool, ParseValOneperhenv) {
   SQLUINTEGER val = SQL_CP_ONE_PER_HENV;
-  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPool::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerHenv);
 }
 
 TEST(EnvAttrConnectionPool, ParseValUnsupportedval) {
   SQLUINTEGER val = 12345;
-  auto status = EnvAttrConnectionPool::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPool::ParseVal(ptr_val);
   EXPECT_THAT(
       status,
       StatusRecordIs(
@@ -108,28 +113,32 @@ TEST(EnvAttrConnectionPoolMatch, ConnectionPoolRelaxedMatch) {
 
 TEST(EnvAttrConnectionPoolMatch, ParseValDefault) {
   SQLUINTEGER val = SQL_CP_MATCH_DEFAULT;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPoolMatch::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseValStrictmatch) {
   SQLUINTEGER val = SQL_CP_STRICT_MATCH;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPoolMatch::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseValRelaxedmatch) {
   SQLUINTEGER val = SQL_CP_RELAXED_MATCH;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPoolMatch::ParseVal(ptr_val);
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kRelaxedMatch);
 }
 
 TEST(EnvAttrConnectionPoolMatch, ParseValUnsupportedval) {
   SQLUINTEGER val = 12345;
-  auto status = EnvAttrConnectionPoolMatch::ParseVal((SQLPOINTER)val);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(val));
+  auto status = EnvAttrConnectionPoolMatch::ParseVal(ptr_val);
   EXPECT_THAT(
       status,
       StatusRecordIs(

@@ -112,11 +112,12 @@ TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
   SQLLEN buff_len = col_size;
   SQLLEN str_len = SQL_LEN_DATA_AT_EXEC(buff_len);
 
-  SQLBindParameterInternal(
-      &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
-      decimal_digits,
-      reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(SQL_DATA_AT_EXEC)),
-      buff_len, &str_len);
+  intptr_t const k_data_at_exec = SQL_DATA_AT_EXEC;
+  auto *data_ptr = reinterpret_cast<SQLPOINTER>(k_data_at_exec);
+
+  SQLBindParameterInternal(&stmt_handle, param_number, in_out_type, value_type,
+                           param_type, col_size, decimal_digits, data_ptr,
+                           buff_len, &str_len);
 
   EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }

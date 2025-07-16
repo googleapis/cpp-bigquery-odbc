@@ -268,8 +268,8 @@ TEST(PopulatIrdDescriptor, InvalidDescriptorHandle) {
   PostQueryResults post_results = CreatePostQueryResults();
 
   TableReference table_schema;
-  StatusRecord ird_response =
-  StatementHandle::PopulateIrd(desc_handle, post_results.schema, table_schema);
+  StatusRecord ird_response = StatementHandle::PopulateIrd(
+      desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(!ird_response.ok());
   EXPECT_EQ(ird_response.sql_state, SQLStates::k_HY024());
 }
@@ -283,8 +283,8 @@ TEST(PopulatIrdDescriptor, PopulateIrdDescriptorHandle) {
   PostQueryResults post_results = CreatePostQueryResults();
 
   TableReference table_schema;
-  StatusRecord ird_response =
-  StatementHandle::PopulateIrd(desc_handle, post_results.schema, table_schema);
+  StatusRecord ird_response = StatementHandle::PopulateIrd(
+      desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(ird_response.ok());
 
   DescriptorRecord descriptor_record;
@@ -309,7 +309,8 @@ TEST(PopulateIpd, InvalidDescHandle) {
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
   JobStatistics job_statistics;
-  StatusRecord ipd_res = StatementHandle::PopulateIpd(desc_handle, job_statistics);
+  StatusRecord ipd_res =
+      StatementHandle::PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(!ipd_res.ok());
   EXPECT_EQ(ipd_res.sql_state, SQLStates::k_HY024());
 }
@@ -339,7 +340,8 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   job_qry_statistics.undeclared_query_parameters = query_params;
   job_statistics.job_query_stats = job_qry_statistics;
 
-  StatusRecord ipd_res = StatementHandle::PopulateIpd(desc_handle, job_statistics);
+  StatusRecord ipd_res =
+      StatementHandle::PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(ipd_res.ok());
 
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;

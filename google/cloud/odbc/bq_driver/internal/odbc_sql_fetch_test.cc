@@ -182,7 +182,7 @@ TEST(WriteRowset, SuccessMultiplerows) {
       }
     }
   }
-  delete strlen_inds;
+  delete[] strlen_inds;
 }
 
 TEST(WriteRowset, SuccessWithoffset) {

@@ -68,15 +68,15 @@ TypeInfoRow const kBqInt64TypeInfoRow = {
     2,                                               // searchable
     0,                                               // unsigned_attribute
     0,                                               // fixed_prec_scale
-    NULL,                                            // auto_unique_value
+    0,                                               // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("INT64")),  // local_type_name
     0,                                               // minimum_scale
     0,                                               // maximum_scale
     SQL_BIGINT,                                      // sql_data_type
-    NULL,                                            // sql_datetime_sub
+    0,                                               // sql_datetime_sub
     10,                                              // num_prec_radix
-    NULL,                                            // interval_precision
+    0,                                               // interval_precision
 };
 
 TypeInfoRow const kBqBoolTypeInfoRow = {
@@ -92,15 +92,15 @@ TypeInfoRow const kBqBoolTypeInfoRow = {
     2,                                              // searchable
     0,                                              // unsigned_attribute
     0,                                              // fixed_prec_scale
-    NULL,                                           // auto_unique_value
+    0,                                              // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("BOOL")),  // local_type_name
     0,                                              // minimum_scale
     0,                                              // maximum_scale
     SQL_BIT,                                        // sql_data_type
-    NULL,                                           // sql_datetime_sub
+    0,                                              // sql_datetime_sub
     10,                                             // num_prec_radix
-    NULL,                                           // interval_precision
+    0,                                              // interval_precision
 };
 
 TypeInfoRow const kBqDateTypeInfoRow = {
@@ -116,7 +116,7 @@ TypeInfoRow const kBqDateTypeInfoRow = {
     2,                                              // searchable
     0,                                              // unsigned_attribute
     0,                                              // fixed_prec_scale
-    NULL,                                           // auto_unique_value
+    0,                                              // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("DATE")),  // local_type_name
     0,                                              // minimum_scale
@@ -124,7 +124,7 @@ TypeInfoRow const kBqDateTypeInfoRow = {
     SQL_DATETIME,                                   // sql_data_type
     1,                                              // sql_datetime_sub
     10,                                             // num_prec_radix
-    NULL,                                           // interval_precision
+    0,                                              // interval_precision
 };
 
 TypeInfoRow const kBqFloat64TypeInfoRow = {
@@ -142,7 +142,7 @@ TypeInfoRow const kBqFloat64TypeInfoRow = {
     2,                                            // searchable
     0,                                            // unsigned_attribute
     0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    0,                                            // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("FLOAT64")),  // local_type_name
     0,                                                 // minimum_scale
@@ -150,7 +150,7 @@ TypeInfoRow const kBqFloat64TypeInfoRow = {
     SQL_DOUBLE,                                        // sql_data_type
     1,                                                 // sql_datetime_sub
     2,                                                 // num_prec_radix
-    NULL,                                              // interval_precision
+    0,                                                 // interval_precision
 };
 
 TypeInfoRow const kBqTimeTypeInfoRow = {
@@ -168,7 +168,7 @@ TypeInfoRow const kBqTimeTypeInfoRow = {
     3,                                            // searchable
     0,                                            // unsigned_attribute
     0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    0,                                            // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("TIME")),  // local_type_name
     0,                                              // minimum_scale
@@ -176,7 +176,7 @@ TypeInfoRow const kBqTimeTypeInfoRow = {
     SQL_DATETIME,                                   // sql_data_type
     2,                                              // sql_datetime_sub
     2,                                              // num_prec_radix
-    NULL,                                           // interval_precision
+    0,                                              // interval_precision
 };
 
 TypeInfoRow const kBqTimestampTypeInfoRow = {
@@ -194,7 +194,7 @@ TypeInfoRow const kBqTimestampTypeInfoRow = {
     3,                                            // searchable
     0,                                            // unsigned_attribute
     0,                                            // fixed_prec_scale
-    NULL,                                         // auto_unique_value
+    0,                                            // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("TIMESTAMP")),  // local_type_name
     0,                                                   // minimum_scale
@@ -202,7 +202,7 @@ TypeInfoRow const kBqTimestampTypeInfoRow = {
     SQL_DATETIME,                                        // sql_data_type
     3,                                                   // sql_datetime_sub
     2,                                                   // num_prec_radix
-    NULL,                                                // interval_precision
+    0,                                                   // interval_precision
 };
 
 TypeInfoRow const kBqDatetimeTypeInfoRow = {
@@ -220,7 +220,7 @@ TypeInfoRow const kBqDatetimeTypeInfoRow = {
     3,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("DATETIME")),  // local_type_name
     0,                                                  // minimum_scale
@@ -228,7 +228,7 @@ TypeInfoRow const kBqDatetimeTypeInfoRow = {
     SQL_DATETIME,                                       // sql_data_type
     3,                                                  // sql_datetime_sub
     2,                                                  // num_prec_radix
-    NULL,                                               // interval_precision
+    0,                                                  // interval_precision
 };
 
 TypeInfoRow const kBqBytesTypeInfoRow = {
@@ -246,7 +246,7 @@ TypeInfoRow const kBqBytesTypeInfoRow = {
     2,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("BYTES")),  // local_type_name
     0,                                               // minimum_scale
@@ -254,7 +254,7 @@ TypeInfoRow const kBqBytesTypeInfoRow = {
     SQL_VARBINARY,                                   // sql_data_type
     3,                                               // sql_datetime_sub
     2,                                               // num_prec_radix
-    NULL,                                            // interval_precision
+    0,                                               // interval_precision
 };
 
 TypeInfoRow const kBqStringTypeInfoRow = {
@@ -272,7 +272,7 @@ TypeInfoRow const kBqStringTypeInfoRow = {
     3,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("STRING")),  // local_type_name
     0,                                                // minimum_scale
@@ -280,7 +280,7 @@ TypeInfoRow const kBqStringTypeInfoRow = {
     SQL_VARCHAR,                                      // sql_data_type
     3,                                                // sql_datetime_sub
     2,                                                // num_prec_radix
-    NULL,                                             // interval_precision
+    0,                                                // interval_precision
 };
 
 TypeInfoRow const kBqArrayTypeInfoRow = {
@@ -298,7 +298,7 @@ TypeInfoRow const kBqArrayTypeInfoRow = {
     0,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("ARRAY")),  // local_type_name
     0,                                               // minimum_scale
@@ -306,7 +306,7 @@ TypeInfoRow const kBqArrayTypeInfoRow = {
     SQL_VARCHAR,                                     // sql_data_type
     3,                                               // sql_datetime_sub
     2,                                               // num_prec_radix
-    NULL,                                            // interval_precision
+    0,                                               // interval_precision
 };
 
 TypeInfoRow const kBqStructTypeInfoRow = {
@@ -324,7 +324,7 @@ TypeInfoRow const kBqStructTypeInfoRow = {
     0,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("STRUCT")),  // local_type_name
     0,                                                // minimum_scale
@@ -332,7 +332,7 @@ TypeInfoRow const kBqStructTypeInfoRow = {
     SQL_VARCHAR,                                      // sql_data_type
     3,                                                // sql_datetime_sub
     2,                                                // num_prec_radix
-    NULL,                                             // interval_precision
+    0,                                                // interval_precision
 };
 
 TypeInfoRow const kBqIntervalTypeInfoRow = {
@@ -350,7 +350,7 @@ TypeInfoRow const kBqIntervalTypeInfoRow = {
     3,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("INTERVAL")),  // local_type_name
     0,                                                  // minimum_scale
@@ -358,7 +358,7 @@ TypeInfoRow const kBqIntervalTypeInfoRow = {
     SQL_VARCHAR,                                        // sql_data_type
     3,                                                  // sql_datetime_sub
     2,                                                  // num_prec_radix
-    NULL,                                               // interval_precision
+    0,                                                  // interval_precision
 };
 
 TypeInfoRow const kBqJsonTypeInfoRow = {
@@ -376,7 +376,7 @@ TypeInfoRow const kBqJsonTypeInfoRow = {
     3,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("JSON")),  // local_type_name
     0,                                              // minimum_scale
@@ -384,7 +384,7 @@ TypeInfoRow const kBqJsonTypeInfoRow = {
     SQL_VARCHAR,                                    // sql_data_type
     3,                                              // sql_datetime_sub
     2,                                              // num_prec_radix
-    NULL,                                           // interval_precision
+    0,                                              // interval_precision
 };
 
 TypeInfoRow const kBqGeographyTypeInfoRow = {
@@ -402,7 +402,7 @@ TypeInfoRow const kBqGeographyTypeInfoRow = {
     0,                                           // searchable
     0,                                           // unsigned_attribute
     0,                                           // fixed_prec_scale
-    NULL,                                        // auto_unique_value
+    0,                                           // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("GEOGRAPHY")),  // local_type_name
     0,                                                   // minimum_scale
@@ -410,7 +410,7 @@ TypeInfoRow const kBqGeographyTypeInfoRow = {
     SQL_VARCHAR,                                         // sql_data_type
     3,                                                   // sql_datetime_sub
     2,                                                   // num_prec_radix
-    NULL,                                                // interval_precision
+    0,                                                   // interval_precision
 };
 
 TypeInfoRow const kBqNumericTypeInfoRow = {
@@ -427,9 +427,9 @@ TypeInfoRow const kBqNumericTypeInfoRow = {
     1,                                                         // nullable
     0,                                                         // case_sensitive
     2,                                                         // searchable
-    0,     // unsigned_attribute
-    1,     // fixed_prec_scale
-    NULL,  // auto_unique_value
+    0,  // unsigned_attribute
+    1,  // fixed_prec_scale
+    0,  // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("NUMERIC")),  // local_type_name
     9,                                                 // minimum_scale
@@ -437,7 +437,7 @@ TypeInfoRow const kBqNumericTypeInfoRow = {
     SQL_NUMERIC,                                       // sql_data_type
     3,                                                 // sql_datetime_sub
     10,                                                // num_prec_radix
-    NULL,                                              // interval_precision
+    0,                                                 // interval_precision
 };
 
 TypeInfoRow const kBqBignumericTypeInfoRow = {
@@ -454,9 +454,9 @@ TypeInfoRow const kBqBignumericTypeInfoRow = {
     1,                                                         // nullable
     0,                                                         // case_sensitive
     2,                                                         // searchable
-    0,     // unsigned_attribute
-    1,     // fixed_prec_scale
-    NULL,  // auto_unique_value
+    0,  // unsigned_attribute
+    1,  // fixed_prec_scale
+    0,  // auto_unique_value
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("BIGNUMERIC")),  // local_type_name
     38,                                                   // minimum_scale,
@@ -464,7 +464,7 @@ TypeInfoRow const kBqBignumericTypeInfoRow = {
     SQL_NUMERIC,                                          // sql_data_type
     3,                                                    // sql_datetime_sub
     10,                                                   // num_prec_radix
-    NULL,                                                 // interval_precision
+    0,                                                    // interval_precision
 };
 
 std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
@@ -522,14 +522,14 @@ inline bool AreSqlAndBqTypesSame(SQLSMALLINT sql_type,
           (kSqlToBqDataTypes.at(sql_type).count(bq_type) != 0));
 }
 
-// Helper function to handle NULL values
+// Helper function to handle 0 values
 template <typename T>
 inline std::string ToBQInsertionStr(T value) {
   std::ostringstream stream;
-  if (value != NULL) {
+  if (value != 0) {
     stream << value;
   } else {
-    stream << "NULL";
+    stream << "0";
   }
   return stream.str();
 }
@@ -540,7 +540,7 @@ inline std::string ToBQInsertionStr(std::string const& value) {
   if (!value.empty()) {
     stream << "'" << value << "'";
   } else {
-    stream << "NULL";
+    stream << "0";
   }
   return stream.str();
 }
@@ -556,7 +556,7 @@ inline std::string ToBQInsertionStr(SQL_TIMESTAMP_STRUCT const& timestamp) {
            << timestamp.minute << ":" << (timestamp.second < 10 ? "0" : "")
            << timestamp.second << "." << timestamp.fraction << "'";
   } else {
-    stream << "NULL";
+    stream << "0";
   }
   return stream.str();
 }
@@ -569,7 +569,7 @@ inline std::string ToBQInsertionStr(SQL_DATE_STRUCT const& date) {
            << date.month << "-" << (date.day < 10 ? "0" : "") << date.day
            << "'";
   } else {
-    stream << "NULL";
+    stream << "0";
   }
   return stream.str();
 }
@@ -600,12 +600,12 @@ inline std::string ToBQInsertionStr(SQL_TIME_STRUCT const& time) {
 // Overload for Snlohmann::json
 inline std::string ToBQInsertionStr(nlohmann::json const& json_field) {
   std::ostringstream stream;
-  if (json_field != NULL) {
+  if (json_field != 0) {
     stream << "JSON '";
     stream << to_string(json_field);
     stream << "'";
   } else {
-    stream << "NULL";
+    stream << "0";
   }
   return stream.str();
 }
