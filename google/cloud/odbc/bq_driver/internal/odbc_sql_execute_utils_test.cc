@@ -23,7 +23,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
-using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using ::google::cloud::odbc_testing_utils::StatusRecordIs;
 using odbc_internal::SQLStates;
 using ::testing::HasSubstr;
@@ -70,7 +69,7 @@ TEST(ConstructPositionalQueryParams, Basic) {
   str_param.parameter_type.type = "STRING";
   std::string value = "Testing String";
   SQLCHAR cstr[50];
-  strcpy((char*)cstr, value.c_str());
+  strcpy(reinterpret_cast<char*>(cstr), value.c_str());
   SQLLEN str_len = value.size();
   PopulateDescriptors(apd, ipd, 3, SQL_C_CHAR, SQL_CHAR, cstr, 50, &str_len);
 
@@ -125,7 +124,7 @@ TEST(ConstructPositionalQueryParams, InvalidConversion) {
   str_param.parameter_type.type = "STRING";
   std::string value = "Testing String";
   SQLCHAR cstr[50];
-  strcpy((char*)cstr, value.c_str());
+  strcpy(reinterpret_cast<char*>(cstr), value.c_str());
   SQLLEN str_len = value.size();
   PopulateDescriptors(apd, ipd, 1, SQL_C_CHAR, SQL_FLOAT, cstr, 50, &str_len);
 
@@ -137,7 +136,7 @@ TEST(ConstructPositionalQueryParams, InvalidConversion) {
   EXPECT_EQ(status_record.message, "Conversion is unsupported");
 }
 
-TEST(ExecuteScript, Invalid_Statement_Handle) {
+TEST(ExecuteScript, InvalidStatementHandle) {
   PostQueryRequest req;
   StatementHandle stmt_handle;
   auto status_record_or = ExecuteScript(stmt_handle, req);
@@ -146,7 +145,7 @@ TEST(ExecuteScript, Invalid_Statement_Handle) {
               StatusRecordIs(SQLStates::k_HY009(), "Invalid statement handle"));
 }
 
-TEST(ExecuteScript, Failure_Not_Connected) {
+TEST(ExecuteScript, FailureNotConnected) {
   PostQueryRequest req;
 
   // Create a valid connection handle but mark it as disconnected
@@ -169,7 +168,7 @@ TEST(ExecuteScript, Failure_Not_Connected) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(ExecuteScript, Failure_Null_BQClient) {
+TEST(ExecuteScript, FailureNullBQClient) {
   PostQueryRequest req;
 
   // Create a valid connection handle

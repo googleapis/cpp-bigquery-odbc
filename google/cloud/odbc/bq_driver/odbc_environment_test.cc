@@ -29,25 +29,24 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
 
-using google::cloud::odbc_testing_utils::StatusIs;
-using ::testing::HasSubstr;
-
 TEST(SetEnvAttr, Success) {
   SQLHENV env_handle;
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  (SQLPOINTER)val, 0));
+                                  ptr_val, 0));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
 TEST(SetEnvAttr, InvalidHandle) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  EXPECT_EQ(SQL_INVALID_HANDLE,
-            SQLSetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING,
-                                  (SQLPOINTER)val, 0));
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
+  EXPECT_EQ(
+      SQL_INVALID_HANDLE,
+      SQLSetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING, ptr_val, 0));
 }
 
 TEST(GetEnvAttr, Success) {
@@ -55,9 +54,10 @@ TEST(GetEnvAttr, Success) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(set_val));
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  (SQLPOINTER)set_val, 0));
+                                  ptr_val, 0));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             SQLGetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,

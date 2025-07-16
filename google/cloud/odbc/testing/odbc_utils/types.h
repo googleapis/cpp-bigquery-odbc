@@ -512,13 +512,14 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
                               {"BIGNUMERIC", kBqBignumericTypeInfoRow},
                           }}};
 
-inline std::string SanitizeBQColType(std::string col_type) {
+inline std::string SanitizeBQColType(std::string const& col_type) {
   return col_type.substr(0, col_type.find_first_of("(<["));
 }
 
-inline bool AreSqlAndBqTypesSame(SQLSMALLINT sql_type, std::string bq_type) {
-  return kSqlToBqDataTypes.count(sql_type) &&
-         kSqlToBqDataTypes.at(sql_type).count(bq_type);
+inline bool AreSqlAndBqTypesSame(SQLSMALLINT sql_type,
+                                 std::string const& bq_type) {
+  return ((kSqlToBqDataTypes.count(sql_type) != 0) &&
+          (kSqlToBqDataTypes.at(sql_type).count(bq_type) != 0));
 }
 
 // Helper function to handle NULL values

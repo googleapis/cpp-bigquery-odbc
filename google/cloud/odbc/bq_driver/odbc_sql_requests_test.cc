@@ -23,7 +23,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
@@ -39,7 +38,7 @@ using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
 using ::testing::HasSubstr;
 
-TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
+TEST(SQLBindParameterInternal, FailInvalidhandle) {
   DescriptorHandle desc_handle;
   SQLUSMALLINT param_number = 1;
   SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
@@ -58,7 +57,7 @@ TEST(SQLBindParameterInternal, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLBindParameterInternal, Fail_ParameterNumberIsZero) {
+TEST(SQLBindParameterInternal, FailParameternumberiszero) {
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLUSMALLINT param_number = 0;
   SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
@@ -80,7 +79,7 @@ TEST(SQLBindParameterInternal, Fail_ParameterNumberIsZero) {
   EXPECT_FALSE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
-TEST(SQLBindParameterInternal, Fail_BufferLengthIzNegative) {
+TEST(SQLBindParameterInternal, FailBufferlengthiznegative) {
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLUSMALLINT param_number = 1;
   SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
@@ -113,15 +112,17 @@ TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
   SQLLEN buff_len = col_size;
   SQLLEN str_len = SQL_LEN_DATA_AT_EXEC(buff_len);
 
-  SQLBindParameterInternal(&stmt_handle, param_number, in_out_type, value_type,
-                           param_type, col_size, decimal_digits,
-                           (SQLPOINTER)SQL_DATA_AT_EXEC, buff_len, &str_len);
+  SQLBindParameterInternal(
+      &stmt_handle, param_number, in_out_type, value_type, param_type, col_size,
+      decimal_digits,
+      reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(SQL_DATA_AT_EXEC)),
+      buff_len, &str_len);
 
   EXPECT_TRUE(stmt_handle.GetStmtState() == StmtStates::kNeedsParams);
 }
 
 TEST(SQLBindParameterInternal,
-     FailToSetInvalidType_SQL_DESC_COUNT_IsNotUpdated_APD) {
+     FailToSetInvalidTypeSqlDescCountIsnotupdatedApd) {
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLUSMALLINT param_number = 1;
   SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
@@ -147,7 +148,7 @@ TEST(SQLBindParameterInternal,
 }
 
 TEST(SQLBindParameterInternal,
-     FailToSetInvalidType_SQL_DESC_COUNT_IsNotUpdated_IPD) {
+     FailToSetInvalidTypeSqlDescCountIsnotupdatedIpd) {
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLUSMALLINT param_number = 1;
   SQLSMALLINT in_out_type = SQL_PARAM_INPUT;
@@ -214,7 +215,7 @@ void AssertDescribeParamResults(SQLRETURN status,
   EXPECT_EQ(record.nullable, nullable);
 }
 
-TEST(SQLDescribeParam, Fail_InvalidHandle) {
+TEST(SQLDescribeParam, FailInvalidhandle) {
   SQLSMALLINT data_type = 0;
   SQLULEN param_size = 0;
   SQLSMALLINT decimal_digits = 0;
@@ -226,7 +227,7 @@ TEST(SQLDescribeParam, Fail_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
+TEST(SQLDescribeParam, FailParameternumberiszero) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
@@ -242,7 +243,7 @@ TEST(SQLDescribeParam, Fail_ParameterNumberIsZero) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
+TEST(SQLDescribeParam, FailInvalidparameternumber) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLSMALLINT data_type = 0;
@@ -258,7 +259,7 @@ TEST(SQLDescribeParam, Fail_InvalidParameterNumber) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeParam, Fail_StatementIsNotPrepared) {
+TEST(SQLDescribeParam, FailStatementisnotprepared) {
   StatementHandle stmt_handle = CreateStatementHandle();
   DescriptorRecord record;
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
@@ -278,7 +279,7 @@ TEST(SQLDescribeParam, Fail_StatementIsNotPrepared) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
+TEST(SQLDescribeParam, DescribeSqlNumeric) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_NUMERIC);
@@ -298,7 +299,7 @@ TEST(SQLDescribeParam, Describe_SQL_NUMERIC) {
                              decimal_digits, nullable);
 }
 
-TEST(SQLDescribeParam, Describe_SQL_CHAR) {
+TEST(SQLDescribeParam, DescribeSqlChar) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_CHAR);
@@ -318,7 +319,7 @@ TEST(SQLDescribeParam, Describe_SQL_CHAR) {
                              decimal_digits, nullable);
 }
 
-TEST(SQLDescribeParam, Describe_SQL_DATE) {
+TEST(SQLDescribeParam, DescribeSqlDate) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_TYPE_DATE);
@@ -338,7 +339,7 @@ TEST(SQLDescribeParam, Describe_SQL_DATE) {
                              decimal_digits, nullable);
 }
 
-TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
+TEST(SQLNumParamsInternal, FailsInvalidhandle) {
   SQLSMALLINT num_param = 0;
 
   SQLRETURN status = SQLNumParamsInternal(nullptr, &num_param);
@@ -346,7 +347,7 @@ TEST(SQLNumParamsInternal, Fails_InvalidHandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLNumParamsInternal, Fail_StatementIsNotPrepared) {
+TEST(SQLNumParamsInternal, FailStatementisnotprepared) {
   StatementHandle handle = CreateStatementHandle();
   SQLSMALLINT num_param = 0;
 
@@ -371,11 +372,13 @@ TEST(SQLNumParamsInternal, ReturnsParamCount) {
   EXPECT_EQ(1, num_param);
 }
 
-TEST(SQLPrepareInternal, Fail_InvalidHandle) {
+TEST(SQLPrepareInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(stmt_handle, query, len);
 
@@ -385,8 +388,10 @@ TEST(SQLPrepareInternal, Fail_InvalidHandle) {
 TEST(SQLPrepareInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str = "select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
   SQLINTEGER len = 0;
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
@@ -418,8 +423,9 @@ TEST(SQLPrepareInternal, NullQueryText) {
 TEST(SQLPrepareInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str;
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, SQL_NTS);
 
@@ -432,13 +438,15 @@ TEST(SQLPrepareInternal, EmptyQueryText) {
               HasSubstr("Query text is null or empty"));
 }
 
-TEST(SQLPrepareInternal, DisableCancellation_PreviouslyCompletedOperation) {
+TEST(SQLPrepareInternal, DisableCancellationPreviouslycompletedoperation) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -447,13 +455,15 @@ TEST(SQLPrepareInternal, DisableCancellation_PreviouslyCompletedOperation) {
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementNotPrepared);
 }
 
-TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationCanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -466,14 +476,16 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_Canceled) {
               HasSubstr("Operation canceled"));
 }
 
-TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
+TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperationNotcanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementAsyncPrepare);
   handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
   handle.DisableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLPrepareInternal(&handle, query, len);
 
@@ -485,7 +497,7 @@ TEST(SQLPrepareInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
               HasSubstr("cannot prepare query asynchronously"));
 }
 
-TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperationCanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementAsyncExecute);
   handle.EnableCancellation();
@@ -501,7 +513,7 @@ TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_Canceled) {
               HasSubstr("Operation canceled"));
 }
 
-TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
+TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperationNotcanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementAsyncExecute);
   handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
@@ -517,18 +529,18 @@ TEST(SQLExecuteInternal, PreviouslyOngoingAsyncOperation_NotCanceled) {
               HasSubstr("cannot execute query asynchronously"));
 }
 
-TEST(SQLExecuteInternal, Fail_NullHandle) {
+TEST(SQLExecuteInternal, FailNullhandle) {
   SQLRETURN status = SQLExecuteInternal(nullptr);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLExecuteInternal, Fail_InvalidHandle) {
+TEST(SQLExecuteInternal, FailInvalidhandle) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   SQLRETURN status = SQLExecuteInternal(&conn_handle);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLExecuteInternal, Fail_UnPreparedHandle) {
+TEST(SQLExecuteInternal, FailUnpreparedhandle) {
   StatementHandle stmt_handle = CreateStatementHandle();
 
   SQLRETURN status = SQLExecuteInternal(&stmt_handle);
@@ -540,7 +552,7 @@ TEST(SQLExecuteInternal, Fail_UnPreparedHandle) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLExecuteInternal, Fail_ExecutionInProgress) {
+TEST(SQLExecuteInternal, FailExecutioninprogress) {
   StatementHandle stmt_handle = CreateStatementHandle();
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
@@ -565,11 +577,12 @@ TEST(SQLExecuteInternal, CancellationOfOngoingExecuteOperation) {
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementPrepared);
 }
 
-TEST(SQLExecDirectInternal, Fail_InvalidHandle) {
+TEST(SQLExecDirectInternal, FailInvalidhandle) {
   StatementHandle* stmt_handle = nullptr;
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(stmt_handle, query, len);
 
@@ -579,8 +592,9 @@ TEST(SQLExecDirectInternal, Fail_InvalidHandle) {
 TEST(SQLExecDirectInternal, InvalidQueryLength) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
+  std::string query_str = "select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLINTEGER len = 0;
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
@@ -612,9 +626,9 @@ TEST(SQLExecDirectInternal, NullQueryText) {
 TEST(SQLExecDirectInternal, EmptyQueryText) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementNotPrepared);
-  std::string queryStr = "";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-
+  std::string query_str;
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
   SQLRETURN status = SQLExecDirectInternal(&handle, query, SQL_NTS);
 
   ASSERT_FALSE(handle.IsOperationCanceled());
@@ -630,16 +644,17 @@ TEST(SQLExecDirectInternal, CancellationBetweenExecutions) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
   ASSERT_EQ(SQL_ERROR, status);
   ASSERT_EQ(handle.GetStmtState(), StmtStates::kStatementExecutedWithRs);
 }
 
-TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperationCanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementStillExecuting);
   std::future<StatusRecord> fut_query =
@@ -647,9 +662,10 @@ TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperation_Canceled) {
   handle.SetFutureExecDirectQuery(std::move(fut_query));
 
   handle.EnableCancellation();
-  std::string queryStr = "Select 1";
-  SQLCHAR* query = (SQLCHAR*)queryStr.c_str();
-  SQLINTEGER len = queryStr.length();
+  std::string query_str = "Select 1";
+  SQLCHAR* query =
+      const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(query_str.c_str()));
+  SQLINTEGER len = query_str.length();
 
   SQLRETURN status = SQLExecDirectInternal(&handle, query, len);
 
@@ -662,13 +678,13 @@ TEST(SQLExecDirectInternal, PreviouslyOngoingAsyncOperation_Canceled) {
               HasSubstr("Operation canceled"));
 }
 
-TEST(SQLSetCursorNameInternal, Fail_NullHandle) {
+TEST(SQLSetCursorNameInternal, FailNullhandle) {
   SQLRETURN status = SQLSetCursorNameInternal(nullptr, nullptr, 0);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQLCUR) {
+TEST(SQLSetCursorNameInternal, FailInvalidnameSqlcur) {
   StatementHandle stmt_handle = CreateStatementHandle();
   std::string cursor_name = "SQLCUR_1";
 
@@ -683,7 +699,7 @@ TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQLCUR) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQL_CUR) {
+TEST(SQLSetCursorNameInternal, FailInvalidnameSqlCur) {
   StatementHandle stmt_handle = CreateStatementHandle();
   std::string cursor_name = "SQL_CUR_1";
 
@@ -698,7 +714,7 @@ TEST(SQLSetCursorNameInternal, Fail_InvalidName_SQL_CUR) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLSetCursorNameInternal, Fail_InvalidLength) {
+TEST(SQLSetCursorNameInternal, FailInvalidlength) {
   StatementHandle stmt_handle = CreateStatementHandle();
   std::string cursor_name = "name_1";
 
@@ -713,7 +729,7 @@ TEST(SQLSetCursorNameInternal, Fail_InvalidLength) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLSetCursorNameInternal, Fail_InvalidState) {
+TEST(SQLSetCursorNameInternal, FailInvalidstate) {
   StatementHandle stmt_handle = CreateStatementHandle();
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   std::string cursor_name = "name_1";
@@ -740,7 +756,7 @@ TEST(SQLSetCursorNameInternal, SetCursorName) {
   EXPECT_EQ(cursor_name, stmt_handle.GetCursorName());
 }
 
-TEST(SQLGetCursorNameInternal, Fail_NullHandle) {
+TEST(SQLGetCursorNameInternal, FailNullhandle) {
   SQLRETURN status = SQLGetCursorNameInternal(nullptr, nullptr, 0, nullptr);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
@@ -759,7 +775,7 @@ TEST(SQLGSetCursorNameInternal, GetCursorName) {
   EXPECT_EQ(cursor_name, actual);
 }
 
-TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
+TEST(SQLGSetCursorNameInternal, GetCursorNameTruncated) {
   StatementHandle stmt_handle = CreateStatementHandle();
   std::string cursor_name = "name_1";
   stmt_handle.SetCursorName(cursor_name);
@@ -777,18 +793,18 @@ TEST(SQLGSetCursorNameInternal, GetCursorName_Truncated) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLMoreResultsInternal, Fail_NullHandle) {
+TEST(SQLMoreResultsInternal, FailNullhandle) {
   SQLRETURN status = SQLMoreResultsInternal(nullptr);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLMoreResultsInternal, Fail_InvalidHandle) {
+TEST(SQLMoreResultsInternal, FailInvalidhandle) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   SQLRETURN status = SQLMoreResultsInternal(&conn_handle);
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLMoreResultsInternal, Fail_StatementCanceled) {
+TEST(SQLMoreResultsInternal, FailStatementcanceled) {
   StatementHandle stmt_handle = CreateStatementHandle();
   stmt_handle.EnableCancellation();
   SQLRETURN status = SQLMoreResultsInternal(&stmt_handle);
@@ -801,7 +817,7 @@ TEST(SQLMoreResultsInternal, Fail_StatementCanceled) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLMoreResultsInternal, Async_Success) {
+TEST(SQLMoreResultsInternal, AsyncSuccess) {
   StatementHandle stmt_handle = CreateStatementHandle();
   stmt_handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
 
@@ -829,7 +845,7 @@ TEST(SQLMoreResultsInternal, NoMoreJobData) {
   EXPECT_EQ(SQL_NO_DATA, status);
 }
 
-TEST(SQLMoreResultsInternal, PreviouslyOngoingAsyncOperation_Canceled) {
+TEST(SQLMoreResultsInternal, PreviouslyOngoingAsyncOperationCanceled) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementStillExecuting);
   std::future<StatusRecord> fut_query =
@@ -855,8 +871,9 @@ TEST(SQLPutDataInternal, InvalidStatementState) {
   char const* test_data = "test_data";
   SQLLEN data_length = strlen(test_data);
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
@@ -876,8 +893,9 @@ TEST(SQLPutDataInternal, NoParameterExpectingData) {
   // Simulate a case where no parameter is expecting data
   stmt_handle.SetCurrentParamIndex(1);
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
@@ -900,8 +918,9 @@ TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
   stmt_handle.SetCurrentParamIndex(1);
   stmt_handle.SetQueryParameters({query_parameters});
 
-  SQLRETURN status =
-      SQLPutDataInternal(&stmt_handle, (SQLPOINTER)test_data, data_length);
+  SQLRETURN status = SQLPutDataInternal(
+      &stmt_handle, const_cast<SQLPOINTER>(static_cast<void const*>(test_data)),
+      data_length);
 
   EXPECT_EQ(SQL_ERROR, status);
   ASSERT_EQ(stmt_handle.GetDiagnostics().GetStatusRecords().size(), 1);
@@ -911,7 +930,7 @@ TEST(SQLPutDataInternal, NoDescriptorRecordForParameter) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
+TEST(SQLParamDataInternal, FailInvalidstatementstate) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kNeedsPutData);
   SQLPOINTER param_or_target_value = nullptr;
@@ -924,7 +943,7 @@ TEST(SQLParamDataInternal, Fail_InvalidStatementState) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
+TEST(SQLParamDataInternal, FailParameteroutofbounds) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kNeedsParams);
 
@@ -938,7 +957,7 @@ TEST(SQLParamDataInternal, Fail_ParameterOutOfBounds) {
             stmt_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
 
-TEST(SQLParamDataInternal, Success_HandlesDataAtExec) {
+TEST(SQLParamDataInternal, SuccessHandlesdataatexec) {
   StatementHandle stmt_handle =
       CreateStmtHandleWithState(StmtStates::kNeedsParams);
 

@@ -90,7 +90,7 @@ TEST(UnbindDescriptorRecord, CountIsZero) {
   EXPECT_EQ(0, handle.GetHeaderRecord().count);
 }
 
-TEST(UnbindDescriptorRecord, Fails_WrongIndex) {
+TEST(UnbindDescriptorRecord, FailsWrongIndex) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
 
@@ -114,7 +114,7 @@ TEST(UnbindAllDescriptorRecordsFrom, UnbindAll) {
   EXPECT_EQ(0, handle.GetHeaderRecord().count);
 }
 
-TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NewIndexIsTooBig) {
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothingNewIndexIsTooBig) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);
@@ -127,7 +127,7 @@ TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NewIndexIsTooBig) {
   EXPECT_EQ(3, handle.GetHeaderRecord().count);
 }
 
-TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NoRecords) {
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothingNoRecords) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   EXPECT_EQ(0, handle.GetHeaderRecord().count);
@@ -138,7 +138,7 @@ TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NoRecords) {
   EXPECT_EQ(0, handle.GetHeaderRecord().count);
 }
 
-TEST(UnbindAllDescriptorRecordsFrom, UnbindNothing_NegativeIndex) {
+TEST(UnbindAllDescriptorRecordsFrom, UnbindNothingNegativeIndex) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);

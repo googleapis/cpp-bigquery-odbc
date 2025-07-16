@@ -30,7 +30,6 @@ using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_internal::SQLStates;
-using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 
@@ -49,50 +48,50 @@ TEST(SQLAllocDescHandle, SQLAllocDescHandle) {
   delete desc_handle;
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidHandle) {
+TEST(SQLSetDescFieldInternal, FailsInvalidhandle) {
   EnvironmentHandle handle;
 
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
-                                        (SQLPOINTER)10, 0);
+                                        reinterpret_cast<SQLPOINTER>(10), 0);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
 TEST(SQLSetDescFieldInternal,
-     Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
+     FailsInvalidfieldidentifierApplicationdescriptor) {
   DescriptorHandle handle;
 
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ROWS_PROCESSED_PTR,
-                                        (SQLPOINTER)10, 0);
+                                        reinterpret_cast<SQLPOINTER>(10), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
+TEST(SQLSetDescFieldInternal, FailsInvalidfieldidentifierIrd) {
   DescriptorHandle handle(DescriptorType::kIRD);
 
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE,
-                                        (SQLPOINTER)10, 0);
+                                        reinterpret_cast<SQLPOINTER>(10), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
+TEST(SQLSetDescFieldInternal, FailsInvalidfieldidentifierIpd) {
   DescriptorHandle handle(DescriptorType::kIPD);
 
   auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_BIND_TYPE,
-                                        (SQLPOINTER)10, 0);
+                                        reinterpret_cast<SQLPOINTER>(10), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
+TEST(SQLSetDescFieldInternal, SetSqlDescBindTypeNullpointer) {
   DescriptorHandle handle;
 
   auto status =
@@ -102,52 +101,56 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_BIND_TYPE_NullPointer) {
   EXPECT_EQ(0, handle.GetHeaderRecord().bind_type);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_ARRAY_SIZE) {
+TEST(SQLSetDescFieldInternal, SetSqlDescArraySize) {
   DescriptorHandle handle;
 #ifdef _WIN64
-  unsigned long long arr_size = 18446744073709551615UL;  // 64-bit max
+  uint64_t arr_size = 18446744073709551615UL;  // 64-bit max
 #else
-  unsigned long long arr_size = 4294967295UL;  // 32-bit max
+  uint64_t arr_size = 4294967295UL;  // 32-bit max
 #endif /* WIN64 */
-  auto status = SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE,
-                                        (SQLPOINTER)arr_size, 0);
+  auto ptr_arr_size =
+      reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(arr_size));
+  auto status =
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_ARRAY_SIZE, ptr_arr_size, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(arr_size, handle.GetHeaderRecord().array_size);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT) {
+TEST(SQLSetDescFieldInternal, SetSqlDescCount) {
   DescriptorHandle handle;
   int count = 3;
-
+  auto ptr_count = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(count));
   auto status =
-      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, ptr_count, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(count, handle.GetHeaderRecord().count);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_COUNT_Negative) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescCountNegative) {
   DescriptorHandle handle;
   int count = -3;
 
+  auto ptr_count = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(count));
   auto status =
-      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, ptr_count, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT_AndUnbindRecords) {
+TEST(SQLSetDescFieldInternal, SetSqlDescCountAndunbindrecords) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);
   handle.BindNewDescriptorRecord(3, descriptor_record);
   SQLSMALLINT count = 0;
 
+  auto ptr_count = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(count));
   auto status =
-      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, (SQLPOINTER)count, 0);
+      SQLSetDescFieldInternal(&handle, 0, SQL_DESC_COUNT, ptr_count, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(count, handle.GetHeaderRecord().count);
@@ -155,24 +158,25 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_COUNT_AndUnbindRecords) {
   EXPECT_FALSE(handle.HasDescriptorRecord(3));
 }
 
-TEST(SQLSetDescFieldInternal, Fails_RecNumberNegative) {
+TEST(SQLSetDescFieldInternal, FailsRecnumbernegative) {
   DescriptorHandle handle;
   SQLSMALLINT rec_number = -5;
 
-  auto status = SQLSetDescFieldInternal(
-      &handle, rec_number, SQL_DESC_CONCISE_TYPE, (SQLPOINTER)3, 0);
+  auto status =
+      SQLSetDescFieldInternal(&handle, rec_number, SQL_DESC_CONCISE_TYPE,
+                              reinterpret_cast<SQLPOINTER>(3), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_07009(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME) {
+TEST(SQLSetDescFieldInternal, SetSqlDescName) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 4);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                        reinterpret_cast<SQLPOINTER>(buf), 4);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -180,24 +184,24 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME) {
   EXPECT_EQ(SQL_NAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Truncated) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNameTruncated) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 2);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                        reinterpret_cast<SQLPOINTER>(buf), 2);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ("te", handle.GetDescriptorRecord(1).name);
   EXPECT_EQ(SQL_NAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_ZeroLength) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNameZerolength) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, 0);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                        reinterpret_cast<SQLPOINTER>(buf), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -205,7 +209,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_ZeroLength) {
   EXPECT_EQ(SQL_UNNAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_NullPointer) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNameNullpointer) {
   DescriptorHandle handle(DescriptorType::kIPD);
 
   auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, nullptr, 0);
@@ -216,36 +220,37 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_NullPointer) {
   EXPECT_EQ(SQL_UNNAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_TooBigLength) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescNameToobiglength) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(
-      &handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, SQL_MAX_IDENTIFIER_LEN + 10);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                        reinterpret_cast<SQLPOINTER>(buf),
+                                        SQL_MAX_IDENTIFIER_LEN + 10);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_22001(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NAME_NegativeLength) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescNameNegativelength) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME, (SQLPOINTER)buf, -5);
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                        reinterpret_cast<SQLPOINTER>(buf), -5);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY090(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Length_SQL_NTS) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNameLengthSqlNts) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
 
-  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, SQL_NTS);
+  auto status = SQLSetDescFieldInternal(
+      &handle, 1, SQL_DESC_NAME, reinterpret_cast<SQLPOINTER>(buf), SQL_NTS);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -253,12 +258,12 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_Length_SQL_NTS) {
   EXPECT_EQ(SQL_NAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_EmptyBuffer) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNameEmptybuffer) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "";
 
-  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
-                                        (SQLPOINTER)buf, SQL_NTS);
+  auto status = SQLSetDescFieldInternal(
+      &handle, 1, SQL_DESC_NAME, reinterpret_cast<SQLPOINTER>(buf), SQL_NTS);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
@@ -266,127 +271,134 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NAME_EmptyBuffer) {
   EXPECT_EQ(SQL_UNNAMED, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_NUM_PREC_RADIX) {
+TEST(SQLSetDescFieldInternal, SetSqlDescNumPrecRadix) {
   DescriptorHandle handle;
   int radix = 0;
 
+  auto ptr_radix = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(radix));
   auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NUM_PREC_RADIX,
-                                        (SQLPOINTER)radix, 0);
+                                        ptr_radix, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
   EXPECT_EQ(radix, handle.GetDescriptorRecord(1).num_prec_radix);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_NUM_PREC_RADIX_WrongValue) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescNumPrecRadixWrongvalue) {
   DescriptorHandle handle;
   int radix = 1;
 
+  auto ptr_radix = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(radix));
   auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_NUM_PREC_RADIX,
-                                        (SQLPOINTER)radix, 0);
+                                        ptr_radix, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_PARAMETER_TYPE) {
+TEST(SQLSetDescFieldInternal, SetSqlDescParameterType) {
   DescriptorHandle handle(DescriptorType::kIPD);
   int type = SQL_PARAM_OUTPUT;
 
-  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE,
-                                        (SQLPOINTER)type, 0);
+  auto ptr_type = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(type));
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE, ptr_type, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
   EXPECT_EQ(type, handle.GetDescriptorRecord(1).parameter_type);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_PARAMETER_TYPE_WrongValue) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescParameterTypeWrongvalue) {
   DescriptorHandle handle(DescriptorType::kIPD);
   int type = 222;
 
-  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE,
-                                        (SQLPOINTER)type, 0);
+  auto ptr_type = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(type));
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_PARAMETER_TYPE, ptr_type, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY105(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_UNNAMED) {
+TEST(SQLSetDescFieldInternal, SetSqlDescUnnamed) {
   DescriptorHandle handle(DescriptorType::kIPD);
   int val = SQL_UNNAMED;
 
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
   auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, (SQLPOINTER)val, 0);
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, ptr_val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
   EXPECT_EQ(val, handle.GetDescriptorRecord(1).unnamed);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_UNNAMED_WrongValue) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescUnnamedWrongvalue) {
   DescriptorHandle handle(DescriptorType::kIPD);
   int val = SQL_NAMED;
 
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
   auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, (SQLPOINTER)val, 0);
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_UNNAMED, ptr_val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY091(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_TYPE) {
+TEST(SQLSetDescFieldInternal, SetSqlDescType) {
   DescriptorHandle handle;
   int val = SQL_C_NUMERIC;
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, ptr_val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
   EXPECT_EQ(val, handle.GetDescriptorRecord(1).type);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_TYPE_WrongValue) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescTypeWrongvalue) {
   DescriptorHandle handle;
   int val = SQL_FLOAT;
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, ptr_val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY021(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_CONCISE_TYPE) {
+TEST(SQLSetDescFieldInternal, SetSqlDescConciseType) {
   DescriptorHandle handle;
   int val = SQL_C_NUMERIC;
 
-  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_CONCISE_TYPE,
-                                        (SQLPOINTER)val, 0);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
+  auto status =
+      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_CONCISE_TYPE, ptr_val, 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_TRUE(handle.HasDescriptorRecord(1));
   EXPECT_EQ(val, handle.GetDescriptorRecord(1).type);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_SQL_DESC_CONCISE_TYPE_WrongValue) {
+TEST(SQLSetDescFieldInternal, FailsSqlDescConciseTypeWrongvalue) {
   DescriptorHandle handle;
   int val = SQL_FLOAT;
 
-  auto status =
-      SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, (SQLPOINTER)val, 0);
+  auto ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));
+  auto status = SQLSetDescFieldInternal(&handle, 1, SQL_DESC_TYPE, ptr_val, 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY021(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
+TEST(SQLSetDescFieldInternal, SetSqlDescDataPtr) {
   DescriptorHandle handle;
   int val = 0;
 
@@ -398,7 +410,7 @@ TEST(SQLSetDescFieldInternal, Set_SQL_DESC_DATA_PTR) {
   EXPECT_EQ(&val, handle.GetDescriptorRecord(1).data_ptr);
 }
 
-TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
+TEST(SQLGetDescFieldInternal, FailsInvalidhandle) {
   EnvironmentHandle handle;
   SQLPOINTER buff = nullptr;
 
@@ -409,7 +421,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidHandle) {
 }
 
 TEST(SQLGetDescFieldInternal,
-     Fails_InvalidFieldIdentifier_ApplicationDescriptor) {
+     FailsInvalidfieldidentifierApplicationdescriptor) {
   DescriptorHandle handle;
   SQLPOINTER buff = nullptr;
 
@@ -421,7 +433,7 @@ TEST(SQLGetDescFieldInternal,
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
+TEST(SQLGetDescFieldInternal, FailsInvalidfieldidentifierIrd) {
   DescriptorHandle handle(DescriptorType::kIRD);
   SQLPOINTER buff = nullptr;
 
@@ -433,7 +445,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IRD) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
+TEST(SQLGetDescFieldInternal, FailsInvalidfieldidentifierIpd) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLPOINTER buff = nullptr;
 
@@ -445,7 +457,7 @@ TEST(SQLGetDescFieldInternal, Fails_InvalidFieldIdentifier_IPD) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescAllocType) {
   DescriptorHandle handle = CreateExplicitDescriptor();
   SQLSMALLINT out_buf = 0;
   SQLINTEGER str_len = 0;
@@ -458,7 +470,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ALLOC_TYPE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_SIZE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescArraySize) {
   DescriptorHandle handle;
   handle.GetHeaderRecord().array_size = 15;
   SQLULEN out_buf = 0;
@@ -472,7 +484,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_SIZE) {
   EXPECT_EQ(sizeof(SQLULEN), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_STATUS_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescArrayStatusPtr) {
   DescriptorHandle handle;
   SQLUSMALLINT array_status_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().array_status_ptr = array_status_ptr;
@@ -490,7 +502,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ARRAY_STATUS_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescBindOffsetPtr) {
   DescriptorHandle handle;
   SQLLEN bind_offset_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().bind_offset_ptr = bind_offset_ptr;
@@ -508,7 +520,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_OFFSET_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_TYPE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescBindType) {
   DescriptorHandle handle;
   handle.GetHeaderRecord().bind_type = 42;
   SQLINTEGER out_buf = 0;
@@ -522,7 +534,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BIND_TYPE) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_COUNT) {
+TEST(SQLGetDescFieldInternal, GetSqlDescCount) {
   DescriptorHandle handle;
   handle.GetHeaderRecord().count = 42;
   SQLSMALLINT out_buf = 0;
@@ -536,7 +548,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_COUNT) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Fail_StatementIsNotPrepared_IRD) {
+TEST(SQLGetDescFieldInternal, FailStatementisnotpreparedIrd) {
   StatementHandle stmt_handle;
   DescriptorHandle handle(DescriptorType::kIRD);
   handle.GetAssociatedStatementHandles().emplace(&stmt_handle,
@@ -551,7 +563,7 @@ TEST(SQLGetDescFieldInternal, Fail_StatementIsNotPrepared_IRD) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescRowsProcessedPtr) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLULEN rows_processed_ptr[] = {1, 2, 3};
   handle.GetHeaderRecord().rows_processed_ptr = rows_processed_ptr;
@@ -569,7 +581,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_ROWS_PROCESSED_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Fails_RecNumberNegative) {
+TEST(SQLGetDescFieldInternal, FailsRecnumbernegative) {
   DescriptorHandle handle;
   SQLINTEGER* out_buf;
   SQLSMALLINT rec_number = -5;
@@ -582,7 +594,7 @@ TEST(SQLGetDescFieldInternal, Fails_RecNumberNegative) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, Succeed_NoData_BigRecNumber) {
+TEST(SQLGetDescFieldInternal, SucceedNodataBigrecnumber) {
   DescriptorHandle handle;
   SQLINTEGER* out_buf;
   SQLSMALLINT rec_number = 5;
@@ -595,7 +607,7 @@ TEST(SQLGetDescFieldInternal, Succeed_NoData_BigRecNumber) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
+TEST(SQLGetDescFieldInternal, GetDefaultRecnumbernotexist) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
@@ -611,7 +623,7 @@ TEST(SQLGetDescFieldInternal, GetDefault_RecNumberNotExist) {
   EXPECT_EQ(default_descriptor_record.length, out_buf);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescAutoUniqueValue) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -632,7 +644,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_AUTO_UNIQUE_VALUE) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescBaseColumnName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -653,7 +665,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_COLUMN_NAME) {
   EXPECT_EQ(6, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescBaseTableName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -674,7 +686,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_BASE_TABLE_NAME) {
   EXPECT_EQ(5, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescCaseSensitive) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.case_sensitive = 42;
@@ -691,7 +703,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CASE_SENSITIVE) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescCatalogName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -712,7 +724,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CATALOG_NAME) {
   EXPECT_EQ(7, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CONCISE_TYPE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescConciseType) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.concise_type = 42;
@@ -729,7 +741,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_CONCISE_TYPE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescDataPtr) {
   DescriptorHandle handle;
   SQLINTEGER val = 5;
   DescriptorRecord descriptor_record;
@@ -748,7 +760,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATA_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescDatetimeIntervalCode) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = 42;
@@ -766,7 +778,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_CODE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
+TEST(SQLGetDescFieldInternal, GetSqlDescDatetimeIntervalPrecision) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_precision = 42;
@@ -784,7 +796,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DATETIME_INTERVAL_PRECISION) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescDisplaySize) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -805,7 +817,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_DISPLAY_SIZE) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescFixedPrecScale) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.fixed_prec_scale = 42;
@@ -822,7 +834,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_FIXED_PREC_SCALE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescIndicatorPtr) {
   DescriptorHandle handle;
   SQLLEN val = 5;
   DescriptorRecord descriptor_record;
@@ -840,7 +852,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
+TEST(SQLGetDescFieldInternal, GetSqlDescIndicatorPtrNullptr) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   SQLSMALLINT rec_number = 1;
@@ -856,7 +868,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_INDICATOR_PTR_NullPtr) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
+TEST(SQLGetDescFieldInternal, GetSqlDescLabel) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -877,7 +889,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LABEL) {
   EXPECT_EQ(5, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
+TEST(SQLGetDescFieldInternal, GetSqlDescLength) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
@@ -894,7 +906,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LENGTH) {
   EXPECT_EQ(sizeof(SQLULEN), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
+TEST(SQLGetDescFieldInternal, GetSqlDescLiteralPrefix) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -915,7 +927,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_PREFIX) {
   EXPECT_EQ(6, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
+TEST(SQLGetDescFieldInternal, GetSqlDescLiteralSuffix) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -936,7 +948,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LITERAL_SUFFIX) {
   EXPECT_EQ(6, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescLocalTypeName) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.local_type_name = "local name";
@@ -953,7 +965,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_LOCAL_TYPE_NAME) {
   EXPECT_EQ(10, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescName) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.name = "name";
@@ -970,7 +982,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NAME) {
   EXPECT_EQ(4, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescNullable) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.nullable = 42;
@@ -987,7 +999,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NULLABLE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
+TEST(SQLGetDescFieldInternal, GetSqlDescNumPrecRadix) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.num_prec_radix = 42;
@@ -1004,7 +1016,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_NUM_PREC_RADIX) {
   EXPECT_EQ(sizeof(SQLINTEGER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH) {
+TEST(SQLGetDescFieldInternal, GetSqlDescOctetLength) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.octet_length = 42;
@@ -1021,7 +1033,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH) {
   EXPECT_EQ(sizeof(SQLLEN), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
+TEST(SQLGetDescFieldInternal, GetSqlDescOctetLengthPtr) {
   DescriptorHandle handle;
   SQLLEN val = 5;
   DescriptorRecord descriptor_record;
@@ -1039,7 +1051,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
+TEST(SQLGetDescFieldInternal, GetSqlDescOctetLengthPtrNullptr) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   SQLSMALLINT rec_number = 1;
@@ -1055,7 +1067,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_OCTET_LENGTH_PTR_NullPtr) {
   EXPECT_EQ(sizeof(SQLPOINTER), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescParameterType) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.parameter_type = 42;
@@ -1072,7 +1084,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PARAMETER_TYPE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PRECISION) {
+TEST(SQLGetDescFieldInternal, GetSqlDescPrecision) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.precision = 42;
@@ -1089,7 +1101,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_PRECISION) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescScale) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.scale = 42;
@@ -1106,7 +1118,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCALE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescSchemaName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -1127,7 +1139,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SCHEMA_NAME) {
   EXPECT_EQ(11, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescSearchable) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -1148,7 +1160,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_SEARCHABLE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescTableName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -1169,7 +1181,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TABLE_NAME) {
   EXPECT_EQ(10, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescType) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.type = 42;
@@ -1186,7 +1198,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
+TEST(SQLGetDescFieldInternal, GetSqlDescTypeName) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -1207,7 +1219,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_TYPE_NAME) {
   EXPECT_EQ(9, str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
+TEST(SQLGetDescFieldInternal, GetSqlDescUnnamed) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.unnamed = 42;
@@ -1224,7 +1236,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNNAMED) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
+TEST(SQLGetDescFieldInternal, GetSqlDescUnsigned) {
   DescriptorHandle handle(DescriptorType::kIPD);
   DescriptorRecord descriptor_record;
   descriptor_record.sql_desc_unsigned = 42;
@@ -1241,7 +1253,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UNSIGNED) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
+TEST(SQLGetDescFieldInternal, GetSqlDescUpdatable) {
   StatementHandle stmt_handle;
   stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
   DescriptorHandle handle(DescriptorType::kIRD);
@@ -1262,7 +1274,7 @@ TEST(SQLGetDescFieldInternal, Get_SQL_DESC_UPDATABLE) {
   EXPECT_EQ(sizeof(SQLSMALLINT), str_len);
 }
 
-TEST(SQLSetDescRecInternal, Fails_InvalidHandle) {
+TEST(SQLSetDescRecInternal, FailsInvalidhandle) {
   EnvironmentHandle handle;
   int data = 10;
   SQLLEN string_length_ptr = 0;
@@ -1273,7 +1285,7 @@ TEST(SQLSetDescRecInternal, Fails_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLSetDescRecInternal, Fails_RecNumberNegative) {
+TEST(SQLSetDescRecInternal, FailsRecnumbernegative) {
   DescriptorHandle handle;
   SQLSMALLINT rec_number = -5;
   int data = 10;
@@ -1316,7 +1328,7 @@ TEST(SQLSetDescRecInternal, Success) {
   EXPECT_EQ(indicator, desc.indicator_ptr);
 }
 
-TEST(SQLSetDescRecInternal, DoNothing_ConcistencyCheckFails) {
+TEST(SQLSetDescRecInternal, DoNothingConcistencycheckfails) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   handle.BindNewDescriptorRecord(1, descriptor_record);
@@ -1372,7 +1384,7 @@ TEST(SQLSetDescRecInternal, DoNotChangeExistingField) {
   EXPECT_EQ("test", desc.name);
 }
 
-TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
+TEST(SQLGetDescRecInternal, FailsInvalidhandle) {
   EnvironmentHandle handle;
   SQLCHAR name[10];
   SQLSMALLINT buffer_length = 10;
@@ -1391,7 +1403,7 @@ TEST(SQLGetDescRecInternal, Fails_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
+TEST(SQLGetDescRecInternal, FailsRecnumbernegative) {
   DescriptorHandle handle;
   SQLSMALLINT rec_number = -5;
   SQLCHAR name[10];
@@ -1413,7 +1425,7 @@ TEST(SQLGetDescRecInternal, Fails_RecNumberNegative) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetDescRecInternal, Succeed_NoData_BigRecNumber) {
+TEST(SQLGetDescRecInternal, SucceedNodataBigrecnumber) {
   DescriptorHandle handle;
   SQLSMALLINT rec_number = 5;
   SQLCHAR name[10];
@@ -1473,7 +1485,7 @@ TEST(SQLGetDescRecInternal, Success) {
   EXPECT_EQ(descriptor_record.nullable, nullable);
 }
 
-TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
+TEST(SQLGetDescRecInternal, GetDefaultRecnumbernotexist) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.length = 42;
@@ -1506,7 +1518,7 @@ TEST(SQLGetDescRecInternal, GetDefault_RecNumberNotExist) {
   EXPECT_EQ(descriptor_record.nullable, nullable);
 }
 
-TEST(SQLGetDescRecInternal, SuccessWithInfo_BufferIsSmall) {
+TEST(SQLGetDescRecInternal, SuccessWithInfoBufferissmall) {
   DescriptorHandle handle;
   DescriptorRecord descriptor_record;
   descriptor_record.name = "test";
@@ -1578,7 +1590,7 @@ TEST(SQLCopyDescInternal, CopyDescriptor) {
   EXPECT_EQ(descriptor_record.precision, target_descriptor_record.precision);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
+TEST(SQLSetDescFieldInternal, FailsInvalidhandleSource) {
   EnvironmentHandle src_handle;
   DescriptorHandle target_handle(DescriptorType::kApplication,
                                  SQL_DESC_ALLOC_AUTO);
@@ -1588,7 +1600,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Source) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
+TEST(SQLSetDescFieldInternal, FailsInvalidhandleTarget) {
   DescriptorHandle src_handle = CreateExplicitDescriptor();
   EnvironmentHandle target_handle;
 
@@ -1597,7 +1609,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandle_Target) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
+TEST(SQLSetDescFieldInternal, FailsInvalidhandletargettypeIrd) {
   DescriptorHandle src_handle = CreateExplicitDescriptor();
   DescriptorHandle target_handle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
 
@@ -1608,7 +1620,7 @@ TEST(SQLSetDescFieldInternal, Fails_InvalidHandleTargetType_IRD) {
             target_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLCopyDescInternal, Fails_InconsistentDescriptor) {
+TEST(SQLCopyDescInternal, FailsInconsistentdescriptor) {
   DescriptorHandle src_handle = CreateExplicitDescriptor();
   DescriptorRecord descriptor_record_1;
   descriptor_record_1.type = SQL_INTEGER;

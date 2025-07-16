@@ -34,7 +34,8 @@ mapfile -t cmake_args < <(cmake::common_args)
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_CLANG_TIDY=/usr/local/bin/clang-tidy-wrapper \
   -DCMAKE_CXX_STANDARD=17 \
-  -DODBC_INTEGRATION_TESTING=OFF
+  -DODBC_INTEGRATION_TESTING=OFF \
+  -DODBC_UNIT_TESTING=ON
 io::run cmake --build cmake-out
 
 if [[ "${TRIGGER_TYPE}" != "manual" ]]; then

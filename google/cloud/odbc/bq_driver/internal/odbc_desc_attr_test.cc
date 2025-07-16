@@ -55,7 +55,7 @@ TEST(SetName, SetName) {
   EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
 }
 
-TEST(SetName, SetName_SQL_NTS) {
+TEST(SetName, SetNameSqlNts) {
   DescriptorRecord descriptor_record;
 
   descriptor_record.SetName("test", SQL_NTS);
@@ -64,7 +64,7 @@ TEST(SetName, SetName_SQL_NTS) {
   EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
 }
 
-TEST(SetName, SetName_Truncated) {
+TEST(SetName, SetNameTruncated) {
   DescriptorRecord descriptor_record;
 
   descriptor_record.SetName("test", 2);
@@ -73,7 +73,7 @@ TEST(SetName, SetName_Truncated) {
   EXPECT_EQ(SQL_NAMED, descriptor_record.unnamed);
 }
 
-TEST(SetName, SetName_EmptyString) {
+TEST(SetName, SetNameEmptyString) {
   DescriptorRecord descriptor_record;
 
   descriptor_record.SetName("", 2);
@@ -82,7 +82,7 @@ TEST(SetName, SetName_EmptyString) {
   EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
 }
 
-TEST(SetName, SetName_ZeroLength) {
+TEST(SetName, SetNameZeroLength) {
   DescriptorRecord descriptor_record;
 
   descriptor_record.SetName("test", 0);
@@ -122,7 +122,7 @@ TEST(SetNumPrecRadix, SetForExactNumericValue) {
   EXPECT_EQ(kNumPrecRadixForExactNumeric, descriptor_record.num_prec_radix);
 }
 
-TEST(SetNumPrecRadix, Fails_InvalidValue) {
+TEST(SetNumPrecRadix, FailsInvalidValue) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetNumPrecRadix(8);
@@ -131,7 +131,7 @@ TEST(SetNumPrecRadix, Fails_InvalidValue) {
   EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
 }
 
-TEST(SetParameterType, Set_SQL_PARAM_INPUT) {
+TEST(SetParameterType, SetSqlParamInput) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -141,7 +141,7 @@ TEST(SetParameterType, Set_SQL_PARAM_INPUT) {
   EXPECT_EQ(SQL_PARAM_INPUT, descriptor_record.parameter_type);
 }
 
-TEST(SetParameterType, Set_SQL_PARAM_INPUT_OUTPUT) {
+TEST(SetParameterType, SetSqlParamInputOutput) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -151,7 +151,7 @@ TEST(SetParameterType, Set_SQL_PARAM_INPUT_OUTPUT) {
   EXPECT_EQ(SQL_PARAM_INPUT_OUTPUT, descriptor_record.parameter_type);
 }
 
-TEST(SetParameterType, Set_SQL_PARAM_OUTPUT) {
+TEST(SetParameterType, SetSqlParamOutput) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -161,7 +161,7 @@ TEST(SetParameterType, Set_SQL_PARAM_OUTPUT) {
   EXPECT_EQ(SQL_PARAM_OUTPUT, descriptor_record.parameter_type);
 }
 
-TEST(SetParameterType, Fails_InvalidValue) {
+TEST(SetParameterType, FailsInvalidValue) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetParameterType(111);
@@ -170,7 +170,7 @@ TEST(SetParameterType, Fails_InvalidValue) {
   EXPECT_EQ(SQLStates::k_HY105(), status_record.sql_state);
 }
 
-TEST(SetUnnamed, Set_SQL_UNNAMED) {
+TEST(SetUnnamed, SetSqlUnnamed) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetUnnamed(SQL_UNNAMED);
@@ -179,7 +179,7 @@ TEST(SetUnnamed, Set_SQL_UNNAMED) {
   EXPECT_EQ(SQL_UNNAMED, descriptor_record.unnamed);
 }
 
-TEST(SetUnnamed, Fails_InvalidValue) {
+TEST(SetUnnamed, FailsInvalidValue) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetUnnamed(111);
@@ -188,7 +188,7 @@ TEST(SetUnnamed, Fails_InvalidValue) {
   EXPECT_EQ(SQLStates::k_HY091(), status_record.sql_state);
 }
 
-TEST(SetType, FailsToSet_SQL_INTERVAL_NoIntervalCodeSet) {
+TEST(SetType, FailsToSetSqlIntervalNoIntervalCodeSet) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -198,7 +198,7 @@ TEST(SetType, FailsToSet_SQL_INTERVAL_NoIntervalCodeSet) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MONTH) {
+TEST(SetType, SetSqlIntervalWithSqlCodeMonth) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_MONTH;
 
@@ -214,7 +214,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MONTH) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR) {
+TEST(SetType, SetSqlIntervalWithSqlCodeYear) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_YEAR;
 
@@ -230,7 +230,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR_TO_MONTH) {
+TEST(SetType, SetSqlIntervalWithSqlCodeYearToMonth) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_YEAR_TO_MONTH;
 
@@ -246,7 +246,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_YEAR_TO_MONTH) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY) {
+TEST(SetType, SetSqlIntervalWithSqlCodeDay) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_DAY;
 
@@ -262,7 +262,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR) {
+TEST(SetType, SetSqlIntervalWithSqlCodeHour) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR;
 
@@ -278,7 +278,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE) {
+TEST(SetType, SetSqlIntervalWithSqlCodeMinute) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_MINUTE;
 
@@ -294,7 +294,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_SECOND) {
+TEST(SetType, SetSqlIntervalWithSqlCodeSecond) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_SECOND;
 
@@ -310,7 +310,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_HOUR) {
+TEST(SetType, SetSqlIntervalWithSqlCodeDayToHour) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_HOUR;
 
@@ -326,7 +326,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_HOUR) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_MINUTE) {
+TEST(SetType, SetSqlIntervalWithSqlCodeDayToMinute) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_MINUTE;
 
@@ -342,7 +342,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_SECOND) {
+TEST(SetType, SetSqlIntervalWithSqlCodeDayToSecond) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_DAY_TO_SECOND;
 
@@ -358,7 +358,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_DAY_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_MINUTE) {
+TEST(SetType, SetSqlIntervalWithSqlCodeHourToMinute) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR_TO_MINUTE;
 
@@ -374,7 +374,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_SECOND) {
+TEST(SetType, SetSqlIntervalWithSqlCodeHourToSecond) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_HOUR_TO_SECOND;
 
@@ -390,7 +390,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_HOUR_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE_TO_SECOND) {
+TEST(SetType, SetSqlIntervalWithSqlCodeMinuteToSecond) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_MINUTE_TO_SECOND;
 
@@ -406,7 +406,7 @@ TEST(SetType, Set_SQL_INTERVAL_With_SQL_CODE_MINUTE_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, FailsToSet_SQL_DATETIME_NoIntervalCodeSet) {
+TEST(SetType, FailsToSetSqlDatetimeNoIntervalCodeSet) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -416,7 +416,7 @@ TEST(SetType, FailsToSet_SQL_DATETIME_NoIntervalCodeSet) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
-TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_DATE) {
+TEST(SetType, SetSqlDatetimeWithSqlCodeDate) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_DATE;
 
@@ -432,7 +432,7 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_DATE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIME) {
+TEST(SetType, SetSqlDatetimeWithSqlCodeTime) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_TIME;
 
@@ -448,7 +448,7 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIME) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIMESTAMP) {
+TEST(SetType, SetSqlDatetimeWithSqlCodeTimestamp) {
   DescriptorRecord descriptor_record;
   descriptor_record.datetime_interval_code = SQL_CODE_TIMESTAMP;
 
@@ -464,7 +464,7 @@ TEST(SetType, Set_SQL_DATETIME_With_SQL_CODE_TIMESTAMP) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetType, Set_SQL_C_CHAR) {
+TEST(SetType, SetSqlCChar) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -480,7 +480,7 @@ TEST(SetType, Set_SQL_C_CHAR) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_C_NUMERIC) {
+TEST(SetType, SetSqlCNumeric) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -496,7 +496,7 @@ TEST(SetType, Set_SQL_C_NUMERIC) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_C_FLOAT) {
+TEST(SetType, SetSqlCFloat) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -512,7 +512,7 @@ TEST(SetType, Set_SQL_C_FLOAT) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_C_DOUBLE) {
+TEST(SetType, SetSqlCDouble) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -528,7 +528,7 @@ TEST(SetType, Set_SQL_C_DOUBLE) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_C_BIT) {
+TEST(SetType, SetSqlCBit) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -544,7 +544,7 @@ TEST(SetType, Set_SQL_C_BIT) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, Set_SQL_C_GUID) {
+TEST(SetType, SetSqlCGuid) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -560,7 +560,7 @@ TEST(SetType, Set_SQL_C_GUID) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetType, FailsToSet_SQL_FLOAT_NotValidValue) {
+TEST(SetType, FailsToSetSqlFloatNotValidValue) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -570,7 +570,7 @@ TEST(SetType, FailsToSet_SQL_FLOAT_NotValidValue) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_MONTH) {
+TEST(SetConciseType, SetSqlCIntervalMonth) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -586,7 +586,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MONTH) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR) {
+TEST(SetConciseType, SetSqlCIntervalYear) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -601,8 +601,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR) {
   EXPECT_EQ(0, descriptor_record.scale);
   EXPECT_EQ(0, descriptor_record.length);
 }
-
-TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR_TO_MONTH) {
+TEST(SetConciseType, SetSqlCIntervalYearToMonth) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -618,7 +617,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_YEAR_TO_MONTH) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY) {
+TEST(SetConciseType, SetSqlCIntervalDay) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -634,7 +633,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR) {
+TEST(SetConciseType, SetSqlCIntervalHour) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -650,7 +649,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE) {
+TEST(SetConciseType, SetSqlCIntervalMinute) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -666,7 +665,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_SECOND) {
+TEST(SetConciseType, SetSqlCIntervalSecond) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -682,7 +681,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_HOUR) {
+TEST(SetConciseType, SetSqlCIntervalDayToHour) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -698,7 +697,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_HOUR) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_MINUTE) {
+TEST(SetConciseType, SetSqlCIntervalDayToMinute) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -714,7 +713,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_SECOND) {
+TEST(SetConciseType, SetSqlCIntervalDayToSecond) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -730,7 +729,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_DAY_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_MINUTE) {
+TEST(SetConciseType, SetSqlCIntervalHourToMinute) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -746,7 +745,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_MINUTE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_SECOND) {
+TEST(SetConciseType, SetSqlCIntervalHourToSecond) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -762,7 +761,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_HOUR_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
+TEST(SetConciseType, SetSqlCIntervalMinuteToSecond) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -779,7 +778,7 @@ TEST(SetConciseType, Set_SQL_C_INTERVAL_MINUTE_TO_SECOND) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_TYPE_DATE) {
+TEST(SetConciseType, SetSqlCTypeDate) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -795,7 +794,7 @@ TEST(SetConciseType, Set_SQL_C_TYPE_DATE) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_TYPE_TIME) {
+TEST(SetConciseType, SetSqlCTypeTime) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -811,7 +810,7 @@ TEST(SetConciseType, Set_SQL_C_TYPE_TIME) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_SQL_C_TYPE_TIMESTAMP) {
+TEST(SetConciseType, SetSqlCTypeTimestamp) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -827,7 +826,7 @@ TEST(SetConciseType, Set_SQL_C_TYPE_TIMESTAMP) {
   EXPECT_EQ(0, descriptor_record.length);
 }
 
-TEST(SetConciseType, Set_C_SQL_CHAR) {
+TEST(SetConciseType, SetSqlCChar) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -843,7 +842,7 @@ TEST(SetConciseType, Set_C_SQL_CHAR) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_C_NUMERIC) {
+TEST(SetConciseType, SetSqlCNumeric) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -859,7 +858,7 @@ TEST(SetConciseType, Set_SQL_C_NUMERIC) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_C_FLOAT) {
+TEST(SetConciseType, SetSqlCFloat) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -875,7 +874,7 @@ TEST(SetConciseType, Set_SQL_C_FLOAT) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_C_DOUBLE) {
+TEST(SetConciseType, SetSqlCDouble) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -891,7 +890,7 @@ TEST(SetConciseType, Set_SQL_C_DOUBLE) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_C_BIT) {
+TEST(SetConciseType, SetSqlCBit) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -907,7 +906,7 @@ TEST(SetConciseType, Set_SQL_C_BIT) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, Set_SQL_C_GUID) {
+TEST(SetConciseType, SetSqlCGuid) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.SetConciseType(
@@ -923,7 +922,7 @@ TEST(SetConciseType, Set_SQL_C_GUID) {
   EXPECT_EQ(0, descriptor_record.scale);
 }
 
-TEST(SetConciseType, FailsToSet_NotValidValue) {
+TEST(SetConciseType, FailsToSetNotValidValue) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record =
@@ -933,7 +932,7 @@ TEST(SetConciseType, FailsToSet_NotValidValue) {
   EXPECT_EQ(SQLStates::k_HY021(), status_record.sql_state);
 }
 
-TEST(ConsistencyCheck, Succeed_Default) {
+TEST(ConsistencyCheck, SucceedDefault) {
   DescriptorRecord descriptor_record;
 
   StatusRecord status_record = descriptor_record.ConsistencyCheck();
@@ -941,7 +940,7 @@ TEST(ConsistencyCheck, Succeed_Default) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_Interval) {
+TEST(ConsistencyCheck, SucceedInterval) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_INTERVAL;
   descriptor_record.concise_type = SQL_INTERVAL_MONTH;
@@ -953,7 +952,7 @@ TEST(ConsistencyCheck, Succeed_Interval) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_Interval_WrongCode) {
+TEST(ConsistencyCheck, FailsIntervalWrongCode) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_INTERVAL;
   descriptor_record.concise_type = SQL_INTERVAL_MONTH;
@@ -965,7 +964,7 @@ TEST(ConsistencyCheck, Fails_Interval_WrongCode) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_Interval_WrongPrecision) {
+TEST(ConsistencyCheck, FailsIntervalWrongPrecision) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_INTERVAL;
   descriptor_record.concise_type = SQL_INTERVAL_MONTH;
@@ -977,7 +976,7 @@ TEST(ConsistencyCheck, Fails_Interval_WrongPrecision) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_Datetime) {
+TEST(ConsistencyCheck, SucceedDatetime) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_TYPE_DATE;
@@ -989,7 +988,7 @@ TEST(ConsistencyCheck, Succeed_Datetime) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_Datetime_WrongCode) {
+TEST(ConsistencyCheck, FailsDatetimeWrongCode) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_TYPE_DATE;
@@ -1001,7 +1000,7 @@ TEST(ConsistencyCheck, Fails_Datetime_WrongCode) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_Datetime_WrongPrecision) {
+TEST(ConsistencyCheck, FailsDatetimeWrongPrecision) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_TYPE_DATE;
@@ -1013,7 +1012,7 @@ TEST(ConsistencyCheck, Fails_Datetime_WrongPrecision) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_SQL_DATE) {
+TEST(ConsistencyCheck, SucceedSqlDate) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_DATE;
@@ -1024,7 +1023,7 @@ TEST(ConsistencyCheck, Succeed_SQL_DATE) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_SQL_TIME) {
+TEST(ConsistencyCheck, SucceedSqlTime) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_TIME;
@@ -1035,7 +1034,7 @@ TEST(ConsistencyCheck, Succeed_SQL_TIME) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_SQL_TIMESTAMP) {
+TEST(ConsistencyCheck, SucceedSqlTimestamp) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_DATETIME;
   descriptor_record.concise_type = SQL_TIMESTAMP;
@@ -1046,7 +1045,7 @@ TEST(ConsistencyCheck, Succeed_SQL_TIMESTAMP) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_NUMERIC) {
+TEST(ConsistencyCheck, SucceedOtherTypesSqlNumeric) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_NUMERIC;
   descriptor_record.concise_type = SQL_NUMERIC;
@@ -1056,7 +1055,7 @@ TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_NUMERIC) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_CHAR) {
+TEST(ConsistencyCheck, SucceedOtherTypesSqlChar) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_CHAR;
   descriptor_record.concise_type = SQL_CHAR;
@@ -1066,7 +1065,7 @@ TEST(ConsistencyCheck, Succeed_OtherTypes_SQL_CHAR) {
   ASSERT_TRUE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_OtherTypes_DifferentTypes) {
+TEST(ConsistencyCheck, FailsOtherTypesDifferentTypes) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = SQL_CHAR;
   descriptor_record.concise_type = SQL_NUMERIC;
@@ -1076,7 +1075,7 @@ TEST(ConsistencyCheck, Fails_OtherTypes_DifferentTypes) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(ConsistencyCheck, Fails_InvalidType) {
+TEST(ConsistencyCheck, FailsInvalidType) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = 11111;
   descriptor_record.concise_type = 11111;
@@ -1086,7 +1085,7 @@ TEST(ConsistencyCheck, Fails_InvalidType) {
   ASSERT_FALSE(status_record.ok());
 }
 
-TEST(SetDataPointer, SetPointer_ApplicationDescriptor) {
+TEST(SetDataPointer, SetPointerApplicationDescriptor) {
   DescriptorRecord descriptor_record;
   char buf[8];
 
@@ -1097,7 +1096,7 @@ TEST(SetDataPointer, SetPointer_ApplicationDescriptor) {
   EXPECT_EQ(buf, descriptor_record.data_ptr);
 }
 
-TEST(SetDataPointer, DoNotSetPointer_IPD) {
+TEST(SetDataPointer, DoNotSetPointerIpd) {
   DescriptorRecord descriptor_record;
   char buf[8];
 
@@ -1108,7 +1107,7 @@ TEST(SetDataPointer, DoNotSetPointer_IPD) {
   EXPECT_EQ(nullptr, descriptor_record.data_ptr);
 }
 
-TEST(SetDataPointer, Fails_ConsistencyCheck_IPD) {
+TEST(SetDataPointer, FailsConsistencyCheckIpd) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = 11111;
   char buf[8];
@@ -1120,7 +1119,7 @@ TEST(SetDataPointer, Fails_ConsistencyCheck_IPD) {
   EXPECT_EQ(nullptr, descriptor_record.data_ptr);
 }
 
-TEST(SetDataPointer, Fails_ConsistencyCheck_ApplicationDescriptor) {
+TEST(SetDataPointer, FailsConsistencyCheckApplicationDescriptor) {
   DescriptorRecord descriptor_record;
   descriptor_record.type = 11111;
   char buf[8];

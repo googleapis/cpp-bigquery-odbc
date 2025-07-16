@@ -81,7 +81,7 @@ void CreateTestingResultSet(ResultSet& result_set) {
   }
 }
 
-TEST(WriteRowset, Success_Basic) {
+TEST(WriteRowset, SuccessBasic) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20], double_buf[20], str_buf[20];
@@ -135,7 +135,7 @@ TEST(WriteRowset, Success_Basic) {
   }
 }
 
-TEST(WriteRowset, Success_MultipleRows) {
+TEST(WriteRowset, SuccessMultiplerows) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   constexpr int rs_size = 3;
@@ -181,7 +181,7 @@ TEST(WriteRowset, Success_MultipleRows) {
   delete strlen_inds;
 }
 
-TEST(WriteRowset, Success_WithOffset) {
+TEST(WriteRowset, SuccessWithoffset) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLLEN bound_offset = 8;
@@ -216,7 +216,7 @@ TEST(WriteRowset, Success_WithOffset) {
 
 // Null StrLen_or_IndPtr should cause error during SQLFetch if there were any
 // null values in the result set
-TEST(WriteRowset, Success_Fail_NullIndicator) {
+TEST(WriteRowset, SuccessFailNullindicator) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20];
@@ -243,7 +243,7 @@ TEST(WriteRowset, Success_Fail_NullIndicator) {
             status_record.message);
 }
 
-TEST(WriteRowset, Failure_TranslationOutOfRange) {
+TEST(WriteRowset, FailureTranslationoutofrange) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20];
@@ -265,7 +265,7 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   EXPECT_EQ(result_set.cursor, 0);
 }
 
-TEST(WriteRowset, Failure_FractionalTruncation) {
+TEST(WriteRowset, FailureFractionaltruncation) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR double_buf[20];
