@@ -15,6 +15,7 @@
 
 #include "catalog.h"
 #include "google/cloud/internal/getenv.h"
+#include <tuple> 
 
 namespace google::cloud::odbc_tests {
 
@@ -450,51 +451,53 @@ RowWiseResults Catalog::GetForeignKeys(const std::shared_ptr<ODBCHandles>& conn,
 
   if (!pk_table.empty() && !fk_table.empty()) {
     if (use_ansi) {
-status = SQLForeignKeysA(
-          conn->hstmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())),
-          static_cast<SQLSMALLINT>(catalog_name.length()), reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())),
-          static_cast<SQLSMALLINT>(dataset.length()), reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())),
-          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0, nullptr, 0);
+        status = SQLForeignKeysA(
+            conn->hstmt,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())), static_cast<SQLSMALLINT>(pk_table.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())), static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
-status = SQLForeignKeys(
-          conn->hstmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())),
-          static_cast<SQLSMALLINT>(catalog_name.length()), reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())),
-          static_cast<SQLSMALLINT>(dataset.length()), reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())),
-          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0, nullptr, 0);
+        status = SQLForeignKeys(
+            conn->hstmt,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())), static_cast<SQLSMALLINT>(pk_table.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())), static_cast<SQLSMALLINT>(fk_table.length()));
     }
   } else if (!pk_table.empty()) {
-    if (use_ansi) {
-              status = SQLForeignKeysA(
-          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())),
-          static_cast<SQLSMALLINT>(catalog_name.length()),
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())),
-          static_cast<SQLSMALLINT>(dataset.length()),
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())),
-          static_cast<SQLSMALLINT>(fk_table.length()));
+        if (use_ansi) {
+        status = SQLForeignKeysA(
+            conn->hstmt,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())), static_cast<SQLSMALLINT>(pk_table.length()),
+            nullptr, 0, nullptr, 0, nullptr, 0);
     } else {
-               status = SQLForeignKeys(
-          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())),
-          static_cast<SQLSMALLINT>(catalog_name.length()),
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())),
-          static_cast<SQLSMALLINT>(dataset.length()),
-          reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())),
-          static_cast<SQLSMALLINT>(fk_table.length()));
+        status = SQLForeignKeys(
+            conn->hstmt,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(pk_table.c_str())), static_cast<SQLSMALLINT>(pk_table.length()),
+            nullptr, 0, nullptr, 0, nullptr, 0);
     }
   } else {
     if (use_ansi) {
-      status = SQLForeignKeysA(
-          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          (SQLCHAR*)catalog_name.c_str(), (SQLSMALLINT)catalog_name.length(),
-          (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
-          (SQLCHAR*)fk_table.c_str(), (SQLSMALLINT)fk_table.length());
+        status = SQLForeignKeysA(
+            conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())), static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
-      status = SQLForeignKeys(
-          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          (SQLCHAR*)catalog_name.c_str(), (SQLSMALLINT)catalog_name.length(),
-          (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
-          (SQLCHAR*)fk_table.c_str(), (SQLSMALLINT)fk_table.length());
+        status = SQLForeignKeys(
+            conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(catalog_name.c_str())), static_cast<SQLSMALLINT>(catalog_name.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(dataset.c_str())), static_cast<SQLSMALLINT>(dataset.length()),
+            reinterpret_cast<SQLCHAR*>(const_cast<char*>(fk_table.c_str())), static_cast<SQLSMALLINT>(fk_table.length()));
     }
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
@@ -587,33 +590,22 @@ bool operator==(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
       lhs.char_octet_len == rhs.char_octet_len && lhs.ord_pos == rhs.ord_pos);
 }
 
-bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
-  return (
-      lhs.project_name > rhs.project_name &&
-      lhs.dataset_name > rhs.dataset_name && lhs.table_name > rhs.table_name &&
-      lhs.column_name > rhs.column_name && lhs.description > rhs.description &&
-      lhs.col_type_name > rhs.col_type_name &&
-      lhs.col_default > rhs.col_default && lhs.is_nullable > rhs.is_nullable &&
-      lhs.sql_data_type > rhs.sql_data_type && lhs.data_type > rhs.data_type &&
-      lhs.sql_date_time_sub > rhs.sql_date_time_sub &&
-      lhs.decimal_digits > rhs.decimal_digits && lhs.radix > rhs.radix &&
-      lhs.nullable > rhs.nullable && lhs.col_size > rhs.col_size &&
-      lhs.buffer_len > rhs.buffer_len &&
-      lhs.char_octet_len > rhs.char_octet_len && lhs.ord_pos > rhs.ord_pos);
+bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
+  return std::tie(lhs.project_name, lhs.dataset_name, lhs.table_name,
+                  lhs.column_name, lhs.data_type, lhs.col_type_name,
+                  lhs.col_size, lhs.buffer_len, lhs.decimal_digits, lhs.radix,
+                  lhs.nullable, lhs.description, lhs.col_default,
+                  lhs.sql_data_type, lhs.sql_date_time_sub,
+                  lhs.char_octet_len, lhs.ord_pos, lhs.is_nullable) <
+         std::tie(rhs.project_name, rhs.dataset_name, rhs.table_name,
+                  rhs.column_name, rhs.data_type, rhs.col_type_name,
+                  rhs.col_size, rhs.buffer_len, rhs.decimal_digits, rhs.radix,
+                  rhs.nullable, rhs.description, rhs.col_default,
+                  rhs.sql_data_type, rhs.sql_date_time_sub,
+                  rhs.char_octet_len, rhs.ord_pos, rhs.is_nullable);
 }
 
-bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
-  return (
-      lhs.project_name < rhs.project_name &&
-      lhs.dataset_name < rhs.dataset_name && lhs.table_name < rhs.table_name &&
-      lhs.column_name < rhs.column_name && lhs.description < rhs.description &&
-      lhs.col_type_name < rhs.col_type_name &&
-      lhs.col_default < rhs.col_default && lhs.is_nullable < rhs.is_nullable &&
-      lhs.sql_data_type < rhs.sql_data_type && lhs.data_type < rhs.data_type &&
-      lhs.sql_date_time_sub < rhs.sql_date_time_sub &&
-      lhs.decimal_digits < rhs.decimal_digits && lhs.radix < rhs.radix &&
-      lhs.nullable < rhs.nullable && lhs.col_size < rhs.col_size &&
-      lhs.buffer_len < rhs.buffer_len &&
-      lhs.char_octet_len < rhs.char_octet_len && lhs.ord_pos < rhs.ord_pos);
+bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs) {
+    return rhs < lhs;
 }
 }  // namespace google::cloud::odbc_tests
