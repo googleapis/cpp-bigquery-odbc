@@ -23,13 +23,9 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        msvc: [ msvc-2022, msvc-2019 ]
-        # TODO(b/357810060): Add x86 arch
+        msvc: [ msvc-2022 ]
         arch: [ x64, x86 ]
         shard: [ Core, BqDriver ]
-        exclude:
-          - msvc: msvc-2019
-            shard: Core
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
@@ -61,8 +57,6 @@ jobs:
         cmakeVersion: "3.29.0"
     - name: Download and Install ODBC Driver
       shell: powershell
-      # TODO(b/357810060): Enable msvc-2019 arch
-      if: matrix.msvc == 'msvc-2022'
       run: |
         .\ci\gha\builds\lib\odbc-driver-install.ps1
     - name: Run DSN Creation Script
@@ -128,8 +122,4 @@ jobs:
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
         export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
-        if [ "${{ matrix.msvc }}" == "msvc-2022" ]; then
-          ci/gha/builds/windows-cmake-integration.sh
-        else
-          ci/gha/builds/windows-cmake.sh
-        fi
+        ci/gha/builds/windows-cmake-integration.sh
