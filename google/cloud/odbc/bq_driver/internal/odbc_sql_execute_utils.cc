@@ -75,8 +75,9 @@ StatusRecord ConstructPositionalQueryParams(
             : apd_rec.data_ptr;
     DataBuffer data;
     if (is_data_buff_req && is_data_at_exec) {
-      owned_octet_lengths.push_back(
-          static_cast<SQLLEN>(apd_rec.data_buffer.size()));
+      owned_octet_lengths.push_back(static_cast<SQLLEN>(
+          apd_rec.data_buffer
+              .size()));  // Handle stack-use-after-scope for octet_length
       SQLLEN* octet_length_ptr = &owned_octet_lengths.back();
       data = {apd_rec.concise_type, buff, *octet_length_ptr, octet_length_ptr};
     } else {
