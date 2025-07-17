@@ -47,8 +47,9 @@ void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
   }
 }
 
-SQLRETURN Connect(const std::string& conn_str, const std::shared_ptr<ODBCHandles>& conn,
-                  int timeout, bool use_ansi) {
+SQLRETURN Connect(std::string const& conn_str,
+                  std::shared_ptr<ODBCHandles> const& conn, int timeout,
+                  bool use_ansi) {
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
@@ -59,13 +60,15 @@ SQLRETURN Connect(const std::string& conn_str, const std::shared_ptr<ODBCHandles
   StrToChar(reinterpret_cast<char*>(data_source), conn_str);
 
   if (use_ansi) {
-    status = SQLDriverConnectA(conn->hdbc, nullptr, reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
-                               reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn),
-                               &buflen, SQL_DRIVER_COMPLETE);
+    status = SQLDriverConnectA(
+        conn->hdbc, nullptr, reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
+        reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn), &buflen,
+        SQL_DRIVER_COMPLETE);
   } else {
-    status = SQLDriverConnect(conn->hdbc, nullptr, reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
-                              reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn),
-                              &buflen, SQL_DRIVER_COMPLETE);
+    status = SQLDriverConnect(
+        conn->hdbc, nullptr, reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
+        reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn), &buflen,
+        SQL_DRIVER_COMPLETE);
   }
   CheckError(status, "SQLDriverConnect", conn, use_ansi);
 
@@ -79,8 +82,9 @@ SQLRETURN Connect(const std::string& conn_str, const std::shared_ptr<ODBCHandles
   return status;
 }
 
-SQLRETURN ConnectWithNullOutputParams(const std::string& conn_str, std::wstring dsn,
-                                      const std::shared_ptr<ODBCHandles>& conn,
+SQLRETURN ConnectWithNullOutputParams(std::string const& conn_str,
+                                      std::wstring dsn,
+                                      std::shared_ptr<ODBCHandles> const& conn,
                                       bool use_wide) {
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
@@ -94,11 +98,12 @@ SQLRETURN ConnectWithNullOutputParams(const std::string& conn_str, std::wstring 
   if (use_wide) {
     std::vector<SQLWCHAR> sql_wstr(dsn.begin(), dsn.end());
     sql_wstr.emplace_back(L'\0');
-    status = SQLDriverConnectW(conn->hdbc, nullptr, sql_wstr.data(), SQL_NTS, nullptr,
-                               0, nullptr, SQL_DRIVER_COMPLETE);
+    status = SQLDriverConnectW(conn->hdbc, nullptr, sql_wstr.data(), SQL_NTS,
+                               nullptr, 0, nullptr, SQL_DRIVER_COMPLETE);
     CheckError(status, "SQLDriverConnectW", conn);
   } else {
-    status = SQLDriverConnect(conn->hdbc, nullptr, reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
+    status = SQLDriverConnect(conn->hdbc, nullptr,
+                              reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
                               nullptr, 0, nullptr, SQL_DRIVER_COMPLETE);
     CheckError(status, "SQLDriverConnect", conn);
   }
@@ -113,8 +118,8 @@ SQLRETURN ConnectWithNullOutputParams(const std::string& conn_str, std::wstring 
   return status;
 }
 
-SQLRETURN ConnectWithPromptWindows(const std::string& conn_str,
-                                   const std::shared_ptr<ODBCHandles>& conn,
+SQLRETURN ConnectWithPromptWindows(std::string const& conn_str,
+                                   std::shared_ptr<ODBCHandles> const& conn,
                                    SQLHWND window_handle,
                                    SQLUSMALLINT driver_completion, int timeout,
                                    bool use_ansi) {
@@ -128,13 +133,14 @@ SQLRETURN ConnectWithPromptWindows(const std::string& conn_str,
   StrToChar(reinterpret_cast<char*>(data_source), conn_str);
 
   if (use_ansi) {
-    status =
-        SQLDriverConnectA(conn->hdbc, window_handle, reinterpret_cast<SQLCHAR*>(data_source),
-                          SQL_NTS, reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn),
-                          &buflen, driver_completion);
+    status = SQLDriverConnectA(
+        conn->hdbc, window_handle, reinterpret_cast<SQLCHAR*>(data_source),
+        SQL_NTS, reinterpret_cast<SQLCHAR*>(conn->outdsn), sizeof(conn->outdsn),
+        &buflen, driver_completion);
   } else {
-    status = SQLDriverConnect(conn->hdbc, window_handle, reinterpret_cast<SQLCHAR*>(data_source),
-                              SQL_NTS, reinterpret_cast<SQLCHAR*>(conn->outdsn),
+    status = SQLDriverConnect(conn->hdbc, window_handle,
+                              reinterpret_cast<SQLCHAR*>(data_source), SQL_NTS,
+                              reinterpret_cast<SQLCHAR*>(conn->outdsn),
                               sizeof(conn->outdsn), &buflen, driver_completion);
   }
   CheckError(status, "SQLDriverConnect", conn, use_ansi);
@@ -145,8 +151,8 @@ SQLRETURN ConnectWithPromptWindows(const std::string& conn_str,
   return status;
 }
 
-SQLRETURN ConnectDsnLess(const std::string& username, const std::string& auth,
-                         const std::shared_ptr<ODBCHandles>& conn, int timeout,
+SQLRETURN ConnectDsnLess(std::string const& username, std::string const& auth,
+                         std::shared_ptr<ODBCHandles> const& conn, int timeout,
                          bool use_ansi) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
@@ -174,7 +180,7 @@ SQLRETURN ConnectDsnLess(const std::string& username, const std::string& auth,
   return status;
 }
 
-SQLRETURN ConnectDsn(std::string dsn, const std::shared_ptr<ODBCHandles>& conn,
+SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> const& conn,
                      int timeout, bool use_ansi) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
@@ -182,13 +188,13 @@ SQLRETURN ConnectDsn(std::string dsn, const std::shared_ptr<ODBCHandles>& conn,
 
   SetAttributes(conn, timeout, use_ansi);
   if (use_ansi) {
-    status =
-        SQLConnectA(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
-                    reinterpret_cast<SQLCHAR*>(conn->outdsn), NumSqlChar(conn->outdsn), nullptr, 0);
+    status = SQLConnectA(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+                         reinterpret_cast<SQLCHAR*>(conn->outdsn),
+                         NumSqlChar(conn->outdsn), nullptr, 0);
   } else {
-    status =
-        SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
-                   reinterpret_cast<SQLCHAR*>(conn->outdsn), NumSqlChar(conn->outdsn), nullptr, 0);
+    status = SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+                        reinterpret_cast<SQLCHAR*>(conn->outdsn),
+                        NumSqlChar(conn->outdsn), nullptr, 0);
   }
 
   CheckError(status, "SQLConnect", conn, use_ansi);
@@ -202,7 +208,7 @@ SQLRETURN ConnectDsn(std::string dsn, const std::shared_ptr<ODBCHandles>& conn,
   return status;
 }
 
-SQLRETURN Connect(std::wstring dsn, const std::shared_ptr<ODBCHandles>& conn,
+SQLRETURN Connect(std::wstring dsn, std::shared_ptr<ODBCHandles> const& conn,
                   int timeout, bool is_driver_connect) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
@@ -213,15 +219,16 @@ SQLRETURN Connect(std::wstring dsn, const std::shared_ptr<ODBCHandles>& conn,
   sql_w_str.emplace_back(L'\0');
 
   if (is_driver_connect) {
-    status = SQLDriverConnectW(conn->hdbc, nullptr, sql_w_str.data(), SQL_NTS,
-                               reinterpret_cast<SQLWCHAR*>(conn->outdsn), sizeof(conn->outdsn),
-                               &buflen, SQL_DRIVER_COMPLETE);
+    status =
+        SQLDriverConnectW(conn->hdbc, nullptr, sql_w_str.data(), SQL_NTS,
+                          reinterpret_cast<SQLWCHAR*>(conn->outdsn),
+                          sizeof(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
 
     CheckError(status, "SQLDriverConnectW", conn);
   } else {
-    status =
-        SQLConnectW(conn->hdbc, sql_w_str.data(), SQL_NTS,
-                    reinterpret_cast<SQLWCHAR*>(conn->outdsn), NumSqlChar(conn->outdsn), nullptr, 0);
+    status = SQLConnectW(conn->hdbc, sql_w_str.data(), SQL_NTS,
+                         reinterpret_cast<SQLWCHAR*>(conn->outdsn),
+                         NumSqlChar(conn->outdsn), nullptr, 0);
 
     CheckError(status, "SQLConnectW", conn);
   }
@@ -236,7 +243,7 @@ SQLRETURN Connect(std::wstring dsn, const std::shared_ptr<ODBCHandles>& conn,
 }
 
 // Disconnect from the database
-SQLRETURN Disconnect(const std::shared_ptr<ODBCHandles>& conn) {
+SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> const& conn) {
   SQLRETURN status;
   if (conn->hstmt) {
     // Not checking for error after SQLCloseCursor because it fails when no
@@ -261,7 +268,8 @@ SQLRETURN Disconnect(const std::shared_ptr<ODBCHandles>& conn) {
 }
 
 // Gets Info about the driver and populates conn.metadata
-SQLRETURN GetDriverInfo(const std::shared_ptr<ODBCHandles>& conn, bool use_ansi) {
+SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> const& conn,
+                        bool use_ansi) {
   SQLCHAR buf[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;
@@ -280,7 +288,7 @@ SQLRETURN GetDriverInfo(const std::shared_ptr<ODBCHandles>& conn, bool use_ansi)
   for (auto elem : k_metadata_fields_map) {
     auto info_type = std::get<0>(elem);
     auto info_name = std::get<1>(elem);
-    auto *metadata_field_ptr = std::get<2>(elem);
+    auto* metadata_field_ptr = std::get<2>(elem);
     if (use_ansi) {
       status = SQLGetInfoA(conn->hdbc, info_type, buf, sizeof(buf), &out_len);
     } else {
@@ -290,7 +298,7 @@ SQLRETURN GetDriverInfo(const std::shared_ptr<ODBCHandles>& conn, bool use_ansi)
     if (SQL_SUCCEEDED(status)) {
       if (status == SQL_SUCCESS_WITH_INFO) {
         throw std::runtime_error("Buffer size is not enough for " + info_name +
-                           " InfoType");
+                                 " InfoType");
       }
       std::string val = reinterpret_cast<char*>(buf);
       *metadata_field_ptr = val;
@@ -303,7 +311,7 @@ SQLRETURN GetDriverInfo(const std::shared_ptr<ODBCHandles>& conn, bool use_ansi)
 
 // TODO(#10): Remove printf and support logging
 // Prints if the environment is ODBC3
-SQLRETURN GetEnvInfo(const std::shared_ptr<ODBCHandles>& conn) {
+SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> const& conn) {
   SQLUINTEGER buf;
   auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
                               (SQLPOINTER)&buf, SQL_IS_UINTEGER, nullptr);
@@ -318,7 +326,8 @@ SQLRETURN GetEnvInfo(const std::shared_ptr<ODBCHandles>& conn) {
 
 // TODO(#10): Remove printf and support logging
 // Print the version and the name of the connected driver
-SQLRETURN PrintDriverVerName(const std::shared_ptr<ODBCHandles>& conn, bool use_ansi) {
+SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> const& conn,
+                             bool use_ansi) {
   SQLCHAR driver_info[kBufferLength];
   SQLSMALLINT out_len;
   SQLRETURN status;

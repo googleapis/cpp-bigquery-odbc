@@ -41,9 +41,9 @@ void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
                              std::to_string(status));
   }
 
-  status = SQLSetDescField(
-      desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-      IntAsSQLPointer(kDatetimePrecisionUnchanged), NULL);
+  status =
+      SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
+                      IntAsSQLPointer(kDatetimePrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
