@@ -72,21 +72,7 @@ CreateApplicationDefaultCredentials() {
   // C++ client library in google-cloud-cpp first checks
   // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
   // looks for a 'default' location of the file with credentials.
-  auto gac_env = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
-
-  if (gac_env.has_value() && !gac_env->empty()) {
-    return ::google::cloud::MakeGoogleDefaultCredentials();
-  }
-  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", "");
-  auto credentials = ::google::cloud::MakeGoogleDefaultCredentials();
-
-  if (!credentials) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Failed to create application default credentials. Make sure gcloud is "
-        "configured or the ADC file exists."};
-  }
-  return credentials;
+  return ::google::cloud::MakeGoogleDefaultCredentials();
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
