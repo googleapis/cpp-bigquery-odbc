@@ -37,7 +37,7 @@ TEST(SetEnvAttr, Success) {
   auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  ptr_val, 0));
+              reinterpret_cast<SQLPOINTER>(&val), 0));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
@@ -57,7 +57,7 @@ TEST(GetEnvAttr, Success) {
   auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(set_val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-                                  ptr_val, 0));
+              reinterpret_cast<SQLPOINTER>(&set_val), 0));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             SQLGetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,

@@ -87,7 +87,7 @@ EnvAttrOdbcVersion::EnvAttrOdbcVersion(EnvAttrOdbcVersVal const& val) {
 
 StatusRecordOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
     void* value) {
-  auto actual_value = reinterpret_cast<std::size_t>(value);
+      auto actual_value = *reinterpret_cast<const SQLINTEGER*>(value);
   switch (actual_value) {
     case SQL_CP_OFF: {
       return EnvAttrConnectionPoolVal::kCpOff;
@@ -108,7 +108,7 @@ StatusRecordOr<EnvAttrConnectionPoolVal> EnvAttrConnectionPool::ParseVal(
 
 StatusRecordOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(
     void* value) {
-  auto actual_value = reinterpret_cast<std::size_t>(value);
+      auto actual_value = *reinterpret_cast<const SQLINTEGER*>(value);
   switch (actual_value) {
     case SQL_CP_RELAXED_MATCH: {
       return EnvAttrCPMatchVal::kRelaxedMatch;
@@ -125,7 +125,7 @@ StatusRecordOr<EnvAttrCPMatchVal> EnvAttrConnectionPoolMatch::ParseVal(
 }
 
 StatusRecordOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
-  auto actual_value = reinterpret_cast<std::size_t>(value);
+  auto actual_value = *reinterpret_cast<const SQLINTEGER*>(value);
   switch (actual_value) {
     case SQL_OV_ODBC2: {
       return EnvAttrOdbcVersVal::kOdbc2;
@@ -142,7 +142,7 @@ StatusRecordOr<EnvAttrOdbcVersVal> EnvAttrOdbcVersion::ParseVal(void* value) {
 }
 
 StatusRecordOr<int> EnvAttrOutputNTS::ParseVal(void* value) {
-  auto actual_value = reinterpret_cast<std::size_t>(value);
+  auto actual_value = *reinterpret_cast<const SQLINTEGER*>(value);
   switch (actual_value) {
     case SQL_TRUE: {
       return static_cast<int>(actual_value);
