@@ -45,6 +45,7 @@ using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
+using google::cloud::odbc_bq_driver_internal::UpdateTraceOption;
 using google::cloud::odbc_bq_driver_internal::ValidateAllowedAttributes;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -106,6 +107,24 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
       GetUpperStr(upper_key);
       dsn_section[upper_key] = value;
     }
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecord ConfigTraceFromSection(Section const& section) {
+  std::optional<std::string> log_level;
+  std::optional<std::string> log_path;
+
+  if (auto it = section.find("LOGLEVEL"); it != section.end()) {
+    log_level = it->second;
+  }
+
+  if (auto it = section.find("LOGPATH"); it != section.end()) {
+    log_path = it->second;
+  }
+
+  if (log_level || log_path) {
+    UpdateTraceOption(log_level, log_path);
   }
   return StatusRecord::Ok();
 }
@@ -252,6 +271,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     GetUpperStr(property);
     dsn_section[property] = value;
   }
+  // Tracing specified via connection string takes priority
+  auto config_res = ConfigTraceFromSection(dsn_section);
+
   // Any parameters defined in the env should
   //  override the DSN section properties.
   std::string dsn_name = dsn_section["DSN"];
